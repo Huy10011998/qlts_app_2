@@ -1,5 +1,7 @@
+// src/context/AuthContext.tsx
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios, { AxiosError, AxiosInstance } from "axios";
+import { jwtDecode } from "jwt-decode";
 import React, {
   createContext,
   ReactNode,
@@ -7,10 +9,8 @@ import React, {
   useEffect,
   useState,
 } from "react";
-import { useNavigation } from "@react-navigation/native"; // ✅ thay expo-router
-import { API_ENDPOINTS, BASE_URL } from "../config";
 import { AuthContextType, JwtPayload } from "../types";
-import { jwtDecode } from "jwt-decode";
+import { API_ENDPOINTS, BASE_URL } from "../config";
 
 // Context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -18,46 +18,47 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  const navigation = useNavigation<any>(); // ✅ thay router
   const [token, setTokenState] = useState<string | null>(null);
 
-  // Set Access Token
   const setToken = async (value: string | null) => {
     if (value) {
       await AsyncStorage.setItem("token", value);
+      console.log("[AuthProvider] setToken: Lưu accessToken");
     } else {
       await AsyncStorage.removeItem("token");
+      console.log("[AuthProvider] setToken: Xoá accessToken");
     }
     setTokenState(value);
   };
 
-  // Set Refresh Token
   const setRefreshToken = async (refreshToken: string | null) => {
     if (refreshToken) {
       await AsyncStorage.setItem("refreshToken", refreshToken);
+      console.log("[AuthProvider] setRefreshToken: Lưu refreshToken");
     } else {
       await AsyncStorage.removeItem("refreshToken");
+      console.log("[AuthProvider] setRefreshToken: Xoá refreshToken");
     }
   };
 
-  // Logout
   const logout = async () => {
     await AsyncStorage.multiRemove(["token", "refreshToken"]);
     setTokenState(null);
-    navigation.replace("Login"); // ✅ thay router.replace("/")
+    console.log("[AuthProvider] logout: Đã xoá token + refreshToken");
   };
 
-  // Lấy token hợp lệ khi app khởi động
   useEffect(() => {
     (async () => {
+      console.log("[AuthProvider] App start → kiểm tra token hợp lệ");
       const validToken = await getValidToken();
       if (validToken) {
+        console.log("[AuthProvider] Token hợp lệ → setTokenState");
         setTokenState(validToken);
       } else {
-        navigation.replace("Login");
+        console.warn("[AuthProvider] Không tìm thấy token hợp lệ");
       }
     })();
-  }, [navigation]);
+  }, []);
 
   return (
     <AuthContext.Provider value={{ token, setToken, setRefreshToken, logout }}>
@@ -66,7 +67,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   );
 };
 
-// HOOK
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) throw new Error("useAuth phải được sử dụng trong AuthProvider");
@@ -78,9 +78,14 @@ export const isTokenExpired = (token: string | null | undefined): boolean => {
   if (!token) return true;
   try {
     const decoded = jwtDecode<JwtPayload>(token);
-    const expiryTime = decoded.exp * 1000;
-    const isExpired = Date.now() >= expiryTime - 30000; // 30s trước khi hết hạn
-    return isExpired;
+    const expired = Date.now() >= decoded.exp * 1000 - 30000;
+    console.log(
+      "[isTokenExpired] Token exp =",
+      decoded.exp,
+      "expired =",
+      expired
+    );
+    return expired;
   } catch (err) {
     console.error("[isTokenExpired] Decode failed:", err);
     return true;
@@ -93,15 +98,20 @@ export const getValidToken = async (): Promise<string | null> => {
     AsyncStorage.getItem("refreshToken"),
   ]);
 
+  console.log("[getValidToken] AccessToken:", accessToken);
+  console.log("[getValidToken] RefreshToken:", refreshToken);
+
   if (!accessToken || !refreshToken) {
-    console.warn("[getValidToken] Missing token or refreshToken");
+    console.warn("[getValidToken] Không có token => return null");
     return null;
   }
 
   if (!isTokenExpired(accessToken)) {
+    console.log("[getValidToken] AccessToken còn hạn → dùng luôn");
     return accessToken;
   }
 
+  console.log("[getValidToken] AccessToken hết hạn → gọi refresh...");
   return await refreshTokenPair(refreshToken);
 };
 
@@ -109,86 +119,86 @@ export const getValidToken = async (): Promise<string | null> => {
 const refreshTokenPair = async (
   refreshToken: string
 ): Promise<string | null> => {
+  console.log(
+    "[refreshTokenPair] Gọi API refresh với refreshToken:",
+    refreshToken
+  );
+
   try {
     const response = await axios.post(API_ENDPOINTS.REFRESH_TOKEN, {
       value: refreshToken,
     });
 
+    console.log("[refreshTokenPair] Response:", response.data);
+
     const data = response?.data?.data;
-    if (!data) {
-      console.error("[refreshTokenPair] No data field in response");
+    if (!data?.accessToken) {
+      console.warn("[refreshTokenPair] Không có accessToken trong response");
       return null;
     }
 
-    const newAccessToken = data.accessToken;
-    const newRefreshToken = data.refreshToken;
+    await AsyncStorage.setItem("token", data.accessToken);
+    console.log("[refreshTokenPair] Access token mới đã được lưu");
 
-    if (!newAccessToken) {
-      console.error("[refreshTokenPair] No new accessToken, cannot save");
-      return null;
+    if (data.refreshToken) {
+      await AsyncStorage.setItem("refreshToken", data.refreshToken);
+      console.log("[refreshTokenPair] Refresh token mới đã được lưu");
     }
 
-    await AsyncStorage.setItem("token", newAccessToken);
-    if (newRefreshToken) {
-      await AsyncStorage.setItem("refreshToken", newRefreshToken);
-    }
-
-    return newAccessToken;
+    return data.accessToken;
   } catch (error: any) {
     console.error(
-      "[refreshTokenPair] Refresh failed:",
+      "[refreshTokenPair] failed:",
       error?.response?.data || error.message
     );
-
     await AsyncStorage.multiRemove(["token", "refreshToken"]);
     return null;
   }
 };
 
-//  AXIOS CONFIG
+// AXIOS CONFIG
 const api: AxiosInstance = axios.create({
   baseURL: BASE_URL,
   headers: { "Content-Type": "application/json;charset=UTF-8" },
 });
 
-// Refresh Queue
 let isRefreshing = false;
 let refreshSubscribers: ((token: string) => void)[] = [];
 
 const notifySubscribers = (newToken: string) => {
+  console.log("[notifySubscribers] Gửi token mới cho subscribers");
   refreshSubscribers.forEach((cb) => cb(newToken));
   refreshSubscribers = [];
 };
 
-//  Request Interceptor
 api.interceptors.request.use(async (config) => {
   const accessToken = await getValidToken();
+  console.log("[axios.request] Dùng token:", accessToken);
+
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;
   }
   return config;
 });
 
-//  Response Interceptor
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const originalRequest: any = error.config;
-    console.warn(
-      "[Response Error] URL:",
-      originalRequest?.url,
-      "| Status:",
-      error.response?.status,
-      "| Data:",
-      error.response?.data
-    );
 
     if (error.response?.status === 401 && !originalRequest._retry) {
+      console.warn("[axios.response] 401 phát hiện, thử refresh token...");
+
       originalRequest._retry = true;
 
       if (isRefreshing) {
+        console.log("[axios.response] Đang refresh, chờ token mới...");
         return new Promise((resolve) => {
           refreshSubscribers.push((newToken) => {
+            console.log(
+              "[axios.response] Nhận token mới từ subscriber:",
+              newToken
+            );
             originalRequest.headers.Authorization = `Bearer ${newToken}`;
             resolve(api(originalRequest));
           });
@@ -201,15 +211,21 @@ api.interceptors.response.use(
         isRefreshing = false;
 
         if (!newToken) {
-          console.error("[Response Error] Cannot refresh token");
-          throw new Error("Không thể làm mới token");
+          console.error(
+            "[axios.response] Refresh thất bại, không có token mới"
+          );
+          throw new Error("Cannot refresh token");
         }
 
+        console.log(
+          "[axios.response] Refresh thành công, token mới:",
+          newToken
+        );
         notifySubscribers(newToken);
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
         return api(originalRequest);
       } catch (err) {
-        console.error("[Response Error] Refresh failed:", err);
+        console.error("[axios.response] Refresh token error:", err);
         isRefreshing = false;
         refreshSubscribers = [];
         return Promise.reject(err);

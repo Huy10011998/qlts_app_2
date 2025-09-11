@@ -1,174 +1,188 @@
-// // src/types/components.d.ts
+import React, { ComponentType, PropsWithChildren, ReactElement } from "react";
+import { Field, Item } from "./model.d";
+import {
+  ImageSourcePropType,
+  TextInputProps,
+  TextProps,
+  ViewProps,
+} from "react-native";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import { getFieldValue } from "../utils/helper";
+import { TabItem } from "./context.d";
 
-// import React, { PropsWithChildren, ReactElement } from "react";
-// import { Field, Item } from "./model.d";
-// import { TextInputProps, TextProps, ViewProps } from "react-native";
-// import { getFieldValue } from "@/utils/helper";
-// import { TAB_ITEMS, TabItem } from "@/app/(dataClass)/details";
-// import Ionicons from "react-native-vector-icons/Ionicons";
+export interface CardItemProps {
+  item: Record<string, any>;
+  fields?: Field[];
+  icon?: string;
+  onPress?: (item: Record<string, any>) => void;
+}
+export interface SearchInputProps {
+  visible: boolean;
+  value: string;
+  onChange: (text: string) => void;
+}
 
-// // Props cho component CardItem
-// export interface CardItemProps {
-//   item: Record<string, any>;
-//   fields?: Field[];
-//   icon?: string;
-//   onPress?: (item: Record<string, any>) => void;
-// }
-// // Props cho SearchBar
-// export interface SearchInputProps {
-//   visible: boolean;
-//   value: string;
-//   onChange: (text: string) => void;
-// }
+export interface SettingHeaderProps {
+  name: string;
+  avatarUrl?: string;
+}
 
-// // Props cho phần header của profile
-// export interface ProfileHeaderProps {
-//   name: string;
-//   avatarUrl?: string;
-// }
+export interface SettingItemProps {
+  icon: React.ReactNode;
+  label: string;
+  onPress: () => void;
+}
 
-// // Props cho setting item
-// export interface SettingItemProps {
-//   icon: React.ReactNode;
-//   label: string;
-//   onPress: () => void;
-// }
+// Props cho Dropdown
+export type DropdownProps = {
+  item: Item;
+  level?: number;
+  expandedIds: (string | number)[];
+  onToggle: (id: string | number) => void;
+};
 
-// // Props cho Dropdown
-// export type DropdownProps = {
-//   item: Item;
-//   level?: number;
-//   expandedIds: (string | number)[];
-//   onToggle: (id: string | number) => void;
-// };
+export interface MenuItemCardProps extends MenuItemComponent {
+  index: number;
+}
 
-// export interface MenuItemCardProps extends MenuItemComponent {
-//   index: number;
-// }
+export type Props = PropsWithChildren<{
+  headerImage: ReactElement;
+  headerBackgroundColor: { dark: string; light: string };
+}>;
 
-// export type Props = PropsWithChildren<{
-//   headerImage: ReactElement;
-//   headerBackgroundColor: { dark: string; light: string };
-// }>;
+export type ScreenOption = {
+  component: ComponentType<any>; //
+  name: string;
+  title?: string;
+  icon: keyof typeof Ionicons;
+  showHeader?: boolean;
+};
 
-// export type ScreenOption = {
-//   name: string;
-//   title?: string;
-//   icon: keyof typeof Ionicons;
-//   showHeader?: boolean; // <-- Thêm thuộc tính này
-// };
+export type TabCustomProps = {
+  screens?: TabScreen[];
+  showHeader?: boolean;
+  backgroundColor?: string;
+  customHeader?: React.ComponentType<any>;
+};
 
-// export type TabCustomProps = {
-//   screens?: ScreenOption[];
-//   showHeader?: boolean; // default cho tất cả tabs nếu tab không khai báo riêng
-//   backgroundColor?: string;
-//   customHeader?: React.ComponentType<any>;
-// };
+export type ThemedTextProps = TextProps & {
+  lightColor?: string;
+  darkColor?: string;
+  type?: "default" | "title" | "defaultSemiBold" | "subtitle" | "link";
+};
 
-// export type ThemedTextProps = TextProps & {
-//   lightColor?: string;
-//   darkColor?: string;
-//   type?: "default" | "title" | "defaultSemiBold" | "subtitle" | "link";
-// };
+export type ThemedTextInputProps = TextInputProps & {
+  lightColor?: string;
+  darkColor?: string;
+};
 
-// export type ThemedTextInputProps = TextInputProps & {
-//   lightColor?: string;
-//   darkColor?: string;
-// };
+export type ThemedViewProps = ViewProps & {
+  lightColor?: string;
+  darkColor?: string;
+};
 
-// export type ThemedViewProps = ViewProps & {
-//   lightColor?: string;
-//   darkColor?: string;
-// };
+export interface TabContentProps {
+  activeTab: string;
+  groupedFields: Record<string, Field[]>;
+  collapsedGroups: Record<string, boolean>;
+  toggleGroup: (groupName: string) => void;
+  getFieldValue: (item: Record<string, any>, field: Field) => string;
+  item: any;
+  previousItem?: any;
+  isFieldChanged?: (
+    field: Field,
+    currentItem: any,
+    previousItem: any
+  ) => boolean;
+}
 
-// export interface TabContentProps {
-//   activeTab: string;
-//   groupedFields: Record<string, Field[]>;
-//   collapsedGroups: Record<string, boolean>;
-//   toggleGroup: (groupName: string) => void;
-//   getFieldValue: (item: Record<string, any>, field: Field) => string;
-//   item: any;
-//   previousItem?: any; // 🔥 optional
-//   isFieldChanged?: (
-//     field: Field,
-//     currentItem: any,
-//     previousItem: any
-//   ) => boolean; // 🔥 optional
-// }
+export interface CenterTextProps {
+  text: string;
+}
 
-// export interface CenterTextProps {
-//   text: string;
-// }
+export interface GroupListProps {
+  groupedFields: Record<string, Field[]>;
+  collapsedGroups: Record<string, boolean>;
+  toggleGroup: (groupName: string) => void;
+  getFieldValue: (item: Record<string, any>, field: Field) => string;
+  item: any;
+  previousItem?: any;
+  isFieldChanged?: (
+    field: Field,
+    currentItem: any,
+    previousItem: any
+  ) => boolean;
+}
 
-// export interface GroupListProps {
-//   groupedFields: Record<string, Field[]>;
-//   collapsedGroups: Record<string, boolean>;
-//   toggleGroup: (groupName: string) => void;
-//   getFieldValue: (item: Record<string, any>, field: Field) => string;
-//   item: any;
-//   previousItem?: any; // 🔥 optional
-//   isFieldChanged?: (
-//     field: Field,
-//     currentItem: any,
-//     previousItem: any
-//   ) => boolean; // 🔥 optional
-// }
+export interface BottomBarProps {
+  tabs: readonly TabItem[];
+  activeTab: string;
+  onTabPress: (tabKey: string, label: string) => void;
+}
+export interface HeaderContextProps {
+  title: string;
+  setTitle: (t: string) => void;
+}
 
-// export interface BottomBarProps {
-//   tabs: readonly TabItem[]; // thêm readonly
-//   activeTab: string;
-//   onTabPress: (tabKey: string, label: string) => void;
-// }
-// export interface HeaderContextProps {
-//   title: string;
-//   setTitle: (t: string) => void;
-// }
+export interface DetailsProps {
+  children: (props: {
+    activeTab: string;
+    setActiveTab: (tabKey: string, label: string) => void;
+    groupedFields: Record<string, Field[]>;
+    collapsedGroups: Record<string, boolean>;
+    toggleGroup: (groupName: string) => void;
+    item: any;
+    getFieldValue: typeof getFieldValue;
+    // TAB_ITEMS?: typeof TAB_ITEMS;
+  }) => React.ReactNode;
+}
 
-// export interface DetailsProps {
-//   children: (props: {
-//     activeTab: string;
-//     setActiveTab: (tabKey: string, label: string) => void;
-//     groupedFields: Record<string, Field[]>;
-//     collapsedGroups: Record<string, boolean>;
-//     toggleGroup: (groupName: string) => void;
-//     item: any;
-//     getFieldValue: typeof getFieldValue;
-//     TAB_ITEMS?: typeof TAB_ITEMS;
-//   }) => React.ReactNode;
-// }
+export interface DetailsHistoryProps {
+  children: (props: {
+    activeTab: string;
+    setActiveTab: (tabKey: string, label: string) => void;
+    groupedFields: Record<string, Field[]>;
+    collapsedGroups: Record<string, boolean>;
+    toggleGroup: (groupName: string) => void;
+    item: any;
+    getFieldValue: typeof getFieldValue;
+    // TAB_ITEMS?: typeof TAB_ITEMS;
+    previousItem: any;
+    isFieldChanged: (
+      field: Field,
+      currentItem: any,
+      previousItem: any
+    ) => boolean;
+  }) => React.ReactNode;
+}
 
-// export interface DetailsHistoryProps {
-//   children: (props: {
-//     activeTab: string;
-//     setActiveTab: (tabKey: string, label: string) => void;
-//     groupedFields: Record<string, Field[]>;
-//     collapsedGroups: Record<string, boolean>;
-//     toggleGroup: (groupName: string) => void;
-//     item: any;
-//     getFieldValue: typeof getFieldValue;
-//     TAB_ITEMS?: typeof TAB_ITEMS;
-//     previousItem: any;
-//     isFieldChanged: (
-//       field: Field,
-//       currentItem: any,
-//       previousItem: any
-//     ) => boolean;
-//   }) => React.ReactNode;
-// }
+export interface ListContainerProps {
+  name?: string;
+  path?: string;
+}
 
-// export interface ListContainerProps {
-//   name?: string; // name có thể được truyền từ bên ngoài
-//   path?: string;
-// }
+export interface MenuItemComponent {
+  id: string;
+  label: string;
+  iconName: string;
+  notificationCount?: number;
+  onPress?: () => void;
+}
 
-// export interface MenuItemComponent {
-//   id: string;
-//   label: string;
-//   icon?: React.ReactNode; // Dùng cho icon là component React
-//   onPress?: () => void;
-//   notificationCount?: number;
-// }
+export type ListCardAttachFileProps = CardItemProps & {
+  onView?: (item: any) => void;
+};
 
-// export type ListCardAttachFileProps = CardItemProps & {
-//   onView?: (item: any) => void;
-// };
+export type TabScreen = {
+  name: string;
+  title?: string;
+  icon: string;
+  component: ComponentType<any>;
+  showHeader?: boolean;
+};
+
+export type HeaderOptionsProps = {
+  showBackButton?: boolean;
+  showSearchButton?: boolean;
+  onSearchPress?: () => void;
+};

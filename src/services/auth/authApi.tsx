@@ -1,6 +1,6 @@
 import { API_ENDPOINTS } from "../../config";
-import { getValidToken } from "../../context/authContex";
-import { ChangePasswordResponse, LoginResponse } from "../../types";
+import { getValidToken } from "../../context/AuthContext";
+import { ChangePasswordResponse, LoginResponse } from "../../types/api.d";
 import { callApi, md5Hash } from "../../utils/helper";
 
 export const loginApi = async (
@@ -36,7 +36,6 @@ export const changePasswordApi = async (
       newPassword: hashedNewPassword,
     });
 
-    // giả sử callApi trả về object { success, message }
     return response as ChangePasswordResponse;
   } catch (error: any) {
     if (__DEV__) console.error("ChangePassword API error:", error);

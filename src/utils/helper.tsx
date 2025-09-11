@@ -1,5 +1,5 @@
 import md5 from "react-native-md5";
-import api from "../context/authContex";
+import api from "../context/AuthContext";
 import { Field } from "../types";
 import { TypeProperty } from "./enum";
 
