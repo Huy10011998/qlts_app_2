@@ -1,24 +1,17 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import Viewer from "../Viewer";
 import { ListCardAttachFileProps } from "../../types";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import Viewer from "../Viewer";
 
-export default function ListCardAttachFile({
-  item,
-  icon,
-}: ListCardAttachFileProps) {
+export default function ListCardAttachFile({ item }: ListCardAttachFileProps) {
   const [openPdf, setOpenPdf] = useState(false);
 
   return (
     <View>
       <View style={styles.card}>
         <View style={styles.avatar}>
-          <Ionicons
-            name={(icon as string) || "document-text-outline"}
-            size={24}
-            color="#FF3333"
-          />
+          <Ionicons name="document-text-outline" size={24} color="#FF3333" />
         </View>
 
         <View style={styles.info}>

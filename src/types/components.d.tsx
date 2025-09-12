@@ -187,3 +187,13 @@ export type HeaderOptionsProps = {
   showSearchButton?: boolean;
   onSearchPress?: () => void;
 };
+
+export interface ViewerProps {
+  visible: boolean;
+  onClose: () => void;
+  params: {
+    name: string;
+    path: string;
+    nameClass: string;
+  };
+}

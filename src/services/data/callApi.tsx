@@ -265,7 +265,7 @@ export const getPreviewAttachFile = async (
           Authorization: `Bearer ${token}`,
         },
         responseType: "arraybuffer",
-        timeout: 10000, // 10 giây
+        timeout: 10000,
       }
     );
 
