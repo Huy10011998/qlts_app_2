@@ -9,6 +9,7 @@ import {
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { getFieldValue } from "../utils/helper";
 import { TabItem } from "./context.d";
+import { TAB_ITEMS } from "../components/assets/AssetDetails";
 
 export interface CardItemProps {
   item: Record<string, any>;
@@ -133,7 +134,7 @@ export interface DetailsProps {
     toggleGroup: (groupName: string) => void;
     item: any;
     getFieldValue: typeof getFieldValue;
-    // TAB_ITEMS?: typeof TAB_ITEMS;
+    TAB_ITEMS?: typeof TAB_ITEMS;
   }) => React.ReactNode;
 }
 
@@ -146,7 +147,7 @@ export interface DetailsHistoryProps {
     toggleGroup: (groupName: string) => void;
     item: any;
     getFieldValue: typeof getFieldValue;
-    // TAB_ITEMS?: typeof TAB_ITEMS;
+    TAB_ITEMS?: typeof TAB_ITEMS;
     previousItem: any;
     isFieldChanged: (
       field: Field,

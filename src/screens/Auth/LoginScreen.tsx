@@ -60,13 +60,15 @@ export default function LoginScreen() {
           if (response?.data?.accessToken) {
             setToken(response.data.accessToken);
             setRefreshToken(response.data.refreshToken ?? null);
-            navigation.replace("Home");
+            navigation.replace("Tabs");
           } else {
             Alert.alert("Lỗi", "Phản hồi không hợp lệ từ server.");
           }
         }
       } catch (error) {
-        console.error("Login error:", error);
+        if (__DEV__) {
+          console.error("Login error:", error);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -93,7 +95,7 @@ export default function LoginScreen() {
             {
               text: "Không",
               style: "cancel",
-              onPress: () => navigation.replace("Home"),
+              onPress: () => navigation.replace("Tabs"),
             },
             {
               text: "Có",
@@ -102,14 +104,16 @@ export default function LoginScreen() {
                   accessible:
                     Keychain.ACCESSIBLE.WHEN_PASSCODE_SET_THIS_DEVICE_ONLY,
                 });
-                navigation.replace("Home");
+                navigation.replace("Tabs");
               },
             },
           ]
         );
       }
     } catch (error) {
-      console.error("Login error:", error);
+      if (__DEV__) {
+        console.error("Login error:", error);
+      }
       Alert.alert("Đăng nhập thất bại", "Sai tài khoản hoặc mật khẩu.");
       setUserPassword("");
     } finally {
@@ -147,12 +151,14 @@ export default function LoginScreen() {
       if (response?.data?.accessToken) {
         setToken(response.data.accessToken);
         setRefreshToken(response.data.refreshToken ?? null);
-        navigation.replace("Home");
+        navigation.replace("Tabs");
       } else {
         Alert.alert("Đăng nhập thất bại", "Phản hồi không hợp lệ từ server.");
       }
     } catch (error) {
-      console.error("FaceID login error:", error);
+      if (__DEV__) {
+        console.error("FaceID login error:", error);
+      }
       Alert.alert("Lỗi", "Đã xảy ra lỗi khi xác thực Face ID.");
     } finally {
       setIsLoading(false);

@@ -1,13 +1,13 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import HomeScreen from "../screens/Home/HomeScreen";
 import SettingStack from "./SettingStack";
 import HeaderHome from "../components/header/HeaderHome";
+import HomeStack from "./HomeStack";
 
 const Tab = createBottomTabNavigator();
 
-export default function HomeTabs() {
+export default function Tabs() {
   return (
     <Tab.Navigator
       screenOptions={{
@@ -22,10 +22,10 @@ export default function HomeTabs() {
     >
       <Tab.Screen
         name="HomeTab"
-        component={HomeScreen}
+        component={HomeStack}
         options={{
-          title: "Home",
-          header: () => <HeaderHome />,
+          title: "Trang chủ",
+          headerShown: false,
           tabBarIcon: ({ color }) => (
             <Ionicons name="home" size={24} color={color} />
           ),
@@ -35,7 +35,7 @@ export default function HomeTabs() {
         name="SettingTab"
         component={SettingStack}
         options={{
-          title: "Setting",
+          title: "Cài đặt",
           headerShown: false,
           tabBarIcon: ({ color }) => (
             <Ionicons name="settings" size={24} color={color} />

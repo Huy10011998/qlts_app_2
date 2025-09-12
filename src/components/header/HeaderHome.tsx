@@ -1,15 +1,11 @@
-// src/header/HeaderHome.tsx
 import React from "react";
 import { View, Image, TouchableOpacity, StyleSheet } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../../types";
+import { TabsScreenNavigationProp } from "../../types";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Home">;
-
 export default function HeaderHome() {
-  const navigation = useNavigation<NavigationProp>();
+  const navigation = useNavigation<TabsScreenNavigationProp>();
 
   return (
     <View style={styles.headerContainer}>
@@ -19,7 +15,7 @@ export default function HeaderHome() {
         resizeMode="contain"
       />
       <View style={styles.headerIcons}>
-        <TouchableOpacity onPress={() => navigation.navigate("Home")}>
+        <TouchableOpacity onPress={() => navigation.navigate("Tabs")}>
           <Ionicons name="home-outline" size={24} color="#fff" />
         </TouchableOpacity>
       </View>

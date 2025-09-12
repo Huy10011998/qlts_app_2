@@ -11,7 +11,11 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { MenuItemCardProps, MenuItemComponent } from "../../types";
+import {
+  HomeScreenNavigationProp,
+  MenuItemCardProps,
+  MenuItemComponent,
+} from "../../types";
 
 const { width: screenWidth } = Dimensions.get("window");
 const itemWidth = screenWidth / 3;
@@ -58,7 +62,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
 
 // ===== HOME SCREEN =====
 const HomeScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<HomeScreenNavigationProp>();
   const insets = useSafeAreaInsets();
 
   const menuItems: MenuItemComponent[] = [
@@ -66,6 +70,9 @@ const HomeScreen: React.FC = () => {
       id: "1",
       label: "Tài sản",
       iconName: "home-outline",
+      onPress: () => {
+        navigation.navigate("Asset");
+      },
     },
     {
       id: "2",

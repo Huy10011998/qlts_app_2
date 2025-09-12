@@ -1,22 +1,20 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { getFieldValue } from "@/utils/helper";
-import { CardItemProps } from "@/types";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import { getFieldValue } from "../../utils/helper";
+import { CardItemProps } from "../../types";
 
 export default function ListCardAsset({
   item,
-  fields,
+  fields = [],
   icon,
-  onPress,
+  onPress = () => {},
 }: CardItemProps) {
   return (
     <TouchableOpacity style={styles.card} onPress={() => onPress(item)}>
       <View style={styles.avatar}>
         <Ionicons
-          name={
-            (icon as keyof typeof Ionicons.glyphMap) || "document-text-outline"
-          }
+          name={icon || "document-text-outline"}
           size={24}
           color="#FF3333"
         />

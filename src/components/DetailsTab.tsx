@@ -5,20 +5,22 @@ import {
   FlatList,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   Alert,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { getClassReference } from "@/services/data/callApi";
-import IsLoading from "@/components/ui/IconLoading";
-import { useRouter } from "expo-router";
-import { MenuItemResponse } from "@/types";
-import { useParams } from "@/hooks/useParams";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import {
+  DeTailsTabNavigationProp,
+  DeTailsTabRouteProp,
+  MenuItemResponse,
+} from "../types";
+import { getClassReference } from "../services";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import IsLoading from "./ui/IconLoading";
 
 export default function DeTailsTab() {
-  const router = useRouter();
-
-  const { id, nameClass } = useParams();
+  const navigation = useNavigation<DeTailsTabNavigationProp>();
+  const route = useRoute<DeTailsTabRouteProp>();
+  const { id, nameClass } = route.params;
 
   const [isLoading, setIsLoading] = useState(true);
   const [items, setItems] = useState<MenuItemResponse[]>([]);
@@ -38,14 +40,12 @@ export default function DeTailsTab() {
 
         setItems(
           data.map((item: any): MenuItemResponse => {
-            const iconName = item.iconMobile as keyof typeof Ionicons.glyphMap;
+            const iconName = item.iconMobile as string;
 
             return {
               ...item,
               label: item.moTa ?? "Không có mô tả",
-              icon: Ionicons.glyphMap[iconName]
-                ? iconName
-                : "document-text-outline",
+              icon: iconName ? iconName : "document-text-outline",
             };
           })
         );
@@ -61,13 +61,11 @@ export default function DeTailsTab() {
   }, [nameClass, id]);
 
   const handlePress = (item: MenuItemResponse) => {
-    router.push({
-      pathname: "/(data)/taisan/related-list",
-      params: {
-        name: item.name,
-        propertyReference: item.propertyReference,
-        idRoot: id, // giữ nguyên string
-      },
+    navigation.navigate("AssetRelatedList", {
+      nameClass: item.name,
+      propertyReference: item.propertyReference,
+      idRoot: id,
+      titleHeader: item.moTa ?? "Danh sách",
     });
   };
 
@@ -78,7 +76,7 @@ export default function DeTailsTab() {
       onPress={() => handlePress(item)}
     >
       <Ionicons
-        name={item.icon}
+        name={item.icon as any}
         size={24}
         color="#FF3333"
         style={styles.icon}
@@ -89,9 +87,9 @@ export default function DeTailsTab() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
         <IsLoading />
-      </SafeAreaView>
+      </View>
     );
   }
 

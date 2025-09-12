@@ -19,5 +19,14 @@ export interface JwtPayload {
 export interface TabItem {
   key: string;
   label: string;
-  icon: keyof typeof Ionicons;
+  icon: string;
 }
+
+export type SearchContextType = {
+  isSearchOpen: boolean;
+  searchText: string;
+  setSearchText: (t: string) => void;
+  toggleSearch: () => void;
+  openSearch: () => void;
+  closeSearch: () => void;
+};

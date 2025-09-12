@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { GroupListProps } from "@/types";
+import { GroupListProps } from "../types";
+import Ionicons from "react-native-vector-icons/Ionicons";
 
 export default function GroupList({
   groupedFields,

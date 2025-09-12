@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { ListCardAttachFileProps } from "@/types";
-import Viewer from "../PdfViewer";
+import Viewer from "../Viewer";
+import { ListCardAttachFileProps } from "../../types";
+import Ionicons from "react-native-vector-icons/Ionicons";
 
 export default function ListCardAttachFile({
   item,
@@ -15,10 +15,7 @@ export default function ListCardAttachFile({
       <View style={styles.card}>
         <View style={styles.avatar}>
           <Ionicons
-            name={
-              (icon as keyof typeof Ionicons.glyphMap) ||
-              "document-text-outline"
-            }
+            name={(icon as string) || "document-text-outline"}
             size={24}
             color="#FF3333"
           />
@@ -43,7 +40,7 @@ export default function ListCardAttachFile({
         params={{
           name: item.name,
           path: item.path,
-          nameCLass: item.name_Class,
+          nameClass: item.name_Class,
         }}
       />
     </View>

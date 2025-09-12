@@ -30,6 +30,7 @@ export interface MenuItemResponse {
   id: string;
   name: string;
   label: string;
-  icon: keyof typeof Ionicons;
+  icon: string;
   propertyReference: string;
+  moTa: string;
 }

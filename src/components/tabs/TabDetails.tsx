@@ -1,11 +1,11 @@
 import React, { JSX } from "react";
 import { ScrollView } from "react-native";
-import { TabContentProps } from "@/types";
 import GroupList from "../GroupList";
 import CenterText from "../theme/ThemedCenterText";
 import DeTailsTab from "../DetailsTab";
-import ListHistory from "@/app/(dataClass)/ListHistory";
-import ListAttachFile from "@/app/(dataClass)/ListAttachFile";
+import { TabContentProps } from "../../types";
+import AssetListHistory from "../assets/AssetListHistory";
+import AssetListAttachFile from "../assets/AssetAttachFile";
 
 export default function TabContent({
   activeTab,
@@ -33,8 +33,8 @@ export default function TabContent({
     ),
     details: <DeTailsTab />,
     notes: <CenterText text={item?.notes ?? "---"} />,
-    history: <ListHistory />,
-    attach: <ListAttachFile />,
+    history: <AssetListHistory />,
+    attach: <AssetListAttachFile />,
   };
 
   return tabContentMap[activeTab] || <CenterText text="Tab không hợp lệ" />;

@@ -1,8 +1,8 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { CardItemProps } from "@/types";
-import { formatDate } from "@/utils/helper";
+import { CardItemProps } from "../../types";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import { formatDate } from "../../utils/helper";
 
 export default function ListCardHistory({ item, onPress }: CardItemProps) {
   const ngayTaoCapNhat = item?.log_StartDate;

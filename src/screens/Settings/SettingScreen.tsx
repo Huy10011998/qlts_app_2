@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -10,18 +10,22 @@ import {
   Modal,
   TextInput,
 } from "react-native";
-import Ionicons from "react-native-vector-icons/Ionicons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Keychain from "react-native-keychain";
 import { useNavigation } from "@react-navigation/native";
-import { SettingHeaderProps, SettingItemProps, UserInfo } from "../../types";
+import Ionicons from "react-native-vector-icons/Ionicons";
 import { useAuth } from "../../context/AuthContext";
 import IsLoading from "../../components/ui/IconLoading";
 import { changePasswordApi } from "../../services";
 import { callApi } from "../../utils/helper";
 import { API_ENDPOINTS } from "../../config";
+import { SettingScreenNavigationProp, UserInfo } from "../../types";
 
-const SettingHeader: React.FC<SettingHeaderProps> = ({ name, avatarUrl }) => (
+// Header profile
+const SettingHeader: React.FC<{ name?: string; avatarUrl?: string }> = ({
+  name,
+  avatarUrl,
+}) => (
   <View style={styles.profileHeader}>
     <View style={styles.avatar}>
       {avatarUrl ? (
@@ -33,34 +37,37 @@ const SettingHeader: React.FC<SettingHeaderProps> = ({ name, avatarUrl }) => (
         />
       )}
     </View>
-    <Text style={styles.name}>{name}</Text>
+    <Text style={styles.name}>{name || "---"}</Text>
   </View>
 );
 
-const SettingItem: React.FC<SettingItemProps> = ({ icon, label, onPress }) => (
+// Item setting
+const SettingItem: React.FC<{
+  iconName: string;
+  label: string;
+  onPress: () => void;
+}> = ({ iconName, label, onPress }) => (
   <TouchableOpacity style={styles.settingItem} onPress={onPress}>
-    <View style={styles.iconWrapper}>{icon}</View>
+    <View style={styles.iconWrapper}>
+      <Ionicons name={iconName} size={22} color="#fff" />
+    </View>
     <Text style={styles.label}>{label}</Text>
-    <Ionicons
-      name="chevron-forward"
-      size={20}
-      color="#999"
-      style={styles.chevron}
-    />
+    <Ionicons name="chevron-forward" size={20} color="#999" />
   </TouchableOpacity>
 );
 
 const SettingScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [user, setUser] = useState<UserInfo>();
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const navigation = useNavigation<SettingScreenNavigationProp>();
   const { setToken } = useAuth();
-  const [user, setUser] = useState<UserInfo | undefined>(undefined);
-  const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
-  const [oldPassword, setOldPassword] = useState<string>("");
-  const [newPassword, setNewPassword] = useState<string>("");
-  const [confirmPassword, setConfirmPassword] = useState<string>("");
 
-  const navigation = useNavigation<any>();
-
+  // Lấy thông tin user
   useEffect(() => {
     const fetchUserInfo = async () => {
       setIsLoading(true);
@@ -72,7 +79,7 @@ const SettingScreen = () => {
         );
         setUser(response.data);
       } catch (error) {
-        if (__DEV__) console.error("API error:", error);
+        console.error("API error:", error);
         Alert.alert("Lỗi", "Không thể tải thông tin người dùng.");
       } finally {
         setIsLoading(false);
@@ -81,18 +88,31 @@ const SettingScreen = () => {
     fetchUserInfo();
   }, []);
 
-  /** Đăng xuất */
+  // Logout
   const handlePressLogout = async () => {
     if (isLoading) return;
     setIsLoading(true);
 
     try {
+      console.log("=== LOGOUT START ===");
+
+      // Xóa token và FaceID
       await AsyncStorage.removeItem("token");
       await Keychain.resetGenericPassword();
 
+      // Kiểm tra
+      const tokenCheck = await AsyncStorage.getItem("token");
+      console.log("Token after remove:", tokenCheck); // null nếu thành công
+
+      const credentialsCheck = await Keychain.getGenericPassword();
+      console.log("FaceID after remove:", credentialsCheck); // false nếu thành công
+
+      // Update context
       setToken(null);
 
       navigation.replace("Login");
+
+      console.log("=== LOGOUT SUCCESS ===");
     } catch (error) {
       console.error("Logout error:", error);
       Alert.alert("Lỗi", "Không thể đăng xuất. Vui lòng thử lại.");
@@ -101,7 +121,7 @@ const SettingScreen = () => {
     }
   };
 
-  /** Đổi mật khẩu */
+  // Đổi mật khẩu
   const handleChangePassword = async () => {
     if (!oldPassword || !newPassword || !confirmPassword) {
       Alert.alert("Lỗi", "Vui lòng điền đầy đủ thông tin.");
@@ -111,8 +131,9 @@ const SettingScreen = () => {
       Alert.alert("Lỗi", "Mật khẩu xác nhận không khớp.");
       return;
     }
+
+    setIsLoading(true);
     try {
-      setIsLoading(true);
       const response = await changePasswordApi(oldPassword, newPassword);
       if (response?.success) {
         Alert.alert("Thành công", "Đổi mật khẩu thành công!");
@@ -124,7 +145,7 @@ const SettingScreen = () => {
         Alert.alert("Lỗi", response?.message || "Đổi mật khẩu thất bại!");
       }
     } catch (error: any) {
-      if (__DEV__) console.error("Change password error:", error);
+      console.error("Change password error:", error);
       const message =
         error.response?.data?.message ||
         "Không thể đổi mật khẩu. Vui lòng thử lại.";
@@ -134,35 +155,30 @@ const SettingScreen = () => {
     }
   };
 
-  /** Danh sách setting */
+  // Danh sách setting
   const settings = [
     {
-      icon: <Ionicons name="person-circle-outline" size={22} color="#fff" />,
+      iconName: "person-circle-outline",
       label: "Hồ sơ/Profile",
       onPress: () => navigation.navigate("Profile"),
     },
     {
-      icon: <Ionicons name="lock-closed-outline" size={22} color="#fff" />,
+      iconName: "lock-closed-outline",
       label: "Đổi mật khẩu/Change Password",
       onPress: () => setIsModalVisible(true),
     },
     {
-      icon: <Ionicons name="log-out-outline" size={22} color="#fff" />,
+      iconName: "log-out-outline",
       label: "Đăng xuất / Log out",
       onPress: () => {
-        Alert.alert(
-          "Xác nhận đăng xuất",
-          "Bạn có chắc chắn muốn đăng xuất?",
-          [
-            { text: "Hủy", style: "cancel" },
-            {
-              text: "Đăng xuất",
-              style: "destructive",
-              onPress: handlePressLogout,
-            },
-          ],
-          { cancelable: true }
-        );
+        Alert.alert("Xác nhận đăng xuất", "Bạn có chắc chắn muốn đăng xuất?", [
+          { text: "Hủy", style: "cancel" },
+          {
+            text: "Đăng xuất",
+            style: "destructive",
+            onPress: handlePressLogout,
+          },
+        ]);
       },
     },
   ];
@@ -170,7 +186,7 @@ const SettingScreen = () => {
   return (
     <View style={{ flex: 1 }}>
       <ScrollView style={styles.container}>
-        <SettingHeader name={user?.moTa ?? "---"} avatarUrl={user?.avatarUrl} />
+        <SettingHeader name={user?.moTa} avatarUrl={user?.avatarUrl} />
         <View style={styles.section}>
           {settings.map((item, index) => (
             <SettingItem key={index} {...item} />
@@ -220,6 +236,7 @@ const SettingScreen = () => {
               <TouchableOpacity
                 style={[styles.button, styles.confirmButton]}
                 onPress={handleChangePassword}
+                disabled={isLoading}
               >
                 <Text style={styles.buttonText}>Xác nhận</Text>
               </TouchableOpacity>
@@ -231,7 +248,6 @@ const SettingScreen = () => {
   );
 };
 
-// Styles giữ nguyên
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
   profileHeader: { alignItems: "center", padding: 16 },
@@ -265,7 +281,6 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   label: { flex: 1, fontSize: 13, fontWeight: "bold" },
-  chevron: { marginLeft: 6 },
   modalOverlay: {
     flex: 1,
     justifyContent: "center",
