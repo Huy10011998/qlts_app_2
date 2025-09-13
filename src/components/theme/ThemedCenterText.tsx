@@ -1,26 +1,40 @@
 import React from "react";
-import { View, Text, useWindowDimensions, StyleSheet } from "react-native";
-import RenderHtml from "react-native-render-html";
+import { StyleSheet, Dimensions } from "react-native";
+import { WebView } from "react-native-webview";
 import { CenterTextProps } from "../../types";
 
-export default function CenterText({ text }: CenterTextProps) {
-  const { width } = useWindowDimensions();
+export default function CenterTextWebView({ text }: CenterTextProps) {
+  const htmlContent = `
+  <html>
+    <head>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body { 
+          font-size: 14px; 
+          padding: 10px; 
+          color: #000; 
+          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
+        }
+        span, div { white-space: pre-wrap; }
+      </style>
+    </head>
+    <body>${text}</body>
+  </html>
+`;
+
   return (
-    <View style={styles.centerContent}>
-      {text ? (
-        <RenderHtml contentWidth={width} source={{ html: text }} />
-      ) : (
-        <Text>---</Text>
-      )}
-    </View>
+    <WebView
+      originWhitelist={["*"]}
+      source={{ html: htmlContent }}
+      style={styles.webview}
+      scrollEnabled={true}
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  centerContent: {
-    flex: 1,
-    justifyContent: "flex-start",
-    alignItems: "flex-start",
-    padding: 10,
+  webview: {
+    width: Dimensions.get("window").width,
+    height: 200, // hoặc flex tùy container
   },
 });

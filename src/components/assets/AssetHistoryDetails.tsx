@@ -10,7 +10,7 @@ import {
 } from "../../types";
 import { getDetailsHistory } from "../../services/data/callApi";
 
-export default function AssetHistoryDetails({ children }: DetailsHistoryProps) {
+export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
   const route = useRoute<DetailsHistoryRouteProp>();
   const { id, id_previous, nameClass, field } = route.params;
 
@@ -33,12 +33,16 @@ export default function AssetHistoryDetails({ children }: DetailsHistoryProps) {
 
   // group theo groupLayout
   const groupedFields = useMemo(() => {
-    return fieldActive.reduce<Record<string, Field[]>>((groups, field) => {
-      const groupName = field.groupLayout || "Thông tin chung";
-      if (!groups[groupName]) groups[groupName] = [];
-      groups[groupName].push(field);
-      return groups;
-    }, {});
+    var result = fieldActive.reduce<Record<string, Field[]>>(
+      (groups, field) => {
+        const groupName = field.groupLayout || "Thông tin chung";
+        if (!groups[groupName]) groups[groupName] = [];
+        groups[groupName].push(field);
+        return groups;
+      },
+      {}
+    );
+    return result;
   }, [fieldActive]);
 
   const toggleGroup = (groupName: string) => {

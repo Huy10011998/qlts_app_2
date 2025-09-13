@@ -1,287 +1,193 @@
-import axios from "axios";
-import { Conditions, Field } from "../../types";
-import { getValidToken } from "../../context/AuthContext";
-import { API_ENDPOINTS, BASE_URL } from "../../config";
+// src/services/apiClient.ts
+import axios, { AxiosError, AxiosInstance } from "axios";
 import { Buffer } from "buffer";
+import { API_ENDPOINTS, BASE_URL } from "../../config";
+import { getValidToken } from "../../context/AuthContext";
 
-export const getList = async (
-  nameCLass: string,
+// =================== Axios instance ===================
+const api: AxiosInstance = axios.create({
+  baseURL: BASE_URL,
+  headers: { "Content-Type": "application/json;charset=UTF-8" },
+});
+
+let isRefreshing = false;
+let refreshSubscribers: ((token: string) => void)[] = [];
+
+const notifySubscribers = (newToken: string) => {
+  refreshSubscribers.forEach((cb) => cb(newToken));
+  refreshSubscribers = [];
+};
+
+// Request interceptor: tự thêm token
+api.interceptors.request.use(async (config) => {
+  const token = await getValidToken();
+  if (token) {
+    console.log("[API] Attaching token:", token.slice(0, 20) + "...");
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Response interceptor
+api.interceptors.response.use(
+  (response) => response,
+  async (error: AxiosError) => {
+    const originalRequest: any = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      console.warn("[API] 401 detected → retrying with refresh token...");
+      originalRequest._retry = true;
+
+      if (isRefreshing) {
+        console.log("[API] Refresh in progress → queue request");
+        return new Promise((resolve) => {
+          refreshSubscribers.push((newToken) => {
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            resolve(api(originalRequest));
+          });
+        });
+      }
+
+      isRefreshing = true;
+      try {
+        const newToken = await getValidToken();
+        if (!newToken) throw new Error("Cannot refresh token");
+
+        console.log("[API] Got new token:", newToken);
+        notifySubscribers(newToken);
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        return api(originalRequest);
+      } catch (err) {
+        console.error("[API] Refresh failed → force logout");
+        refreshSubscribers = [];
+        throw err;
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
+    throw error;
+  }
+);
+
+// =================== Generic API Wrapper ===================
+export const callApi = async <T,>(
+  method: "GET" | "POST" | "PUT" | "DELETE",
+  url: string,
+  data?: any,
+  configOverride?: any
+): Promise<T> => {
+  const config = { method, url, data, ...configOverride };
+  const response = await api.request<T>(config);
+  return response.data;
+};
+
+// =================== API Functions ===================
+
+// Get list of any class
+export const getList = async <T = any,>(
+  nameClass: string,
   orderby: string,
   pageSize: number,
   skipSize: number,
   searchText: string,
-  fields: Field[],
-  conditions: Conditions[],
-  conditionsAll: Conditions[]
-) => {
-  try {
-    const token = await getValidToken();
-    if (!token) {
-      throw new Error("Không tìm thấy token. Vui lòng đăng nhập lại.");
-    }
-
-    const config = {
-      method: "POST" as const,
-      url: `${BASE_URL}/${nameCLass}/get-list`,
-      headers: {
-        "Content-Type": "application/json;charset=UTF-8",
-        Authorization: `Bearer ${token}`,
-      },
-      data: {
-        orderby,
-        pageSize,
-        skipSize,
-        searchText,
-        fields,
-        conditions,
-        conditionsAll,
-      },
-    };
-    const response = await axios(config);
-    return response.data;
-  } catch (error) {
-    if (__DEV__) console.error(`GetList ${nameCLass} API error:`, error);
-    throw error;
-  }
+  fields: any[],
+  conditions: any[],
+  conditionsAll: any[]
+): Promise<T> => {
+  return callApi<T>("POST", `/${nameClass}/get-list`, {
+    orderby,
+    pageSize,
+    skipSize,
+    searchText,
+    fields,
+    conditions,
+    conditionsAll,
+  });
 };
 
-export const getFieldActive = async (iD_Class_MoTa: string) => {
-  try {
-    const token = await getValidToken();
-    if (!token) {
-      throw new Error("Không tìm thấy token. Vui lòng đăng nhập lại.");
-    }
-
-    const config = {
-      method: "POST" as const,
-      url: API_ENDPOINTS.GET_FIELD_ACTIVE,
-      headers: {
-        "Content-Type": "application/json;charset=UTF-8",
-        Authorization: `Bearer ${token}`,
-      },
-      data: {
-        iD_Class_MoTa,
-      },
-    };
-    const response = await axios(config);
-    return response.data;
-  } catch (error) {
-    if (__DEV__) console.error("GetList May Tinh API error:", error);
-    throw error;
-  }
+// Get details of an item
+export const getDetails = async <T = any,>(
+  nameClass: string,
+  id: number
+): Promise<T> => {
+  return callApi<T>("POST", `/${nameClass}/get-details`, { id });
 };
 
-export const getPropertyClass = async (nameClass: string) => {
-  try {
-    const token = await getValidToken();
-
-    if (!token) {
-      throw new Error("Không tìm thấy token. Vui lòng đăng nhập lại.");
-    }
-
-    const config = {
-      method: "POST" as const,
-      url: API_ENDPOINTS.GET_CLASS_BY_NAME,
-      headers: {
-        "Content-Type": "application/json;charset=UTF-8",
-        Authorization: `Bearer ${token}`,
-      },
-      data: {
-        nameClass,
-      },
-    };
-    const response = await axios(config);
-    return response.data;
-  } catch (error) {
-    if (__DEV__) console.error("GetList May Tinh API error:", error);
-    throw error;
-  }
+// Get history details
+export const getDetailsHistory = async <T = any,>(
+  nameClass: string,
+  id: number
+): Promise<T> => {
+  return callApi<T>("POST", `/${nameClass}/get-list-history-detail`, {
+    log_ID: id,
+  });
 };
 
-export const getDetails = async (nameCLass: string, id: number) => {
-  try {
-    const token = await getValidToken();
-
-    if (!token) {
-      throw new Error("Không tìm thấy token. Vui lòng đăng nhập lại.");
-    }
-
-    const config = {
-      method: "POST" as const,
-      url: `${BASE_URL}/${nameCLass}/get-details`,
-      headers: {
-        "Content-Type": "application/json;charset=UTF-8",
-        Authorization: `Bearer ${token}`,
-      },
-      data: {
-        id,
-      },
-    };
-    const response = await axios(config);
-    return response.data;
-  } catch (error) {
-    if (__DEV__) console.error(`Get Details ${nameCLass} API error:`, error);
-    throw error;
-  }
+// Get class reference
+export const getClassReference = async <T = any,>(
+  nameClass: string
+): Promise<T> => {
+  return callApi<T>("POST", API_ENDPOINTS.GET_CLASS_REFERENCE, {
+    referenceName: nameClass,
+  });
 };
 
-export const getDetailsHistory = async (nameCLass: string, id: number) => {
-  try {
-    const token = await getValidToken();
-
-    if (!token) {
-      throw new Error("Không tìm thấy token. Vui lòng đăng nhập lại.");
-    }
-
-    const config = {
-      method: "POST" as const,
-      url: `${BASE_URL}/${nameCLass}/get-list-history-detail`,
-      headers: {
-        "Content-Type": "application/json;charset=UTF-8",
-        Authorization: `Bearer ${token}`,
-      },
-      data: {
-        log_ID: id,
-      },
-    };
-    const response = await axios(config);
-    return response.data;
-  } catch (error) {
-    if (__DEV__)
-      console.error(`Get Details History ${nameCLass} API error:`, error);
-    throw error;
-  }
+// Get list history
+export const getListHistory = async <T = any,>(
+  id: number,
+  nameClass: string
+): Promise<T> => {
+  return callApi<T>("POST", `/${nameClass}/get-list-history`, { id });
 };
 
-export const getClassReference = async (nameCLass: string) => {
-  try {
-    const token = await getValidToken();
-
-    if (!token) {
-      throw new Error("Không tìm thấy token. Vui lòng đăng nhập lại.");
-    }
-
-    const config = {
-      method: "POST" as const,
-      url: API_ENDPOINTS.GET_CLASS_REFERENCE,
-      headers: {
-        "Content-Type": "application/json;charset=UTF-8",
-        Authorization: `Bearer ${token}`,
-      },
-      data: {
-        referenceName: nameCLass,
-      },
-    };
-    const response = await axios(config);
-    return response.data;
-  } catch (error) {
-    if (__DEV__) console.error(`Get Details ${nameCLass} API error:`, error);
-    throw error;
-  }
-};
-
-export const getListHistory = async (id: number, nameCLass: string) => {
-  try {
-    const token = await getValidToken();
-
-    if (!token) {
-      throw new Error("Không tìm thấy token. Vui lòng đăng nhập lại.");
-    }
-
-    const config = {
-      method: "POST" as const,
-      url: `${BASE_URL}/${nameCLass}/get-list-history`,
-      headers: {
-        "Content-Type": "application/json;charset=UTF-8",
-        Authorization: `Bearer ${token}`,
-      },
-      data: {
-        id,
-      },
-    };
-    const response = await axios(config);
-    return response.data;
-  } catch (error) {
-    if (__DEV__) console.error(`Get ListHistory ${id} API error:`, error);
-    throw error;
-  }
-};
-
+// Get list of attached files
 export const getListAttachFile = async (
-  nameCLass: string,
+  nameClass: string,
   orderby: string,
   pageSize: number,
   skipSize: number,
   searchText: string,
-  conditions: Conditions[],
-  conditionsAll: Conditions[]
-) => {
-  try {
-    const token = await getValidToken();
-    if (!token) {
-      throw new Error("Không tìm thấy token. Vui lòng đăng nhập lại.");
-    }
-
-    const config = {
-      method: "POST" as const,
-      url: `${BASE_URL}/${nameCLass}/get-attach-file`,
-      headers: {
-        "Content-Type": "application/json;charset=UTF-8",
-        Authorization: `Bearer ${token}`,
-      },
-      data: {
-        orderby,
-        pageSize,
-        skipSize,
-        searchText,
-        conditions,
-        conditionsAll,
-      },
-    };
-    const response = await axios(config);
-    return response.data;
-  } catch (error) {
-    if (__DEV__)
-      console.error(`GetList Attach File ${nameCLass} API error:`, error);
-    throw error;
-  }
+  conditions: any[],
+  conditionsAll: any[]
+): Promise<{ data: { items: Record<string, any>[]; totalCount: number } }> => {
+  return callApi<{
+    data: { items: Record<string, any>[]; totalCount: number };
+  }>("POST", `/${nameClass}/get-attach-file`, {
+    orderby,
+    pageSize,
+    skipSize,
+    searchText,
+    conditions,
+    conditionsAll,
+  });
 };
 
+// Preview attached file
 export const getPreviewAttachFile = async (
   name: string,
   path: string,
   nameClass: string
-) => {
-  try {
-    const token = await getValidToken();
-    if (!token) throw new Error("Không tìm thấy token.");
+): Promise<{ headers: any; data: string }> => {
+  const response = await api.post(
+    `/${nameClass}/preview-attach-file`,
+    { name, path, isMobile: true },
+    { responseType: "arraybuffer", timeout: 10000 }
+  );
+  const base64Data = Buffer.from(response.data, "binary").toString("base64");
+  return { headers: response.headers, data: base64Data };
+};
 
-    const response = await axios.post(
-      `${BASE_URL}/${nameClass}/preview-attach-file`,
-      { name, path, isMobile: true },
-      {
-        headers: {
-          "Content-Type": "application/json;charset=UTF-8",
-          Authorization: `Bearer ${token}`,
-        },
-        responseType: "arraybuffer",
-        timeout: 10000,
-      }
-    );
+// Get class properties
+export const getPropertyClass = async <T = any,>(
+  nameClass: string
+): Promise<T> => {
+  return callApi<T>("POST", API_ENDPOINTS.GET_CLASS_BY_NAME, { nameClass });
+};
 
-    const base64Data = Buffer.from(response.data, "binary").toString("base64");
-
-    return {
-      headers: response.headers,
-      data: base64Data,
-    };
-  } catch (error: any) {
-    if (__DEV__) {
-      console.error(`GetPreview Attach File ${nameClass} API error:`, error);
-    }
-    // Bổ sung message rõ hơn
-    const message =
-      error.response?.data?.message || error.message || "Lỗi không xác định";
-    throw new Error(message);
-  }
+// Get active fields
+export const getFieldActive = async <T = any,>(
+  iD_Class_MoTa: string
+): Promise<T> => {
+  return callApi<T>("POST", API_ENDPOINTS.GET_FIELD_ACTIVE, { iD_Class_MoTa });
 };

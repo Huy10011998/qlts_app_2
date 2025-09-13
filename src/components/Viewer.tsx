@@ -1,4 +1,4 @@
-// PdfViewer.tsx
+// FileViewer.tsx
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -8,13 +8,13 @@ import {
   Text,
   TouchableOpacity,
   Image,
-  Dimensions,
-  Platform,
   ScrollView,
+  Dimensions,
   Alert,
+  Platform,
 } from "react-native";
 import { WebView } from "react-native-webview";
-import { getPreviewAttachFile } from "../services"; // giữ nguyên hàm của bạn
+import { getPreviewAttachFile } from "../services";
 
 type ViewerProps = {
   visible: boolean;
@@ -22,7 +22,7 @@ type ViewerProps = {
   params: { name: string; path: string; nameClass: string };
 };
 
-export default function Viewer({ visible, onClose, params }: ViewerProps) {
+export default function FileViewer({ visible, onClose, params }: ViewerProps) {
   const [fileData, setFileData] = useState<string | null>(null);
   const [fileType, setFileType] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -51,10 +51,7 @@ export default function Viewer({ visible, onClose, params }: ViewerProps) {
       setFileData(data);
     } catch (err) {
       console.error("Fetch file error:", err);
-      Alert.alert(
-        "Lỗi",
-        "Không thể tải file. Sử dụng fallback URL cho iOS Simulator."
-      );
+      Alert.alert("Lỗi", "Không thể tải file. Sử dụng fallback URL cho PDF.");
       setUseUrlFallback(true);
     } finally {
       setLoading(false);
@@ -62,21 +59,36 @@ export default function Viewer({ visible, onClose, params }: ViewerProps) {
   };
 
   const renderFile = () => {
-    if (!fileType || !fileData) return null;
+    if (!fileType || (!fileData && !useUrlFallback)) return null;
 
     // Hiển thị ảnh
     if (["png", "jpg", "jpeg"].includes(fileType)) {
-      const uri = `data:image/${fileType};base64,${fileData}`;
+      const uri = fileData
+        ? `data:image/${fileType};base64,${fileData}`
+        : undefined;
       return (
-        <Image
-          source={{ uri }}
-          style={{
+        <ScrollView
+          maximumZoomScale={5}
+          minimumZoomScale={1}
+          contentContainerStyle={{
             flex: 1,
-            width: "100%",
-            height: windowHeight,
-            resizeMode: "contain",
+            justifyContent: "center",
+            alignItems: "center",
           }}
-        />
+        >
+          {uri ? (
+            <Image
+              source={{ uri }}
+              style={{
+                width: "100%",
+                height: windowHeight,
+                resizeMode: "contain",
+              }}
+            />
+          ) : (
+            <Text>❌ Không tải được ảnh</Text>
+          )}
+        </ScrollView>
       );
     }
 
@@ -95,8 +107,35 @@ export default function Viewer({ visible, onClose, params }: ViewerProps) {
 
       const html = `
         <html>
-          <body style="margin:0;padding:0;">
-            <embed width="100%" height="100%" src="data:application/pdf;base64,${fileData}" type="application/pdf" />
+          <head>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
+            <style>
+              body { margin:0; padding:0; }
+              canvas { display:block; margin:16px auto; border:1px solid #ccc; }
+            </style>
+          </head>
+          <body>
+            <div id="container"></div>
+            <script>
+              const pdfData = "${fileData}";
+              const pdfjsLib = window['pdfjs-dist/build/pdf'];
+              pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.worker.min.js';
+              const loadingTask = pdfjsLib.getDocument({ data: atob(pdfData) });
+              loadingTask.promise.then(pdf => {
+                for(let pageNum=1; pageNum <= pdf.numPages; pageNum++){
+                  pdf.getPage(pageNum).then(page=>{
+                    const scale = 1.5;
+                    const viewport = page.getViewport({scale});
+                    const canvas = document.createElement('canvas');
+                    document.getElementById('container').appendChild(canvas);
+                    const context = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    page.render({canvasContext: context, viewport: viewport});
+                  });
+                }
+              });
+            </script>
           </body>
         </html>
       `;
@@ -105,6 +144,8 @@ export default function Viewer({ visible, onClose, params }: ViewerProps) {
           originWhitelist={["*"]}
           source={{ html }}
           style={{ flex: 1, height: windowHeight }}
+          javaScriptEnabled
+          domStorageEnabled
         />
       );
     }
@@ -121,7 +162,11 @@ export default function Viewer({ visible, onClose, params }: ViewerProps) {
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>{params?.name || "File đính kèm"}</Text>
+          <View style={{ flex: 1, paddingRight: 10 }}>
+            <Text style={styles.title} numberOfLines={2} ellipsizeMode="middle">
+              {params?.name || "File đính kèm"}
+            </Text>
+          </View>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <Text style={styles.closeText}>Đóng</Text>
           </TouchableOpacity>
@@ -147,10 +192,14 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     backgroundColor: "#FF3333",
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
   },
-  title: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  title: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+    flexShrink: 1, // co nhỏ khi cần
+  },
   closeButton: { padding: 6, borderRadius: 6 },
   closeText: { color: "#fff", fontWeight: "bold", fontSize: 15 },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },

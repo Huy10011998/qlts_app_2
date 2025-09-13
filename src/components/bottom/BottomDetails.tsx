@@ -53,7 +53,7 @@ export default function BottomBarDetails({
             onPress={() => handlePress(tab.key, tab.label, index)}
             activeOpacity={0.8}
           >
-            <Ionicons name={tab.icon} size={22} color="#fff" />
+            <Ionicons name={tab.icon} size={22} color="#FF3333" />
             <Text
               style={[styles.bottomLabel, isActive && styles.bottomLabelActive]}
             >
@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
   bottomBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FF3333",
+    backgroundColor: "#fff",
     paddingVertical: 1,
     position: "absolute",
     bottom: 70,
@@ -83,8 +83,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
     fontWeight: "600",
-    color: "#fff",
-    opacity: 0.9,
+    color: "#FF3333",
   },
   bottomLabelActive: { opacity: 1, fontWeight: "800" },
   underline: {
@@ -92,7 +91,7 @@ const styles = StyleSheet.create({
     bottom: 2.5,
     marginBottom: 5,
     height: 2,
-    backgroundColor: "#fff",
+    backgroundColor: "#FF3333",
     borderRadius: 1,
   },
 });
