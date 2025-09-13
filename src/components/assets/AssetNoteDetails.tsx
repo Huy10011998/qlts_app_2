@@ -3,7 +3,7 @@ import { StyleSheet, Dimensions } from "react-native";
 import { WebView } from "react-native-webview";
 import { CenterTextProps } from "../../types";
 
-export default function CenterTextWebView({ text }: CenterTextProps) {
+export default function AssetNoteDetails({ text }: CenterTextProps) {
   const htmlContent = `
   <html>
     <head>

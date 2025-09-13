@@ -1,11 +1,11 @@
 import React, { JSX } from "react";
 import { ScrollView } from "react-native";
-import GroupList from "../GroupList";
-import CenterText from "../theme/ThemedCenterText";
-import DeTailsTab from "../DetailsTab";
 import { TabContentProps } from "../../types";
 import AssetListHistory from "../assets/AssetListHistory";
 import AssetListAttachFile from "../assets/AssetAttachFile";
+import AssetNoteDetails from "../assets/AssetNoteDetails";
+import AssetDeTailsTab from "../assets/AssetDetailsTab";
+import AssetGroupList from "../assets/AssetGroupList";
 
 export default function TabContent({
   activeTab,
@@ -20,7 +20,7 @@ export default function TabContent({
   const tabContentMap: Record<string, JSX.Element> = {
     list: (
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 70 }}>
-        <GroupList
+        <AssetGroupList
           groupedFields={groupedFields}
           collapsedGroups={collapsedGroups}
           toggleGroup={toggleGroup}
@@ -31,11 +31,13 @@ export default function TabContent({
         />
       </ScrollView>
     ),
-    details: <DeTailsTab />,
-    notes: <CenterText text={item?.notes ?? "---"} />,
+    details: <AssetDeTailsTab />,
+    notes: <AssetNoteDetails text={item?.notes ?? "---"} />,
     history: <AssetListHistory />,
     attach: <AssetListAttachFile />,
   };
 
-  return tabContentMap[activeTab] || <CenterText text="Tab không hợp lệ" />;
+  return (
+    tabContentMap[activeTab] || <AssetNoteDetails text="Tab không hợp lệ" />
+  );
 }

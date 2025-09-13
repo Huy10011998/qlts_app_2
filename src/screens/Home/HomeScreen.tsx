@@ -69,7 +69,7 @@ const HomeScreen: React.FC = () => {
     {
       id: "1",
       label: "Tài sản",
-      iconName: "home-outline",
+      iconName: "cube-outline",
       onPress: () => {
         navigation.navigate("Asset");
       },

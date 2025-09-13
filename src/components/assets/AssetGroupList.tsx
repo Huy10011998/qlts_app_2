@@ -1,9 +1,9 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { GroupListProps } from "../types";
+import { GroupListProps } from "../../types";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
-export default function GroupList({
+export default function AssetGroupList({
   groupedFields,
   collapsedGroups,
   toggleGroup,

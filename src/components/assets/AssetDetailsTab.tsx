@@ -12,12 +12,12 @@ import {
   DeTailsTabNavigationProp,
   DeTailsTabRouteProp,
   MenuItemResponse,
-} from "../types";
-import { getClassReference } from "../services";
+} from "../../types";
+import { getClassReference } from "../../services";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import IsLoading from "./ui/IconLoading";
+import IsLoading from "../ui/IconLoading";
 
-export default function DeTailsTab() {
+export default function AssetDeTailsTab() {
   const navigation = useNavigation<DeTailsTabNavigationProp>();
   const route = useRoute<DeTailsTabRouteProp>();
   const { id, nameClass } = route.params;

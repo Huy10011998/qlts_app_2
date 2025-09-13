@@ -4,11 +4,11 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export function AddItemAsset() {
-  const insets = useSafeAreaInsets(); // Lấy safe area inset
+  const insets = useSafeAreaInsets();
 
   return (
     <TouchableOpacity
-      style={[styles.fab, { bottom: 24 + insets.bottom }]} // Tự động thêm inset bottom
+      style={[styles.fab, { bottom: 24 + insets.bottom }]}
       onPress={() => console.log("FAB pressed")}
       activeOpacity={0.8}
     >
