@@ -32,7 +32,7 @@ const SettingHeader: React.FC<{ name?: string; avatarUrl?: string }> = ({
         <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
       ) : (
         <Image
-          source={require("../../assets/images/user.jpeg")}
+          source={require("../../assets/images/user.png")}
           style={styles.avatarImage}
         />
       )}

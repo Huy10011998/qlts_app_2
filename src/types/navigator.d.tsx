@@ -14,7 +14,12 @@ export type RootStackParamList = {
     idRoot: string;
     propertyReference: string;
   };
-  AssetDetails: { id: string; field: any; nameClass: string };
+  AssetDetails: {
+    id: string;
+    field: any;
+    nameClass: string;
+    titleHeader: string;
+  };
   RelaterList: { name: string };
   AssetRelatedList: {
     nameClass: string;

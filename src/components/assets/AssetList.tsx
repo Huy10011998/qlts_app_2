@@ -138,6 +138,7 @@ export default function AssetList() {
         id: String(item.id),
         field: JSON.stringify(fieldActive),
         nameClass: nameClass,
+        titleHeader: titleHeader,
       });
     } catch (error) {
       console.error(error);

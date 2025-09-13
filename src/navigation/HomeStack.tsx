@@ -39,17 +39,21 @@ export default function HomeStack() {
         }: {
           route: RouteProp<RootStackParamList, "AssetList">;
         }) => ({
-          title: route.params.titleHeader || "Danh sách tài sản",
+          title: "Danh sách " + route.params.titleHeader || "Danh sách tài sản",
           ...HeaderDetails({ showBackButton: true }),
         })}
       />
       <Stack.Screen
         name="AssetDetails"
         component={AssetDetailsScreen}
-        options={{
-          title: "Chi tiết",
+        options={({
+          route,
+        }: {
+          route: RouteProp<RootStackParamList, "AssetDetails">;
+        }) => ({
+          title: route.params.titleHeader,
           ...HeaderDetails({ showBackButton: true }),
-        }}
+        })}
       />
       <Stack.Screen
         name="AssetRelatedList"
