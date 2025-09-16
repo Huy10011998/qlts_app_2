@@ -31,10 +31,7 @@ const SettingHeader: React.FC<{ name?: string; avatarUrl?: string }> = ({
       {avatarUrl ? (
         <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
       ) : (
-        <Image
-          source={require("../../assets/images/user.png")}
-          style={styles.avatarImage}
-        />
+        <Ionicons name="person-circle-outline" size={60} color="#FF3333" />
       )}
     </View>
     <Text style={styles.name}>{name || "---"}</Text>
@@ -208,7 +205,10 @@ const SettingScreen = () => {
             <TextInput
               style={styles.input}
               placeholder="Mật khẩu cũ"
+              placeholderTextColor="#999"
               secureTextEntry
+              textContentType="none"
+              autoCorrect={false}
               value={oldPassword}
               onChangeText={setOldPassword}
             />
@@ -216,6 +216,8 @@ const SettingScreen = () => {
               style={styles.input}
               placeholder="Mật khẩu mới"
               secureTextEntry
+              placeholderTextColor="#999"
+              textContentType="none"
               value={newPassword}
               onChangeText={setNewPassword}
             />
@@ -223,6 +225,8 @@ const SettingScreen = () => {
               style={styles.input}
               placeholder="Xác nhận mật khẩu mới"
               secureTextEntry
+              placeholderTextColor="#999"
+              textContentType="none"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
             />
@@ -255,7 +259,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: "#ccc",
+    backgroundColor: "#fff",
     justifyContent: "center",
     alignItems: "center",
     overflow: "hidden",

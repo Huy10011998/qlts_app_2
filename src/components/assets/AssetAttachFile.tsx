@@ -1,14 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, FlatList, Alert } from "react-native";
 import { useParams } from "../../hooks/useParams";
-import { Conditions } from "../../types";
-import { SqlOperator, TypeProperty } from "../../utils/enum";
+import { Conditions, FileItem } from "../../types";
+import { SqlOperator, TypeProperty, CategoryFiles } from "../../utils/enum";
 import { getListAttachFile } from "../../services";
 import IsLoading from "../ui/IconLoading";
 import ListCardAttachFile from "../list/ListCardAttachFile";
 
 export default function AssetListAttachFile() {
-  const [file, setFile] = useState<Record<string, any>[]>([]);
+  const [file, setFile] = useState<FileItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [skipSize, setSkipSize] = useState(0);
@@ -54,8 +54,8 @@ export default function AssetListAttachFile() {
           conditions,
           []
         );
-        const newItems: Record<string, any>[] = response?.data?.items || [];
-        const totalItems = response?.data?.totalCount || 0;
+        const newItems: FileItem[] = response?.data?.items || [];
+        const totalItems: number = response?.data?.totalCount || 0;
 
         if (isLoadMore) {
           setFile((prev) => [...prev, ...newItems]);
@@ -87,14 +87,40 @@ export default function AssetListAttachFile() {
     if (file.length < total && !isLoadingMore) fetchData(true);
   };
 
+  const groupedData = useMemo<Record<string, FileItem[]>>(() => {
+    return file.reduce((acc, item) => {
+      const key = item.categoryFile ?? "Khac"; // fallback nếu undefined
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(item);
+      return acc;
+    }, {} as Record<string, FileItem[]>);
+  }, [file]);
+
+  const categories = Object.keys(groupedData);
+
   if (isLoading) return <IsLoading />;
 
   return (
     <View style={styles.container}>
       <FlatList
-        data={file}
-        keyExtractor={(item) => String(item.id)}
-        renderItem={({ item }) => <ListCardAttachFile item={item} />}
+        data={categories}
+        keyExtractor={(cat) => cat}
+        renderItem={({ item: category }) => {
+          const categoryLabel =
+            (CategoryFiles as any as Record<string, { label: string }>)[
+              category
+            ]?.label || "Khác";
+
+          return (
+            <View style={styles.groupContainer}>
+              <Text style={styles.categoryText}>{categoryLabel}</Text>
+
+              {groupedData[category].map((fileItem) => (
+                <ListCardAttachFile key={fileItem.id} item={fileItem} />
+              ))}
+            </View>
+          );
+        }}
         contentContainerStyle={{ paddingBottom: 100 }}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
@@ -121,4 +147,26 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   stickyHeader: { backgroundColor: "#F3F4F6", paddingVertical: 10, zIndex: 10 },
+  groupContainer: {
+    marginHorizontal: 12,
+    marginTop: 12,
+    marginBottom: 16,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
+    paddingBottom: 8,
+  },
+  categoryText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#007AFF",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#E5E7EB",
+  },
 });

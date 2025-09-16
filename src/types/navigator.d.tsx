@@ -11,14 +11,14 @@ export type RootStackParamList = {
   AssetList: {
     nameClass: string;
     titleHeader: string;
-    idRoot: string;
-    propertyReference: string;
+    idRoot?: string;
+    propertyReference?: string;
   };
   AssetDetails: {
     id: string;
     field: any;
     nameClass: string;
-    titleHeader: string;
+    titleHeader?: string;
   };
   RelaterList: { name: string };
   AssetRelatedList: {
@@ -38,6 +38,12 @@ export type RootStackParamList = {
     id_previous: string;
     field: any;
     nameClass: string;
+  };
+  AssetRelatedDetails: {
+    id: string;
+    field: any;
+    nameClass: string;
+    titleHeader?: string;
   };
 };
 

@@ -75,3 +75,5 @@ export interface UserInfo {
   moTa?: string;
   avatarUrl?: string;
 }
+
+export type FileItem = Record<string, any>;

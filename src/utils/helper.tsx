@@ -111,3 +111,8 @@ export const getFileExtension = (fileName: string) => {
   const parts = fileName.split(".");
   return parts.length > 1 ? parts.pop()?.toLowerCase() : "";
 };
+
+export function capitalizeFirstLetter(str?: string): string {
+  if (!str) return "";
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}

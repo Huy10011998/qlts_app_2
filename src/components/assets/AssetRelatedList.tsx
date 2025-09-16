@@ -55,7 +55,7 @@ export default function AssetRelatedList() {
 
   const handlePress = async (item: Record<string, any>) => {
     try {
-      navigation.navigate("AssetDetails", {
+      navigation.navigate("AssetRelatedDetails", {
         id: String(item.id),
         field: JSON.stringify(fieldActive),
         nameClass: nameClass,
@@ -160,6 +160,7 @@ export default function AssetRelatedList() {
     <View style={{ flex: 1 }}>
       <TextInput
         placeholder="Tìm kiếm..."
+        placeholderTextColor="#999"
         value={searchText}
         onChangeText={(text) => setSearchText(normalizeText(text))}
         style={styles.searchInput}

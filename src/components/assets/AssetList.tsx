@@ -154,6 +154,7 @@ export default function AssetList() {
     <View style={{ flex: 1 }}>
       <TextInput
         placeholder="Tìm kiếm..."
+        placeholderTextColor="#999"
         value={searchText}
         onChangeText={(text) => setSearchText(normalizeText(text))}
         style={styles.searchInput}

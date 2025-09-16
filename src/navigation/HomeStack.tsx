@@ -10,6 +10,8 @@ import HeaderHome from "../components/header/HeaderHome";
 import AssetDetailsScreen from "../screens/Assets/AssetDetailsScreen";
 import AssetRelaterListScreen from "../screens/Assets/AssetRelatedListScreen";
 import AssetRelatedDeTailsHistoryScreen from "../screens/Assets/AssetRelatedDeTailsHistoryScreen";
+import AssetRelatedDetailsScreen from "../screens/Assets/AssetRelatedDetailsScreen";
+import { capitalizeFirstLetter } from "../utils/helper";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -39,7 +41,7 @@ export default function HomeStack() {
         }: {
           route: RouteProp<RootStackParamList, "AssetList">;
         }) => ({
-          title: "Danh sách " + route.params.titleHeader || "Danh sách tài sản",
+          title: capitalizeFirstLetter(route.params.titleHeader) || "Tài sản",
           ...HeaderDetails({ showBackButton: true }),
         })}
       />
@@ -51,7 +53,7 @@ export default function HomeStack() {
         }: {
           route: RouteProp<RootStackParamList, "AssetDetails">;
         }) => ({
-          title: route.params.titleHeader,
+          title: capitalizeFirstLetter(route.params.titleHeader) || "Chi tiết",
           ...HeaderDetails({ showBackButton: true }),
         })}
       />
@@ -63,7 +65,17 @@ export default function HomeStack() {
         }: {
           route: RouteProp<RootStackParamList, "AssetRelatedList">;
         }) => ({
-          title: route.params.titleHeader || "Danh sách linh kiện",
+          title: capitalizeFirstLetter(route.params.titleHeader) || "Linh kiện",
+          ...HeaderDetails({ showBackButton: true }),
+        })}
+      />
+      <Stack.Screen
+        name="AssetRelatedDetails"
+        component={AssetRelatedDetailsScreen}
+        options={({}: {
+          route: RouteProp<RootStackParamList, "AssetRelatedDetails">;
+        }) => ({
+          title: "Chi tiết",
           ...HeaderDetails({ showBackButton: true }),
         })}
       />

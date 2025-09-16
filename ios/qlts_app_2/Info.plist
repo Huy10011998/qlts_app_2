@@ -49,8 +49,10 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
-	<key>NSCameraUsageDescription</key>
+  <key>NSCameraUsageDescription</key>
   <string>Ứng dụng cần dùng camera để quét QR code</string>
+	<key>NSFaceIDUsageDescription</key>
+  <string>Ứng dụng cần sử dụng Face ID để đăng nhập nhanh.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>AntDesign.ttf</string>

@@ -196,6 +196,7 @@ export default function AssetScreen() {
       <TextInput
         ref={searchInputRef}
         placeholder="Tìm kiếm..."
+        placeholderTextColor="#999"
         value={search}
         onChangeText={setSearch}
         style={{
@@ -232,7 +233,7 @@ export default function AssetScreen() {
             />
           ) : null
         }
-        style={{ backgroundColor: "#fff" }}
+        style={{ backgroundColor: "#fff", marginBottom: 60 }}
       />
     </View>
   );

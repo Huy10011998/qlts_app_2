@@ -1,12 +1,11 @@
 import { StyleSheet, View } from "react-native";
-import AssetDetails from "../../components/assets/AssetDetails";
 import TabContent from "../../components/tabs/TabDetails";
-import BottomBarDetails from "../../components/bottom/BottomDetails";
+import AssetRelatedDetails from "../../components/assets/AssetRelatedDetails";
 
-export default function AssetDetailsScreen() {
+export default function AssetRelatedDetailsScreen() {
   return (
     <View style={styles.container}>
-      <AssetDetails>
+      <AssetRelatedDetails>
         {({
           activeTab,
           setActiveTab,
@@ -28,15 +27,9 @@ export default function AssetDetailsScreen() {
                 item={item}
               />
             </View>
-
-            <BottomBarDetails
-              activeTab={activeTab}
-              onTabPress={setActiveTab}
-              tabs={TAB_ITEMS ?? []}
-            />
           </>
         )}
-      </AssetDetails>
+      </AssetRelatedDetails>
     </View>
   );
 }

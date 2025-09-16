@@ -1,132 +1,106 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  Linking,
+  Alert,
+  Platform,
   StyleSheet,
   TouchableOpacity,
-  Vibration,
-  Alert,
-  Animated,
-  Dimensions,
 } from "react-native";
-import QRCodeScanner from "react-native-qrcode-scanner";
+import { check, request, PERMISSIONS, RESULTS } from "react-native-permissions";
 import { RNCamera } from "react-native-camera";
-
-const { width, height } = Dimensions.get("window");
-const SCAN_SIZE = 250;
+import { useNavigation } from "@react-navigation/native";
+import { Linking } from "react-native";
 
 export default function QrScannerScreen() {
+  const [hasPermission, setHasPermission] = useState(false);
   const [scanned, setScanned] = useState(false);
+  const navigation = useNavigation();
 
-  const onSuccess = async (e: any) => {
-    if (scanned) return; // tránh quét nhiều lần
-    setScanned(true);
-    Vibration.vibrate(200);
-
-    if (e.data.startsWith("http")) {
-      const supported = await Linking.canOpenURL(e.data);
-      if (supported) {
-        Linking.openURL(e.data);
+  // ✅ Xin quyền camera khi vào màn hình
+  useEffect(() => {
+    const requestCamera = async () => {
+      if (Platform.OS === "ios") {
+        const result = await request(PERMISSIONS.IOS.CAMERA);
+        console.log("Camera permission result:", result);
+        if (result === RESULTS.GRANTED) {
+          setHasPermission(true);
+        } else {
+          Alert.alert(
+            "Thông báo",
+            "Bạn cần cấp quyền camera trong Cài đặt để sử dụng chức năng quét QR."
+          );
+        }
       } else {
-        Alert.alert("Thông báo", `Không mở được link: ${e.data}`);
+        const result = await request(PERMISSIONS.ANDROID.CAMERA);
+        if (result === RESULTS.GRANTED) {
+          setHasPermission(true);
+        } else {
+          Alert.alert(
+            "Thông báo",
+            "Bạn cần cấp quyền camera trong Cài đặt để sử dụng chức năng quét QR."
+          );
+        }
       }
-    } else {
-      Alert.alert("QR Data", e.data);
-    }
+    };
+
+    requestCamera();
+  }, []);
+
+  // ✅ Xử lý dữ liệu QR code
+  const handleBarCodeScanned = async ({ data }: { data: string }) => {
+    // if (scanned) return; // tránh scan liên tục
+    // setScanned(true);
+    // try {
+    //   if (data.startsWith("/profile/")) {
+    //     const id = data.replace("/profile/", "");
+    //     navigation.navigate("Profile" as never, { id } as never);
+    //   } else if (data.startsWith("/ticket/")) {
+    //     const id = data.replace("/ticket/", "");
+    //     navigation.navigate("TicketDetail" as never, { id } as never);
+    //   } else if (data.startsWith("/asset/")) {
+    //     const id = data.replace("/asset/", "");
+    //     navigation.navigate("AssetDetail" as never, { id } as never);
+    //   } else if (data.startsWith("http")) {
+    //     const supported = await Linking.canOpenURL(data);
+    //     supported
+    //       ? Linking.openURL(data)
+    //       : Alert.alert("Thông báo", `Không mở được link: ${data}`);
+    //   } else {
+    //     Alert.alert("QR Data", data);
+    //   }
+    // } catch (err) {
+    //   console.error("QR Scan error:", err);
+    // }
+    // Cho phép quét lại sau 2s
+    // setTimeout(() => setScanned(false), 2000);
   };
 
-  return (
-    <View style={styles.container}>
-      <QRCodeScanner
-        onRead={onSuccess}
-        flashMode={RNCamera.Constants.FlashMode.auto}
-        showMarker={true}
-        reactivate={false}
-        customMarker={
-          <CustomMarker scanned={scanned} onReset={() => setScanned(false)} />
-        }
-        topContent={<Text style={styles.centerText}>Quét mã QR của bạn</Text>}
-      />
-    </View>
-  );
-}
-
-function CustomMarker({
-  scanned,
-  onReset,
-}: {
-  scanned: boolean;
-  onReset: () => void;
-}) {
-  const animatedValue = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(animatedValue, {
-          toValue: 1,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(animatedValue, {
-          toValue: 0,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  }, [animatedValue]);
-
-  const translateY = animatedValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, SCAN_SIZE],
-  });
+  if (!hasPermission) {
+    return (
+      <View style={styles.center}>
+        <Text>Đang chờ cấp quyền camera...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1 }}>
-      {/* Overlay tối xung quanh */}
-      <View
-        style={[
-          styles.overlay,
-          { top: 0, height: (height - SCAN_SIZE) / 2, width },
-        ]}
-      />
-      <View style={{ flexDirection: "row" }}>
-        <View
-          style={[
-            styles.overlay,
-            { width: (width - SCAN_SIZE) / 2, height: SCAN_SIZE },
-          ]}
-        />
-        <View style={styles.scanArea}>
-          {/* 4 góc xanh */}
-          <View style={styles.borderTopLeft} />
-          <View style={styles.borderTopRight} />
-          <View style={styles.borderBottomLeft} />
-          <View style={styles.borderBottomRight} />
-          {/* Tia laser */}
-          <Animated.View
-            style={[styles.laser, { transform: [{ translateY }] }]}
-          />
+      <RNCamera
+        style={styles.camera}
+        onBarCodeRead={handleBarCodeScanned}
+        captureAudio={false} // bỏ mic cho nhẹ app
+      >
+        <View style={styles.overlay}>
+          <Text style={styles.overlayText}>Quét QR Code</Text>
         </View>
-        <View
-          style={[
-            styles.overlay,
-            { width: (width - SCAN_SIZE) / 2, height: SCAN_SIZE },
-          ]}
-        />
-      </View>
-      <View
-        style={[
-          styles.overlay,
-          { bottom: 0, height: (height - SCAN_SIZE) / 2, width },
-        ]}
-      />
+      </RNCamera>
 
-      {/* Nút quét lại */}
       {scanned && (
-        <TouchableOpacity style={styles.button} onPress={onReset}>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => setScanned(false)}
+        >
           <Text style={styles.buttonText}>Quét lại</Text>
         </TouchableOpacity>
       )}
@@ -135,78 +109,39 @@ function CustomMarker({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#000" },
-  centerText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginTop: 20,
+  camera: {
+    flex: 1,
+  },
+  overlay: {
+    position: "absolute",
+    top: 50,
+    alignSelf: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+    padding: 10,
+    borderRadius: 8,
+  },
+  overlayText: {
     color: "#fff",
-    textAlign: "center",
+    fontSize: 16,
+    fontWeight: "600",
   },
   button: {
     position: "absolute",
-    bottom: 80,
+    bottom: 40,
     alignSelf: "center",
-    padding: 12,
-    backgroundColor: "#FF3333",
-    borderRadius: 10,
-    alignItems: "center",
+    backgroundColor: "#007AFF",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
   },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
-  overlay: {
-    backgroundColor: "rgba(0,0,0,0.6)",
+  buttonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 16,
   },
-  scanArea: {
-    width: SCAN_SIZE,
-    height: SCAN_SIZE,
+  center: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
-  },
-  borderTopLeft: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: 40,
-    height: 40,
-    borderTopWidth: 4,
-    borderLeftWidth: 4,
-    borderColor: "#00FF00",
-  },
-  borderTopRight: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    width: 40,
-    height: 40,
-    borderTopWidth: 4,
-    borderRightWidth: 4,
-    borderColor: "#00FF00",
-  },
-  borderBottomLeft: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    width: 40,
-    height: 40,
-    borderBottomWidth: 4,
-    borderLeftWidth: 4,
-    borderColor: "#00FF00",
-  },
-  borderBottomRight: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    width: 40,
-    height: 40,
-    borderBottomWidth: 4,
-    borderRightWidth: 4,
-    borderColor: "#00FF00",
-  },
-  laser: {
-    position: "absolute",
-    width: "100%",
-    height: 2,
-    backgroundColor: "red",
-    opacity: 0.8,
   },
 });
