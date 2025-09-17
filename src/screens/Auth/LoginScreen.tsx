@@ -17,6 +17,7 @@ import { ThemedView } from "../../components/theme/ThemedView";
 import { ThemedTextInput } from "../../components/theme/ThemedTextInput";
 import { ThemedText } from "../../components/theme/ThemedText";
 import IsLoading from "../../components/ui/IconLoading";
+import { useThemeColor } from "../../hooks/useThemeColor";
 
 export default function LoginScreen() {
   const navigation = useNavigation<any>();
@@ -30,6 +31,8 @@ export default function LoginScreen() {
 
   const hasTriedFaceID = useRef(false);
   const rnBiometrics = new ReactNativeBiometrics();
+
+  const textColor = useThemeColor({}, "text");
 
   useEffect(() => {
     setIsLoginDisabled(!(userName.trim() && userPassword.trim()));
@@ -198,7 +201,7 @@ export default function LoginScreen() {
                     ? require("../../assets/images/iconEye-hide.png")
                     : require("../../assets/images/iconEye-view.png")
                 }
-                style={styles.iconEye}
+                style={[styles.iconEye, { tintColor: textColor }]}
               />
             </TouchableOpacity>
           </ThemedView>

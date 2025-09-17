@@ -1,5 +1,11 @@
 import React from "react";
-import { View, Image, TouchableOpacity, StyleSheet } from "react-native";
+import {
+  View,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+  Linking,
+} from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { TabsScreenNavigationProp } from "../../types";
 import Ionicons from "react-native-vector-icons/Ionicons";
@@ -7,13 +13,20 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 export default function HeaderHome() {
   const navigation = useNavigation<TabsScreenNavigationProp>();
 
+  // Hàm mở website
+  const handleOpenWebsite = () => {
+    Linking.openURL("https://cholimexfood.com.vn");
+  };
+
   return (
     <View style={styles.headerContainer}>
-      <Image
-        source={require("../../assets/images/logo-cholimex.jpg")}
-        style={styles.logo}
-        resizeMode="contain"
-      />
+      <TouchableOpacity onPress={handleOpenWebsite}>
+        <Image
+          source={require("../../assets/images/logo-cholimex.jpg")}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+      </TouchableOpacity>
       <View style={styles.headerIcons}>
         <TouchableOpacity onPress={() => navigation.navigate("Tabs")}>
           <Ionicons name="home-outline" size={24} color="#fff" />
