@@ -25,6 +25,7 @@ import {
   splitNameClass,
 } from "../../utils/helper";
 import { API_ENDPOINTS } from "../../config";
+import { useDebounce } from "../../hooks/useDebounce";
 
 if (
   Platform.OS === "android" &&
@@ -106,10 +107,14 @@ const DropdownItem: React.FC<DropdownProps> = ({
 
 export default function AssetScreen() {
   const [data, setData] = useState<Item[]>([]);
-  const [isFetching, setIsFetching] = useState(true); // chỉ loading fetch
+  const [isFetching, setIsFetching] = useState(true);
   const [search, setSearch] = useState("");
   const [expandedIds, setExpandedIds] = useState<(string | number)[]>([]);
   const searchInputRef = useRef<TextInput>(null);
+
+  // debounce search
+  const debouncedSearch = useDebounce(search, 400);
+  const [isSearching, setIsSearching] = useState(false);
 
   const buildTree = (items: Item[]) => {
     const map: Record<string | number, Item> = {};
@@ -128,12 +133,12 @@ export default function AssetScreen() {
   };
 
   const filteredData = useMemo(() => {
-    if (!search.trim()) {
+    if (!debouncedSearch.trim()) {
       setExpandedIds([]);
       return data;
     }
 
-    const keyword = removeVietnameseTones(search);
+    const keyword = removeVietnameseTones(debouncedSearch);
     const expandedSet = new Set<string | number>();
 
     const filterTree = (nodes: Item[]): Item[] => {
@@ -155,7 +160,7 @@ export default function AssetScreen() {
     const result = filterTree(data);
     setExpandedIds(Array.from(expandedSet));
     return result;
-  }, [search, data]);
+  }, [debouncedSearch, data]);
 
   const handleToggle = (id: string | number) => {
     setExpandedIds((prev) =>
@@ -191,24 +196,48 @@ export default function AssetScreen() {
     fetchData();
   }, []);
 
+  // show loading nhỏ trong search khi gõ
+  useEffect(() => {
+    if (search !== debouncedSearch) {
+      setIsSearching(true);
+    } else {
+      setIsSearching(false);
+    }
+  }, [search, debouncedSearch]);
+
   return (
     <View style={{ flex: 1 }}>
-      <TextInput
-        ref={searchInputRef}
-        placeholder="Tìm kiếm..."
-        placeholderTextColor="#999"
-        value={search}
-        onChangeText={setSearch}
+      <View
         style={{
+          flexDirection: "row",
+          alignItems: "center",
+          margin: 12,
           borderWidth: 1,
           borderColor: "#ccc",
-          backgroundColor: "#fff",
           borderRadius: 8,
+          backgroundColor: "#fff",
           paddingHorizontal: 12,
-          paddingVertical: 12,
-          margin: 12,
         }}
-      />
+      >
+        <TextInput
+          ref={searchInputRef}
+          placeholder="Tìm kiếm..."
+          placeholderTextColor="#999"
+          value={search}
+          onChangeText={setSearch}
+          style={{
+            flex: 1,
+            paddingVertical: 10,
+          }}
+        />
+        {isSearching && (
+          <ActivityIndicator
+            size="small"
+            color="#666"
+            style={{ marginLeft: 8 }}
+          />
+        )}
+      </View>
 
       <FlatList
         data={filteredData}

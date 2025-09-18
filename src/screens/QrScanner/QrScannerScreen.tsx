@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, Alert, Platform, StyleSheet } from "react-native";
 import { request, PERMISSIONS, RESULTS } from "react-native-permissions";
-import QRCodeScanner from "react-native-qrcode-scanner";
-import { useNavigation } from "@react-navigation/native";
 import { Camera, useCameraDevice } from "react-native-vision-camera";
 
 export default function QrScannerScreen() {

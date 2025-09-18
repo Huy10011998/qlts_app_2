@@ -9,6 +9,7 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  ActivityIndicator,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import {
@@ -22,6 +23,7 @@ import ListCardAsset from "../../components/list/ListCardAsset";
 import IsLoading from "../../components/ui/IconLoading";
 import { normalizeText } from "../../utils/helper";
 import { SqlOperator, TypeProperty } from "../../utils/enum";
+import { useDebounce } from "../../hooks/useDebounce";
 
 if (
   Platform.OS === "android" &&
@@ -37,9 +39,14 @@ export default function AssetRelatedList() {
   const { nameClass, idRoot, propertyReference } = route.params;
 
   if (!nameClass && idRoot && propertyReference) {
-    Alert.alert("Lỗi", "Thiếu nameClass hoặc idRoot hoặc  trong params");
+    Alert.alert(
+      "Lỗi",
+      "Thiếu nameClass hoặc idRoot hoặc propertyReference trong params"
+    );
     return null;
   }
+
+  // Điều kiện filter liên kết
   const conditions = useMemo(() => {
     return propertyReference && idRoot
       ? [
@@ -70,19 +77,26 @@ export default function AssetRelatedList() {
   const [fieldActive, setFieldActive] = useState<Field[]>([]);
   const [fieldShowMobile, setFieldShowMobile] = useState<Field[]>([]);
   const [propertyClass, setPropertyClass] = useState<PropertyResponse>();
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // load lần đầu
+  const [isLoadingMore, setIsLoadingMore] = useState(false); // load thêm
+  const [isSearching, setIsSearching] = useState(false); // loading khi search
   const [skipSize, setSkipSize] = useState(0);
   const [total, setTotal] = useState(0);
   const [searchText, setSearchText] = useState("");
+  const debouncedSearch = useDebounce(searchText, 600); // debounce 600ms
   const pageSize = 20;
 
   const fetchData = useCallback(
     async (isLoadMore = false) => {
       if (!nameClass) return;
 
-      if (isLoadMore) setIsLoadingMore(true);
-      else setIsLoading(true);
+      if (isLoadMore) {
+        setIsLoadingMore(true);
+      } else if (debouncedSearch) {
+        setIsSearching(true);
+      } else {
+        setIsLoading(true);
+      }
 
       try {
         if (!isLoadMore && fieldActive.length === 0) {
@@ -106,7 +120,7 @@ export default function AssetRelatedList() {
           "",
           pageSize,
           currentSkip,
-          searchText,
+          debouncedSearch,
           fieldActive,
           conditions,
           []
@@ -133,20 +147,17 @@ export default function AssetRelatedList() {
       } finally {
         setIsLoading(false);
         setIsLoadingMore(false);
+        setIsSearching(false);
       }
     },
-    [nameClass, fieldActive, propertyClass, skipSize, searchText]
+    [nameClass, fieldActive, propertyClass, skipSize, debouncedSearch]
   );
 
+  // fetch data khi nameClass hoặc debouncedSearch thay đổi
   useEffect(() => {
     if (!nameClass) return;
-
-    const timeout = setTimeout(() => {
-      fetchData(false);
-    }, 500);
-
-    return () => clearTimeout(timeout);
-  }, [nameClass, searchText]);
+    fetchData(false);
+  }, [nameClass, debouncedSearch]);
 
   const handleLoadMore = () => {
     if (linhkien.length < total && !isLoadingMore) {
@@ -154,17 +165,29 @@ export default function AssetRelatedList() {
     }
   };
 
-  if (isLoading) return <IsLoading />;
+  if (isLoading && !isSearching) return <IsLoading />;
 
   return (
     <View style={{ flex: 1 }}>
-      <TextInput
-        placeholder="Tìm kiếm..."
-        placeholderTextColor="#999"
-        value={searchText}
-        onChangeText={(text) => setSearchText(normalizeText(text))}
-        style={styles.searchInput}
-      />
+      {/* Search Box */}
+      <View style={styles.searchWrapper}>
+        <TextInput
+          placeholder="Tìm kiếm..."
+          placeholderTextColor="#999"
+          value={searchText}
+          onChangeText={(text) => setSearchText(normalizeText(text))}
+          style={styles.searchInput}
+        />
+        {isSearching && (
+          <ActivityIndicator
+            size="small"
+            color="#FF3333"
+            style={styles.searchLoader}
+          />
+        )}
+      </View>
+
+      {/* List */}
       <FlatList
         data={linhkien}
         keyExtractor={(item) => String(item.id)}
@@ -194,14 +217,27 @@ export default function AssetRelatedList() {
 }
 
 const styles = StyleSheet.create({
-  searchInput: {
+  searchWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 12,
+    marginTop: 12,
+    marginBottom: 4,
     borderWidth: 1,
     borderColor: "#ccc",
-    backgroundColor: "#fff",
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    margin: 12,
+    backgroundColor: "#fff",
+    paddingHorizontal: 10,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    fontSize: 14,
+    color: "#333",
+  },
+  searchLoader: {
+    marginLeft: 8,
   },
   header: {
     textAlign: "center",

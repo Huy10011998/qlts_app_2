@@ -9,6 +9,7 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  ActivityIndicator,
 } from "react-native";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import {
@@ -21,6 +22,7 @@ import { getFieldActive, getList, getPropertyClass } from "../../services";
 import ListCardAsset from "../../components/list/ListCardAsset";
 import IsLoading from "../../components/ui/IconLoading";
 import { normalizeText } from "../../utils/helper";
+import { useDebounce } from "../../hooks/useDebounce";
 
 if (
   Platform.OS === "android" &&
@@ -29,7 +31,6 @@ if (
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-// Route type
 type AssetListScreenRouteProp = RouteProp<RootStackParamList, "AssetList">;
 
 export default function AssetList() {
@@ -45,9 +46,11 @@ export default function AssetList() {
   const [propertyClass, setPropertyClass] = useState<PropertyResponse>();
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const [skipSize, setSkipSize] = useState(0);
   const [total, setTotal] = useState(0);
   const [searchText, setSearchText] = useState("");
+  const debouncedSearch = useDebounce(searchText, 600);
   const pageSize = 20;
 
   // Fetch data function
@@ -55,11 +58,15 @@ export default function AssetList() {
     async (isLoadMore = false) => {
       if (!nameClass) return;
 
-      if (isLoadMore) setIsLoadingMore(true);
-      else setIsLoading(true);
+      if (isLoadMore) {
+        setIsLoadingMore(true);
+      } else {
+        if (debouncedSearch)
+          setIsSearching(true); // show spinner trong ô search
+        else setIsLoading(true); // lần đầu load trang
+      }
 
       try {
-        // Lấy fieldActive và fieldShowMobile lần đầu
         if (!isLoadMore && fieldActive.length === 0) {
           const responseFieldActive = await getFieldActive(nameClass);
           const activeFields = responseFieldActive?.data || [];
@@ -69,7 +76,6 @@ export default function AssetList() {
           );
         }
 
-        // Lấy propertyClass lần đầu
         if (!isLoadMore && !propertyClass) {
           const responsePropertyClass = await getPropertyClass(nameClass);
           setPropertyClass(responsePropertyClass?.data);
@@ -82,7 +88,7 @@ export default function AssetList() {
           "",
           pageSize,
           currentSkip,
-          searchText,
+          debouncedSearch,
           fieldActive,
           [],
           []
@@ -109,23 +115,18 @@ export default function AssetList() {
       } finally {
         setIsLoading(false);
         setIsLoadingMore(false);
+        setIsSearching(false);
       }
     },
-    [nameClass, fieldActive, propertyClass, skipSize, searchText]
+    [nameClass, fieldActive, propertyClass, skipSize, debouncedSearch]
   );
 
-  // Debounce search + initial fetch
+  // Fetch khi search thay đổi
   useEffect(() => {
     if (!nameClass) return;
+    fetchData(false);
+  }, [nameClass, debouncedSearch]);
 
-    const timeout = setTimeout(() => {
-      fetchData(false);
-    }, 500); // debounce 500ms
-
-    return () => clearTimeout(timeout);
-  }, [nameClass, searchText]);
-
-  // Load more
   const handleLoadMore = () => {
     if (taisan.length < total && !isLoadingMore) {
       fetchData(true);
@@ -143,22 +144,30 @@ export default function AssetList() {
     } catch (error) {
       console.error(error);
       Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  if (isLoading) return <IsLoading />;
+  if (isLoading && !debouncedSearch) return <IsLoading />;
 
   return (
     <View style={{ flex: 1 }}>
-      <TextInput
-        placeholder="Tìm kiếm..."
-        placeholderTextColor="#999"
-        value={searchText}
-        onChangeText={(text) => setSearchText(normalizeText(text))}
-        style={styles.searchInput}
-      />
+      <View style={styles.searchWrapper}>
+        <TextInput
+          placeholder="Tìm kiếm..."
+          placeholderTextColor="#999"
+          value={searchText}
+          onChangeText={(text) => setSearchText(normalizeText(text))}
+          style={styles.searchInput}
+        />
+        {isSearching && (
+          <ActivityIndicator
+            size="small"
+            color="#666"
+            style={styles.searchSpinner}
+          />
+        )}
+      </View>
+
       <FlatList
         data={taisan}
         keyExtractor={(item) => String(item.id)}
@@ -170,7 +179,7 @@ export default function AssetList() {
             onPress={() => handlePress(item)}
           />
         )}
-        contentContainerStyle={{ paddingBottom: 100 }} // tránh FAB che
+        contentContainerStyle={{ paddingBottom: 100 }}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
         ListFooterComponent={isLoadingMore ? <IsLoading /> : null}
@@ -188,6 +197,10 @@ export default function AssetList() {
 }
 
 const styles = StyleSheet.create({
+  searchWrapper: {
+    position: "relative",
+    margin: 12,
+  },
   searchInput: {
     borderWidth: 1,
     borderColor: "#ccc",
@@ -195,7 +208,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    margin: 12,
+    paddingRight: 36, // chừa chỗ cho spinner
+  },
+  searchSpinner: {
+    position: "absolute",
+    right: 20,
+    top: "50%",
+    marginTop: -10,
   },
   header: {
     textAlign: "center",

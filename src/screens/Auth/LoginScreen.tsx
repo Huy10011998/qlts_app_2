@@ -4,8 +4,11 @@ import {
   Image,
   Keyboard,
   StyleSheet,
+  Text,
+  TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
+  View,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { useNavigation } from "@react-navigation/native";
@@ -13,11 +16,7 @@ import ReactNativeBiometrics from "react-native-biometrics";
 import * as Keychain from "react-native-keychain";
 import { useAuth } from "../../context/AuthContext";
 import { loginApi } from "../../services/auth/authApi";
-import { ThemedView } from "../../components/theme/ThemedView";
-import { ThemedTextInput } from "../../components/theme/ThemedTextInput";
-import { ThemedText } from "../../components/theme/ThemedText";
 import IsLoading from "../../components/ui/IconLoading";
-import { useThemeColor } from "../../hooks/useThemeColor";
 
 export default function LoginScreen() {
   const navigation = useNavigation<any>();
@@ -31,8 +30,6 @@ export default function LoginScreen() {
 
   const hasTriedFaceID = useRef(false);
   const rnBiometrics = new ReactNativeBiometrics();
-
-  const textColor = useThemeColor({}, "text");
 
   useEffect(() => {
     setIsLoginDisabled(!(userName.trim() && userPassword.trim()));
@@ -117,7 +114,7 @@ export default function LoginScreen() {
       if (__DEV__) {
         console.error("Login error:", error);
       }
-      Alert.alert("Đăng nhập thất bại", "Sai tài khoản hoặc mật khẩu.");
+      Alert.alert("Đăng nhập thất bại", error as any);
       setUserPassword("");
     } finally {
       setIsLoading(false);
@@ -171,23 +168,32 @@ export default function LoginScreen() {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <KeyboardAwareScrollView contentContainerStyle={{ flexGrow: 1 }}>
-        <ThemedView style={[styles.contaiContent, { flex: 0.5 }]}>
+        <View style={[styles.contaiContent, { flex: 0.5 }]}>
           <Image
             source={require("../../assets/images/logo-cholimex.jpg")}
             style={styles.logoCholimex}
           />
-        </ThemedView>
+        </View>
 
-        <ThemedView style={[styles.contaiInput, { flex: 0.5 }]}>
-          <ThemedTextInput
-            placeholder="Tài khoản"
-            value={userName}
-            onChangeText={setUserName}
-          />
-          <ThemedView style={styles.contaiInputPW}>
-            <ThemedTextInput
+        <View style={[styles.contaiInput, { flex: 0.5 }]}>
+          {/* Username */}
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Tài khoản"
+              placeholderTextColor="#888"
+              value={userName}
+              onChangeText={setUserName}
+            />
+          </View>
+
+          {/* Password */}
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.textInput}
               secureTextEntry={!isPasswordVisible}
               placeholder="Mật khẩu"
+              placeholderTextColor="#888"
               value={userPassword}
               onChangeText={setUserPassword}
             />
@@ -201,18 +207,19 @@ export default function LoginScreen() {
                     ? require("../../assets/images/iconEye-hide.png")
                     : require("../../assets/images/iconEye-view.png")
                 }
-                style={[styles.iconEye, { tintColor: textColor }]}
+                style={[styles.iconEye]}
               />
             </TouchableOpacity>
-          </ThemedView>
+          </View>
 
-          <ThemedView style={styles.rowContainer}>
+          {/* Button + FaceID */}
+          <View style={styles.rowContainer}>
             <TouchableOpacity
               style={[styles.btnContai, isLoginDisabled && styles.disabledBtn]}
               onPress={handlePressLogin}
               disabled={isLoginDisabled}
             >
-              <ThemedText type="default">Đăng nhập</ThemedText>
+              <Text style={styles.btnText}>Đăng nhập</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.iconFaceID}
@@ -228,8 +235,8 @@ export default function LoginScreen() {
                 />
               )}
             </TouchableOpacity>
-          </ThemedView>
-        </ThemedView>
+          </View>
+        </View>
       </KeyboardAwareScrollView>
     </TouchableWithoutFeedback>
   );
@@ -241,55 +248,97 @@ const styles = StyleSheet.create({
     alignItems: "center",
     width: "100%",
   },
-  contaiInput: {
-    width: "100%",
-    padding: 16,
-  },
+
   logoCholimex: {
     resizeMode: "contain",
     width: 300,
     height: 150,
   },
-  contaiInputPW: {
+
+  contaiInput: {
+    width: "100%",
+    paddingHorizontal: 20,
+  },
+
+  inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: 20,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#eee",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    marginBottom: 16,
+    height: 50,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
   },
+
+  textInput: {
+    flex: 1,
+    fontSize: 15,
+    color: "#333",
+  },
+
   iconEyeContainer: {
-    position: "absolute",
-    right: 10,
+    padding: 6,
   },
+
   iconEye: {
-    width: 25,
-    height: 25,
+    width: 22,
+    height: 22,
   },
+
   btnContai: {
-    borderRadius: 8,
-    width: "80%",
-    height: 60,
-    padding: 20,
+    flex: 1,
+    borderRadius: 12,
+    height: 55,
     backgroundColor: "#FF3333",
     justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 6,
+    elevation: 3,
+    marginRight: 12,
   },
+
+  btnText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+
   disabledBtn: {
-    opacity: 0.6,
-    backgroundColor: "#cccccc",
+    backgroundColor: "#ccc",
   },
+
   iconFaceID: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 55,
+    height: 55,
+    borderRadius: 28,
+    backgroundColor: "#f5f5f5",
     justifyContent: "center",
     alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
   },
+
   faceIDIcon: {
-    width: 50,
-    height: 50,
+    width: 34,
+    height: 34,
   },
+
   rowContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 30,
+    marginTop: 24,
   },
 });
