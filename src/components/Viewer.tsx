@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Modal,
-  ActivityIndicator,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -11,10 +10,12 @@ import {
   Dimensions,
   Alert,
   Platform,
+  Animated,
 } from "react-native";
 import { WebView } from "react-native-webview";
 import { getPreviewAttachFile } from "../services";
 import { ViewerProps } from "../types";
+import IsLoading from "./ui/IconLoading";
 
 export default function FileViewer({ visible, onClose, params }: ViewerProps) {
   const [fileData, setFileData] = useState<string | null>(null);
@@ -24,19 +25,25 @@ export default function FileViewer({ visible, onClose, params }: ViewerProps) {
 
   const windowHeight = Dimensions.get("window").height;
 
+  // animation opacity
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
-    if (visible && params) fetchFile();
-    else {
+    if (visible && params) {
+      fetchFile();
+    } else {
       setFileData(null);
       setFileType(null);
       setUseUrlFallback(false);
       setLoading(false);
+      fadeAnim.setValue(0);
     }
   }, [visible, params]);
 
   const fetchFile = async () => {
     try {
       setLoading(true);
+      fadeIn();
       const { name, path, nameClass } = params;
       const ext = name.split(".").pop()?.toLowerCase() || "pdf";
       setFileType(ext);
@@ -48,14 +55,29 @@ export default function FileViewer({ visible, onClose, params }: ViewerProps) {
       Alert.alert("Lỗi", "Không thể tải file. Sử dụng fallback URL cho PDF.");
       setUseUrlFallback(true);
     } finally {
-      setLoading(false);
+      fadeOut();
     }
+  };
+
+  const fadeIn = () => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const fadeOut = () => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => setLoading(false));
   };
 
   const renderFile = () => {
     if (!fileType || (!fileData && !useUrlFallback)) return null;
 
-    // Hiển thị ảnh
     if (["png", "jpg", "jpeg"].includes(fileType)) {
       const uri = fileData
         ? `data:image/${fileType};base64,${fileData}`
@@ -86,7 +108,6 @@ export default function FileViewer({ visible, onClose, params }: ViewerProps) {
       );
     }
 
-    // Hiển thị PDF
     if (fileType === "pdf") {
       if (useUrlFallback) {
         const pdfUrl = `${params.nameClass}/preview-attach-file?name=${params.name}`;
@@ -166,12 +187,16 @@ export default function FileViewer({ visible, onClose, params }: ViewerProps) {
           </TouchableOpacity>
         </View>
 
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#FF3333" />
-          </View>
-        ) : (
-          renderFile()
+        {renderFile()}
+
+        {/* overlay loading */}
+        {loading && (
+          <Animated.View
+            style={[styles.loadingOverlay, { opacity: fadeAnim }]}
+            pointerEvents="none"
+          >
+            <IsLoading />
+          </Animated.View>
         )}
       </View>
     </Modal>
@@ -192,9 +217,14 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
-    flexShrink: 1, // co nhỏ khi cần
+    flexShrink: 1,
   },
   closeButton: { padding: 6, borderRadius: 6 },
   closeText: { color: "#fff", fontWeight: "bold", fontSize: 15 },
-  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.6)",
+  },
 });

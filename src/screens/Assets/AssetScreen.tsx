@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { useNavigation } from "@react-navigation/native";
 import {
   AssetListScreenNavigationProp,
@@ -50,10 +51,9 @@ const DropdownItem: React.FC<DropdownProps> = ({
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       onToggle(item.id);
     } else if (item.contentName_Mobile) {
-      const { key, label } = splitNameClass(item.contentName_Mobile);
       navigation.navigate("AssetList", {
-        nameClass: key,
-        titleHeader: label,
+        nameClass: item.contentName_Mobile,
+        titleHeader: item.label,
       });
     }
   };
@@ -77,7 +77,7 @@ const DropdownItem: React.FC<DropdownProps> = ({
         }}
       >
         {item.contentName_Mobile ? (
-          <Ionicons name="pin" size={18} color="red" />
+          <MaterialIcons name="book" size={18} color="red" />
         ) : expanded ? (
           <Ionicons name="folder-open" size={18} color="red" />
         ) : (
