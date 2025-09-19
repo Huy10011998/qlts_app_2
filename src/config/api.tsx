@@ -11,4 +11,5 @@ export const API_ENDPOINTS = {
   GET_FIELD_ACTIVE: `${BASE_URL}/Common/get-fields-active`,
   GET_CLASS_BY_NAME: `${BASE_URL}/Common/get-class-by-name`,
   GET_CLASS_REFERENCE: `${BASE_URL}/Common/get-class-reference`,
+  PREVIEW_ATTACH_PROPERTY: `${BASE_URL}/Common/preview-attach-property`,
 };

@@ -133,7 +133,7 @@ export interface DetailsProps {
     collapsedGroups: Record<string, boolean>;
     toggleGroup: (groupName: string) => void;
     item: any;
-    getFieldValue: typeof getFieldValue;
+    getFieldValue: any;
     TAB_ITEMS?: typeof TAB_ITEMS;
   }) => React.ReactNode;
 }

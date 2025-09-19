@@ -2,8 +2,9 @@ import md5 from "react-native-md5";
 import api from "../context/AuthContext";
 import { Field } from "../types";
 import { TypeProperty } from "./enum";
+import React from "react";
 
-// Bỏ dấu tiếng Việt
+/* -------------------- Bỏ dấu tiếng Việt -------------------- */
 export const removeVietnameseTones = (str: string): string => {
   return str
     .normalize("NFD")
@@ -13,27 +14,27 @@ export const removeVietnameseTones = (str: string): string => {
     .toLowerCase();
 };
 
-// ✅ Hash MD5 bằng react-native-quick-crypto
+/* -------------------- Hash MD5 -------------------- */
 export function md5Hash(input: string): string {
   return md5.hex_md5(input);
 }
 
-// Chuẩn hóa text cơ bản
+/* -------------------- Chuẩn hóa text -------------------- */
 export const normalizeText = (text: string) =>
   text
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
 
-// Format key property (camelCase chữ cái đầu)
+/* -------------------- Format key property -------------------- */
 export const formatKeyProperty = (key: string) =>
   key.charAt(0).toLowerCase() + key.slice(1);
 
-// Lấy giá trị từ Field
+/* -------------------- Lấy giá trị từ Field -------------------- */
 export const getFieldValue = (
   item: Record<string, any>,
   field: Field
-): string => {
+): React.ReactNode => {
   if (!item || !field) return "--";
 
   const key =
@@ -41,10 +42,67 @@ export const getFieldValue = (
       ? `${field.name}_MoTa`
       : field.name;
 
-  return String(item[formatKeyProperty(key)] ?? "--");
+  const rawValue = item[formatKeyProperty(key)];
+  if (rawValue == null) return "--";
+
+  switch (field.typeProperty) {
+    case TypeProperty.Date: {
+      const date = new Date(rawValue);
+      if (isNaN(date.getTime())) return "--";
+      const day = String(date.getDate()).padStart(2, "0");
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`; // dd/MM/yyyy
+    }
+
+    case TypeProperty.Bool:
+      return rawValue === true ? "✅" : rawValue === false ? "❌" : "--";
+
+    case TypeProperty.Decimal: {
+      const num = Number(rawValue);
+      if (isNaN(num)) return "--";
+      const formatter = new Intl.NumberFormat("vi-VN", {
+        useGrouping: !field.notShowSplit,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 3,
+      });
+      return formatter.format(num);
+    }
+
+    case TypeProperty.Int: {
+      const num = Number(rawValue);
+      if (isNaN(num)) return "--";
+      const formatter = new Intl.NumberFormat("vi-VN", {
+        useGrouping: !field.notShowSplit,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      });
+      return formatter.format(num);
+    }
+
+    case TypeProperty.Reference:
+      return String(rawValue);
+
+    case TypeProperty.Image: {
+      const uri = String(rawValue);
+      if (!uri) return "--";
+
+      return uri;
+    }
+
+    case TypeProperty.Link: {
+      const link = String(rawValue);
+      if (!link) return "--";
+
+      return link;
+    }
+
+    default:
+      return String(rawValue);
+  }
 };
 
-// Gọi API chung
+/* -------------------- Call API -------------------- */
 export const callApi = async <T,>(
   method: "GET" | "POST" | "PUT" | "DELETE",
   url: string,
@@ -63,7 +121,7 @@ export const callApi = async <T,>(
   }
 };
 
-// Tách tên lớp thành key và label
+/* -------------------- Tách nameClass -------------------- */
 export const splitNameClass = (nameClass: string) => {
   if (!nameClass) return { key: "", label: "" };
 
@@ -74,7 +132,7 @@ export const splitNameClass = (nameClass: string) => {
   };
 };
 
-// Format ngày giờ
+/* -------------------- Format ngày giờ -------------------- */
 export const formatDate = (dateString?: string) => {
   if (!dateString) return "Không có";
   try {
@@ -92,7 +150,7 @@ export const formatDate = (dateString?: string) => {
   }
 };
 
-// Chuẩn hóa value để so sánh
+/* -------------------- Chuẩn hóa value -------------------- */
 export function normalizeValue(value?: any): string {
   if (value === null || value === undefined) return "";
   return String(value)
@@ -106,13 +164,58 @@ export function normalizeValue(value?: any): string {
     .toLowerCase();
 }
 
-// Lấy extension của file
+/* -------------------- Lấy extension file -------------------- */
 export const getFileExtension = (fileName: string) => {
   const parts = fileName.split(".");
   return parts.length > 1 ? parts.pop()?.toLowerCase() : "";
 };
 
+/* -------------------- Viết hoa chữ cái đầu -------------------- */
 export function capitalizeFirstLetter(str?: string): string {
   if (!str) return "";
   return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+// detect mime type từ path
+export const getMimeType = (path: string) => {
+  const ext = path.split(".").pop()?.toLowerCase();
+  switch (ext) {
+    case "jpg":
+    case "jpeg":
+      return "image/jpeg";
+    case "png":
+      return "image/png";
+    case "gif":
+      return "image/gif";
+    default:
+      return "image/png";
+  }
+};
+
+export function getResizePath(inputPath: string): string {
+  if (!inputPath) return "";
+
+  // Chuẩn hóa path -> thay "\" thành "/"
+  const normalizedPath = inputPath.replace(/\\/g, "/");
+
+  // Tách thư mục và file
+  const lastSlashIndex = normalizedPath.lastIndexOf("/");
+  const folder =
+    lastSlashIndex >= 0 ? normalizedPath.substring(0, lastSlashIndex) : "";
+  const fileName =
+    lastSlashIndex >= 0
+      ? normalizedPath.substring(lastSlashIndex + 1)
+      : normalizedPath;
+
+  // Tách tên và đuôi file
+  const dotIndex = fileName.lastIndexOf(".");
+  const nameWithoutExt =
+    dotIndex >= 0 ? fileName.substring(0, dotIndex) : fileName;
+  const ext = dotIndex >= 0 ? fileName.substring(dotIndex) : "";
+
+  // Đổi folder -> folder_resize
+  const newFolder = folder ? `${folder}_resize` : "resize";
+
+  // Tạo path mới
+  return `${newFolder}/${nameWithoutExt}_resize${ext}`;
 }

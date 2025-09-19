@@ -164,7 +164,7 @@ api.interceptors.request.use(async (config) => {
   const accessToken = await getValidToken();
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;
-    console.log("[API] Attach token:", accessToken.slice(0, 20) + "...");
+    console.log("[API] Attach token:", accessToken);
   }
   return config;
 });

@@ -1,4 +1,3 @@
-// FileViewer.tsx
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -15,12 +14,7 @@ import {
 } from "react-native";
 import { WebView } from "react-native-webview";
 import { getPreviewAttachFile } from "../services";
-
-type ViewerProps = {
-  visible: boolean;
-  onClose: () => void;
-  params: { name: string; path: string; nameClass: string };
-};
+import { ViewerProps } from "../types";
 
 export default function FileViewer({ visible, onClose, params }: ViewerProps) {
   const [fileData, setFileData] = useState<string | null>(null);

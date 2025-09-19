@@ -191,3 +191,22 @@ export const getFieldActive = async <T = any,>(
 ): Promise<T> => {
   return callApi<T>("POST", API_ENDPOINTS.GET_FIELD_ACTIVE, { iD_Class_MoTa });
 };
+
+export const getPreviewAttachProperty = async (
+  path: string
+): Promise<{ headers: any; data: string }> => {
+  const response = await api.post(
+    API_ENDPOINTS.PREVIEW_ATTACH_PROPERTY,
+    path, // <-- truyền string thuần, không phải { path }
+    {
+      responseType: "arraybuffer", // đúng rồi, vì bạn trả về binary (bytes)
+      timeout: 10000,
+      headers: {
+        "Content-Type": "application/json", // axios sẽ wrap string thành JSON string hợp lệ
+      },
+    }
+  );
+
+  const base64Data = Buffer.from(response.data, "binary").toString("base64");
+  return { headers: response.headers, data: base64Data };
+};
