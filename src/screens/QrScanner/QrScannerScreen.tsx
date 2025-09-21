@@ -1,11 +1,20 @@
-import React, { useEffect, useState } from "react";
+import React, { Fragment, useEffect, useState } from "react";
 import { View, Text, Alert, Platform, StyleSheet } from "react-native";
 import { request, PERMISSIONS, RESULTS } from "react-native-permissions";
-import { Camera, useCameraDevice } from "react-native-vision-camera";
+import {
+  Camera,
+  Code,
+  CodeScanner,
+  useCameraDevice,
+  useCodeScanner,
+} from "react-native-vision-camera";
 
 export default function QrScannerScreen() {
   const [hasPermission, setHasPermission] = useState(false);
   const device = useCameraDevice("back") as any;
+
+  const [isScanned, setIsScanned] = useState<boolean>(false);
+  const [QRCodeResult, setQRCodeResult] = useState<string>("");
 
   // ✅ Xin quyền camera
   useEffect(() => {
@@ -32,6 +41,37 @@ export default function QrScannerScreen() {
     })();
   }, []);
 
+  useEffect(() => {
+    if (isScanned) {
+      Alert.alert(
+        "Thông báo",
+        `Result: ${QRCodeResult}`,
+        [
+          {
+            text: "Confirm",
+            onPress: () => {
+              setIsScanned(false);
+              setQRCodeResult("");
+            },
+          },
+        ],
+        { cancelable: false }
+      );
+    }
+  }, [isScanned, QRCodeResult]);
+
+  const codeScanner: CodeScanner = useCodeScanner({
+    codeTypes: ["qr"],
+    onCodeScanned: (codes: Code[]) => {
+      if (codes.length > 0) {
+        setIsScanned(true);
+        setQRCodeResult(codes?.[0]?.value || "");
+      }
+    },
+  });
+
+  if (!device) return <Fragment />;
+
   if (!hasPermission) {
     return (
       <View style={styles.center}>
@@ -42,7 +82,12 @@ export default function QrScannerScreen() {
 
   return (
     <View style={{ flex: 1, position: "relative" }}>
-      <Camera style={StyleSheet.absoluteFill} device={device} isActive={true} />
+      <Camera
+        style={StyleSheet.absoluteFill}
+        device={device}
+        isActive={true}
+        codeScanner={codeScanner}
+      />
     </View>
   );
 }
