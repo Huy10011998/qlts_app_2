@@ -53,7 +53,7 @@ export default function BottomBarDetails({
             onPress={() => handlePress(tab.key, tab.label, index)}
             activeOpacity={0.8}
           >
-            <Ionicons name={tab.icon} size={22} color="#FF3333" />
+            <Ionicons name={tab.icon} size={26} color="#FF3333" />
             <Text
               style={[styles.bottomLabel, isActive && styles.bottomLabelActive]}
             >

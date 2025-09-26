@@ -20,13 +20,10 @@ import {
   GetMenuActiveResponse,
   Item,
 } from "../../types";
-import {
-  callApi,
-  removeVietnameseTones,
-  splitNameClass,
-} from "../../utils/helper";
+import { callApi, removeVietnameseTones } from "../../utils/helper";
 import { API_ENDPOINTS } from "../../config";
 import { useDebounce } from "../../hooks/useDebounce";
+import IsLoading from "../../components/ui/IconLoading";
 
 if (
   Platform.OS === "android" &&
@@ -233,7 +230,7 @@ export default function AssetScreen() {
         {isSearching && (
           <ActivityIndicator
             size="small"
-            color="#666"
+            color="#FF3333"
             style={{ marginLeft: 8 }}
           />
         )}
@@ -254,13 +251,7 @@ export default function AssetScreen() {
           paddingHorizontal: 12,
         }}
         ListHeaderComponent={
-          isFetching ? (
-            <ActivityIndicator
-              size="small"
-              color="#999"
-              style={{ margin: 12 }}
-            />
-          ) : null
+          isFetching ? <IsLoading size="small" style={{ margin: 12 }} /> : null
         }
         style={{ backgroundColor: "#fff", marginBottom: 60 }}
       />

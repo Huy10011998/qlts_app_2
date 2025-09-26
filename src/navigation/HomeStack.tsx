@@ -40,10 +40,17 @@ export default function HomeStack() {
           route,
         }: {
           route: RouteProp<RootStackParamList, "AssetList">;
-        }) => ({
-          title: capitalizeFirstLetter(route.params.titleHeader) || "Tài sản",
-          ...HeaderDetails({ showBackButton: true }),
-        })}
+        }) => {
+          const { titleHeader, isBuildTree, onMenuPress } = route.params || {};
+          return {
+            title: capitalizeFirstLetter(titleHeader) || "Tài sản",
+            ...HeaderDetails({
+              showBackButton: true,
+              showMenuButton: isBuildTree,
+              onMenuPress, // 🆕 lấy hàm từ params
+            }),
+          };
+        }}
       />
       <Stack.Screen
         name="AssetDetails"

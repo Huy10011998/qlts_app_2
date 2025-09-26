@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Image,
-  ActivityIndicator,
   Modal,
   PanResponder,
   Linking,
@@ -15,6 +14,7 @@ import { GroupListProps } from "../../types";
 import { TypeProperty } from "../../utils/enum";
 import { getPreviewAttachProperty } from "../../services/data/callApi";
 import { getMimeType } from "../../utils/helper";
+import IsLoading from "../ui/IconLoading";
 
 export default function AssetGroupList({
   groupedFields,
@@ -105,7 +105,7 @@ export default function AssetGroupList({
               <Text style={styles.groupTitle}>{groupName}</Text>
               <Ionicons
                 name={isCollapsed ? "chevron-down" : "chevron-up"}
-                size={22}
+                size={26}
                 color="#222"
               />
             </TouchableOpacity>
@@ -130,7 +130,7 @@ export default function AssetGroupList({
                     {field.typeProperty === TypeProperty.Image ? (
                       currentValue !== "---" ? (
                         loadingImages[field.name] ? (
-                          <ActivityIndicator size="small" color="#666" />
+                          <IsLoading size="small" />
                         ) : images[field.name] ? (
                           <TouchableOpacity
                             onPress={() => {

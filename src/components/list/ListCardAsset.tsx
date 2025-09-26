@@ -15,7 +15,7 @@ export default function ListCardAsset({
       <View style={styles.avatar}>
         <Ionicons
           name={icon || "document-text-outline"}
-          size={24}
+          size={26}
           color="#FF3333"
         />
       </View>

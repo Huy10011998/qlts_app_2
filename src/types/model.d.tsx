@@ -77,3 +77,14 @@ export interface UserInfo {
 }
 
 export type FileItem = Record<string, any>;
+
+export type TreeNode = {
+  index: number;
+  parent: number | null;
+  text: string;
+  value: string;
+  property: string;
+  icon?: string | null;
+  expanded: boolean;
+  children?: TreeNode[];
+};

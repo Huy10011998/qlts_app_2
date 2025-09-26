@@ -16,66 +16,71 @@ import {
   useCameraDevice,
   useCodeScanner,
 } from "react-native-vision-camera";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { QrScannerNavigationProp } from "../../types";
 
 export default function QrScannerScreen() {
   const [hasPermission, setHasPermission] = useState(false);
   const device = useCameraDevice("back") as any;
-  const navigation = useNavigation();
-
+  const navigation = useNavigation<QrScannerNavigationProp>();
   const [isScanned, setIsScanned] = useState<boolean>(false);
-  const [QRCodeResult, setQRCodeResult] = useState<string>("");
 
   // ✅ Xin quyền camera
   useEffect(() => {
     (async () => {
-      if (Platform.OS === "ios") {
-        const result = await request(PERMISSIONS.IOS.CAMERA);
-        if (result === RESULTS.GRANTED) setHasPermission(true);
-        else {
-          Alert.alert(
-            "Thông báo",
-            "Bạn cần cấp quyền camera trong Cài đặt để sử dụng chức năng quét QR."
-          );
-        }
+      const result =
+        Platform.OS === "ios"
+          ? await request(PERMISSIONS.IOS.CAMERA)
+          : await request(PERMISSIONS.ANDROID.CAMERA);
+
+      if (result === RESULTS.GRANTED) {
+        setHasPermission(true);
       } else {
-        const result = await request(PERMISSIONS.ANDROID.CAMERA);
-        if (result === RESULTS.GRANTED) setHasPermission(true);
-        else {
-          Alert.alert(
-            "Thông báo",
-            "Bạn cần cấp quyền camera trong Cài đặt để sử dụng chức năng quét QR."
-          );
-        }
+        Alert.alert(
+          "Thông báo",
+          "Bạn cần cấp quyền camera trong Cài đặt để sử dụng chức năng quét QR."
+        );
       }
     })();
   }, []);
 
-  useEffect(() => {
-    if (isScanned) {
-      Alert.alert(
-        "Thông báo",
-        `Result: ${QRCodeResult}`,
-        [
-          {
-            text: "Confirm",
-            onPress: () => {
-              setIsScanned(false);
-              setQRCodeResult("");
-            },
-          },
-        ],
-        { cancelable: false }
-      );
-    }
-  }, [isScanned, QRCodeResult]);
+  // ✅ Reset state mỗi khi quay lại màn hình scan
+  useFocusEffect(
+    React.useCallback(() => {
+      setIsScanned(false);
+    }, [])
+  );
 
+  // ✅ Xử lý khi scan QR
   const codeScanner: CodeScanner = useCodeScanner({
     codeTypes: ["qr"],
     onCodeScanned: (codes: Code[]) => {
-      if (codes.length > 0) {
+      if (codes.length > 0 && !isScanned) {
         setIsScanned(true);
-        setQRCodeResult(codes?.[0]?.value || "");
+
+        const data = codes?.[0]?.value || "";
+        console.log("QR Data:", data); // ví dụ: /maytinh/1493
+
+        const cleanData = data.startsWith("/") ? data.slice(1) : data;
+        const parts = cleanData.split("/"); // ["maytinh", "1493"]
+
+        if (parts.length === 2) {
+          const [title, id] = parts;
+
+          // 👉 Điều hướng sang AssetDetails trong HomeStack (tab HomeTab)
+          navigation.navigate("HomeTab", {
+            screen: "AssetDetails",
+            params: {
+              id,
+              titleHeader: title,
+              nameClass: title,
+            },
+          });
+        } else {
+          Alert.alert("QR không hợp lệ", data, [
+            { text: "OK", onPress: () => setIsScanned(false) },
+          ]);
+        }
       }
     },
   });
@@ -202,20 +207,5 @@ const styles = StyleSheet.create({
     marginTop: 20,
     color: "#fff",
     fontSize: 16,
-  },
-  footer: {
-    position: "absolute",
-    bottom: 40,
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    justifyContent: "space-around",
-  },
-  footerBtn: {
-    alignItems: "center",
-  },
-  footerText: {
-    color: "#fff",
-    fontSize: 14,
   },
 });

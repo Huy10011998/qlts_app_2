@@ -13,11 +13,23 @@ export type RootStackParamList = {
     titleHeader: string;
     idRoot?: string;
     propertyReference?: string;
+    isBuildTree?: boolean;
+    onMenuPress?: () => void;
+  };
+  HomeTab: {
+    screen: "AssetDetails";
+    params: { id: string; titleHeader?: string; nameClass?: string };
   };
   AssetDetails: {
     id: string;
-    field: any;
-    nameClass: string;
+    field?: any;
+    nameClass?: string;
+    titleHeader?: string;
+    isBuildTree?: boolean;
+    onMenuPress?: () => void;
+  };
+  QrScanner: {
+    id: string;
     titleHeader?: string;
   };
   RelaterList: { name: string };
@@ -92,6 +104,11 @@ export type AssetListScreenRouteProp = RouteProp<
 export type AssetDetailsNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   "AssetDetails"
+>;
+
+export type QrScannerNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "QrScanner"
 >;
 
 export type DeTailsTabNavigationProp = NativeStackNavigationProp<

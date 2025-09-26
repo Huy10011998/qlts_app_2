@@ -8,4 +8,7 @@ export {
   getListHistory,
   getListAttachFile,
   getPreviewAttachFile,
+  getBuildTree,
+  getDetailsHistory,
+  getPreviewAttachProperty,
 } from "./data/callApi";

@@ -28,7 +28,7 @@ export default function Tabs() {
           title: "Trang chủ",
           headerShown: false,
           tabBarIcon: ({ color }) => (
-            <Ionicons name="home" size={24} color={color} />
+            <Ionicons name="home" size={26} color={color} />
           ),
         }}
       />
@@ -54,7 +54,7 @@ export default function Tabs() {
           title: "Cài đặt",
           headerShown: false,
           tabBarIcon: ({ color }) => (
-            <Ionicons name="settings" size={24} color={color} />
+            <Ionicons name="settings" size={26} color={color} />
           ),
         }}
       />

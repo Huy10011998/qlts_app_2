@@ -7,39 +7,36 @@ import { HeaderOptionsProps } from "../../types";
 
 export const HeaderDetails = ({
   showBackButton,
-  showSearchButton,
-  onSearchPress,
+  showMenuButton,
+  onMenuPress,
 }: HeaderOptionsProps = {}): NativeStackNavigationOptions => {
   return {
     headerStyle: { backgroundColor: "#FF3333" },
     headerTintColor: "#fff",
     headerTitleStyle: { fontWeight: "bold" },
     headerLeft: showBackButton ? () => <HeaderBackButton /> : undefined,
-    headerRight: showSearchButton
+    headerRight: showMenuButton
       ? () => (
           <TouchableOpacity
-            onPress={onSearchPress}
-            style={{ paddingHorizontal: 10 }}
+            onPress={onMenuPress}
+            style={{ paddingHorizontal: 5 }}
           >
-            <Ionicons name="search" size={24} color="#fff" />
+            <Ionicons name="menu" size={26} color="#fff" />
           </TouchableOpacity>
         )
       : undefined,
   };
 };
 
-/**
- * Nút back sử dụng navigation.goBack()
- */
 function HeaderBackButton() {
   const navigation = useNavigation<NavigationProp<any>>();
 
   return (
     <TouchableOpacity
       onPress={() => navigation.goBack()}
-      style={{ paddingHorizontal: 10 }}
+      style={{ paddingHorizontal: 5 }}
     >
-      <Ionicons name="arrow-back" size={24} color="#fff" />
+      <Ionicons name="arrow-back" size={26} color="#fff" />
     </TouchableOpacity>
   );
 }

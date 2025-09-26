@@ -106,6 +106,11 @@ export const getList = async <T = any,>(
   });
 };
 
+// Get build-tree of any class
+export const getBuildTree = async <T = any,>(nameClass: string): Promise<T> => {
+  return callApi<T>("POST", `/${nameClass}/build-tree`, {});
+};
+
 // Get details of an item
 export const getDetails = async <T = any,>(
   nameClass: string,
@@ -195,17 +200,13 @@ export const getFieldActive = async <T = any,>(
 export const getPreviewAttachProperty = async (
   path: string
 ): Promise<{ headers: any; data: string }> => {
-  const response = await api.post(
-    API_ENDPOINTS.PREVIEW_ATTACH_PROPERTY,
-    path, // <-- truyền string thuần, không phải { path }
-    {
-      responseType: "arraybuffer", // đúng rồi, vì bạn trả về binary (bytes)
-      timeout: 10000,
-      headers: {
-        "Content-Type": "application/json", // axios sẽ wrap string thành JSON string hợp lệ
-      },
-    }
-  );
+  const response = await api.post(API_ENDPOINTS.PREVIEW_ATTACH_PROPERTY, path, {
+    responseType: "arraybuffer",
+    timeout: 10000,
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
 
   const base64Data = Buffer.from(response.data, "binary").toString("base64");
   return { headers: response.headers, data: base64Data };

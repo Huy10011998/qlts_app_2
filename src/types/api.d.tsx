@@ -23,6 +23,7 @@ export interface LoginResponse {
 }
 
 export interface PropertyResponse {
+  fields(fields: any): unknown;
   iconMobile: string;
 }
 

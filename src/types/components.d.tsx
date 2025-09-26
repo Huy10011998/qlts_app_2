@@ -2,9 +2,11 @@ import React, { ComponentType, PropsWithChildren, ReactElement } from "react";
 import { Field, Item } from "./model.d";
 import {
   ImageSourcePropType,
+  StyleProp,
   TextInputProps,
   TextProps,
   ViewProps,
+  ViewStyle,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { getFieldValue } from "../utils/helper";
@@ -184,8 +186,8 @@ export type TabScreen = {
 
 export type HeaderOptionsProps = {
   showBackButton?: boolean;
-  showSearchButton?: boolean;
-  onSearchPress?: () => void;
+  showMenuButton?: boolean;
+  onMenuPress?: () => void;
 };
 
 export interface ViewerProps {
@@ -197,3 +199,9 @@ export interface ViewerProps {
     nameClass: string;
   };
 }
+
+export type IsLoadingProps = {
+  size?: "small" | "large";
+  color?: string;
+  style?: StyleProp<ViewStyle>;
+};

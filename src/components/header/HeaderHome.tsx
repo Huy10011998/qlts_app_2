@@ -29,7 +29,7 @@ export default function HeaderHome() {
       </TouchableOpacity>
       <View style={styles.headerIcons}>
         <TouchableOpacity onPress={() => navigation.navigate("Tabs")}>
-          <Ionicons name="home-outline" size={24} color="#fff" />
+          <Ionicons name="home-outline" size={26} color="#fff" />
         </TouchableOpacity>
       </View>
     </View>

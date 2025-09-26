@@ -77,7 +77,7 @@ export default function AssetDeTailsTab() {
     >
       <Ionicons
         name={item.icon as any}
-        size={24}
+        size={26}
         color="#FF3333"
         style={styles.icon}
       />

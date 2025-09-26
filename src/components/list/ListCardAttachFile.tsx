@@ -11,7 +11,7 @@ export default function ListCardAttachFile({ item }: ListCardAttachFileProps) {
     <View>
       <View style={styles.card}>
         <View style={styles.avatar}>
-          <Ionicons name="document-text-outline" size={24} color="#FF3333" />
+          <Ionicons name="document-text-outline" size={26} color="#FF3333" />
         </View>
 
         <View style={styles.info}>
