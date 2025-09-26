@@ -84,6 +84,7 @@ export default function LoginScreen() {
 
     try {
       const response = await loginApi(userName, userPassword);
+
       if (response?.data?.accessToken) {
         setToken(response.data.accessToken);
         setRefreshToken(response.data.refreshToken ?? null);
@@ -109,12 +110,23 @@ export default function LoginScreen() {
             },
           ]
         );
+      } else {
+        Alert.alert(
+          "Đăng nhập thất bại",
+          "Tên đăng nhập hoặc mật khẩu không đúng."
+        );
+        setUserPassword("");
       }
-    } catch (error) {
-      if (__DEV__) {
-        console.error("Login error:", error);
+    } catch (error: any) {
+      if (error?.response?.status === 401) {
+        Alert.alert("Đăng nhập thất bại", "Sai tên đăng nhập hoặc mật khẩu.");
+      } else {
+        Alert.alert(
+          "Đăng nhập thất bại",
+          error?.response?.data?.message || "Có lỗi xảy ra. Vui lòng thử lại."
+        );
       }
-      Alert.alert("Đăng nhập thất bại", error as any);
+
       setUserPassword("");
     } finally {
       setIsLoading(false);

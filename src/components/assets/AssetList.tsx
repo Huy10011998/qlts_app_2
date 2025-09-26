@@ -16,13 +16,13 @@ import {
   ActivityIndicator,
   ScrollView,
 } from "react-native";
-import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
+import { useRoute, useNavigation } from "@react-navigation/native";
 import {
-  RootStackParamList,
   Field,
   PropertyResponse,
   AssetDetailsNavigationProp,
   TreeNode,
+  AssetListScreenRouteProp,
 } from "../../types";
 import {
   getFieldActive,
@@ -35,6 +35,7 @@ import IsLoading from "../../components/ui/IconLoading";
 import { normalizeText } from "../../utils/helper";
 import { useDebounce } from "../../hooks/useDebounce";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import { SqlOperator, TypeProperty } from "../../utils/enum";
 
 if (
   Platform.OS === "android" &&
@@ -43,72 +44,132 @@ if (
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-type AssetListScreenRouteProp = RouteProp<RootStackParamList, "AssetList">;
-
 const { width } = Dimensions.get("window");
 const MENU_WIDTH = width * 0.6;
 
-// 🛠 Build tree từ flat list
+//  Build tree từ flat list
 function buildTree(data: TreeNode[]): TreeNode[] {
-  const map: Record<number, TreeNode> = {};
+  const map: Record<number, TreeNode & { parentNode?: TreeNode | null }> = {};
   const roots: TreeNode[] = [];
 
   data.forEach((item) => {
-    map[item.index] = { ...item, children: [] };
+    map[item.index] = { ...item, children: [], parentNode: null };
   });
 
   data.forEach((item) => {
     if (item.parent === null) {
       roots.push(map[item.index]);
     } else {
-      map[item.parent]?.children?.push(map[item.index]);
+      const parent = map[item.parent];
+      if (parent) {
+        map[item.index].parentNode = parent;
+        parent.children?.push(map[item.index]);
+      }
     }
   });
 
   return roots;
 }
 
-// Component đệ quy render tree dropdown
+//  Hàm gom conditions từ node → root
+function getConditionsFromNode(
+  node: TreeNode & { parentNode?: TreeNode | null }
+) {
+  const conditions: any[] = [];
+  const seen = new Set<string>(); // để loại trùng property+value
+  let current: TreeNode | null = node;
+
+  while (current) {
+    if (current.property && current.value) {
+      const props = current.property.split(",");
+      const values = current.value.split(",");
+
+      props.forEach((prop, idx) => {
+        const rawValue = values[idx] ? values[idx].trim() : "";
+        const intValue = parseInt(rawValue, 10);
+        const key = `${prop.trim()}-${rawValue}`;
+
+        if (!seen.has(key)) {
+          seen.add(key);
+
+          if (!isNaN(intValue)) {
+            conditions.push({
+              property: prop.trim(),
+              operator:
+                intValue >= 0 ? SqlOperator.Equals : SqlOperator.NotEquals,
+              value: String(Math.abs(intValue)),
+              type: TypeProperty.Int,
+            });
+          } else {
+            conditions.push({
+              property: prop.trim(),
+              operator: SqlOperator.Equals,
+              value: rawValue,
+              type: TypeProperty.String,
+            });
+          }
+        }
+      });
+    }
+
+    current = (current as any).parentNode ?? null;
+  }
+
+  return conditions;
+}
+
+//  Component đệ quy render tree dropdown
 const TreeNodeItem = ({
   node,
   level = 0,
+  onSelect,
 }: {
   node: TreeNode;
   level?: number;
+  onSelect: (node: TreeNode) => void;
 }) => {
   const [expanded, setExpanded] = useState(node.expanded || false);
+  const hasChildren = node.children && node.children.length > 0;
 
-  const toggle = () => {
+  const handleIconPress = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setExpanded(!expanded);
   };
 
-  const hasChildren = node.children && node.children.length > 0;
-
   return (
     <View style={{ marginLeft: level * 4, marginVertical: 4, marginRight: 8 }}>
-      <TouchableOpacity
-        style={styles.nodeRow}
-        onPress={hasChildren ? toggle : undefined}
-        activeOpacity={0.7}
-      >
+      <View style={styles.nodeRow}>
         {hasChildren ? (
-          <Ionicons
-            name={expanded ? "chevron-down" : "chevron-forward"}
-            size={22}
-            color="#333"
-            style={{ marginRight: 6 }}
-          />
+          <TouchableOpacity onPress={handleIconPress}>
+            <Ionicons
+              name={expanded ? "chevron-down" : "chevron-forward"}
+              size={22}
+              color="#333"
+              style={{ marginRight: 6 }}
+            />
+          </TouchableOpacity>
         ) : (
-          <View style={{ width: 16, marginRight: 6 }} />
+          <View style={{ width: 22, marginRight: 6 }} />
         )}
-        <Text style={styles.nodeText}>{node.text}</Text>
-      </TouchableOpacity>
+
+        <TouchableOpacity
+          style={{ flex: 1 }}
+          onPress={() => onSelect(node)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.nodeText}>{node.text}</Text>
+        </TouchableOpacity>
+      </View>
 
       {hasChildren && expanded && (
         <View>
           {node.children?.map((child) => (
-            <TreeNodeItem key={child.index} node={child} level={level + 1} />
+            <TreeNodeItem
+              key={child.index}
+              node={child}
+              level={level + 1}
+              onSelect={onSelect}
+            />
           ))}
         </View>
       )}
@@ -145,15 +206,19 @@ export default function AssetList() {
   const [treeData, setTreeData] = useState<TreeNode[]>([]);
   const [loadingTree, setLoadingTree] = useState(false);
 
+  // Filter conditions
+  const [conditions, setConditions] = useState<any[]>([]);
+  const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
+
   const openMenu = async () => {
     setMenuVisible(true);
 
-    // gọi API tree
     if (nameClass) {
       try {
         setLoadingTree(true);
         const res = await getBuildTree(nameClass);
         const tree = buildTree(res.data || []);
+
         setTreeData(tree);
       } catch (e) {
         console.error("Lỗi load tree:", e);
@@ -178,18 +243,15 @@ export default function AssetList() {
   };
 
   const toggleMenu = () => {
-    if (menuVisible) {
-      closeMenu();
-    } else {
-      openMenu();
-    }
+    if (menuVisible) closeMenu();
+    else openMenu();
   };
 
   useEffect(() => {
     navigation.setParams({ onMenuPress: toggleMenu });
   }, [menuVisible]);
 
-  // Fetch data function
+  //  Fetch data
   const fetchData = useCallback(
     async (isLoadMore = false) => {
       if (!nameClass) return;
@@ -228,7 +290,7 @@ export default function AssetList() {
           currentSkip,
           debouncedSearch,
           fieldActive,
-          [],
+          conditions,
           []
         );
 
@@ -256,13 +318,20 @@ export default function AssetList() {
         setIsSearching(false);
       }
     },
-    [nameClass, fieldActive, propertyClass, skipSize, debouncedSearch]
+    [
+      nameClass,
+      fieldActive,
+      propertyClass,
+      skipSize,
+      debouncedSearch,
+      conditions,
+    ]
   );
 
   useEffect(() => {
     if (!nameClass) return;
     fetchData(false);
-  }, [nameClass, debouncedSearch]);
+  }, [nameClass, debouncedSearch, conditions]);
 
   const handleLoadMore = () => {
     if (taisan.length < total && !isLoadingMore) fetchData(true);
@@ -280,6 +349,17 @@ export default function AssetList() {
       console.error(error);
       Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
     }
+  };
+
+  //  Select node
+  const handleSelectNode = (node: TreeNode) => {
+    setSelectedNode(node);
+
+    // Luôn build conditions từ node → root
+    const newConditions = getConditionsFromNode(node as any);
+
+    setConditions(newConditions);
+    closeMenu();
   };
 
   if (isLoading && !debouncedSearch) return <IsLoading />;
@@ -323,7 +403,9 @@ export default function AssetList() {
         ListHeaderComponent={
           <View style={styles.stickyHeader}>
             <Text style={styles.header}>
-              Tổng: {total} (Đã tải: {taisan.length})
+              {selectedNode
+                ? `${selectedNode.text} - Tổng: ${total} (Đã tải: ${taisan.length})`
+                : `Tất cả - Tổng: ${total} (Đã tải: ${taisan.length})`}
             </Text>
           </View>
         }
@@ -333,10 +415,7 @@ export default function AssetList() {
       {/* Drawer */}
       {menuVisible && (
         <View style={StyleSheet.absoluteFill}>
-          {/* Overlay */}
           <Pressable style={styles.overlay} onPress={closeMenu} />
-
-          {/* Menu */}
           <Animated.View
             style={[
               styles.menuContainer,
@@ -344,16 +423,18 @@ export default function AssetList() {
             ]}
           >
             <Text style={styles.menuTitle}>Menu</Text>
-
             {loadingTree && <IsLoading size="small" />}
-
             {!loadingTree && treeData.length > 0 && (
               <ScrollView
                 style={{ flex: 1 }}
                 contentContainerStyle={{ paddingBottom: 20 }}
               >
                 {treeData.map((node) => (
-                  <TreeNodeItem key={node.index} node={node} />
+                  <TreeNodeItem
+                    key={node.index}
+                    node={node}
+                    onSelect={handleSelectNode}
+                  />
                 ))}
               </ScrollView>
             )}
@@ -420,8 +501,8 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   nodeText: {
-    fontSize: 14,
+    fontSize: 15,
     color: "#333",
-    fontWeight: "bold",
+    fontWeight: "500",
   },
 });

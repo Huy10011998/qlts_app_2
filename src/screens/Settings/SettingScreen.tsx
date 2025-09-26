@@ -191,7 +191,11 @@ const SettingScreen = () => {
         </View>
       </ScrollView>
 
-      {isLoading && <IsLoading />}
+      {isLoading && (
+        <View style={styles.loadingOverlay}>
+          <IsLoading size="large" color="#FF3333" />
+        </View>
+      )}
 
       <Modal
         transparent
@@ -325,6 +329,12 @@ const styles = StyleSheet.create({
   cancelButton: { backgroundColor: "#ccc" },
   confirmButton: { backgroundColor: "#FF3333" },
   buttonText: { color: "#fff", fontWeight: "bold" },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject, // full màn hình
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.2)", // nếu muốn nền mờ
+  },
 });
 
 export default SettingScreen;

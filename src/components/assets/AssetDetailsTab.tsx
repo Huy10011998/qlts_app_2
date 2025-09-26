@@ -99,6 +99,7 @@ export default function AssetDeTailsTab() {
         data={items}
         keyExtractor={(item) => String(item.id)}
         renderItem={renderItem}
+        contentContainerStyle={{ paddingBottom: 70 }}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         ListEmptyComponent={
           <View style={{ padding: 20 }}>
