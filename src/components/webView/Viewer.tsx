@@ -13,9 +13,9 @@ import {
   Animated,
 } from "react-native";
 import { WebView } from "react-native-webview";
-import { getPreviewAttachFile } from "../services";
-import { ViewerProps } from "../types";
-import IsLoading from "./ui/IconLoading";
+import { ViewerProps } from "../../types";
+import { getPreviewAttachFile } from "../../services";
+import IsLoading from "../ui/IconLoading";
 
 export default function FileViewer({ visible, onClose, params }: ViewerProps) {
   const [fileData, setFileData] = useState<string | null>(null);

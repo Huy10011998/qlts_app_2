@@ -123,12 +123,19 @@ const TreeNodeItem = ({
   node,
   level = 0,
   onSelect,
+  expandAll = false,
 }: {
   node: TreeNode;
   level?: number;
   onSelect: (node: TreeNode) => void;
+  expandAll?: boolean;
 }) => {
-  const [expanded, setExpanded] = useState(node.expanded || false);
+  const [expanded, setExpanded] = useState(node.expanded || expandAll);
+
+  useEffect(() => {
+    if (expandAll) setExpanded(true);
+  }, [expandAll]);
+
   const hasChildren = node.children && node.children.length > 0;
 
   const handleIconPress = () => {
@@ -169,6 +176,7 @@ const TreeNodeItem = ({
               node={child}
               level={level + 1}
               onSelect={onSelect}
+              expandAll={expandAll} // truyền xuống con
             />
           ))}
         </View>
@@ -434,6 +442,7 @@ export default function AssetList() {
                     key={node.index}
                     node={node}
                     onSelect={handleSelectNode}
+                    expandAll={true} // mở hết
                   />
                 ))}
               </ScrollView>

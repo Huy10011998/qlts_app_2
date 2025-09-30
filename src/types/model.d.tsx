@@ -54,6 +54,7 @@ export interface Item {
   children: Item[];
   contentName_Mobile: string | null;
   stt: string | number;
+  isReport: boolean;
 }
 
 // Dữ liệu người dùng cơ bản

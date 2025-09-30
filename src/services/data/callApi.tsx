@@ -197,6 +197,7 @@ export const getFieldActive = async <T = any,>(
   return callApi<T>("POST", API_ENDPOINTS.GET_FIELD_ACTIVE, { iD_Class_MoTa });
 };
 
+// Get preview attach property
 export const getPreviewAttachProperty = async (
   path: string
 ): Promise<{ headers: any; data: string }> => {
@@ -209,5 +210,20 @@ export const getPreviewAttachProperty = async (
   });
 
   const base64Data = Buffer.from(response.data, "binary").toString("base64");
+  return { headers: response.headers, data: base64Data };
+};
+
+// Get preview bao cao
+export const getPreviewBC = async (
+  param: Record<string, any>,
+  path: string
+): Promise<{ headers: any; data: string }> => {
+  const response = await api.post(path, param, {
+    responseType: "arraybuffer",
+    timeout: 10000,
+  });
+
+  const base64Data = Buffer.from(response.data, "binary").toString("base64");
+
   return { headers: response.headers, data: base64Data };
 };

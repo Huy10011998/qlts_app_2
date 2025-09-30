@@ -3,6 +3,7 @@ import api from "../context/AuthContext";
 import { Field } from "../types";
 import { TypeProperty } from "./enum";
 import React from "react";
+import { Alert } from "react-native";
 
 /* -------------------- Bỏ dấu tiếng Việt -------------------- */
 export const removeVietnameseTones = (str: string): string => {
@@ -219,3 +220,55 @@ export function getResizePath(inputPath: string): string {
   // Tạo path mới
   return `${newFolder}/${nameWithoutExt}_resize${ext}`;
 }
+
+// convert dd/mm/yyyy -> string yyyy-MM-ddT00:00:00
+export function parseDateLocal(dateStr: string): string | null {
+  if (!dateStr) return null;
+  const parts = dateStr.split("/");
+  if (parts.length !== 3) return null;
+
+  const [day, month, year] = parts.map(Number);
+  if (!day || !month || !year) return null;
+
+  // format yyyy-MM-ddT00:00:00
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(
+    2,
+    "0"
+  )}T00:00:00`;
+}
+
+export const validateDates = (
+  fromDate: string,
+  toDate: string
+): { from: string; to: string } | null => {
+  // Chuyển từ dd/MM/yyyy → Date
+  const parseDateLocal = (dateStr: string): Date | null => {
+    if (!dateStr) return null;
+    const parts = dateStr.split("/");
+    if (parts.length !== 3) return null;
+
+    const [day, month, year] = parts.map(Number);
+    if (!day || !month || !year) return null;
+
+    return new Date(year, month - 1, day);
+  };
+
+  const from = parseDateLocal(fromDate);
+  const to = parseDateLocal(toDate);
+
+  if (!from || !to) {
+    Alert.alert("Lỗi", "Ngày nhập không hợp lệ (định dạng dd/mm/yyyy).");
+    return null;
+  }
+
+  if (from > to) {
+    Alert.alert("Lỗi", "Từ ngày không được lớn hơn Đến ngày.");
+    return null;
+  }
+
+  // Convert sang ISO string (yyyy-MM-ddTHH:mm:ss)
+  return {
+    from: from.toISOString(),
+    to: to.toISOString(),
+  };
+};

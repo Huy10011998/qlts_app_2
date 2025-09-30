@@ -10,6 +10,7 @@ import {
   UIManager,
   TextInput,
   ActivityIndicator,
+  Modal,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
@@ -24,6 +25,7 @@ import { callApi, removeVietnameseTones } from "../../utils/helper";
 import { API_ENDPOINTS } from "../../config";
 import { useDebounce } from "../../hooks/useDebounce";
 import IsLoading from "../../components/ui/IconLoading";
+import ReportView from "../../components/report/ReportView";
 
 if (
   Platform.OS === "android" &&
@@ -33,12 +35,11 @@ if (
 }
 
 // Component cho mỗi item dropdown
-const DropdownItem: React.FC<DropdownProps> = ({
-  item,
-  level = 0,
-  expandedIds,
-  onToggle,
-}) => {
+const DropdownItem: React.FC<
+  DropdownProps & {
+    onShowReport: (item: Item) => void;
+  }
+> = ({ item, level = 0, expandedIds, onToggle, onShowReport }) => {
   const navigation = useNavigation<AssetListScreenNavigationProp>();
   const hasChildren = item.children && item.children.length > 0;
   const expanded = expandedIds.includes(item.id);
@@ -47,6 +48,9 @@ const DropdownItem: React.FC<DropdownProps> = ({
     if (hasChildren) {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       onToggle(item.id);
+    } else if (item.isReport) {
+      // 👉 Nếu là báo cáo thì mở modal ReportView
+      onShowReport(item);
     } else if (item.contentName_Mobile) {
       navigation.navigate("AssetList", {
         nameClass: item.contentName_Mobile,
@@ -73,13 +77,16 @@ const DropdownItem: React.FC<DropdownProps> = ({
           elevation: 1,
         }}
       >
-        {item.contentName_Mobile ? (
+        {item.isReport ? (
+          <MaterialIcons name="bar-chart" size={18} color="red" />
+        ) : item.contentName_Mobile ? (
           <MaterialIcons name="book" size={18} color="red" />
         ) : expanded ? (
           <Ionicons name="folder-open" size={18} color="red" />
         ) : (
           <Ionicons name="folder" size={18} color="red" />
         )}
+
         <Text style={{ marginLeft: 6, fontSize: 13, fontWeight: "bold" }}>
           {item.label}
         </Text>
@@ -94,6 +101,7 @@ const DropdownItem: React.FC<DropdownProps> = ({
               level={level + 1}
               expandedIds={expandedIds}
               onToggle={onToggle}
+              onShowReport={onShowReport}
             />
           ))}
         </View>
@@ -112,6 +120,9 @@ export default function AssetScreen() {
   // debounce search
   const debouncedSearch = useDebounce(search, 400);
   const [isSearching, setIsSearching] = useState(false);
+
+  // State modal report
+  const [reportItem, setReportItem] = useState<Item | null>(null);
 
   const buildTree = (items: Item[]) => {
     const map: Record<string | number, Item> = {};
@@ -204,6 +215,7 @@ export default function AssetScreen() {
 
   return (
     <View style={{ flex: 1 }}>
+      {/* Ô tìm kiếm */}
       <View
         style={{
           flexDirection: "row",
@@ -236,6 +248,7 @@ export default function AssetScreen() {
         )}
       </View>
 
+      {/* Danh sách menu */}
       <FlatList
         data={filteredData}
         keyExtractor={(item) => item.id.toString()}
@@ -244,6 +257,7 @@ export default function AssetScreen() {
             item={item}
             expandedIds={expandedIds}
             onToggle={handleToggle}
+            onShowReport={setReportItem}
           />
         )}
         contentContainerStyle={{
@@ -255,6 +269,20 @@ export default function AssetScreen() {
         }
         style={{ backgroundColor: "#fff", marginBottom: 60 }}
       />
+
+      {/* Modal báo cáo */}
+      <Modal
+        visible={!!reportItem}
+        animationType="slide"
+        onRequestClose={() => setReportItem(null)}
+      >
+        {reportItem && (
+          <ReportView
+            title={reportItem.label}
+            onClose={() => setReportItem(null)}
+          />
+        )}
+      </Modal>
     </View>
   );
 }

@@ -205,3 +205,8 @@ export type IsLoadingProps = {
   color?: string;
   style?: StyleProp<ViewStyle>;
 };
+
+export interface ReportViewProps {
+  title: string;
+  onClose: () => void;
+}
