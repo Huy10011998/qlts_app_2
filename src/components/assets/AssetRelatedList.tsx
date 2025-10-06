@@ -17,12 +17,16 @@ import {
   PropertyResponse,
   AssetDetailsNavigationProp,
   AssetListScreenRouteProp,
-} from "../../types";
-import { getFieldActive, getList, getPropertyClass } from "../../services";
+} from "../../types/Index";
+import {
+  getFieldActive,
+  getList,
+  getPropertyClass,
+} from "../../services/Index";
 import ListCardAsset from "../../components/list/ListCardAsset";
 import IsLoading from "../../components/ui/IconLoading";
-import { normalizeText } from "../../utils/helper";
-import { SqlOperator, TypeProperty } from "../../utils/enum";
+import { normalizeText } from "../../utils/Helper";
+import { SqlOperator, TypeProperty } from "../../utils/Enum";
 import { useDebounce } from "../../hooks/useDebounce";
 
 if (

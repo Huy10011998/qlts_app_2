@@ -1,8 +1,4 @@
-// src/types/api.d.ts
-
-import Ionicons from "react-native-vector-icons/Ionicons";
-
-import { Item } from "./model.d";
+import { Item } from "./Model.d";
 
 export interface GetMenuActiveResponse {
   data: Item[];

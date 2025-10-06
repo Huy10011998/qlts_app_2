@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { View, StyleSheet, Alert, ScrollView } from "react-native";
-import { DetailsProps, Field } from "../../types";
+import { DetailsProps, Field } from "../../types/Index";
 import { useParams } from "../../hooks/useParams";
-import { getDetails } from "../../services";
+import { getDetails } from "../../services/Index";
 import IsLoading from "../ui/IconLoading";
-import { getFieldValue } from "../../utils/helper";
+import { getFieldValue } from "../../utils/Helper";
 
 // Các tab mặc định
 export const TAB_ITEMS = [

@@ -11,7 +11,7 @@ import {
   getFieldActive,
   getPropertyClass,
   getListHistory,
-} from "../../services";
+} from "../../services/Index";
 import ListCardHistory from "../list/ListCardHistory";
 import IsLoading from "../ui/IconLoading";
 import orderBy from "lodash/orderBy";

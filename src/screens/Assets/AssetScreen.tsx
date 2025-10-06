@@ -20,9 +20,9 @@ import {
   DropdownProps,
   GetMenuActiveResponse,
   Item,
-} from "../../types";
-import { callApi, removeVietnameseTones } from "../../utils/helper";
-import { API_ENDPOINTS } from "../../config";
+} from "../../types/Index";
+import { callApi, removeVietnameseTones } from "../../utils/Helper";
+import { API_ENDPOINTS } from "../../config/Index";
 import { useDebounce } from "../../hooks/useDebounce";
 import IsLoading from "../../components/ui/IconLoading";
 import ReportView from "../../components/report/ReportView";
@@ -49,7 +49,7 @@ const DropdownItem: React.FC<
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       onToggle(item.id);
     } else if (item.isReport) {
-      // 👉 Nếu là báo cáo thì mở modal ReportView
+      // Nếu là báo cáo thì mở modal ReportView
       onShowReport(item);
     } else if (item.contentName_Mobile) {
       navigation.navigate("AssetList", {

@@ -13,11 +13,11 @@ import {
   Animated,
 } from "react-native";
 import { WebView } from "react-native-webview";
-import { ViewerProps } from "../../types";
-import { getPreviewAttachFile } from "../../services";
+import { ViewerProps } from "../../types/Index";
+import { getPreviewAttachFile } from "../../services/Index";
 import IsLoading from "../ui/IconLoading";
 
-export default function FileViewer({ visible, onClose, params }: ViewerProps) {
+export default function FileView({ visible, onClose, params }: ViewerProps) {
   const [fileData, setFileData] = useState<string | null>(null);
   const [fileType, setFileType] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);

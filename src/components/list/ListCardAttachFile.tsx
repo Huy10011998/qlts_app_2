@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { ListCardAttachFileProps } from "../../types";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import Viewer from "../webView/Viewer";
+import Viewer from "../file/FileView";
 
 export default function ListCardAttachFile({ item }: ListCardAttachFileProps) {
   const [openPdf, setOpenPdf] = useState(false);

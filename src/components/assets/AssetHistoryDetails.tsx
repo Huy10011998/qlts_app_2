@@ -1,14 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { View, StyleSheet, Alert } from "react-native";
 import { useRoute } from "@react-navigation/native";
-import { getFieldValue } from "../../utils/helper"; // đổi "@/..." thành "../../"
+import { getFieldValue } from "../../utils/Helper"; // đổi "@/..." thành "../../"
 import IsLoading from "../../components/ui/IconLoading";
 import {
   DetailsHistoryProps,
   DetailsHistoryRouteProp,
   Field,
-} from "../../types";
-import { getDetailsHistory } from "../../services/data/callApi";
+} from "../../types/Index";
+import { getDetailsHistory } from "../../services/data/CallApi";
 
 export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
   const route = useRoute<DetailsHistoryRouteProp>();

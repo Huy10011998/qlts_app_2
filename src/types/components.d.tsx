@@ -1,5 +1,5 @@
 import React, { ComponentType, PropsWithChildren, ReactElement } from "react";
-import { Field, Item } from "./model.d";
+import { Field, Item } from "./Model.d";
 import {
   ImageSourcePropType,
   StyleProp,
@@ -9,8 +9,8 @@ import {
   ViewStyle,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { getFieldValue } from "../utils/helper";
-import { TabItem } from "./context.d";
+import { getFieldValue } from "../utils/Helper";
+import { TabItem } from "./Context.d";
 import { TAB_ITEMS } from "../components/assets/AssetDetails";
 
 export interface CardItemProps {

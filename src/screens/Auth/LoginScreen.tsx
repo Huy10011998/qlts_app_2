@@ -15,7 +15,7 @@ import { useNavigation } from "@react-navigation/native";
 import ReactNativeBiometrics from "react-native-biometrics";
 import * as Keychain from "react-native-keychain";
 import { useAuth } from "../../context/AuthContext";
-import { loginApi } from "../../services/auth/authApi";
+import { loginApi } from "../../services/auth/AuthApi";
 import IsLoading from "../../components/ui/IconLoading";
 
 export default function LoginScreen() {

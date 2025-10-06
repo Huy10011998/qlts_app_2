@@ -5,13 +5,13 @@ import AssetScreen from "../screens/Assets/AssetScreen";
 import HomeScreen from "../screens/Home/HomeScreen";
 import AssetListScreen from "../screens/Assets/AssetListScreen";
 import { RouteProp } from "@react-navigation/native";
-import { RootStackParamList } from "../types";
+import { RootStackParamList } from "../types/Index";
 import HeaderHome from "../components/header/HeaderHome";
 import AssetDetailsScreen from "../screens/Assets/AssetDetailsScreen";
 import AssetRelaterListScreen from "../screens/Assets/AssetRelatedListScreen";
 import AssetRelatedDeTailsHistoryScreen from "../screens/Assets/AssetRelatedDeTailsHistoryScreen";
 import AssetRelatedDetailsScreen from "../screens/Assets/AssetRelatedDetailsScreen";
-import { capitalizeFirstLetter } from "../utils/helper";
+import { capitalizeFirstLetter } from "../utils/Helper";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 

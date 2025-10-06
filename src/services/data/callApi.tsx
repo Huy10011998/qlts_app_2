@@ -1,29 +1,38 @@
-// src/services/apiClient.ts
 import axios, { AxiosError, AxiosInstance } from "axios";
 import { Buffer } from "buffer";
-import { API_ENDPOINTS, BASE_URL } from "../../config";
+import { API_ENDPOINTS, BASE_URL } from "../../config/Index";
 import { getValidToken } from "../../context/AuthContext";
 
-// =================== Axios instance ===================
-const api: AxiosInstance = axios.create({
+// Axios instance
+export const api: AxiosInstance = axios.create({
   baseURL: BASE_URL,
   headers: { "Content-Type": "application/json;charset=UTF-8" },
+  timeout: 15000,
 });
 
+// Refresh Token Queue
 let isRefreshing = false;
-let refreshSubscribers: ((token: string) => void)[] = [];
+let refreshSubscribers: ((token: string | null) => void)[] = [];
 
-const notifySubscribers = (newToken: string) => {
-  refreshSubscribers.forEach((cb) => cb(newToken));
+const subscribeTokenRefresh = (cb: (token: string | null) => void) => {
+  refreshSubscribers.push(cb);
+};
+
+const onRefreshed = (token: string | null) => {
+  refreshSubscribers.forEach((cb) => cb(token));
   refreshSubscribers = [];
 };
 
-// Request interceptor: tự thêm token
+// Request interceptor
 api.interceptors.request.use(async (config) => {
   const token = await getValidToken();
   if (token) {
-    console.log("[API] Attaching token:", token.slice(0, 20) + "...");
-    config.headers.Authorization = `Bearer ${token}`;
+    if (config.headers?.set) {
+      config.headers.set("Authorization", `Bearer ${token}`);
+    } else {
+      (config.headers as any).Authorization = `Bearer ${token}`;
+    }
+    console.log("[API] Request → attach token:", token.slice(0, 20) + "...");
   }
   return config;
 });
@@ -35,55 +44,62 @@ api.interceptors.response.use(
     const originalRequest: any = error.config;
 
     if (error.response?.status === 401 && !originalRequest._retry) {
-      console.warn("[API] 401 detected → retrying with refresh token...");
+      console.warn("[API] 401 Unauthorized → try refresh");
       originalRequest._retry = true;
 
       if (isRefreshing) {
-        console.log("[API] Refresh in progress → queue request");
-        return new Promise((resolve) => {
-          refreshSubscribers.push((newToken) => {
-            originalRequest.headers.Authorization = `Bearer ${newToken}`;
-            resolve(api(originalRequest));
+        // Nếu đang refresh → chờ token mới
+        return new Promise((resolve, reject) => {
+          subscribeTokenRefresh((newToken) => {
+            if (newToken) {
+              originalRequest.headers.Authorization = `Bearer ${newToken}`;
+              resolve(api(originalRequest));
+            } else {
+              reject(error);
+            }
           });
         });
       }
 
       isRefreshing = true;
+
       try {
         const newToken = await getValidToken();
-        if (!newToken) throw new Error("Cannot refresh token");
+        if (!newToken) throw new Error("Refresh token failed");
 
-        console.log("[API] Got new token:", newToken);
-        notifySubscribers(newToken);
+        onRefreshed(newToken);
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
         return api(originalRequest);
       } catch (err) {
-        console.error("[API] Refresh failed → force logout");
-        refreshSubscribers = [];
-        throw err;
+        console.error("[API] Refresh failed → logout required");
+        onRefreshed(null);
+        return Promise.reject(err);
       } finally {
         isRefreshing = false;
       }
     }
 
-    throw error;
+    return Promise.reject(error);
   }
 );
 
-// =================== Generic API Wrapper ===================
+// Generic API Wrapper
 export const callApi = async <T,>(
   method: "GET" | "POST" | "PUT" | "DELETE",
   url: string,
   data?: any,
   configOverride?: any
 ): Promise<T> => {
-  const config = { method, url, data, ...configOverride };
-  const response = await api.request<T>(config);
+  const response = await api.request<T>({
+    method,
+    url,
+    data,
+    ...configOverride,
+  });
   return response.data;
 };
 
-// =================== API Functions ===================
-
+// API Functions
 // Get list of any class
 export const getList = async <T = any,>(
   nameClass: string,
@@ -106,12 +122,12 @@ export const getList = async <T = any,>(
   });
 };
 
-// Get build-tree of any class
+// Build-tree
 export const getBuildTree = async <T = any,>(nameClass: string): Promise<T> => {
   return callApi<T>("POST", `/${nameClass}/build-tree`, {});
 };
 
-// Get details of an item
+// Details
 export const getDetails = async <T = any,>(
   nameClass: string,
   id: number
@@ -119,7 +135,7 @@ export const getDetails = async <T = any,>(
   return callApi<T>("POST", `/${nameClass}/get-details`, { id });
 };
 
-// Get history details
+// History details
 export const getDetailsHistory = async <T = any,>(
   nameClass: string,
   id: number
@@ -129,7 +145,7 @@ export const getDetailsHistory = async <T = any,>(
   });
 };
 
-// Get class reference
+// Class reference
 export const getClassReference = async <T = any,>(
   nameClass: string
 ): Promise<T> => {
@@ -138,7 +154,7 @@ export const getClassReference = async <T = any,>(
   });
 };
 
-// Get list history
+// List history
 export const getListHistory = async <T = any,>(
   id: number,
   nameClass: string
@@ -146,7 +162,7 @@ export const getListHistory = async <T = any,>(
   return callApi<T>("POST", `/${nameClass}/get-list-history`, { id });
 };
 
-// Get list of attached files
+// List attached files
 export const getListAttachFile = async (
   nameClass: string,
   orderby: string,
@@ -156,9 +172,7 @@ export const getListAttachFile = async (
   conditions: any[],
   conditionsAll: any[]
 ): Promise<{ data: { items: Record<string, any>[]; totalCount: number } }> => {
-  return callApi<{
-    data: { items: Record<string, any>[]; totalCount: number };
-  }>("POST", `/${nameClass}/get-attach-file`, {
+  return callApi("POST", `/${nameClass}/get-attach-file`, {
     orderby,
     pageSize,
     skipSize,
@@ -183,37 +197,34 @@ export const getPreviewAttachFile = async (
   return { headers: response.headers, data: base64Data };
 };
 
-// Get class properties
+// Class properties
 export const getPropertyClass = async <T = any,>(
   nameClass: string
 ): Promise<T> => {
   return callApi<T>("POST", API_ENDPOINTS.GET_CLASS_BY_NAME, { nameClass });
 };
 
-// Get active fields
+// Active fields
 export const getFieldActive = async <T = any,>(
   iD_Class_MoTa: string
 ): Promise<T> => {
   return callApi<T>("POST", API_ENDPOINTS.GET_FIELD_ACTIVE, { iD_Class_MoTa });
 };
 
-// Get preview attach property
+// Preview attach property
 export const getPreviewAttachProperty = async (
   path: string
 ): Promise<{ headers: any; data: string }> => {
   const response = await api.post(API_ENDPOINTS.PREVIEW_ATTACH_PROPERTY, path, {
     responseType: "arraybuffer",
     timeout: 10000,
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
   });
-
   const base64Data = Buffer.from(response.data, "binary").toString("base64");
   return { headers: response.headers, data: base64Data };
 };
 
-// Get preview bao cao
+// Preview báo cáo
 export const getPreviewBC = async (
   param: Record<string, any>,
   path: string
@@ -222,8 +233,6 @@ export const getPreviewBC = async (
     responseType: "arraybuffer",
     timeout: 10000,
   });
-
   const base64Data = Buffer.from(response.data, "binary").toString("base64");
-
   return { headers: response.headers, data: base64Data };
 };

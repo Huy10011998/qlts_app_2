@@ -15,9 +15,9 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { WebView } from "react-native-webview";
 import { ReportViewProps } from "../../types";
-import { getPreviewBC } from "../../services/data/callApi";
-import { API_ENDPOINTS } from "../../config";
-import { validateDates } from "../../utils/helper";
+import { getPreviewBC } from "../../services/data/CallApi";
+import { API_ENDPOINTS } from "../../config/Index";
+import { validateDates } from "../../utils/Helper";
 
 const ReportView: React.FC<ReportViewProps> = ({ title, onClose }) => {
   const [fromDate, setFromDate] = useState<string>("");

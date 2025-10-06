@@ -1,4 +1,4 @@
-export * from "./auth/authApi";
+export * from "./auth/AuthApi";
 export {
   getList,
   getFieldActive,
@@ -11,4 +11,4 @@ export {
   getBuildTree,
   getDetailsHistory,
   getPreviewAttachProperty,
-} from "./data/callApi";
+} from "./data/CallApi";

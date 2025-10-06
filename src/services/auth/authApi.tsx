@@ -1,7 +1,6 @@
-import { API_ENDPOINTS } from "../../config";
-import { getValidToken } from "../../context/AuthContext";
-import { ChangePasswordResponse, LoginResponse } from "../../types/api.d";
-import { callApi, md5Hash } from "../../utils/helper";
+import { API_ENDPOINTS } from "../../config/Index";
+import { ChangePasswordResponse, LoginResponse } from "../../types/Api.d";
+import { callApi, md5Hash } from "../../utils/Helper";
 
 export const loginApi = async (
   userName: string,

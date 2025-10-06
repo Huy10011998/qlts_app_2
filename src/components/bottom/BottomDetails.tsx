@@ -7,7 +7,7 @@ import {
   StyleSheet,
   Dimensions,
 } from "react-native";
-import { BottomBarProps } from "../../types";
+import { BottomBarProps } from "../../types/Index";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 export default function BottomBarDetails({

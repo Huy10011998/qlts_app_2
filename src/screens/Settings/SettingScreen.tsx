@@ -16,9 +16,9 @@ import { useNavigation } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useAuth } from "../../context/AuthContext";
 import IsLoading from "../../components/ui/IconLoading";
-import { changePasswordApi } from "../../services";
-import { callApi } from "../../utils/helper";
-import { API_ENDPOINTS } from "../../config";
+import { changePasswordApi } from "../../services/Index";
+import { callApi } from "../../utils/Helper";
+import { API_ENDPOINTS } from "../../config/Index";
 import { SettingScreenNavigationProp, UserInfo } from "../../types";
 
 // Header profile

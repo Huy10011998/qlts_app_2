@@ -11,9 +11,9 @@ import {
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { GroupListProps } from "../../types";
-import { TypeProperty } from "../../utils/enum";
-import { getPreviewAttachProperty } from "../../services/data/callApi";
-import { getMimeType } from "../../utils/helper";
+import { TypeProperty } from "../../utils/Enum";
+import { getPreviewAttachProperty } from "../../services/data/CallApi";
+import { getMimeType } from "../../utils/Helper";
 import IsLoading from "../ui/IconLoading";
 
 export default function AssetGroupList({

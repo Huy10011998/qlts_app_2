@@ -23,19 +23,19 @@ import {
   AssetDetailsNavigationProp,
   TreeNode,
   AssetListScreenRouteProp,
-} from "../../types";
+} from "../../types/Index";
 import {
   getFieldActive,
   getList,
   getPropertyClass,
   getBuildTree,
-} from "../../services";
+} from "../../services/Index";
 import ListCardAsset from "../../components/list/ListCardAsset";
 import IsLoading from "../../components/ui/IconLoading";
-import { normalizeText } from "../../utils/helper";
+import { normalizeText } from "../../utils/Helper";
 import { useDebounce } from "../../hooks/useDebounce";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { SqlOperator, TypeProperty } from "../../utils/enum";
+import { SqlOperator, TypeProperty } from "../../utils/Enum";
 
 if (
   Platform.OS === "android" &&
@@ -459,6 +459,7 @@ const styles = StyleSheet.create({
     position: "relative",
     margin: 12,
   },
+
   searchInput: {
     borderWidth: 1,
     borderColor: "#ccc",
@@ -468,27 +469,32 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingRight: 36,
   },
+
   searchSpinner: {
     position: "absolute",
     right: 20,
     top: "50%",
     marginTop: -10,
   },
+
   header: {
     textAlign: "center",
     fontSize: 14,
     color: "#333",
     fontWeight: "600",
   },
+
   stickyHeader: {
     backgroundColor: "#F3F4F6",
     paddingVertical: 10,
     zIndex: 10,
   },
+
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.3)",
   },
+
   menuContainer: {
     position: "absolute",
     right: 0,
@@ -499,16 +505,19 @@ const styles = StyleSheet.create({
     elevation: 5,
     zIndex: 999,
   },
+
   menuTitle: {
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 12,
   },
+
   nodeRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 6,
   },
+
   nodeText: {
     fontSize: 15,
     color: "#333",

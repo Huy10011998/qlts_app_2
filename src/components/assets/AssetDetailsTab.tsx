@@ -13,7 +13,7 @@ import {
   DeTailsTabRouteProp,
   MenuItemResponse,
 } from "../../types";
-import { getClassReference } from "../../services";
+import { getClassReference } from "../../services/Index";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import IsLoading from "../ui/IconLoading";
 

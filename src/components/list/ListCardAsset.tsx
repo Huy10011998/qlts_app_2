@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { getFieldValue } from "../../utils/helper";
+import { getFieldValue } from "../../utils/Helper";
 import { CardItemProps } from "../../types";
 
 export default function ListCardAsset({

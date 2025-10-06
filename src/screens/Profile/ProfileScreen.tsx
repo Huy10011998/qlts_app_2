@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, Image, ScrollView, Alert } from "react-native";
 import IsLoading from "../../components/ui/IconLoading"; // sửa path theo dự án
-import { API_ENDPOINTS } from "../../config";
-import { User } from "../../types";
-import { callApi } from "../../utils/helper";
+import { API_ENDPOINTS } from "../../config/Index";
+import { User } from "../../types/Index";
+import { callApi } from "../../utils/Helper";
 
 const ProfileScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);

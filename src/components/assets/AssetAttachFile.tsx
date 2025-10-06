@@ -2,8 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, FlatList, Alert } from "react-native";
 import { useParams } from "../../hooks/useParams";
 import { Conditions, FileItem } from "../../types";
-import { SqlOperator, TypeProperty, CategoryFiles } from "../../utils/enum";
-import { getListAttachFile } from "../../services";
+import { SqlOperator, TypeProperty, CategoryFiles } from "../../utils/Enum";
+import { getListAttachFile } from "../../services/Index";
 import IsLoading from "../ui/IconLoading";
 import ListCardAttachFile from "../list/ListCardAttachFile";
 
