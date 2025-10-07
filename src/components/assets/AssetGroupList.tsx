@@ -232,6 +232,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
   },
+
   groupHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -239,44 +240,53 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     marginBottom: 12,
   },
+
   groupTitle: { fontSize: 16, fontWeight: "700", color: "#000" },
+
   fieldRow: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 8,
     flexWrap: "wrap",
   },
+
   label: {
     fontWeight: "600",
     color: "#000",
     fontSize: 14,
     marginRight: 6,
   },
+
   value: {
     fontSize: 14,
     color: "#000",
     flexShrink: 1,
   },
+
   link: {
     color: "blue",
     textDecorationLine: "underline",
   },
+
   image: {
     width: 80,
     height: 80,
     borderRadius: 8,
     backgroundColor: "#f2f2f2",
   },
+
   modalContainer: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.9)",
     justifyContent: "center",
     alignItems: "center",
   },
+
   fullImage: {
     width: "90%",
     height: "80%",
   },
+
   closeButton: {
     position: "absolute",
     top: 60,

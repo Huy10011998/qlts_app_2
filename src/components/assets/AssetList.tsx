@@ -274,7 +274,9 @@ export default function AssetList() {
         if (!isLoadMore && fieldActive.length === 0) {
           const responseFieldActive = await getFieldActive(nameClass);
           const activeFields = responseFieldActive?.data || [];
+
           setFieldActive(activeFields);
+
           setFieldShowMobile(
             activeFields.filter((f: { isShowMobile: any }) => f.isShowMobile)
           );
@@ -297,7 +299,6 @@ export default function AssetList() {
           pageSize,
           currentSkip,
           debouncedSearch,
-          fieldActive,
           conditions,
           []
         );
@@ -326,14 +327,7 @@ export default function AssetList() {
         setIsSearching(false);
       }
     },
-    [
-      nameClass,
-      fieldActive,
-      propertyClass,
-      skipSize,
-      debouncedSearch,
-      conditions,
-    ]
+    [nameClass, propertyClass, skipSize, debouncedSearch, conditions]
   );
 
   useEffect(() => {
@@ -504,6 +498,7 @@ const styles = StyleSheet.create({
     padding: 16,
     elevation: 5,
     zIndex: 999,
+    paddingBottom: 70,
   },
 
   menuTitle: {

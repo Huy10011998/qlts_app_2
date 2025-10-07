@@ -12,6 +12,7 @@ import AssetRelaterListScreen from "../screens/Assets/AssetRelatedListScreen";
 import AssetRelatedDeTailsHistoryScreen from "../screens/Assets/AssetRelatedDeTailsHistoryScreen";
 import AssetRelatedDetailsScreen from "../screens/Assets/AssetRelatedDetailsScreen";
 import { capitalizeFirstLetter } from "../utils/Helper";
+import QrDetailsScreen from "../screens/QrScanner/QrDetailsScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -92,6 +93,26 @@ export default function HomeStack() {
         options={{
           title: "Chi tiết lịch sử",
           ...HeaderDetails({ showBackButton: true }),
+        }}
+      />
+      <Stack.Screen
+        name="QrDetails"
+        component={QrDetailsScreen}
+        options={({
+          route,
+        }: {
+          route: RouteProp<RootStackParamList, "QrDetails">;
+        }) => {
+          const { toggleMenu } = route.params || {};
+          return {
+            title: "Thông tin tài sản",
+
+            ...HeaderDetails({
+              showBackButton: true,
+              showMenuButton: true,
+              onMenuPress: toggleMenu,
+            }),
+          };
         }}
       />
     </Stack.Navigator>

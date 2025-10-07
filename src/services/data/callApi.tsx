@@ -107,7 +107,6 @@ export const getList = async <T = any,>(
   pageSize: number,
   skipSize: number,
   searchText: string,
-  fields: any[],
   conditions: any[],
   conditionsAll: any[]
 ): Promise<T> => {
@@ -116,7 +115,6 @@ export const getList = async <T = any,>(
     pageSize,
     skipSize,
     searchText,
-    fields,
     conditions,
     conditionsAll,
   });

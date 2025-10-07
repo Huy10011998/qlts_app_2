@@ -125,7 +125,6 @@ export default function AssetRelatedList() {
           pageSize,
           currentSkip,
           debouncedSearch,
-          fieldActive,
           conditions,
           []
         );
@@ -154,7 +153,7 @@ export default function AssetRelatedList() {
         setIsSearching(false);
       }
     },
-    [nameClass, fieldActive, propertyClass, skipSize, debouncedSearch]
+    [nameClass, propertyClass, skipSize, debouncedSearch]
   );
 
   // fetch data khi nameClass hoặc debouncedSearch thay đổi

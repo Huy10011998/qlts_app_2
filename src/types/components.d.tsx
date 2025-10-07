@@ -139,6 +139,17 @@ export interface DetailsProps {
     TAB_ITEMS?: typeof TAB_ITEMS;
   }) => React.ReactNode;
 }
+export interface QrDetailsProps {
+  children: (props: {
+    activeTab: string;
+    setActiveTab: (tabKey: string, label: string) => void;
+    groupedFields: Record<string, Field[]>;
+    collapsedGroups: Record<string, boolean>;
+    toggleGroup: (groupName: string) => void;
+    item: any;
+    getFieldValue: any;
+  }) => React.ReactNode;
+}
 
 export interface DetailsHistoryProps {
   children: (props: {

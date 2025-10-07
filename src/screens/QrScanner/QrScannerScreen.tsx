@@ -18,6 +18,7 @@ import {
 } from "react-native-vision-camera";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { QrScannerNavigationProp } from "../../types";
+import { getFieldActive } from "../../services/Index";
 
 export default function QrScannerScreen() {
   const [hasPermission, setHasPermission] = useState(false);
@@ -54,7 +55,7 @@ export default function QrScannerScreen() {
   // ✅ Xử lý khi scan QR
   const codeScanner: CodeScanner = useCodeScanner({
     codeTypes: ["qr"],
-    onCodeScanned: (codes: Code[]) => {
+    onCodeScanned: async (codes: Code[]) => {
       if (codes.length > 0 && !isScanned) {
         setIsScanned(true);
 
@@ -67,15 +68,24 @@ export default function QrScannerScreen() {
         if (parts.length === 2) {
           const [title, id] = parts;
 
-          // 👉 Điều hướng sang AssetDetails trong HomeStack (tab HomeTab)
-          navigation.navigate("HomeTab", {
-            screen: "AssetDetails",
-            params: {
-              id,
-              titleHeader: title,
-              nameClass: title,
-            },
-          });
+          try {
+            const responseFieldActive = await getFieldActive(title);
+            const fieldActive = responseFieldActive?.data || [];
+
+            navigation.navigate("HomeTab", {
+              screen: "QrDetails",
+              params: {
+                id,
+                titleHeader: title,
+                nameClass: title,
+                field: JSON.stringify(fieldActive),
+              },
+            });
+          } catch (error) {
+            console.error("Lỗi khi gọi getFieldActive:", error);
+            Alert.alert("Lỗi", "Không lấy được dữ liệu từ server.");
+            setIsScanned(false);
+          }
         } else {
           Alert.alert("QR không hợp lệ", data, [
             { text: "OK", onPress: () => setIsScanned(false) },
@@ -137,6 +147,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+
   header: {
     position: "absolute",
     top: 50,
@@ -146,14 +157,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
   headerCenter: {
     alignItems: "center",
   },
+
   closeBtn: {
     position: "absolute",
     right: 10,
     top: 0,
   },
+
   headerText: {
     color: "#fff",
     fontSize: 16,
@@ -163,46 +177,54 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 16,
   },
+
   scanFrameContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
+
   scanFrame: {
     width: 250,
     height: 250,
     position: "relative",
   },
+
   corner: {
     width: 40,
     height: 40,
     borderColor: "#fff",
     position: "absolute",
   },
+
   topLeft: {
     top: 0,
     left: 0,
     borderLeftWidth: 6,
     borderTopWidth: 6,
   },
+
   topRight: {
     top: 0,
     right: 0,
     borderRightWidth: 6,
     borderTopWidth: 6,
   },
+
   bottomLeft: {
     bottom: 0,
     left: 0,
     borderLeftWidth: 6,
     borderBottomWidth: 6,
   },
+
   bottomRight: {
     bottom: 0,
     right: 0,
     borderRightWidth: 6,
     borderBottomWidth: 6,
   },
+
   scanText: {
     marginTop: 20,
     color: "#fff",
