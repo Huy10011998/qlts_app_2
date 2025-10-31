@@ -29,7 +29,6 @@ export type RootStackParamList = {
     nameClass?: string;
     titleHeader?: string;
     isBuildTree?: boolean;
-    onMenuPress?: () => void;
   };
 
   QrDetails: {
@@ -37,7 +36,6 @@ export type RootStackParamList = {
     titleHeader?: string;
     nameClass?: string;
     field?: any;
-    toggleMenu?: () => void;
   };
 
   RelaterList: { name: string };

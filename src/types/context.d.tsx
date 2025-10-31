@@ -1,7 +1,3 @@
-// src/types/context.d.ts
-
-import Ionicons from "react-native-vector-icons/Ionicons";
-
 // Context cho xác thực
 export interface AuthContextType {
   token: string | null;

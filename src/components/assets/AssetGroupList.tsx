@@ -13,7 +13,7 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { GroupListProps } from "../../types";
 import { TypeProperty } from "../../utils/Enum";
 import { getPreviewAttachProperty } from "../../services/data/CallApi";
-import { getMimeType } from "../../utils/Helper";
+import { getMimeType, parseLink } from "../../utils/Helper";
 import IsLoading from "../ui/IconLoading";
 
 export default function AssetGroupList({
@@ -80,15 +80,6 @@ export default function AssetGroupList({
       }
     },
   });
-
-  // Hàm parse link từ chuỗi HTML <a>
-  const parseLink = (html: string) => {
-    const match = html.match(/href="([^"]+)".*>([^<]+)<\/a>/);
-    if (match) {
-      return { url: match[1], text: match[2] };
-    }
-    return null;
-  };
 
   return (
     <>

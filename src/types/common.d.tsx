@@ -1,5 +1,3 @@
-// src/types/common.d.ts
-
 // Enum cho TypeGroup của Item
 export enum TypeGroup {
   ROOT = 0,

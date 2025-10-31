@@ -5,7 +5,7 @@ import React from "react";
 import { Alert } from "react-native";
 import { api } from "../services/data/CallApi";
 
-/* -------------------- Bỏ dấu tiếng Việt -------------------- */
+// Bỏ dấu tiếng Việt
 export const removeVietnameseTones = (str: string): string => {
   return str
     .normalize("NFD")
@@ -15,23 +15,23 @@ export const removeVietnameseTones = (str: string): string => {
     .toLowerCase();
 };
 
-/* -------------------- Hash MD5 -------------------- */
+// Hash MD5
 export function md5Hash(input: string): string {
   return md5.hex_md5(input);
 }
 
-/* -------------------- Chuẩn hóa text -------------------- */
+// Chuẩn hóa text
 export const normalizeText = (text: string) =>
   text
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
 
-/* -------------------- Format key property -------------------- */
+// Format key property
 export const formatKeyProperty = (key: string) =>
   key.charAt(0).toLowerCase() + key.slice(1);
 
-/* -------------------- Lấy giá trị từ Field -------------------- */
+// Lấy giá trị từ Field
 export const getFieldValue = (
   item: Record<string, any>,
   field: Field
@@ -103,7 +103,7 @@ export const getFieldValue = (
   }
 };
 
-/* -------------------- Call API -------------------- */
+// Call API
 export const callApi = async <T,>(
   method: "GET" | "POST" | "PUT" | "DELETE",
   url: string,
@@ -122,7 +122,7 @@ export const callApi = async <T,>(
   }
 };
 
-/* -------------------- Tách nameClass -------------------- */
+// Tách nameClass
 export const splitNameClass = (nameClass: string) => {
   if (!nameClass) return { key: "", label: "" };
 
@@ -133,7 +133,7 @@ export const splitNameClass = (nameClass: string) => {
   };
 };
 
-/* -------------------- Format ngày giờ -------------------- */
+// Format ngày giờ
 export const formatDate = (dateString?: string) => {
   if (!dateString) return "Không có";
   try {
@@ -151,7 +151,7 @@ export const formatDate = (dateString?: string) => {
   }
 };
 
-/* -------------------- Chuẩn hóa value -------------------- */
+// Chuẩn hóa value
 export function normalizeValue(value?: any): string {
   if (value === null || value === undefined) return "";
   return String(value)
@@ -165,19 +165,19 @@ export function normalizeValue(value?: any): string {
     .toLowerCase();
 }
 
-/* -------------------- Lấy extension file -------------------- */
+// Lấy extension file
 export const getFileExtension = (fileName: string) => {
   const parts = fileName.split(".");
   return parts.length > 1 ? parts.pop()?.toLowerCase() : "";
 };
 
-/* -------------------- Viết hoa chữ cái đầu -------------------- */
+// Viết hoa chữ cái đầu
 export function capitalizeFirstLetter(str?: string): string {
   if (!str) return "";
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-// detect mime type từ path
+// Detect mime type từ path
 export const getMimeType = (path: string) => {
   const ext = path.split(".").pop()?.toLowerCase();
   switch (ext) {
@@ -221,7 +221,7 @@ export function getResizePath(inputPath: string): string {
   return `${newFolder}/${nameWithoutExt}_resize${ext}`;
 }
 
-// convert dd/mm/yyyy -> string yyyy-MM-ddT00:00:00
+// Convert dd/mm/yyyy -> string yyyy-MM-ddT00:00:00
 export function parseDateLocal(dateStr: string): string | null {
   if (!dateStr) return null;
   const parts = dateStr.split("/");
@@ -237,6 +237,7 @@ export function parseDateLocal(dateStr: string): string | null {
   )}T00:00:00`;
 }
 
+// Format Date
 export const validateDates = (
   fromDate: string,
   toDate: string
@@ -271,4 +272,13 @@ export const validateDates = (
     from: from.toISOString(),
     to: to.toISOString(),
   };
+};
+
+// Hàm parse link từ chuỗi HTML <a>
+export const parseLink = (html: string) => {
+  const match = html.match(/href="([^"]+)".*>([^<]+)<\/a>/);
+  if (match) {
+    return { url: match[1], text: match[2] };
+  }
+  return null;
 };

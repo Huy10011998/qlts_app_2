@@ -31,7 +31,7 @@ export enum SqlOperator {
   IsNotEmpty,
 }
 
-// CategoryFile.ts
+// CategoryFile
 export enum CategoryFile {
   TaiLieu = "0",
   TaiChinh = "1",

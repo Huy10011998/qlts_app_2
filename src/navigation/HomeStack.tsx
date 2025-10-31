@@ -98,21 +98,12 @@ export default function HomeStack() {
       <Stack.Screen
         name="QrDetails"
         component={QrDetailsScreen}
-        options={({
-          route,
-        }: {
-          route: RouteProp<RootStackParamList, "QrDetails">;
-        }) => {
-          const { toggleMenu } = route.params || {};
-          return {
-            title: "Thông tin tài sản",
-
-            ...HeaderDetails({
-              showBackButton: true,
-              showMenuButton: true,
-              onMenuPress: toggleMenu,
-            }),
-          };
+        options={{
+          title: "Thông tin tài sản",
+          ...HeaderDetails({
+            showBackButton: true,
+            showMenuButton: false,
+          }),
         }}
       />
     </Stack.Navigator>

@@ -1,10 +1,4 @@
-import React, {
-  useEffect,
-  useMemo,
-  useState,
-  useRef,
-  useLayoutEffect,
-} from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import {
   View,
   StyleSheet,
@@ -75,8 +69,9 @@ export default function QrDetails({ children }: QrDetailsProps) {
   };
 
   // Drawer functions
-  const openMenu = () => {
+  const openMenu = async () => {
     setMenuVisible(true);
+
     Animated.timing(slideAnim, {
       toValue: 0,
       duration: 300,
@@ -97,10 +92,15 @@ export default function QrDetails({ children }: QrDetailsProps) {
     else openMenu();
   };
 
-  // Cập nhật header để nút menu hoạt động
   useEffect(() => {
-    navigation.setParams({ toggleMenu });
-  }, [toggleMenu]);
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity onPress={toggleMenu} style={{ paddingHorizontal: 5 }}>
+          <Ionicons name="menu" size={26} color="#fff" />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, toggleMenu]);
 
   // Fetch chi tiết asset
   useEffect(() => {
@@ -187,11 +187,13 @@ export default function QrDetails({ children }: QrDetailsProps) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F9F9F9", paddingBottom: 20 },
+
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.3)",
     zIndex: 998,
   },
+
   menuContainer: {
     position: "absolute",
     right: 0,
@@ -200,12 +202,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     zIndex: 999,
   },
+
   menuItem: {
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
   },
+
   menuItemText: {
     fontSize: 15,
     color: "#333",
