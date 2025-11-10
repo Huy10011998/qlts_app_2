@@ -46,6 +46,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
+
   logo: { width: 100, height: 40 },
   headerIcons: { flexDirection: "row", alignItems: "center" },
 });

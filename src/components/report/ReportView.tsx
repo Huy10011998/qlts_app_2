@@ -3,21 +3,17 @@ import {
   View,
   Text,
   Platform,
-  TextInput,
   TouchableOpacity,
   Alert,
   ActivityIndicator,
-  Modal,
-  StyleSheet,
-  Dimensions,
 } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { WebView } from "react-native-webview";
 import { ReportViewProps } from "../../types";
 import { getPreviewBC } from "../../services/data/CallApi";
 import { API_ENDPOINTS } from "../../config/Index";
 import { validateDates } from "../../utils/Helper";
+import { DatePickerIOS } from "../datePickerIOS/DatePicker";
 
 const ReportView: React.FC<ReportViewProps> = ({ title, onClose }) => {
   const [fromDate, setFromDate] = useState<string>("");
@@ -25,30 +21,8 @@ const ReportView: React.FC<ReportViewProps> = ({ title, onClose }) => {
   const [reportHtml, setReportHtml] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
-  const [showPicker, setShowPicker] = useState(false);
-  const [currentField, setCurrentField] = useState<"from" | "to" | null>(null);
-  const [tempDate, setTempDate] = useState(new Date());
-
-  // Khi chọn ngày trong picker
-  const handleDateChange = (event: any, selectedDate?: Date) => {
-    const current = selectedDate || tempDate;
-    setTempDate(current);
-  };
-
-  // Nhấn "Chọn" trên toolbar
-  const handleConfirmDate = () => {
-    const selected = tempDate;
-    const formatted = `${("0" + selected.getDate()).slice(-2)}/${(
-      "0" +
-      (selected.getMonth() + 1)
-    ).slice(-2)}/${selected.getFullYear()}`;
-    if (currentField === "from") setFromDate(formatted);
-    if (currentField === "to") setToDate(formatted);
-    setShowPicker(false);
-  };
-
-  // Nhấn "Hủy"
-  const handleCancelDate = () => setShowPicker(false);
+  // Convert "dd-MM-yyyy" → "dd/MM/yyyy"
+  const formatToSlash = (str: string) => str.replace(/-/g, "/");
 
   const handleSubmit = async () => {
     if (!fromDate || !toDate) {
@@ -113,18 +87,6 @@ const ReportView: React.FC<ReportViewProps> = ({ title, onClose }) => {
     }
   };
 
-  // Mở date picker và khởi tạo đúng tempDate
-  const openPicker = (field: "from" | "to", dateStr: string) => {
-    setCurrentField(field);
-    if (dateStr) {
-      const [d, m, y] = dateStr.split("/").map(Number);
-      setTempDate(new Date(y, m - 1, d));
-    } else {
-      setTempDate(new Date());
-    }
-    setShowPicker(true);
-  };
-
   return (
     <View style={{ flex: 1, backgroundColor: "#fff" }}>
       {/* Header */}
@@ -135,49 +97,30 @@ const ReportView: React.FC<ReportViewProps> = ({ title, onClose }) => {
           paddingBottom: 10,
           backgroundColor: "#FF3333",
           flexDirection: "row",
-          alignItems: "center",
           justifyContent: "space-between",
+          alignItems: "center",
         }}
       >
         <Text style={{ fontSize: 18, fontWeight: "bold", color: "#fff" }}>
           {title}
         </Text>
+
         <TouchableOpacity onPress={onClose}>
           <Ionicons name="close" size={30} color="#fff" />
         </TouchableOpacity>
       </View>
 
       {/* Bộ lọc ngày */}
-      <View style={{ padding: 16 }}>
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => openPicker("from", fromDate)}
-        >
-          <View pointerEvents="none">
-            <TextInput
-              style={styles.input}
-              placeholder="Từ ngày (dd/mm/yyyy)"
-              placeholderTextColor="#999"
-              value={fromDate}
-              editable={false}
-            />
-          </View>
-        </TouchableOpacity>
+      <View style={{ padding: 16, gap: 12 }}>
+        <DatePickerIOS
+          value={fromDate.replace(/\//g, "-")} // convert dd/MM/yyyy → dd-MM-yyyy
+          onChange={(val) => setFromDate(formatToSlash(val))}
+        />
 
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => openPicker("to", toDate)}
-        >
-          <View pointerEvents="none">
-            <TextInput
-              style={styles.input}
-              placeholder="Đến ngày (dd/mm/yyyy)"
-              placeholderTextColor="#999"
-              value={toDate}
-              editable={false}
-            />
-          </View>
-        </TouchableOpacity>
+        <DatePickerIOS
+          value={toDate.replace(/\//g, "-")}
+          onChange={(val) => setToDate(formatToSlash(val))}
+        />
 
         <TouchableOpacity
           style={{
@@ -200,53 +143,6 @@ const ReportView: React.FC<ReportViewProps> = ({ title, onClose }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Date Picker Modal */}
-      <Modal
-        visible={showPicker}
-        transparent
-        animationType="slide"
-        onRequestClose={handleCancelDate}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPressOut={handleCancelDate}
-        >
-          <View style={styles.pickerContainer}>
-            {/* Toolbar Hủy/Chọn */}
-            <View style={styles.toolbar}>
-              <TouchableOpacity onPress={handleCancelDate}>
-                <Text style={styles.toolbarText}>Hủy</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleConfirmDate}>
-                <Text style={[styles.toolbarText, { fontWeight: "bold" }]}>
-                  Chọn
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Container cố định cho DatePicker */}
-            <View
-              style={{
-                backgroundColor: "#fff",
-                height: 250,
-                width: "100%",
-                alignItems: "center",
-              }}
-            >
-              <DateTimePicker
-                value={tempDate}
-                mode="date"
-                display="spinner"
-                onChange={handleDateChange}
-                // maximumDate={new Date()}
-                textColor="#000"
-              />
-            </View>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
       {/* Hiển thị PDF */}
       <View style={{ flex: 1 }}>
         {reportHtml && (
@@ -256,48 +152,13 @@ const ReportView: React.FC<ReportViewProps> = ({ title, onClose }) => {
             style={{ flex: 1 }}
             javaScriptEnabled
             domStorageEnabled
-            scalesPageToFit={true}
-            androidHardwareAccelerationDisabled={false}
-            nestedScrollEnabled={true}
+            nestedScrollEnabled
+            scalesPageToFit
           />
         )}
       </View>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  input: {
-    height: 45,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    marginBottom: 12,
-    paddingHorizontal: 10,
-    color: "#000",
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.4)",
-  },
-  pickerContainer: {
-    backgroundColor: "#fff",
-    paddingBottom: 20,
-  },
-  toolbar: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ddd",
-    backgroundColor: "#f9f9f9",
-  },
-  toolbarText: {
-    fontSize: 16,
-    color: "#FF3333",
-  },
-});
 
 export default ReportView;

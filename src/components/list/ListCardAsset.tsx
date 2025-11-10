@@ -45,6 +45,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
   },
+
   avatar: {
     width: 48,
     height: 48,
@@ -54,6 +55,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: 16,
   },
+
   info: { flex: 1 },
   text: { fontSize: 14, color: "#000", marginBottom: 2 },
   label: { fontWeight: "bold", color: "#000" },

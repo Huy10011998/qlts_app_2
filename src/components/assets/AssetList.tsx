@@ -13,7 +13,6 @@ import {
   Dimensions,
   Pressable,
   TouchableOpacity,
-  ActivityIndicator,
   ScrollView,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
@@ -36,6 +35,7 @@ import { normalizeText } from "../../utils/Helper";
 import { useDebounce } from "../../hooks/useDebounce";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { SqlOperator, TypeProperty } from "../../utils/Enum";
+import { AddItemAsset } from "./AddItemAsset";
 
 if (
   Platform.OS === "android" &&
@@ -364,7 +364,8 @@ export default function AssetList() {
     closeMenu();
   };
 
-  if (isLoading && !debouncedSearch) return <IsLoading />;
+  if (isLoading && !debouncedSearch)
+    return <IsLoading size="large" color="#FF3333" />;
 
   return (
     <View style={{ flex: 1 }}>
@@ -378,7 +379,7 @@ export default function AssetList() {
           style={styles.searchInput}
         />
         {isSearching && (
-          <ActivityIndicator
+          <IsLoading
             size="small"
             color="#FF3333"
             style={styles.searchSpinner}
@@ -444,6 +445,7 @@ export default function AssetList() {
           </Animated.View>
         </View>
       )}
+      <AddItemAsset nameClass={nameClass} field={JSON.stringify(fieldActive)} />
     </View>
   );
 }

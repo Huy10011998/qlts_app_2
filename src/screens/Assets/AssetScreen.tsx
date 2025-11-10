@@ -21,11 +21,12 @@ import {
   GetMenuActiveResponse,
   Item,
 } from "../../types/Index";
-import { callApi, removeVietnameseTones } from "../../utils/Helper";
 import { API_ENDPOINTS } from "../../config/Index";
 import { useDebounce } from "../../hooks/useDebounce";
 import IsLoading from "../../components/ui/IconLoading";
 import ReportView from "../../components/report/ReportView";
+import { removeVietnameseTones } from "../../utils/Helper";
+import { callApi } from "../../services/data/CallApi";
 
 if (
   Platform.OS === "android" &&

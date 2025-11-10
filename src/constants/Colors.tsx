@@ -12,6 +12,7 @@ export const Colors = {
     placeholderTextColor: "#aaa",
     borderColor: "#aaa",
   },
+
   dark: {
     text: "#ECEDEE",
     background: "#151718",

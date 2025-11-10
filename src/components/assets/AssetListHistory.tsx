@@ -109,7 +109,7 @@ export default function AssetListHistory() {
     if (lichsu.length < total && !isLoadingMore) fetchData(true);
   };
 
-  if (isLoading) return <IsLoading />;
+  if (isLoading) return <IsLoading size="large" color="#FF3333" />;
 
   return (
     <View style={styles.container}>

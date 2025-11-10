@@ -4,16 +4,7 @@ import { DetailsProps, Field } from "../../types/Index";
 import { useParams } from "../../hooks/useParams";
 import { getDetails } from "../../services/Index";
 import IsLoading from "../ui/IconLoading";
-import { getFieldValue } from "../../utils/Helper";
-
-// Các tab mặc định
-export const TAB_ITEMS = [
-  { key: "list", label: "Thông tin", icon: "document-text-outline" },
-  { key: "details", label: "Chi tiết", icon: "menu-outline" },
-  { key: "notes", label: "Note", icon: "document-attach-outline" },
-  { key: "history", label: "Lịch sử", icon: "time-outline" },
-  { key: "attach", label: "Tệp", icon: "attach-outline" },
-] as const;
+import { getFieldValue, TAB_ITEMS } from "../../utils/Helper";
 
 export default function AssetRelatedDetails({ children }: DetailsProps) {
   const { id, nameClass, field } = useParams();
@@ -22,6 +13,7 @@ export default function AssetRelatedDetails({ children }: DetailsProps) {
   const [collapsedGroups, setCollapsedGroups] = useState<
     Record<string, boolean>
   >({});
+
   const [isLoading, setIsLoading] = useState(true);
   const [item, setItem] = useState<any>(null);
 
@@ -77,11 +69,7 @@ export default function AssetRelatedDetails({ children }: DetailsProps) {
   }, [id, nameClass]);
 
   if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <IsLoading />
-      </View>
-    );
+    return <IsLoading size="large" color="#FF3333" />;
   }
 
   return (

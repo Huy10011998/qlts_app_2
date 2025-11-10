@@ -2,14 +2,33 @@ import React from "react";
 import { TouchableOpacity, StyleSheet } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import {
+  AddItemAssetProps,
+  AssetAddItemNavigationProp,
+} from "../../types/Navigator.d";
 
-export function AddItemAsset() {
+export function AddItemAsset({ onPress, nameClass, field }: AddItemAssetProps) {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<AssetAddItemNavigationProp>();
+
+  const handlePress = () => {
+    if (typeof onPress === "function") {
+      onPress();
+    } else if (typeof onPress === "string") {
+      navigation.navigate(onPress as never);
+    } else {
+      navigation.navigate("AssetAddItem", {
+        field: JSON.stringify(field),
+        nameClass: nameClass,
+      });
+    }
+  };
 
   return (
     <TouchableOpacity
       style={[styles.fab, { bottom: 24 + insets.bottom }]}
-      onPress={() => console.log("FAB pressed")}
+      onPress={handlePress}
       activeOpacity={0.8}
     >
       <Ionicons name="add" size={28} color="#fff" />

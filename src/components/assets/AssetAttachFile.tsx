@@ -98,7 +98,7 @@ export default function AssetListAttachFile() {
 
   const categories = Object.keys(groupedData);
 
-  if (isLoading) return <IsLoading />;
+  if (isLoading) return <IsLoading size="large" color="#FF3333" />;
 
   return (
     <View style={styles.container}>

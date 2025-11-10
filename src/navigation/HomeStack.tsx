@@ -13,6 +13,7 @@ import AssetRelatedDeTailsHistoryScreen from "../screens/Assets/AssetRelatedDeTa
 import AssetRelatedDetailsScreen from "../screens/Assets/AssetRelatedDetailsScreen";
 import { capitalizeFirstLetter } from "../utils/Helper";
 import QrDetailsScreen from "../screens/QrScanner/QrDetailsScreen";
+import AssetAddItemScreen from "../screens/Assets/AssetAddItemScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -26,6 +27,7 @@ export default function HomeStack() {
           header: () => <HeaderHome />,
         }}
       />
+
       <Stack.Screen
         name="Asset"
         component={AssetScreen}
@@ -34,6 +36,7 @@ export default function HomeStack() {
           ...HeaderDetails({ showBackButton: true }),
         }}
       />
+
       <Stack.Screen
         name="AssetList"
         component={AssetListScreen}
@@ -48,11 +51,12 @@ export default function HomeStack() {
             ...HeaderDetails({
               showBackButton: true,
               showMenuButton: isBuildTree,
-              onMenuPress, // 🆕 lấy hàm từ params
+              onMenuPress,
             }),
           };
         }}
       />
+
       <Stack.Screen
         name="AssetDetails"
         component={AssetDetailsScreen}
@@ -65,6 +69,7 @@ export default function HomeStack() {
           ...HeaderDetails({ showBackButton: true }),
         })}
       />
+
       <Stack.Screen
         name="AssetRelatedList"
         component={AssetRelaterListScreen}
@@ -77,6 +82,7 @@ export default function HomeStack() {
           ...HeaderDetails({ showBackButton: true }),
         })}
       />
+
       <Stack.Screen
         name="AssetRelatedDetails"
         component={AssetRelatedDetailsScreen}
@@ -87,6 +93,7 @@ export default function HomeStack() {
           ...HeaderDetails({ showBackButton: true }),
         })}
       />
+
       <Stack.Screen
         name="AssetHistoryDetail"
         component={AssetRelatedDeTailsHistoryScreen}
@@ -95,6 +102,19 @@ export default function HomeStack() {
           ...HeaderDetails({ showBackButton: true }),
         }}
       />
+
+      <Stack.Screen
+        name="AssetAddItem"
+        component={AssetAddItemScreen}
+        options={{
+          title: "Thêm mới",
+          ...HeaderDetails({
+            showBackButton: true,
+            showMenuButton: false,
+          }),
+        }}
+      />
+
       <Stack.Screen
         name="QrDetails"
         component={QrDetailsScreen}

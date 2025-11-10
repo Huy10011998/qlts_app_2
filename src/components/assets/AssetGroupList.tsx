@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  groupTitle: { fontSize: 16, fontWeight: "700", color: "#000" },
+  groupTitle: { fontSize: 16, fontWeight: "700", color: "#FF3333" },
 
   fieldRow: {
     flexDirection: "row",

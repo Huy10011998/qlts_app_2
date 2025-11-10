@@ -78,6 +78,7 @@ const styles = StyleSheet.create({
     right: 0,
     height: 70,
   },
+
   bottomItem: { alignItems: "center", justifyContent: "center" },
   bottomLabel: {
     fontSize: 12,
@@ -85,7 +86,9 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#FF3333",
   },
+
   bottomLabelActive: { opacity: 1, fontWeight: "800" },
+
   underline: {
     position: "absolute",
     bottom: 2.5,

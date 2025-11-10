@@ -86,11 +86,7 @@ export default function AssetDeTailsTab() {
   );
 
   if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <IsLoading />
-      </View>
-    );
+    return <IsLoading size="large" color="#FF3333" />;
   }
 
   return (

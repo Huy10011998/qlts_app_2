@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { View, StyleSheet, Alert } from "react-native";
 import { useRoute } from "@react-navigation/native";
-import { getFieldValue } from "../../utils/Helper"; // đổi "@/..." thành "../../"
+import { getFieldValue } from "../../utils/Helper";
 import IsLoading from "../../components/ui/IconLoading";
 import {
   DetailsHistoryProps,
@@ -100,11 +100,7 @@ export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
   };
 
   if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <IsLoading />
-      </View>
-    );
+    return <IsLoading size="large" color="#FF3333" />;
   }
 
   return (

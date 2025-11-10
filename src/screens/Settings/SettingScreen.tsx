@@ -17,9 +17,9 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { useAuth } from "../../context/AuthContext";
 import IsLoading from "../../components/ui/IconLoading";
 import { changePasswordApi } from "../../services/Index";
-import { callApi } from "../../utils/Helper";
 import { API_ENDPOINTS } from "../../config/Index";
 import { SettingScreenNavigationProp, UserInfo } from "../../types";
+import { callApi } from "../../services/data/CallApi";
 
 // Header profile
 const SettingHeader: React.FC<{ name?: string; avatarUrl?: string }> = ({
@@ -76,7 +76,6 @@ const SettingScreen = () => {
         );
         setUser(response.data);
       } catch (error) {
-        console.error("API error:", error);
         Alert.alert("Lỗi", "Không thể tải thông tin người dùng.");
       } finally {
         setIsLoading(false);
@@ -91,27 +90,20 @@ const SettingScreen = () => {
     setIsLoading(true);
 
     try {
-      console.log("=== LOGOUT START ===");
-
       // Xóa token và FaceID
       await AsyncStorage.removeItem("token");
       await Keychain.resetGenericPassword();
 
       // Kiểm tra
       const tokenCheck = await AsyncStorage.getItem("token");
-      console.log("Token after remove:", tokenCheck); // null nếu thành công
 
       const credentialsCheck = await Keychain.getGenericPassword();
-      console.log("FaceID after remove:", credentialsCheck); // false nếu thành công
 
       // Update context
       setToken(null);
 
       navigation.replace("Login");
-
-      console.log("=== LOGOUT SUCCESS ===");
     } catch (error) {
-      console.error("Logout error:", error);
       Alert.alert("Lỗi", "Không thể đăng xuất. Vui lòng thử lại.");
     } finally {
       setIsLoading(false);
@@ -142,7 +134,6 @@ const SettingScreen = () => {
         Alert.alert("Lỗi", response?.message || "Đổi mật khẩu thất bại!");
       }
     } catch (error: any) {
-      console.error("Change password error:", error);
       const message =
         error.response?.data?.message ||
         "Không thể đổi mật khẩu. Vui lòng thử lại.";
@@ -191,11 +182,7 @@ const SettingScreen = () => {
         </View>
       </ScrollView>
 
-      {isLoading && (
-        <View style={styles.loadingOverlay}>
-          <IsLoading size="large" color="#FF3333" />
-        </View>
-      )}
+      {isLoading && <IsLoading size="large" color="#FF3333" />}
 
       <Modal
         transparent
@@ -259,6 +246,7 @@ const SettingScreen = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
   profileHeader: { alignItems: "center", padding: 16 },
+
   avatar: {
     width: 60,
     height: 60,
@@ -269,9 +257,11 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     marginRight: 12,
   },
+
   avatarImage: { width: "100%", height: "100%", resizeMode: "cover" },
   name: { marginTop: 8, fontSize: 16, fontWeight: "bold" },
   section: { paddingHorizontal: 16 },
+
   settingItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -279,6 +269,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderColor: "#ddd",
   },
+
   iconWrapper: {
     width: 36,
     height: 36,
@@ -288,13 +279,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 12,
   },
+
   label: { flex: 1, fontSize: 13, fontWeight: "bold" },
+
   modalOverlay: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "rgba(0,0,0,0.5)",
   },
+
   modalContent: {
     width: "85%",
     backgroundColor: "#fff",
@@ -302,12 +296,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     elevation: 5,
   },
+
   modalTitle: {
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 16,
     textAlign: "center",
   },
+
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
@@ -315,26 +311,23 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 12,
   },
+
   modalButtons: {
     flexDirection: "row",
     justifyContent: "flex-end",
     marginTop: 10,
   },
+
   button: {
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,
     marginLeft: 10,
   },
+
   cancelButton: { backgroundColor: "#ccc" },
   confirmButton: { backgroundColor: "#FF3333" },
   buttonText: { color: "#fff", fontWeight: "bold" },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject, // full màn hình
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.2)", // nếu muốn nền mờ
-  },
 });
 
 export default SettingScreen;

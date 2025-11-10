@@ -9,9 +9,8 @@ import {
   ViewStyle,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { getFieldValue } from "../utils/Helper";
+import { getFieldValue, TAB_ITEMS } from "../utils/Helper";
 import { TabItem } from "./Context.d";
-import { TAB_ITEMS } from "../components/assets/AssetDetails";
 
 export interface CardItemProps {
   item: Record<string, any>;

@@ -239,7 +239,7 @@ export default function LoginScreen() {
               disabled={isLoading}
             >
               {isLoading ? (
-                <IsLoading />
+                <IsLoading size="large" color="#FF3333" />
               ) : (
                 <Image
                   source={require("../../assets/images/faceid-icon2.png")}

@@ -1,6 +1,7 @@
 import { API_ENDPOINTS } from "../../config/Index";
 import { ChangePasswordResponse, LoginResponse } from "../../types/Api.d";
-import { callApi, md5Hash } from "../../utils/Helper";
+import { md5Hash } from "../../utils/Helper";
+import { callApi } from "../data/CallApi";
 
 export const loginApi = async (
   userName: string,

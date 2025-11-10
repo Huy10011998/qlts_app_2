@@ -55,6 +55,7 @@ const styles = StyleSheet.create({
     elevation: 3,
     alignItems: "center",
   },
+
   avatar: {
     width: 48,
     height: 48,
@@ -64,14 +65,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: 16,
   },
+
   info: { flex: 1 },
   text: { fontSize: 14, color: "#444", marginTop: 4 },
   label: { fontWeight: "bold", color: "#000", fontSize: 15 },
+
   viewButton: {
     paddingVertical: 6,
     paddingHorizontal: 12,
     backgroundColor: "#FF3333",
     borderRadius: 8,
   },
+
   viewText: { color: "#fff", fontWeight: "bold", fontSize: 14 },
 });

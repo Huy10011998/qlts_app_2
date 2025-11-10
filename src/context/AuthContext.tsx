@@ -10,6 +10,7 @@ import React, {
 } from "react";
 import { AuthContextType, JwtPayload } from "../types/Index";
 import { API_ENDPOINTS, BASE_URL } from "../config/Index";
+import { error, log, warn } from "../utils/Logger";
 
 // CONTEXT
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,10 +23,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   // Lưu hoặc clear access token
   const setToken = async (value: string | null) => {
     if (value) {
-      console.log("[Auth] Save access token:", value.slice(0, 20) + "...");
+      log("[Auth] Save access token");
       await AsyncStorage.setItem("token", value);
     } else {
-      console.log("[Auth] Clear access token");
+      log("[Auth] Clear access token");
       await AsyncStorage.removeItem("token");
     }
     setTokenState(value);
@@ -34,17 +35,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   // Lưu hoặc clear refresh token
   const setRefreshToken = async (value: string | null) => {
     if (value) {
-      console.log("[Auth] Save refresh token:", value.slice(0, 20) + "...");
+      log("[Auth] Save refresh token");
       await AsyncStorage.setItem("refreshToken", value);
     } else {
-      console.log("[Auth] Clear refresh token");
+      log("[Auth] Clear refresh token");
       await AsyncStorage.removeItem("refreshToken");
     }
   };
 
   // Logout → clear cả access + refresh token
   const logout = async () => {
-    console.log("[Auth] Logout → clear all tokens");
+    log("[Auth] Logout → clear all tokens");
     await AsyncStorage.multiRemove(["token", "refreshToken"]);
     setTokenState(null);
   };
@@ -76,12 +77,11 @@ export const isTokenExpired = (token: string | null | undefined): boolean => {
   if (!token) return true;
   try {
     const decoded = jwtDecode<JwtPayload>(token);
-    // Trừ 30s dự phòng để tránh expired ngay thời điểm call API
     const expired = Date.now() >= decoded.exp * 1000 - 30_000;
-    if (expired) console.log("[Auth] Token expired");
+    if (expired) log("[Auth] Token expired");
     return expired;
   } catch (err) {
-    console.warn("[Auth] Decode token failed:", err);
+    warn("[Auth] Decode token failed");
     return true;
   }
 };
@@ -95,7 +95,7 @@ export const getValidToken = async (
 
   // Không có refresh token → logout luôn
   if (!refreshToken) {
-    console.log("[Auth] Missing refresh token → force logout");
+    warn("[Auth] Missing refresh token → force logout");
     await AsyncStorage.multiRemove(["token", "refreshToken"]);
     if (onFailLogout) await onFailLogout();
     return null;
@@ -107,7 +107,7 @@ export const getValidToken = async (
   }
 
   // Hết hạn → gọi refresh
-  console.log("[Auth] Access token expired → refreshing...");
+  log("[Auth] Access token expired → refreshing...");
   return await refreshTokenPair(refreshToken, onFailLogout);
 };
 
@@ -122,21 +122,20 @@ const refreshTokenPair = async (
   onFailLogout?: () => Promise<void>
 ): Promise<string | null> => {
   try {
-    console.log(
-      "[Auth] Call refresh API with:",
-      refreshToken.slice(0, 20) + "..."
-    );
+    log("[Auth] Call refresh API");
+
     const res = await refreshApi.post(API_ENDPOINTS.REFRESH_TOKEN, {
       value: refreshToken,
     });
 
     const data = res?.data?.data;
+
     if (!data?.accessToken) {
-      console.warn("[Auth] Refresh API success but missing accessToken");
+      warn("[Auth] Refresh API success but missing accessToken");
       return null;
     }
 
-    console.log("[Auth] Refresh success → update tokens");
+    log("[Auth] Refresh success");
 
     // Lưu lại token mới
     await AsyncStorage.setItem("token", data.accessToken);
@@ -147,7 +146,7 @@ const refreshTokenPair = async (
 
     return data.accessToken;
   } catch (err) {
-    console.error("[Auth] Refresh failed → clear tokens", err);
+    error("[Auth] Refresh failed");
     await AsyncStorage.multiRemove(["token", "refreshToken"]);
     if (onFailLogout) await onFailLogout();
     return null;

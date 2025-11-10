@@ -232,6 +232,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     paddingHorizontal: 10,
   },
+
   searchInput: {
     flex: 1,
     paddingVertical: 10,
@@ -239,15 +240,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#333",
   },
+
   searchLoader: {
     marginLeft: 8,
   },
+
   header: {
     textAlign: "center",
     fontSize: 14,
     color: "#333",
     fontWeight: "600",
   },
+
   stickyHeader: {
     backgroundColor: "#F3F4F6",
     paddingVertical: 10,

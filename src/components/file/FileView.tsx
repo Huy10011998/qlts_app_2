@@ -195,7 +195,7 @@ export default function FileView({ visible, onClose, params }: ViewerProps) {
             style={[styles.loadingOverlay, { opacity: fadeAnim }]}
             pointerEvents="none"
           >
-            <IsLoading />
+            <IsLoading size="large" color="#FF3333" />
           </Animated.View>
         )}
       </View>

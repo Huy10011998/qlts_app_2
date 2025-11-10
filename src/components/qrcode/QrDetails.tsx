@@ -122,11 +122,7 @@ export default function QrDetails({ children }: QrDetailsProps) {
   }, [id, nameClass]);
 
   if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <IsLoading />
-      </View>
-    );
+    return <IsLoading size="large" color="#FF3333" />;
   }
 
   return (

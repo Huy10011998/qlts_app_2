@@ -1,6 +1,6 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import TabContent from "../../components/tabs/TabDetails";
+import TabContent from "../../components/tabs/TabContent";
 import AssetHistoryDetails from "../../components/assets/AssetHistoryDetails";
 
 export default function AssetRelatedDeTailsHistoryScreen() {

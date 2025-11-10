@@ -104,12 +104,15 @@ const HomeScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: { paddingHorizontal: 0, backgroundColor: "white", flexGrow: 1 },
+
   gridWrapper: { flexDirection: "row", flexWrap: "wrap" },
+
   menuItemContainer: {
     width: itemWidth,
     alignItems: "center",
     marginBottom: 16,
   },
+
   menuItemBox: {
     width: itemWidth - 16,
     alignItems: "center",
@@ -122,7 +125,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+
   iconWrapper: { position: "relative" },
+
   iconCircle: {
     backgroundColor: "#FF3333",
     padding: 16,
@@ -130,6 +135,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
   notificationBadge: {
     position: "absolute",
     top: -4,
@@ -140,7 +146,9 @@ const styles = StyleSheet.create({
     minWidth: 18,
     alignItems: "center",
   },
+
   notificationText: { color: "white", fontSize: 10, fontWeight: "bold" },
+
   menuItemLabel: {
     marginTop: 8,
     fontSize: 13,

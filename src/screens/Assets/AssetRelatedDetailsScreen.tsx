@@ -1,5 +1,5 @@
 import { StyleSheet, View } from "react-native";
-import TabContent from "../../components/tabs/TabDetails";
+import TabContent from "../../components/tabs/TabContent";
 import AssetRelatedDetails from "../../components/assets/AssetRelatedDetails";
 
 export default function AssetRelatedDetailsScreen() {

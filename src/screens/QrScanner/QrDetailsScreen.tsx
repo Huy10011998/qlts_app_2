@@ -1,5 +1,5 @@
 import { StyleSheet, View } from "react-native";
-import TabContent from "../../components/tabs/TabDetails";
+import TabContent from "../../components/tabs/TabContent";
 import QrDetails from "../../components/qrcode/QrDetails";
 
 export default function QrDetailsScreen() {

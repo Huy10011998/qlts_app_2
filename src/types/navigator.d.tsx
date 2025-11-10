@@ -1,4 +1,4 @@
-import { RouteProp, NavigatorScreenParams } from "@react-navigation/native";
+import { RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 export type RootStackParamList = {
@@ -29,6 +29,7 @@ export type RootStackParamList = {
     nameClass?: string;
     titleHeader?: string;
     isBuildTree?: boolean;
+    onMenuPress?: () => void;
   };
 
   QrDetails: {
@@ -69,6 +70,11 @@ export type RootStackParamList = {
   };
 
   QrScanner: undefined;
+
+  AssetAddItem: {
+    field: any;
+    nameClass?: string;
+  };
 };
 
 export type OptionalParams = {
@@ -139,3 +145,14 @@ export type DetaiHistoryNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   "AssetHistoryDetail"
 >;
+
+export type AssetAddItemNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "AssetAddItem"
+>;
+
+export type AddItemAssetProps = {
+  onPress?: (() => void) | string;
+  field?: any;
+  nameClass?: string;
+};

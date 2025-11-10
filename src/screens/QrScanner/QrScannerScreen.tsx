@@ -63,7 +63,12 @@ export default function QrScannerScreen() {
         console.log("QR Data:", data); // ví dụ: /maytinh/1493
 
         const cleanData = data.startsWith("/") ? data.slice(1) : data;
-        const parts = cleanData.split("/"); // ["maytinh", "1493"]
+        const parts = cleanData
+          .split("/")
+          .map((item) => item.trim()) // loại bỏ \r, \n, khoảng trắng thừa
+          .filter((item) => item.length > 0); // bỏ phần rỗng nếu có
+
+        console.log("parts: ", parts);
 
         if (parts.length === 2) {
           const [title, id] = parts;

@@ -3,7 +3,6 @@ import { Field } from "../types";
 import { TypeProperty } from "./Enum";
 import React from "react";
 import { Alert } from "react-native";
-import { api } from "../services/data/CallApi";
 
 // Bỏ dấu tiếng Việt
 export const removeVietnameseTones = (str: string): string => {
@@ -100,25 +99,6 @@ export const getFieldValue = (
 
     default:
       return String(rawValue);
-  }
-};
-
-// Call API
-export const callApi = async <T,>(
-  method: "GET" | "POST" | "PUT" | "DELETE",
-  url: string,
-  data?: any
-): Promise<T> => {
-  try {
-    const response = await api.request<T>({
-      method,
-      url,
-      data,
-    });
-    return response.data;
-  } catch (error: any) {
-    if (__DEV__) console.error(`[API ERROR] ${url}:`, error);
-    throw error;
   }
 };
 
@@ -282,3 +262,12 @@ export const parseLink = (html: string) => {
   }
   return null;
 };
+
+// Các tab mặc định
+export const TAB_ITEMS = [
+  { key: "list", label: "Thông tin", icon: "document-text-outline" },
+  { key: "details", label: "Chi tiết", icon: "menu-outline" },
+  { key: "notes", label: "Note", icon: "document-attach-outline" },
+  { key: "history", label: "Lịch sử", icon: "time-outline" },
+  { key: "attach", label: "Tệp", icon: "attach-outline" },
+] as const;

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Image, ScrollView, Alert } from "react-native";
 import IsLoading from "../../components/ui/IconLoading"; // sửa path theo dự án
 import { API_ENDPOINTS } from "../../config/Index";
 import { User } from "../../types/Index";
-import { callApi } from "../../utils/Helper";
+import { callApi } from "../../services/data/CallApi";
 
 const ProfileScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -37,7 +37,7 @@ const ProfileScreen: React.FC = () => {
   );
 
   if (isLoading || !user) {
-    return <IsLoading />;
+    return <IsLoading size="large" color="#FF3333" />;
   }
 
   return (
@@ -71,10 +71,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
+
   header: {
     alignItems: "center",
     paddingVertical: 32,
   },
+
   avatarWrapper: {
     width: 100,
     height: 100,
@@ -84,29 +86,35 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 12,
   },
+
   avatar: {
     width: "100%",
     height: "100%",
     borderRadius: 20,
     resizeMode: "cover",
   },
+
   avatarText: {
     fontSize: 36,
     fontWeight: "bold",
     color: "#fff",
   },
+
   infoSection: {
     padding: 16,
   },
+
   row: {
     flexDirection: "row",
     marginBottom: 12,
   },
+
   label: {
     flex: 1,
     fontWeight: "bold",
     fontSize: 14,
   },
+
   value: {
     flex: 2,
     fontSize: 14,
