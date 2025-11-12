@@ -1,7 +1,6 @@
 import React, { ComponentType, PropsWithChildren, ReactElement } from "react";
 import { Field, Item } from "./Model.d";
 import {
-  ImageSourcePropType,
   StyleProp,
   TextInputProps,
   TextProps,
@@ -18,6 +17,7 @@ export interface CardItemProps {
   icon?: string;
   onPress?: (item: Record<string, any>) => void;
 }
+
 export interface SearchInputProps {
   visible: boolean;
   value: string;
@@ -35,7 +35,6 @@ export interface SettingItemProps {
   onPress: () => void;
 }
 
-// Props cho Dropdown
 export type DropdownProps = {
   item: Item;
   level?: number;
@@ -121,6 +120,7 @@ export interface BottomBarProps {
   activeTab: string;
   onTabPress: (tabKey: string, label: string) => void;
 }
+
 export interface HeaderContextProps {
   title: string;
   setTitle: (t: string) => void;
@@ -138,6 +138,7 @@ export interface DetailsProps {
     TAB_ITEMS?: typeof TAB_ITEMS;
   }) => React.ReactNode;
 }
+
 export interface QrDetailsProps {
   children: (props: {
     activeTab: string;
@@ -219,4 +220,17 @@ export type IsLoadingProps = {
 export interface ReportViewProps {
   title: string;
   onClose: () => void;
+}
+
+export interface EnumItem {
+  value: any;
+  text: string;
+}
+
+export interface PropsEnum {
+  visible: boolean;
+  title: string;
+  items: EnumItem[];
+  onClose: () => void;
+  onSelect: (value: any) => void;
 }

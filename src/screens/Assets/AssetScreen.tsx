@@ -9,8 +9,8 @@ import {
   Platform,
   UIManager,
   TextInput,
-  ActivityIndicator,
   Modal,
+  StyleSheet,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
@@ -241,10 +241,10 @@ export default function AssetScreen() {
           }}
         />
         {isSearching && (
-          <ActivityIndicator
+          <IsLoading
             size="small"
             color="#FF3333"
-            style={{ marginLeft: 8 }}
+            style={styles.searchSpinner}
           />
         )}
       </View>
@@ -287,3 +287,12 @@ export default function AssetScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  searchSpinner: {
+    position: "absolute",
+    right: 20,
+    top: "50%",
+    marginTop: -10,
+  },
+});

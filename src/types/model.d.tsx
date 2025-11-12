@@ -89,3 +89,8 @@ export type TreeNode = {
   expanded: boolean;
   children?: TreeNode[];
 };
+
+export interface Emum {
+  value?: number;
+  text?: string;
+}

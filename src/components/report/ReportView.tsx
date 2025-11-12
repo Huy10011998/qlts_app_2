@@ -13,7 +13,7 @@ import { ReportViewProps } from "../../types";
 import { getPreviewBC } from "../../services/data/CallApi";
 import { API_ENDPOINTS } from "../../config/Index";
 import { validateDates } from "../../utils/Helper";
-import { DatePickerIOS } from "../datePickerIOS/DatePicker";
+import { DatePickerIOS } from "../modal/DatePickerModal";
 
 const ReportView: React.FC<ReportViewProps> = ({ title, onClose }) => {
   const [fromDate, setFromDate] = useState<string>("");

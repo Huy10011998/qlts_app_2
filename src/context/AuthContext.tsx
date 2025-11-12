@@ -53,8 +53,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   // Khi app load → lấy access token hợp lệ
   useEffect(() => {
     (async () => {
-      const validToken = await getValidToken(logout);
-      if (validToken) setTokenState(validToken);
+      try {
+        const validToken = await getValidToken(logout);
+        if (validToken) setTokenState(validToken);
+      } catch (err) {
+        error("[Auth] Failed to load valid token", err);
+        await logout();
+      }
     })();
   }, []);
 

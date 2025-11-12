@@ -13,4 +13,5 @@ export const API_ENDPOINTS = {
   GET_CLASS_REFERENCE: `${BASE_URL}/Common/get-class-reference`,
   PREVIEW_ATTACH_PROPERTY: `${BASE_URL}/Common/preview-attach-property`,
   PREVIEW_MAYTINH_THONGKE_CNTT: `${BASE_URL}/MayTinh/thong-ke-cntt`,
+  GET_CATEGORY_ENUM: `${BASE_URL}/Common/get-category-enum`,
 };

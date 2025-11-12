@@ -16,7 +16,10 @@ import { Field } from "../../types/Index";
 import { TypeProperty } from "../../utils/Enum";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import IsLoading from "../ui/IconLoading";
-import { DatePickerIOS } from "../datePickerIOS/DatePicker";
+import { DatePickerModalIOS } from "../modal/DatePickerModal";
+import { callApi } from "../../services/data/CallApi";
+import { API_ENDPOINTS } from "../../config/Index";
+import EnumPickerModal from "../modal/EnumPickerModal";
 
 export default function AssetAddItemDetails() {
   const { field } = useParams();
@@ -33,6 +36,7 @@ export default function AssetAddItemDetails() {
     }
   }, [field]);
 
+  // Group theo groupLayout
   const groupedFields = useMemo(() => {
     return fieldActive.reduce<Record<string, Field[]>>((groups, f) => {
       const groupName = f.groupLayout?.trim() || "Thông tin chung";
@@ -46,6 +50,11 @@ export default function AssetAddItemDetails() {
   const [collapsedGroups, setCollapsedGroups] = useState<
     Record<string, boolean>
   >({});
+  const [enumData, setEnumData] = useState<Record<string, any[]>>({});
+
+  // Modal State
+  const [modalVisible, setModalVisible] = useState(false);
+  const [activeEnumField, setActiveEnumField] = useState<Field | null>(null);
 
   useEffect(() => {
     const next: Record<string, boolean> = {};
@@ -66,22 +75,45 @@ export default function AssetAddItemDetails() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Load enum từ API
+  const fetchEnumByField = async (enumName: string, fieldName: string) => {
+    if (!enumName) return;
+    try {
+      const res = await callApi<{ success: boolean; data: any[] }>(
+        "POST",
+        API_ENDPOINTS.GET_CATEGORY_ENUM,
+        { enumName }
+      );
+      setEnumData((prev) => ({ ...prev, [fieldName]: res.data }));
+    } catch (e) {
+      console.log("Lỗi tải enum:", e);
+    }
+  };
+
+  // Fetch enum fields
+  useEffect(() => {
+    fieldActive.forEach((f) => {
+      if (f.typeProperty === TypeProperty.Enum && f.enumName) {
+        fetchEnumByField(f.enumName, f.name);
+      }
+    });
+  }, [fieldActive]);
+
   const handleCreate = () => {
     if (Object.keys(formData).length === 0) {
       Alert.alert("Thông báo", "Vui lòng nhập ít nhất một trường thông tin!");
       return;
     }
-
     console.log("📦 Dữ liệu gửi lên:", formData);
     Alert.alert("Thành công", "Tạo mới thành công!");
   };
 
-  if (!fieldActive.length) {
-    return <IsLoading size="large" color="#FF3333" />;
-  }
+  if (!fieldActive.length) return <IsLoading size="large" color="#FF3333" />;
 
+  // RENDER INPUT
   const renderInputByType = (f: Field) => {
-    const value = formData[f.name] || "";
+    const value = formData[f.name] ?? "";
+    const options = enumData[f.name] || [];
     let inputElement: JSX.Element;
 
     switch (f.typeProperty) {
@@ -92,6 +124,7 @@ export default function AssetAddItemDetails() {
             style={styles.input}
             keyboardType="numeric"
             placeholder={`Nhập ${f.moTa || f.name}`}
+            placeholderTextColor="#999"
             value={String(value)}
             onChangeText={(t) => handleChange(f.name, t)}
           />
@@ -112,10 +145,44 @@ export default function AssetAddItemDetails() {
 
       case TypeProperty.Date:
         inputElement = (
-          <DatePickerIOS
+          <DatePickerModalIOS
             value={value}
             onChange={(date) => handleChange(f.name, date)}
           />
+        );
+        break;
+
+      case TypeProperty.Enum:
+        inputElement = (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={styles.pickerWrapper}
+            onPress={() => {
+              setActiveEnumField(f);
+              setModalVisible(true);
+            }}
+          >
+            <Text
+              style={{
+                paddingVertical: 12,
+                paddingHorizontal: 12,
+                fontSize: 14,
+                color:
+                  value !== null && value !== undefined && value !== ""
+                    ? "#000"
+                    : "#999",
+              }}
+            >
+              {options.find((x) => x.value === value)?.text ??
+                `Chọn ${f.moTa || f.name}`}
+            </Text>
+            <Ionicons
+              name="chevron-down"
+              size={20}
+              color="#555"
+              style={{ position: "absolute", right: 12, top: 14 }}
+            />
+          </TouchableOpacity>
         );
         break;
 
@@ -134,6 +201,7 @@ export default function AssetAddItemDetails() {
     return <View>{inputElement}</View>;
   };
 
+  // MAIN UI
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -152,7 +220,6 @@ export default function AssetAddItemDetails() {
               <TouchableOpacity
                 style={styles.groupHeader}
                 onPress={() => toggleGroup(groupName)}
-                activeOpacity={0.7}
               >
                 <Text style={styles.groupTitle}>{groupName}</Text>
                 <Ionicons
@@ -179,6 +246,19 @@ export default function AssetAddItemDetails() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <EnumPickerModal
+        visible={modalVisible}
+        title={`Chọn ${activeEnumField?.moTa || activeEnumField?.name || ""}`}
+        items={activeEnumField ? enumData[activeEnumField.name] || [] : []}
+        onClose={() => setModalVisible(false)}
+        onSelect={(value) => {
+          if (activeEnumField) {
+            handleChange(activeEnumField.name, value);
+          }
+          setModalVisible(false);
+        }}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -202,7 +282,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 4,
     marginBottom: 12,
   },
 
@@ -210,16 +289,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: "#FF3333",
-  },
-
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    backgroundColor: "#fafafa",
   },
 
   fieldBlock: {
@@ -233,10 +302,27 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
 
+  input: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    backgroundColor: "#fff",
+  },
+
   switchRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+  },
+
+  pickerWrapper: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    backgroundColor: "#fff",
   },
 
   footer: {

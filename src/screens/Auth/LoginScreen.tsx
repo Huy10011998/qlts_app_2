@@ -20,7 +20,7 @@ import IsLoading from "../../components/ui/IconLoading";
 
 export default function LoginScreen() {
   const navigation = useNavigation<any>();
-  const { setToken, setRefreshToken } = useAuth();
+  const { setToken, setRefreshToken, token } = useAuth();
 
   const [userName, setUserName] = useState("");
   const [userPassword, setUserPassword] = useState("");
@@ -30,6 +30,8 @@ export default function LoginScreen() {
 
   const hasTriedFaceID = useRef(false);
   const rnBiometrics = new ReactNativeBiometrics();
+
+  console.log("===token", token);
 
   useEffect(() => {
     setIsLoginDisabled(!(userName.trim() && userPassword.trim()));
