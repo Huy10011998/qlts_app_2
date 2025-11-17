@@ -94,3 +94,9 @@ export interface Emum {
   value?: number;
   text?: string;
 }
+
+export interface RefResponse {
+  data?: {
+    items?: { id: number; text: string; typeMulti?: any }[];
+  };
+}

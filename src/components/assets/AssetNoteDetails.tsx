@@ -57,10 +57,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+
   webview: {
     flex: 1,
     width: Dimensions.get("window").width,
   },
+
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: "center",

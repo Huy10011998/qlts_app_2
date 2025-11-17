@@ -113,20 +113,24 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     paddingTop: 10,
   },
+
   item: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 16,
     paddingHorizontal: 20,
   },
+
   icon: {
     marginRight: 12,
   },
+
   label: {
     fontSize: 14,
     color: "#000",
     fontWeight: "bold",
   },
+
   separator: {
     height: 1,
     backgroundColor: "#eee",

@@ -10,7 +10,6 @@ import {
   Modal,
   TextInput,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Keychain from "react-native-keychain";
 import { useNavigation } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
@@ -62,7 +61,6 @@ const SettingScreen = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const navigation = useNavigation<SettingScreenNavigationProp>();
-  const { setToken } = useAuth();
 
   // Lấy thông tin user
   useEffect(() => {
@@ -85,26 +83,19 @@ const SettingScreen = () => {
   }, []);
 
   // Logout
+  const { logout } = useAuth();
+
   const handlePressLogout = async () => {
     if (isLoading) return;
     setIsLoading(true);
 
     try {
-      // Xóa token và FaceID
-      await AsyncStorage.removeItem("token");
-      await Keychain.resetGenericPassword();
-
-      // Kiểm tra
-      const tokenCheck = await AsyncStorage.getItem("token");
-
-      const credentialsCheck = await Keychain.getGenericPassword();
-
-      // Update context
-      setToken(null);
+      await logout(); // xoá token + refreshToken + setToken(null)
+      await Keychain.resetGenericPassword(); // xoá FaceID
 
       navigation.replace("Login");
-    } catch (error) {
-      Alert.alert("Lỗi", "Không thể đăng xuất. Vui lòng thử lại.");
+    } catch (e) {
+      Alert.alert("Lỗi", "Không thể đăng xuất.");
     } finally {
       setIsLoading(false);
     }
@@ -171,6 +162,10 @@ const SettingScreen = () => {
     },
   ];
 
+  if (isLoading || !user) {
+    return <IsLoading size="large" color="#FF3333" />;
+  }
+
   return (
     <View style={{ flex: 1 }}>
       <ScrollView style={styles.container}>
@@ -181,8 +176,6 @@ const SettingScreen = () => {
           ))}
         </View>
       </ScrollView>
-
-      {isLoading && <IsLoading size="large" color="#FF3333" />}
 
       <Modal
         transparent

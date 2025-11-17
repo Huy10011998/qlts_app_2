@@ -140,13 +140,16 @@ export default function AssetListAttachFile() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F3F4F6" },
+
   header: {
     textAlign: "center",
     fontSize: 14,
     color: "#333",
     fontWeight: "600",
   },
+
   stickyHeader: { backgroundColor: "#F3F4F6", paddingVertical: 10, zIndex: 10 },
+
   groupContainer: {
     marginHorizontal: 12,
     marginTop: 12,
@@ -160,6 +163,7 @@ const styles = StyleSheet.create({
     elevation: 2,
     paddingBottom: 8,
   },
+
   categoryText: {
     fontSize: 14,
     fontWeight: "600",

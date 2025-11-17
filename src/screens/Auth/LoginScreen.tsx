@@ -31,11 +31,10 @@ export default function LoginScreen() {
   const hasTriedFaceID = useRef(false);
   const rnBiometrics = new ReactNativeBiometrics();
 
-  console.log("===token", token);
-
   useEffect(() => {
+    console.log("===token", token);
     setIsLoginDisabled(!(userName.trim() && userPassword.trim()));
-  }, [userName, userPassword]);
+  }, [userName, userPassword, token]);
 
   useEffect(() => {
     const tryAutoLoginWithFaceID = async () => {

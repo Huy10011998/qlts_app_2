@@ -234,3 +234,11 @@ export const getPreviewBC = async (
   const base64Data = Buffer.from(response.data, "binary").toString("base64");
   return { headers: response.headers, data: base64Data };
 };
+
+// insert
+export const insert = async <T = any,>(
+  nameClass: string,
+  payload: any
+): Promise<T> => {
+  return callApi<T>("POST", `${BASE_URL}/${nameClass}/insert`, payload);
+};

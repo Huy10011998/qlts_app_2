@@ -10,12 +10,13 @@ export type RootStackParamList = {
   Profile: undefined;
 
   AssetList: {
-    nameClass: string;
-    titleHeader: string;
+    nameClass?: string;
+    titleHeader?: string;
     idRoot?: string;
     propertyReference?: string;
     isBuildTree?: boolean;
     onMenuPress?: () => void;
+    loadData?: () => void;
   };
 
   HomeTab: {
@@ -74,6 +75,7 @@ export type RootStackParamList = {
   AssetAddItem: {
     field: any;
     nameClass?: string;
+    onCreated?: () => void;
   };
 };
 
@@ -86,6 +88,7 @@ export type OptionalParams = {
   idRoot?: number;
   logID?: number;
   id_previous?: number;
+  onCreated?: () => void;
 };
 
 // Navigation Props
@@ -155,4 +158,5 @@ export type AddItemAssetProps = {
   onPress?: (() => void) | string;
   field?: any;
   nameClass?: string;
+  onCreated?: () => void;
 };

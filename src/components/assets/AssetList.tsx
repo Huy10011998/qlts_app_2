@@ -203,6 +203,8 @@ export default function AssetList() {
   const [total, setTotal] = useState(0);
   const [searchText, setSearchText] = useState("");
 
+  const [isRefreshingTop, setIsRefreshingTop] = useState(false);
+
   const debouncedSearch = useDebounce(searchText, 600);
   const pageSize = 20;
 
@@ -217,6 +219,14 @@ export default function AssetList() {
   // Filter conditions
   const [conditions, setConditions] = useState<any[]>([]);
   const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
+
+  const refreshTop = async () => {
+    setIsRefreshingTop(true);
+
+    await fetchData(false);
+
+    setIsRefreshingTop(false);
+  };
 
   const openMenu = async () => {
     setMenuVisible(true);
@@ -399,6 +409,12 @@ export default function AssetList() {
             onPress={() => handlePress(item)}
           />
         )}
+        onScroll={(e) => {
+          if (e.nativeEvent.contentOffset.y <= 0 && !isRefreshingTop) {
+            refreshTop();
+          }
+        }}
+        scrollEventThrottle={16}
         contentContainerStyle={{ paddingBottom: 100 }}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
@@ -445,7 +461,14 @@ export default function AssetList() {
           </Animated.View>
         </View>
       )}
-      <AddItemAsset nameClass={nameClass} field={JSON.stringify(fieldActive)} />
+      <AddItemAsset
+        nameClass={nameClass}
+        field={JSON.stringify(fieldActive)}
+        onCreated={() => {
+          // Reload lại list khi tạo thành công
+          fetchData(false);
+        }}
+      />
     </View>
   );
 }

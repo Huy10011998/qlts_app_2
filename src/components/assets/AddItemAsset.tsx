@@ -8,7 +8,12 @@ import {
   AssetAddItemNavigationProp,
 } from "../../types/Navigator.d";
 
-export function AddItemAsset({ onPress, nameClass, field }: AddItemAssetProps) {
+export function AddItemAsset({
+  onPress,
+  nameClass,
+  field,
+  onCreated,
+}: AddItemAssetProps) {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<AssetAddItemNavigationProp>();
 
@@ -21,6 +26,7 @@ export function AddItemAsset({ onPress, nameClass, field }: AddItemAssetProps) {
       navigation.navigate("AssetAddItem", {
         field: JSON.stringify(field),
         nameClass: nameClass,
+        onCreated: onCreated,
       });
     }
   };

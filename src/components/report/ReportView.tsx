@@ -13,7 +13,7 @@ import { ReportViewProps } from "../../types";
 import { getPreviewBC } from "../../services/data/CallApi";
 import { API_ENDPOINTS } from "../../config/Index";
 import { validateDates } from "../../utils/Helper";
-import { DatePickerIOS } from "../modal/DatePickerModal";
+import { DatePickerModalIOS } from "../modal/DatePickerModal";
 
 const ReportView: React.FC<ReportViewProps> = ({ title, onClose }) => {
   const [fromDate, setFromDate] = useState<string>("");
@@ -112,12 +112,12 @@ const ReportView: React.FC<ReportViewProps> = ({ title, onClose }) => {
 
       {/* Bộ lọc ngày */}
       <View style={{ padding: 16, gap: 12 }}>
-        <DatePickerIOS
+        <DatePickerModalIOS
           value={fromDate.replace(/\//g, "-")} // convert dd/MM/yyyy → dd-MM-yyyy
           onChange={(val) => setFromDate(formatToSlash(val))}
         />
 
-        <DatePickerIOS
+        <DatePickerModalIOS
           value={toDate.replace(/\//g, "-")}
           onChange={(val) => setToDate(formatToSlash(val))}
         />

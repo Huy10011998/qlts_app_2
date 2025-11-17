@@ -143,13 +143,16 @@ export default function AssetListHistory() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F3F4F6" },
+
   header: {
     textAlign: "center",
     fontSize: 14,
     color: "#333",
     fontWeight: "600",
   },
+
   stickyHeader: { backgroundColor: "#F3F4F6", paddingVertical: 10, zIndex: 10 },
+
   searchBox: {
     borderWidth: 1,
     borderColor: "#ccc",

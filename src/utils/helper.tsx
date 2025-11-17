@@ -271,3 +271,29 @@ export const TAB_ITEMS = [
   { key: "history", label: "Lịch sử", icon: "time-outline" },
   { key: "attach", label: "Tệp", icon: "attach-outline" },
 ] as const;
+
+export function formatDateForBE(date: any): string | null {
+  if (!date) return null;
+
+  // Nếu FE truyền Date object
+  if (date instanceof Date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}T00:00:00`;
+  }
+
+  // Nếu FE truyền dạng string dd-MM-yyyy
+  if (typeof date === "string" && date.includes("-")) {
+    const parts = date.split("-");
+    if (parts.length === 3) {
+      const [day, month, year] = parts;
+      // FE nhập 14-11-2025 → BE cần yyyy-MM-dd
+      if (year.length === 4) {
+        return `${year}-${month}-${day}T00:00:00`;
+      }
+    }
+  }
+
+  return null;
+}

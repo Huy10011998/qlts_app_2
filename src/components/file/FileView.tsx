@@ -205,6 +205,7 @@ export default function FileView({ visible, onClose, params }: ViewerProps) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
+
   header: {
     paddingTop: Platform.OS === "ios" ? 50 : 20,
     paddingHorizontal: 16,
@@ -213,14 +214,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
+
   title: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
     flexShrink: 1,
   },
+
   closeButton: { padding: 6, borderRadius: 6 },
   closeText: { color: "#fff", fontWeight: "bold", fontSize: 15 },
+
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: "center",
