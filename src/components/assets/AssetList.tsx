@@ -35,7 +35,7 @@ import { normalizeText } from "../../utils/Helper";
 import { useDebounce } from "../../hooks/useDebounce";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { SqlOperator, TypeProperty } from "../../utils/Enum";
-import { AddItemAsset } from "./AddItemAsset";
+import { AssetAddItem } from "./AssetAddItem";
 
 if (
   Platform.OS === "android" &&
@@ -356,6 +356,10 @@ export default function AssetList() {
         field: JSON.stringify(fieldActive),
         nameClass: nameClass,
         titleHeader: titleHeader,
+
+        onCreated: () => {
+          fetchData(false); // load lại list
+        },
       });
     } catch (error) {
       console.error(error);
@@ -461,7 +465,7 @@ export default function AssetList() {
           </Animated.View>
         </View>
       )}
-      <AddItemAsset
+      <AssetAddItem
         nameClass={nameClass}
         field={JSON.stringify(fieldActive)}
         onCreated={() => {

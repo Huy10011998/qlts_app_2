@@ -100,3 +100,11 @@ export interface RefResponse {
     items?: { id: number; text: string; typeMulti?: any }[];
   };
 }
+
+// ---------- fetch enum & reference ----------
+export interface FetchEnumResponse {
+  data: any[];
+  [key: string]: any;
+}
+
+export type SetEnumDataFn = (prev: Record<string, any>) => Record<string, any>;

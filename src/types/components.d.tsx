@@ -1,4 +1,10 @@
-import React, { ComponentType, PropsWithChildren, ReactElement } from "react";
+import React, {
+  ComponentType,
+  Dispatch,
+  PropsWithChildren,
+  ReactElement,
+  SetStateAction,
+} from "react";
 import { Field, Item } from "./Model.d";
 import {
   StyleProp,
@@ -90,6 +96,8 @@ export interface TabContentProps {
   getFieldValue: (item: Record<string, any>, field: Field) => string;
   item: any;
   previousItem?: any;
+  nameClass?: string;
+  fieldActive: Field[];
   isFieldChanged?: (
     field: Field,
     currentItem: any,
@@ -108,11 +116,18 @@ export interface GroupListProps {
   getFieldValue: (item: Record<string, any>, field: Field) => string;
   item: any;
   previousItem?: any;
+  nameClass?: string;
+  fieldActive?: Field[];
   isFieldChanged?: (
     field: Field,
     currentItem: any,
     previousItem: any
   ) => boolean;
+}
+
+export interface AssetDeleteProps {
+  onEdit: () => void;
+  onDelete: () => void;
 }
 
 export interface BottomBarProps {
@@ -135,6 +150,8 @@ export interface DetailsProps {
     toggleGroup: (groupName: string) => void;
     item: any;
     getFieldValue: any;
+    fieldActive: Field[];
+    nameClass: string;
     TAB_ITEMS?: typeof TAB_ITEMS;
   }) => React.ReactNode;
 }
@@ -233,4 +250,39 @@ export interface PropsEnum {
   items: EnumItem[];
   onClose: () => void;
   onSelect: (value: any) => void;
+}
+
+export type AddItemAssetProps = {
+  onPress?: (() => void) | string;
+  field?: any;
+  nameClass?: string;
+  onCreated?: () => void;
+};
+
+export interface HandleCascadeChangeProps {
+  name: string;
+  value: any;
+  fieldActive: any[];
+  setFormData: Dispatch<SetStateAction<any>>;
+  setReferenceData: Dispatch<SetStateAction<Record<string, any[]>>>;
+}
+
+export interface RenderInputByTypeProps {
+  f: Field;
+  formData: any;
+  enumData: any;
+  referenceData: any;
+  images?: any;
+  loadingImages?: any;
+  handleChange: (name: string, value: any) => void;
+  pickImage: any;
+  setImages?: any;
+  styles: any;
+
+  // picker modal share
+  setModalVisible: any;
+  setActiveEnumField: any;
+
+  mode: "add" | "edit";
+  getDefaultValueForField: (f: Field) => any;
 }

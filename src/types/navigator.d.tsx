@@ -30,6 +30,7 @@ export type RootStackParamList = {
     nameClass?: string;
     titleHeader?: string;
     isBuildTree?: boolean;
+    onCreated?: () => void;
     onMenuPress?: () => void;
   };
 
@@ -77,6 +78,11 @@ export type RootStackParamList = {
     nameClass?: string;
     onCreated?: () => void;
   };
+
+  AssetEditItem: {
+    item: Record<string, any>;
+    field: string;
+  };
 };
 
 export type OptionalParams = {
@@ -88,6 +94,7 @@ export type OptionalParams = {
   idRoot?: number;
   logID?: number;
   id_previous?: number;
+  item?: Record<string, any>;
   onCreated?: () => void;
 };
 
@@ -154,9 +161,7 @@ export type AssetAddItemNavigationProp = NativeStackNavigationProp<
   "AssetAddItem"
 >;
 
-export type AddItemAssetProps = {
-  onPress?: (() => void) | string;
-  field?: any;
-  nameClass?: string;
-  onCreated?: () => void;
-};
+export type AssetEditItemNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "AssetEditItem"
+>;

@@ -14,6 +14,7 @@ import AssetRelatedDetailsScreen from "../screens/Assets/AssetRelatedDetailsScre
 import { capitalizeFirstLetter } from "../utils/Helper";
 import QrDetailsScreen from "../screens/QrScanner/QrDetailsScreen";
 import AssetAddItemScreen from "../screens/Assets/AssetAddItemScreen";
+import AssetEditItem from "../components/assets/AssetEditItem";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -108,6 +109,18 @@ export default function HomeStack() {
         component={AssetAddItemScreen}
         options={{
           title: "Thêm mới",
+          ...HeaderDetails({
+            showBackButton: true,
+            showMenuButton: false,
+          }),
+        }}
+      />
+
+      <Stack.Screen
+        name="AssetEditItem"
+        component={AssetEditItem}
+        options={{
+          title: "Chỉnh sửa",
           ...HeaderDetails({
             showBackButton: true,
             showMenuButton: false,

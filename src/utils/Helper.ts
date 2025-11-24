@@ -257,10 +257,31 @@ export const validateDates = (
 // Hàm parse link từ chuỗi HTML <a>
 export const parseLink = (html: string) => {
   const match = html.match(/href="([^"]+)".*>([^<]+)<\/a>/);
+
   if (match) {
     return { url: match[1], text: match[2] };
   }
   return null;
+};
+
+export const parseLinkHtml = (html: string) => {
+  if (!html) return { url: "", text: "" };
+
+  try {
+    const hrefMatch = html.match(/href="([^"]*)"/);
+    const textMatch = html.match(/>(.*?)<\/a>/);
+
+    const url = hrefMatch ? hrefMatch[1].trim() : "";
+    let text = textMatch ? textMatch[1].trim() : "";
+
+    if (url === text) {
+      text = "";
+    }
+
+    return { url, text };
+  } catch {
+    return { url: "", text: "" };
+  }
 };
 
 // Các tab mặc định
@@ -297,3 +318,86 @@ export function formatDateForBE(date: any): string | null {
 
   return null;
 }
+
+// FILE: src/utils/buildHtmlLink.ts
+export const buildHtmlLink = (url: string, label?: string) => {
+  const labelOrUrl = label?.trim() || url;
+  return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: blue;">${labelOrUrl}</a>`;
+};
+
+export const normalizeKey = (k?: string) =>
+  (k ?? "").toString().replace(/[_\s]/g, "").toLowerCase();
+
+export function getMatchedKey(item: Record<string, any>, name: string) {
+  const keys = Object.keys(item);
+
+  // match exact first
+  let found = keys.find((k) => k.toLowerCase() === name.toLowerCase());
+  if (found) return found;
+
+  // match remove underscore / lowercase
+  found = keys.find(
+    (k) =>
+      k.replace(/_/g, "").toLowerCase() === name.replace(/_/g, "").toLowerCase()
+  );
+  if (found) return found;
+
+  return undefined;
+}
+
+export const formatToIOS = (val: string) => {
+  const [d, m, y] = val.split("-"); // dd-MM-yyyy
+  return `${y}-${m}-${d}`;
+};
+
+export const normalizeDateFromBE = (raw: any) => {
+  if (!raw) return "";
+
+  const s = String(raw).trim();
+
+  // yyyy-MM-dd or yyyy-MM-ddTHH:mm:ss
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    const d = new Date(s);
+    if (isNaN(d.getTime())) return "";
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    return `${dd}-${mm}-${yyyy}`;
+  }
+
+  // dd-MM-yyyy → giữ nguyên
+  if (/^\d{2}-\d{2}-\d{4}$/.test(s)) return s;
+
+  return "";
+};
+
+// tính độ sâu cho mỗi field dựa trên parentsFields
+export const getDepth = (field: any, all: any[]): number => {
+  if (!field.parentsFields) return 0; // cha gốc
+  const parents = field.parentsFields.split(",");
+  return (
+    1 +
+    Math.max(
+      ...parents.map((p: any) => {
+        const parentField = all.find((f) => f.name === p);
+        return parentField ? getDepth(parentField, all) : 0;
+      })
+    )
+  );
+};
+
+// Lấy giá trị mặc định Date Now cho field
+export const getDefaultValueForField = (f: Field) => {
+  if (f.typeProperty === TypeProperty.Date && f.defaultDateNow) {
+    const d = new Date();
+
+    // format = dd-mm-yyyy
+    const formatted = d
+      .toLocaleDateString("vi-VN") // → dd/mm/yyyy
+      .replaceAll("/", "-"); // → dd-mm-yyyy
+
+    return formatted;
+  }
+
+  return "";
+};

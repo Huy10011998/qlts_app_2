@@ -8,13 +8,19 @@ import {
   Modal,
   PanResponder,
   Linking,
+  Alert,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { GroupListProps } from "../../types";
+import { AssetEditItemNavigationProp, GroupListProps } from "../../types";
 import { TypeProperty } from "../../utils/Enum";
-import { getPreviewAttachProperty } from "../../services/data/CallApi";
-import { getMimeType, parseLink } from "../../utils/Helper";
+import { checkReferenceUsage, deleteItems } from "../../services/data/CallApi";
+import { parseLink } from "../../utils/Helper";
 import IsLoading from "../ui/IconLoading";
+import { useParams } from "../../hooks/useParams";
+import { useNavigation } from "@react-navigation/native";
+import AssetDelete from "./AssetDelete";
+import { error } from "../../utils/Logger";
+import { fetchImage } from "../../utils/Image";
 
 export default function AssetGroupList({
   groupedFields,
@@ -24,34 +30,95 @@ export default function AssetGroupList({
   item,
   previousItem,
   isFieldChanged,
+  nameClass,
+  fieldActive,
 }: GroupListProps) {
   const [images, setImages] = useState<Record<string, string>>({});
   const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>(
     {}
   );
 
-  // state cho modal
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  // tải ảnh theo field
-  const fetchImage = async (fieldName: string, path: string) => {
+  const { onCreated } = useParams();
+  const navigation = useNavigation<AssetEditItemNavigationProp>();
+
+  const handleDelete = async () => {
+    if (!item?.id) return;
+
     try {
-      if (!path || path.trim() === "--") return;
+      const body = { iDs: [item.id] };
 
-      setLoadingImages((prev) => ({ ...prev, [fieldName]: true }));
+      // Check Reference trước
+      const res = await checkReferenceUsage(nameClass || "", body.iDs);
+      const refList = res?.data;
 
-      const res = await getPreviewAttachProperty(path);
-      const mimeType = getMimeType(path);
+      // Nếu bị tham chiếu → báo lỗi, KHÔNG hỏi confirm delete
+      if (Array.isArray(refList) && refList.length > 0) {
+        const refMessage = refList.map((e) => `• ${e.message}`).join("\n");
 
-      setImages((prev) => ({
-        ...prev,
-        [fieldName]: `data:${mimeType};base64,${res.data}`,
-      }));
-    } catch (error) {
-      console.error("Error fetching image:", error);
-    } finally {
-      setLoadingImages((prev) => ({ ...prev, [fieldName]: false }));
+        Alert.alert(
+          "Không thể xóa tài sản",
+          `Tài sản đang được tham chiếu tại:\n\n${refMessage}`
+        );
+        return;
+      }
+
+      //  Nếu KHÔNG bị tham chiếu → hỏi lại người dùng có muốn xóa không
+      Alert.alert(
+        "Xác nhận xoá",
+        "Bạn có chắc chắn muốn xoá tài sản này?",
+        [
+          {
+            text: "Huỷ",
+            style: "cancel",
+          },
+          {
+            text: "Xóa",
+            style: "destructive",
+            onPress: () => confirmDelete(),
+          },
+        ],
+        { cancelable: true }
+      );
+    } catch (err) {
+      Alert.alert("Lỗi", "Không thể kiểm tra dữ liệu tham chiếu!");
+    }
+  };
+
+  const confirmDelete = async () => {
+    try {
+      const deleteBody = {
+        iDs: [item.id],
+        saveHistory: true,
+      };
+
+      await deleteItems(nameClass || "", deleteBody);
+
+      Alert.alert("Thành công", "Đã xoá tài sản!", [
+        {
+          text: "OK",
+          onPress: () => {
+            if (onCreated) onCreated();
+            navigation.goBack();
+          },
+        },
+      ]);
+    } catch (err) {
+      Alert.alert("Lỗi", "Không thể xoá tài sản!");
+    }
+  };
+
+  const onPressNavigateToEdit = (item: Record<string, any>) => {
+    try {
+      navigation.navigate("AssetEditItem", {
+        item,
+        field: JSON.stringify(fieldActive ?? []), // stringify để không lỗi non-serializable
+      });
+    } catch (err) {
+      error(err);
+      Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
     }
   };
 
@@ -64,13 +131,12 @@ export default function AssetGroupList({
           value &&
           value !== "---"
         ) {
-          fetchImage(field.name, value);
+          fetchImage(field.name, value, setLoadingImages, setImages);
         }
       });
     });
   }, [item]);
 
-  // PanResponder cho vuốt xuống
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
@@ -83,15 +149,20 @@ export default function AssetGroupList({
 
   return (
     <>
+      <AssetDelete
+        onEdit={() => onPressNavigateToEdit(item)}
+        onDelete={handleDelete}
+      />
+
       {Object.entries(groupedFields).map(([groupName, fields]) => {
         const isCollapsed = collapsedGroups[groupName];
+
         return (
           <View key={groupName} style={styles.groupCard}>
             {/* Group Header */}
             <TouchableOpacity
               style={styles.groupHeader}
               onPress={() => toggleGroup(groupName)}
-              activeOpacity={0.7}
             >
               <Text style={styles.groupTitle}>{groupName}</Text>
               <Ionicons
@@ -142,7 +213,6 @@ export default function AssetGroupList({
                         <Text style={styles.value}>---</Text>
                       )
                     ) : field.typeProperty === TypeProperty.Link ? (
-                      // Case Link
                       currentValue !== "---" ? (
                         (() => {
                           const parsed = parseLink(currentValue);
@@ -162,7 +232,6 @@ export default function AssetGroupList({
                         <Text style={styles.value}>---</Text>
                       )
                     ) : (
-                      // Case mặc định (text)
                       <Text
                         style={[
                           styles.value,
@@ -186,7 +255,7 @@ export default function AssetGroupList({
       {/* Modal xem ảnh full */}
       <Modal
         visible={modalVisible}
-        transparent={true}
+        transparent
         animationType="fade"
         onRequestClose={() => setModalVisible(false)}
       >
@@ -195,7 +264,7 @@ export default function AssetGroupList({
             style={styles.closeButton}
             onPress={() => setModalVisible(false)}
           >
-            <Ionicons name="close" size={30} color="#fff" />
+            <Ionicons name="close" size={36} color="#fff" />
           </TouchableOpacity>
 
           {selectedImage && (

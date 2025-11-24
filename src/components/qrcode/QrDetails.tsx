@@ -10,7 +10,7 @@ import {
   Dimensions,
   ScrollView,
 } from "react-native";
-import { Field, QrDetailsProps } from "../../types/Index";
+import { QrDetailsProps } from "../../types/Index";
 import { useParams } from "../../hooks/useParams";
 import { getDetails } from "../../services/Index";
 import IsLoading from "../ui/IconLoading";
@@ -19,6 +19,8 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../types/Index";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import { parseFieldActive } from "../../utils/parser/parseFieldActive";
+import { groupFields } from "../../utils/parser/groupFields";
 
 const { width } = Dimensions.get("window");
 const MENU_WIDTH = width * 0.6;
@@ -39,33 +41,21 @@ export default function QrDetails({ children }: QrDetailsProps) {
   const [menuVisible, setMenuVisible] = useState(false);
   const slideAnim = useRef(new Animated.Value(MENU_WIDTH)).current;
 
-  // Parse field từ params
-  const fieldActive: Field[] = useMemo(() => {
-    try {
-      return field ? JSON.parse(field as string) : [];
-    } catch {
-      return [];
-    }
-  }, [field]);
+  // parse fields safely
+  const fieldActive = useMemo(() => parseFieldActive(field), [field]);
 
-  const groupedFields = useMemo(() => {
-    return fieldActive.reduce<Record<string, Field[]>>((groups, field) => {
-      const groupName = field.groupLayout || "Thông tin chung";
-      if (!groups[groupName]) groups[groupName] = [];
-      groups[groupName].push(field);
-      return groups;
-    }, {});
-  }, [fieldActive]);
-
-  const toggleGroup = (groupName: string) => {
-    setCollapsedGroups((prev) => ({
-      ...prev,
-      [groupName]: !prev[groupName],
-    }));
-  };
+  // grouped by groupLayout (kept as-is style D)
+  const groupedFields = useMemo(() => groupFields(fieldActive), [fieldActive]);
 
   const handleChangeTab = (tabKey: string) => {
     setActiveTab(tabKey);
+  };
+
+  const toggleGroup = (groupKey: string) => {
+    setCollapsedGroups((prev) => ({
+      ...prev,
+      [groupKey]: !prev[groupKey],
+    }));
   };
 
   // Drawer functions

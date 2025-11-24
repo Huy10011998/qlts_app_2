@@ -16,6 +16,8 @@ export default function AssetDetailsScreen() {
           item,
           getFieldValue,
           TAB_ITEMS,
+          nameClass,
+          fieldActive,
         }) => (
           <>
             <View style={styles.content}>
@@ -26,6 +28,8 @@ export default function AssetDetailsScreen() {
                 toggleGroup={toggleGroup}
                 getFieldValue={getFieldValue}
                 item={item}
+                nameClass={nameClass || ""}
+                fieldActive={fieldActive}
               />
             </View>
 

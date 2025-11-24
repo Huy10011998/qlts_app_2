@@ -16,6 +16,8 @@ export default function TabContent({
   item,
   previousItem,
   isFieldChanged,
+  nameClass,
+  fieldActive,
 }: TabContentProps) {
   const tabContentMap: Record<string, JSX.Element> = {
     list: (
@@ -27,7 +29,9 @@ export default function TabContent({
           getFieldValue={getFieldValue}
           item={item}
           previousItem={previousItem}
+          fieldActive={fieldActive}
           isFieldChanged={isFieldChanged}
+          nameClass={nameClass}
         />
       </ScrollView>
     ),

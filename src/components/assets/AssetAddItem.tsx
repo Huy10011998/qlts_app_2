@@ -3,12 +3,10 @@ import { TouchableOpacity, StyleSheet } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
-import {
-  AddItemAssetProps,
-  AssetAddItemNavigationProp,
-} from "../../types/Navigator.d";
+import { AssetAddItemNavigationProp } from "../../types/Navigator.d";
+import { AddItemAssetProps } from "../../types/Components.d";
 
-export function AddItemAsset({
+export function AssetAddItem({
   onPress,
   nameClass,
   field,

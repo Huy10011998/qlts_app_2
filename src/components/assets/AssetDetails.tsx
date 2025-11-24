@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { View, StyleSheet, Alert } from "react-native";
-import { DetailsProps, Field } from "../../types/Index";
+import { DetailsProps } from "../../types/Index";
 import { useParams } from "../../hooks/useParams";
 import { getDetails } from "../../services/Index";
 import IsLoading from "../ui/IconLoading";
 import { getFieldValue, TAB_ITEMS } from "../../utils/Helper";
+import { parseFieldActive } from "../../utils/parser/parseFieldActive";
+import { groupFields } from "../../utils/parser/groupFields";
 
 export default function AssetDetails({ children }: DetailsProps) {
   const { id, nameClass, field } = useParams();
@@ -17,25 +19,11 @@ export default function AssetDetails({ children }: DetailsProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [item, setItem] = useState<any>(null);
 
-  // Parse field từ params
-  const fieldActive: Field[] = useMemo(() => {
-    try {
-      return field ? JSON.parse(field as string) : [];
-    } catch {
-      return [];
-    }
-  }, [field]);
+  // parse fields safely
+  const fieldActive = useMemo(() => parseFieldActive(field), [field]);
 
-  // Gom các field theo groupLayout
-  const groupedFields = useMemo(() => {
-    return fieldActive.reduce<Record<string, Field[]>>((groups, field) => {
-      const groupName = field.groupLayout || "Thông tin chung";
-
-      if (!groups[groupName]) groups[groupName] = [];
-      groups[groupName].push(field);
-      return groups;
-    }, {});
-  }, [fieldActive]);
+  // grouped by groupLayout (kept as-is style D)
+  const groupedFields = useMemo(() => groupFields(fieldActive), [fieldActive]);
 
   // Toggle group collapsed/expanded
   const toggleGroup = (groupName: string) => {
@@ -84,6 +72,8 @@ export default function AssetDetails({ children }: DetailsProps) {
         item,
         getFieldValue,
         TAB_ITEMS,
+        nameClass: nameClass || "",
+        fieldActive: fieldActive || [],
       })}
     </View>
   );
