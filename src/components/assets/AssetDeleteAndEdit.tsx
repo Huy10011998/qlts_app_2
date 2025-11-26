@@ -3,7 +3,10 @@ import { View, TouchableOpacity, StyleSheet } from "react-native";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { AssetDeleteProps } from "../../types/Components.d";
 
-export default function AssetDelete({ onEdit, onDelete }: AssetDeleteProps) {
+export default function AssetDeleteAndEdit({
+  onEdit,
+  onDelete,
+}: AssetDeleteProps) {
   return (
     <View style={styles.actionIcons}>
       <TouchableOpacity style={styles.iconBtn} onPress={onEdit}>

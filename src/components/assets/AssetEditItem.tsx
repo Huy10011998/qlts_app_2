@@ -13,7 +13,7 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 
 import { Field } from "../../types/Index";
 import { TypeProperty } from "../../utils/Enum";
-import EnumPickerModal from "../modal/EnumPickerModal";
+import EnumAndReferencePickerModal from "../modal/EnumAndReferencePickerModal";
 import {
   getDefaultValueForField,
   getMatchedKey,
@@ -251,10 +251,10 @@ export default function AssetEditItem() {
 
         <View style={{ flexDirection: "row", gap: 12 }}>
           <TouchableOpacity
-            style={[styles.createButton, { flex: 1 }]}
+            style={[styles.updateButton, { flex: 1 }]}
             onPress={() => {}}
           >
-            <Text style={styles.createButtonText}>Cập nhật</Text>
+            <Text style={styles.updateButtonText}>Cập nhật</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -275,7 +275,7 @@ export default function AssetEditItem() {
         </View>
       </ScrollView>
 
-      <EnumPickerModal
+      <EnumAndReferencePickerModal
         visible={modalVisible}
         title={`Chọn ${activeEnumField?.moTa ?? ""}`}
         items={
@@ -332,14 +332,14 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
 
-  createButton: {
+  updateButton: {
     backgroundColor: "#FF3333",
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: "center",
     marginTop: 8,
   },
-  createButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  updateButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
 
   resetButton: {
     backgroundColor: "#fff",
@@ -352,4 +352,50 @@ const styles = StyleSheet.create({
   },
 
   resetButtonText: { color: "#FF3333", fontSize: 16, fontWeight: "700" },
+
+  switchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  textArea: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 6,
+    padding: 10,
+    minHeight: 100, // nhập nhiều dòng
+    fontSize: 14,
+    color: "#000",
+    backgroundColor: "#fff",
+    textAlignVertical: "top", // giúp text bắt đầu từ trên xuống
+  },
+
+  uploadButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "#FF3333",
+    borderRadius: 8,
+    backgroundColor: "#fff",
+    marginTop: 6,
+  },
+
+  previewImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 10,
+    backgroundColor: "#f2f2f2",
+  },
+
+  removeImageButton: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    padding: 4,
+    borderRadius: 20,
+  },
 });

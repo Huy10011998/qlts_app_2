@@ -14,7 +14,7 @@ import {
   ViewStyle,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { getFieldValue, TAB_ITEMS } from "../utils/Helper";
+import { TAB_ITEMS } from "../utils/Helper";
 import { TabItem } from "./Context.d";
 
 export interface CardItemProps {
@@ -176,7 +176,7 @@ export interface DetailsHistoryProps {
     collapsedGroups: Record<string, boolean>;
     toggleGroup: (groupName: string) => void;
     item: any;
-    getFieldValue: typeof getFieldValue;
+    getFieldValue: any;
     TAB_ITEMS?: typeof TAB_ITEMS;
     previousItem: any;
     isFieldChanged: (

@@ -13,6 +13,7 @@ import { TypeProperty } from "../../utils/Enum";
 import { DatePickerModalIOS } from "../modal/DatePickerModal";
 import { RenderInputByTypeProps } from "../../types/Components.d";
 import { parseLinkHtml } from "../../utils/Helper";
+import IsLoading from "../ui/IconLoading";
 
 export const RenderInputByType = ({
   f,
@@ -58,6 +59,7 @@ export const RenderInputByType = ({
           keyboardType="numeric"
           value={String(value ?? "")}
           placeholder={`Nhập ${f.moTa ?? f.name}`}
+          placeholderTextColor="#888"
           onChangeText={(t) => handleChange(f.name, t)}
         />
       );
@@ -83,14 +85,28 @@ export const RenderInputByType = ({
         />
       );
 
-    // TEXT
-    case TypeProperty.Text:
+    // STRING
+    case TypeProperty.String:
       return (
         <TextInput
-          style={styles.textArea}
+          style={styles.input}
           multiline
           value={String(value ?? "")}
           placeholder={`Nhập ${f.moTa ?? f.name}`}
+          placeholderTextColor="#888"
+          onChangeText={(t) => handleChange(f.name, t)}
+        />
+      );
+
+    // TEXTAREA
+    case TypeProperty.Text:
+      return (
+        <TextInput
+          style={[styles.textArea, { textAlignVertical: "top" }]}
+          multiline
+          value={String(value ?? "")}
+          placeholder={`Nhập ${f.moTa ?? f.name}`}
+          placeholderTextColor="#888"
           onChangeText={(t) => handleChange(f.name, t)}
         />
       );
@@ -116,7 +132,7 @@ export const RenderInputByType = ({
           </TouchableOpacity>
 
           {loading ? (
-            <Text>Đang tải...</Text>
+            <IsLoading size="small" />
           ) : img ? (
             <View style={{ marginTop: 10 }}>
               <Image source={{ uri: img }} style={styles.previewImage} />
@@ -152,6 +168,7 @@ export const RenderInputByType = ({
           <TextInput
             style={styles.input}
             placeholder="Nhập đường link"
+            placeholderTextColor="#888"
             value={url}
             onChangeText={(t) => {
               setUrl(t);
@@ -161,6 +178,7 @@ export const RenderInputByType = ({
           <TextInput
             style={styles.input}
             placeholder="Nhập label"
+            placeholderTextColor="#888"
             value={label}
             onChangeText={(t) => {
               setLabel(t);
@@ -182,21 +200,24 @@ export const RenderInputByType = ({
     case TypeProperty.Reference:
       return (
         <TouchableOpacity
-          style={styles.pickerWrapper}
           onPress={() => {
             setActiveEnumField(f);
             setModalVisible(true);
           }}
         >
           <Text
-            style={{
-              padding: 12,
-              fontSize: 14,
-              color:
-                value !== null && value !== undefined && value !== ""
-                  ? "#000"
-                  : "#999",
-            }}
+            style={[
+              {
+                padding: 12,
+                fontSize: 14,
+                paddingLeft: 4,
+                color:
+                  value !== null && value !== undefined && value !== ""
+                    ? "#000"
+                    : "#999",
+              },
+              styles.input,
+            ]}
           >
             {items.find((x: { value: any }) => x.value == value)?.text ??
               (value != null ? formData?.[`${f.name}_MoTa`] : null) ??
@@ -221,6 +242,7 @@ export const RenderInputByType = ({
           style={styles.input}
           value={String(value ?? "")}
           placeholder={`Nhập ${f.moTa ?? f.name}`}
+          placeholderTextColor="#888"
           onChangeText={(t) => handleChange(f.name, t)}
         />
       );

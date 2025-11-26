@@ -17,10 +17,10 @@ import { checkReferenceUsage, deleteItems } from "../../services/data/CallApi";
 import { parseLink } from "../../utils/Helper";
 import IsLoading from "../ui/IconLoading";
 import { useParams } from "../../hooks/useParams";
-import { useNavigation } from "@react-navigation/native";
-import AssetDelete from "./AssetDelete";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { error } from "../../utils/Logger";
 import { fetchImage } from "../../utils/Image";
+import AssetDeleteAndEdit from "./AssetDeleteAndEdit";
 
 export default function AssetGroupList({
   groupedFields,
@@ -37,6 +37,12 @@ export default function AssetGroupList({
   const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>(
     {}
   );
+
+  const route = useRoute();
+
+  const detailScreens = ["AssetDetails"];
+
+  const isDetailsScreen = detailScreens.includes(route.name);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -149,10 +155,12 @@ export default function AssetGroupList({
 
   return (
     <>
-      <AssetDelete
-        onEdit={() => onPressNavigateToEdit(item)}
-        onDelete={handleDelete}
-      />
+      {isDetailsScreen && (
+        <AssetDeleteAndEdit
+          onEdit={() => onPressNavigateToEdit(item)}
+          onDelete={handleDelete}
+        />
+      )}
 
       {Object.entries(groupedFields).map(([groupName, fields]) => {
         const isCollapsed = collapsedGroups[groupName];

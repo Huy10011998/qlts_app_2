@@ -26,6 +26,7 @@ export default function AssetRelatedDeTailsHistoryScreen() {
             item={item}
             previousItem={previousItem}
             isFieldChanged={isFieldChanged}
+            fieldActive={[]}
           />
         )}
       </AssetHistoryDetails>

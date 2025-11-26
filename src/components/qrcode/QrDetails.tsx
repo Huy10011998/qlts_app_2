@@ -14,13 +14,13 @@ import { QrDetailsProps } from "../../types/Index";
 import { useParams } from "../../hooks/useParams";
 import { getDetails } from "../../services/Index";
 import IsLoading from "../ui/IconLoading";
-import { getFieldValue } from "../../utils/Helper";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../types/Index";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { parseFieldActive } from "../../utils/parser/parseFieldActive";
 import { groupFields } from "../../utils/parser/groupFields";
+import { getFieldValue } from "../../utils/Helper";
 
 const { width } = Dimensions.get("window");
 const MENU_WIDTH = width * 0.6;

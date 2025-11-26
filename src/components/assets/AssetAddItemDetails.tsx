@@ -14,7 +14,7 @@ import { AssetAddItemNavigationProp, Field } from "../../types/Index";
 import { TypeProperty } from "../../utils/Enum";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { insert } from "../../services/data/CallApi";
-import EnumPickerModal from "../modal/EnumPickerModal";
+import EnumAndReferencePickerModal from "../modal/EnumAndReferencePickerModal";
 import { log } from "../../utils/Logger";
 import IsLoading from "../ui/IconLoading";
 import { useNavigation } from "@react-navigation/native";
@@ -48,6 +48,8 @@ export default function AssetAddItemDetails() {
   const [activeEnumField, setActiveEnumField] = useState<Field | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [images, setImages] = useState<Record<string, string>>({});
 
   // Expand group mặc định
   useEffect(() => {
@@ -193,6 +195,8 @@ export default function AssetAddItemDetails() {
                       setModalVisible={setModalVisible}
                       setActiveEnumField={setActiveEnumField}
                       getDefaultValueForField={getDefaultValueForField}
+                      images={images}
+                      setImages={setImages}
                     />
                   </View>
                 ))}
@@ -206,7 +210,7 @@ export default function AssetAddItemDetails() {
       </ScrollView>
 
       {/* Picker Modal */}
-      <EnumPickerModal
+      <EnumAndReferencePickerModal
         visible={modalVisible}
         title={`Chọn ${activeEnumField?.moTa || activeEnumField?.name}`}
         items={
@@ -290,5 +294,42 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     zIndex: 999,
+  },
+
+  switchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  textArea: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 6,
+    padding: 10,
+    minHeight: 100,
+    fontSize: 14,
+    color: "#000",
+    backgroundColor: "#fff",
+    textAlignVertical: "top",
+  },
+
+  uploadButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "#FF3333",
+    borderRadius: 8,
+    backgroundColor: "#fff",
+    marginTop: 6,
+  },
+
+  previewImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 10,
+    backgroundColor: "#f2f2f2",
   },
 });

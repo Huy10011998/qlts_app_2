@@ -9,6 +9,8 @@ import {
   Field,
 } from "../../types/Index";
 import { getDetailsHistory } from "../../services/data/CallApi";
+import { parseFieldActive } from "../../utils/parser/parseFieldActive";
+import { groupFields } from "../../utils/parser/groupFields";
 
 export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
   const route = useRoute<DetailsHistoryRouteProp>();
@@ -22,28 +24,11 @@ export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
   const [item, setItem] = useState<any>(null);
   const [previousItem, setPreviousItem] = useState<any>(null);
 
-  // parse fieldActive
-  const fieldActive: Field[] = useMemo(() => {
-    try {
-      return field ? JSON.parse(field as string) : [];
-    } catch {
-      return [];
-    }
-  }, [field]);
+  // parse fields safely
+  const fieldActive = useMemo(() => parseFieldActive(field), [field]);
 
-  // group theo groupLayout
-  const groupedFields = useMemo(() => {
-    var result = fieldActive.reduce<Record<string, Field[]>>(
-      (groups, field) => {
-        const groupName = field.groupLayout || "Thông tin chung";
-        if (!groups[groupName]) groups[groupName] = [];
-        groups[groupName].push(field);
-        return groups;
-      },
-      {}
-    );
-    return result;
-  }, [fieldActive]);
+  // grouped by groupLayout (kept as-is style D)
+  const groupedFields = useMemo(() => groupFields(fieldActive), [fieldActive]);
 
   const toggleGroup = (groupName: string) => {
     setCollapsedGroups((prev) => ({

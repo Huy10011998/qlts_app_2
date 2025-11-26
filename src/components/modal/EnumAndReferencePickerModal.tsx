@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { PropsEnum } from "../../types/Components.d";
 
-export default function EnumPickerModal({
+export default function EnumAndReferencePickerModal({
   visible,
   title,
   items,
