@@ -25,7 +25,6 @@ import {
 } from "../../services/Index";
 import ListCardAsset from "../../components/list/ListCardAsset";
 import IsLoading from "../../components/ui/IconLoading";
-import { normalizeText } from "../../utils/Helper";
 import { SqlOperator, TypeProperty } from "../../utils/Enum";
 import { useDebounce } from "../../hooks/useDebounce";
 
@@ -69,7 +68,7 @@ export default function AssetRelatedList() {
       navigation.navigate("AssetRelatedDetails", {
         id: String(item.id),
         field: JSON.stringify(fieldActive),
-        nameClass: nameClass,
+        nameClass: nameClass || "",
       });
     } catch (error) {
       console.error(error);
@@ -178,7 +177,7 @@ export default function AssetRelatedList() {
           placeholder="Tìm kiếm..."
           placeholderTextColor="#999"
           value={searchText}
-          onChangeText={(text) => setSearchText(normalizeText(text))}
+          onChangeText={setSearchText}
           style={styles.searchInput}
         />
         {isSearching && (

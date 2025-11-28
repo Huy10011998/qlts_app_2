@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Image,
   Modal,
   TextInput,
+  Switch,
 } from "react-native";
 import * as Keychain from "react-native-keychain";
 import { useNavigation } from "@react-navigation/native";
@@ -19,8 +20,10 @@ import { changePasswordApi } from "../../services/Index";
 import { API_ENDPOINTS } from "../../config/Index";
 import { SettingScreenNavigationProp, UserInfo } from "../../types";
 import { callApi } from "../../services/data/CallApi";
+import ReactNativeBiometrics from "react-native-biometrics";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// Header profile
+// HEADER COMPONEN
 const SettingHeader: React.FC<{ name?: string; avatarUrl?: string }> = ({
   name,
   avatarUrl,
@@ -36,8 +39,7 @@ const SettingHeader: React.FC<{ name?: string; avatarUrl?: string }> = ({
     <Text style={styles.name}>{name || "---"}</Text>
   </View>
 );
-
-// Item setting
+// ITEM BUTTO
 const SettingItem: React.FC<{
   iconName: string;
   label: string;
@@ -51,20 +53,41 @@ const SettingItem: React.FC<{
     <Ionicons name="chevron-forward" size={20} color="#999" />
   </TouchableOpacity>
 );
+// ITEM SWITC
+const SettingSwitchItem: React.FC<{
+  iconName: string;
+  label: string;
+  value: boolean;
+  onValueChange: (value: boolean) => void;
+}> = ({ iconName, label, value, onValueChange }) => (
+  <View style={styles.settingItem}>
+    <View style={styles.iconWrapper}>
+      <Ionicons name={iconName} size={22} color="#fff" />
+    </View>
+    <Text style={styles.label}>{label}</Text>
+    <Switch value={value} onValueChange={onValueChange} />
+  </View>
+);
 
 const SettingScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [user, setUser] = useState<UserInfo>();
+
+  const rnBiometrics = useRef(new ReactNativeBiometrics()).current;
+
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const navigation = useNavigation<SettingScreenNavigationProp>();
+  const [isFaceIdEnabled, setIsFaceIdEnabled] = useState(false);
 
-  // Lấy thông tin user
+  const navigation = useNavigation<SettingScreenNavigationProp>();
+  const { logout } = useAuth();
+
+  // LOAD USER INFO + FACEID
   useEffect(() => {
-    const fetchUserInfo = async () => {
+    const fetchData = async () => {
       setIsLoading(true);
       try {
         const response = await callApi<{ success: boolean; data: UserInfo }>(
@@ -73,25 +96,86 @@ const SettingScreen = () => {
           {}
         );
         setUser(response.data);
+
+        // Load FaceID status
+        const flag = await AsyncStorage.getItem("faceid-enabled");
+        setIsFaceIdEnabled(flag === "1");
       } catch (error) {
         Alert.alert("Lỗi", "Không thể tải thông tin người dùng.");
       } finally {
         setIsLoading(false);
       }
     };
-    fetchUserInfo();
+
+    fetchData();
   }, []);
 
-  // Logout
-  const { logout } = useAuth();
-
-  const handlePressLogout = async () => {
-    if (isLoading) return;
-    setIsLoading(true);
+  // FACE ID TOGGLE
+  const handleToggleFaceID = async (value: boolean) => {
+    if (!value) {
+      // Tắt FaceID
+      await Keychain.resetGenericPassword({ service: "faceid-login" });
+      await AsyncStorage.setItem("faceid-enabled", "0");
+      setIsFaceIdEnabled(false);
+      Alert.alert("FaceID", "Đã tắt đăng nhập bằng FaceID.");
+      return;
+    }
 
     try {
-      await logout(); // xoá token + refreshToken + setToken(null)
-      await Keychain.resetGenericPassword(); // xoá FaceID
+      const saved = await Keychain.getGenericPassword({
+        service: "user-login",
+      });
+
+      if (!saved) {
+        Alert.alert("Không thể bật", "Bạn cần đăng nhập trước.");
+        setIsFaceIdEnabled(false);
+        return;
+      }
+
+      const { available } = await rnBiometrics.isSensorAvailable();
+      if (!available) {
+        Alert.alert("Thiết bị không hỗ trợ FaceID.");
+        setIsFaceIdEnabled(false);
+        return;
+      }
+
+      const result = await rnBiometrics.simplePrompt({
+        promptMessage: "Xác thực để bật FaceID",
+      });
+
+      if (!result.success) {
+        setIsFaceIdEnabled(false);
+        return;
+      }
+
+      await Keychain.setGenericPassword(saved.username, saved.password, {
+        service: "faceid-login",
+        accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
+        accessible: Keychain.ACCESSIBLE.WHEN_PASSCODE_SET_THIS_DEVICE_ONLY,
+      });
+
+      // Lưu flag tránh auto FaceID khi mở Setting
+      await AsyncStorage.setItem("faceid-enabled", "1");
+
+      setIsFaceIdEnabled(true);
+      Alert.alert("FaceID", "Đã bật đăng nhập bằng FaceID!");
+    } catch (error) {
+      Alert.alert("Lỗi", "Không thể bật FaceID.");
+      setIsFaceIdEnabled(false);
+    }
+  };
+
+  // LOGOUT
+  const handlePressLogout = async () => {
+    if (isLoading) return;
+
+    setIsLoading(true);
+    try {
+      await logout();
+
+      // Xóa đúng service
+      await Keychain.resetGenericPassword({ service: "user-login" });
+      await Keychain.resetGenericPassword({ service: "faceid-login" });
 
       navigation.replace("Login");
     } catch (e) {
@@ -101,14 +185,25 @@ const SettingScreen = () => {
     }
   };
 
-  // Đổi mật khẩu
+  // CHANGE PASSWORD
   const handleChangePassword = async () => {
     if (!oldPassword || !newPassword || !confirmPassword) {
       Alert.alert("Lỗi", "Vui lòng điền đầy đủ thông tin.");
       return;
     }
+
+    if (newPassword.length < 4) {
+      Alert.alert("Lỗi", "Mật khẩu mới phải có ít nhất 4 ký tự.");
+      return;
+    }
+
     if (newPassword !== confirmPassword) {
       Alert.alert("Lỗi", "Mật khẩu xác nhận không khớp.");
+      return;
+    }
+
+    if (oldPassword === newPassword) {
+      Alert.alert("Lỗi", "Mật khẩu mới phải khác mật khẩu cũ.");
       return;
     }
 
@@ -116,6 +211,27 @@ const SettingScreen = () => {
     try {
       const response = await changePasswordApi(oldPassword, newPassword);
       if (response?.success) {
+        // Cập nhật mật khẩu vào Keychain
+        const saved = await Keychain.getGenericPassword({
+          service: "user-login",
+        });
+
+        if (saved) {
+          await Keychain.setGenericPassword(saved.username, newPassword, {
+            service: "user-login",
+          });
+
+          if (isFaceIdEnabled) {
+            await Keychain.setGenericPassword(saved.username, newPassword, {
+              service: "faceid-login",
+              accessControl:
+                Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
+              accessible:
+                Keychain.ACCESSIBLE.WHEN_PASSCODE_SET_THIS_DEVICE_ONLY,
+            });
+          }
+        }
+
         Alert.alert("Thành công", "Đổi mật khẩu thành công!");
         setIsModalVisible(false);
         setOldPassword("");
@@ -134,49 +250,54 @@ const SettingScreen = () => {
     }
   };
 
-  // Danh sách setting
-  const settings = [
-    {
-      iconName: "person-circle-outline",
-      label: "Hồ sơ/Profile",
-      onPress: () => navigation.navigate("Profile"),
-    },
-    {
-      iconName: "lock-closed-outline",
-      label: "Đổi mật khẩu/Change Password",
-      onPress: () => setIsModalVisible(true),
-    },
-    {
-      iconName: "log-out-outline",
-      label: "Đăng xuất / Log out",
-      onPress: () => {
-        Alert.alert("Xác nhận đăng xuất", "Bạn có chắc chắn muốn đăng xuất?", [
-          { text: "Hủy", style: "cancel" },
-          {
-            text: "Đăng xuất",
-            style: "destructive",
-            onPress: handlePressLogout,
-          },
-        ]);
-      },
-    },
-  ];
-
   if (isLoading || !user) {
     return <IsLoading size="large" color="#FF3333" />;
   }
 
+  // UI RENDER
   return (
     <View style={{ flex: 1 }}>
       <ScrollView style={styles.container}>
         <SettingHeader name={user?.moTa} avatarUrl={user?.avatarUrl} />
+
         <View style={styles.section}>
-          {settings.map((item, index) => (
-            <SettingItem key={index} {...item} />
-          ))}
+          <SettingItem
+            iconName="person-circle-outline"
+            label="Hồ sơ / Profile"
+            onPress={() => navigation.navigate("Profile")}
+          />
+
+          <SettingItem
+            iconName="lock-closed-outline"
+            label="Đổi mật khẩu / Change Password"
+            onPress={() => setIsModalVisible(true)}
+          />
+
+          <SettingSwitchItem
+            iconName="finger-print-outline"
+            label="Đăng nhập bằng FaceID"
+            value={isFaceIdEnabled}
+            onValueChange={handleToggleFaceID}
+          />
+
+          <SettingItem
+            iconName="log-out-outline"
+            label="Đăng xuất / Log out"
+            onPress={() =>
+              Alert.alert("Xác nhận", "Bạn muốn đăng xuất?", [
+                { text: "Hủy", style: "cancel" },
+                {
+                  text: "Đăng xuất",
+                  style: "destructive",
+                  onPress: handlePressLogout,
+                },
+              ])
+            }
+          />
         </View>
       </ScrollView>
 
+      {/* Modal đổi mật khẩu */}
       <Modal
         transparent
         animationType="fade"
@@ -186,34 +307,34 @@ const SettingScreen = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Đổi mật khẩu</Text>
+
             <TextInput
               style={styles.input}
               placeholder="Mật khẩu cũ"
               placeholderTextColor="#999"
               secureTextEntry
-              textContentType="none"
-              autoCorrect={false}
               value={oldPassword}
               onChangeText={setOldPassword}
             />
+
             <TextInput
               style={styles.input}
               placeholder="Mật khẩu mới"
-              secureTextEntry
               placeholderTextColor="#999"
-              textContentType="none"
+              secureTextEntry
               value={newPassword}
               onChangeText={setNewPassword}
             />
+
             <TextInput
               style={styles.input}
               placeholder="Xác nhận mật khẩu mới"
-              secureTextEntry
               placeholderTextColor="#999"
-              textContentType="none"
+              secureTextEntry
               value={confirmPassword}
               onChangeText={setConfirmPassword}
             />
+
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.button, styles.cancelButton]}
@@ -221,6 +342,7 @@ const SettingScreen = () => {
               >
                 <Text style={styles.buttonText}>Hủy</Text>
               </TouchableOpacity>
+
               <TouchableOpacity
                 style={[styles.button, styles.confirmButton]}
                 onPress={handleChangePassword}
@@ -235,7 +357,7 @@ const SettingScreen = () => {
     </View>
   );
 };
-
+// STYLE
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
   profileHeader: { alignItems: "center", padding: 16 },

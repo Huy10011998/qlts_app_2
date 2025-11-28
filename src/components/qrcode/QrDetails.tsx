@@ -125,6 +125,8 @@ export default function QrDetails({ children }: QrDetailsProps) {
         toggleGroup,
         item,
         getFieldValue,
+        nameClass: nameClass || "",
+        fieldActive: fieldActive || [],
       })}
 
       {/* Drawer */}

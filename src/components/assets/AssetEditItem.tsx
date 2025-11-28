@@ -11,16 +11,17 @@ import {
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
-import { Field } from "../../types/Index";
+import { AssetEditItemNavigationProp, Field } from "../../types/Index";
 import { TypeProperty } from "../../utils/Enum";
 import EnumAndReferencePickerModal from "../modal/EnumAndReferencePickerModal";
 import {
+  formatDateForBE,
   getDefaultValueForField,
   getMatchedKey,
   normalizeDateFromBE,
 } from "../../utils/Helper";
 import { useParams } from "../../hooks/useParams";
-import { buildImageUrlLocal, fetchImage, pickImage } from "../../utils/Image";
+import { fetchImage, pickImage } from "../../utils/Image";
 import { fetchReferenceByField } from "../../utils/FetchReferenceField";
 import { fetchReferenceByFieldWithParent } from "../../utils/cascade/FetchReferenceByFieldWithParent";
 import { handleCascadeChange } from "../../utils/cascade";
@@ -28,10 +29,15 @@ import { fetchEnumByField } from "../../utils/FetchEnumField";
 import { parseFieldActive } from "../../utils/parser/parseFieldActive";
 import { groupFields } from "../../utils/parser/groupFields";
 import { RenderInputByType } from "../form/RenderInputByType";
+import { useImageLoader } from "../../hooks/useImageLoader";
+import { update } from "../../services/data/CallApi";
+import { useNavigation } from "@react-navigation/native";
 
-// ----------------- Main Component -----------------
+// Main Component
 export default function AssetEditItem() {
-  const { item, field } = useParams();
+  const { item, field, nameClass, onReload } = useParams();
+
+  const navigation = useNavigation<AssetEditItemNavigationProp>();
 
   // parse fields safely
   const fieldActive = useMemo(() => parseFieldActive(field), [field]);
@@ -113,11 +119,14 @@ export default function AssetEditItem() {
         }
 
         case TypeProperty.Image:
-          initial[name] = ""; // để rỗng trước
           if (raw && raw !== "---") {
+            initial[name] = raw; // ⚡ LƯU GIÁ TRỊ THẬT
             fetchImage(name, raw, setLoadingImages, setImages);
+          } else {
+            initial[name] = ""; // không có ảnh
           }
           break;
+
         default:
           initial[name] = raw != null ? raw : "";
       }
@@ -170,8 +179,22 @@ export default function AssetEditItem() {
     });
   }, [formData]); // chạy khi formData được set từ item lúc mở màn hình
 
-  // ---------- handle change & cascade ----------
+  // load image khi giá trị thay đổi
+  useImageLoader({
+    fieldActive,
+    formData,
+    fetchImage,
+    setImages,
+    setLoadingImages,
+  });
+
+  // handle change & cascade
   const handleChange = (name: string, value: any) => {
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
     handleCascadeChange({
       name,
       value,
@@ -181,25 +204,159 @@ export default function AssetEditItem() {
     });
   };
 
-  // ---------- reset ----------
+  const handleUpdate = async () => {
+    try {
+      if (!originalItem?.id) {
+        Alert.alert("Lỗi", "Không tìm thấy ID để cập nhật!");
+        return;
+      }
+
+      const entity: Record<string, any> = {};
+
+      fieldActive.forEach((f) => {
+        const key = f.name;
+        const value = formData[key];
+
+        switch (f.typeProperty) {
+          // DATE
+          case TypeProperty.Date:
+            entity[key] = value ? formatDateForBE(value) : null;
+            break;
+
+          // NUMBER (INT / DECIMAL)
+          case TypeProperty.Int:
+          case TypeProperty.Decimal:
+            entity[key] =
+              value === "" || value === null || value === undefined
+                ? null
+                : Number(value);
+            break;
+
+          // TEXT / STRING
+          case TypeProperty.Text:
+          case TypeProperty.String:
+            entity[key] =
+              value === "" || value === null || value === undefined
+                ? null
+                : value;
+            break;
+
+          // ENUM / REFERENCE
+          case TypeProperty.Enum:
+          case TypeProperty.Reference:
+            entity[key] =
+              value === "" || value === null || value === undefined
+                ? null
+                : value;
+            break;
+
+          // IMAGE
+          case TypeProperty.Image:
+            if (value === "---") {
+              // người dùng bấm nút X xoá ảnh
+              entity[key] = "";
+            } else {
+              entity[key] =
+                value === "" || value === null || value === undefined
+                  ? null
+                  : value;
+            }
+            break;
+
+          // DEFAULT
+          default:
+            entity[key] =
+              value === "" || value === null || value === undefined
+                ? null
+                : value;
+        }
+      });
+
+      // XOÁ field _MoTa khỏi payload (Reference)
+      Object.keys(entity).forEach((k) => {
+        if (k.endsWith("_MoTa")) delete entity[k];
+      });
+
+      const body = {
+        entity,
+        iDs: [originalItem.id],
+        lstIncludeProperties: [],
+        lstExcludeProperties: [],
+        saveHistory: true,
+      };
+
+      if (!nameClass) {
+        Alert.alert("Lỗi", "Không tìm thấy nameClass để update!");
+        return;
+      }
+
+      const res = await update(nameClass, body);
+
+      Alert.alert("Thành công", "Cập nhật thành công!", [
+        {
+          text: "OK",
+          onPress: () => {
+            setFormData({});
+            setImages({});
+
+            if (onReload) onReload();
+            navigation.goBack();
+          },
+        },
+      ]);
+    } catch (err) {
+      Alert.alert("Lỗi", "Không thể cập nhật dữ liệu!");
+    }
+  };
+
+  // reset
   const handleReset = () => {
     if (!originalItem) return;
+
     const reset: Record<string, any> = {};
+
     fieldActive.forEach((f) => {
       const matchedKey = getMatchedKey(originalItem || {}, f.name);
       const raw = matchedKey ? originalItem[matchedKey] : undefined;
-      if (f.typeProperty === TypeProperty.Date)
-        reset[f.name] = raw ? normalizeDateFromBE(raw) : "";
-      else if (f.typeProperty === TypeProperty.Image)
-        reset[f.name] = raw ? buildImageUrlLocal(raw) : "";
-      else if (f.typeProperty === TypeProperty.Reference) {
-        const rawText =
-          (matchedKey && originalItem?.[`${matchedKey}_MoTa`]) ??
-          originalItem?.[`${f.name}_MoTa`];
-        reset[f.name] = raw != null ? raw : rawText ?? "";
-      } else reset[f.name] = raw != null ? raw : "";
+
+      switch (f.typeProperty) {
+        case TypeProperty.Date:
+          reset[f.name] = raw ? normalizeDateFromBE(raw) : "";
+          break;
+
+        case TypeProperty.Image:
+          reset[f.name] = raw ?? "";
+          break;
+
+        case TypeProperty.Reference:
+          const rawText =
+            (matchedKey && originalItem?.[`${matchedKey}_MoTa`]) ??
+            originalItem?.[`${f.name}_MoTa`];
+          reset[f.name] = raw != null ? raw : rawText ?? "";
+          break;
+
+        default:
+          reset[f.name] = raw != null ? raw : "";
+      }
     });
+
+    // Update formData trước
     setFormData(reset);
+
+    // xử lý image preview sau
+    fieldActive.forEach((f) => {
+      const matchedKey = getMatchedKey(originalItem || {}, f.name);
+      const raw = matchedKey ? originalItem[matchedKey] : undefined;
+
+      if (f.typeProperty === TypeProperty.Image) {
+        if (!raw || raw === "---") {
+          setImages((p) => ({ ...p, [f.name]: "" }));
+          return; // stop
+        }
+
+        fetchImage(f.name, raw, setLoadingImages, setImages);
+      }
+    });
   };
 
   return (
@@ -224,27 +381,32 @@ export default function AssetEditItem() {
               </TouchableOpacity>
 
               {!collapsed &&
-                fields.map((f) => (
-                  <View key={f.id ?? f.name} style={styles.fieldBlock}>
-                    <Text style={styles.label}>{f.moTa ?? f.name}</Text>
-                    <RenderInputByType
-                      f={f}
-                      formData={formData}
-                      enumData={enumData}
-                      referenceData={referenceData}
-                      images={images}
-                      loadingImages={loadingImages}
-                      handleChange={handleChange}
-                      pickImage={pickImage}
-                      setImages={setImages}
-                      mode="edit"
-                      styles={styles}
-                      setModalVisible={setModalVisible}
-                      setActiveEnumField={setActiveEnumField}
-                      getDefaultValueForField={getDefaultValueForField}
-                    />
-                  </View>
-                ))}
+                fields.map((f) => {
+                  if (f.isReadOnly) return null; // ẨN TOÀN BỘ FIELD
+
+                  return (
+                    <View key={f.id ?? f.name} style={styles.fieldBlock}>
+                      <Text style={styles.label}>{f.moTa ?? f.name}</Text>
+                      <RenderInputByType
+                        f={f}
+                        formData={formData}
+                        enumData={enumData}
+                        referenceData={referenceData}
+                        images={images}
+                        setLoadingImages={setLoadingImages}
+                        loadingImages={loadingImages}
+                        handleChange={handleChange}
+                        pickImage={pickImage}
+                        setImages={setImages}
+                        mode="edit"
+                        styles={styles}
+                        setModalVisible={setModalVisible}
+                        setActiveEnumField={setActiveEnumField}
+                        getDefaultValueForField={getDefaultValueForField}
+                      />
+                    </View>
+                  );
+                })}
             </View>
           );
         })}
@@ -252,7 +414,7 @@ export default function AssetEditItem() {
         <View style={{ flexDirection: "row", gap: 12 }}>
           <TouchableOpacity
             style={[styles.updateButton, { flex: 1 }]}
-            onPress={() => {}}
+            onPress={handleUpdate}
           >
             <Text style={styles.updateButtonText}>Cập nhật</Text>
           </TouchableOpacity>
@@ -364,11 +526,11 @@ const styles = StyleSheet.create({
     borderColor: "#ccc",
     borderRadius: 6,
     padding: 10,
-    minHeight: 100, // nhập nhiều dòng
+    minHeight: 100,
     fontSize: 14,
     color: "#000",
     backgroundColor: "#fff",
-    textAlignVertical: "top", // giúp text bắt đầu từ trên xuống
+    textAlignVertical: "top",
   },
 
   uploadButton: {

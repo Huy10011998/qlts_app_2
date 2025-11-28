@@ -26,6 +26,16 @@ export const normalizeText = (text: string) =>
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
 
+// Chuẩn hóa keys của object
+export const normalizeKeys = (obj: any) => {
+  const newObj: any = {};
+  for (const key in obj) {
+    const normalized = key.charAt(0).toLowerCase() + key.slice(1);
+    newObj[normalized] = obj[key];
+  }
+  return newObj;
+};
+
 // Format key property
 export const formatKeyProperty = (key: string) =>
   key.charAt(0).toLowerCase() + key.slice(1);

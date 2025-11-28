@@ -1,7 +1,10 @@
 import { launchImageLibrary } from "react-native-image-picker";
-import { getPreviewAttachProperty } from "../services/data/CallApi";
+import {
+  getPreviewAttachProperty,
+  uploadAttachProperty,
+} from "../services/data/CallApi";
 import { getMimeType } from "./Helper";
-import { error, log } from "./Logger";
+import { error } from "./Logger";
 import { Alert } from "react-native";
 
 export const buildImageUrlLocal = (raw: any) => {
@@ -28,7 +31,7 @@ export const buildImageUrlLocal = (raw: any) => {
   return clean.startsWith("/") ? `${base}${clean.slice(1)}` : `${base}${clean}`;
 };
 
-// Hàm fetch ảnh cho AssetEditItem.tsx và AssetGroupList
+// Hàm fetch ảnh
 export const fetchImage = async (
   fieldName: string,
   path: string,
@@ -59,41 +62,47 @@ export const fetchImage = async (
 export const pickImage = async (
   fieldName: string,
   handleChange: (field: string, value: any) => void,
-  setImages: React.Dispatch<React.SetStateAction<Record<string, string>>>
+  setImages: React.Dispatch<React.SetStateAction<Record<string, any>>>,
+  setLoadingImages: React.Dispatch<
+    React.SetStateAction<Record<string, boolean>>
+  >
 ) => {
   try {
     const res = await launchImageLibrary({
       mediaType: "photo",
-      includeBase64: true,
       quality: 0.7,
     });
-    if (res.didCancel || !res.assets?.length) return;
 
-    const file = res.assets[0];
-
-    // 1) Gán vào formData để chuẩn bị gửi lên server
-    if (file.base64 && file.type) {
-      const base64Image = `data:${file.type};base64,${file.base64}`;
-
-      handleChange(fieldName, base64Image);
-
-      // 2) Gán vào images để UI hiển thị ngay
-      setImages((prev) => ({
-        ...prev,
-        [fieldName]: base64Image,
-      }));
-    } else if (file.uri) {
-      handleChange(fieldName, file.uri);
-
-      setImages((prev) => ({
-        ...prev,
-        [fieldName]: file.uri!,
-      }));
-    } else {
-      Alert.alert("Lỗi", "Không đọc được ảnh!");
+    if (res.didCancel || !res.assets?.length) {
+      setLoadingImages((p) => ({ ...p, [fieldName]: false }));
+      return;
     }
-  } catch (e) {
-    log("Lỗi chọn ảnh:", e);
+
+    const asset = res.assets[0];
+
+    const fileObj = {
+      uri: asset.uri,
+      name: asset.fileName ?? `image_${Date.now()}.jpg`,
+      type: asset.type || "image/jpeg",
+    };
+
+    // Nếu muốn log FormData -> tạo thử để log
+    const debugForm = new FormData();
+    debugForm.append("File", fileObj);
+
+    const url = await uploadAttachProperty({
+      file: fileObj,
+    });
+
+    // Update preview
+    setImages((prev) => ({
+      ...prev,
+      [fieldName]: url,
+    }));
+
+    // Update formData
+    handleChange(fieldName, url);
+  } catch (error: any) {
     Alert.alert("Lỗi", "Không thể tải ảnh!");
   }
 };

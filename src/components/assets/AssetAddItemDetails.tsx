@@ -13,9 +13,7 @@ import { useParams } from "../../hooks/useParams";
 import { AssetAddItemNavigationProp, Field } from "../../types/Index";
 import { TypeProperty } from "../../utils/Enum";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { insert } from "../../services/data/CallApi";
 import EnumAndReferencePickerModal from "../modal/EnumAndReferencePickerModal";
-import { log } from "../../utils/Logger";
 import IsLoading from "../ui/IconLoading";
 import { useNavigation } from "@react-navigation/native";
 import { formatDateForBE, getDefaultValueForField } from "../../utils/Helper";
@@ -24,8 +22,10 @@ import { fetchEnumByField } from "../../utils/FetchEnumField";
 import { fetchReferenceByField } from "../../utils/FetchReferenceField";
 import { parseFieldActive } from "../../utils/parser/parseFieldActive";
 import { groupFields } from "../../utils/parser/groupFields";
-import { pickImage } from "../../utils/Image";
+import { fetchImage, pickImage } from "../../utils/Image";
 import { RenderInputByType } from "../form/RenderInputByType";
+import { useImageLoader } from "../../hooks/useImageLoader";
+import { insert } from "../../services/data/CallApi";
 
 export default function AssetAddItemDetails() {
   const { field, nameClass, onCreated } = useParams();
@@ -50,6 +50,9 @@ export default function AssetAddItemDetails() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [images, setImages] = useState<Record<string, string>>({});
+  const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>(
+    {}
+  );
 
   // Expand group mặc định
   useEffect(() => {
@@ -84,6 +87,14 @@ export default function AssetAddItemDetails() {
     });
   }, [fieldActive]);
 
+  useImageLoader({
+    fieldActive,
+    formData,
+    fetchImage,
+    setImages,
+    setLoadingImages,
+  });
+
   const handleChange = (name: string, value: any) => {
     handleCascadeChange({
       name,
@@ -95,23 +106,22 @@ export default function AssetAddItemDetails() {
   };
 
   const handleCreate = async () => {
-    if (Object.keys(formData).length === 0) {
+    if (!Object.keys(formData).length) {
       Alert.alert("Thông báo", "Vui lòng nhập ít nhất một trường!");
       return;
     }
 
     if (!nameClass) {
-      Alert.alert("Lỗi", "Không xác định được danh mục để tạo mới!");
+      Alert.alert("Lỗi", "Không xác định được danh mục!");
       return;
     }
 
     try {
       setIsSubmitting(true);
 
-      // Clone để không ảnh hưởng UI
       const payloadData = { ...formData };
 
-      // Format Date trước khi gửi BE
+      // Format date
       fieldActive.forEach((f) => {
         if (f.typeProperty === TypeProperty.Date) {
           payloadData[f.name] = formatDateForBE(payloadData[f.name]);
@@ -125,9 +135,6 @@ export default function AssetAddItemDetails() {
 
       await insert(nameClass, payload);
 
-      // Reset form
-      setFormData({});
-
       Alert.alert(
         "Thành công",
         "Tạo mới thành công!",
@@ -135,16 +142,18 @@ export default function AssetAddItemDetails() {
           {
             text: "OK",
             onPress: () => {
-              if (onCreated) onCreated(); // gọi callback báo screen trước reload
-              navigation.goBack(); // sau đó mới back
+              setFormData({});
+              setImages({});
+              if (onCreated) onCreated();
+              navigation.goBack();
             },
           },
         ],
         { cancelable: false }
       );
-    } catch (e) {
+    } catch (err) {
       Alert.alert("Lỗi", "Không thể tạo mới!");
-      log(e);
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -180,26 +189,32 @@ export default function AssetAddItemDetails() {
               </TouchableOpacity>
 
               {!collapsed &&
-                fields.map((f) => (
-                  <View key={f.id ?? f.name} style={styles.fieldBlock}>
-                    <Text style={styles.label}>{f.moTa}</Text>
-                    <RenderInputByType
-                      f={f}
-                      formData={formData}
-                      enumData={enumData}
-                      referenceData={referenceData}
-                      handleChange={handleChange}
-                      pickImage={pickImage}
-                      mode="add"
-                      styles={styles}
-                      setModalVisible={setModalVisible}
-                      setActiveEnumField={setActiveEnumField}
-                      getDefaultValueForField={getDefaultValueForField}
-                      images={images}
-                      setImages={setImages}
-                    />
-                  </View>
-                ))}
+                fields.map((f) => {
+                  if (f.isReadOnly) return null; // ẨN TOÀN BỘ FIELD
+
+                  return (
+                    <View key={f.id ?? f.name} style={styles.fieldBlock}>
+                      <Text style={styles.label}>{f.moTa}</Text>
+                      <RenderInputByType
+                        f={f}
+                        formData={formData}
+                        enumData={enumData}
+                        referenceData={referenceData}
+                        handleChange={handleChange}
+                        setLoadingImages={setLoadingImages}
+                        loadingImages={loadingImages}
+                        pickImage={pickImage}
+                        mode="add"
+                        styles={styles}
+                        setModalVisible={setModalVisible}
+                        setActiveEnumField={setActiveEnumField}
+                        getDefaultValueForField={getDefaultValueForField}
+                        images={images}
+                        setImages={setImages}
+                      />
+                    </View>
+                  );
+                })}
             </View>
           );
         })}

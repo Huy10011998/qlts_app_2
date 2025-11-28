@@ -315,11 +315,11 @@ export const insert = async <T = any,>(
   return callApi<T>("POST", `/${nameClass}/insert`, payload);
 };
 
-export const checkReferenceUsage = async <T = any,>(
+export const update = async <T = any,>(
   nameClass: string,
-  iDs: number[]
+  payload: any
 ): Promise<T> => {
-  return callApi<T>("POST", `/${nameClass}/check-reference-usage`, { iDs });
+  return callApi<T>("POST", `/${nameClass}/update`, payload);
 };
 
 export const deleteItems = async <T = any,>(
@@ -327,4 +327,34 @@ export const deleteItems = async <T = any,>(
   body: { iDs: number[]; saveHistory: boolean }
 ): Promise<T> => {
   return callApi<T>("POST", `/${nameClass}/delete`, body);
+};
+
+export const checkReferenceUsage = async <T = any,>(
+  nameClass: string,
+  iDs: number[]
+): Promise<T> => {
+  return callApi<T>("POST", `/${nameClass}/check-reference-usage`, { iDs });
+};
+
+export const uploadAttachProperty = async ({ file }: { file: any }) => {
+  const form = new FormData();
+
+  form.append("File", {
+    uri: file.uri,
+    name: file.fileName || file.name,
+    type: file.type,
+  });
+
+  const res = await callApi<{ data: string }>(
+    "POST",
+    `/Common/attach-property`,
+    form,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }
+  );
+
+  return res.data;
 };

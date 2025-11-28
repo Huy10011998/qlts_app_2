@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -19,11 +19,24 @@ export default function BottomBarDetails({
   const TAB_WIDTH = SCREEN_WIDTH / tabs.length;
   const UNDERLINE_WIDTH = TAB_WIDTH * 0.6;
 
-  const startX = (TAB_WIDTH - UNDERLINE_WIDTH) / 2;
+  // ⭐ Khởi tạo underlineX đúng tab ban đầu
+  const initialIndex = tabs.findIndex((t) => t.key === activeTab) ?? 0;
+  const startX = initialIndex * TAB_WIDTH + (TAB_WIDTH - UNDERLINE_WIDTH) / 2;
   const underlineX = useRef(new Animated.Value(startX)).current;
 
   const moveUnderlineTo = (index: number) =>
     index * TAB_WIDTH + (TAB_WIDTH - UNDERLINE_WIDTH) / 2;
+
+  // ⭐ Cập nhật underline khi activeTab thay đổi
+  useEffect(() => {
+    const index = tabs.findIndex((t) => t.key === activeTab);
+    if (index >= 0) {
+      Animated.spring(underlineX, {
+        toValue: moveUnderlineTo(index),
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [activeTab, tabs]);
 
   const handlePress = (tabKey: string, label: string, index: number) => {
     onTabPress(tabKey, label);

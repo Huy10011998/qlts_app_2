@@ -18,6 +18,7 @@ export default function AssetDetailsScreen() {
           TAB_ITEMS,
           nameClass,
           fieldActive,
+          onReload,
         }) => (
           <>
             <View style={styles.content}>
@@ -30,6 +31,7 @@ export default function AssetDetailsScreen() {
                 item={item}
                 nameClass={nameClass || ""}
                 fieldActive={fieldActive}
+                onReload={onReload}
               />
             </View>
 

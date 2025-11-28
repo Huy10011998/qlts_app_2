@@ -32,6 +32,7 @@ export default function AssetGroupList({
   isFieldChanged,
   nameClass,
   fieldActive,
+  onReload,
 }: GroupListProps) {
   const [images, setImages] = useState<Record<string, string>>({});
   const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>(
@@ -40,7 +41,7 @@ export default function AssetGroupList({
 
   const route = useRoute();
 
-  const detailScreens = ["AssetDetails"];
+  const detailScreens = ["AssetDetails", "QrDetails"];
 
   const isDetailsScreen = detailScreens.includes(route.name);
 
@@ -120,7 +121,9 @@ export default function AssetGroupList({
     try {
       navigation.navigate("AssetEditItem", {
         item,
-        field: JSON.stringify(fieldActive ?? []), // stringify để không lỗi non-serializable
+        nameClass,
+        field: JSON.stringify(fieldActive ?? []),
+        onReload,
       });
     } catch (err) {
       error(err);

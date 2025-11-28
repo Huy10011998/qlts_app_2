@@ -31,7 +31,6 @@ import {
 } from "../../services/Index";
 import ListCardAsset from "../../components/list/ListCardAsset";
 import IsLoading from "../../components/ui/IconLoading";
-import { normalizeText } from "../../utils/Helper";
 import { useDebounce } from "../../hooks/useDebounce";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { SqlOperator, TypeProperty } from "../../utils/Enum";
@@ -389,7 +388,7 @@ export default function AssetList() {
           placeholder="Tìm kiếm..."
           placeholderTextColor="#999"
           value={searchText}
-          onChangeText={(text) => setSearchText(normalizeText(text))}
+          onChangeText={setSearchText}
           style={styles.searchInput}
         />
         {isSearching && (

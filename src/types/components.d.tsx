@@ -103,6 +103,7 @@ export interface TabContentProps {
     currentItem: any,
     previousItem: any
   ) => boolean;
+  onReload: () => void;
 }
 
 export interface CenterTextProps {
@@ -123,6 +124,7 @@ export interface GroupListProps {
     currentItem: any,
     previousItem: any
   ) => boolean;
+  onReload: () => void;
 }
 
 export interface AssetDeleteProps {
@@ -153,6 +155,7 @@ export interface DetailsProps {
     fieldActive: Field[];
     nameClass: string;
     TAB_ITEMS?: typeof TAB_ITEMS;
+    onReload: () => void;
   }) => React.ReactNode;
 }
 
@@ -165,6 +168,8 @@ export interface QrDetailsProps {
     toggleGroup: (groupName: string) => void;
     item: any;
     getFieldValue: any;
+    fieldActive: Field[];
+    nameClass: string;
   }) => React.ReactNode;
 }
 
@@ -282,7 +287,16 @@ export interface RenderInputByTypeProps {
   // picker modal share
   setModalVisible: any;
   setActiveEnumField: any;
+  setLoadingImages: any;
 
   mode: "add" | "edit";
   getDefaultValueForField: (f: Field) => any;
+}
+
+export interface PreviewImgByTypeProps {
+  fieldActive: Field[];
+  formData: any;
+  fetchImage: any;
+  setImages: any;
+  setLoadingImages: any;
 }

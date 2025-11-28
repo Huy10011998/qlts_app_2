@@ -74,7 +74,7 @@ export type RootStackParamList = {
   QrScanner: undefined;
 
   AssetAddItem: {
-    field: any;
+    field: string;
     nameClass?: string;
     onCreated?: () => void;
   };
@@ -82,6 +82,9 @@ export type RootStackParamList = {
   AssetEditItem: {
     item: Record<string, any>;
     field: string;
+    nameClass?: string;
+    onCreated?: () => void;
+    onReload?: () => void;
   };
 };
 
@@ -95,7 +98,10 @@ export type OptionalParams = {
   logID?: number;
   id_previous?: number;
   item?: Record<string, any>;
+  mode: string;
+  activeTab?: string;
   onCreated?: () => void;
+  onReload?: () => void;
 };
 
 // Navigation Props

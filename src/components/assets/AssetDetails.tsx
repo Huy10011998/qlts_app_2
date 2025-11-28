@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { View, StyleSheet, Alert } from "react-native";
 import { DetailsProps } from "../../types/Index";
 import { useParams } from "../../hooks/useParams";
@@ -9,23 +9,18 @@ import { parseFieldActive } from "../../utils/parser/parseFieldActive";
 import { groupFields } from "../../utils/parser/groupFields";
 
 export default function AssetDetails({ children }: DetailsProps) {
-  const { id, nameClass, field } = useParams();
+  const { id, nameClass, field, activeTab: tabFromParams } = useParams();
 
-  const [activeTab, setActiveTab] = useState("list");
+  const [activeTab, setActiveTab] = useState(tabFromParams ?? "list");
   const [collapsedGroups, setCollapsedGroups] = useState<
     Record<string, boolean>
   >({});
-
   const [isLoading, setIsLoading] = useState(true);
   const [item, setItem] = useState<any>(null);
 
-  // parse fields safely
   const fieldActive = useMemo(() => parseFieldActive(field), [field]);
-
-  // grouped by groupLayout (kept as-is style D)
   const groupedFields = useMemo(() => groupFields(fieldActive), [fieldActive]);
 
-  // Toggle group collapsed/expanded
   const toggleGroup = (groupName: string) => {
     setCollapsedGroups((prev) => ({
       ...prev,
@@ -33,33 +28,34 @@ export default function AssetDetails({ children }: DetailsProps) {
     }));
   };
 
-  const handleChangeTab = (tabKey: string) => {
-    setActiveTab(tabKey);
-  };
+  const handleChangeTab = (tabKey: string) => setActiveTab(tabKey);
 
-  useEffect(() => {
-    const fetchDetails = async () => {
-      setIsLoading(true);
-      try {
-        if (!id || !nameClass) throw new Error("Thiếu ID hoặc nameClass");
-
-        const response = await getDetails(nameClass, id);
-        setItem(response.data);
-      } catch (error) {
-        console.error(error);
-        Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    setActiveTab("list");
-    fetchDetails();
+  const fetchDetails = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      if (!id || !nameClass) throw new Error("Thiếu ID hoặc nameClass");
+      const response = await getDetails(nameClass, id);
+      setItem(response.data);
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
+    } finally {
+      setIsLoading(false);
+    }
   }, [id, nameClass]);
 
-  if (isLoading) {
-    return <IsLoading size="large" color="#FF3333" />;
-  }
+  // fetch lần đầu khi mount
+  useEffect(() => {
+    if (id && nameClass) fetchDetails();
+    else setIsLoading(false);
+  }, [id, nameClass, fetchDetails]);
+
+  // Hàm onReload sẽ được truyền xuống children
+  const handleReload = () => {
+    fetchDetails();
+  };
+
+  if (isLoading) return <IsLoading size="large" color="#FF3333" />;
 
   return (
     <View style={styles.container}>
@@ -74,6 +70,7 @@ export default function AssetDetails({ children }: DetailsProps) {
         TAB_ITEMS,
         nameClass: nameClass || "",
         fieldActive: fieldActive || [],
+        onReload: handleReload,
       })}
     </View>
   );

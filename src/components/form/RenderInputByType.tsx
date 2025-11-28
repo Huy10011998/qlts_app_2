@@ -24,6 +24,7 @@ export const RenderInputByType = ({
   loadingImages = {},
   handleChange,
   pickImage,
+  setLoadingImages,
   setImages,
   styles,
   setModalVisible,
@@ -34,7 +35,12 @@ export const RenderInputByType = ({
   // INITIAL VALUE
   const value = formData[f.name];
 
-  // ★ APPLY DEFAULT FOR ADD MODE ONLY
+  // Skip read-only fields entirely
+  if (f.isReadOnly === true) {
+    return null;
+  }
+
+  // APPLY DEFAULT FOR ADD MODE ONLY
   useEffect(() => {
     if (mode === "add" && !value && f.defaultDateNow) {
       const def = getDefaultValueForField(f);
@@ -113,19 +119,22 @@ export const RenderInputByType = ({
 
     // IMAGE
     case TypeProperty.Image: {
-      const img = images[f.name];
+      const imgUrl = images[f.name];
       const loading = loadingImages[f.name];
-
-      const removeImage = () => {
-        setImages?.((p: any) => ({ ...p, [f.name]: "" }));
-        handleChange(f.name, "");
-      };
 
       return (
         <View>
           <TouchableOpacity
             style={styles.uploadButton}
-            onPress={() => pickImage(f.name, handleChange, setImages)}
+            onPress={async () => {
+              setLoadingImages((p: any) => ({ ...p, [f.name]: true }));
+              await pickImage(
+                f.name,
+                handleChange,
+                setImages,
+                setLoadingImages
+              );
+            }}
           >
             <Ionicons name="image-outline" size={22} color="#FF3333" />
             <Text style={{ marginLeft: 8, color: "#FF3333" }}>Chọn hình</Text>
@@ -133,11 +142,23 @@ export const RenderInputByType = ({
 
           {loading ? (
             <IsLoading size="small" />
-          ) : img ? (
+          ) : imgUrl ? (
             <View style={{ marginTop: 10 }}>
-              <Image source={{ uri: img }} style={styles.previewImage} />
+              <Image
+                source={{ uri: imgUrl }}
+                style={styles.previewImage}
+                resizeMode="cover"
+              />
+
+              {/* nút X dùng chung */}
               <TouchableOpacity
-                onPress={removeImage}
+                onPress={() => {
+                  // Xóa preview hình
+                  setImages((p: any) => ({ ...p, [f.name]: "" }));
+
+                  // Gửi tín hiệu '---' để BE xóa ảnh
+                  handleChange(f.name, "---");
+                }}
                 style={styles.removeImageButton}
               >
                 <Ionicons name="close" size={18} color="#fff" />
@@ -210,7 +231,7 @@ export const RenderInputByType = ({
               {
                 padding: 12,
                 fontSize: 14,
-                paddingLeft: 4,
+                paddingRight: 12,
                 color:
                   value !== null && value !== undefined && value !== ""
                     ? "#000"

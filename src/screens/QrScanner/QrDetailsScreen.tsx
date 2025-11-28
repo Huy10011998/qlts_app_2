@@ -13,6 +13,8 @@ export default function QrDetailsScreen() {
           toggleGroup,
           item,
           getFieldValue,
+          nameClass,
+          fieldActive,
         }) => (
           <>
             <View style={styles.content}>
@@ -23,7 +25,8 @@ export default function QrDetailsScreen() {
                 toggleGroup={toggleGroup}
                 getFieldValue={getFieldValue}
                 item={item}
-                fieldActive={[]}
+                nameClass={nameClass || ""}
+                fieldActive={fieldActive}
               />
             </View>
           </>
