@@ -26,9 +26,13 @@ import { fetchImage, pickImage } from "../../utils/Image";
 import { RenderInputByType } from "../form/RenderInputByType";
 import { useImageLoader } from "../../hooks/useImageLoader";
 import { insert } from "../../services/data/CallApi";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "../../store/Index";
+import { setShouldRefreshList } from "../../store/AssetSlice";
 
 export default function AssetAddItemDetails() {
-  const { field, nameClass, onCreated } = useParams();
+  const { field, nameClass } = useParams();
+
   const navigation = useNavigation<AssetAddItemNavigationProp>();
 
   // parse fields safely
@@ -53,6 +57,9 @@ export default function AssetAddItemDetails() {
   const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>(
     {}
   );
+
+  // Redux
+  const dispatch = useDispatch<AppDispatch>();
 
   // Expand group mặc định
   useEffect(() => {
@@ -144,7 +151,8 @@ export default function AssetAddItemDetails() {
             onPress: () => {
               setFormData({});
               setImages({});
-              if (onCreated) onCreated();
+
+              dispatch(setShouldRefreshList(true));
               navigation.goBack();
             },
           },

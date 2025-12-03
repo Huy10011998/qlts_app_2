@@ -6,12 +6,7 @@ import { useNavigation } from "@react-navigation/native";
 import { AssetAddItemNavigationProp } from "../../types/Navigator.d";
 import { AddItemAssetProps } from "../../types/Components.d";
 
-export function AssetAddItem({
-  onPress,
-  nameClass,
-  field,
-  onCreated,
-}: AddItemAssetProps) {
+export function AssetAddItem({ onPress, nameClass, field }: AddItemAssetProps) {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<AssetAddItemNavigationProp>();
 
@@ -24,7 +19,6 @@ export function AssetAddItem({
       navigation.navigate("AssetAddItem", {
         field: JSON.stringify(field),
         nameClass: nameClass,
-        onCreated: onCreated,
       });
     }
   };

@@ -82,6 +82,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     };
   }, []);
 
+  // useAutoRefreshToken();
+
   return (
     <AuthContext.Provider value={{ token, setToken, setRefreshToken, logout }}>
       {children}
@@ -110,19 +112,15 @@ export const isTokenExpired = (token: string | null | undefined): boolean => {
   }
 };
 
-/**
- * Lấy access token hiện tại từ storage nhưng KHÔNG thực hiện refresh ở đây.
- * Trả về token nếu còn hạn, hoặc null nếu không có / hết hạn.
- */
-export const getValidToken = async (): Promise<string | null> => {
-  try {
-    const accessToken = await AsyncStorage.getItem("token");
-    if (accessToken && !isTokenExpired(accessToken)) {
-      return accessToken;
-    }
-    return null;
-  } catch (err) {
-    error("[Auth] getValidToken error", err);
-    return null;
-  }
-};
+// export const getValidToken = async (): Promise<string | null> => {
+//   try {
+//     const accessToken = await AsyncStorage.getItem("token");
+//     if (accessToken && !isTokenExpired(accessToken)) {
+//       return accessToken;
+//     }
+//     return null;
+//   } catch (err) {
+//     error("[Auth] getValidToken error", err);
+//     return null;
+//   }
+// };

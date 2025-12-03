@@ -103,7 +103,6 @@ export interface TabContentProps {
     currentItem: any,
     previousItem: any
   ) => boolean;
-  onReload: () => void;
 }
 
 export interface CenterTextProps {
@@ -124,7 +123,6 @@ export interface GroupListProps {
     currentItem: any,
     previousItem: any
   ) => boolean;
-  onReload: () => void;
 }
 
 export interface AssetDeleteProps {
@@ -155,7 +153,6 @@ export interface DetailsProps {
     fieldActive: Field[];
     nameClass: string;
     TAB_ITEMS?: typeof TAB_ITEMS;
-    onReload: () => void;
   }) => React.ReactNode;
 }
 
@@ -261,7 +258,6 @@ export type AddItemAssetProps = {
   onPress?: (() => void) | string;
   field?: any;
   nameClass?: string;
-  onCreated?: () => void;
 };
 
 export interface HandleCascadeChangeProps {

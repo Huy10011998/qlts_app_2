@@ -32,10 +32,13 @@ import { RenderInputByType } from "../form/RenderInputByType";
 import { useImageLoader } from "../../hooks/useImageLoader";
 import { update } from "../../services/data/CallApi";
 import { useNavigation } from "@react-navigation/native";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "../../store";
+import { setShouldRefreshDetails } from "../../store/AssetSlice";
 
 // Main Component
 export default function AssetEditItem() {
-  const { item, field, nameClass, onReload } = useParams();
+  const { item, field, nameClass } = useParams();
 
   const navigation = useNavigation<AssetEditItemNavigationProp>();
 
@@ -60,6 +63,9 @@ export default function AssetEditItem() {
     {}
   );
   const [images, setImages] = useState<Record<string, string>>({});
+
+  // Redux
+  const dispatch = useDispatch<AppDispatch>();
 
   // init collapsed
   useEffect(() => {
@@ -299,7 +305,8 @@ export default function AssetEditItem() {
             setFormData({});
             setImages({});
 
-            if (onReload) onReload();
+            // báo detail reload lại
+            dispatch(setShouldRefreshDetails(true));
             navigation.goBack();
           },
         },

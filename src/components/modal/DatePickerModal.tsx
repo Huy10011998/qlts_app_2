@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    backgroundColor: "#fafafa",
+    backgroundColor: "#fff",
   },
 
   modalOverlay: {

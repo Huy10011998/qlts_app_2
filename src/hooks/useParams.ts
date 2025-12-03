@@ -15,8 +15,7 @@ export function useParams<RouteName extends keyof RootStackParamList>() {
     logID: params?.logID,
     id_previous: params?.id_previous,
     item: params?.item,
-    onCreated: params?.onCreated,
-    onReload: params?.onReload,
+    titleHeader: params?.titleHeader,
     activeTab: params?.activeTab,
   };
 }

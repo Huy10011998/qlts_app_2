@@ -1,5 +1,6 @@
 import { API_ENDPOINTS } from "../../config/API";
 import { callApi } from "../../services/data/CallApi";
+import { log } from "../Logger";
 
 export const fetchReferenceByFieldWithParent = async (
   referenceName: string,
@@ -33,6 +34,6 @@ export const fetchReferenceByFieldWithParent = async (
 
     setReference((prev) => ({ ...prev, [fieldName]: items }));
   } catch (e) {
-    console.log("Lỗi cascade:", e);
+    log("Lỗi cascade:", e);
   }
 };

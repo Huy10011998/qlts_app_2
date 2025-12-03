@@ -15,13 +15,12 @@ import {
   TouchableOpacity,
   ScrollView,
 } from "react-native";
-import { useRoute, useNavigation } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import {
   Field,
   PropertyResponse,
-  AssetDetailsNavigationProp,
   TreeNode,
-  AssetListScreenRouteProp,
+  AssetListScreenNavigationProp,
 } from "../../types/Index";
 import {
   getFieldActive,
@@ -35,6 +34,10 @@ import { useDebounce } from "../../hooks/useDebounce";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { SqlOperator, TypeProperty } from "../../utils/Enum";
 import { AssetAddItem } from "./AssetAddItem";
+import { useParams } from "../../hooks/useParams";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "../../store";
+import { resetShouldRefreshList } from "../../store/AssetSlice";
 
 if (
   Platform.OS === "android" &&
@@ -185,11 +188,9 @@ const TreeNodeItem = ({
 };
 
 export default function AssetList() {
-  const route = useRoute<AssetListScreenRouteProp>();
-  const navigation = useNavigation<AssetDetailsNavigationProp>();
+  const navigation = useNavigation<AssetListScreenNavigationProp>();
 
-  const { nameClass: paramNameClass, titleHeader } = route.params || {};
-  const nameClass = paramNameClass;
+  const { nameClass, titleHeader } = useParams();
 
   const [taisan, setTaiSan] = useState<Record<string, any>[]>([]);
   const [fieldActive, setFieldActive] = useState<Field[]>([]);
@@ -218,6 +219,12 @@ export default function AssetList() {
   // Filter conditions
   const [conditions, setConditions] = useState<any[]>([]);
   const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
+
+  // Redux
+  const dispatch = useDispatch<AppDispatch>();
+  const shouldRefresh = useSelector(
+    (state: RootState) => state.asset.shouldRefreshList
+  );
 
   const refreshTop = async () => {
     setIsRefreshingTop(true);
@@ -265,8 +272,22 @@ export default function AssetList() {
   };
 
   useEffect(() => {
-    navigation.setParams({ onMenuPress: toggleMenu });
-  }, [menuVisible]);
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity onPress={toggleMenu} style={{ paddingHorizontal: 5 }}>
+          <Ionicons name="menu" size={26} color="#fff" />
+        </TouchableOpacity>
+      ),
+    });
+  }, [toggleMenu]);
+
+  // Redux
+  useEffect(() => {
+    if (shouldRefresh) {
+      fetchData(false);
+      dispatch(resetShouldRefreshList());
+    }
+  }, [shouldRefresh]);
 
   //  Fetch data
   const fetchData = useCallback(
@@ -294,10 +315,6 @@ export default function AssetList() {
         if (!isLoadMore && !propertyClass) {
           const responsePropertyClass = await getPropertyClass(nameClass);
           setPropertyClass(responsePropertyClass?.data);
-
-          navigation.setParams({
-            isBuildTree: responsePropertyClass?.data?.isBuildTree || false,
-          });
         }
 
         const currentSkip = isLoadMore ? skipSize : 0;
@@ -353,12 +370,8 @@ export default function AssetList() {
       navigation.navigate("AssetDetails", {
         id: String(item.id),
         field: JSON.stringify(fieldActive),
-        nameClass: nameClass,
-        titleHeader: titleHeader,
-
-        onCreated: () => {
-          fetchData(false); // load lại list
-        },
+        nameClass,
+        titleHeader,
       });
     } catch (error) {
       console.error(error);
@@ -464,14 +477,7 @@ export default function AssetList() {
           </Animated.View>
         </View>
       )}
-      <AssetAddItem
-        nameClass={nameClass}
-        field={JSON.stringify(fieldActive)}
-        onCreated={() => {
-          // Reload lại list khi tạo thành công
-          fetchData(false);
-        }}
-      />
+      <AssetAddItem nameClass={nameClass} field={JSON.stringify(fieldActive)} />
     </View>
   );
 }

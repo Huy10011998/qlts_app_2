@@ -82,7 +82,7 @@ export default function LoginScreen() {
 
   // ... giữ các import khác
 
-  // LOGIN BẰNG FACEID (sửa: chỉ dùng Keychain prompt)
+  // LOGIN BẰNG FACEID (chỉ dùng Keychain prompt)
   const handleFaceIDLogin = async () => {
     if (isFaceIDRunning.current) return;
     isFaceIDRunning.current = true; // chặn double tap
@@ -99,13 +99,13 @@ export default function LoginScreen() {
       // Thêm authenticationPrompt cho iOS để hiển thị message chuẩn, Android sẽ ignore field
       const credentials = await Keychain.getGenericPassword({
         service: "faceid-login",
-        // Lưu ý: field authenticationPrompt được hỗ trợ trên iOS (react-native-keychain)
+        // Field authenticationPrompt được hỗ trợ trên iOS (react-native-keychain)
         authenticationPrompt: {
           title: "Xác thực",
           subtitle: "Sử dụng FaceID để đăng nhập",
           description: "Đăng nhập bằng FaceID",
           cancel: "Huỷ",
-        } as any, // nếu TS than phiền, tuỳ chỉnh type
+        } as any,
       });
 
       if (!credentials) {
@@ -130,7 +130,6 @@ export default function LoginScreen() {
       }
     } catch (err) {
       // Nếu err do user huỷ prompt thì có thể bỏ qua hoặc show thông báo nhẹ
-      // console.log(err);
       Alert.alert("Lỗi", "Không thể đăng nhập bằng FaceID.");
     } finally {
       setIsLoading(false);

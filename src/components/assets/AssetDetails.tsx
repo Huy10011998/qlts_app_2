@@ -7,6 +7,9 @@ import IsLoading from "../ui/IconLoading";
 import { getFieldValue, TAB_ITEMS } from "../../utils/Helper";
 import { parseFieldActive } from "../../utils/parser/parseFieldActive";
 import { groupFields } from "../../utils/parser/groupFields";
+import { AppDispatch, RootState } from "../../store";
+import { useDispatch, useSelector } from "react-redux";
+import { resetShouldRefreshDetails } from "../../store/AssetSlice";
 
 export default function AssetDetails({ children }: DetailsProps) {
   const { id, nameClass, field, activeTab: tabFromParams } = useParams();
@@ -20,6 +23,12 @@ export default function AssetDetails({ children }: DetailsProps) {
 
   const fieldActive = useMemo(() => parseFieldActive(field), [field]);
   const groupedFields = useMemo(() => groupFields(fieldActive), [fieldActive]);
+
+  // Redux
+  const dispatch = useDispatch<AppDispatch>();
+  const shouldRefreshDetails = useSelector(
+    (state: RootState) => state.asset.shouldRefreshDetails
+  );
 
   const toggleGroup = (groupName: string) => {
     setCollapsedGroups((prev) => ({
@@ -44,16 +53,18 @@ export default function AssetDetails({ children }: DetailsProps) {
     }
   }, [id, nameClass]);
 
+  useEffect(() => {
+    if (shouldRefreshDetails) {
+      fetchDetails();
+      dispatch(resetShouldRefreshDetails()); // reset lại
+    }
+  }, [shouldRefreshDetails]);
+
   // fetch lần đầu khi mount
   useEffect(() => {
     if (id && nameClass) fetchDetails();
     else setIsLoading(false);
   }, [id, nameClass, fetchDetails]);
-
-  // Hàm onReload sẽ được truyền xuống children
-  const handleReload = () => {
-    fetchDetails();
-  };
 
   if (isLoading) return <IsLoading size="large" color="#FF3333" />;
 
@@ -70,7 +81,6 @@ export default function AssetDetails({ children }: DetailsProps) {
         TAB_ITEMS,
         nameClass: nameClass || "",
         fieldActive: fieldActive || [],
-        onReload: handleReload,
       })}
     </View>
   );

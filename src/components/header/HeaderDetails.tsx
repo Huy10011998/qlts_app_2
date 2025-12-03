@@ -7,24 +7,12 @@ import { HeaderOptionsProps } from "../../types";
 
 export const HeaderDetails = ({
   showBackButton,
-  showMenuButton,
-  onMenuPress,
 }: HeaderOptionsProps = {}): NativeStackNavigationOptions => {
   return {
     headerStyle: { backgroundColor: "#FF3333" },
     headerTintColor: "#fff",
     headerTitleStyle: { fontWeight: "bold" },
     headerLeft: showBackButton ? () => <HeaderBackButton /> : undefined,
-    headerRight: showMenuButton
-      ? () => (
-          <TouchableOpacity
-            onPress={onMenuPress}
-            style={{ paddingHorizontal: 5 }}
-          >
-            <Ionicons name="menu" size={26} color="#fff" />
-          </TouchableOpacity>
-        )
-      : undefined,
   };
 };
 

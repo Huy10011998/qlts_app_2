@@ -30,7 +30,6 @@ export type RootStackParamList = {
     nameClass?: string;
     titleHeader?: string;
     isBuildTree?: boolean;
-    onCreated?: () => void;
     onMenuPress?: () => void;
   };
 
@@ -76,15 +75,12 @@ export type RootStackParamList = {
   AssetAddItem: {
     field: string;
     nameClass?: string;
-    onCreated?: () => void;
   };
 
   AssetEditItem: {
     item: Record<string, any>;
     field: string;
     nameClass?: string;
-    onCreated?: () => void;
-    onReload?: () => void;
   };
 };
 
@@ -100,8 +96,7 @@ export type OptionalParams = {
   item?: Record<string, any>;
   mode: string;
   activeTab?: string;
-  onCreated?: () => void;
-  onReload?: () => void;
+  titleHeader?: string;
 };
 
 // Navigation Props

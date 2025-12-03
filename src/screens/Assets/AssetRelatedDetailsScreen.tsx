@@ -8,13 +8,11 @@ export default function AssetRelatedDetailsScreen() {
       <AssetRelatedDetails>
         {({
           activeTab,
-          setActiveTab,
           groupedFields,
           collapsedGroups,
           toggleGroup,
           item,
           getFieldValue,
-          TAB_ITEMS,
         }) => (
           <>
             <View style={styles.content}>
@@ -25,6 +23,7 @@ export default function AssetRelatedDetailsScreen() {
                 toggleGroup={toggleGroup}
                 getFieldValue={getFieldValue}
                 item={item}
+                fieldActive={[]}
               />
             </View>
           </>

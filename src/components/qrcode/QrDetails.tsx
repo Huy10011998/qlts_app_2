@@ -21,6 +21,7 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { parseFieldActive } from "../../utils/parser/parseFieldActive";
 import { groupFields } from "../../utils/parser/groupFields";
 import { getFieldValue } from "../../utils/Helper";
+import { log } from "../../utils/Logger";
 
 const { width } = Dimensions.get("window");
 const MENU_WIDTH = width * 0.6;
@@ -146,21 +147,21 @@ export default function QrDetails({ children }: QrDetailsProps) {
           </Text>
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => console.log("Báo hỏng")}
+            onPress={() => log("Báo hỏng")}
           >
             <Text style={styles.menuItemText}>Báo hỏng / Yêu cầu sửa chữa</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => console.log("Thang lý")}
+            onPress={() => log("Thang lý")}
           >
             <Text style={styles.menuItemText}>Thanh lý</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => console.log("Trung chuyển")}
+            onPress={() => log("Trung chuyển")}
           >
             <Text style={styles.menuItemText}>Trung chuyển</Text>
           </TouchableOpacity>

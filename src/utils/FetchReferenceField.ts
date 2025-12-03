@@ -1,5 +1,6 @@
 import { API_ENDPOINTS } from "../config/API";
 import { callApi } from "../services/data/CallApi";
+import { log } from "./Logger";
 
 export const fetchReferenceByField = async (
   referenceName: string,
@@ -21,6 +22,6 @@ export const fetchReferenceByField = async (
 
     setReference((prev) => ({ ...prev, [fieldName]: items }));
   } catch (e) {
-    console.log("Lỗi tải reference:", e);
+    log("Lỗi tải reference:", e);
   }
 };

@@ -1,4 +1,5 @@
 import { Field } from "../../types/Index";
+import { log } from "../Logger";
 
 export const parseFieldActive = (field: any): Field[] => {
   try {
@@ -9,7 +10,7 @@ export const parseFieldActive = (field: any): Field[] => {
 
     return Array.isArray(parsed) ? parsed : [];
   } catch (e) {
-    console.log("Lỗi parse field:", e);
+    log("Lỗi parse field:", e);
     return [];
   }
 };

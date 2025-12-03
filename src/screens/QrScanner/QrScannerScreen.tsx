@@ -19,6 +19,7 @@ import {
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { QrScannerNavigationProp } from "../../types";
 import { getFieldActive } from "../../services/Index";
+import { log } from "../../utils/Logger";
 
 export default function QrScannerScreen() {
   const [hasPermission, setHasPermission] = useState(false);
@@ -60,7 +61,7 @@ export default function QrScannerScreen() {
         setIsScanned(true);
 
         const data = codes?.[0]?.value || "";
-        console.log("QR Data:", data); // ví dụ: /maytinh/1493
+        log("QR Data:", data); // ví dụ: /maytinh/1493
 
         const cleanData = data.startsWith("/") ? data.slice(1) : data;
         const parts = cleanData
@@ -68,7 +69,7 @@ export default function QrScannerScreen() {
           .map((item) => item.trim()) // loại bỏ \r, \n, khoảng trắng thừa
           .filter((item) => item.length > 0); // bỏ phần rỗng nếu có
 
-        console.log("parts: ", parts);
+        log("parts: ", parts);
 
         if (parts.length === 2) {
           const [title, id] = parts;

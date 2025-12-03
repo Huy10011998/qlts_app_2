@@ -46,13 +46,11 @@ export default function HomeStack() {
         }: {
           route: RouteProp<RootStackParamList, "AssetList">;
         }) => {
-          const { titleHeader, isBuildTree, onMenuPress } = route.params || {};
+          const { titleHeader } = route.params || {};
           return {
             title: capitalizeFirstLetter(titleHeader) || "Tài sản",
             ...HeaderDetails({
               showBackButton: true,
-              showMenuButton: isBuildTree,
-              onMenuPress,
             }),
           };
         }}
