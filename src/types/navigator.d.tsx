@@ -29,7 +29,6 @@ export type RootStackParamList = {
     field?: any;
     nameClass?: string;
     titleHeader?: string;
-    isBuildTree?: boolean;
     onMenuPress?: () => void;
   };
 

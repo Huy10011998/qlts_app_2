@@ -37,7 +37,11 @@ import { AssetAddItem } from "./AssetAddItem";
 import { useParams } from "../../hooks/useParams";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../../store";
-import { resetShouldRefreshList } from "../../store/AssetSlice";
+import {
+  resetShouldRefreshList,
+  setSelectedTreeNode,
+} from "../../store/AssetSlice";
+import { error } from "../../utils/Logger";
 
 if (
   Platform.OS === "android" &&
@@ -245,7 +249,7 @@ export default function AssetList() {
 
         setTreeData(tree);
       } catch (e) {
-        console.error("Lỗi load tree:", e);
+        error("Lỗi load tree:", e);
       } finally {
         setLoadingTree(false);
       }
@@ -267,19 +271,24 @@ export default function AssetList() {
   };
 
   const toggleMenu = () => {
+    if (!propertyClass?.isBuildTree) return;
     if (menuVisible) closeMenu();
     else openMenu();
   };
 
   useEffect(() => {
     navigation.setOptions({
-      headerRight: () => (
-        <TouchableOpacity onPress={toggleMenu} style={{ paddingHorizontal: 5 }}>
-          <Ionicons name="menu" size={26} color="#fff" />
-        </TouchableOpacity>
-      ),
+      headerRight: () =>
+        propertyClass?.isBuildTree ? (
+          <TouchableOpacity
+            onPress={toggleMenu}
+            style={{ paddingHorizontal: 5 }}
+          >
+            <Ionicons name="menu" size={26} color="#fff" />
+          </TouchableOpacity>
+        ) : null,
     });
-  }, [toggleMenu]);
+  }, [toggleMenu, propertyClass?.isBuildTree]);
 
   // Redux
   useEffect(() => {
@@ -343,8 +352,8 @@ export default function AssetList() {
         }
 
         setTotal(totalItems);
-      } catch (error) {
-        console.error("API error:", error);
+      } catch (e) {
+        error("API error:", e);
         Alert.alert("Lỗi", "Không thể tải dữ liệu.");
         if (!isLoadMore) setTaiSan([]);
       } finally {
@@ -373,8 +382,8 @@ export default function AssetList() {
         nameClass,
         titleHeader,
       });
-    } catch (error) {
-      console.error(error);
+    } catch (e) {
+      error(e);
       Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
     }
   };
@@ -383,7 +392,16 @@ export default function AssetList() {
   const handleSelectNode = (node: TreeNode) => {
     setSelectedNode(node);
 
-    // Luôn build conditions từ node → root
+    // Lưu vào redux
+    dispatch(
+      setSelectedTreeNode({
+        value: node.value ?? null,
+        property: node.property ?? null,
+        text: node.text ?? null,
+      })
+    );
+
+    // Build điều kiện từ node → root
     const newConditions = getConditionsFromNode(node as any);
 
     setConditions(newConditions);

@@ -1,5 +1,4 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { jwtDecode } from "jwt-decode";
 import React, {
   createContext,
   ReactNode,
@@ -7,7 +6,7 @@ import React, {
   useEffect,
   useState,
 } from "react";
-import { AuthContextType, JwtPayload } from "../types/Index";
+import { AuthContextType } from "../types/Index";
 import { error, log, warn } from "../utils/Logger";
 import { setOnAuthLogout } from "../services/data/CallApi";
 
@@ -46,7 +45,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const logout = async () => {
     log("[Auth] Logout → clear all tokens");
     try {
-      await AsyncStorage.multiRemove(["token", "refreshToken"]);
+      await Promise.all([
+        AsyncStorage.removeItem("token"),
+        AsyncStorage.removeItem("refreshToken"),
+      ]);
     } catch (e) {
       warn("[Auth] Error clearing storage on logout");
     }
@@ -58,13 +60,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     (async () => {
       try {
         const stored = await AsyncStorage.getItem("token");
-        if (stored && !isTokenExpired(stored)) {
-          setTokenState(stored);
-          log("[Auth] Loaded valid token from storage");
-        } else {
-          setTokenState(null);
-          log("[Auth] No valid token on load");
-        }
+        setTokenState(stored);
+        log("[Auth] Loaded token from storage");
       } catch (err) {
         error("[Auth] Failed to load token from storage", err);
         await logout();
@@ -97,30 +94,3 @@ export const useAuth = () => {
   if (!context) throw new Error("useAuth phải được dùng trong AuthProvider");
   return context;
 };
-
-// Kiểm tra access token hết hạn chưa
-export const isTokenExpired = (token: string | null | undefined): boolean => {
-  if (!token) return true;
-  try {
-    const decoded = jwtDecode<JwtPayload>(token);
-    const expired = Date.now() >= decoded.exp * 1000 - 30_000;
-    if (expired) log("[Auth] Token expired");
-    return expired;
-  } catch (err) {
-    warn("[Auth] Decode token failed");
-    return true;
-  }
-};
-
-// export const getValidToken = async (): Promise<string | null> => {
-//   try {
-//     const accessToken = await AsyncStorage.getItem("token");
-//     if (accessToken && !isTokenExpired(accessToken)) {
-//       return accessToken;
-//     }
-//     return null;
-//   } catch (err) {
-//     error("[Auth] getValidToken error", err);
-//     return null;
-//   }
-// };

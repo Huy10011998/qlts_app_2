@@ -58,6 +58,30 @@ export const fetchImage = async (
   }
 };
 
+// Convert path img
+export const convertToResizePath = (originalPath: string): string => {
+  try {
+    // Tách folder + filename
+    const parts = originalPath.split("\\");
+    if (parts.length < 2) return originalPath;
+
+    const folder = parts[0]; // Property
+    const filename = parts[1]; // aefadd90-....jpg
+
+    // Tách name + extension
+    const dotIndex = filename.lastIndexOf(".");
+    if (dotIndex === -1) return originalPath;
+
+    const name = filename.slice(0, dotIndex); // aefadd90-...
+    const ext = filename.slice(dotIndex); // .jpg
+
+    // Tạo path mới
+    return `${folder}_Resize\\${name}_resize${ext}`;
+  } catch {
+    return originalPath;
+  }
+};
+
 // ---------- image picker ----------
 export const pickImage = async (
   fieldName: string,

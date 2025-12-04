@@ -221,6 +221,7 @@ export const RenderInputByType = ({
     case TypeProperty.Reference:
       return (
         <TouchableOpacity
+          key={value}
           onPress={() => {
             setActiveEnumField(f);
             setModalVisible(true);
@@ -241,10 +242,8 @@ export const RenderInputByType = ({
             ]}
           >
             {items.find((x: { value: any }) => x.value == value)?.text ??
-              (value != null ? formData?.[`${f.name}_MoTa`] : null) ??
-              (value && typeof value === "string"
-                ? value
-                : `Chọn ${f.moTa || f.name}`)}
+              formData?.[`${f.name}_MoTa`] ??
+              `Chọn ${f.moTa || f.name}`}
           </Text>
 
           <Ionicons

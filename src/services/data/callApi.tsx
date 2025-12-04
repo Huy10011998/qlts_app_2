@@ -2,104 +2,127 @@ import axios, { AxiosError, AxiosInstance } from "axios";
 import { Buffer } from "buffer";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_ENDPOINTS, BASE_URL } from "../../config/Index";
-import { log, warn } from "../../utils/Logger";
-import { isTokenExpired } from "../../context/AuthContext";
+import { error, log, warn } from "../../utils/Logger";
 import { jwtDecode } from "jwt-decode";
 import { JwtPayload } from "../../types/Context.d";
 
+// GLOBAL LOGOUT HANDLER
 let onAuthLogout: (() => Promise<void>) | null = null;
 export const setOnAuthLogout = (cb: (() => Promise<void>) | null) => {
   onAuthLogout = cb;
 };
 
-// Axios instances
+// AXIOS
 export const api: AxiosInstance = axios.create({
   baseURL: BASE_URL,
-  headers: { "Content-Type": "application/json;charset=UTF-8" },
   timeout: 15000,
+  headers: { "Content-Type": "application/json;charset=UTF-8" },
 });
 
 const refreshApi = axios.create({
   baseURL: BASE_URL,
-  headers: { "Content-Type": "application/json;charset=UTF-8" },
   timeout: 15000,
+  headers: { "Content-Type": "application/json;charset=UTF-8" },
 });
 
-// Refresh token queue
+// IN-MEMORY CACHE
+let cachedToken: string | null = null;
+let cachedRefresh: string | null = null;
+
+// HELPERS
+const safeDecode = (token: string): JwtPayload | null => {
+  try {
+    return jwtDecode<JwtPayload>(token);
+  } catch (_) {
+    return null;
+  }
+};
+
+const getToken = async () => {
+  if (cachedToken) return cachedToken;
+  cachedToken = await AsyncStorage.getItem("token");
+  return cachedToken;
+};
+
+const getRefreshToken = async () => {
+  if (cachedRefresh) return cachedRefresh;
+  cachedRefresh = await AsyncStorage.getItem("refreshToken");
+  return cachedRefresh;
+};
+
+const clearTokenStorage = async () => {
+  cachedToken = null;
+  cachedRefresh = null;
+  await AsyncStorage.multiRemove(["token", "refreshToken"]);
+};
+
+// REFRESH FLOW
 let isRefreshing = false;
 let refreshSubscribers: ((token: string | null) => void)[] = [];
+
 const subscribeTokenRefresh = (cb: (token: string | null) => void) => {
   refreshSubscribers.push(cb);
 };
+
 const onRefreshed = (token: string | null) => {
   refreshSubscribers.forEach((cb) => cb(token));
   refreshSubscribers = [];
 };
 
-// In-memory token cache
-let cachedToken: string | null = null;
-
-// Helper: lấy token hợp lệ (cache + storage)
-const getToken = async () => {
-  if (cachedToken && !isTokenExpired(cachedToken)) return cachedToken;
-  const token = await AsyncStorage.getItem("token");
-  cachedToken = token;
-  return token;
-};
-
-// Refresh token function
 const refreshTokenFlow = async (): Promise<string> => {
   try {
-    const refreshToken = await AsyncStorage.getItem("refreshToken");
-    if (!refreshToken) throw new Error("Missing refresh token");
+    const refreshToken = await getRefreshToken();
+    if (!refreshToken) throw { NEED_LOGIN: true };
 
     const res = await refreshApi.post(API_ENDPOINTS.REFRESH_TOKEN, {
       value: refreshToken,
     });
+
     const data = res?.data?.data;
-    if (!data?.accessToken) throw new Error("No accessToken in refresh");
+    if (!data?.accessToken) throw { NEED_LOGIN: true };
 
+    // Save access token
     await AsyncStorage.setItem("token", data.accessToken);
-    if (data.refreshToken)
-      await AsyncStorage.setItem("refreshToken", data.refreshToken);
+    cachedToken = data.accessToken;
 
-    cachedToken = data.accessToken; // update cache
-    log("[API] Token refreshed successfully");
+    // Save refresh token (if provided)
+    if (data.refreshToken) {
+      await AsyncStorage.setItem("refreshToken", data.refreshToken);
+      cachedRefresh = data.refreshToken;
+    }
+
+    log("[API] 🔄 Token refreshed successfully");
     return data.accessToken;
-  } catch (err) {
-    cachedToken = null;
-    await AsyncStorage.multiRemove(["token", "refreshToken"]);
-    if (onAuthLogout) await onAuthLogout();
-    throw err;
+  } catch (err: any) {
+    await clearTokenStorage();
+    throw Object.assign(new Error("NEED_LOGIN"), { NEED_LOGIN: true });
   }
 };
 
-// Request interceptor: attach token + auto refresh
-const REFRESH_BEFORE_MS = 60 * 1000; // 1 phút trước khi hết hạn
+// REQUEST
+const REFRESH_BEFORE_MS = 60 * 1000; // 1 phút
+
 api.interceptors.request.use(async (config) => {
   let token = await getToken();
-
   if (token) {
-    // Kiểm tra thời điểm token hết hạn
-    const decoded = jwtDecode<JwtPayload>(token);
-    const expiresIn = decoded.exp * 1000 - Date.now();
+    const decoded = safeDecode(token);
+    const expiresIn = decoded?.exp ? decoded.exp * 1000 - Date.now() : null;
 
-    if (expiresIn < REFRESH_BEFORE_MS) {
-      log("[API] Token near expiry → refresh before request");
+    if (expiresIn !== null && expiresIn < REFRESH_BEFORE_MS) {
+      log("[API] ⏳ Token near expiry → refreshing...");
 
       if (isRefreshing) {
         token = await new Promise<string | null>((resolve) =>
           subscribeTokenRefresh(resolve)
         );
-        if (!token) throw new Error("Token refresh failed");
       } else {
         isRefreshing = true;
         try {
           token = await refreshTokenFlow();
           onRefreshed(token);
-        } catch (err) {
+        } catch (e) {
           onRefreshed(null);
-          throw err;
+          throw e;
         } finally {
           isRefreshing = false;
         }
@@ -112,41 +135,76 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
-// Response interceptor fallback 401
+// RESPONSE
 api.interceptors.response.use(
   (res) => res,
-  async (err: AxiosError) => {
+  async (err: AxiosError & { NEED_LOGIN?: boolean }) => {
     const originalRequest: any = err.config;
+
+    // Nếu refresh trả NEED_LOGIN
+    if (err.NEED_LOGIN) {
+      warn("[API] ❌ Refresh failed → redirect to login");
+      if (onAuthLogout) await onAuthLogout();
+      return Promise.reject(err);
+    }
+
+    // Không phải lỗi 401 hoặc đã retry
     if (
       err.response?.status !== 401 ||
       !originalRequest ||
       originalRequest._retry
-    )
+    ) {
       return Promise.reject(err);
+    }
 
     originalRequest._retry = true;
-    warn("[API] 401 Unauthorized → retry with refresh flow");
+    warn("[API] ⚠️ 401 → retry with refresh");
 
+    // Nếu offline hoặc lỗi mạng → không logout
+    if (!err.response && err.message === "Network Error") {
+      error("[API] 📵 Network error → do not logout");
+      return Promise.reject(err);
+    }
+
+    // Nếu đang refresh: đợi
     if (isRefreshing) {
       return new Promise((resolve, reject) => {
         subscribeTokenRefresh((newToken) => {
           if (newToken) {
-            originalRequest.headers.Authorization = `Bearer ${newToken}`;
-            resolve(api(originalRequest));
-          } else reject(err);
+            resolve(
+              api({
+                ...originalRequest,
+                headers: {
+                  ...originalRequest.headers,
+                  Authorization: `Bearer ${newToken}`,
+                },
+              })
+            );
+          } else {
+            reject(
+              Object.assign(new Error("NEED_LOGIN"), { NEED_LOGIN: true })
+            );
+          }
         });
       });
     }
 
+    // Tự refresh
     isRefreshing = true;
     try {
       const token = await refreshTokenFlow();
       onRefreshed(token);
-      originalRequest.headers.Authorization = `Bearer ${token}`;
-      return api(originalRequest);
+
+      return api({
+        ...originalRequest,
+        headers: {
+          ...originalRequest.headers,
+          Authorization: `Bearer ${token}`,
+        },
+      });
     } catch (refreshErr) {
       onRefreshed(null);
-      return Promise.reject(refreshErr);
+      return Promise.reject({ NEED_LOGIN: true });
     } finally {
       isRefreshing = false;
     }

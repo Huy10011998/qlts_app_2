@@ -26,8 +26,8 @@ import { fetchImage, pickImage } from "../../utils/Image";
 import { RenderInputByType } from "../form/RenderInputByType";
 import { useImageLoader } from "../../hooks/useImageLoader";
 import { insert } from "../../services/data/CallApi";
-import { useDispatch } from "react-redux";
-import { AppDispatch } from "../../store/Index";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "../../store/Index";
 import { setShouldRefreshList } from "../../store/AssetSlice";
 
 export default function AssetAddItemDetails() {
@@ -35,7 +35,7 @@ export default function AssetAddItemDetails() {
 
   const navigation = useNavigation<AssetAddItemNavigationProp>();
 
-  // parse fields safely
+  // Parse fields safely
   const fieldActive = useMemo(() => parseFieldActive(field), [field]);
 
   // grouped by groupLayout (kept as-is style D)
@@ -45,6 +45,7 @@ export default function AssetAddItemDetails() {
   const [collapsedGroups, setCollapsedGroups] = useState<
     Record<string, boolean>
   >({});
+
   const [enumData, setEnumData] = useState<Record<string, any[]>>({});
   const [referenceData, setReferenceData] = useState<Record<string, any[]>>({});
 
@@ -58,8 +59,27 @@ export default function AssetAddItemDetails() {
     {}
   );
 
-  // Redux
+  // Lấy node từ redux
   const dispatch = useDispatch<AppDispatch>();
+  const { selectedTreeValue, selectedTreeProperty, selectedTreeText } =
+    useSelector((state: RootState) => state.asset);
+
+  // Redux
+  useEffect(() => {
+    if (!selectedTreeProperty || !selectedTreeValue) return;
+
+    // Nếu form chưa có giá trị này, ta set mặc định
+    setFormData((prev) => {
+      // Nếu đã có thì không override nữa
+      if (prev[selectedTreeProperty] !== undefined) return prev;
+
+      return {
+        ...prev,
+        [selectedTreeProperty]: selectedTreeValue,
+        [`${selectedTreeProperty}_MoTa`]: selectedTreeText ?? "", // nếu bạn dùng mô tả
+      };
+    });
+  }, [selectedTreeProperty, selectedTreeValue, selectedTreeText]);
 
   // Expand group mặc định
   useEffect(() => {

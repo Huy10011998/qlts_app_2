@@ -1,4 +1,4 @@
-import { Item } from "./Model.d";
+import { Field, Item } from "./Model.d";
 
 export interface GetMenuActiveResponse {
   data: Item[];
@@ -19,8 +19,9 @@ export interface LoginResponse {
 }
 
 export interface PropertyResponse {
-  fields(fields: any): unknown;
+  fields(fields: any): Field;
   iconMobile: string;
+  isBuildTree: boolean;
 }
 
 export interface MenuItemResponse {
