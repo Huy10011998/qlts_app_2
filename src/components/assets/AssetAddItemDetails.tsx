@@ -61,25 +61,45 @@ export default function AssetAddItemDetails() {
 
   // Lấy node từ redux
   const dispatch = useDispatch<AppDispatch>();
-  const { selectedTreeValue, selectedTreeProperty, selectedTreeText } =
-    useSelector((state: RootState) => state.asset);
+  const { selectedTreeValue, selectedTreeProperty } = useSelector(
+    (state: RootState) => state.asset
+  );
 
   // Redux
   useEffect(() => {
     if (!selectedTreeProperty || !selectedTreeValue) return;
 
-    // Nếu form chưa có giá trị này, ta set mặc định
-    setFormData((prev) => {
-      // Nếu đã có thì không override nữa
-      if (prev[selectedTreeProperty] !== undefined) return prev;
+    // Reset form để không giữ lại giá trị cũ
+    setFormData({});
+    setReferenceData({});
 
-      return {
-        ...prev,
-        [selectedTreeProperty]: selectedTreeValue,
-        [`${selectedTreeProperty}_MoTa`]: selectedTreeText ?? "", // nếu bạn dùng mô tả
-      };
+    const props = selectedTreeProperty.split(",");
+    const values = selectedTreeValue
+      .split(",")
+      .map((v) => Number(v))
+      .filter((v) => v >= 0);
+
+    props.forEach((p, i) => {
+      if (!values[i] && values[i] !== 0) return;
+
+      const f = fieldActive.find((fi) => fi.name === p);
+      if (!f) return;
+
+      // Set value trước
+      setFormData((prev) => ({ ...prev, [p]: values[i] }));
+
+      // Cascade sau
+      setTimeout(() => {
+        handleCascadeChange({
+          name: p,
+          value: values[i],
+          fieldActive,
+          setFormData,
+          setReferenceData,
+        });
+      }, 0);
     });
-  }, [selectedTreeProperty, selectedTreeValue, selectedTreeText]);
+  }, [selectedTreeProperty, selectedTreeValue, fieldActive]);
 
   // Expand group mặc định
   useEffect(() => {

@@ -14,10 +14,8 @@ export const fetchReferenceByFieldWithParent = async (
       currentID: [0],
     };
 
-    if (parentValue != null) {
-      payload.lstParent = Array.isArray(parentValue)
-        ? parentValue.join(",")
-        : String(parentValue);
+    if (parentValue != null && parentValue !== "") {
+      payload.lstParent = String(parentValue);
     }
 
     const res = await callApi<{ success: boolean; data: { items: any[] } }>(

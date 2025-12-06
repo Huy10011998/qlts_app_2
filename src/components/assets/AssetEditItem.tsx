@@ -163,21 +163,16 @@ export default function AssetEditItem() {
   // Auto load reference có parent khi mở màn hình EDIT
   useEffect(() => {
     fieldActive.forEach((f) => {
-      if (
-        f.typeProperty === TypeProperty.Reference &&
-        f.parentsFields &&
-        formData[f.parentsFields] // parent đã có value
-      ) {
-        const parents = f.parentsFields.split(",");
-        const parentValues = parents
-          .map((p) => formData[p])
-          .filter((x) => x != null);
+      if (f.typeProperty === TypeProperty.Reference && f.parentsFields) {
+        const parents = f.parentsFields.split(","); // ["ID_Complex", "ID_Building"]
+        const haveAllParents = parents.every((p) => formData[p]); // check từng field có value
 
-        if (parentValues.length > 0) {
+        if (haveAllParents) {
+          const parentValues = parents.map((p) => formData[p]).join(",");
           fetchReferenceByFieldWithParent(
             f.referenceName!,
             f.name,
-            parentValues.join(","),
+            parentValues,
             setReferenceData
           );
         }
@@ -296,7 +291,7 @@ export default function AssetEditItem() {
         return;
       }
 
-      const res = await update(nameClass, body);
+      await update(nameClass, body);
 
       Alert.alert("Thành công", "Cập nhật thành công!", [
         {
@@ -332,6 +327,10 @@ export default function AssetEditItem() {
           break;
 
         case TypeProperty.Image:
+          reset[f.name] = raw ?? "";
+          break;
+
+        case TypeProperty.Link:
           reset[f.name] = raw ?? "";
           break;
 

@@ -17,10 +17,11 @@ import * as Keychain from "react-native-keychain";
 import { useAuth } from "../../context/AuthContext";
 import { loginApi } from "../../services/auth/AuthApi";
 import IsLoading from "../../components/ui/IconLoading";
+import { log } from "../../utils/Logger";
 
 export default function LoginScreen() {
   const navigation = useNavigation<any>();
-  const { setToken, setRefreshToken } = useAuth();
+  const { setToken, setRefreshToken, token } = useAuth();
 
   const [userName, setUserName] = useState("");
   const [userPassword, setUserPassword] = useState("");
@@ -41,6 +42,9 @@ export default function LoginScreen() {
     hasTriedFaceID.current = true;
   }, []);
 
+  useEffect(() => {
+    log("token", token);
+  }, [token]);
   // Reset trạng thái loading khi quay lại màn Login
   useEffect(() => {
     setIsLoading(false);

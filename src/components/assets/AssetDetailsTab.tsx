@@ -16,6 +16,7 @@ import {
 import { getClassReference } from "../../services/Index";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import IsLoading from "../ui/IconLoading";
+import { error } from "../../utils/Logger";
 
 export default function AssetDeTailsTab() {
   const navigation = useNavigation<DeTailsTabNavigationProp>();
@@ -49,8 +50,8 @@ export default function AssetDeTailsTab() {
             };
           })
         );
-      } catch (error) {
-        console.error(error);
+      } catch (e) {
+        error(e);
         Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
       } finally {
         setIsLoading(false);
@@ -99,7 +100,7 @@ export default function AssetDeTailsTab() {
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         ListEmptyComponent={
           <View style={{ padding: 20 }}>
-            <Text>Không có dữ liệu</Text>
+            <Text>---</Text>
           </View>
         }
       />

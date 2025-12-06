@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, FlatList, Alert } from "react-native";
 import {
   DetaiHistoryNavigationProp,
   Field,
-  ListContainerProps,
   PropertyResponse,
 } from "../../types";
 import { useParams } from "../../hooks/useParams";

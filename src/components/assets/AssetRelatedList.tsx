@@ -208,7 +208,7 @@ export default function AssetRelatedList() {
         ListHeaderComponent={
           <View style={styles.stickyHeader}>
             <Text style={styles.header}>
-              Tổng số linh kiện: {total} (Đã tải: {linhkien.length})
+              Tổng số: {total} (Đã tải: {linhkien.length})
             </Text>
           </View>
         }

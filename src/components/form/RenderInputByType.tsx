@@ -179,6 +179,11 @@ export const RenderInputByType = ({
       const [url, setUrl] = useState(parsed.url);
       const [label, setLabel] = useState(parsed.text);
 
+      useEffect(() => {
+        setUrl(parsed.url);
+        setLabel(parsed.text);
+      }, [parsed.url, parsed.text]);
+
       const buildHtml = (u: string, l: string) =>
         `<a href="${u}" target="_blank" rel="noopener noreferrer">${
           l || u
@@ -232,7 +237,7 @@ export const RenderInputByType = ({
               {
                 padding: 12,
                 fontSize: 14,
-                paddingRight: 12,
+                marginRight: 6,
                 color:
                   value !== null && value !== undefined && value !== ""
                     ? "#000"

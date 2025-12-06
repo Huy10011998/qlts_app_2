@@ -274,25 +274,17 @@ export const parseLink = (html: string) => {
   return null;
 };
 
-export const parseLinkHtml = (html: string) => {
+export function parseLinkHtml(html: string) {
   if (!html) return { url: "", text: "" };
 
-  try {
-    const hrefMatch = html.match(/href="([^"]*)"/);
-    const textMatch = html.match(/>(.*?)<\/a>/);
+  const urlMatch = html.match(/href="([^"]+)"/);
+  const textMatch = html.replace(/<[^>]+>/g, "").trim();
 
-    const url = hrefMatch ? hrefMatch[1].trim() : "";
-    let text = textMatch ? textMatch[1].trim() : "";
-
-    if (url === text) {
-      text = "";
-    }
-
-    return { url, text };
-  } catch {
-    return { url: "", text: "" };
-  }
-};
+  return {
+    url: urlMatch ? urlMatch[1] : "",
+    text: textMatch || "",
+  };
+}
 
 // Các tab mặc định
 export const TAB_ITEMS = [
