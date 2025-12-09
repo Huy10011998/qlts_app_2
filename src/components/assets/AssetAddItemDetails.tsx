@@ -29,6 +29,7 @@ import { insert } from "../../services/data/CallApi";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../../store/Index";
 import { setShouldRefreshList } from "../../store/AssetSlice";
+import { usePermission } from "../../hooks/usePermission";
 
 export default function AssetAddItemDetails() {
   const { field, nameClass } = useParams();
@@ -58,6 +59,9 @@ export default function AssetAddItemDetails() {
   const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>(
     {}
   );
+
+  //Check Permission
+  const { can } = usePermission();
 
   // Lấy node từ redux
   const dispatch = useDispatch<AppDispatch>();
@@ -153,6 +157,10 @@ export default function AssetAddItemDetails() {
   };
 
   const handleCreate = async () => {
+    if (nameClass && !can(nameClass, "Insert")) {
+      Alert.alert("Không có quyền", "Bạn không có quyền tạo mới dữ liệu!");
+      return;
+    }
     if (!Object.keys(formData).length) {
       Alert.alert("Thông báo", "Vui lòng nhập ít nhất một trường!");
       return;
@@ -267,7 +275,15 @@ export default function AssetAddItemDetails() {
           );
         })}
 
-        <TouchableOpacity style={styles.createButton} onPress={handleCreate}>
+        <TouchableOpacity
+          style={[
+            styles.createButton,
+            nameClass &&
+              !can(nameClass, "Insert") && { backgroundColor: "#ccc" },
+          ]}
+          onPress={handleCreate}
+          disabled={!!nameClass && !can(nameClass, "Insert")}
+        >
           <Text style={styles.createButtonText}>Tạo</Text>
         </TouchableOpacity>
       </ScrollView>

@@ -10,6 +10,7 @@ import { groupFields } from "../../utils/parser/groupFields";
 import { AppDispatch, RootState } from "../../store";
 import { useDispatch, useSelector } from "react-redux";
 import { resetShouldRefreshDetails } from "../../store/AssetSlice";
+import { error } from "../../utils/Logger";
 
 export default function AssetDetails({ children }: DetailsProps) {
   const { id, nameClass, field, activeTab: tabFromParams } = useParams();
@@ -45,8 +46,8 @@ export default function AssetDetails({ children }: DetailsProps) {
       if (!id || !nameClass) throw new Error("Thiếu ID hoặc nameClass");
       const response = await getDetails(nameClass, id);
       setItem(response.data);
-    } catch (error) {
-      console.error(error);
+    } catch (e) {
+      error(e);
       Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
     } finally {
       setIsLoading(false);

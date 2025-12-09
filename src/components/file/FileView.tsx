@@ -16,6 +16,7 @@ import { WebView } from "react-native-webview";
 import { ViewerProps } from "../../types/Index";
 import { getPreviewAttachFile } from "../../services/Index";
 import IsLoading from "../ui/IconLoading";
+import { error } from "../../utils/Logger";
 
 export default function FileView({ visible, onClose, params }: ViewerProps) {
   const [fileData, setFileData] = useState<string | null>(null);
@@ -51,7 +52,7 @@ export default function FileView({ visible, onClose, params }: ViewerProps) {
       const { data } = await getPreviewAttachFile(name, path, nameClass);
       setFileData(data);
     } catch (err) {
-      console.error("Fetch file error:", err);
+      error("Fetch file error:", err);
       Alert.alert("Lỗi", "Không thể tải file. Sử dụng fallback URL cho PDF.");
       setUseUrlFallback(true);
     } finally {

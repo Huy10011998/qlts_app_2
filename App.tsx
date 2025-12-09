@@ -13,13 +13,13 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
-      <AuthProvider>
-        <Provider store={store}>
+      <Provider store={store}>
+        <AuthProvider>
           <NavigationContainer>
             <RootNavigator />
           </NavigationContainer>
-        </Provider>
-      </AuthProvider>
+        </AuthProvider>
+      </Provider>
     </SafeAreaProvider>
   );
 }

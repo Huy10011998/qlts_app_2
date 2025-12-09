@@ -164,6 +164,7 @@ export default function AssetGroupList({
         <AssetDeleteAndEdit
           onEdit={() => onPressNavigateToEdit(item)}
           onDelete={handleDelete}
+          nameClass={nameClass}
         />
       )}
 

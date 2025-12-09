@@ -11,6 +11,7 @@ import {
 import { getDetailsHistory } from "../../services/data/CallApi";
 import { parseFieldActive } from "../../utils/parser/parseFieldActive";
 import { groupFields } from "../../utils/parser/groupFields";
+import { error } from "../../utils/Logger";
 
 export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
   const route = useRoute<DetailsHistoryRouteProp>();
@@ -58,8 +59,8 @@ export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
         } else {
           setPreviousItem(null);
         }
-      } catch (error) {
-        console.error(error);
+      } catch (e) {
+        error(e);
         Alert.alert("Lỗi", `Không thể tải chi tiết lịch sử ${nameClass}`);
       } finally {
         setIsLoading(false);

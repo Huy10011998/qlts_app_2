@@ -4,6 +4,7 @@ import IsLoading from "../../components/ui/IconLoading"; // sửa path theo dự
 import { API_ENDPOINTS } from "../../config/Index";
 import { User } from "../../types/Index";
 import { callApi } from "../../services/data/CallApi";
+import { error } from "../../utils/Logger";
 
 const ProfileScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -19,8 +20,8 @@ const ProfileScreen: React.FC = () => {
           {}
         );
         setUser(response.data);
-      } catch (error) {
-        if (__DEV__) console.error("API error:", error);
+      } catch (e) {
+        error("API error:", e);
         Alert.alert("Lỗi", "Không thể tải hồ sơ cá nhân.");
       } finally {
         setIsLoading(false);

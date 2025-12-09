@@ -11,4 +11,12 @@ export {
   getBuildTree,
   getDetailsHistory,
   getPreviewAttachProperty,
+  getPreviewBC,
+  callApi,
+  insert,
+  update,
+  deleteItems,
+  checkReferenceUsage,
+  uploadAttachProperty,
+  getPermission,
 } from "./data/CallApi";

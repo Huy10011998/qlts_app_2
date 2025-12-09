@@ -1,6 +1,7 @@
 import { API_ENDPOINTS } from "../../config/Index";
 import { ChangePasswordResponse, LoginResponse } from "../../types/Api.d";
 import { md5Hash } from "../../utils/Helper";
+import { error } from "../../utils/Logger";
 import { callApi } from "../data/CallApi";
 
 export const loginApi = async (
@@ -33,8 +34,8 @@ export const changePasswordApi = async (
         newPassword: hashedNewPassword,
       }
     );
-  } catch (error: any) {
-    if (__DEV__) console.error("ChangePassword API error:", error);
+  } catch (e: any) {
+    error("ChangePassword API error:", e);
     throw error;
   }
 };

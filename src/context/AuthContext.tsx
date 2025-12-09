@@ -8,7 +8,7 @@ import React, {
 } from "react";
 import { AuthContextType } from "../types/Index";
 import { error, log, warn } from "../utils/Logger";
-import { setOnAuthLogout } from "../services/data/CallApi";
+import { clearTokenStorage, setOnAuthLogout } from "../services/data/CallApi";
 
 // CONTEXT
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,19 +21,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   // Lưu hoặc clear access token
   const setToken = async (value: string | null) => {
     if (value) {
-      log("[Auth] Save access token");
+      log("[Auth] Save access token:", value);
       await AsyncStorage.setItem("token", value);
     } else {
       log("[Auth] Clear access token");
       await AsyncStorage.removeItem("token");
     }
     setTokenState(value);
+    log("[Auth] tokenState updated:", value);
   };
 
   // Lưu hoặc clear refresh token
   const setRefreshToken = async (value: string | null) => {
     if (value) {
-      log("[Auth] Save refresh token");
+      log("[Auth] Save refresh token:", value);
       await AsyncStorage.setItem("refreshToken", value);
     } else {
       log("[Auth] Clear refresh token");
@@ -48,6 +49,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       await Promise.all([
         AsyncStorage.removeItem("token"),
         AsyncStorage.removeItem("refreshToken"),
+        clearTokenStorage(), // <--- thêm dòng này
       ]);
     } catch (e) {
       warn("[Auth] Error clearing storage on logout");
@@ -61,7 +63,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       try {
         const stored = await AsyncStorage.getItem("token");
         setTokenState(stored);
-        log("[Auth] Loaded token from storage");
+        log("[Auth] Loaded token from storage:", stored);
       } catch (err) {
         error("[Auth] Failed to load token from storage", err);
         await logout();

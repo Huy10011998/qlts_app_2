@@ -27,6 +27,7 @@ import IsLoading from "../../components/ui/IconLoading";
 import ReportView from "../../components/report/ReportView";
 import { removeVietnameseTones } from "../../utils/Helper";
 import { callApi } from "../../services/data/CallApi";
+import { error } from "../../utils/Logger";
 
 if (
   Platform.OS === "android" &&
@@ -194,8 +195,8 @@ export default function AssetScreen() {
         } else {
           throw new Error("Dữ liệu trả về không hợp lệ.");
         }
-      } catch (error) {
-        console.error("API error:", error);
+      } catch (e) {
+        error("API error:", e);
         Alert.alert("Lỗi", "Không thể tải dữ liệu menu.");
       } finally {
         setIsFetching(false);

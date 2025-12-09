@@ -27,6 +27,7 @@ import ListCardAsset from "../../components/list/ListCardAsset";
 import IsLoading from "../../components/ui/IconLoading";
 import { SqlOperator, TypeProperty } from "../../utils/Enum";
 import { useDebounce } from "../../hooks/useDebounce";
+import { error } from "../../utils/Logger";
 
 if (
   Platform.OS === "android" &&
@@ -70,8 +71,8 @@ export default function AssetRelatedList() {
         field: JSON.stringify(fieldActive),
         nameClass: nameClass || "",
       });
-    } catch (error) {
-      console.error(error);
+    } catch (e) {
+      error(e);
       Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
     }
   };
@@ -142,8 +143,8 @@ export default function AssetRelatedList() {
         }
 
         setTotal(totalItems);
-      } catch (error) {
-        console.error("API error:", error);
+      } catch (e) {
+        error("API error:", e);
         Alert.alert("Lỗi", "Không thể tải dữ liệu.");
         if (!isLoadMore) setLinhkien([]);
       } finally {

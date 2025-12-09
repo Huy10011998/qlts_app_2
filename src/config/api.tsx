@@ -15,4 +15,6 @@ export const API_ENDPOINTS = {
   PREVIEW_MAYTINH_THONGKE_CNTT: `${BASE_URL}/MayTinh/thong-ke-cntt`,
   GET_CATEGORY_ENUM: `${BASE_URL}/Common/get-category-enum`,
   GET_CATEGORY: `${BASE_URL}/Common/get-category`,
+
+  GET_PERMISSION: `${BASE_URL}/Common/get-permission`,
 };

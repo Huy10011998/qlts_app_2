@@ -19,9 +19,16 @@ import IsLoading from "../../components/ui/IconLoading";
 import { changePasswordApi } from "../../services/Index";
 import { API_ENDPOINTS } from "../../config/Index";
 import { SettingScreenNavigationProp, UserInfo } from "../../types";
-import { callApi } from "../../services/data/CallApi";
+import {
+  callApi,
+  setRefreshInApi,
+  setTokenInApi,
+} from "../../services/data/CallApi";
 import ReactNativeBiometrics from "react-native-biometrics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { clearPermissions } from "../../store/PermissionSlice";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "../../store";
 
 // HEADER COMPONEN
 const SettingHeader: React.FC<{ name?: string; avatarUrl?: string }> = ({
@@ -39,7 +46,7 @@ const SettingHeader: React.FC<{ name?: string; avatarUrl?: string }> = ({
     <Text style={styles.name}>{name || "---"}</Text>
   </View>
 );
-// ITEM BUTTO
+// ITEM BUTTON
 const SettingItem: React.FC<{
   iconName: string;
   label: string;
@@ -84,6 +91,8 @@ const SettingScreen = () => {
 
   const navigation = useNavigation<SettingScreenNavigationProp>();
   const { logout } = useAuth();
+
+  const dispatch = useDispatch<AppDispatch>();
 
   // LOAD USER INFO + FACEID
   useEffect(() => {
@@ -173,10 +182,22 @@ const SettingScreen = () => {
     try {
       await logout();
 
-      // Xóa đúng service
+      // Xóa keychain
       await Keychain.resetGenericPassword({ service: "user-login" });
       await Keychain.resetGenericPassword({ service: "faceid-login" });
 
+      // Clear CallApi in-memory token
+      setTokenInApi(null);
+      setRefreshInApi(null);
+
+      // Clear Redux permissions
+      dispatch(clearPermissions());
+
+      // Reset FaceID switch
+      setIsFaceIdEnabled(false);
+      await AsyncStorage.setItem("faceid-enabled", "0");
+
+      // Navigate to login
       navigation.replace("Login");
     } catch (e) {
       Alert.alert("Lỗi", "Không thể đăng xuất.");

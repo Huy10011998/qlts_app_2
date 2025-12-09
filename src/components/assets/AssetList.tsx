@@ -42,6 +42,7 @@ import {
   setSelectedTreeNode,
 } from "../../store/AssetSlice";
 import { error } from "../../utils/Logger";
+import { usePermission } from "../../hooks/usePermission";
 
 if (
   Platform.OS === "android" &&
@@ -229,6 +230,9 @@ export default function AssetList() {
   const shouldRefresh = useSelector(
     (state: RootState) => state.asset.shouldRefreshList
   );
+
+  // Check Permission
+  const { can } = usePermission();
 
   const refreshTop = async () => {
     setIsRefreshingTop(true);
@@ -495,7 +499,13 @@ export default function AssetList() {
           </Animated.View>
         </View>
       )}
-      <AssetAddItem nameClass={nameClass} field={JSON.stringify(fieldActive)} />
+
+      {nameClass && can(nameClass, "Insert") && (
+        <AssetAddItem
+          nameClass={nameClass}
+          field={JSON.stringify(fieldActive)}
+        />
+      )}
     </View>
   );
 }

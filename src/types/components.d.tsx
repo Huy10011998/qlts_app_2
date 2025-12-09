@@ -128,6 +128,7 @@ export interface GroupListProps {
 export interface AssetDeleteProps {
   onEdit: () => void;
   onDelete: () => void;
+  nameClass?: string;
 }
 
 export interface BottomBarProps {

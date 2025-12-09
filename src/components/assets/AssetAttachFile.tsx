@@ -6,6 +6,7 @@ import { SqlOperator, TypeProperty, CategoryFiles } from "../../utils/Enum";
 import { getListAttachFile } from "../../services/Index";
 import IsLoading from "../ui/IconLoading";
 import ListCardAttachFile from "../list/ListCardAttachFile";
+import { error } from "../../utils/Logger";
 
 export default function AssetListAttachFile() {
   const [file, setFile] = useState<FileItem[]>([]);
@@ -66,8 +67,8 @@ export default function AssetListAttachFile() {
         }
 
         setTotal(totalItems);
-      } catch (error) {
-        if (__DEV__) console.error("API error:", error);
+      } catch (e) {
+        error("API error:", e);
         Alert.alert("Lỗi", "Không thể tải dữ liệu.");
         if (!isLoadMore) setFile([]);
       } finally {

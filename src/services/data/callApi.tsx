@@ -29,6 +29,14 @@ const refreshApi = axios.create({
 let cachedToken: string | null = null;
 let cachedRefresh: string | null = null;
 
+export const setTokenInApi = (token: string | null) => {
+  cachedToken = token;
+};
+
+export const setRefreshInApi = (refresh: string | null) => {
+  cachedRefresh = refresh;
+};
+
 // HELPERS
 const safeDecode = (token: string): JwtPayload | null => {
   try {
@@ -50,7 +58,8 @@ const getRefreshToken = async () => {
   return cachedRefresh;
 };
 
-const clearTokenStorage = async () => {
+export const clearTokenStorage = async () => {
+  log("[API] Clearing cached tokens");
   cachedToken = null;
   cachedRefresh = null;
   await AsyncStorage.multiRemove(["token", "refreshToken"]);
@@ -91,7 +100,7 @@ const refreshTokenFlow = async (): Promise<string> => {
       cachedRefresh = data.refreshToken;
     }
 
-    log("[API] 🔄 Token refreshed successfully");
+    log("[API] Token refreshed successfully");
     return data.accessToken;
   } catch (err: any) {
     await clearTokenStorage();
@@ -109,7 +118,7 @@ api.interceptors.request.use(async (config) => {
     const expiresIn = decoded?.exp ? decoded.exp * 1000 - Date.now() : null;
 
     if (expiresIn !== null && expiresIn < REFRESH_BEFORE_MS) {
-      log("[API] ⏳ Token near expiry → refreshing...");
+      log("[API] Token near expiry → refreshing...");
 
       if (isRefreshing) {
         token = await new Promise<string | null>((resolve) =>
@@ -143,7 +152,7 @@ api.interceptors.response.use(
 
     // Nếu refresh trả NEED_LOGIN
     if (err.NEED_LOGIN) {
-      warn("[API] ❌ Refresh failed → redirect to login");
+      warn("[API] Refresh failed → redirect to login");
       if (onAuthLogout) await onAuthLogout();
       return Promise.reject(err);
     }
@@ -158,11 +167,11 @@ api.interceptors.response.use(
     }
 
     originalRequest._retry = true;
-    warn("[API] ⚠️ 401 → retry with refresh");
+    warn("[API] 401 → retry with refresh");
 
     // Nếu offline hoặc lỗi mạng → không logout
     if (!err.response && err.message === "Network Error") {
-      error("[API] 📵 Network error → do not logout");
+      error("[API] Network error → do not logout");
       return Promise.reject(err);
     }
 
@@ -360,3 +369,6 @@ export const uploadAttachProperty = async ({ file }: { file: any }) => {
   );
   return res.data;
 };
+
+export const getPermission = async <T = any,>() =>
+  callApi<T>("POST", API_ENDPOINTS.GET_PERMISSION);

@@ -15,6 +15,7 @@ import ListCardHistory from "../list/ListCardHistory";
 import IsLoading from "../ui/IconLoading";
 import orderBy from "lodash/orderBy";
 import { useNavigation } from "@react-navigation/native";
+import { error } from "../../utils/Logger";
 
 export default function AssetListHistory() {
   const [lichsu, setLichsu] = useState<Record<string, any>[]>([]);
@@ -44,8 +45,8 @@ export default function AssetListHistory() {
         field: JSON.stringify(fieldActive),
         nameClass: nameClass!,
       });
-    } catch (error) {
-      console.error(error);
+    } catch (e) {
+      error(e);
       Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
     } finally {
       setIsLoading(false);
@@ -87,8 +88,8 @@ export default function AssetListHistory() {
           setSkipSize(pageSize);
         }
         setTotal(totalItems);
-      } catch (error) {
-        if (__DEV__) console.error(error);
+      } catch (e) {
+        error(e);
         Alert.alert("Lỗi", "Không thể tải dữ liệu.");
         if (!isLoadMore) setLichsu([]);
       } finally {

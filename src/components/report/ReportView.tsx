@@ -14,6 +14,7 @@ import { getPreviewBC } from "../../services/data/CallApi";
 import { API_ENDPOINTS } from "../../config/Index";
 import { validateDates } from "../../utils/Helper";
 import { DatePickerModalIOS } from "../modal/DatePickerModal";
+import { error } from "../../utils/Logger";
 
 const ReportView: React.FC<ReportViewProps> = ({ title, onClose }) => {
   const [fromDate, setFromDate] = useState<string>("");
@@ -80,7 +81,7 @@ const ReportView: React.FC<ReportViewProps> = ({ title, onClose }) => {
 `;
       setReportHtml(html);
     } catch (err) {
-      console.error("Lỗi khi gọi API:", err);
+      error("Lỗi khi gọi API:", err);
       Alert.alert("Lỗi", "Không thể tải báo cáo.");
     } finally {
       setLoading(false);

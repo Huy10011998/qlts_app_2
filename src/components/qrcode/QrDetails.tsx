@@ -21,7 +21,7 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { parseFieldActive } from "../../utils/parser/parseFieldActive";
 import { groupFields } from "../../utils/parser/groupFields";
 import { getFieldValue } from "../../utils/Helper";
-import { log } from "../../utils/Logger";
+import { error, log } from "../../utils/Logger";
 
 const { width } = Dimensions.get("window");
 const MENU_WIDTH = width * 0.6;
@@ -101,8 +101,8 @@ export default function QrDetails({ children }: QrDetailsProps) {
         if (!id || !nameClass) throw new Error("Thiếu ID hoặc nameClass");
         const response = await getDetails(nameClass, id);
         setItem(response.data);
-      } catch (error) {
-        console.error(error);
+      } catch (err) {
+        error(err);
         Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
       } finally {
         setIsLoading(false);

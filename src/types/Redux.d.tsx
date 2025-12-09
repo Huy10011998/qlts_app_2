@@ -6,3 +6,7 @@ export interface AssetState {
   selectedTreeProperty: string | null;
   selectedTreeText: string | null;
 }
+
+export interface PermissionState {
+  permissions: string[];
+}

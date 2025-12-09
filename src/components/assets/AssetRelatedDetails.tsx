@@ -7,6 +7,7 @@ import IsLoading from "../ui/IconLoading";
 import { getFieldValue, TAB_ITEMS } from "../../utils/Helper";
 import { parseFieldActive } from "../../utils/parser/parseFieldActive";
 import { groupFields } from "../../utils/parser/groupFields";
+import { error } from "../../utils/Logger";
 
 export default function AssetRelatedDetails({ children }: DetailsProps) {
   const { id, nameClass, field } = useParams();
@@ -46,8 +47,8 @@ export default function AssetRelatedDetails({ children }: DetailsProps) {
 
         const response = await getDetails(nameClass, id);
         setItem(response.data);
-      } catch (error) {
-        console.error(error);
+      } catch (e) {
+        error(e);
         Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
       } finally {
         setIsLoading(false);

@@ -19,7 +19,7 @@ import {
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { QrScannerNavigationProp } from "../../types";
 import { getFieldActive } from "../../services/Index";
-import { log } from "../../utils/Logger";
+import { error, log } from "../../utils/Logger";
 
 export default function QrScannerScreen() {
   const [hasPermission, setHasPermission] = useState(false);
@@ -87,8 +87,8 @@ export default function QrScannerScreen() {
                 field: JSON.stringify(fieldActive),
               },
             });
-          } catch (error) {
-            console.error("Lỗi khi gọi getFieldActive:", error);
+          } catch (e) {
+            error("Lỗi khi gọi getFieldActive:", e);
             Alert.alert("Lỗi", "Không lấy được dữ liệu từ server.");
             setIsScanned(false);
           }

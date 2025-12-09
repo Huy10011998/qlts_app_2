@@ -17,11 +17,15 @@ import * as Keychain from "react-native-keychain";
 import { useAuth } from "../../context/AuthContext";
 import { loginApi } from "../../services/auth/AuthApi";
 import IsLoading from "../../components/ui/IconLoading";
-import { log } from "../../utils/Logger";
+import { getPermission } from "../../services/Index";
+import { setPermissions } from "../../store/PermissionSlice";
+import { AppDispatch } from "../../store";
+import { useDispatch } from "react-redux";
+import { setRefreshInApi, setTokenInApi } from "../../services/data/CallApi";
 
 export default function LoginScreen() {
   const navigation = useNavigation<any>();
-  const { setToken, setRefreshToken, token } = useAuth();
+  const { setToken, setRefreshToken } = useAuth();
 
   const [userName, setUserName] = useState("");
   const [userPassword, setUserPassword] = useState("");
@@ -31,6 +35,8 @@ export default function LoginScreen() {
 
   const hasTriedFaceID = useRef(false);
   const rnBiometrics = useRef(new ReactNativeBiometrics()).current;
+
+  const dispatch = useDispatch<AppDispatch>();
 
   // Enable / Disable Login button
   useEffect(() => {
@@ -42,9 +48,6 @@ export default function LoginScreen() {
     hasTriedFaceID.current = true;
   }, []);
 
-  useEffect(() => {
-    log("token", token);
-  }, [token]);
   // Reset trạng thái loading khi quay lại màn Login
   useEffect(() => {
     setIsLoading(false);
@@ -61,14 +64,27 @@ export default function LoginScreen() {
       const res = await loginApi(userName, userPassword);
 
       if (res?.data?.accessToken) {
-        setToken(res.data.accessToken);
-        setRefreshToken(res.data.refreshToken ?? null);
+        await setToken(res.data.accessToken);
+        await setRefreshToken(res.data.refreshToken ?? null);
+
+        setTokenInApi(res.data.accessToken);
+        setRefreshInApi(res.data.refreshToken ?? null);
 
         // Lưu lại login thường (không phải FaceID)
         await Keychain.setGenericPassword(userName, userPassword, {
           service: "user-login",
           accessible: Keychain.ACCESSIBLE.WHEN_PASSCODE_SET_THIS_DEVICE_ONLY,
         });
+
+        // Đồng bộ token cho axios interceptor
+        setTokenInApi(res.data.accessToken);
+        setRefreshInApi(res.data.refreshToken ?? null);
+
+        // Lấy quyền
+        const permissionRes = await getPermission();
+        const listPermission = permissionRes?.data ?? [];
+
+        dispatch(setPermissions(listPermission));
 
         navigation.replace("Tabs");
       } else {
@@ -126,8 +142,15 @@ export default function LoginScreen() {
       );
 
       if (response?.data?.accessToken) {
-        setToken(response.data.accessToken);
-        setRefreshToken(response.data.refreshToken ?? null);
+        await setToken(response.data.accessToken);
+        await setRefreshToken(response.data.refreshToken ?? null);
+
+        // Lấy quyền
+        const permissionRes = await getPermission();
+        const listPermission = permissionRes?.data ?? [];
+
+        dispatch(setPermissions(listPermission));
+
         navigation.replace("Tabs");
       } else {
         Alert.alert("Đăng nhập thất bại", "Sai tài khoản hoặc mật khẩu.");
@@ -152,7 +175,6 @@ export default function LoginScreen() {
         </View>
 
         <View style={[styles.bottom, { flex: 0.5 }]}>
-          {/* Username */}
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.textInput}
@@ -163,7 +185,6 @@ export default function LoginScreen() {
             />
           </View>
 
-          {/* Password */}
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.textInput}
@@ -189,7 +210,6 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Buttons */}
           <View style={styles.row}>
             <TouchableOpacity
               style={[styles.btn, isLoginDisabled && styles.disabledBtn]}
