@@ -18,10 +18,11 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../types/Index";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { parseFieldActive } from "../../utils/parser/parseFieldActive";
-import { groupFields } from "../../utils/parser/groupFields";
 import { getFieldValue } from "../../utils/Helper";
 import { error, log } from "../../utils/Logger";
+import { ParseFieldActive } from "../../utils/parser/ParseFieldActive";
+import { GroupFields } from "../../utils/parser/GroupFields";
+import { ToggleGroupUtil } from "../../utils/parser/ToggleGroup";
 
 const { width } = Dimensions.get("window");
 const MENU_WIDTH = width * 0.6;
@@ -43,20 +44,17 @@ export default function QrDetails({ children }: QrDetailsProps) {
   const slideAnim = useRef(new Animated.Value(MENU_WIDTH)).current;
 
   // parse fields safely
-  const fieldActive = useMemo(() => parseFieldActive(field), [field]);
+  const fieldActive = useMemo(() => ParseFieldActive(field), [field]);
 
   // grouped by groupLayout (kept as-is style D)
-  const groupedFields = useMemo(() => groupFields(fieldActive), [fieldActive]);
+  const groupedFields = useMemo(() => GroupFields(fieldActive), [fieldActive]);
 
   const handleChangeTab = (tabKey: string) => {
     setActiveTab(tabKey);
   };
 
-  const toggleGroup = (groupKey: string) => {
-    setCollapsedGroups((prev) => ({
-      ...prev,
-      [groupKey]: !prev[groupKey],
-    }));
+  const toggleGroup = (groupName: string) => {
+    setCollapsedGroups((prev) => ToggleGroupUtil(prev, groupName));
   };
 
   // Drawer functions

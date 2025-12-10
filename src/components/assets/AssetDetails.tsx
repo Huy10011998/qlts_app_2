@@ -5,12 +5,13 @@ import { useParams } from "../../hooks/useParams";
 import { getDetails } from "../../services/Index";
 import IsLoading from "../ui/IconLoading";
 import { getFieldValue, TAB_ITEMS } from "../../utils/Helper";
-import { parseFieldActive } from "../../utils/parser/parseFieldActive";
-import { groupFields } from "../../utils/parser/groupFields";
 import { AppDispatch, RootState } from "../../store";
 import { useDispatch, useSelector } from "react-redux";
 import { resetShouldRefreshDetails } from "../../store/AssetSlice";
 import { error } from "../../utils/Logger";
+import { ParseFieldActive } from "../../utils/parser/ParseFieldActive";
+import { GroupFields } from "../../utils/parser/GroupFields";
+import { ToggleGroupUtil } from "../../utils/parser/ToggleGroup";
 
 export default function AssetDetails({ children }: DetailsProps) {
   const { id, nameClass, field, activeTab: tabFromParams } = useParams();
@@ -22,8 +23,8 @@ export default function AssetDetails({ children }: DetailsProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [item, setItem] = useState<any>(null);
 
-  const fieldActive = useMemo(() => parseFieldActive(field), [field]);
-  const groupedFields = useMemo(() => groupFields(fieldActive), [fieldActive]);
+  const fieldActive = useMemo(() => ParseFieldActive(field), [field]);
+  const groupedFields = useMemo(() => GroupFields(fieldActive), [fieldActive]);
 
   // Redux
   const dispatch = useDispatch<AppDispatch>();
@@ -32,10 +33,7 @@ export default function AssetDetails({ children }: DetailsProps) {
   );
 
   const toggleGroup = (groupName: string) => {
-    setCollapsedGroups((prev) => ({
-      ...prev,
-      [groupName]: !prev[groupName],
-    }));
+    setCollapsedGroups((prev) => ToggleGroupUtil(prev, groupName));
   };
 
   const handleChangeTab = (tabKey: string) => setActiveTab(tabKey);

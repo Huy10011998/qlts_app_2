@@ -9,9 +9,10 @@ import {
   Field,
 } from "../../types/Index";
 import { getDetailsHistory } from "../../services/data/CallApi";
-import { parseFieldActive } from "../../utils/parser/parseFieldActive";
-import { groupFields } from "../../utils/parser/groupFields";
 import { error } from "../../utils/Logger";
+import { ParseFieldActive } from "../../utils/parser/ParseFieldActive";
+import { GroupFields } from "../../utils/parser/GroupFields";
+import { ToggleGroupUtil } from "../../utils/parser/ToggleGroup";
 
 export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
   const route = useRoute<DetailsHistoryRouteProp>();
@@ -26,16 +27,13 @@ export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
   const [previousItem, setPreviousItem] = useState<any>(null);
 
   // parse fields safely
-  const fieldActive = useMemo(() => parseFieldActive(field), [field]);
+  const fieldActive = useMemo(() => ParseFieldActive(field), [field]);
 
   // grouped by groupLayout (kept as-is style D)
-  const groupedFields = useMemo(() => groupFields(fieldActive), [fieldActive]);
+  const groupedFields = useMemo(() => GroupFields(fieldActive), [fieldActive]);
 
   const toggleGroup = (groupName: string) => {
-    setCollapsedGroups((prev) => ({
-      ...prev,
-      [groupName]: !prev[groupName],
-    }));
+    setCollapsedGroups((prev) => ToggleGroupUtil(prev, groupName));
   };
 
   const handleChangeTab = (tabKey: string) => {

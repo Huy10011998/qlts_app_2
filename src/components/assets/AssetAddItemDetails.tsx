@@ -16,20 +16,24 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import EnumAndReferencePickerModal from "../modal/EnumAndReferencePickerModal";
 import IsLoading from "../ui/IconLoading";
 import { useNavigation } from "@react-navigation/native";
-import { formatDateForBE, getDefaultValueForField } from "../../utils/Helper";
-import { handleCascadeChange } from "../../utils/cascade";
+import { handleCascadeChange } from "../../utils/cascade/Index";
 import { fetchEnumByField } from "../../utils/FetchEnumField";
 import { fetchReferenceByField } from "../../utils/FetchReferenceField";
-import { parseFieldActive } from "../../utils/parser/parseFieldActive";
-import { groupFields } from "../../utils/parser/groupFields";
 import { fetchImage, pickImage } from "../../utils/Image";
 import { RenderInputByType } from "../form/RenderInputByType";
 import { useImageLoader } from "../../hooks/useImageLoader";
 import { insert } from "../../services/data/CallApi";
+
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../../store/Index";
 import { setShouldRefreshList } from "../../store/AssetSlice";
 import { usePermission } from "../../hooks/usePermission";
+
+import { formatDateForBE, getDefaultValueForField } from "../../utils/Date";
+
+import { ParseFieldActive } from "../../utils/parser/ParseFieldActive";
+import { GroupFields } from "../../utils/parser/GroupFields";
+import { ToggleGroupUtil } from "../../utils/parser/ToggleGroup";
 
 export default function AssetAddItemDetails() {
   const { field, nameClass } = useParams();
@@ -37,10 +41,10 @@ export default function AssetAddItemDetails() {
   const navigation = useNavigation<AssetAddItemNavigationProp>();
 
   // Parse fields safely
-  const fieldActive = useMemo(() => parseFieldActive(field), [field]);
+  const fieldActive = useMemo(() => ParseFieldActive(field), [field]);
 
   // grouped by groupLayout (kept as-is style D)
-  const groupedFields = useMemo(() => groupFields(fieldActive), [fieldActive]);
+  const groupedFields = useMemo(() => GroupFields(fieldActive), [fieldActive]);
 
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [collapsedGroups, setCollapsedGroups] = useState<
@@ -112,14 +116,9 @@ export default function AssetAddItemDetails() {
     setCollapsedGroups(next);
   }, [groupedFields]);
 
-  const toggleGroup = useCallback(
-    (groupName: string) =>
-      setCollapsedGroups((prev) => ({
-        ...prev,
-        [groupName]: !prev[groupName],
-      })),
-    []
-  );
+  const toggleGroup = (groupName: string) => {
+    setCollapsedGroups((prev) => ToggleGroupUtil(prev, groupName));
+  };
 
   // Load enum & reference basic
   useEffect(() => {

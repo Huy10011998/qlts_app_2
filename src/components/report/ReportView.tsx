@@ -12,18 +12,15 @@ import { WebView } from "react-native-webview";
 import { ReportViewProps } from "../../types";
 import { getPreviewBC } from "../../services/data/CallApi";
 import { API_ENDPOINTS } from "../../config/Index";
-import { validateDates } from "../../utils/Helper";
 import { DatePickerModalIOS } from "../modal/DatePickerModal";
 import { error } from "../../utils/Logger";
+import { formatToSlash, validateDates } from "../../utils/Date";
 
 const ReportView: React.FC<ReportViewProps> = ({ title, onClose }) => {
   const [fromDate, setFromDate] = useState<string>("");
   const [toDate, setToDate] = useState<string>("");
   const [reportHtml, setReportHtml] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-
-  // Convert "dd-MM-yyyy" → "dd/MM/yyyy"
-  const formatToSlash = (str: string) => str.replace(/-/g, "/");
 
   const handleSubmit = async () => {
     if (!fromDate || !toDate) {

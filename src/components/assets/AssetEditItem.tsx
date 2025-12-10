@@ -14,20 +14,13 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { AssetEditItemNavigationProp, Field } from "../../types/Index";
 import { TypeProperty } from "../../utils/Enum";
 import EnumAndReferencePickerModal from "../modal/EnumAndReferencePickerModal";
-import {
-  formatDateForBE,
-  getDefaultValueForField,
-  getMatchedKey,
-  normalizeDateFromBE,
-} from "../../utils/Helper";
+import { getMatchedKey } from "../../utils/Helper";
 import { useParams } from "../../hooks/useParams";
 import { fetchImage, pickImage } from "../../utils/Image";
 import { fetchReferenceByField } from "../../utils/FetchReferenceField";
 import { fetchReferenceByFieldWithParent } from "../../utils/cascade/FetchReferenceByFieldWithParent";
-import { handleCascadeChange } from "../../utils/cascade";
+import { handleCascadeChange } from "../../utils/cascade/Index";
 import { fetchEnumByField } from "../../utils/FetchEnumField";
-import { parseFieldActive } from "../../utils/parser/parseFieldActive";
-import { groupFields } from "../../utils/parser/groupFields";
 import { RenderInputByType } from "../form/RenderInputByType";
 import { useImageLoader } from "../../hooks/useImageLoader";
 import { update } from "../../services/data/CallApi";
@@ -36,6 +29,16 @@ import { useDispatch } from "react-redux";
 import { AppDispatch } from "../../store";
 import { setShouldRefreshDetails } from "../../store/AssetSlice";
 
+import {
+  formatDateForBE,
+  getDefaultValueForField,
+  normalizeDateFromBE,
+} from "../../utils/Date";
+
+import { ParseFieldActive } from "../../utils/parser/ParseFieldActive";
+import { GroupFields } from "../../utils/parser/GroupFields";
+import { ToggleGroupUtil } from "../../utils/parser/ToggleGroup";
+
 // Main Component
 export default function AssetEditItem() {
   const { item, field, nameClass } = useParams();
@@ -43,9 +46,9 @@ export default function AssetEditItem() {
   const navigation = useNavigation<AssetEditItemNavigationProp>();
 
   // parse fields safely
-  const fieldActive = useMemo(() => parseFieldActive(field), [field]);
+  const fieldActive = useMemo(() => ParseFieldActive(field), [field]);
   // grouped by groupLayout (kept as-is style D)
-  const groupedFields = useMemo(() => groupFields(fieldActive), [fieldActive]);
+  const groupedFields = useMemo(() => GroupFields(fieldActive), [fieldActive]);
 
   // states
   const [formData, setFormData] = useState<Record<string, any>>({});
@@ -142,10 +145,9 @@ export default function AssetEditItem() {
     setOriginalItem(item ? { ...item } : {});
   }, [fieldActive, item]);
 
-  const toggleGroup = useCallback(
-    (g: string) => setCollapsedGroups((p) => ({ ...p, [g]: !p[g] })),
-    []
-  );
+  const toggleGroup = (groupName: string) => {
+    setCollapsedGroups((prev) => ToggleGroupUtil(prev, groupName));
+  };
 
   useEffect(() => {
     fieldActive.forEach((f) => {
