@@ -372,3 +372,6 @@ export const uploadAttachProperty = async ({ file }: { file: any }) => {
 
 export const getPermission = async <T = any,>() =>
   callApi<T>("POST", API_ENDPOINTS.GET_PERMISSION);
+
+export const tuDongTang = async <T = any,>(nameClass: string, payload: {}) =>
+  callApi<T>("POST", `/${nameClass}/tu-dong-tang`, payload);

@@ -1,18 +1,21 @@
 import React from "react";
 import { View, TouchableOpacity, StyleSheet } from "react-native";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
-import { AssetDeleteProps } from "../../types/Components.d";
+import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
 import { usePermission } from "../../hooks/usePermission";
+import { AssetActionProps } from "../../types";
 
-export default function AssetDeleteAndEdit({
+export default function AssetActions({
   onEdit,
   onDelete,
+  onClone,
   nameClass,
-}: AssetDeleteProps) {
+}: AssetActionProps) {
   const { can } = usePermission();
 
   const allowEdit = !!nameClass && can(nameClass, "Update");
   const allowDelete = !!nameClass && can(nameClass, "Delete");
+  const allowInsert = !!nameClass && can(nameClass, "Insert");
 
   return (
     <View style={styles.actionIcons}>
@@ -28,6 +31,14 @@ export default function AssetDeleteAndEdit({
         <TouchableOpacity style={styles.iconBtn} onPress={onDelete}>
           <View style={styles.iconWrapper}>
             <MaterialIcons name="delete" size={24} color="#333" />
+          </View>
+        </TouchableOpacity>
+      )}
+
+      {allowInsert && (
+        <TouchableOpacity style={styles.iconBtn} onPress={onClone}>
+          <View style={styles.iconWrapper}>
+            <FontAwesome5 name="clone" size={24} color="#333" />
           </View>
         </TouchableOpacity>
       )}

@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState, useCallback } from "react";
+import React, { useMemo, useEffect, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -22,11 +22,14 @@ import { fetchReferenceByField } from "../../utils/FetchReferenceField";
 import { fetchImage, pickImage } from "../../utils/Image";
 import { RenderInputByType } from "../form/RenderInputByType";
 import { useImageLoader } from "../../hooks/useImageLoader";
-import { insert } from "../../services/data/CallApi";
+import { insert, tuDongTang } from "../../services/data/CallApi";
 
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../../store/Index";
-import { setShouldRefreshList } from "../../store/AssetSlice";
+import {
+  resetSelectedTreeNode,
+  setShouldRefreshList,
+} from "../../store/AssetSlice";
 import { usePermission } from "../../hooks/usePermission";
 
 import { formatDateForBE, getDefaultValueForField } from "../../utils/Date";
@@ -34,9 +37,10 @@ import { formatDateForBE, getDefaultValueForField } from "../../utils/Date";
 import { ParseFieldActive } from "../../utils/parser/ParseFieldActive";
 import { GroupFields } from "../../utils/parser/GroupFields";
 import { ToggleGroupUtil } from "../../utils/parser/ToggleGroup";
+import { log } from "../../utils/Logger";
 
 export default function AssetAddItemDetails() {
-  const { field, nameClass } = useParams();
+  const { field, nameClass, propertyClass } = useParams();
 
   const navigation = useNavigation<AssetAddItemNavigationProp>();
 
@@ -73,40 +77,36 @@ export default function AssetAddItemDetails() {
     (state: RootState) => state.asset
   );
 
-  // Redux
+  const rawTreeValues = useMemo(() => {
+    if (!selectedTreeValue) return [];
+    return selectedTreeValue.split(",").map((v) => v.trim());
+  }, [selectedTreeValue]);
+
+  log("selectedTreeProperty: ", selectedTreeProperty);
+  log("selectedTreeValue: ", selectedTreeValue);
+
+  // Khi chọn cây → set giá trị cha vào form
   useEffect(() => {
     if (!selectedTreeProperty || !selectedTreeValue) return;
 
-    // Reset form để không giữ lại giá trị cũ
-    setFormData({});
-    setReferenceData({});
-
     const props = selectedTreeProperty.split(",");
-    const values = selectedTreeValue
-      .split(",")
-      .map((v) => Number(v))
-      .filter((v) => v >= 0);
+    const rawValues = selectedTreeValue.split(",");
 
     props.forEach((p, i) => {
-      if (!values[i] && values[i] !== 0) return;
-
       const f = fieldActive.find((fi) => fi.name === p);
       if (!f) return;
 
-      // Set value trước
-      setFormData((prev) => ({ ...prev, [p]: values[i] }));
+      const raw = rawValues[i];
+      if (raw == null) return;
 
-      // Cascade sau
-      setTimeout(() => {
-        handleCascadeChange({
-          name: p,
-          value: values[i],
-          fieldActive,
-          setFormData,
-          setReferenceData,
-        });
-      }, 0);
+      const numVal = Number(raw);
+      if (!isNaN(numVal) && numVal < 0) return;
+
+      handleChange(f.name, String(numVal)); // gọi handleChange thay vì setFormData trực tiếp
     });
+
+    // Clear referenceData trước khi cascade chạy
+    setReferenceData({});
   }, [selectedTreeProperty, selectedTreeValue, fieldActive]);
 
   // Expand group mặc định
@@ -136,6 +136,37 @@ export default function AssetAddItemDetails() {
       }
     });
   }, [fieldActive]);
+
+  // Auto tăng mã
+  useEffect(() => {
+    if (!propertyClass?.isTuDongTang || !nameClass) return;
+
+    const fieldName = propertyClass.propertyTuDongTang;
+    if (!fieldName) return;
+
+    if (formData[fieldName] != null) return;
+
+    const parentProps = propertyClass.prentTuDongTang?.split(",") || [];
+    const validParentValues = parentProps
+      .map((prop, idx) => Number(rawTreeValues[idx]))
+      .filter((v) => !isNaN(v) && v >= 0)
+      .join(",");
+
+    tuDongTang(nameClass, {
+      propertyTuDongTang: fieldName,
+      formatTuDongTang: propertyClass.formatTuDongTang,
+      prentTuDongTang: propertyClass.prentTuDongTang,
+      prentTuDongTang_Value: validParentValues,
+      prefix: propertyClass.prefix,
+    }).then((autoRes) => {
+      if (autoRes?.data) {
+        setFormData((prev) => ({
+          ...prev,
+          [fieldName]: autoRes.data,
+        }));
+      }
+    });
+  }, [rawTreeValues, selectedTreeValue, propertyClass, nameClass]);
 
   useImageLoader({
     fieldActive,

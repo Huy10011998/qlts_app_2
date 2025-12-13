@@ -6,7 +6,12 @@ import { useNavigation } from "@react-navigation/native";
 import { AssetAddItemNavigationProp } from "../../types/Navigator.d";
 import { AddItemAssetProps } from "../../types/Components.d";
 
-export function AssetAddItem({ onPress, nameClass, field }: AddItemAssetProps) {
+export function AssetAddItem({
+  onPress,
+  nameClass,
+  field,
+  propertyClass,
+}: AddItemAssetProps) {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<AssetAddItemNavigationProp>();
 
@@ -19,6 +24,7 @@ export function AssetAddItem({ onPress, nameClass, field }: AddItemAssetProps) {
       navigation.navigate("AssetAddItem", {
         field: JSON.stringify(field),
         nameClass: nameClass,
+        propertyClass: propertyClass,
       });
     }
   };
@@ -29,7 +35,7 @@ export function AssetAddItem({ onPress, nameClass, field }: AddItemAssetProps) {
       onPress={handlePress}
       activeOpacity={0.8}
     >
-      <Ionicons name="add" size={28} color="#fff" />
+      <Ionicons name="add" size={36} color="#fff" />
     </TouchableOpacity>
   );
 }
@@ -39,9 +45,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 24,
     backgroundColor: "#FF3333",
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 70,
+    height: 70,
+    borderRadius: 42,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",

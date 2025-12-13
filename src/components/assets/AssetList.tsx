@@ -38,6 +38,7 @@ import { useParams } from "../../hooks/useParams";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../../store";
 import {
+  resetSelectedTreeNode,
   resetShouldRefreshList,
   setSelectedTreeNode,
 } from "../../store/AssetSlice";
@@ -227,6 +228,12 @@ export default function AssetList() {
 
   // Redux
   const dispatch = useDispatch<AppDispatch>();
+
+  useEffect(() => {
+    // Khi vào AssetList thì reset node cũ
+    dispatch(resetSelectedTreeNode());
+  }, []);
+
   const shouldRefresh = useSelector(
     (state: RootState) => state.asset.shouldRefreshList
   );
@@ -504,6 +511,7 @@ export default function AssetList() {
         <AssetAddItem
           nameClass={nameClass}
           field={JSON.stringify(fieldActive)}
+          propertyClass={propertyClass}
         />
       )}
     </View>

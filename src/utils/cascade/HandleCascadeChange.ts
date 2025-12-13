@@ -9,42 +9,61 @@ export const handleCascadeChange = ({
   setReferenceData,
 }: HandleCascadeChangeProps) => {
   setFormData((prev: any) => {
-    const updated = { ...prev, [name]: value };
+    const next = { ...prev, [name]: value };
 
     const fieldCurrent = fieldActive.find((f) => f.name === name);
-    if (!fieldCurrent) return updated;
+    if (!fieldCurrent) return next;
 
-    const clearCascade = (parent: string, obj: any) => {
-      const parentField = fieldActive.find((f) => f.name === parent);
-      if (!parentField?.cascadeClearFields) return;
+    // Không cascade nếu value invalid
+    if (
+      value === null ||
+      value === "" ||
+      (typeof value === "number" && value < 0)
+    ) {
+      return next;
+    }
 
-      const childName = parentField.cascadeClearFields;
+    // Danh sách field phía sau
+    const cascadeFields = fieldActive.slice(
+      fieldActive.findIndex((f) => f.name === name) + 1
+    );
 
-      obj[childName] = null;
-      setReferenceData((prev: any) => ({ ...prev, [childName]: [] }));
+    cascadeFields.forEach((f) => {
+      // Chỉ xử lý field có parentsFields
+      if (!f.parentsFields) return;
 
-      const childField = fieldActive.find((f) => f.name === childName);
-      if (childField?.referenceName) {
-        const parents = childField.parentsFields?.split(",") ?? [];
-        const parentValues = parents
-          .map((p: string | number) => obj[p])
-          .filter((x: null) => x != null);
+      const parents = f.parentsFields.split(",");
 
+      // Nếu field hiện tại KHÔNG phải là parent → skip
+      if (!parents.includes(name)) return;
+
+      // Clear giá trị
+      next[f.name] = null;
+
+      // Clear reference data
+      setReferenceData((prev) => ({
+        ...prev,
+        [f.name]: [],
+      }));
+
+      // Kiểm tra có đủ parent value chưa
+      const parentValues = parents
+        .map((p: string | number) => next[p])
+        .filter((v: string | null) => v != null && v !== "");
+
+      if (parentValues.length !== parents.length) return;
+
+      // Fetch lại reference theo parent
+      if (f.referenceName) {
         fetchReferenceByFieldWithParent(
-          childField.referenceName,
-          childName,
+          f.referenceName,
+          f.name,
           parentValues.join(","),
           setReferenceData
         );
       }
+    });
 
-      clearCascade(childName, obj);
-    };
-
-    if (fieldCurrent.cascadeClearFields) {
-      clearCascade(name, updated);
-    }
-
-    return updated;
+    return next;
   });
 };

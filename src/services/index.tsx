@@ -19,4 +19,5 @@ export {
   checkReferenceUsage,
   uploadAttachProperty,
   getPermission,
+  tuDongTang,
 } from "./data/CallApi";

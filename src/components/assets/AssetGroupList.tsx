@@ -19,7 +19,7 @@ import IsLoading from "../ui/IconLoading";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { error } from "../../utils/Logger";
 import { fetchImage } from "../../utils/Image";
-import AssetDeleteAndEdit from "./AssetDeleteAndEdit";
+import AssetActions from "./AssetActions";
 import { AppDispatch } from "../../store/Index";
 import { useDispatch } from "react-redux";
 import { setShouldRefreshList } from "../../store/AssetSlice";
@@ -133,6 +133,19 @@ export default function AssetGroupList({
     }
   };
 
+  const onPressNavigateToClone = (item: Record<string, any>) => {
+    try {
+      navigation.navigate("AssetCloneItem", {
+        item,
+        nameClass,
+        field: JSON.stringify(fieldActive ?? []),
+      });
+    } catch (err) {
+      error(err);
+      Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
+    }
+  };
+
   useEffect(() => {
     Object.entries(groupedFields).forEach(([_, fields]) => {
       fields.forEach((field) => {
@@ -161,9 +174,10 @@ export default function AssetGroupList({
   return (
     <>
       {isDetailsScreen && (
-        <AssetDeleteAndEdit
+        <AssetActions
           onEdit={() => onPressNavigateToEdit(item)}
           onDelete={handleDelete}
+          onClone={() => onPressNavigateToClone(item)}
           nameClass={nameClass}
         />
       )}

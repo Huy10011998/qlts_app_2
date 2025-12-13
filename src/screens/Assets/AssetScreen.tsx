@@ -215,6 +215,9 @@ export default function AssetScreen() {
     }
   }, [search, debouncedSearch]);
 
+  if (isFetching && !debouncedSearch)
+    return <IsLoading size="large" color="#FF3333" />;
+
   return (
     <View style={{ flex: 1 }}>
       {/* Ô tìm kiếm */}
@@ -266,9 +269,6 @@ export default function AssetScreen() {
           paddingVertical: 12,
           paddingHorizontal: 12,
         }}
-        ListHeaderComponent={
-          isFetching ? <IsLoading size="small" style={{ margin: 12 }} /> : null
-        }
         style={{ backgroundColor: "#fff", marginBottom: 60 }}
       />
 

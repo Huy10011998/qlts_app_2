@@ -14,7 +14,8 @@ import AssetRelatedDetailsScreen from "../screens/Assets/AssetRelatedDetailsScre
 import { capitalizeFirstLetter } from "../utils/Helper";
 import QrDetailsScreen from "../screens/QrScanner/QrDetailsScreen";
 import AssetAddItemScreen from "../screens/Assets/AssetAddItemScreen";
-import AssetEditItem from "../components/assets/AssetEditItem";
+import AssetCloneItemScreen from "../screens/Assets/AssetCloneItemScreen";
+import AssetEditItemScreen from "../screens/Assets/AssetEditItemScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -109,19 +110,28 @@ export default function HomeStack() {
           title: "Thêm mới",
           ...HeaderDetails({
             showBackButton: true,
-            showMenuButton: false,
           }),
         }}
       />
 
       <Stack.Screen
         name="AssetEditItem"
-        component={AssetEditItem}
+        component={AssetEditItemScreen}
         options={{
           title: "Chỉnh sửa",
           ...HeaderDetails({
             showBackButton: true,
-            showMenuButton: false,
+          }),
+        }}
+      />
+
+      <Stack.Screen
+        name="AssetCloneItem"
+        component={AssetCloneItemScreen}
+        options={{
+          title: "Thêm bản sao mới",
+          ...HeaderDetails({
+            showBackButton: true,
           }),
         }}
       />
@@ -133,7 +143,6 @@ export default function HomeStack() {
           title: "Thông tin tài sản",
           ...HeaderDetails({
             showBackButton: true,
-            showMenuButton: false,
           }),
         }}
       />

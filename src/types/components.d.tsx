@@ -125,9 +125,10 @@ export interface GroupListProps {
   ) => boolean;
 }
 
-export interface AssetDeleteProps {
+export interface AssetActionProps {
   onEdit: () => void;
   onDelete: () => void;
+  onClone: () => void;
   nameClass?: string;
 }
 
@@ -259,6 +260,7 @@ export type AddItemAssetProps = {
   onPress?: (() => void) | string;
   field?: any;
   nameClass?: string;
+  propertyClass?: {};
 };
 
 export interface HandleCascadeChangeProps {
@@ -286,7 +288,7 @@ export interface RenderInputByTypeProps {
   setActiveEnumField: any;
   setLoadingImages: any;
 
-  mode: "add" | "edit";
+  mode: "add" | "edit" | "clone";
   getDefaultValueForField: (f: Field) => any;
 }
 

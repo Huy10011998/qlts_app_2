@@ -74,9 +74,16 @@ export type RootStackParamList = {
   AssetAddItem: {
     field: string;
     nameClass?: string;
+    propertyClass?: {};
   };
 
   AssetEditItem: {
+    item: Record<string, any>;
+    field: string;
+    nameClass?: string;
+  };
+
+  AssetCloneItem: {
     item: Record<string, any>;
     field: string;
     nameClass?: string;
@@ -96,6 +103,13 @@ export type OptionalParams = {
   mode: string;
   activeTab?: string;
   titleHeader?: string;
+  propertyClass?: {
+    isTuDongTang?: boolean;
+    propertyTuDongTang?: string;
+    formatTuDongTang?: string;
+    prentTuDongTang?: string;
+    prefix?: string;
+  };
 };
 
 // Navigation Props
@@ -164,4 +178,9 @@ export type AssetAddItemNavigationProp = NativeStackNavigationProp<
 export type AssetEditItemNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   "AssetEditItem"
+>;
+
+export type AssetCloneItemNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "AssetCloneItem"
 >;

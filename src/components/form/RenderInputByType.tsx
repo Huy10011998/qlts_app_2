@@ -172,7 +172,7 @@ export const RenderInputByType = ({
     // LINK (ADD + EDIT)
     case TypeProperty.Link: {
       const parsed =
-        mode === "edit" && value
+        (mode === "edit" || mode === "clone") && value
           ? parseLinkHtml(String(value))
           : { url: "", text: "" };
 
