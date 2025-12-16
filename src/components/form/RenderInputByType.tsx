@@ -60,14 +60,42 @@ export const RenderInputByType = ({
     case TypeProperty.Int:
     case TypeProperty.Decimal:
       return (
-        <TextInput
-          style={styles.input}
-          keyboardType="numeric"
-          value={String(value ?? "")}
-          placeholder={`Nhập ${f.moTa ?? f.name}`}
-          placeholderTextColor="#888"
-          onChangeText={(t) => handleChange(f.name, t)}
-        />
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            borderWidth: 1,
+            borderColor: "#ccc",
+            borderRadius: 8,
+            paddingHorizontal: 12,
+          }}
+        >
+          <TextInput
+            style={{
+              flex: 1,
+              paddingVertical: 12,
+              fontSize: 14,
+            }}
+            keyboardType="numeric"
+            value={String(value ?? "")}
+            placeholder={`Nhập ${f.moTa ?? f.name}`}
+            placeholderTextColor="#888"
+            onChangeText={(t) => handleChange(f.name, t)}
+          />
+
+          {/* PREFIX */}
+          {f.prefix ? (
+            <Text
+              style={{
+                marginLeft: 8,
+                color: "#333",
+                fontSize: 14,
+              }}
+            >
+              {f.prefix}
+            </Text>
+          ) : null}
+        </View>
       );
 
     // BOOL
@@ -94,14 +122,42 @@ export const RenderInputByType = ({
     // STRING
     case TypeProperty.String:
       return (
-        <TextInput
-          style={styles.input}
-          multiline
-          value={String(value ?? "")}
-          placeholder={`Nhập ${f.moTa ?? f.name}`}
-          placeholderTextColor="#888"
-          onChangeText={(t) => handleChange(f.name, t)}
-        />
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            borderWidth: 1,
+            borderColor: "#ccc",
+            borderRadius: 8,
+            paddingHorizontal: 12,
+          }}
+        >
+          <TextInput
+            style={{
+              flex: 1,
+              paddingVertical: 12,
+              fontSize: 14,
+            }}
+            keyboardType="numeric"
+            value={String(value ?? "")}
+            placeholder={`Nhập ${f.moTa ?? f.name}`}
+            placeholderTextColor="#888"
+            onChangeText={(t) => handleChange(f.name, t)}
+          />
+
+          {/* PREFIX */}
+          {f.prefix ? (
+            <Text
+              style={{
+                marginLeft: 8,
+                color: "#333",
+                fontSize: 14,
+              }}
+            >
+              {f.prefix}
+            </Text>
+          ) : null}
+        </View>
       );
 
     // TEXTAREA
@@ -237,7 +293,6 @@ export const RenderInputByType = ({
               {
                 padding: 12,
                 fontSize: 14,
-                marginRight: 6,
                 color:
                   value !== null && value !== undefined && value !== ""
                     ? "#000"
@@ -248,14 +303,18 @@ export const RenderInputByType = ({
           >
             {items.find((x: { value: any }) => x.value == value)?.text ??
               formData?.[`${f.name}_MoTa`] ??
-              `Chọn ${f.moTa || f.name}`}
+              `${f.moTa || f.name}`}
           </Text>
 
           <Ionicons
             name="chevron-down"
-            size={20}
-            color="#444"
-            style={{ position: "absolute", right: 8, top: 12 }}
+            size={24}
+            color="#FF3333"
+            style={{
+              position: "absolute",
+              right: 12,
+              top: 10,
+            }}
           />
         </TouchableOpacity>
       );
@@ -263,13 +322,42 @@ export const RenderInputByType = ({
     // DEFAULT
     default:
       return (
-        <TextInput
-          style={styles.input}
-          value={String(value ?? "")}
-          placeholder={`Nhập ${f.moTa ?? f.name}`}
-          placeholderTextColor="#888"
-          onChangeText={(t) => handleChange(f.name, t)}
-        />
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            borderWidth: 1,
+            borderColor: "#ccc",
+            borderRadius: 8,
+            paddingHorizontal: 12,
+          }}
+        >
+          <TextInput
+            style={{
+              flex: 1,
+              paddingVertical: 12,
+              fontSize: 14,
+            }}
+            keyboardType="numeric"
+            value={String(value ?? "")}
+            placeholder={`Nhập ${f.moTa ?? f.name}`}
+            placeholderTextColor="#888"
+            onChangeText={(t) => handleChange(f.name, t)}
+          />
+
+          {/* PREFIX */}
+          {f.prefix ? (
+            <Text
+              style={{
+                marginLeft: 8,
+                color: "#333",
+                fontSize: 14,
+              }}
+            >
+              {f.prefix}
+            </Text>
+          ) : null}
+        </View>
       );
   }
 };

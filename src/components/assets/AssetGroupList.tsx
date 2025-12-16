@@ -196,7 +196,7 @@ export default function AssetGroupList({
               <Ionicons
                 name={isCollapsed ? "chevron-down" : "chevron-up"}
                 size={26}
-                color="#222"
+                color="#FF3333"
               />
             </TouchableOpacity>
 
@@ -231,7 +231,7 @@ export default function AssetGroupList({
                             <Image
                               source={{ uri: images[field.name] }}
                               style={styles.image}
-                              resizeMode="cover"
+                              resizeMode="contain"
                             />
                           </TouchableOpacity>
                         ) : (
@@ -357,8 +357,8 @@ const styles = StyleSheet.create({
   },
 
   image: {
-    width: 80,
-    height: 80,
+    width: 100,
+    height: 100,
     borderRadius: 8,
     backgroundColor: "#f2f2f2",
   },

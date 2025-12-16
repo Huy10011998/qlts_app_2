@@ -302,7 +302,8 @@ export default function AssetCloneItem() {
                 <Text style={styles.groupTitle}>{gName}</Text>
                 <Ionicons
                   name={collapsed ? "chevron-down" : "chevron-up"}
-                  size={24}
+                  size={26}
+                  color={"#FF3333"}
                 />
               </TouchableOpacity>
 
@@ -345,13 +346,13 @@ export default function AssetCloneItem() {
       {/* Select modal */}
       <EnumAndReferencePickerModal
         visible={modalVisible}
-        title={`Chọn ${activeEnumField?.moTa ?? ""}`}
+        title={`${activeEnumField?.moTa ?? ""}`}
         items={
           activeEnumField
             ? [
                 {
                   value: "",
-                  text: `Chọn ${activeEnumField.moTa ?? activeEnumField.name}`,
+                  text: `${activeEnumField.moTa ?? activeEnumField.name}`,
                 },
                 ...(activeEnumField.typeProperty === TypeProperty.Reference
                   ? referenceData[activeEnumField.name] || []

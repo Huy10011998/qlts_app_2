@@ -19,7 +19,7 @@ export default function BottomBarDetails({
   const TAB_WIDTH = SCREEN_WIDTH / tabs.length;
   const UNDERLINE_WIDTH = TAB_WIDTH * 0.6;
 
-  // ⭐ Khởi tạo underlineX đúng tab ban đầu
+  // Khởi tạo underlineX đúng tab ban đầu
   const initialIndex = tabs.findIndex((t) => t.key === activeTab) ?? 0;
   const startX = initialIndex * TAB_WIDTH + (TAB_WIDTH - UNDERLINE_WIDTH) / 2;
   const underlineX = useRef(new Animated.Value(startX)).current;
@@ -27,7 +27,7 @@ export default function BottomBarDetails({
   const moveUnderlineTo = (index: number) =>
     index * TAB_WIDTH + (TAB_WIDTH - UNDERLINE_WIDTH) / 2;
 
-  // ⭐ Cập nhật underline khi activeTab thay đổi
+  // Cập nhật underline khi activeTab thay đổi
   useEffect(() => {
     const index = tabs.findIndex((t) => t.key === activeTab);
     if (index >= 0) {

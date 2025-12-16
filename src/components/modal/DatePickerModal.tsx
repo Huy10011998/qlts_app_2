@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import Ionicons from "react-native-vector-icons/Ionicons";
 
 export const DatePickerModalIOS = ({
   value,
@@ -59,9 +60,11 @@ export const DatePickerModalIOS = ({
         }}
         activeOpacity={0.8}
       >
-        <Text style={{ color: value ? "#000" : "#999" }}>
-          {value || "Chọn ngày (dd-MM-yyyy)"}
+        <Text style={{ color: value ? "#000" : "#999", flex: 1 }}>
+          {value || "Ngày (dd-MM-yyyy)"}
         </Text>
+
+        <Ionicons name="time-outline" size={24} color="#FF3333" />
       </TouchableOpacity>
 
       <Modal
@@ -102,12 +105,14 @@ export const DatePickerModalIOS = ({
 
 const styles = StyleSheet.create({
   input: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    fontSize: 14,
     backgroundColor: "#fff",
   },
 

@@ -26,10 +26,7 @@ import { insert, tuDongTang } from "../../services/data/CallApi";
 
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../../store/Index";
-import {
-  resetSelectedTreeNode,
-  setShouldRefreshList,
-} from "../../store/AssetSlice";
+import { setShouldRefreshList } from "../../store/AssetSlice";
 import { usePermission } from "../../hooks/usePermission";
 
 import { formatDateForBE, getDefaultValueForField } from "../../utils/Date";
@@ -84,6 +81,8 @@ export default function AssetAddItemDetails() {
 
   log("selectedTreeProperty: ", selectedTreeProperty);
   log("selectedTreeValue: ", selectedTreeValue);
+
+  log("fieldActive: ", fieldActive);
 
   // Khi chọn cây → set giá trị cha vào form
   useEffect(() => {
@@ -270,7 +269,8 @@ export default function AssetAddItemDetails() {
                 <Text style={styles.groupTitle}>{groupName}</Text>
                 <Ionicons
                   name={collapsed ? "chevron-down" : "chevron-up"}
-                  size={24}
+                  size={26}
+                  color={"#FF3333"}
                 />
               </TouchableOpacity>
 
@@ -321,11 +321,11 @@ export default function AssetAddItemDetails() {
       {/* Picker Modal */}
       <EnumAndReferencePickerModal
         visible={modalVisible}
-        title={`Chọn ${activeEnumField?.moTa || activeEnumField?.name}`}
+        title={`${activeEnumField?.moTa || activeEnumField?.name}`}
         items={
           activeEnumField
             ? [
-                { value: "", text: `Chọn ${activeEnumField.moTa}` },
+                { value: "", text: `${activeEnumField.moTa}` },
                 ...(activeEnumField.typeProperty === TypeProperty.Reference
                   ? referenceData[activeEnumField.name] || []
                   : enumData[activeEnumField.name] || []),
@@ -379,9 +379,9 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
+    padding: 12,
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
 
   createButton: {
