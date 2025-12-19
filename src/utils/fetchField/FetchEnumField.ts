@@ -1,7 +1,7 @@
-import { API_ENDPOINTS } from "../config/API";
-import { callApi } from "../services/data/CallApi";
-import { FetchEnumResponse, SetEnumDataFn } from "../types/Model.d";
-import { log } from "./Logger";
+import { API_ENDPOINTS } from "../../config/API";
+import { callApi } from "../../services/data/CallApi";
+import { FetchEnumResponse, SetEnumDataFn } from "../../types/Model.d";
+import { log } from "../Logger";
 
 export const fetchEnumByField = async (
   enumName: string,

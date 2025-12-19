@@ -4,11 +4,12 @@ import { DetailsProps, Field } from "../../types/Index";
 import { useParams } from "../../hooks/useParams";
 import { getDetails } from "../../services/Index";
 import IsLoading from "../ui/IconLoading";
-import { getFieldValue, TAB_ITEMS } from "../../utils/Helper";
 import { error } from "../../utils/Logger";
 import { ParseFieldActive } from "../../utils/parser/ParseFieldActive";
 import { GroupFields } from "../../utils/parser/GroupFields";
 import { ToggleGroupUtil } from "../../utils/parser/ToggleGroup";
+import { getFieldValue } from "../../utils/fields/GetFieldValue";
+import { TAB_ITEMS } from "../../utils/Helper";
 
 export default function AssetRelatedDetails({ children }: DetailsProps) {
   const { id, nameClass, field } = useParams();

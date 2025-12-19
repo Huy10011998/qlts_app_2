@@ -1,6 +1,6 @@
-import { API_ENDPOINTS } from "../config/API";
-import { callApi } from "../services/data/CallApi";
-import { log } from "./Logger";
+import { API_ENDPOINTS } from "../../config/API";
+import { callApi } from "../../services/data/CallApi";
+import { log } from "../Logger";
 
 export const fetchReferenceByField = async (
   referenceName: string,

@@ -17,10 +17,9 @@ import EnumAndReferencePickerModal from "../modal/EnumAndReferencePickerModal";
 import { getMatchedKey } from "../../utils/Helper";
 import { useParams } from "../../hooks/useParams";
 import { fetchImage, pickImage } from "../../utils/Image";
-import { fetchReferenceByField } from "../../utils/FetchReferenceField";
 import { fetchReferenceByFieldWithParent } from "../../utils/cascade/FetchReferenceByFieldWithParent";
 import { handleCascadeChange } from "../../utils/cascade/Index";
-import { fetchEnumByField } from "../../utils/FetchEnumField";
+import { fetchEnumByField } from "../../utils/fetchField/FetchEnumField";
 import { RenderInputByType } from "../form/RenderInputByType";
 import { useImageLoader } from "../../hooks/useImageLoader";
 import { useNavigation } from "@react-navigation/native";
@@ -38,6 +37,7 @@ import { ParseFieldActive } from "../../utils/parser/ParseFieldActive";
 import { GroupFields } from "../../utils/parser/GroupFields";
 import { ToggleGroupUtil } from "../../utils/parser/ToggleGroup";
 import { insert } from "../../services/data/CallApi";
+import { fetchReferenceByField } from "../../utils/fetchField/FetchReferenceField";
 
 export default function AssetCloneItem() {
   const { item, field, nameClass } = useParams();
@@ -308,28 +308,32 @@ export default function AssetCloneItem() {
               </TouchableOpacity>
 
               {!collapsed &&
-                fields.map((f) => (
-                  <View key={f.id ?? f.name} style={styles.fieldBlock}>
-                    <Text style={styles.label}>{f.moTa ?? f.name}</Text>
-                    <RenderInputByType
-                      f={f}
-                      formData={formData}
-                      enumData={enumData}
-                      referenceData={referenceData}
-                      images={images}
-                      loadingImages={loadingImages}
-                      pickImage={pickImage}
-                      setImages={setImages}
-                      setLoadingImages={setLoadingImages}
-                      handleChange={handleChange}
-                      mode="clone"
-                      styles={styles}
-                      setModalVisible={setModalVisible}
-                      setActiveEnumField={setActiveEnumField}
-                      getDefaultValueForField={getDefaultValueForField}
-                    />
-                  </View>
-                ))}
+                fields.map((f) => {
+                  if (f.isReadOnly) return null; // ẨN TOÀN BỘ FIELD
+
+                  return (
+                    <View key={f.id ?? f.name} style={styles.fieldBlock}>
+                      <Text style={styles.label}>{f.moTa ?? f.name}</Text>
+                      <RenderInputByType
+                        f={f}
+                        formData={formData}
+                        enumData={enumData}
+                        referenceData={referenceData}
+                        images={images}
+                        loadingImages={loadingImages}
+                        pickImage={pickImage}
+                        setImages={setImages}
+                        setLoadingImages={setLoadingImages}
+                        handleChange={handleChange}
+                        mode="clone"
+                        styles={styles}
+                        setModalVisible={setModalVisible}
+                        setActiveEnumField={setActiveEnumField}
+                        getDefaultValueForField={getDefaultValueForField}
+                      />
+                    </View>
+                  );
+                })}
             </View>
           );
         })}

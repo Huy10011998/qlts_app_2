@@ -61,7 +61,7 @@ export const DatePickerModalIOS = ({
         activeOpacity={0.8}
       >
         <Text style={{ color: value ? "#000" : "#999", flex: 1 }}>
-          {value || "Ngày (dd-MM-yyyy)"}
+          {value || "Chọn Ngày (dd-MM-yyyy)"}
         </Text>
 
         <Ionicons name="time-outline" size={24} color="#FF3333" />

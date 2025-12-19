@@ -3,7 +3,6 @@ import {
   getPreviewAttachProperty,
   uploadAttachProperty,
 } from "../services/data/CallApi";
-import { getMimeType } from "./Helper";
 import { error } from "./Logger";
 import { Alert } from "react-native";
 
@@ -29,6 +28,22 @@ export const buildImageUrlLocal = (raw: any) => {
   const base = "https://your-real-domain.com/";
 
   return clean.startsWith("/") ? `${base}${clean.slice(1)}` : `${base}${clean}`;
+};
+
+// Detect mime type từ path
+export const getMimeType = (path: string) => {
+  const ext = path.split(".").pop()?.toLowerCase();
+  switch (ext) {
+    case "jpg":
+    case "jpeg":
+      return "image/jpeg";
+    case "png":
+      return "image/png";
+    case "gif":
+      return "image/gif";
+    default:
+      return "image/png";
+  }
 };
 
 // Hàm fetch ảnh
@@ -130,3 +145,31 @@ export const pickImage = async (
     Alert.alert("Lỗi", "Không thể tải ảnh!");
   }
 };
+
+export function getResizePath(inputPath: string): string {
+  if (!inputPath) return "";
+
+  // Chuẩn hóa path -> thay "\" thành "/"
+  const normalizedPath = inputPath.replace(/\\/g, "/");
+
+  // Tách thư mục và file
+  const lastSlashIndex = normalizedPath.lastIndexOf("/");
+  const folder =
+    lastSlashIndex >= 0 ? normalizedPath.substring(0, lastSlashIndex) : "";
+  const fileName =
+    lastSlashIndex >= 0
+      ? normalizedPath.substring(lastSlashIndex + 1)
+      : normalizedPath;
+
+  // Tách tên và đuôi file
+  const dotIndex = fileName.lastIndexOf(".");
+  const nameWithoutExt =
+    dotIndex >= 0 ? fileName.substring(0, dotIndex) : fileName;
+  const ext = dotIndex >= 0 ? fileName.substring(dotIndex) : "";
+
+  // Đổi folder -> folder_resize
+  const newFolder = folder ? `${folder}_resize` : "resize";
+
+  // Tạo path mới
+  return `${newFolder}/${nameWithoutExt}_resize${ext}`;
+}

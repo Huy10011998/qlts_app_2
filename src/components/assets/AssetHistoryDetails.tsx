@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { View, StyleSheet, Alert } from "react-native";
 import { useRoute } from "@react-navigation/native";
-import { getFieldValue } from "../../utils/Helper";
 import IsLoading from "../../components/ui/IconLoading";
 import {
   DetailsHistoryProps,
@@ -13,6 +12,7 @@ import { error } from "../../utils/Logger";
 import { ParseFieldActive } from "../../utils/parser/ParseFieldActive";
 import { GroupFields } from "../../utils/parser/GroupFields";
 import { ToggleGroupUtil } from "../../utils/parser/ToggleGroup";
+import { getFieldValue } from "../../utils/fields/GetFieldValue";
 
 export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
   const route = useRoute<DetailsHistoryRouteProp>();

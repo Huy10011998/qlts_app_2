@@ -14,7 +14,6 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { AssetEditItemNavigationProp, GroupListProps } from "../../types";
 import { TypeProperty } from "../../utils/Enum";
 import { checkReferenceUsage, deleteItems } from "../../services/data/CallApi";
-import { parseLink } from "../../utils/Helper";
 import IsLoading from "../ui/IconLoading";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { error } from "../../utils/Logger";
@@ -23,6 +22,7 @@ import AssetActions from "./AssetActions";
 import { AppDispatch } from "../../store/Index";
 import { useDispatch } from "react-redux";
 import { setShouldRefreshList } from "../../store/AssetSlice";
+import { parseLink } from "../../utils/Link";
 
 export default function AssetGroupList({
   groupedFields,
@@ -231,7 +231,7 @@ export default function AssetGroupList({
                             <Image
                               source={{ uri: images[field.name] }}
                               style={styles.image}
-                              resizeMode="contain"
+                              resizeMode="cover"
                             />
                           </TouchableOpacity>
                         ) : (

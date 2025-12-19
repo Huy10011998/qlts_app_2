@@ -12,8 +12,9 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { TypeProperty } from "../../utils/Enum";
 import { DatePickerModalIOS } from "../modal/DatePickerModal";
 import { RenderInputByTypeProps } from "../../types/Components.d";
-import { parseLinkHtml } from "../../utils/Helper";
+import { formatVND, unFormatVND } from "../../utils/Helper";
 import IsLoading from "../ui/IconLoading";
+import { parseLinkHtml } from "../../utils/Link";
 
 export const RenderInputByType = ({
   f,
@@ -46,7 +47,7 @@ export const RenderInputByType = ({
       const def = getDefaultValueForField(f);
       handleChange(f.name, def);
     }
-  }, []);
+  }, [mode]);
 
   // LIST ITEMS (ENUM / REFERENCE)
   const items =
@@ -54,11 +55,56 @@ export const RenderInputByType = ({
       ? referenceData[f.name] || []
       : enumData[f.name] || [];
 
+  const hasValue =
+    value !== null && value !== undefined && value !== "" && value !== 0;
+
+  const selectedItem = items.find((x: any) => x.value == value);
+
+  const displayText = hasValue
+    ? selectedItem?.text ?? formData?.[`${f.name}_MoTa`] ?? String(value)
+    : `Chọn ${f.moTa || f.name}`;
+
+  const renderBasicInput = ({
+    keyboardType = "default",
+  }: { keyboardType?: "default" | "numeric" } = {}) => (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        borderWidth: 1,
+        borderColor: "#ccc",
+        borderRadius: 8,
+        paddingHorizontal: 12,
+      }}
+    >
+      <TextInput
+        style={{
+          flex: 1,
+          paddingVertical: 12,
+          fontSize: 14,
+        }}
+        keyboardType={keyboardType}
+        value={String(value ?? "")}
+        placeholder={`Nhập ${f.moTa ?? f.name}`}
+        placeholderTextColor="#888"
+        onChangeText={(t) => handleChange(f.name, t)}
+      />
+
+      {f.prefix ? (
+        <Text style={{ marginLeft: 8, color: "#333", fontSize: 14 }}>
+          {f.prefix}
+        </Text>
+      ) : null}
+    </View>
+  );
+
   // SWITCH CASE
   switch (f.typeProperty) {
     // NUMBER
     case TypeProperty.Int:
-    case TypeProperty.Decimal:
+    case TypeProperty.Decimal: {
+      const formattedValue = formatVND(value);
+
       return (
         <View
           style={{
@@ -77,26 +123,17 @@ export const RenderInputByType = ({
               fontSize: 14,
             }}
             keyboardType="numeric"
-            value={String(value ?? "")}
+            value={formattedValue}
             placeholder={`Nhập ${f.moTa ?? f.name}`}
             placeholderTextColor="#888"
-            onChangeText={(t) => handleChange(f.name, t)}
+            onChangeText={(text) => {
+              const raw = unFormatVND(text);
+              handleChange(f.name, raw);
+            }}
           />
-
-          {/* PREFIX */}
-          {f.prefix ? (
-            <Text
-              style={{
-                marginLeft: 8,
-                color: "#333",
-                fontSize: 14,
-              }}
-            >
-              {f.prefix}
-            </Text>
-          ) : null}
         </View>
       );
+    }
 
     // BOOL
     case TypeProperty.Bool:
@@ -121,44 +158,7 @@ export const RenderInputByType = ({
 
     // STRING
     case TypeProperty.String:
-      return (
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            borderWidth: 1,
-            borderColor: "#ccc",
-            borderRadius: 8,
-            paddingHorizontal: 12,
-          }}
-        >
-          <TextInput
-            style={{
-              flex: 1,
-              paddingVertical: 12,
-              fontSize: 14,
-            }}
-            keyboardType="numeric"
-            value={String(value ?? "")}
-            placeholder={`Nhập ${f.moTa ?? f.name}`}
-            placeholderTextColor="#888"
-            onChangeText={(t) => handleChange(f.name, t)}
-          />
-
-          {/* PREFIX */}
-          {f.prefix ? (
-            <Text
-              style={{
-                marginLeft: 8,
-                color: "#333",
-                fontSize: 14,
-              }}
-            >
-              {f.prefix}
-            </Text>
-          ) : null}
-        </View>
-      );
+      return renderBasicInput();
 
     // TEXTAREA
     case TypeProperty.Text:
@@ -282,7 +282,6 @@ export const RenderInputByType = ({
     case TypeProperty.Reference:
       return (
         <TouchableOpacity
-          key={value}
           onPress={() => {
             setActiveEnumField(f);
             setModalVisible(true);
@@ -290,74 +289,28 @@ export const RenderInputByType = ({
         >
           <Text
             style={[
+              styles.input,
               {
                 padding: 12,
                 fontSize: 14,
-                color:
-                  value !== null && value !== undefined && value !== ""
-                    ? "#000"
-                    : "#999",
+                color: hasValue ? "#000" : "#999",
               },
-              styles.input,
             ]}
           >
-            {items.find((x: { value: any }) => x.value == value)?.text ??
-              formData?.[`${f.name}_MoTa`] ??
-              `${f.moTa || f.name}`}
+            {displayText}
           </Text>
 
           <Ionicons
             name="chevron-down"
-            size={24}
-            color="#FF3333"
-            style={{
-              position: "absolute",
-              right: 12,
-              top: 10,
-            }}
+            size={20}
+            color="#444"
+            style={{ position: "absolute", right: 8, top: 12 }}
           />
         </TouchableOpacity>
       );
 
     // DEFAULT
     default:
-      return (
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            borderWidth: 1,
-            borderColor: "#ccc",
-            borderRadius: 8,
-            paddingHorizontal: 12,
-          }}
-        >
-          <TextInput
-            style={{
-              flex: 1,
-              paddingVertical: 12,
-              fontSize: 14,
-            }}
-            keyboardType="numeric"
-            value={String(value ?? "")}
-            placeholder={`Nhập ${f.moTa ?? f.name}`}
-            placeholderTextColor="#888"
-            onChangeText={(t) => handleChange(f.name, t)}
-          />
-
-          {/* PREFIX */}
-          {f.prefix ? (
-            <Text
-              style={{
-                marginLeft: 8,
-                color: "#333",
-                fontSize: 14,
-              }}
-            >
-              {f.prefix}
-            </Text>
-          ) : null}
-        </View>
-      );
+      return renderBasicInput({ keyboardType: "numeric" });
   }
 };

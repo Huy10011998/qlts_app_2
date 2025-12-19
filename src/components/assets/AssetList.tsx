@@ -14,6 +14,7 @@ import {
   Pressable,
   TouchableOpacity,
   ScrollView,
+  RefreshControl,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import {
@@ -226,6 +227,8 @@ export default function AssetList() {
   const [conditions, setConditions] = useState<any[]>([]);
   const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
 
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
+
   // Redux
   const dispatch = useDispatch<AppDispatch>();
 
@@ -242,9 +245,12 @@ export default function AssetList() {
   const { can } = usePermission();
 
   const refreshTop = async () => {
-    setIsRefreshingTop(true);
+    if (isRefreshingTop) return;
 
-    await fetchData(false);
+    setIsRefreshingTop(true);
+    setSkipSize(0);
+
+    await fetchData(false, { isRefresh: true });
 
     setIsRefreshingTop(false);
   };
@@ -311,13 +317,13 @@ export default function AssetList() {
 
   //  Fetch data
   const fetchData = useCallback(
-    async (isLoadMore = false) => {
+    async (isLoadMore = false, options?: { isRefresh?: boolean }) => {
       if (!nameClass) return;
 
-      if (isLoadMore) setIsLoadingMore(true);
-      else {
-        if (debouncedSearch) setIsSearching(true);
-        else setIsLoading(true);
+      const isRefresh = options?.isRefresh;
+
+      if (!isLoadMore && !isRefresh && isFirstLoad) {
+        setIsLoading(true);
       }
 
       try {
@@ -370,19 +376,29 @@ export default function AssetList() {
       } finally {
         setIsLoading(false);
         setIsLoadingMore(false);
-        setIsSearching(false);
+        setIsFirstLoad(false);
       }
     },
-    [nameClass, propertyClass, skipSize, debouncedSearch, conditions]
+    [
+      nameClass,
+      propertyClass,
+      skipSize,
+      debouncedSearch,
+      conditions,
+      isFirstLoad,
+    ]
   );
 
   useEffect(() => {
     if (!nameClass) return;
     fetchData(false);
-  }, [nameClass, debouncedSearch, conditions]);
+  }, [nameClass]);
 
   const handleLoadMore = () => {
-    if (taisan.length < total && !isLoadingMore) fetchData(true);
+    if (taisan.length < total && !isLoadingMore && !isLoading) {
+      setIsLoadingMore(true);
+      fetchData(true);
+    }
   };
 
   const handlePress = async (item: Record<string, any>) => {
@@ -419,8 +435,34 @@ export default function AssetList() {
     closeMenu();
   };
 
-  if (isLoading && !debouncedSearch)
+  useEffect(() => {
+    if (!nameClass) return;
+
+    const isSearch = debouncedSearch.trim().length > 0;
+
+    if (isSearch) {
+      setIsSearching(true); // bật spinner search
+    }
+
+    setIsLoading(true);
+    setSkipSize(0);
+    setTaiSan([]);
+
+    fetchData(false).finally(() => {
+      if (isSearch) {
+        setIsSearching(false); // tắt spinner SAU KHI SEARCH XONG
+      }
+    });
+  }, [debouncedSearch, conditions]);
+
+  if (
+    isLoading &&
+    !isRefreshingTop &&
+    !isLoadingMore &&
+    !isSearching // thêm điều kiện này
+  ) {
     return <IsLoading size="large" color="#FF3333" />;
+  }
 
   return (
     <View style={{ flex: 1 }}>
@@ -454,11 +496,15 @@ export default function AssetList() {
             onPress={() => handlePress(item)}
           />
         )}
-        onScroll={(e) => {
-          if (e.nativeEvent.contentOffset.y <= 0 && !isRefreshingTop) {
-            refreshTop();
-          }
-        }}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshingTop}
+            onRefresh={refreshTop}
+            colors={["#FF3333"]} // Android
+            tintColor="#FF3333" // iOS
+            progressViewOffset={50}
+          />
+        }
         scrollEventThrottle={16}
         contentContainerStyle={{ paddingBottom: 100 }}
         onEndReached={handleLoadMore}

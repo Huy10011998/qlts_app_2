@@ -17,10 +17,9 @@ import EnumAndReferencePickerModal from "../modal/EnumAndReferencePickerModal";
 import { getMatchedKey } from "../../utils/Helper";
 import { useParams } from "../../hooks/useParams";
 import { fetchImage, pickImage } from "../../utils/Image";
-import { fetchReferenceByField } from "../../utils/FetchReferenceField";
 import { fetchReferenceByFieldWithParent } from "../../utils/cascade/FetchReferenceByFieldWithParent";
 import { handleCascadeChange } from "../../utils/cascade/Index";
-import { fetchEnumByField } from "../../utils/FetchEnumField";
+import { fetchEnumByField } from "../../utils/fetchField/FetchEnumField";
 import { RenderInputByType } from "../form/RenderInputByType";
 import { useImageLoader } from "../../hooks/useImageLoader";
 import { update } from "../../services/data/CallApi";
@@ -38,6 +37,7 @@ import {
 import { ParseFieldActive } from "../../utils/parser/ParseFieldActive";
 import { GroupFields } from "../../utils/parser/GroupFields";
 import { ToggleGroupUtil } from "../../utils/parser/ToggleGroup";
+import { fetchReferenceByField } from "../../utils/fetchField/FetchReferenceField";
 
 // Main Component
 export default function AssetEditItem() {

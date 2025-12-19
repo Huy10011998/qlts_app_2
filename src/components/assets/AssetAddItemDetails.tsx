@@ -17,8 +17,7 @@ import EnumAndReferencePickerModal from "../modal/EnumAndReferencePickerModal";
 import IsLoading from "../ui/IconLoading";
 import { useNavigation } from "@react-navigation/native";
 import { handleCascadeChange } from "../../utils/cascade/Index";
-import { fetchEnumByField } from "../../utils/FetchEnumField";
-import { fetchReferenceByField } from "../../utils/FetchReferenceField";
+import { fetchEnumByField } from "../../utils/fetchField/FetchEnumField";
 import { fetchImage, pickImage } from "../../utils/Image";
 import { RenderInputByType } from "../form/RenderInputByType";
 import { useImageLoader } from "../../hooks/useImageLoader";
@@ -35,6 +34,7 @@ import { ParseFieldActive } from "../../utils/parser/ParseFieldActive";
 import { GroupFields } from "../../utils/parser/GroupFields";
 import { ToggleGroupUtil } from "../../utils/parser/ToggleGroup";
 import { log } from "../../utils/Logger";
+import { fetchReferenceByField } from "../../utils/fetchField/FetchReferenceField";
 
 export default function AssetAddItemDetails() {
   const { field, nameClass, propertyClass } = useParams();
@@ -243,14 +243,6 @@ export default function AssetAddItemDetails() {
     }
   };
 
-  {
-    isSubmitting && (
-      <View style={styles.loadingOverlay}>
-        <IsLoading size="large" color="#FF3333" />
-      </View>
-    );
-  }
-
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -349,6 +341,12 @@ export default function AssetAddItemDetails() {
           setModalVisible(false);
         }}
       />
+
+      {isSubmitting && (
+        <View style={styles.loadingOverlay}>
+          <IsLoading size="large" color="#FF3333" />
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }

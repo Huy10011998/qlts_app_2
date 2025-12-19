@@ -18,11 +18,11 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../types/Index";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { getFieldValue } from "../../utils/Helper";
 import { error, log } from "../../utils/Logger";
 import { ParseFieldActive } from "../../utils/parser/ParseFieldActive";
 import { GroupFields } from "../../utils/parser/GroupFields";
 import { ToggleGroupUtil } from "../../utils/parser/ToggleGroup";
+import { getFieldValue } from "../../utils/fields/GetFieldValue";
 
 const { width } = Dimensions.get("window");
 const MENU_WIDTH = width * 0.6;

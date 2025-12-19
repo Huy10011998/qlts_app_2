@@ -8,11 +8,12 @@ import {
   Linking,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { getFieldValue, parseLink } from "../../utils/Helper";
 import { CardItemProps } from "../../types";
 import { TypeProperty } from "../../utils/Enum";
 import IsLoading from "../ui/IconLoading";
 import { convertToResizePath, fetchImage } from "../../utils/Image";
+import { getFieldValue } from "../../utils/fields/GetFieldValue";
+import { parseLink } from "../../utils/Link";
 
 export default function ListCardAsset({
   item,
@@ -68,9 +69,7 @@ export default function ListCardAsset({
               <View key={field.name} style={{ marginBottom: 6 }}>
                 <Text style={styles.label}>{field.moTa}: </Text>
 
-                {loadingImages[field.name] ? (
-                  <IsLoading size="small" />
-                ) : images[field.name] ? (
+                {images[field.name] ? (
                   <Image
                     source={{ uri: images[field.name] }}
                     style={{

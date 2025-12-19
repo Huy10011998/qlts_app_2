@@ -1,7 +1,4 @@
 import md5 from "react-native-md5";
-import { Field } from "../types";
-import { TypeProperty } from "./Enum";
-import React from "react";
 
 // Bỏ dấu tiếng Việt
 export const removeVietnameseTones = (str: string): string => {
@@ -17,130 +14,6 @@ export const removeVietnameseTones = (str: string): string => {
 export function md5Hash(input: string): string {
   return md5.hex_md5(input);
 }
-
-// Chuẩn hóa text
-export const normalizeText = (text: string) =>
-  text
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-
-// Chuẩn hóa keys của object
-export const normalizeKeys = (obj: any) => {
-  const newObj: any = {};
-  for (const key in obj) {
-    const normalized = key.charAt(0).toLowerCase() + key.slice(1);
-    newObj[normalized] = obj[key];
-  }
-  return newObj;
-};
-
-// Format key property
-export const formatKeyProperty = (key: string) =>
-  key.charAt(0).toLowerCase() + key.slice(1);
-
-// Lấy giá trị từ Field
-export const getFieldValue = (
-  item: Record<string, any>,
-  field: Field
-): React.ReactNode => {
-  if (!item || !field) return "--";
-
-  const key =
-    field.typeProperty === TypeProperty.Reference
-      ? `${field.name}_MoTa`
-      : field.name;
-
-  const rawValue = item[formatKeyProperty(key)];
-  if (rawValue == null) return "--";
-
-  switch (field.typeProperty) {
-    case TypeProperty.Date: {
-      const date = new Date(rawValue);
-      if (isNaN(date.getTime())) return "--";
-      const day = String(date.getDate()).padStart(2, "0");
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const year = date.getFullYear();
-      return `${day}/${month}/${year}`; // dd/MM/yyyy
-    }
-
-    case TypeProperty.Bool:
-      return rawValue === true ? "✅" : rawValue === false ? "❌" : "--";
-
-    case TypeProperty.Decimal: {
-      const num = Number(rawValue);
-      if (isNaN(num)) return "--";
-      const formatter = new Intl.NumberFormat("vi-VN", {
-        useGrouping: !field.notShowSplit,
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 3,
-      });
-      return formatter.format(num);
-    }
-
-    case TypeProperty.Int: {
-      const num = Number(rawValue);
-      if (isNaN(num)) return "--";
-      const formatter = new Intl.NumberFormat("vi-VN", {
-        useGrouping: !field.notShowSplit,
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      });
-      return formatter.format(num);
-    }
-
-    case TypeProperty.Reference:
-      return String(rawValue);
-
-    case TypeProperty.Image: {
-      const uri = String(rawValue);
-      if (!uri) return "--";
-
-      return uri;
-    }
-
-    case TypeProperty.Link: {
-      const link = String(rawValue);
-      if (!link) return "--";
-
-      return link;
-    }
-
-    default:
-      return String(rawValue);
-  }
-};
-
-// Tách nameClass
-export const splitNameClass = (nameClass: string) => {
-  if (!nameClass) return { key: "", label: "" };
-
-  const parts = nameClass.split("-");
-  return {
-    key: parts[0]?.trim() || "",
-    label: parts[1]?.trim() || "",
-  };
-};
-
-// Chuẩn hóa value
-export function normalizeValue(value?: any): string {
-  if (value === null || value === undefined) return "";
-  return String(value)
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
-}
-
-// Lấy extension file
-export const getFileExtension = (fileName: string) => {
-  const parts = fileName.split(".");
-  return parts.length > 1 ? parts.pop()?.toLowerCase() : "";
-};
 
 // Viết hoa chữ cái đầu
 export function capitalizeFirstLetter(str?: string): string {
@@ -176,72 +49,6 @@ export const normalizeClassName = (name?: string) => {
     .join("");
 };
 
-// Detect mime type từ path
-export const getMimeType = (path: string) => {
-  const ext = path.split(".").pop()?.toLowerCase();
-  switch (ext) {
-    case "jpg":
-    case "jpeg":
-      return "image/jpeg";
-    case "png":
-      return "image/png";
-    case "gif":
-      return "image/gif";
-    default:
-      return "image/png";
-  }
-};
-
-export function getResizePath(inputPath: string): string {
-  if (!inputPath) return "";
-
-  // Chuẩn hóa path -> thay "\" thành "/"
-  const normalizedPath = inputPath.replace(/\\/g, "/");
-
-  // Tách thư mục và file
-  const lastSlashIndex = normalizedPath.lastIndexOf("/");
-  const folder =
-    lastSlashIndex >= 0 ? normalizedPath.substring(0, lastSlashIndex) : "";
-  const fileName =
-    lastSlashIndex >= 0
-      ? normalizedPath.substring(lastSlashIndex + 1)
-      : normalizedPath;
-
-  // Tách tên và đuôi file
-  const dotIndex = fileName.lastIndexOf(".");
-  const nameWithoutExt =
-    dotIndex >= 0 ? fileName.substring(0, dotIndex) : fileName;
-  const ext = dotIndex >= 0 ? fileName.substring(dotIndex) : "";
-
-  // Đổi folder -> folder_resize
-  const newFolder = folder ? `${folder}_resize` : "resize";
-
-  // Tạo path mới
-  return `${newFolder}/${nameWithoutExt}_resize${ext}`;
-}
-
-// Hàm parse link từ chuỗi HTML <a>
-export const parseLink = (html: string) => {
-  const match = html.match(/href="([^"]+)".*>([^<]+)<\/a>/);
-
-  if (match) {
-    return { url: match[1], text: match[2] };
-  }
-  return null;
-};
-
-export function parseLinkHtml(html: string) {
-  if (!html) return { url: "", text: "" };
-
-  const urlMatch = html.match(/href="([^"]+)"/);
-  const textMatch = html.replace(/<[^>]+>/g, "").trim();
-
-  return {
-    url: urlMatch ? urlMatch[1] : "",
-    text: textMatch || "",
-  };
-}
-
 // Các tab mặc định
 export const TAB_ITEMS = [
   { key: "list", label: "Thông tin", icon: "document-text-outline" },
@@ -251,15 +58,7 @@ export const TAB_ITEMS = [
   { key: "attach", label: "Tệp", icon: "attach-outline" },
 ] as const;
 
-// buildHtmlLink.ts
-export const buildHtmlLink = (url: string, label?: string) => {
-  const labelOrUrl = label?.trim() || url;
-  return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: blue;">${labelOrUrl}</a>`;
-};
-
-export const normalizeKey = (k?: string) =>
-  (k ?? "").toString().replace(/[_\s]/g, "").toLowerCase();
-
+// map key “gần đúng” giữa dữ liệu backend và frontend.
 export function getMatchedKey(item: Record<string, any>, name: string) {
   const keys = Object.keys(item);
 
@@ -291,3 +90,13 @@ export const getDepth = (field: any, all: any[]): number => {
     )
   );
 };
+
+// format view hiển thị 1000 -> 1.000
+export const formatVND = (value: string | number) => {
+  if (value === null || value === undefined || value === "") return "";
+  const num = Number(String(value).replace(/\D/g, ""));
+  if (isNaN(num)) return "";
+  return num.toLocaleString("vi-VN");
+};
+
+export const unFormatVND = (value: string) => value.replace(/\./g, "");
