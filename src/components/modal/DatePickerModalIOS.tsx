@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import { formatDMY, parseDate } from "../../utils/Date";
 
 export const DatePickerModalIOS = ({
   value,
@@ -17,22 +18,8 @@ export const DatePickerModalIOS = ({
   value?: string;
   onChange: (val: string) => void;
 }) => {
-  // Hàm parse ngày dd-MM-yyyy
-  const parseDate = (val?: string) => {
-    if (!val) return new Date();
-    const [d, m, y] = val.split("-").map(Number);
-    return new Date(y, m - 1, d);
-  };
-
   const [showPicker, setShowPicker] = useState(false);
   const [tempDate, setTempDate] = useState<Date>(parseDate(value));
-
-  const formatISO = (date: Date) => {
-    const d = date.getDate().toString().padStart(2, "0");
-    const m = (date.getMonth() + 1).toString().padStart(2, "0");
-    const y = date.getFullYear();
-    return `${d}-${m}-${y}`;
-  };
 
   const handleDateChange = (_: any, selectedDate?: Date) => {
     if (selectedDate) {
@@ -41,7 +28,7 @@ export const DatePickerModalIOS = ({
   };
 
   const handleConfirmDate = () => {
-    onChange(formatISO(tempDate));
+    onChange(formatDMY(tempDate));
     setShowPicker(false);
   };
 

@@ -44,23 +44,28 @@ export const validateDates = (
   fromDate: string,
   toDate: string
 ): { from: string; to: string } | null => {
-  // Chuyển từ dd/MM/yyyy → Date
-  const parseDateLocal = (dateStr: string): Date | null => {
-    if (!dateStr) return null;
-    const parts = dateStr.split("/");
-    if (parts.length !== 3) return null;
+  const parseWithCurrentTime = (dateStr: string): Date | null => {
+    const [d, m, y] = dateStr.split("/").map(Number);
+    if (!d || !m || !y) return null;
 
-    const [day, month, year] = parts.map(Number);
-    if (!day || !month || !year) return null;
+    const now = new Date();
 
-    return new Date(year, month - 1, day);
+    return new Date(
+      y,
+      m - 1,
+      d,
+      now.getHours(),
+      now.getMinutes(),
+      now.getSeconds(),
+      now.getMilliseconds()
+    );
   };
 
-  const from = parseDateLocal(fromDate);
-  const to = parseDateLocal(toDate);
+  const from = parseWithCurrentTime(fromDate);
+  const to = parseWithCurrentTime(toDate);
 
   if (!from || !to) {
-    Alert.alert("Lỗi", "Ngày nhập không hợp lệ (định dạng dd/mm/yyyy).");
+    Alert.alert("Lỗi", "Ngày nhập không hợp lệ.");
     return null;
   }
 
@@ -69,7 +74,6 @@ export const validateDates = (
     return null;
   }
 
-  // Convert sang ISO string (yyyy-MM-ddTHH:mm:ss)
   return {
     from: from.toISOString(),
     to: to.toISOString(),
@@ -142,4 +146,19 @@ export const getDefaultValueForField = (f: Field) => {
   }
 
   return "";
+};
+
+// Hàm parse ngày dd-MM-yyyy
+export const parseDate = (val?: string) => {
+  if (!val) return new Date();
+  const [d, m, y] = val.split("-").map(Number);
+  return new Date(y, m - 1, d, 12, 0, 0);
+};
+
+// Hàm format ngày dd-MM-yyyy
+export const formatDMY = (date: Date) => {
+  const d = date.getDate().toString().padStart(2, "0");
+  const m = (date.getMonth() + 1).toString().padStart(2, "0");
+  const y = date.getFullYear();
+  return `${d}-${m}-${y}`;
 };

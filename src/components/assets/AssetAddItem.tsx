@@ -45,8 +45,8 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 24,
     backgroundColor: "#FF3333",
-    width: 70,
-    height: 70,
+    width: 60,
+    height: 60,
     borderRadius: 42,
     alignItems: "center",
     justifyContent: "center",
@@ -55,6 +55,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
     elevation: 6,
-    marginBottom: 20,
+    marginBottom: 30,
   },
 });

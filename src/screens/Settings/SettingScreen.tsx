@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
   },
 
   avatarImage: { width: "100%", height: "100%", resizeMode: "cover" },
-  name: { marginTop: 8, fontSize: 16, fontWeight: "bold" },
+  name: { marginTop: 8, fontSize: 16, fontWeight: "bold", color: "#333" },
   section: { paddingHorizontal: 16 },
 
   settingItem: {
@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
 
-  label: { flex: 1, fontSize: 13, fontWeight: "bold" },
+  label: { flex: 1, fontSize: 13, fontWeight: "bold", color: "#333" },
 
   modalOverlay: {
     flex: 1,
@@ -438,6 +438,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 16,
     textAlign: "center",
+    color: "#333",
   },
 
   input: {

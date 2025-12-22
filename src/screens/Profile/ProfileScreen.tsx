@@ -114,11 +114,13 @@ const styles = StyleSheet.create({
     flex: 1,
     fontWeight: "bold",
     fontSize: 14,
+    color: "#333",
   },
 
   value: {
     flex: 2,
     fontSize: 14,
+    color: "#333",
   },
 });
 

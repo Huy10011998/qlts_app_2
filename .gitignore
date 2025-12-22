@@ -1,37 +1,46 @@
+# =======================
 # Node
+# =======================
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
-# React Native
-.expo/
-.expo-shared/
-dist/
-build/
-.bundle/
+# =======================
+# Env
+# =======================
 .env
 .env.local
 .env.*.local
-*.expo
-*.p8
-*.p12
-*.key
-*.mobileprovision
 
-# Metro
-metro-cache/
-.expo/web/cache
+# =======================
+# Logs
+# =======================
+*.log
+logs/
+*.log.*
 
+# =======================
 # macOS
+# =======================
 .DS_Store
+.AppleDouble
+.LSOverride
 *.swp
 *.swo
 
-# Logs
-*.log
+# =======================
+# Windows
+# =======================
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
 
-# Android
+# =======================
+# Android (IMPORTANT)
+# =======================
 android/.gradle/
 android/app/build/
 android/build/
@@ -39,23 +48,51 @@ android/local.properties
 android/.idea/
 android/.settings/
 android/.cxx/
+android/app/.cxx/
+.externalNativeBuild/
+captures/
 *.iml
 
-# Keystore files (private, đừng push)
+# =======================
+# Gradle / CMake / NDK (VERY IMPORTANT)
+# =======================
+.gradle/
+.cxx/
+**/.cxx/**
+CMakeCache.txt
+CMakeFiles/
+cmake.*
+*.cmake
+*.ninja
+.ninja_deps
+.ninja_log
+compile_commands.json*
+configure_fingerprint.bin
+prefab_config.json
+symbol_folder_index.txt
+additional_project_files.txt
+build_file_index.txt
+android_gradle_build*.json
+
+# =======================
+# Keystore (PRIVATE)
+# =======================
 *.keystore
 *.jks
 
+# =======================
 # iOS
+# =======================
 ios/build/
 ios/Pods/
-ios/Podfile.lock
-ios/*.xcodeproj/project.xcworkspace/
-ios/*.xcworkspace/xcuserdata/
-ios/*.xcworkspace/xcshareddata/
+ios/DerivedData/
 ios/.swiftpm/
 ios/.symlinks/
-ios/DerivedData/
-ios/.idea/
+*.hmap
+*.ipa
+*.xcarchive
+
+# Xcode user data
 *.pbxuser
 *.mode1v3
 *.mode2v3
@@ -65,9 +102,29 @@ ios/.idea/
 *.xcuserstate
 *.xcscmblueprint
 
-# Xcode
-*.xcworkspace/xcuserdata/
-*.xcworkspace/xcshareddata/
-*.xcodeproj/xcuserdata/
-*.xcodeproj/project.xcworkspace/
-*.xcodeproj/xcshareddata/
+# =======================
+# IDEs
+# =======================
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# =======================
+# Testing / Coverage
+# =======================
+coverage/
+*.lcov
+
+# =======================
+# Metro bundler
+# =======================
+.metro-cache/
+
+# =======================
+# Misc
+# =======================
+*.zip
+*.tar.gz
+*.rar
+*.tmp

@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
   },
 
   fieldBlock: { marginBottom: 14 },
-  label: { fontSize: 14, fontWeight: "600", marginBottom: 6 },
+  label: { fontSize: 14, fontWeight: "600", marginBottom: 6, color: "#333" },
 
   input: {
     borderWidth: 1,

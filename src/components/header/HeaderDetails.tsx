@@ -11,6 +11,7 @@ export const HeaderDetails = ({
   return {
     headerStyle: { backgroundColor: "#FF3333" },
     headerTintColor: "#fff",
+    headerTitleAlign: "center",
     headerTitleStyle: { fontWeight: "bold" },
     headerLeft: showBackButton ? () => <HeaderBackButton /> : undefined,
   };

@@ -10,11 +10,11 @@ import {
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { TypeProperty } from "../../utils/Enum";
-import { DatePickerModalIOS } from "../modal/DatePickerModal";
 import { RenderInputByTypeProps } from "../../types/Components.d";
 import { formatVND, unFormatVND } from "../../utils/Helper";
 import IsLoading from "../ui/IconLoading";
 import { parseLinkHtml } from "../../utils/Link";
+import { DatePicker } from "../dataPicker/DataPicker";
 
 export const RenderInputByType = ({
   f,
@@ -131,6 +131,12 @@ export const RenderInputByType = ({
               handleChange(f.name, raw);
             }}
           />
+
+          {f.prefix ? (
+            <Text style={{ marginLeft: 8, color: "#333", fontSize: 14 }}>
+              {f.prefix}
+            </Text>
+          ) : null}
         </View>
       );
     }
@@ -150,10 +156,7 @@ export const RenderInputByType = ({
     // DATE
     case TypeProperty.Date:
       return (
-        <DatePickerModalIOS
-          value={value}
-          onChange={(d) => handleChange(f.name, d)}
-        />
+        <DatePicker value={value} onChange={(d) => handleChange(f.name, d)} />
       );
 
     // STRING

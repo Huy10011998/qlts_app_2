@@ -12,9 +12,9 @@ import { WebView } from "react-native-webview";
 import { ReportViewProps } from "../../types";
 import { getPreviewBC } from "../../services/data/CallApi";
 import { API_ENDPOINTS } from "../../config/Index";
-import { DatePickerModalIOS } from "../modal/DatePickerModal";
 import { error } from "../../utils/Logger";
 import { formatToSlash, validateDates } from "../../utils/Date";
+import { DatePicker } from "../dataPicker/DataPicker";
 
 const ReportView: React.FC<ReportViewProps> = ({ title, onClose }) => {
   const [fromDate, setFromDate] = useState<string>("");
@@ -39,6 +39,9 @@ const ReportView: React.FC<ReportViewProps> = ({ title, onClose }) => {
         { tuNgay: from, denNgay: to, isPreview: true },
         API_ENDPOINTS.PREVIEW_MAYTINH_THONGKE_CNTT
       );
+
+      console.log("===tuNgay", from);
+      console.log("===denNgay", to);
 
       const html = `
 <html>
@@ -110,12 +113,12 @@ const ReportView: React.FC<ReportViewProps> = ({ title, onClose }) => {
 
       {/* Bộ lọc ngày */}
       <View style={{ padding: 16, gap: 12 }}>
-        <DatePickerModalIOS
+        <DatePicker
           value={fromDate.replace(/\//g, "-")} // convert dd/MM/yyyy → dd-MM-yyyy
           onChange={(val) => setFromDate(formatToSlash(val))}
         />
 
-        <DatePickerModalIOS
+        <DatePicker
           value={toDate.replace(/\//g, "-")}
           onChange={(val) => setToDate(formatToSlash(val))}
         />

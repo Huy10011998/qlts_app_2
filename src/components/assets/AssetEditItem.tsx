@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
 
   groupTitle: { fontSize: 16, fontWeight: "700", color: "#FF3333" },
   fieldBlock: { marginBottom: 14 },
-  label: { fontSize: 14, fontWeight: "600", marginBottom: 6 },
+  label: { fontSize: 14, fontWeight: "600", marginBottom: 6, color: "#333" },
 
   input: {
     borderWidth: 1,

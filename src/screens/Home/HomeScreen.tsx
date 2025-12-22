@@ -87,12 +87,7 @@ const HomeScreen: React.FC = () => {
   ];
 
   return (
-    <ScrollView
-      contentContainerStyle={[
-        styles.container,
-        { paddingTop: insets.top - 40 },
-      ]}
-    >
+    <ScrollView contentContainerStyle={[styles.container]}>
       <View style={styles.gridWrapper}>
         {menuItems.map((item, index) => (
           <MenuItemCard key={item.id} {...item} index={index} />
@@ -105,7 +100,7 @@ const HomeScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: { paddingHorizontal: 0, backgroundColor: "white", flexGrow: 1 },
 
-  gridWrapper: { flexDirection: "row", flexWrap: "wrap" },
+  gridWrapper: { flexDirection: "row", flexWrap: "wrap", paddingTop: 16 },
 
   menuItemContainer: {
     width: itemWidth,
@@ -154,6 +149,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: "center",
     fontWeight: "500",
+    color: "#333",
   },
 });
 

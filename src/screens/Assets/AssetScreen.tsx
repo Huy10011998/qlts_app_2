@@ -89,7 +89,14 @@ const DropdownItem: React.FC<
           <Ionicons name="folder" size={18} color="red" />
         )}
 
-        <Text style={{ marginLeft: 6, fontSize: 13, fontWeight: "bold" }}>
+        <Text
+          style={{
+            marginLeft: 6,
+            fontSize: 13,
+            fontWeight: "bold",
+            color: "#333",
+          }}
+        >
           {item.label}
         </Text>
       </Pressable>
@@ -269,7 +276,7 @@ export default function AssetScreen() {
           paddingVertical: 12,
           paddingHorizontal: 12,
         }}
-        style={{ backgroundColor: "#fff", marginBottom: 60 }}
+        style={{ backgroundColor: "#fff", marginBottom: 60, flex: 1 }}
       />
 
       {/* Modal báo cáo */}
