@@ -1,10 +1,13 @@
 // Context cho xác thực
-export interface AuthContextType {
+export type AuthContextType = {
   token: string | null;
+  isLoading: boolean;
+  iosAuthenticated: boolean;
+  setIosAuthenticated: (value: boolean) => void;
   setToken: (token: string | null) => Promise<void>;
-  setRefreshToken: (refreshToken: string | null) => Promise<void>;
+  setRefreshToken: (token: string | null) => Promise<void>;
   logout: () => Promise<void>;
-}
+};
 
 // Payload của JWT
 export interface JwtPayload {

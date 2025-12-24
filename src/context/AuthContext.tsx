@@ -6,9 +6,9 @@ import React, {
   useEffect,
   useState,
 } from "react";
-import { AuthContextType } from "../types/Index";
 import { error, log, warn } from "../utils/Logger";
 import { clearTokenStorage, setOnAuthLogout } from "../services/data/CallApi";
+import { AuthContextType } from "../types/Context.d";
 
 // CONTEXT
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -17,28 +17,38 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const [token, setTokenState] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [iosAuthenticated, setIosAuthenticated] = useState(false);
 
   // Lưu hoặc clear access token
   const setToken = async (value: string | null) => {
-    if (value) {
-      log("[Auth] Save access token:", value);
-      await AsyncStorage.setItem("token", value);
-    } else {
-      log("[Auth] Clear access token");
-      await AsyncStorage.removeItem("token");
+    try {
+      if (value) {
+        log("[Auth] Save access token:", value);
+        await AsyncStorage.setItem("token", value);
+      } else {
+        log("[Auth] Clear access token");
+        await AsyncStorage.removeItem("token");
+      }
+      setTokenState(value);
+      log("[Auth] tokenState updated:", value);
+    } catch (e) {
+      error("[Auth] Failed to set token", e);
     }
-    setTokenState(value);
-    log("[Auth] tokenState updated:", value);
   };
 
   // Lưu hoặc clear refresh token
   const setRefreshToken = async (value: string | null) => {
-    if (value) {
-      log("[Auth] Save refresh token:", value);
-      await AsyncStorage.setItem("refreshToken", value);
-    } else {
-      log("[Auth] Clear refresh token");
-      await AsyncStorage.removeItem("refreshToken");
+    try {
+      if (value) {
+        log("[Auth] Save refresh token:", value);
+        await AsyncStorage.setItem("refreshToken", value);
+      } else {
+        log("[Auth] Clear refresh token");
+        await AsyncStorage.removeItem("refreshToken");
+      }
+    } catch (e) {
+      error("[Auth] Failed to set refresh token", e);
     }
   };
 
@@ -49,17 +59,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       await Promise.all([
         AsyncStorage.removeItem("token"),
         AsyncStorage.removeItem("refreshToken"),
-        clearTokenStorage(), // <--- thêm dòng này
+        clearTokenStorage(),
       ]);
     } catch (e) {
       warn("[Auth] Error clearing storage on logout");
+    } finally {
+      setTokenState(null);
     }
-    setTokenState(null);
   };
 
-  // Khi app load → lấy access token hợp lệ (KHÔNG tự refresh ở đây)
+  // Khi app load → lấy access token
   useEffect(() => {
-    (async () => {
+    const loadToken = async () => {
       try {
         const stored = await AsyncStorage.getItem("token");
         setTokenState(stored);
@@ -67,11 +78,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       } catch (err) {
         error("[Auth] Failed to load token from storage", err);
         await logout();
+      } finally {
+        setIsLoading(false);
       }
-    })();
+    };
+
+    loadToken();
   }, []);
 
-  // Đăng ký logout handler cho module api (để api có thể gọi logout khi refresh thất bại)
+  // Đăng ký logout handler cho API
   useEffect(() => {
     setOnAuthLogout(async () => {
       await logout();
@@ -81,10 +96,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     };
   }, []);
 
-  // useAutoRefreshToken();
-
   return (
-    <AuthContext.Provider value={{ token, setToken, setRefreshToken, logout }}>
+    <AuthContext.Provider
+      value={{
+        token,
+        isLoading,
+        iosAuthenticated,
+        setIosAuthenticated,
+        setToken,
+        setRefreshToken,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

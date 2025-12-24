@@ -3,6 +3,7 @@ import {
   Alert,
   Image,
   Keyboard,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -11,7 +12,6 @@ import {
   View,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
-import { useNavigation } from "@react-navigation/native";
 import ReactNativeBiometrics from "react-native-biometrics";
 import * as Keychain from "react-native-keychain";
 import { useAuth } from "../../context/AuthContext";
@@ -22,10 +22,10 @@ import { setPermissions } from "../../store/PermissionSlice";
 import { AppDispatch } from "../../store";
 import { useDispatch } from "react-redux";
 import { setRefreshInApi, setTokenInApi } from "../../services/data/CallApi";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function LoginScreen() {
-  const navigation = useNavigation<any>();
-  const { setToken, setRefreshToken } = useAuth();
+  const { setToken, setRefreshToken, setIosAuthenticated } = useAuth();
 
   const [userName, setUserName] = useState("");
   const [userPassword, setUserPassword] = useState("");
@@ -33,7 +33,6 @@ export default function LoginScreen() {
   const [isLoginDisabled, setIsLoginDisabled] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
-  const hasTriedFaceID = useRef(false);
   const rnBiometrics = useRef(new ReactNativeBiometrics()).current;
 
   const dispatch = useDispatch<AppDispatch>();
@@ -42,11 +41,6 @@ export default function LoginScreen() {
   useEffect(() => {
     setIsLoginDisabled(!(userName.trim() && userPassword.trim()));
   }, [userName, userPassword]);
-
-  // CHẶN auto FaceID khi vào màn Login
-  useEffect(() => {
-    hasTriedFaceID.current = true;
-  }, []);
 
   // Reset trạng thái loading khi quay lại màn Login
   useEffect(() => {
@@ -76,17 +70,15 @@ export default function LoginScreen() {
           accessible: Keychain.ACCESSIBLE.WHEN_PASSCODE_SET_THIS_DEVICE_ONLY,
         });
 
-        // Đồng bộ token cho axios interceptor
-        setTokenInApi(res.data.accessToken);
-        setRefreshInApi(res.data.refreshToken ?? null);
-
         // Lấy quyền
         const permissionRes = await getPermission();
         const listPermission = permissionRes?.data ?? [];
 
-        dispatch(setPermissions(listPermission));
+        if (Platform.OS === "ios") {
+          setIosAuthenticated(true);
+        }
 
-        navigation.replace("Tabs");
+        dispatch(setPermissions(listPermission));
       } else {
         Alert.alert("Lỗi", "Không thể kết nối đến máy chủ.");
       }
@@ -97,29 +89,34 @@ export default function LoginScreen() {
     }
   };
 
-  // LOGIN BẰNG FACEID
   const isFaceIDRunning = useRef(false);
-
-  // ... giữ các import khác
 
   // LOGIN BẰNG FACEID (chỉ dùng Keychain prompt)
   const handleFaceIDLogin = async () => {
     if (isFaceIDRunning.current) return;
-    isFaceIDRunning.current = true; // chặn double tap
+    isFaceIDRunning.current = true;
 
     try {
-      // Kiểm tra sensor (không bắt prompt)
+      // Check user có bật FaceID trong Settings chưa
+      const enabled = await AsyncStorage.getItem("faceid-enabled");
+      if (enabled !== "1") {
+        Alert.alert(
+          "FaceID",
+          "Bạn chưa bật đăng nhập bằng FaceID trong Cài đặt."
+        );
+        return;
+      }
+
+      // Check sensor (không trigger prompt)
       const { available } = await rnBiometrics.isSensorAvailable();
       if (!available) {
         Alert.alert("Thiết bị không hỗ trợ FaceID.");
         return;
       }
 
-      // Lấy credentials — trên iOS có thể hiện prompt do access control của keychain
-      // Thêm authenticationPrompt cho iOS để hiển thị message chuẩn, Android sẽ ignore field
+      // Get credentials → iOS sẽ auto prompt FaceID
       const credentials = await Keychain.getGenericPassword({
         service: "faceid-login",
-        // Field authenticationPrompt được hỗ trợ trên iOS (react-native-keychain)
         authenticationPrompt: {
           title: "Xác thực",
           subtitle: "Sử dụng FaceID để đăng nhập",
@@ -129,11 +126,10 @@ export default function LoginScreen() {
       });
 
       if (!credentials) {
-        Alert.alert("Bạn chưa bật đăng nhập FaceID trong Cài đặt.");
+        Alert.alert("FaceID", "Không tìm thấy thông tin đăng nhập FaceID.");
         return;
       }
 
-      // Chỉ bật loading khi gọi API
       setIsLoading(true);
 
       const response = await loginApi(
@@ -145,18 +141,22 @@ export default function LoginScreen() {
         await setToken(response.data.accessToken);
         await setRefreshToken(response.data.refreshToken ?? null);
 
-        // Lấy quyền
+        setTokenInApi(response.data.accessToken);
+        setRefreshInApi(response.data.refreshToken ?? null);
+
         const permissionRes = await getPermission();
-        const listPermission = permissionRes?.data ?? [];
+        dispatch(setPermissions(permissionRes?.data ?? []));
 
-        dispatch(setPermissions(listPermission));
-
-        navigation.replace("Tabs");
+        setIosAuthenticated(true);
       } else {
         Alert.alert("Đăng nhập thất bại", "Sai tài khoản hoặc mật khẩu.");
       }
-    } catch (err) {
-      // Nếu err do user huỷ prompt thì có thể bỏ qua hoặc show thông báo nhẹ
+    } catch (err: any) {
+      // iOS: user cancel FaceID → err.code = -128
+      if (err?.code === "-128") {
+        return; // user huỷ, không cần alert
+      }
+
       Alert.alert("Lỗi", "Không thể đăng nhập bằng FaceID.");
     } finally {
       setIsLoading(false);
@@ -219,20 +219,22 @@ export default function LoginScreen() {
               <Text style={styles.btnText}>Đăng nhập</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.faceID}
-              onPress={handleFaceIDLogin}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <IsLoading size="large" color="#FF3333" />
-              ) : (
-                <Image
-                  source={require("../../assets/images/faceid-icon2.png")}
-                  style={styles.faceIDIcon}
-                />
-              )}
-            </TouchableOpacity>
+            {Platform.OS === "ios" && (
+              <TouchableOpacity
+                style={styles.faceID}
+                onPress={handleFaceIDLogin}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <IsLoading size="large" color="#FF3333" />
+                ) : (
+                  <Image
+                    source={require("../../assets/images/faceid-icon2.png")}
+                    style={styles.faceIDIcon}
+                  />
+                )}
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </KeyboardAwareScrollView>

@@ -1,18 +1,22 @@
 import React from "react";
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { Platform } from "react-native";
 import { useAuth } from "../context/AuthContext";
-import LoginScreen from "../screens/Auth/LoginScreen";
-import Tabs from "./Tabs";
-
-const Stack = createNativeStackNavigator();
+import AppNavigator from "./AppNavigator.tsx";
+import AuthNavigator from "./AuthNavigator.tsx";
+import IsLoading from "../components/ui/IconLoading.tsx";
 
 export default function RootNavigator() {
-  const { token } = useAuth();
+  const { token, isLoading, iosAuthenticated } = useAuth();
 
-  return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="Tabs" component={Tabs} />
-    </Stack.Navigator>
-  );
+  if (isLoading) {
+    return <IsLoading />;
+  }
+
+  // Android: token là đủ
+  if (Platform.OS === "android") {
+    return token ? <AppNavigator /> : <AuthNavigator />;
+  }
+
+  // iOS: phải FaceID thành công
+  return iosAuthenticated ? <AppNavigator /> : <AuthNavigator />;
 }

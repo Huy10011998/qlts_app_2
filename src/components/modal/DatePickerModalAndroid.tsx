@@ -55,7 +55,7 @@ export const DatePickerModalAndroid = ({
         <DateTimePicker
           value={tempDate}
           mode="date"
-          display={Platform.Version >= 21 ? "calendar" : "default"}
+          display="spinner"
           onChange={handleDateChange}
         />
       )}

@@ -10,6 +10,7 @@ import {
   Modal,
   TextInput,
   Switch,
+  Platform,
 } from "react-native";
 import * as Keychain from "react-native-keychain";
 import { useNavigation } from "@react-navigation/native";
@@ -294,12 +295,14 @@ const SettingScreen = () => {
             onPress={() => setIsModalVisible(true)}
           />
 
-          <SettingSwitchItem
-            iconName="finger-print-outline"
-            label="Đăng nhập bằng FaceID"
-            value={isFaceIdEnabled}
-            onValueChange={handleToggleFaceID}
-          />
+          {Platform.OS === "ios" && (
+            <SettingSwitchItem
+              iconName="finger-print-outline"
+              label="Đăng nhập bằng FaceID"
+              value={isFaceIdEnabled}
+              onValueChange={handleToggleFaceID}
+            />
+          )}
 
           <SettingItem
             iconName="log-out-outline"
