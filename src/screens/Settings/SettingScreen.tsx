@@ -91,7 +91,7 @@ const SettingScreen = () => {
   const [isFaceIdEnabled, setIsFaceIdEnabled] = useState(false);
 
   const navigation = useNavigation<SettingScreenNavigationProp>();
-  const { logout } = useAuth();
+  const { logout, setIosAuthenticated } = useAuth();
 
   const dispatch = useDispatch<AppDispatch>();
 
@@ -136,15 +136,15 @@ const SettingScreen = () => {
         service: "user-login",
       });
 
-      if (!saved) {
-        Alert.alert("Không thể bật", "Bạn cần đăng nhập trước.");
+      const { available } = await rnBiometrics.isSensorAvailable();
+      if (!available) {
+        Alert.alert("FaceID", "Thiết bị không hỗ trợ FaceID.");
         setIsFaceIdEnabled(false);
         return;
       }
 
-      const { available } = await rnBiometrics.isSensorAvailable();
-      if (!available) {
-        Alert.alert("Thiết bị không hỗ trợ FaceID.");
+      if (!saved) {
+        Alert.alert("Không thể bật", "Bạn cần đăng nhập trước.");
         setIsFaceIdEnabled(false);
         return;
       }
@@ -181,25 +181,28 @@ const SettingScreen = () => {
 
     setIsLoading(true);
     try {
+      // 1. Logout auth context (clear token + storage)
       await logout();
 
-      // Xóa keychain
+      // 2. Reset iOS auth state (RẤT QUAN TRỌNG)
+      setIosAuthenticated(false);
+
+      // 3. Xóa keychain
       await Keychain.resetGenericPassword({ service: "user-login" });
       await Keychain.resetGenericPassword({ service: "faceid-login" });
 
-      // Clear CallApi in-memory token
+      // 4. Clear CallApi in-memory token
       setTokenInApi(null);
       setRefreshInApi(null);
 
-      // Clear Redux permissions
+      // 5. Clear Redux permissions
       dispatch(clearPermissions());
 
-      // Reset FaceID switch
+      // 6. Reset FaceID switch
       setIsFaceIdEnabled(false);
       await AsyncStorage.setItem("faceid-enabled", "0");
 
-      // Navigate to login
-      navigation.replace("Login");
+      // App sẽ tự quay về Login do AuthContext thay đổi
     } catch (e) {
       Alert.alert("Lỗi", "Không thể đăng xuất.");
     } finally {

@@ -97,20 +97,20 @@ export default function LoginScreen() {
     isFaceIDRunning.current = true;
 
     try {
+      // Check sensor (không trigger prompt)
+      const { available } = await rnBiometrics.isSensorAvailable();
+      if (!available) {
+        Alert.alert("FaceID", "Thiết bị không hỗ trợ FaceID.");
+        return;
+      }
+
       // Check user có bật FaceID trong Settings chưa
       const enabled = await AsyncStorage.getItem("faceid-enabled");
       if (enabled !== "1") {
         Alert.alert(
           "FaceID",
-          "Bạn chưa bật đăng nhập bằng FaceID trong Cài đặt."
+          "Bạn chưa bật đăng nhập bằng FaceID trong Cài đặt. Vui lòng đăng nhập bằng tài khoản và mật khẩu, sau đó vào Cài đặt để bật tính năng này."
         );
-        return;
-      }
-
-      // Check sensor (không trigger prompt)
-      const { available } = await rnBiometrics.isSensorAvailable();
-      if (!available) {
-        Alert.alert("Thiết bị không hỗ trợ FaceID.");
         return;
       }
 
@@ -153,14 +153,12 @@ export default function LoginScreen() {
       }
     } catch (err: any) {
       // iOS: user cancel FaceID → err.code = -128
-      if (err?.code === "-128") {
-        return; // user huỷ, không cần alert
+      if (err?.code !== "-128") {
+        Alert.alert("Lỗi", "Không thể đăng nhập bằng FaceID.");
       }
-
-      Alert.alert("Lỗi", "Không thể đăng nhập bằng FaceID.");
     } finally {
       setIsLoading(false);
-      isFaceIDRunning.current = false;
+      isFaceIDRunning.current = false; // luôn reset → bấm lần 2 OK
     }
   };
 

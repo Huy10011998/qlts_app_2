@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "557212653738",
+    "project_id": "qlts-2",
+    "storage_bucket": "qlts-2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:557212653738:android:7d8e5684fd0b8d530d98d3",
+        "android_client_info": {
+          "package_name": "com.qlts_app_2"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAaUBsupHG_fquZNmMSNls5x94BvkoIDCE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

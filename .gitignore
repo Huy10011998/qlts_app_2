@@ -128,3 +128,17 @@ coverage/
 *.tar.gz
 *.rar
 *.tmp
+
+# React Native bundle
+android/app/src/main/assets/index.android.bundle
+
+# Android build
+android/app/build/
+android/.gradle/
+
+# Android generated resources
+android/app/src/main/res/drawable-*
+android/app/src/main/res/raw/
+
+# Logs
+*.log
