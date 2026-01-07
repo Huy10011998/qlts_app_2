@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   View,
   Text,
@@ -9,7 +15,6 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
-  ActivityIndicator,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import {
@@ -42,84 +47,66 @@ export default function AssetRelatedList() {
 
   const { nameClass, idRoot, propertyReference } = route.params;
 
-  if (!nameClass && idRoot && propertyReference) {
-    Alert.alert(
-      "Lỗi",
-      "Thiếu nameClass hoặc idRoot hoặc propertyReference trong params"
-    );
+  if (!nameClass || !idRoot || !propertyReference) {
+    Alert.alert("Lỗi", "Thiếu param bắt buộc");
     return null;
   }
 
-  // Điều kiện filter liên kết
+  // ===== FILTER CONDITIONS =====
   const conditions = useMemo(() => {
-    return propertyReference && idRoot
-      ? [
-          {
-            property: propertyReference,
-            operator: SqlOperator.Equals,
-            value: String(idRoot),
-            type: TypeProperty.Int,
-          },
-        ]
-      : [];
+    return [
+      {
+        property: propertyReference,
+        operator: SqlOperator.Equals,
+        value: String(idRoot),
+        type: TypeProperty.Int,
+      },
+    ];
   }, [propertyReference, idRoot]);
 
-  const handlePress = async (item: Record<string, any>) => {
-    try {
-      navigation.navigate("AssetRelatedDetails", {
-        id: String(item.id),
-        field: JSON.stringify(fieldActive),
-        nameClass: nameClass || "",
-      });
-    } catch (e) {
-      error(e);
-      Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
-    }
-  };
-
-  const [linhkien, setLinhkien] = useState<Record<string, any>[]>([]);
+  // ===== STATE =====
+  const [data, setData] = useState<Record<string, any>[]>([]);
   const [fieldActive, setFieldActive] = useState<Field[]>([]);
   const [fieldShowMobile, setFieldShowMobile] = useState<Field[]>([]);
   const [propertyClass, setPropertyClass] = useState<PropertyResponse>();
-  const [isLoading, setIsLoading] = useState(true); // load lần đầu
-  const [isLoadingMore, setIsLoadingMore] = useState(false); // load thêm
-  const [isSearching, setIsSearching] = useState(false); // loading khi search
-  const [skipSize, setSkipSize] = useState(0);
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+
   const [total, setTotal] = useState(0);
   const [searchText, setSearchText] = useState("");
-  const debouncedSearch = useDebounce(searchText, 600); // debounce 600ms
+
+  const debouncedSearch = useDebounce(searchText, 600);
   const pageSize = 20;
 
+  // QUAN TRỌNG: dùng ref cho skip
+  const skipRef = useRef(0);
+  const isFetchingRef = useRef(false);
+
+  // ===== FETCH DATA =====
   const fetchData = useCallback(
     async (isLoadMore = false) => {
-      if (!nameClass) return;
-
-      if (isLoadMore) {
-        setIsLoadingMore(true);
-      } else if (debouncedSearch) {
-        setIsSearching(true);
-      } else {
-        setIsLoading(true);
-      }
+      if (isFetchingRef.current) return;
 
       try {
+        isFetchingRef.current = true;
+
         if (!isLoadMore && fieldActive.length === 0) {
-          const responseFieldActive = await getFieldActive(nameClass);
-          const activeFields = responseFieldActive?.data || [];
-          setFieldActive(activeFields);
-          setFieldShowMobile(
-            activeFields.filter((f: { isShowMobile: any }) => f.isShowMobile)
-          );
+          const resField = await getFieldActive(nameClass);
+          const fields = resField?.data || [];
+          setFieldActive(fields);
+          setFieldShowMobile(fields.filter((f: Field) => f.isShowMobile));
         }
 
         if (!isLoadMore && !propertyClass) {
-          const responsePropertyClass = await getPropertyClass(nameClass);
-          setPropertyClass(responsePropertyClass?.data);
+          const resProp = await getPropertyClass(nameClass);
+          setPropertyClass(resProp?.data);
         }
 
-        const currentSkip = isLoadMore ? skipSize : 0;
+        const currentSkip = isLoadMore ? skipRef.current : 0;
 
-        const response = await getList(
+        const res = await getList(
           nameClass,
           "",
           pageSize,
@@ -129,50 +116,77 @@ export default function AssetRelatedList() {
           []
         );
 
-        const newItems: Record<string, any>[] = response?.data?.items || [];
-        const totalItems = response?.data?.totalCount || 0;
+        const items = res?.data?.items || [];
+        const totalCount = res?.data?.totalCount || 0;
 
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
 
         if (isLoadMore) {
-          setLinhkien((prev) => [...prev, ...newItems]);
-          setSkipSize(currentSkip + pageSize);
+          // CHỐNG TRÙNG ID TUYỆT ĐỐI
+          setData((prev) => {
+            const map = new Map<string, any>();
+            [...prev, ...items].forEach((item) => {
+              map.set(String(item.id), item);
+            });
+            return Array.from(map.values());
+          });
+
+          skipRef.current = currentSkip + pageSize;
         } else {
-          setLinhkien(newItems);
-          setSkipSize(pageSize);
+          setData(items);
+          skipRef.current = pageSize;
         }
 
-        setTotal(totalItems);
+        setTotal(totalCount);
       } catch (e) {
-        error("API error:", e);
-        Alert.alert("Lỗi", "Không thể tải dữ liệu.");
-        if (!isLoadMore) setLinhkien([]);
+        error(e);
+        Alert.alert("Lỗi", "Không thể tải dữ liệu");
+        if (!isLoadMore) setData([]);
       } finally {
+        isFetchingRef.current = false;
         setIsLoading(false);
         setIsLoadingMore(false);
         setIsSearching(false);
       }
     },
-    [nameClass, propertyClass, skipSize, debouncedSearch]
+    [nameClass, propertyClass, debouncedSearch, conditions, fieldActive.length]
   );
 
-  // fetch data khi nameClass hoặc debouncedSearch thay đổi
+  // ===== LOAD + SEARCH =====
   useEffect(() => {
-    if (!nameClass) return;
+    setIsLoading(true);
+    setIsSearching(debouncedSearch.trim().length > 0);
+    skipRef.current = 0;
+    setData([]);
+
     fetchData(false);
   }, [nameClass, debouncedSearch]);
 
+  // ===== LOAD MORE =====
   const handleLoadMore = () => {
-    if (linhkien.length < total && !isLoadingMore) {
-      fetchData(true);
+    if (isLoading || isLoadingMore || isSearching || data.length >= total) {
+      return;
     }
+
+    setIsLoadingMore(true);
+    fetchData(true);
   };
 
-  if (isLoading && !isSearching) return <IsLoading />;
+  const handlePress = (item: Record<string, any>) => {
+    navigation.navigate("AssetRelatedDetails", {
+      id: String(item.id),
+      field: JSON.stringify(fieldActive),
+      nameClass,
+    });
+  };
+
+  if (isLoading && !isSearching && !isLoadingMore) {
+    return <IsLoading />;
+  }
 
   return (
     <View style={{ flex: 1 }}>
-      {/* Search Box */}
+      {/* SEARCH */}
       <View style={styles.searchWrapper}>
         <TextInput
           placeholder="Tìm kiếm..."
@@ -182,17 +196,17 @@ export default function AssetRelatedList() {
           style={styles.searchInput}
         />
         {isSearching && (
-          <ActivityIndicator
+          <IsLoading
             size="small"
             color="#FF3333"
-            style={styles.searchLoader}
+            style={styles.searchSpinner}
           />
         )}
       </View>
 
-      {/* List */}
+      {/* LIST */}
       <FlatList
-        data={linhkien}
+        data={data}
         keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => (
           <ListCardAsset
@@ -202,14 +216,14 @@ export default function AssetRelatedList() {
             onPress={() => handlePress(item)}
           />
         )}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: 0 }}
         onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.5}
+        onEndReachedThreshold={0.4}
         ListFooterComponent={isLoadingMore ? <IsLoading /> : null}
         ListHeaderComponent={
           <View style={styles.stickyHeader}>
             <Text style={styles.header}>
-              Tổng số: {total} (Đã tải: {linhkien.length})
+              Tổng: {total} (Đã tải: {data.length})
             </Text>
           </View>
         }
@@ -221,28 +235,26 @@ export default function AssetRelatedList() {
 
 const styles = StyleSheet.create({
   searchWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginHorizontal: 12,
-    marginTop: 12,
-    marginBottom: 4,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    backgroundColor: "#fff",
-    paddingHorizontal: 10,
+    position: "relative",
+    margin: 12,
   },
 
   searchInput: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    fontSize: 14,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    paddingRight: 36,
     color: "#333",
   },
 
-  searchLoader: {
-    marginLeft: 8,
+  searchSpinner: {
+    position: "absolute",
+    right: 20,
+    top: "50%",
+    marginTop: -10,
   },
 
   header: {

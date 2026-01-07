@@ -1,23 +1,34 @@
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { HeaderDetails } from "../components/header/HeaderDetails";
-import AssetScreen from "../screens/Assets/AssetScreen";
-import HomeScreen from "../screens/Home/HomeScreen";
-import AssetListScreen from "../screens/Assets/AssetListScreen";
-import { RouteProp } from "@react-navigation/native";
+
 import { RootStackParamList } from "../types/Index";
-import HeaderHome from "../components/header/HeaderHome";
-import AssetDetailsScreen from "../screens/Assets/AssetDetailsScreen";
-import AssetRelaterListScreen from "../screens/Assets/AssetRelatedListScreen";
-import AssetRelatedDeTailsHistoryScreen from "../screens/Assets/AssetRelatedDeTailsHistoryScreen";
-import AssetRelatedDetailsScreen from "../screens/Assets/AssetRelatedDetailsScreen";
 import { capitalizeFirstLetter } from "../utils/Helper";
-import QrDetailsScreen from "../screens/QrScanner/QrDetailsScreen";
+
+// Headers
+import HeaderHome from "../components/header/HeaderHome";
+import { HeaderDetails } from "../components/header/HeaderDetails";
+
+// Screens
+import HomeScreen from "../screens/Home/HomeScreen";
+
+import AssetScreen from "../screens/Assets/AssetScreen";
+import AssetListScreen from "../screens/Assets/AssetListScreen";
+import AssetDetailsScreen from "../screens/Assets/AssetDetailsScreen";
+
+import AssetRelaterListScreen from "../screens/Assets/AssetRelatedListScreen";
+import AssetRelatedDetailsScreen from "../screens/Assets/AssetRelatedDetailsScreen";
+import AssetRelatedDeTailsHistoryScreen from "../screens/Assets/AssetRelatedDeTailsHistoryScreen";
+
 import AssetAddItemScreen from "../screens/Assets/AssetAddItemScreen";
-import AssetCloneItemScreen from "../screens/Assets/AssetCloneItemScreen";
 import AssetEditItemScreen from "../screens/Assets/AssetEditItemScreen";
+import AssetCloneItemScreen from "../screens/Assets/AssetCloneItemScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+/**
+ * Common header config
+ */
+const headerWithBack = HeaderDetails({ showBackButton: true });
 
 export default function HomeStack() {
   return (
@@ -35,24 +46,21 @@ export default function HomeStack() {
         component={AssetScreen}
         options={{
           title: "Tài sản",
-          ...HeaderDetails({ showBackButton: true }),
+          ...headerWithBack,
         }}
       />
 
       <Stack.Screen
         name="AssetList"
         component={AssetListScreen}
-        options={({
-          route,
-        }: {
-          route: RouteProp<RootStackParamList, "AssetList">;
-        }) => {
-          const { titleHeader } = route.params || {};
+        options={({ route }) => {
+          const title = route.params?.titleHeader
+            ? capitalizeFirstLetter(route.params.titleHeader)
+            : "Tài sản";
+
           return {
-            title: capitalizeFirstLetter(titleHeader) || "Tài sản",
-            ...HeaderDetails({
-              showBackButton: true,
-            }),
+            title,
+            ...headerWithBack,
           };
         }}
       />
@@ -60,38 +68,40 @@ export default function HomeStack() {
       <Stack.Screen
         name="AssetDetails"
         component={AssetDetailsScreen}
-        options={({
-          route,
-        }: {
-          route: RouteProp<RootStackParamList, "AssetDetails">;
-        }) => ({
-          title: capitalizeFirstLetter(route.params.titleHeader) || "Chi tiết",
-          ...HeaderDetails({ showBackButton: true }),
-        })}
+        options={({ route }) => {
+          const title = route.params?.titleHeader
+            ? capitalizeFirstLetter(route.params.titleHeader)
+            : "Chi tiết";
+
+          return {
+            title,
+            ...headerWithBack,
+          };
+        }}
       />
 
       <Stack.Screen
         name="AssetRelatedList"
         component={AssetRelaterListScreen}
-        options={({
-          route,
-        }: {
-          route: RouteProp<RootStackParamList, "AssetRelatedList">;
-        }) => ({
-          title: capitalizeFirstLetter(route.params.titleHeader) || "Linh kiện",
-          ...HeaderDetails({ showBackButton: true }),
-        })}
+        options={({ route }) => {
+          const title = route.params?.titleHeader
+            ? capitalizeFirstLetter(route.params.titleHeader)
+            : "Linh kiện";
+
+          return {
+            title,
+            ...headerWithBack,
+          };
+        }}
       />
 
       <Stack.Screen
         name="AssetRelatedDetails"
         component={AssetRelatedDetailsScreen}
-        options={({}: {
-          route: RouteProp<RootStackParamList, "AssetRelatedDetails">;
-        }) => ({
+        options={{
           title: "Chi tiết",
-          ...HeaderDetails({ showBackButton: true }),
-        })}
+          ...headerWithBack,
+        }}
       />
 
       <Stack.Screen
@@ -99,7 +109,7 @@ export default function HomeStack() {
         component={AssetRelatedDeTailsHistoryScreen}
         options={{
           title: "Chi tiết lịch sử",
-          ...HeaderDetails({ showBackButton: true }),
+          ...headerWithBack,
         }}
       />
 
@@ -108,9 +118,7 @@ export default function HomeStack() {
         component={AssetAddItemScreen}
         options={{
           title: "Thêm mới",
-          ...HeaderDetails({
-            showBackButton: true,
-          }),
+          ...headerWithBack,
         }}
       />
 
@@ -119,9 +127,7 @@ export default function HomeStack() {
         component={AssetEditItemScreen}
         options={{
           title: "Chỉnh sửa",
-          ...HeaderDetails({
-            showBackButton: true,
-          }),
+          ...headerWithBack,
         }}
       />
 
@@ -130,20 +136,7 @@ export default function HomeStack() {
         component={AssetCloneItemScreen}
         options={{
           title: "Thêm bản sao mới",
-          ...HeaderDetails({
-            showBackButton: true,
-          }),
-        }}
-      />
-
-      <Stack.Screen
-        name="QrDetails"
-        component={QrDetailsScreen}
-        options={{
-          title: "Thông tin tài sản",
-          ...HeaderDetails({
-            showBackButton: true,
-          }),
+          ...headerWithBack,
         }}
       />
     </Stack.Navigator>

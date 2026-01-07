@@ -19,7 +19,7 @@ export type RootStackParamList = {
     loadData?: () => void;
   };
 
-  HomeTab: {
+  ScanTab: {
     screen: "QrDetails";
     params: RootStackParamList["QrDetails"];
   };

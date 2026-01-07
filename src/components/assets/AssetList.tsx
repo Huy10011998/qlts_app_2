@@ -242,7 +242,7 @@ export default function AssetList() {
   );
 
   // Check Permission
-  const { can } = usePermission();
+  const { can, loaded } = usePermission();
 
   const refreshTop = async () => {
     if (isRefreshingTop) return;
@@ -506,7 +506,6 @@ export default function AssetList() {
           />
         }
         scrollEventThrottle={16}
-        contentContainerStyle={{ paddingBottom: 100 }}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
         ListFooterComponent={isLoadingMore ? <IsLoading /> : null}
@@ -537,7 +536,7 @@ export default function AssetList() {
             {!loadingTree && treeData.length > 0 && (
               <ScrollView
                 style={{ flex: 1 }}
-                contentContainerStyle={{ paddingBottom: 20 }}
+                contentContainerStyle={{ paddingBottom: 0 }}
               >
                 {treeData.map((node) => (
                   <TreeNodeItem
@@ -553,7 +552,7 @@ export default function AssetList() {
         </View>
       )}
 
-      {nameClass && can(nameClass, "Insert") && (
+      {loaded && nameClass && can(nameClass, "Insert") && (
         <AssetAddItem
           nameClass={nameClass}
           field={JSON.stringify(fieldActive)}
@@ -578,6 +577,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     paddingRight: 36,
+    color: "#333",
   },
 
   searchSpinner: {
@@ -612,15 +612,16 @@ const styles = StyleSheet.create({
     height: "100%",
     backgroundColor: "#fff",
     padding: 16,
+    paddingBottom: 0,
     elevation: 5,
     zIndex: 999,
-    paddingBottom: 70,
   },
 
   menuTitle: {
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 12,
+    color: "#333",
   },
 
   nodeRow: {

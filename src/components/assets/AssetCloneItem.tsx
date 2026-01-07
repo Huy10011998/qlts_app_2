@@ -290,7 +290,7 @@ export default function AssetCloneItem() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={{ flex: 1 }}
     >
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 20 }}>
         {Object.entries(groupedFields).map(([gName, fields]) => {
           const collapsed = collapsedGroups[gName];
           return (

@@ -249,6 +249,7 @@ export default function AssetScreen() {
           style={{
             flex: 1,
             paddingVertical: 10,
+            color: "#333",
           }}
         />
         {isSearching && (
@@ -276,7 +277,7 @@ export default function AssetScreen() {
           paddingVertical: 12,
           paddingHorizontal: 12,
         }}
-        style={{ backgroundColor: "#fff", marginBottom: 60, flex: 1 }}
+        style={{ marginBottom: 0, flex: 1 }}
       />
 
       {/* Modal báo cáo */}

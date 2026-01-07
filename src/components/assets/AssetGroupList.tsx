@@ -8,20 +8,12 @@ import {
   Modal,
   PanResponder,
   Linking,
-  Alert,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { AssetEditItemNavigationProp, GroupListProps } from "../../types";
+import { GroupListProps } from "../../types";
 import { TypeProperty } from "../../utils/Enum";
-import { checkReferenceUsage, deleteItems } from "../../services/data/CallApi";
 import IsLoading from "../ui/IconLoading";
-import { useNavigation, useRoute } from "@react-navigation/native";
-import { error } from "../../utils/Logger";
 import { fetchImage } from "../../utils/Image";
-import AssetActions from "./AssetActions";
-import { AppDispatch } from "../../store/Index";
-import { useDispatch } from "react-redux";
-import { setShouldRefreshList } from "../../store/AssetSlice";
 import { parseLink } from "../../utils/Link";
 
 export default function AssetGroupList({
@@ -32,119 +24,14 @@ export default function AssetGroupList({
   item,
   previousItem,
   isFieldChanged,
-  nameClass,
-  fieldActive,
 }: GroupListProps) {
   const [images, setImages] = useState<Record<string, string>>({});
   const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>(
     {}
   );
 
-  const route = useRoute();
-
-  const detailScreens = ["AssetDetails", "QrDetails"];
-
-  const isDetailsScreen = detailScreens.includes(route.name);
-
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-
-  const navigation = useNavigation<AssetEditItemNavigationProp>();
-
-  // Redux
-  const dispatch = useDispatch<AppDispatch>();
-
-  const handleDelete = async () => {
-    if (!item?.id) return;
-
-    try {
-      const body = { iDs: [item.id] };
-
-      // Check Reference trước
-      const res = await checkReferenceUsage(nameClass || "", body.iDs);
-      const refList = res?.data;
-
-      // Nếu bị tham chiếu → báo lỗi, KHÔNG hỏi confirm delete
-      if (Array.isArray(refList) && refList.length > 0) {
-        const refMessage = refList.map((e) => `• ${e.message}`).join("\n");
-
-        Alert.alert(
-          "Không thể xóa tài sản",
-          `Tài sản đang được tham chiếu tại:\n\n${refMessage}`
-        );
-        return;
-      }
-
-      //  Nếu KHÔNG bị tham chiếu → hỏi lại người dùng có muốn xóa không
-      Alert.alert(
-        "Xác nhận xoá",
-        "Bạn có chắc chắn muốn xoá tài sản này?",
-        [
-          {
-            text: "Huỷ",
-            style: "cancel",
-          },
-          {
-            text: "Xóa",
-            style: "destructive",
-            onPress: () => confirmDelete(),
-          },
-        ],
-        { cancelable: true }
-      );
-    } catch (err) {
-      Alert.alert("Lỗi", "Không thể kiểm tra dữ liệu tham chiếu!");
-    }
-  };
-
-  const confirmDelete = async () => {
-    try {
-      const deleteBody = {
-        iDs: [item.id],
-        saveHistory: true,
-      };
-
-      await deleteItems(nameClass || "", deleteBody);
-
-      Alert.alert("Thành công", "Đã xoá tài sản!", [
-        {
-          text: "OK",
-          onPress: () => {
-            dispatch(setShouldRefreshList(true));
-            navigation.goBack();
-          },
-        },
-      ]);
-    } catch (err) {
-      Alert.alert("Lỗi", "Không thể xoá tài sản!");
-    }
-  };
-
-  const onPressNavigateToEdit = (item: Record<string, any>) => {
-    try {
-      navigation.navigate("AssetEditItem", {
-        item,
-        nameClass,
-        field: JSON.stringify(fieldActive ?? []),
-      });
-    } catch (err) {
-      error(err);
-      Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
-    }
-  };
-
-  const onPressNavigateToClone = (item: Record<string, any>) => {
-    try {
-      navigation.navigate("AssetCloneItem", {
-        item,
-        nameClass,
-        field: JSON.stringify(fieldActive ?? []),
-      });
-    } catch (err) {
-      error(err);
-      Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
-    }
-  };
 
   useEffect(() => {
     Object.entries(groupedFields).forEach(([_, fields]) => {
@@ -173,15 +60,6 @@ export default function AssetGroupList({
 
   return (
     <>
-      {isDetailsScreen && (
-        <AssetActions
-          onEdit={() => onPressNavigateToEdit(item)}
-          onDelete={handleDelete}
-          onClone={() => onPressNavigateToClone(item)}
-          nameClass={nameClass}
-        />
-      )}
-
       {Object.entries(groupedFields).map(([groupName, fields]) => {
         const isCollapsed = collapsedGroups[groupName];
 

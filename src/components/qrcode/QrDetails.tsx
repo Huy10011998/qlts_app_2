@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useState, useRef } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+  useRef,
+  useCallback,
+} from "react";
 import {
   View,
   StyleSheet,
@@ -10,14 +16,14 @@ import {
   Dimensions,
   ScrollView,
 } from "react-native";
-import { QrDetailsProps } from "../../types/Index";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import Ionicons from "react-native-vector-icons/Ionicons";
+
+import { QrDetailsProps, RootStackParamList } from "../../types/Index";
 import { useParams } from "../../hooks/useParams";
 import { getDetails } from "../../services/Index";
 import IsLoading from "../ui/IconLoading";
-import { useNavigation } from "@react-navigation/native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../../types/Index";
-import Ionicons from "react-native-vector-icons/Ionicons";
 import { error, log } from "../../utils/Logger";
 import { ParseFieldActive } from "../../utils/parser/ParseFieldActive";
 import { GroupFields } from "../../utils/parser/GroupFields";
@@ -32,6 +38,7 @@ export default function QrDetails({ children }: QrDetailsProps) {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
+  //  STATE
   const [activeTab, setActiveTab] = useState("list");
   const [collapsedGroups, setCollapsedGroups] = useState<
     Record<string, boolean>
@@ -39,16 +46,16 @@ export default function QrDetails({ children }: QrDetailsProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [item, setItem] = useState<any>(null);
 
-  // Drawer state
+  // Drawer
   const [menuVisible, setMenuVisible] = useState(false);
   const slideAnim = useRef(new Animated.Value(MENU_WIDTH)).current;
+  const isAnimating = useRef(false);
 
-  // parse fields safely
+  //  PARSER
   const fieldActive = useMemo(() => ParseFieldActive(field), [field]);
-
-  // grouped by groupLayout (kept as-is style D)
   const groupedFields = useMemo(() => GroupFields(fieldActive), [fieldActive]);
 
+  // HANDLERS
   const handleChangeTab = (tabKey: string) => {
     setActiveTab(tabKey);
   };
@@ -57,48 +64,59 @@ export default function QrDetails({ children }: QrDetailsProps) {
     setCollapsedGroups((prev) => ToggleGroupUtil(prev, groupName));
   };
 
-  // Drawer functions
-  const openMenu = async () => {
-    setMenuVisible(true);
+  // DRAWER
+  const openMenu = useCallback(() => {
+    if (isAnimating.current) return;
+    isAnimating.current = true;
 
+    setMenuVisible(true);
     Animated.timing(slideAnim, {
       toValue: 0,
       duration: 300,
       useNativeDriver: true,
-    }).start();
-  };
+    }).start(() => {
+      isAnimating.current = false;
+    });
+  }, [slideAnim]);
 
-  const closeMenu = () => {
+  const closeMenu = useCallback(() => {
+    if (isAnimating.current) return;
+    isAnimating.current = true;
+
     Animated.timing(slideAnim, {
       toValue: MENU_WIDTH,
       duration: 300,
       useNativeDriver: true,
-    }).start(() => setMenuVisible(false));
-  };
+    }).start(() => {
+      isAnimating.current = false;
+      setMenuVisible(false);
+    });
+  }, [slideAnim]);
 
-  const toggleMenu = () => {
+  const toggleMenu = useCallback(() => {
     if (menuVisible) closeMenu();
     else openMenu();
-  };
+  }, [menuVisible, openMenu, closeMenu]);
 
+  //  HEADER
   useEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <TouchableOpacity onPress={toggleMenu} style={{ paddingHorizontal: 5 }}>
+        <TouchableOpacity onPress={toggleMenu} style={{ paddingHorizontal: 8 }}>
           <Ionicons name="menu" size={26} color="#fff" />
         </TouchableOpacity>
       ),
     });
   }, [navigation, toggleMenu]);
 
-  // Fetch chi tiết asset
+  //  DATA FETCHING
   useEffect(() => {
     const fetchDetails = async () => {
       setIsLoading(true);
       try {
         if (!id || !nameClass) throw new Error("Thiếu ID hoặc nameClass");
-        const response = await getDetails(nameClass, id);
-        setItem(response.data);
+        const res = await getDetails(nameClass, id);
+        setItem(res.data);
       } catch (err) {
         error(err);
         Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
@@ -106,6 +124,7 @@ export default function QrDetails({ children }: QrDetailsProps) {
         setIsLoading(false);
       }
     };
+
     setActiveTab("list");
     fetchDetails();
   }, [id, nameClass]);
@@ -114,6 +133,7 @@ export default function QrDetails({ children }: QrDetailsProps) {
     return <IsLoading size="large" color="#FF3333" />;
   }
 
+  //  RENDER
   return (
     <View style={styles.container}>
       {children({
@@ -128,52 +148,54 @@ export default function QrDetails({ children }: QrDetailsProps) {
         fieldActive: fieldActive || [],
       })}
 
-      {/* Drawer */}
-      <Animated.View
-        pointerEvents={menuVisible ? "auto" : "none"}
-        style={[
-          styles.menuContainer,
-          { transform: [{ translateX: slideAnim }] },
-        ]}
-      >
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ padding: 16, paddingBottom: 20 }}
-        >
-          <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 16 }}>
-            Menu
-          </Text>
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => log("Báo hỏng")}
-          >
-            <Text style={styles.menuItemText}>Báo hỏng / Yêu cầu sửa chữa</Text>
-          </TouchableOpacity>
+      {menuVisible && (
+        <>
+          <Pressable style={styles.overlay} onPress={closeMenu} />
 
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => log("Thang lý")}
+          <Animated.View
+            style={[
+              styles.menuContainer,
+              { transform: [{ translateX: slideAnim }] },
+            ]}
           >
-            <Text style={styles.menuItemText}>Thanh lý</Text>
-          </TouchableOpacity>
+            <ScrollView contentContainerStyle={styles.menuContent}>
+              <Text style={styles.menuTitle}>Menu</Text>
 
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => log("Trung chuyển")}
-          >
-            <Text style={styles.menuItemText}>Trung chuyển</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </Animated.View>
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => log("Báo hỏng")}
+              >
+                <Text style={styles.menuItemText}>
+                  Báo hỏng / Yêu cầu sửa chữa
+                </Text>
+              </TouchableOpacity>
 
-      {/* Overlay */}
-      {menuVisible && <Pressable style={styles.overlay} onPress={closeMenu} />}
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => log("Thanh lý")}
+              >
+                <Text style={styles.menuItemText}>Thanh lý</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => log("Trung chuyển")}
+              >
+                <Text style={styles.menuItemText}>Trung chuyển</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </Animated.View>
+        </>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9F9F9", paddingBottom: 20 },
+  container: {
+    flex: 1,
+    backgroundColor: "#F9F9F9",
+  },
 
   overlay: {
     ...StyleSheet.absoluteFillObject,
@@ -183,16 +205,30 @@ const styles = StyleSheet.create({
 
   menuContainer: {
     position: "absolute",
+    top: 0,
     right: 0,
+    bottom: 0,
     width: MENU_WIDTH,
-    height: "100%",
     backgroundColor: "#fff",
     zIndex: 999,
+    elevation: 10, // Android
+  },
+
+  menuContent: {
+    padding: 16,
+    paddingBottom: 24,
+  },
+
+  menuTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 16,
+    color: "#333",
   },
 
   menuItem: {
     paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
   },
@@ -200,5 +236,6 @@ const styles = StyleSheet.create({
   menuItemText: {
     fontSize: 15,
     color: "#333",
+    fontWeight: "500",
   },
 });

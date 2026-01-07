@@ -122,7 +122,7 @@ export default function AssetListAttachFile() {
             </View>
           );
         }}
-        contentContainerStyle={{ paddingBottom: 70 }}
+        contentContainerStyle={{ paddingBottom: 20 }}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
         ListFooterComponent={isLoadingMore ? <IsLoading /> : null}

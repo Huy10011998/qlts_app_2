@@ -3,8 +3,6 @@ import { Buffer } from "buffer";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_ENDPOINTS, BASE_URL } from "../../config/Index";
 import { error, log, warn } from "../../utils/Logger";
-import { jwtDecode } from "jwt-decode";
-import { JwtPayload } from "../../types/Context.d";
 
 // GLOBAL LOGOUT HANDLER
 let onAuthLogout: (() => Promise<void>) | null = null;
@@ -37,15 +35,6 @@ export const setRefreshInApi = (refresh: string | null) => {
   cachedRefresh = refresh;
 };
 
-// HELPERS
-const safeDecode = (token: string): JwtPayload | null => {
-  try {
-    return jwtDecode<JwtPayload>(token);
-  } catch (_) {
-    return null;
-  }
-};
-
 const getToken = async () => {
   if (cachedToken) return cachedToken;
   cachedToken = await AsyncStorage.getItem("token");
@@ -65,8 +54,31 @@ export const clearTokenStorage = async () => {
   await AsyncStorage.multiRemove(["token", "refreshToken"]);
 };
 
+export const resetAuthState = () => {
+  cachedToken = null;
+  cachedRefresh = null;
+  isRefreshing = false;
+  refreshSubscribers = [];
+};
+
+export const hardResetApi = () => {
+  log("[API] Hard reset API state");
+  cachedToken = null;
+  cachedRefresh = null;
+  isRefreshing = false;
+  refreshSubscribers = [];
+  refreshPromise = null;
+};
+
+const throwNeedLogin = (): never => {
+  const e = new Error("NEED_LOGIN");
+  (e as any).NEED_LOGIN = true;
+  throw e;
+};
+
 // REFRESH FLOW
 let isRefreshing = false;
+let refreshPromise: Promise<string> | null = null;
 let refreshSubscribers: ((token: string | null) => void)[] = [];
 
 const subscribeTokenRefresh = (cb: (token: string | null) => void) => {
@@ -78,67 +90,52 @@ const onRefreshed = (token: string | null) => {
   refreshSubscribers = [];
 };
 
-const refreshTokenFlow = async (): Promise<string> => {
-  try {
-    const refreshToken = await getRefreshToken();
-    if (!refreshToken) throw { NEED_LOGIN: true };
+export const refreshTokenFlow = async (): Promise<string> => {
+  if (refreshPromise) return refreshPromise;
 
-    const res = await refreshApi.post(API_ENDPOINTS.REFRESH_TOKEN, {
-      value: refreshToken,
-    });
+  refreshPromise = (async () => {
+    try {
+      const refreshToken = await getRefreshToken();
+      if (!refreshToken) throwNeedLogin();
 
-    const data = res?.data?.data;
-    if (!data?.accessToken) throw { NEED_LOGIN: true };
+      const res = await refreshApi.post(API_ENDPOINTS.REFRESH_TOKEN, {
+        value: refreshToken,
+      });
 
-    // Save access token
-    await AsyncStorage.setItem("token", data.accessToken);
-    cachedToken = data.accessToken;
+      const data = res?.data?.data;
+      if (!data?.accessToken) throwNeedLogin();
 
-    // Save refresh token (if provided)
-    if (data.refreshToken) {
-      await AsyncStorage.setItem("refreshToken", data.refreshToken);
-      cachedRefresh = data.refreshToken;
+      await AsyncStorage.setItem("token", data.accessToken);
+      setTokenInApi(data.accessToken);
+
+      if (data.refreshToken) {
+        await AsyncStorage.setItem("refreshToken", data.refreshToken);
+        cachedRefresh = data.refreshToken;
+      }
+
+      log("[API] Refresh token success");
+      return data.accessToken;
+    } catch (err: any) {
+      const status = err?.response?.status;
+      if (status === 401 || status === 403 || err?.NEED_LOGIN) {
+        await clearTokenStorage();
+        throwNeedLogin();
+      }
+      throw err;
+    } finally {
+      refreshPromise = null;
     }
+  })();
 
-    log("[API] Token refreshed successfully");
-    return data.accessToken;
-  } catch (err: any) {
-    await clearTokenStorage();
-    throw Object.assign(new Error("NEED_LOGIN"), { NEED_LOGIN: true });
-  }
+  return refreshPromise;
 };
 
 // REQUEST
-const REFRESH_BEFORE_MS = 60 * 1000; // 1 phút
-
 api.interceptors.request.use(async (config) => {
-  let token = await getToken();
+  const token = await getToken();
+
   if (token) {
-    const decoded = safeDecode(token);
-    const expiresIn = decoded?.exp ? decoded.exp * 1000 - Date.now() : null;
-
-    if (expiresIn !== null && expiresIn < REFRESH_BEFORE_MS) {
-      log("[API] Token near expiry → refreshing...");
-
-      if (isRefreshing) {
-        token = await new Promise<string | null>((resolve) =>
-          subscribeTokenRefresh(resolve)
-        );
-      } else {
-        isRefreshing = true;
-        try {
-          token = await refreshTokenFlow();
-          onRefreshed(token);
-        } catch (e) {
-          onRefreshed(null);
-          throw e;
-        } finally {
-          isRefreshing = false;
-        }
-      }
-    }
-
-    (config.headers as any).Authorization = `Bearer ${token}`;
+    config.headers.Authorization = `Bearer ${token}`;
   }
 
   return config;

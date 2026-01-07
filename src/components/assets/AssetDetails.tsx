@@ -87,5 +87,5 @@ export default function AssetDetails({ children }: DetailsProps) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9F9F9", paddingBottom: 20 },
+  container: { flex: 1, backgroundColor: "#F9F9F9" },
 });

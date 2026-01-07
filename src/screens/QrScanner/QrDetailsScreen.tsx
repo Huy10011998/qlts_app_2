@@ -38,5 +38,5 @@ export default function QrDetailsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F9F9F9" },
-  content: { flex: 1, paddingBottom: 60 },
+  content: { flex: 1 },
 });

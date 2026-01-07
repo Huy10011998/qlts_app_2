@@ -54,7 +54,6 @@ const styles = StyleSheet.create({
   },
   iconBtn: {
     marginLeft: 10,
-    marginBottom: 10,
   },
   iconWrapper: {
     backgroundColor: "rgba(255, 255, 255, 0.9)",

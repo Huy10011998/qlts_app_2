@@ -12,7 +12,11 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
+      <StatusBar
+        translucent={false}
+        backgroundColor="#FF3333"
+        barStyle={isDarkMode ? "light-content" : "dark-content"}
+      />
       <Provider store={store}>
         <AuthProvider>
           <NavigationContainer>

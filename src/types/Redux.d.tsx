@@ -9,4 +9,5 @@ export interface AssetState {
 
 export interface PermissionState {
   permissions: string[];
+  loaded: boolean;
 }

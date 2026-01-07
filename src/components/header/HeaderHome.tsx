@@ -9,17 +9,18 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import { TabsScreenNavigationProp } from "../../types";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function HeaderHome() {
   const navigation = useNavigation<TabsScreenNavigationProp>();
+  const insets = useSafeAreaInsets(); // lấy safe area
 
-  // Hàm mở website
   const handleOpenWebsite = () => {
     Linking.openURL("https://cholimexfood.com.vn");
   };
 
   return (
-    <View style={styles.headerContainer}>
+    <View style={[styles.headerContainer, { paddingTop: insets.top + 8 }]}>
       <TouchableOpacity onPress={handleOpenWebsite}>
         <Image
           source={require("../../assets/images/logo-cholimex.jpg")}
@@ -27,9 +28,10 @@ export default function HeaderHome() {
           resizeMode="contain"
         />
       </TouchableOpacity>
+
       <View style={styles.headerIcons}>
         <TouchableOpacity onPress={() => navigation.navigate("Tabs")}>
-          <Ionicons name="home-outline" size={26} color="#fff" />
+          <Ionicons name="home-outline" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
     </View>
@@ -39,7 +41,6 @@ export default function HeaderHome() {
 const styles = StyleSheet.create({
   headerContainer: {
     backgroundColor: "#FF3333",
-    paddingTop: 50,
     paddingBottom: 10,
     paddingHorizontal: 16,
     flexDirection: "row",

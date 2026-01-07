@@ -20,11 +20,7 @@ import IsLoading from "../../components/ui/IconLoading";
 import { changePasswordApi } from "../../services/Index";
 import { API_ENDPOINTS } from "../../config/Index";
 import { SettingScreenNavigationProp, UserInfo } from "../../types";
-import {
-  callApi,
-  setRefreshInApi,
-  setTokenInApi,
-} from "../../services/data/CallApi";
+import { callApi, hardResetApi } from "../../services/data/CallApi";
 import ReactNativeBiometrics from "react-native-biometrics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { clearPermissions } from "../../store/PermissionSlice";
@@ -91,7 +87,7 @@ const SettingScreen = () => {
   const [isFaceIdEnabled, setIsFaceIdEnabled] = useState(false);
 
   const navigation = useNavigation<SettingScreenNavigationProp>();
-  const { logout, setIosAuthenticated } = useAuth();
+  const { logout } = useAuth();
 
   const dispatch = useDispatch<AppDispatch>();
 
@@ -110,7 +106,8 @@ const SettingScreen = () => {
         // Load FaceID status
         const flag = await AsyncStorage.getItem("faceid-enabled");
         setIsFaceIdEnabled(flag === "1");
-      } catch (error) {
+      } catch (error: any) {
+        if (error?.NEED_LOGIN) return;
         Alert.alert("Lỗi", "Không thể tải thông tin người dùng.");
       } finally {
         setIsLoading(false);
@@ -181,28 +178,20 @@ const SettingScreen = () => {
 
     setIsLoading(true);
     try {
-      // 1. Logout auth context (clear token + storage)
+      // 0. Reset API state ngay lập tức
+      hardResetApi();
+
+      // 1. Logout auth (token + keychain + storage)
       await logout();
 
-      // 2. Reset iOS auth state (RẤT QUAN TRỌNG)
-      setIosAuthenticated(false);
-
-      // 3. Xóa keychain
-      await Keychain.resetGenericPassword({ service: "user-login" });
-      await Keychain.resetGenericPassword({ service: "faceid-login" });
-
-      // 4. Clear CallApi in-memory token
-      setTokenInApi(null);
-      setRefreshInApi(null);
-
-      // 5. Clear Redux permissions
+      // 2. Clear Redux permissions
       dispatch(clearPermissions());
 
-      // 6. Reset FaceID switch
+      // 3. Clear FaceID setting
       setIsFaceIdEnabled(false);
-      await AsyncStorage.setItem("faceid-enabled", "0");
+      await AsyncStorage.removeItem("faceid-enabled");
 
-      // App sẽ tự quay về Login do AuthContext thay đổi
+      // App tự quay về Login
     } catch (e) {
       Alert.alert("Lỗi", "Không thể đăng xuất.");
     } finally {

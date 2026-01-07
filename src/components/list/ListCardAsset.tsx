@@ -10,7 +10,6 @@ import {
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { CardItemProps } from "../../types";
 import { TypeProperty } from "../../utils/Enum";
-import IsLoading from "../ui/IconLoading";
 import { convertToResizePath, fetchImage } from "../../utils/Image";
 import { getFieldValue } from "../../utils/fields/GetFieldValue";
 import { parseLink } from "../../utils/Link";
@@ -22,9 +21,7 @@ export default function ListCardAsset({
   onPress = () => {},
 }: CardItemProps) {
   const [images, setImages] = useState<Record<string, string>>({});
-  const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>(
-    {}
-  );
+  const [, setLoadingImages] = useState<Record<string, boolean>>({});
 
   // Fetch ảnh cho các field type Image
   useEffect(() => {

@@ -3,6 +3,7 @@ import { PermissionState } from "../types/Redux.d";
 
 const initialState: PermissionState = {
   permissions: [],
+  loaded: false,
 };
 
 const permissionSlice = createSlice({
@@ -11,9 +12,11 @@ const permissionSlice = createSlice({
   reducers: {
     setPermissions(state, action: PayloadAction<string[]>) {
       state.permissions = action.payload;
+      state.loaded = true;
     },
     clearPermissions(state) {
       state.permissions = [];
+      state.loaded = false;
     },
   },
 });

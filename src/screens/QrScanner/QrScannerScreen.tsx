@@ -78,7 +78,7 @@ export default function QrScannerScreen() {
             const responseFieldActive = await getFieldActive(title);
             const fieldActive = responseFieldActive?.data || [];
 
-            navigation.navigate("HomeTab", {
+            navigation.navigate("ScanTab", {
               screen: "QrDetails",
               params: {
                 id,

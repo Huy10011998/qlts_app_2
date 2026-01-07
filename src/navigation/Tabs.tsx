@@ -1,60 +1,71 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { StyleSheet, Platform } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { View, StyleSheet } from "react-native";
-import SettingStack from "./SettingStack";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 import HomeStack from "./HomeStack";
-import QrScannerScreen from "../screens/QrScanner/QrScannerScreen";
+import SettingStack from "./SettingStack";
+import ScanStack from "./ScanStack";
 
 const Tab = createBottomTabNavigator();
+const TAB_HEIGHT = 56;
+const FAB_SIZE = 64;
 
 export default function Tabs() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tab.Navigator
       screenOptions={{
+        headerShown: false,
+        tabBarShowLabel: true,
+
+        tabBarStyle: [
+          styles.tabBar,
+          {
+            height: TAB_HEIGHT + insets.bottom,
+            paddingBottom: insets.bottom,
+          },
+        ],
+
+        tabBarLabelStyle: styles.label,
         tabBarActiveTintColor: "#fff",
-        tabBarStyle: {
-          position: "absolute",
-          height: 70,
-          backgroundColor: "#FF3333",
-        },
-        tabBarLabelStyle: { fontSize: 12, fontWeight: "bold" },
+        tabBarInactiveTintColor: "#ffd6d6",
       }}
     >
+      {/* HOME */}
       <Tab.Screen
         name="HomeTab"
         component={HomeStack}
         options={{
           title: "Trang chủ",
-          headerShown: false,
           tabBarIcon: ({ color }) => (
-            <Ionicons name="home" size={26} color={color} />
+            <Ionicons name="home" size={24} color={color} />
           ),
         }}
       />
 
+      {/* SCAN – FAB */}
       <Tab.Screen
         name="ScanTab"
-        component={QrScannerScreen}
+        component={ScanStack}
         options={{
-          title: "",
-          headerShown: false,
-          tabBarIcon: () => (
-            <View style={styles.scanButton}>
-              <Ionicons name="qr-code-outline" size={32} color="#fff" />
-            </View>
+          title: "Quét QR",
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="qr-code-outline" size={30} color={color} />
           ),
         }}
       />
 
+      {/* SETTING */}
       <Tab.Screen
         name="SettingTab"
         component={SettingStack}
         options={{
           title: "Cài đặt",
-          headerShown: false,
           tabBarIcon: ({ color }) => (
-            <Ionicons name="settings" size={26} color={color} />
+            <Ionicons name="settings" size={24} color={color} />
           ),
         }}
       />
@@ -62,17 +73,66 @@ export default function Tabs() {
   );
 }
 
+// function FabButton({ onPress }: any) {
+//   return (
+//     <TouchableOpacity
+//       activeOpacity={0.85}
+//       onPress={onPress}
+//       style={styles.fabWrapper}
+//     >
+//       <View style={styles.fab}>
+//         <Ionicons name="qr-code-outline" size={30} color="#fff" />
+//       </View>
+//     </TouchableOpacity>
+//   );
+// }
+
 const styles = StyleSheet.create({
-  scanButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+  tabBar: {
+    backgroundColor: "#FF3333",
+    borderTopWidth: 0,
+
+    ...(Platform.OS === "ios"
+      ? {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: -3 },
+          shadowOpacity: 0.15,
+          shadowRadius: 6,
+        }
+      : {
+          elevation: 20,
+        }),
+  },
+
+  label: {
+    fontSize: 11,
+    fontWeight: "600",
+    marginTop: 2,
+  },
+
+  fabWrapper: {
+    position: "absolute",
+    top: -28,
+    alignSelf: "center",
+  },
+
+  fab: {
+    width: FAB_SIZE,
+    height: FAB_SIZE,
+    borderRadius: FAB_SIZE / 2,
     backgroundColor: "#FF3333",
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 5,
+
+    ...(Platform.OS === "ios"
+      ? {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.25,
+          shadowRadius: 6,
+        }
+      : {
+          elevation: 12,
+        }),
   },
 });

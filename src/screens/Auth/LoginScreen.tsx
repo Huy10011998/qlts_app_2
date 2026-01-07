@@ -21,7 +21,11 @@ import { getPermission } from "../../services/Index";
 import { setPermissions } from "../../store/PermissionSlice";
 import { AppDispatch } from "../../store";
 import { useDispatch } from "react-redux";
-import { setRefreshInApi, setTokenInApi } from "../../services/data/CallApi";
+import {
+  hardResetApi,
+  setRefreshInApi,
+  setTokenInApi,
+} from "../../services/data/CallApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function LoginScreen() {
@@ -55,6 +59,7 @@ export default function LoginScreen() {
     setIsLoading(true);
 
     try {
+      hardResetApi(); // reset CallApi state before login
       const res = await loginApi(userName, userPassword);
 
       if (res?.data?.accessToken) {
@@ -66,24 +71,36 @@ export default function LoginScreen() {
 
         // Lưu lại login thường (không phải FaceID)
         await Keychain.setGenericPassword(userName, userPassword, {
-          service: "user-login",
+          service: "auth-login",
           accessible: Keychain.ACCESSIBLE.WHEN_PASSCODE_SET_THIS_DEVICE_ONLY,
+          accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET,
         });
 
         // Lấy quyền
         const permissionRes = await getPermission();
-        const listPermission = permissionRes?.data ?? [];
+        dispatch(setPermissions(permissionRes.data));
 
         if (Platform.OS === "ios") {
           setIosAuthenticated(true);
         }
-
-        dispatch(setPermissions(listPermission));
-      } else {
-        Alert.alert("Lỗi", "Không thể kết nối đến máy chủ.");
       }
-    } catch (error) {
-      Alert.alert("Đăng nhập thất bại", "Sai tài khoản hoặc mật khẩu.");
+    } catch (err: any) {
+      const status = err.response?.status;
+      const message = err.response?.data?.message;
+
+      if (status === 401) {
+        Alert.alert(
+          "Đăng nhập thất bại",
+          message || "Sai tài khoản hoặc mật khẩu."
+        );
+      } else if (!err.response) {
+        Alert.alert(
+          "Lỗi kết nối",
+          "Không thể kết nối đến máy chủ. Vui lòng kiểm tra mạng."
+        );
+      } else {
+        Alert.alert("Lỗi", "Có lỗi xảy ra. Vui lòng thử lại.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -116,13 +133,13 @@ export default function LoginScreen() {
 
       // Get credentials → iOS sẽ auto prompt FaceID
       const credentials = await Keychain.getGenericPassword({
-        service: "faceid-login",
+        service: "auth-login",
         authenticationPrompt: {
           title: "Xác thực",
           subtitle: "Sử dụng FaceID để đăng nhập",
           description: "Đăng nhập bằng FaceID",
           cancel: "Huỷ",
-        } as any,
+        },
       });
 
       if (!credentials) {
@@ -131,6 +148,8 @@ export default function LoginScreen() {
       }
 
       setIsLoading(true);
+
+      hardResetApi();
 
       const response = await loginApi(
         credentials.username,
@@ -145,7 +164,7 @@ export default function LoginScreen() {
         setRefreshInApi(response.data.refreshToken ?? null);
 
         const permissionRes = await getPermission();
-        dispatch(setPermissions(permissionRes?.data ?? []));
+        dispatch(setPermissions(permissionRes.data));
 
         setIosAuthenticated(true);
       } else {

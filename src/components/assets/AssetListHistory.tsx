@@ -124,7 +124,8 @@ export default function AssetListHistory() {
             onPress={() => handlePress(item, index)}
           />
         )}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: 20 }}
+        scrollEventThrottle={16}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
         ListFooterComponent={isLoadingMore ? <IsLoading /> : null}

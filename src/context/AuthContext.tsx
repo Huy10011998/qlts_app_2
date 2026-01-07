@@ -6,8 +6,14 @@ import React, {
   useEffect,
   useState,
 } from "react";
-import { error, log, warn } from "../utils/Logger";
-import { clearTokenStorage, setOnAuthLogout } from "../services/data/CallApi";
+import * as Keychain from "react-native-keychain";
+import { error, log } from "../utils/Logger";
+import {
+  hardResetApi,
+  setOnAuthLogout,
+  setTokenInApi,
+  setRefreshInApi,
+} from "../services/data/CallApi";
 import { AuthContextType } from "../types/Context.d";
 
 // CONTEXT
@@ -17,89 +23,108 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const [token, setTokenState] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [authReady, setAuthReady] = useState(false); // NEW
+  const [isLoading, setIsLoading] = useState(false);
   const [iosAuthenticated, setIosAuthenticated] = useState(false);
 
-  // Lưu hoặc clear access token
+  // TOKEN HANDLERS
+
   const setToken = async (value: string | null) => {
     try {
       if (value) {
-        log("[Auth] Save access token:", value);
         await AsyncStorage.setItem("token", value);
+        setTokenInApi(value); // sync API
+        log("[Auth] Save access token");
       } else {
-        log("[Auth] Clear access token");
         await AsyncStorage.removeItem("token");
+        setTokenInApi(null);
+        log("[Auth] Clear access token");
       }
       setTokenState(value);
-      log("[Auth] tokenState updated:", value);
     } catch (e) {
       error("[Auth] Failed to set token", e);
     }
   };
 
-  // Lưu hoặc clear refresh token
   const setRefreshToken = async (value: string | null) => {
     try {
       if (value) {
-        log("[Auth] Save refresh token:", value);
         await AsyncStorage.setItem("refreshToken", value);
+        setRefreshInApi(value); // sync API
+        log("[Auth] Save refresh token");
       } else {
-        log("[Auth] Clear refresh token");
         await AsyncStorage.removeItem("refreshToken");
+        setRefreshInApi(null);
+        log("[Auth] Clear refresh token");
       }
     } catch (e) {
       error("[Auth] Failed to set refresh token", e);
     }
   };
 
-  // Logout → clear cả access + refresh token
+  // LOGOUT
+
   const logout = async () => {
-    log("[Auth] Logout → clear all tokens");
+    log("[Auth] Logout → hard reset");
+    setIsLoading(true);
     try {
-      await Promise.all([
-        AsyncStorage.removeItem("token"),
-        AsyncStorage.removeItem("refreshToken"),
-        clearTokenStorage(),
+      hardResetApi();
+      await AsyncStorage.multiRemove([
+        "token",
+        "refreshToken",
+        "faceid-enabled",
       ]);
-    } catch (e) {
-      warn("[Auth] Error clearing storage on logout");
+      await Keychain.resetGenericPassword({ service: "auth-login" });
     } finally {
       setTokenState(null);
+      setIosAuthenticated(false);
+      setIsLoading(false);
     }
   };
 
-  // Khi app load → lấy access token
+  // BOOTSTRAP APP
+
   useEffect(() => {
-    const loadToken = async () => {
+    const bootstrapAuth = async () => {
       try {
-        const stored = await AsyncStorage.getItem("token");
-        setTokenState(stored);
-        log("[Auth] Loaded token from storage:", stored);
-      } catch (err) {
-        error("[Auth] Failed to load token from storage", err);
+        const [storedToken, storedRefresh] = await Promise.all([
+          AsyncStorage.getItem("token"),
+          AsyncStorage.getItem("refreshToken"),
+        ]);
+
+        setTokenState(storedToken);
+        setTokenInApi(storedToken); // RẤT QUAN TRỌNG
+        setRefreshInApi(storedRefresh);
+
+        log("[Auth] Bootstrap done", {
+          token: !!storedToken,
+          refresh: !!storedRefresh,
+        });
+      } catch (e) {
+        error("[Auth] Bootstrap failed", e);
         await logout();
       } finally {
-        setIsLoading(false);
+        setAuthReady(true); // AUTH SẴN SÀNG
       }
     };
 
-    loadToken();
+    bootstrapAuth();
   }, []);
 
-  // Đăng ký logout handler cho API
+  // API → LOGOUT HANDLER
+
   useEffect(() => {
     setOnAuthLogout(async () => {
       await logout();
     });
-    return () => {
-      setOnAuthLogout(null);
-    };
+    return () => setOnAuthLogout(null);
   }, []);
 
   return (
     <AuthContext.Provider
       value={{
         token,
+        authReady, // expose
         isLoading,
         iosAuthenticated,
         setIosAuthenticated,
@@ -114,8 +139,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 };
 
 // HOOK
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) throw new Error("useAuth phải được dùng trong AuthProvider");
+  if (!context) {
+    throw new Error("useAuth phải được dùng trong AuthProvider");
+  }
   return context;
 };
