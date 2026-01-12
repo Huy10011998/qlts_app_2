@@ -2,20 +2,17 @@ import React, { useEffect, useMemo, useState } from "react";
 import { View, StyleSheet, Alert } from "react-native";
 import { useRoute } from "@react-navigation/native";
 import IsLoading from "../../components/ui/IconLoading";
-import {
-  DetailsHistoryProps,
-  DetailsHistoryRouteProp,
-  Field,
-} from "../../types/Index";
+import { DetailsHistoryProps, Field, StackRoute } from "../../types/Index";
 import { getDetailsHistory } from "../../services/data/CallApi";
 import { error } from "../../utils/Logger";
 import { ParseFieldActive } from "../../utils/parser/ParseFieldActive";
 import { GroupFields } from "../../utils/parser/GroupFields";
 import { ToggleGroupUtil } from "../../utils/parser/ToggleGroup";
 import { getFieldValue } from "../../utils/fields/GetFieldValue";
+import { useAutoReload } from "../../hooks/useAutoReload";
 
 export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
-  const route = useRoute<DetailsHistoryRouteProp>();
+  const route = useRoute<StackRoute<"AssetHistoryDetail">>();
   const { id, id_previous, nameClass, field } = route.params;
 
   const [activeTab, setActiveTab] = useState("list");
@@ -40,34 +37,36 @@ export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
     setActiveTab(tabKey);
   };
 
-  useEffect(() => {
-    const fetchDetails = async () => {
-      setIsLoading(true);
-      try {
-        if (!id || !nameClass) throw new Error("Thiếu ID hoặc nameClass");
+  const fetchDetails = async () => {
+    setIsLoading(true);
+    try {
+      if (!id || !nameClass) throw new Error("Thiếu ID hoặc nameClass");
 
-        // bản ghi hiện tại
-        const response = await getDetailsHistory(nameClass, id);
-        setItem(response.data);
+      // bản ghi hiện tại
+      const response = await getDetailsHistory(nameClass, id);
+      setItem(response.data);
 
-        // bản ghi trước đó
-        if (id_previous) {
-          const prevResponse = await getDetailsHistory(nameClass, id_previous);
-          setPreviousItem(prevResponse.data);
-        } else {
-          setPreviousItem(null);
-        }
-      } catch (e) {
-        error(e);
-        Alert.alert("Lỗi", `Không thể tải chi tiết lịch sử ${nameClass}`);
-      } finally {
-        setIsLoading(false);
+      // bản ghi trước đó
+      if (id_previous) {
+        const prevResponse = await getDetailsHistory(nameClass, id_previous);
+        setPreviousItem(prevResponse.data);
+      } else {
+        setPreviousItem(null);
       }
-    };
+    } catch (e) {
+      error(e);
+      Alert.alert("Lỗi", `Không thể tải chi tiết lịch sử ${nameClass}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     setActiveTab("list");
     fetchDetails();
   }, [id, id_previous, nameClass]);
+
+  useAutoReload(fetchDetails);
 
   // so sánh field
   const isFieldChanged = (

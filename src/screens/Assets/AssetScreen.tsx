@@ -16,10 +16,10 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { useNavigation } from "@react-navigation/native";
 import {
-  AssetListScreenNavigationProp,
   DropdownProps,
   GetMenuActiveResponse,
   Item,
+  StackNavigation,
 } from "../../types/Index";
 import { API_ENDPOINTS } from "../../config/Index";
 import { useDebounce } from "../../hooks/useDebounce";
@@ -28,6 +28,7 @@ import ReportView from "../../components/report/ReportView";
 import { removeVietnameseTones } from "../../utils/Helper";
 import { callApi } from "../../services/data/CallApi";
 import { error } from "../../utils/Logger";
+import { useAutoReload } from "../../hooks/useAutoReload";
 
 if (
   Platform.OS === "android" &&
@@ -42,7 +43,8 @@ const DropdownItem: React.FC<
     onShowReport: (item: Item) => void;
   }
 > = ({ item, level = 0, expandedIds, onToggle, onShowReport }) => {
-  const navigation = useNavigation<AssetListScreenNavigationProp>();
+  const navigation = useNavigation<StackNavigation<"AssetList">>();
+
   const hasChildren = item.children && item.children.length > 0;
   const expanded = expandedIds.includes(item.id);
 
@@ -151,20 +153,20 @@ export default function AssetScreen() {
 
   const filteredData = useMemo(() => {
     if (!debouncedSearch.trim()) {
-      setExpandedIds([]);
       return data;
     }
 
     const keyword = removeVietnameseTones(debouncedSearch);
     const expandedSet = new Set<string | number>();
 
-    const filterTree = (nodes: Item[]): Item[] => {
-      return nodes
+    const filterTree = (nodes: Item[]): Item[] =>
+      nodes
         .map((node) => {
           const match = removeVietnameseTones(node.label).includes(keyword);
           const filteredChildren = node.children.length
             ? filterTree(node.children)
             : [];
+
           if (match || filteredChildren.length > 0) {
             if (filteredChildren.length > 0) expandedSet.add(node.id);
             return { ...node, children: filteredChildren };
@@ -172,11 +174,33 @@ export default function AssetScreen() {
           return null;
         })
         .filter((n): n is Item => n !== null);
+
+    return filterTree(data);
+  }, [debouncedSearch, data]);
+
+  useEffect(() => {
+    if (!debouncedSearch.trim()) {
+      setExpandedIds([]);
+      return;
+    }
+
+    const keyword = removeVietnameseTones(debouncedSearch);
+    const expandedSet = new Set<string | number>();
+
+    const walk = (nodes: Item[]) => {
+      nodes.forEach((node) => {
+        if (
+          removeVietnameseTones(node.label).includes(keyword) &&
+          node.children.length
+        ) {
+          expandedSet.add(node.id);
+        }
+        if (node.children.length) walk(node.children);
+      });
     };
 
-    const result = filterTree(data);
+    walk(data);
     setExpandedIds(Array.from(expandedSet));
-    return result;
   }, [debouncedSearch, data]);
 
   const handleToggle = (id: string | number) => {
@@ -184,34 +208,48 @@ export default function AssetScreen() {
       prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]
     );
   };
+  const fetchingRef = useRef(false);
+
+  const fetchData = async () => {
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
+
+    const showLoading = data.length === 0;
+
+    try {
+      if (showLoading) setIsFetching(true);
+
+      const response = (await callApi(
+        "POST",
+        API_ENDPOINTS.GET_MENU_ACTIVE,
+        {}
+      )) as GetMenuActiveResponse;
+
+      if (!Array.isArray(response?.data)) {
+        throw new Error("Dữ liệu trả về không hợp lệ.");
+      }
+
+      const menuAccount = response.data
+        .filter((item) => item.typeGroup === 0)
+        .sort((a, b) => Number(a.stt) - Number(b.stt));
+
+      setData(buildTree(menuAccount));
+    } catch (e) {
+      error("API error:", e);
+      if (showLoading) {
+        Alert.alert("Lỗi", "Không thể tải dữ liệu menu.");
+      }
+    } finally {
+      fetchingRef.current = false;
+      if (showLoading) setIsFetching(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = (await callApi(
-          "POST",
-          API_ENDPOINTS.GET_MENU_ACTIVE,
-          {}
-        )) as GetMenuActiveResponse;
-
-        if (Array.isArray(response?.data)) {
-          const menuAccount = response.data
-            .filter((item) => item.typeGroup === 0)
-            .sort((a, b) => Number(a.stt) - Number(b.stt));
-          setData(buildTree(menuAccount));
-        } else {
-          throw new Error("Dữ liệu trả về không hợp lệ.");
-        }
-      } catch (e) {
-        error("API error:", e);
-        Alert.alert("Lỗi", "Không thể tải dữ liệu menu.");
-      } finally {
-        setIsFetching(false);
-      }
-    };
-
     fetchData();
   }, []);
+
+  useAutoReload(fetchData);
 
   // show loading nhỏ trong search khi gõ
   useEffect(() => {

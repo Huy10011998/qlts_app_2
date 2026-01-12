@@ -10,7 +10,7 @@ import {
   KeyboardAvoidingView,
 } from "react-native";
 import { useParams } from "../../hooks/useParams";
-import { AssetAddItemNavigationProp, Field } from "../../types/Index";
+import { AssetAddRelatedItemNavigationProp, Field } from "../../types/Index";
 import { TypeProperty } from "../../utils/Enum";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import EnumAndReferencePickerModal from "../modal/EnumAndReferencePickerModal";
@@ -21,7 +21,11 @@ import { fetchEnumByField } from "../../utils/fetchField/FetchEnumField";
 import { fetchImage, pickImage } from "../../utils/Image";
 import { RenderInputByType } from "../form/RenderInputByType";
 import { useImageLoader } from "../../hooks/useImageLoader";
-import { insert, tuDongTang } from "../../services/data/CallApi";
+import {
+  getParentValue,
+  insert,
+  tuDongTang,
+} from "../../services/data/CallApi";
 
 import { useSelector } from "react-redux";
 import { RootState } from "../../store/Index";
@@ -33,14 +37,18 @@ import { formatDateForBE, getDefaultValueForField } from "../../utils/Date";
 import { ParseFieldActive } from "../../utils/parser/ParseFieldActive";
 import { GroupFields } from "../../utils/parser/GroupFields";
 import { ToggleGroupUtil } from "../../utils/parser/ToggleGroup";
-import { log } from "../../utils/Logger";
 import { fetchReferenceByField } from "../../utils/fetchField/FetchReferenceField";
 import { useAppDispatch } from "../../store/Hooks";
 
-export default function AssetAddItemDetails() {
-  const { field, nameClass, propertyClass } = useParams();
+export default function AssetAddRelatedItem() {
+  const { field, nameClass, propertyClass, idRoot, nameClassRoot } =
+    useParams();
 
-  const navigation = useNavigation<AssetAddItemNavigationProp>();
+  console.log("nameClass", nameClass);
+  console.log("nameClassRoot", nameClassRoot);
+  console.log("idRoot", idRoot);
+
+  const navigation = useNavigation<AssetAddRelatedItemNavigationProp>();
 
   // Parse fields safely
   const fieldActive = useMemo(() => ParseFieldActive(field), [field]);
@@ -79,11 +87,6 @@ export default function AssetAddItemDetails() {
     if (!selectedTreeValue) return [];
     return selectedTreeValue.split(",").map((v) => v.trim());
   }, [selectedTreeValue]);
-
-  log("selectedTreeProperty: ", selectedTreeProperty);
-  log("selectedTreeValue: ", selectedTreeValue);
-
-  log("fieldActive: ", fieldActive);
 
   // Khi chọn cây → set giá trị cha vào form
   useEffect(() => {
@@ -148,7 +151,7 @@ export default function AssetAddItemDetails() {
 
     const parentProps = propertyClass.prentTuDongTang?.split(",") || [];
     const validParentValues = parentProps
-      .map((prop: any, idx: string | number) =>
+      .map((_prop: any, idx: string | number) =>
         Number(rawTreeValues[Number(idx)])
       )
       .filter((v: number) => !isNaN(v) && v >= 0)
@@ -177,6 +180,59 @@ export default function AssetAddItemDetails() {
     setImages,
     setLoadingImages,
   });
+
+  useEffect(() => {
+    if (!idRoot || !nameClassRoot || !nameClass) return;
+
+    let isMounted = true;
+
+    const fetchData = async () => {
+      try {
+        const payload = {
+          idClass: idRoot,
+          nameClass: nameClassRoot,
+          nameReference: nameClass,
+        };
+
+        const res = await getParentValue(nameClassRoot, payload);
+        if (!isMounted || !res?.data) return;
+
+        const { parentsFields, parentsValues } = res.data;
+
+        if (!Array.isArray(parentsFields)) return;
+
+        // STEP 1: load reference trước
+        for (let i = 0; i < parentsFields.length; i++) {
+          const fieldName = parentsFields[i];
+          const f = fieldActive.find((fi) => fi.name === fieldName);
+
+          if (f?.typeProperty === TypeProperty.Reference && f.referenceName) {
+            await fetchReferenceByField(
+              f.referenceName,
+              f.name,
+              setReferenceData
+            );
+          }
+        }
+
+        // STEP 2: set value sau khi đã có options
+        parentsFields.forEach((fieldName: string, index: number) => {
+          const rawValue = parentsValues[index];
+          if (rawValue == null) return;
+
+          handleChange(fieldName, Number(rawValue));
+        });
+      } catch (err) {
+        console.warn("[getParentValue] failed:", err);
+      }
+    };
+
+    fetchData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [idRoot, nameClassRoot, nameClass, fieldActive]);
 
   const handleChange = (name: string, value: any) => {
     handleCascadeChange({

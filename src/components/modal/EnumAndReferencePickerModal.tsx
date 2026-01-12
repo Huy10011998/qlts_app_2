@@ -8,6 +8,7 @@ import {
   StyleSheet,
   TouchableWithoutFeedback,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { PropsEnum } from "../../types/Components.d";
 
 export default function EnumAndReferencePickerModal({
@@ -18,24 +19,36 @@ export default function EnumAndReferencePickerModal({
   onSelect,
 }: PropsEnum) {
   return (
-    <Modal animationType="slide" transparent={true} visible={visible}>
+    <Modal
+      animationType="slide"
+      transparent
+      visible={visible}
+      statusBarTranslucent
+      presentationStyle="overFullScreen"
+    >
       {/* Overlay - bấm ra ngoài để đóng */}
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.modalOverlay} />
       </TouchableWithoutFeedback>
 
       {/* Modal Content */}
-      <View style={styles.modalContainer}>
-        {/* Drag Handle */}
+      <SafeAreaView edges={["bottom"]} style={styles.modalContainer}>
+        {/* Drag handle */}
         <View style={styles.dragHandle} />
 
+        {/* Title */}
         <Text style={styles.modalTitle}>{title}</Text>
 
-        <ScrollView style={styles.listWrapper}>
+        {/* List */}
+        <ScrollView
+          style={styles.listWrapper}
+          showsVerticalScrollIndicator={false}
+        >
           {items.map((item, idx) => (
             <TouchableOpacity
               key={idx}
               style={styles.modalItem}
+              activeOpacity={0.7}
               onPress={() => onSelect(item.value)}
             >
               <Text style={styles.modalItemText}>{item.text}</Text>
@@ -43,43 +56,53 @@ export default function EnumAndReferencePickerModal({
           ))}
         </ScrollView>
 
-        <TouchableOpacity onPress={onClose} style={styles.modalCancel}>
+        {/* Close button */}
+        <TouchableOpacity
+          onPress={onClose}
+          style={styles.modalCancel}
+          activeOpacity={0.8}
+        >
           <Text style={styles.modalCancelText}>Đóng</Text>
         </TouchableOpacity>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  /* Overlay */
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.25)",
   },
 
+  /* Modal container */
   modalContainer: {
-    backgroundColor: "#fff",
-    paddingTop: 8,
-    paddingBottom: 32,
-    paddingHorizontal: 16,
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
-    height: "92%",
     position: "absolute",
     bottom: 0,
     width: "100%",
+    maxHeight: "85%",
+
+    backgroundColor: "#fff",
+    paddingTop: 8,
+    paddingHorizontal: 16,
+
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
   },
 
+  /* Drag handle */
   dragHandle: {
     width: 45,
     height: 5,
     backgroundColor: "#ccc",
     borderRadius: 3,
     alignSelf: "center",
-    marginBottom: 12,
     marginTop: 4,
+    marginBottom: 12,
   },
 
+  /* Title */
   modalTitle: {
     fontSize: 18,
     fontWeight: "700",
@@ -88,9 +111,10 @@ const styles = StyleSheet.create({
     color: "#000",
   },
 
+  /* List */
   listWrapper: {
     flexGrow: 1,
-    marginBottom: 20,
+    marginBottom: 12,
   },
 
   modalItem: {
@@ -104,8 +128,9 @@ const styles = StyleSheet.create({
     color: "#000",
   },
 
+  /* Cancel */
   modalCancel: {
-    marginTop: 12,
+    marginTop: 8,
     paddingVertical: 14,
     borderRadius: 10,
     backgroundColor: "#f2f2f2",

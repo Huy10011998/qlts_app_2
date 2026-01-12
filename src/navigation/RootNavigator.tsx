@@ -5,13 +5,14 @@ import AppNavigator from "./AppNavigator.tsx";
 import AuthNavigator from "./AuthNavigator.tsx";
 import IsLoading from "../components/ui/IconLoading.tsx";
 import { clearPermissions, setPermissions } from "../store/PermissionSlice.ts";
-import { AppDispatch, RootState } from "../store/index.ts";
-import { useDispatch, useSelector } from "react-redux";
+import { RootState } from "../store/index.ts";
+import { useSelector } from "react-redux";
 import { getPermission } from "../services/Index.tsx";
+import { useAppDispatch } from "../store/Hooks.ts";
 
 export default function RootNavigator() {
   const { token, isLoading, iosAuthenticated, authReady } = useAuth();
-  const dispatch = useDispatch<AppDispatch>();
+  const dispatch = useAppDispatch();
 
   const { loaded } = useSelector((state: RootState) => state.permission);
 

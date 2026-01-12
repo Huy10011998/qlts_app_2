@@ -22,6 +22,7 @@ import AssetRelatedDeTailsHistoryScreen from "../screens/Assets/AssetRelatedDeTa
 import AssetAddItemScreen from "../screens/Assets/AssetAddItemScreen";
 import AssetEditItemScreen from "../screens/Assets/AssetEditItemScreen";
 import AssetCloneItemScreen from "../screens/Assets/AssetCloneItemScreen";
+import AssetAddRelatedItem from "../components/assets/AssetAddRelatedItem";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -136,6 +137,15 @@ export default function HomeStack() {
         component={AssetCloneItemScreen}
         options={{
           title: "Thêm bản sao mới",
+          ...headerWithBack,
+        }}
+      />
+
+      <Stack.Screen
+        name="AssetAddRelatedItem"
+        component={AssetAddRelatedItem}
+        options={{
+          title: "Thêm mới",
           ...headerWithBack,
         }}
       />

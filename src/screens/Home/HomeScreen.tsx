@@ -8,13 +8,12 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import {
-  HomeScreenNavigationProp,
   MenuItemCardProps,
   MenuItemComponent,
+  StackNavigation,
 } from "../../types";
 
 const { width: screenWidth } = Dimensions.get("window");
@@ -62,8 +61,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
 
 // ===== HOME SCREEN =====
 const HomeScreen: React.FC = () => {
-  const navigation = useNavigation<HomeScreenNavigationProp>();
-  const insets = useSafeAreaInsets();
+  const navigation = useNavigation<StackNavigation<"Tabs">>();
 
   const menuItems: MenuItemComponent[] = [
     {

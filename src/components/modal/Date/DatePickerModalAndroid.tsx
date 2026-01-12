@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { formatDMY, parseDate } from "../../utils/Date";
+import { formatDMY, parseDate } from "../../../utils/Date";
 
 export const DatePickerModalAndroid = ({
   value,
@@ -25,8 +25,13 @@ export const DatePickerModalAndroid = ({
     setTempDate(parseDate(value));
   }, [value]);
 
-  const handleDateChange = (_: any, selectedDate?: Date) => {
+  const handleDateChange = (event: any, selectedDate?: Date) => {
     setShowPicker(false);
+
+    // Nếu bấm Huỷ → bỏ qua
+    if (event?.type === "dismissed") {
+      return;
+    }
 
     if (!selectedDate) return;
 

@@ -1,11 +1,28 @@
 import { StyleSheet, View } from "react-native";
-import TabContent from "../../components/tabs/TabContent";
-import AssetRelatedDetails from "../../components/assets/AssetRelatedDetails";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback } from "react";
 
-export default function AssetRelatedDetailsScreen() {
+import AssetDetails from "../../components/assets/AssetDetails";
+import TabContent from "../../components/tabs/TabContent";
+import BottomBarDetails from "../../components/bottom/BottomDetails";
+
+import { useAppDispatch } from "../../store/Hooks";
+import { reloadPermissions } from "../../store/PermissionActions";
+
+export default function AssetDetailsScreen() {
+  const dispatch = useAppDispatch();
+
+  // reload permission mỗi lần quay lại màn
+  useFocusEffect(
+    useCallback(() => {
+      console.log("[PERMISSION] reload on AssetDetailsScreen focus");
+      dispatch(reloadPermissions());
+    }, [dispatch])
+  );
+
   return (
     <View style={styles.container}>
-      <AssetRelatedDetails>
+      <AssetDetails>
         {({
           activeTab,
           groupedFields,
@@ -13,6 +30,8 @@ export default function AssetRelatedDetailsScreen() {
           toggleGroup,
           item,
           getFieldValue,
+          nameClass,
+          fieldActive,
         }) => (
           <>
             <View style={styles.content}>
@@ -23,17 +42,18 @@ export default function AssetRelatedDetailsScreen() {
                 toggleGroup={toggleGroup}
                 getFieldValue={getFieldValue}
                 item={item}
-                fieldActive={[]}
+                nameClass={nameClass || ""}
+                fieldActive={fieldActive}
               />
             </View>
           </>
         )}
-      </AssetRelatedDetails>
+      </AssetDetails>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F9F9F9" },
-  content: { flex: 1, paddingBottom: 60 },
+  content: { flex: 1 },
 });

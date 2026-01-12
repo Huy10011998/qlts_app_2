@@ -15,13 +15,14 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  RefreshControl,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import {
   Field,
   PropertyResponse,
   AssetDetailsNavigationProp,
-  AssetListScreenRouteProp,
+  StackRoute,
 } from "../../types/Index";
 import {
   getFieldActive,
@@ -33,6 +34,13 @@ import IsLoading from "../../components/ui/IconLoading";
 import { SqlOperator, TypeProperty } from "../../utils/Enum";
 import { useDebounce } from "../../hooks/useDebounce";
 import { error } from "../../utils/Logger";
+import { useAutoReload } from "../../hooks/useAutoReload";
+import { usePermission } from "../../hooks/usePermission";
+import { RelatedAddItem } from "../add/RelatedAddItem";
+import { useSelector } from "react-redux";
+import { RootState } from "../../store";
+import { useAppDispatch } from "../../store/Hooks";
+import { resetShouldRefreshList } from "../../store/AssetSlice";
 
 if (
   Platform.OS === "android" &&
@@ -42,27 +50,28 @@ if (
 }
 
 export default function AssetRelatedList() {
-  const route = useRoute<AssetListScreenRouteProp>();
+  const route = useRoute<StackRoute<"AssetRelatedList">>();
   const navigation = useNavigation<AssetDetailsNavigationProp>();
 
-  const { nameClass, idRoot, propertyReference } = route.params;
+  const { nameClass, idRoot, propertyReference, nameClassRoot } = route.params;
 
   if (!nameClass || !idRoot || !propertyReference) {
     Alert.alert("Lỗi", "Thiếu param bắt buộc");
     return null;
   }
 
-  // ===== FILTER CONDITIONS =====
-  const conditions = useMemo(() => {
-    return [
+  // ===== CONDITIONS CỐ ĐỊNH =====
+  const conditions = useMemo(
+    () => [
       {
         property: propertyReference,
         operator: SqlOperator.Equals,
         value: String(idRoot),
         type: TypeProperty.Int,
       },
-    ];
-  }, [propertyReference, idRoot]);
+    ],
+    [propertyReference, idRoot]
+  );
 
   // ===== STATE =====
   const [data, setData] = useState<Record<string, any>[]>([]);
@@ -73,6 +82,8 @@ export default function AssetRelatedList() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [isRefreshingTop, setIsRefreshingTop] = useState(false);
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
 
   const [total, setTotal] = useState(0);
   const [searchText, setSearchText] = useState("");
@@ -80,14 +91,24 @@ export default function AssetRelatedList() {
   const debouncedSearch = useDebounce(searchText, 600);
   const pageSize = 20;
 
-  // QUAN TRỌNG: dùng ref cho skip
+  // ===== REF =====
   const skipRef = useRef(0);
   const isFetchingRef = useRef(false);
 
-  // ===== FETCH DATA =====
+  const { can, loaded } = usePermission();
+
+  const dispatch = useAppDispatch();
+
+  // ===== FETCH DATA (GIỐNG ASSETLIST) =====
   const fetchData = useCallback(
-    async (isLoadMore = false) => {
+    async (isLoadMore = false, options?: { isRefresh?: boolean }) => {
       if (isFetchingRef.current) return;
+
+      const isRefresh = options?.isRefresh;
+
+      if (!isLoadMore && !isRefresh && isFirstLoad) {
+        setIsLoading(true);
+      }
 
       try {
         isFetchingRef.current = true;
@@ -122,15 +143,11 @@ export default function AssetRelatedList() {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
 
         if (isLoadMore) {
-          // CHỐNG TRÙNG ID TUYỆT ĐỐI
           setData((prev) => {
             const map = new Map<string, any>();
-            [...prev, ...items].forEach((item) => {
-              map.set(String(item.id), item);
-            });
+            [...prev, ...items].forEach((i) => map.set(String(i.id), i));
             return Array.from(map.values());
           });
-
           skipRef.current = currentSkip + pageSize;
         } else {
           setData(items);
@@ -147,26 +164,51 @@ export default function AssetRelatedList() {
         setIsLoading(false);
         setIsLoadingMore(false);
         setIsSearching(false);
+        setIsRefreshingTop(false);
+        setIsFirstLoad(false);
       }
     },
-    [nameClass, propertyClass, debouncedSearch, conditions, fieldActive.length]
+    [
+      nameClass,
+      propertyClass,
+      debouncedSearch,
+      conditions,
+      fieldActive.length,
+      isFirstLoad,
+    ]
   );
 
-  // ===== LOAD + SEARCH =====
+  useAutoReload(fetchData);
+
+  // ===== SEARCH / RELOAD =====
   useEffect(() => {
-    setIsLoading(true);
-    setIsSearching(debouncedSearch.trim().length > 0);
+    const isSearch = debouncedSearch.trim().length > 0;
+
+    if (isSearch) setIsSearching(true);
+
     skipRef.current = 0;
     setData([]);
+    setIsLoading(true);
 
-    fetchData(false);
-  }, [nameClass, debouncedSearch]);
+    fetchData(false).finally(() => {
+      if (isSearch) setIsSearching(false);
+    });
+  }, [debouncedSearch]);
+
+  // ===== REFRESH TOP =====
+  const refreshTop = async () => {
+    if (isRefreshingTop) return;
+
+    setIsRefreshingTop(true);
+    skipRef.current = 0;
+
+    await fetchData(false, { isRefresh: true });
+  };
 
   // ===== LOAD MORE =====
   const handleLoadMore = () => {
-    if (isLoading || isLoadingMore || isSearching || data.length >= total) {
+    if (isLoading || isLoadingMore || isSearching || data.length >= total)
       return;
-    }
 
     setIsLoadingMore(true);
     fetchData(true);
@@ -180,18 +222,34 @@ export default function AssetRelatedList() {
     });
   };
 
-  if (isLoading && !isSearching && !isLoadingMore) {
-    return <IsLoading />;
-  }
+  const shouldRefresh = useSelector(
+    (state: RootState) => state.asset.shouldRefreshList
+  );
 
+  // Redux
+  useEffect(() => {
+    if (shouldRefresh) {
+      fetchData(false);
+      dispatch(resetShouldRefreshList());
+    }
+  }, [shouldRefresh]);
+
+  if (
+    isLoading &&
+    !isRefreshingTop &&
+    !isLoadingMore &&
+    !isSearching // thêm điều kiện này
+  ) {
+    return <IsLoading size="large" color="#FF3333" />;
+  }
   return (
     <View style={{ flex: 1 }}>
       {/* SEARCH */}
       <View style={styles.searchWrapper}>
         <TextInput
           placeholder="Tìm kiếm..."
-          placeholderTextColor="#999"
           value={searchText}
+          placeholderTextColor="#999"
           onChangeText={setSearchText}
           style={styles.searchInput}
         />
@@ -216,9 +274,16 @@ export default function AssetRelatedList() {
             onPress={() => handlePress(item)}
           />
         )}
-        contentContainerStyle={{ paddingBottom: 0 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshingTop}
+            onRefresh={refreshTop}
+            colors={["#FF3333"]}
+            tintColor="#FF3333"
+          />
+        }
         onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.4}
+        onEndReachedThreshold={0.5}
         ListFooterComponent={isLoadingMore ? <IsLoading /> : null}
         ListHeaderComponent={
           <View style={styles.stickyHeader}>
@@ -229,6 +294,16 @@ export default function AssetRelatedList() {
         }
         stickyHeaderIndices={[0]}
       />
+
+      {loaded && can(nameClass, "Insert") && (
+        <RelatedAddItem
+          nameClass={nameClass}
+          field={fieldActive}
+          propertyClass={propertyClass}
+          idRoot={idRoot}
+          nameClassRoot={nameClassRoot}
+        />
+      )}
     </View>
   );
 }

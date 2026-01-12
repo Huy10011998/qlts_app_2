@@ -5,30 +5,35 @@ import { API_ENDPOINTS } from "../../config/Index";
 import { User } from "../../types/Index";
 import { callApi } from "../../services/data/CallApi";
 import { error } from "../../utils/Logger";
+import { useAutoReload } from "../../hooks/useAutoReload";
 
 const ProfileScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [user, setUser] = useState<User | null>(null);
 
+  const fetchUserInfo = async () => {
+    setIsLoading(true);
+    try {
+      const response = await callApi<{ success: boolean; data: User }>(
+        "POST",
+        API_ENDPOINTS.GET_INFO,
+        {}
+      );
+      setUser(response.data);
+    } catch (e) {
+      error("API error:", e);
+      Alert.alert("Lỗi", "Không thể tải hồ sơ cá nhân.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchUserInfo = async () => {
-      setIsLoading(true);
-      try {
-        const response = await callApi<{ success: boolean; data: User }>(
-          "POST",
-          API_ENDPOINTS.GET_INFO,
-          {}
-        );
-        setUser(response.data);
-      } catch (e) {
-        error("API error:", e);
-        Alert.alert("Lỗi", "Không thể tải hồ sơ cá nhân.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchUserInfo();
   }, []);
+
+  // AUTO RELOAD
+  useAutoReload(fetchUserInfo);
 
   const renderRow = (label: string, value?: string) => (
     <View style={styles.row}>

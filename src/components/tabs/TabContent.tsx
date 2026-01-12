@@ -3,7 +3,7 @@ import { ScrollView, View, Alert } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useDispatch } from "react-redux";
 
-import { TabContentProps, AssetEditItemNavigationProp } from "../../types";
+import { TabContentProps, AssetDetailsNavigationProp } from "../../types";
 import AssetActions from "../assets/AssetActions";
 import AssetGroupList from "../assets/AssetGroupList";
 import { checkReferenceUsage, deleteItems } from "../../services/data/CallApi";
@@ -27,11 +27,13 @@ export default function TabContent({
   fieldActive,
 }: TabContentProps) {
   const route = useRoute();
-  const navigation = useNavigation<AssetEditItemNavigationProp>();
+  const navigation = useNavigation<AssetDetailsNavigationProp>();
   const dispatch = useDispatch();
 
-  const detailScreens = ["AssetDetails", "QrDetails"];
+  const detailScreens = ["AssetDetails", "QrDetails", "AssetRelatedDetails"];
   const isDetailsScreen = detailScreens.includes(route.name);
+
+  const nameClassRoot = nameClass;
 
   /* ACTION HANDLERS */
   const handleDelete = async () => {
@@ -157,7 +159,7 @@ export default function TabContent({
       </View>
     ),
 
-    details: <AssetDeTailsTab />,
+    details: <AssetDeTailsTab nameClassRoot={nameClassRoot} />,
     notes: <AssetNoteDetails text={item?.notes ?? "---"} />,
     history: <AssetListHistory />,
     attach: <AssetListAttachFile />,

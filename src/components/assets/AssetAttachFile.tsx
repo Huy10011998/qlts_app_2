@@ -7,6 +7,7 @@ import { getListAttachFile } from "../../services/Index";
 import IsLoading from "../ui/IconLoading";
 import ListCardAttachFile from "../list/ListCardAttachFile";
 import { error } from "../../utils/Logger";
+import { useAutoReload } from "../../hooks/useAutoReload";
 
 export default function AssetListAttachFile() {
   const [file, setFile] = useState<FileItem[]>([]);
@@ -83,6 +84,8 @@ export default function AssetListAttachFile() {
     if (!nameClass) return;
     fetchData();
   }, [nameClass]);
+
+  useAutoReload(fetchData);
 
   const handleLoadMore = () => {
     if (file.length < total && !isLoadingMore) fetchData(true);

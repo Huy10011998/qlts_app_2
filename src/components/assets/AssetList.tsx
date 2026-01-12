@@ -20,8 +20,8 @@ import { useNavigation } from "@react-navigation/native";
 import {
   Field,
   PropertyResponse,
+  StackNavigation,
   TreeNode,
-  AssetListScreenNavigationProp,
 } from "../../types/Index";
 import {
   getFieldActive,
@@ -34,10 +34,10 @@ import IsLoading from "../../components/ui/IconLoading";
 import { useDebounce } from "../../hooks/useDebounce";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { SqlOperator, TypeProperty } from "../../utils/Enum";
-import { AssetAddItem } from "./AssetAddItem";
+import { AddItem } from "../add/AddItem";
 import { useParams } from "../../hooks/useParams";
-import { useDispatch, useSelector } from "react-redux";
-import { AppDispatch, RootState } from "../../store";
+import { useSelector } from "react-redux";
+import { RootState } from "../../store";
 import {
   resetSelectedTreeNode,
   resetShouldRefreshList,
@@ -45,6 +45,8 @@ import {
 } from "../../store/AssetSlice";
 import { error } from "../../utils/Logger";
 import { usePermission } from "../../hooks/usePermission";
+import { useAutoReload } from "../../hooks/useAutoReload";
+import { useAppDispatch } from "../../store/Hooks";
 
 if (
   Platform.OS === "android" &&
@@ -195,7 +197,7 @@ const TreeNodeItem = ({
 };
 
 export default function AssetList() {
-  const navigation = useNavigation<AssetListScreenNavigationProp>();
+  const navigation = useNavigation<StackNavigation<"AssetList">>();
 
   const { nameClass, titleHeader } = useParams();
 
@@ -230,7 +232,7 @@ export default function AssetList() {
   const [isFirstLoad, setIsFirstLoad] = useState(true);
 
   // Redux
-  const dispatch = useDispatch<AppDispatch>();
+  const dispatch = useAppDispatch();
 
   useEffect(() => {
     // Khi vào AssetList thì reset node cũ
@@ -388,6 +390,8 @@ export default function AssetList() {
       isFirstLoad,
     ]
   );
+
+  useAutoReload(fetchData);
 
   useEffect(() => {
     if (!nameClass) return;
@@ -553,9 +557,9 @@ export default function AssetList() {
       )}
 
       {loaded && nameClass && can(nameClass, "Insert") && (
-        <AssetAddItem
+        <AddItem
           nameClass={nameClass}
-          field={JSON.stringify(fieldActive)}
+          field={fieldActive} // object
           propertyClass={propertyClass}
         />
       )}

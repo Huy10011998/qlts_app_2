@@ -261,6 +261,16 @@ export type AddItemAssetProps = {
   field?: any;
   nameClass?: string;
   propertyClass?: {};
+  idRoot?: string;
+};
+
+export type RelatedAddItemAssetProps = {
+  onPress?: (() => void) | string;
+  field?: any;
+  nameClass: string;
+  propertyClass?: {};
+  idRoot?: string;
+  nameClassRoot?: string;
 };
 
 export interface HandleCascadeChangeProps {

@@ -14,7 +14,7 @@ import { RenderInputByTypeProps } from "../../types/Components.d";
 import { formatVND, unFormatVND } from "../../utils/Helper";
 import IsLoading from "../ui/IconLoading";
 import { parseLinkHtml } from "../../utils/Link";
-import { DatePicker } from "../dataPicker/DataPicker";
+import { DatePicker, TimePicker } from "../dataPicker/DataPicker";
 
 export const RenderInputByType = ({
   f,
@@ -44,6 +44,14 @@ export const RenderInputByType = ({
   // APPLY DEFAULT FOR ADD MODE ONLY
   useEffect(() => {
     if (mode === "add" && !value && f.defaultDateNow) {
+      const def = getDefaultValueForField(f);
+      handleChange(f.name, def);
+    }
+  }, [mode]);
+
+  // APPLY DEFAULT TIME FOR ADD MODE ONLY
+  useEffect(() => {
+    if (mode === "add" && !value && f.defaultTimeNow) {
       const def = getDefaultValueForField(f);
       handleChange(f.name, def);
     }
@@ -82,6 +90,7 @@ export const RenderInputByType = ({
           flex: 1,
           paddingVertical: 12,
           fontSize: 14,
+          color: "#333",
         }}
         keyboardType={keyboardType}
         value={String(value ?? "")}
@@ -121,6 +130,7 @@ export const RenderInputByType = ({
               flex: 1,
               paddingVertical: 12,
               fontSize: 14,
+              color: "#333",
             }}
             keyboardType="numeric"
             value={formattedValue}
@@ -159,6 +169,12 @@ export const RenderInputByType = ({
         <DatePicker value={value} onChange={(d) => handleChange(f.name, d)} />
       );
 
+    // TIME
+    case TypeProperty.Time:
+      return (
+        <TimePicker value={value} onChange={(d) => handleChange(f.name, d)} />
+      );
+
     // STRING
     case TypeProperty.String:
       return renderBasicInput();
@@ -167,7 +183,7 @@ export const RenderInputByType = ({
     case TypeProperty.Text:
       return (
         <TextInput
-          style={[styles.textArea, { textAlignVertical: "top" }]}
+          style={[styles.textArea, { textAlignVertical: "top", color: "#333" }]}
           multiline
           value={String(value ?? "")}
           placeholder={`Nhập ${f.moTa ?? f.name}`}
@@ -251,7 +267,7 @@ export const RenderInputByType = ({
       return (
         <View style={{ gap: 10 }}>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { color: "#333" }]}
             placeholder="Nhập đường link"
             placeholderTextColor="#888"
             value={url}
@@ -261,7 +277,7 @@ export const RenderInputByType = ({
             }}
           />
           <TextInput
-            style={styles.input}
+            style={[styles.input, { color: "#333" }]}
             placeholder="Nhập label"
             placeholderTextColor="#888"
             value={label}

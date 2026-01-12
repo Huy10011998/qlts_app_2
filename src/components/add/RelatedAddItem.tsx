@@ -4,19 +4,21 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { AssetAddItemNavigationProp } from "../../types/Navigator.d";
-import { AddItemAssetProps } from "../../types/Components.d";
+import { AssetAddRelatedItemNavigationProp } from "../../types/Navigator.d";
+import { RelatedAddItemAssetProps } from "../../types/Components.d";
 
 const FAB_SIZE = 64;
 const FAB_OFFSET = 16;
 
-function AssetAddItemComponent({
+function RelatedAddItemComponent({
   onPress,
   nameClass,
   field,
   propertyClass,
-}: AddItemAssetProps) {
-  const navigation = useNavigation<AssetAddItemNavigationProp>();
+  idRoot,
+  nameClassRoot,
+}: RelatedAddItemAssetProps) {
+  const navigation = useNavigation<AssetAddRelatedItemNavigationProp>();
   const insets = useSafeAreaInsets();
 
   const handlePress = useCallback(() => {
@@ -30,12 +32,14 @@ function AssetAddItemComponent({
       return;
     }
 
-    navigation.navigate("AssetAddItem", {
+    navigation.navigate("AssetAddRelatedItem", {
       field: JSON.stringify(field),
       nameClass,
       propertyClass,
+      idRoot,
+      nameClassRoot,
     });
-  }, [onPress, navigation, field, nameClass, propertyClass]);
+  }, [onPress, navigation, field, nameClass, propertyClass, idRoot]);
 
   // FAB screen → chỉ neo theo safeArea
   // KHÔNG dính tabBar
@@ -55,7 +59,7 @@ function AssetAddItemComponent({
   );
 }
 
-export const AssetAddItem = memo(AssetAddItemComponent);
+export const RelatedAddItem = memo(RelatedAddItemComponent);
 
 const styles = StyleSheet.create({
   fab: {

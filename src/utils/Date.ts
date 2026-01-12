@@ -83,23 +83,27 @@ export const validateDates = (
 export function formatDateForBE(date: any): string | null {
   if (!date) return null;
 
-  // Nếu FE truyền Date object
+  // ===== FE truyền Date object =====
   if (date instanceof Date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}T00:00:00`;
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+
+    return `${yyyy}-${mm}-${dd}T00:00:00`;
   }
 
-  // Nếu FE truyền dạng string dd-MM-yyyy
-  if (typeof date === "string" && date.includes("-")) {
-    const parts = date.split("-");
-    if (parts.length === 3) {
-      const [day, month, year] = parts;
-      // FE nhập 14-11-2025 → BE cần yyyy-MM-dd
-      if (year.length === 4) {
-        return `${year}-${month}-${day}T00:00:00`;
-      }
+  // ===== FE truyền string =====
+  if (typeof date === "string") {
+    // Case: đã đúng yyyy-MM-dd hoặc yyyy-MM-ddTHH:mm:ss
+    if (/^\d{4}-\d{2}-\d{2}/.test(date)) {
+      const [ymd] = date.split("T");
+      return `${ymd}T00:00:00`;
+    }
+
+    // Case: dd-MM-yyyy
+    if (/^\d{2}-\d{2}-\d{4}$/.test(date)) {
+      const [dd, mm, yyyy] = date.split("-");
+      return `${yyyy}-${mm}-${dd}T00:00:00`;
     }
   }
 
@@ -134,15 +138,22 @@ export const normalizeDateFromBE = (raw: any) => {
 
 // Lấy giá trị mặc định Date Now cho field
 export const getDefaultValueForField = (f: Field) => {
+  // ===== DATE =====
   if (f.typeProperty === TypeProperty.Date && f.defaultDateNow) {
     const d = new Date();
 
-    // format = dd-mm-yyyy
-    const formatted = d
-      .toLocaleDateString("vi-VN") // → dd/mm/yyyy
-      .replaceAll("/", "-"); // → dd-mm-yyyy
+    // dd-MM-yyyy
+    return d.toLocaleDateString("vi-VN").replaceAll("/", "-");
+  }
 
-    return formatted;
+  // ===== TIME =====
+  if (f.typeProperty === TypeProperty.Time && f.defaultTimeNow) {
+    const d = new Date();
+
+    const h = String(d.getHours()).padStart(2, "0");
+    const m = String(d.getMinutes()).padStart(2, "0");
+
+    return `${h}:${m}`; // ✅ 16:05
   }
 
   return "";

@@ -43,6 +43,7 @@ export interface Field {
   notShowReference: boolean;
   notShowSplit: boolean;
   isShowMobile: boolean;
+  defaultTimeNow: boolean;
 }
 
 // Loại dữ liệu Menu hoặc danh mục

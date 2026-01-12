@@ -1,13 +1,59 @@
-import { RouteProp } from "@react-navigation/native";
+import { RouteProp, NavigatorScreenParams } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
-export type RootStackParamList = {
-  Login: undefined;
-  Tabs: undefined;
-  Asset: undefined;
-  Home: undefined;
-  Settings: undefined;
-  Profile: undefined;
+// =====================================================
+// COMMON TYPES
+// =====================================================
+export type AssetField = unknown;
+export type AssetItem = Record<string, unknown>;
+
+export type PropertyClass = {
+  isTuDongTang?: boolean;
+  propertyTuDongTang?: string;
+  formatTuDongTang?: string;
+  prentTuDongTang?: string;
+  prefix?: string;
+};
+
+// ⚠️ chỉnh mode thành optional
+export type OptionalParams = {
+  propertyReference?: string;
+  nameClass?: string;
+  nameClassRoot?: string;
+  id?: string;
+  field?: any;
+  name?: string;
+  idRoot?: string;
+  logID?: number;
+  id_previous?: string;
+  item?: Record<string, any>;
+  mode?: string;
+  activeTab?: string;
+  titleHeader?: string;
+  propertyClass?: PropertyClass;
+};
+
+// =====================================================
+// QR TAB (NESTED NAVIGATOR)
+// =====================================================
+export type ScanTabParamList = {
+  QrScanner: undefined;
+
+  QrDetails: {
+    id: string;
+    titleHeader?: string;
+    nameClass?: string;
+    field?: AssetField;
+  };
+};
+
+export type HomeTabParamList = {
+  AssetRelatedList: {
+    idRoot: string;
+    nameClass: string;
+    propertyReference: string;
+    nameClassRoot?: string;
+  };
 
   AssetList: {
     nameClass?: string;
@@ -15,172 +61,144 @@ export type RootStackParamList = {
     idRoot?: string;
     propertyReference?: string;
     isBuildTree?: boolean;
-    onMenuPress?: () => void;
-    loadData?: () => void;
   };
+};
 
-  ScanTab: {
-    screen: "QrDetails";
-    params: RootStackParamList["QrDetails"];
+// =====================================================
+// ROOT STACK PARAM LIST
+// =====================================================
+export type RootStackParamList = {
+  /** ================= AUTH ================= */
+  Login: undefined;
+
+  /** ================= ROOT ================= */
+  Tabs: undefined;
+  Home: undefined;
+  HomeTab: NavigatorScreenParams<HomeTabParamList>;
+  /** ================= SETTINGS ================= */
+  Settings: undefined;
+  Profile: undefined;
+
+  /** ================= ASSET ================= */
+  Asset: undefined;
+
+  AssetList: {
+    nameClass?: string;
+    titleHeader?: string;
+    idRoot?: string;
+    propertyReference?: string;
+    isBuildTree?: boolean;
   };
 
   AssetDetails: {
     id: string;
-    field?: any;
     nameClass?: string;
     titleHeader?: string;
-    onMenuPress?: () => void;
+    field?: AssetField;
   };
 
-  QrDetails: {
+  /** ================= ASSET HISTORY ================= */
+  AssetListHistory: {
     id: string;
+    nameClass: string;
     titleHeader?: string;
-    nameClass?: string;
-    field?: any;
-  };
-
-  RelaterList: { name: string };
-
-  AssetRelatedList: {
-    nameClass: string;
-    titleHeader: string;
-    propertyReference: string;
-    idRoot: string;
-  };
-
-  RelatedDeTailsHistory: {
-    id: number;
-    id_previous: number;
-    nameClass: string;
-    field: any;
   };
 
   AssetHistoryDetail: {
     id: string;
-    id_previous: string;
-    field: any;
+    id_previous: string | null;
     nameClass: string;
+    field?: AssetField;
+  };
+
+  /** ================= ASSET RELATED ================= */
+  AssetRelatedList: {
+    nameClass: string;
+    propertyReference: string;
+    idRoot: string;
+    nameClassRoot?: string;
+    titleHeader?: string; // ✅ FIX
   };
 
   AssetRelatedDetails: {
     id: string;
-    field: any;
     nameClass: string;
     titleHeader?: string;
+    field?: AssetField;
   };
 
-  QrScanner: undefined;
+  AssetAddRelatedItem: {
+    idRoot?: string;
+    nameClass: string;
+    field: AssetField;
+    propertyClass?: PropertyClass;
+    nameClassRoot?: string;
+  };
 
+  /** ================= QR (NESTED) ================= */
+  ScanTab: NavigatorScreenParams<ScanTabParamList>;
+
+  /** ================= CRUD ================= */
   AssetAddItem: {
     field: string;
     nameClass?: string;
-    propertyClass?: {};
+    propertyClass?: PropertyClass;
+    idRoot?: string;
   };
 
   AssetEditItem: {
-    item: Record<string, any>;
+    item: AssetItem;
     field: string;
     nameClass?: string;
   };
 
   AssetCloneItem: {
-    item: Record<string, any>;
+    item: AssetItem;
     field: string;
     nameClass?: string;
   };
 };
 
-export type OptionalParams = {
-  propertyReference?: string;
-  nameClass?: string;
-  id?: number;
-  field?: any;
-  name?: string;
-  idRoot?: number;
-  logID?: number;
-  id_previous?: number;
-  item?: Record<string, any>;
-  mode: string;
-  activeTab?: string;
-  titleHeader?: string;
-  propertyClass?: {
-    isTuDongTang?: boolean;
-    propertyTuDongTang?: string;
-    formatTuDongTang?: string;
-    prentTuDongTang?: string;
-    prefix?: string;
-  };
-};
+// =====================================================
+// GENERIC NAVIGATION HELPERS
+// =====================================================
+export type StackNavigation<T extends keyof RootStackParamList> =
+  NativeStackNavigationProp<RootStackParamList, T>;
 
-// Navigation Props
-export type HomeScreenNavigationProp = NativeStackNavigationProp<
+export type StackRoute<T extends keyof RootStackParamList> = RouteProp<
   RootStackParamList,
-  "Home"
+  T
 >;
 
-export type TabsScreenNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  "Tabs"
->;
+// =====================================================
+// SCREEN-SPECIFIC TYPES
+// =====================================================
+export type HomeNavigationProp = StackNavigation<"Home">;
 
-export type AssetScreenNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  "Asset"
->;
+export type AssetListNavigationProp = StackNavigation<"AssetList">;
+export type AssetListRouteProp = StackRoute<"AssetList">;
 
-export type SettingScreenNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  "Profile"
->;
+export type AssetDetailsNavigationProp = StackNavigation<"AssetDetails">;
+export type AssetDetailsRouteProp = StackRoute<"AssetDetails">;
 
-export type AssetListScreenNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  "AssetList"
->;
+export type AssetListHistoryNavigationProp =
+  StackNavigation<"AssetListHistory">;
+export type AssetListHistoryRouteProp = StackRoute<"AssetListHistory">;
 
-export type AssetListScreenRouteProp = RouteProp<
-  RootStackParamList,
-  "AssetList"
->;
+export type AssetHistoryDetailNavigationProp =
+  StackNavigation<"AssetHistoryDetail">;
+export type AssetHistoryDetailRouteProp = StackRoute<"AssetHistoryDetail">;
 
-export type AssetDetailsNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  "AssetDetails"
->;
+export type AssetAddItemNavigationProp = StackNavigation<"AssetAddItem">;
 
-export type QrScannerNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  "QrScanner"
->;
+export type AssetAddRelatedItemNavigationProp =
+  StackNavigation<"AssetAddRelatedItem">;
 
-export type DeTailsTabNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  "AssetDetails"
->;
+export type AssetEditItemNavigationProp = StackNavigation<"AssetEditItem">;
 
-export type DeTailsTabRouteProp = RouteProp<RootStackParamList, "AssetDetails">;
+export type AssetCloneItemNavigationProp = StackNavigation<"AssetCloneItem">;
 
-export type DetailsHistoryRouteProp = RouteProp<
-  RootStackParamList,
-  "RelatedDeTailsHistory"
->;
+/** ================= QR ================= */
+export type ScanTabNavigationProp = NativeStackNavigationProp<ScanTabParamList>;
 
-export type DetaiHistoryNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  "AssetHistoryDetail"
->;
-
-export type AssetAddItemNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  "AssetAddItem"
->;
-
-export type AssetEditItemNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  "AssetEditItem"
->;
-
-export type AssetCloneItemNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  "AssetCloneItem"
->;
+export type QrDetailsRouteProp = RouteProp<ScanTabParamList, "QrDetails">;

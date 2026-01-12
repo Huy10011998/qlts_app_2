@@ -1,10 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { View, Text, StyleSheet, FlatList, Alert } from "react-native";
-import {
-  DetaiHistoryNavigationProp,
-  Field,
-  PropertyResponse,
-} from "../../types";
+import { Field, PropertyResponse, StackNavigation } from "../../types";
 import { useParams } from "../../hooks/useParams";
 import {
   getFieldActive,
@@ -16,6 +12,7 @@ import IsLoading from "../ui/IconLoading";
 import orderBy from "lodash/orderBy";
 import { useNavigation } from "@react-navigation/native";
 import { error } from "../../utils/Logger";
+import { useAutoReload } from "../../hooks/useAutoReload";
 
 export default function AssetListHistory() {
   const [lichsu, setLichsu] = useState<Record<string, any>[]>([]);
@@ -31,7 +28,7 @@ export default function AssetListHistory() {
   const nameClass = paramNameClass;
   const pageSize = 20;
 
-  const navigation = useNavigation<DetaiHistoryNavigationProp>();
+  const navigation = useNavigation<StackNavigation<"AssetListHistory">>();
 
   const handlePress = async (item: Record<string, any>, index: number) => {
     const currentIndex = lichsu.findIndex((x) => x.id === item.id);
@@ -104,6 +101,8 @@ export default function AssetListHistory() {
     if (!nameClass || !id) return;
     fetchData();
   }, [nameClass, id, fetchData]);
+
+  useAutoReload(fetchData);
 
   const handleLoadMore = () => {
     if (lichsu.length < total && !isLoadingMore) fetchData(true);

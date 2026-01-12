@@ -6,6 +6,7 @@ import RootNavigator from "./src/navigation/RootNavigator";
 import { AuthProvider } from "./src/context/AuthContext";
 import { Provider } from "react-redux";
 import { store } from "./src/store/Index";
+import AppBootstrap from "./src/app/AppBootstrap";
 
 export default function App() {
   const isDarkMode = useColorScheme() === "dark";
@@ -20,6 +21,7 @@ export default function App() {
       <Provider store={store}>
         <AuthProvider>
           <NavigationContainer>
+            <AppBootstrap />
             <RootNavigator />
           </NavigationContainer>
         </AuthProvider>

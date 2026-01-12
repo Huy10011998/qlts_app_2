@@ -8,19 +8,20 @@ import {
   Alert,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import {
-  DeTailsTabNavigationProp,
-  DeTailsTabRouteProp,
-  MenuItemResponse,
-} from "../../types";
+import { MenuItemResponse, StackNavigation, StackRoute } from "../../types";
 import { getClassReference } from "../../services/Index";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import IsLoading from "../ui/IconLoading";
-import { error } from "../../utils/Logger";
+import { error, log } from "../../utils/Logger";
 
-export default function AssetDeTailsTab() {
-  const navigation = useNavigation<DeTailsTabNavigationProp>();
-  const route = useRoute<DeTailsTabRouteProp>();
+export default function AssetDeTailsTab({
+  nameClassRoot,
+}: {
+  nameClassRoot?: string;
+}) {
+  const navigation = useNavigation<StackNavigation<"AssetDetails">>();
+  const route = useRoute<StackRoute<"AssetDetails">>();
+
   const { id, nameClass } = route.params;
 
   const [isLoading, setIsLoading] = useState(true);
@@ -34,7 +35,7 @@ export default function AssetDeTailsTab() {
 
         const response = await getClassReference(nameClass);
         const data = response?.data;
-
+        log("Class reference data:", data);
         if (!Array.isArray(data)) {
           throw new Error("Dữ liệu trả về không hợp lệ");
         }
@@ -65,9 +66,12 @@ export default function AssetDeTailsTab() {
     navigation.navigate("AssetRelatedList", {
       nameClass: item.name,
       propertyReference: item.propertyReference,
+
       idRoot: id,
+      nameClassRoot: nameClassRoot,
       titleHeader: item.moTa ?? "Danh sách",
     });
+    console.log("===item", item.propertyReference);
   };
 
   const renderItem = ({ item }: { item: MenuItemResponse }) => (

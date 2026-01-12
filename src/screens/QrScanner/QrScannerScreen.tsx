@@ -17,14 +17,14 @@ import {
   useCodeScanner,
 } from "react-native-vision-camera";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
-import { QrScannerNavigationProp } from "../../types";
-import { getFieldActive } from "../../services/Index";
+import { getClassReference, getFieldActive } from "../../services/Index";
 import { error, log } from "../../utils/Logger";
 
 export default function QrScannerScreen() {
   const [hasPermission, setHasPermission] = useState(false);
   const device = useCameraDevice("back") as any;
-  const navigation = useNavigation<QrScannerNavigationProp>();
+  const navigation = useNavigation<any>();
+
   const [isScanned, setIsScanned] = useState<boolean>(false);
 
   // ✅ Xin quyền camera
@@ -57,46 +57,64 @@ export default function QrScannerScreen() {
   const codeScanner: CodeScanner = useCodeScanner({
     codeTypes: ["qr"],
     onCodeScanned: async (codes: Code[]) => {
-      if (codes.length > 0 && !isScanned) {
-        setIsScanned(true);
+      if (codes.length === 0 || isScanned) return;
 
-        const data = codes?.[0]?.value || "";
-        log("QR Data:", data); // ví dụ: /maytinh/1493
+      setIsScanned(true);
 
-        const cleanData = data.startsWith("/") ? data.slice(1) : data;
-        const parts = cleanData
-          .split("/")
-          .map((item) => item.trim()) // loại bỏ \r, \n, khoảng trắng thừa
-          .filter((item) => item.length > 0); // bỏ phần rỗng nếu có
+      const rawData = codes[0]?.value ?? "";
+      log("QR Data:", rawData);
 
-        log("parts: ", parts);
+      const parts = rawData
+        .replace(/^\//, "") // bỏ dấu / đầu
+        .split("/")
+        .map((p) => p.trim())
+        .filter(Boolean);
 
+      log("QR parts:", parts);
+
+      try {
+        // CASE 1: maytinh/1493
         if (parts.length === 2) {
-          const [title, id] = parts;
+          const [nameClass, id] = parts;
 
-          try {
-            const responseFieldActive = await getFieldActive(title);
-            const fieldActive = responseFieldActive?.data || [];
+          const response = await getFieldActive(nameClass);
+          const fieldActive = response?.data || [];
 
-            navigation.navigate("ScanTab", {
-              screen: "QrDetails",
-              params: {
-                id,
-                titleHeader: title,
-                nameClass: title,
-                field: JSON.stringify(fieldActive),
-              },
-            });
-          } catch (e) {
-            error("Lỗi khi gọi getFieldActive:", e);
-            Alert.alert("Lỗi", "Không lấy được dữ liệu từ server.");
-            setIsScanned(false);
-          }
-        } else {
-          Alert.alert("QR không hợp lệ", data, [
-            { text: "OK", onPress: () => setIsScanned(false) },
-          ]);
+          navigation.navigate("QrDetails", {
+            id,
+            titleHeader: nameClass,
+            nameClass,
+            field: fieldActive,
+          });
+          return;
         }
+
+        // CASE 2: NoiDia_KhuVuc/NoiDia_Tablet/125
+        if (parts.length === 3) {
+          const [nameClassRoot, propertyReference, idRoot] = parts;
+          const response = await getClassReference(nameClassRoot);
+          const data = response?.data?.[0]?.propertyReference;
+
+          navigation.navigate("HomeTab", {
+            screen: "AssetRelatedList",
+            params: {
+              idRoot,
+              nameClassRoot: nameClassRoot,
+              nameClass: propertyReference,
+              propertyReference: data,
+            },
+          });
+
+          return;
+        }
+
+        // QR không hợp lệ
+        throw new Error("INVALID_QR_FORMAT");
+      } catch (e) {
+        error("QR scan error:", e);
+        Alert.alert("QR không hợp lệ", rawData, [
+          { text: "OK", onPress: () => setIsScanned(false) },
+        ]);
       }
     },
   });

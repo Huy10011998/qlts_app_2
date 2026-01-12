@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { StyleSheet, Platform } from "react-native";
+import { StyleSheet, Platform, Keyboard } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -9,23 +9,42 @@ import SettingStack from "./SettingStack";
 import ScanStack from "./ScanStack";
 
 const Tab = createBottomTabNavigator();
+
 const TAB_HEIGHT = 56;
-const FAB_SIZE = 64;
 
 export default function Tabs() {
   const insets = useSafeAreaInsets();
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  // ==========================
+  // KEYBOARD LISTENER
+  // ==========================
+  useEffect(() => {
+    const showSub = Keyboard.addListener("keyboardDidShow", () => {
+      setKeyboardVisible(true);
+    });
+
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: true,
-
         tabBarStyle: [
           styles.tabBar,
           {
-            height: TAB_HEIGHT + insets.bottom,
-            paddingBottom: insets.bottom,
+            height: keyboardVisible ? 0 : TAB_HEIGHT + insets.bottom,
+            paddingBottom: keyboardVisible ? 0 : insets.bottom,
+            opacity: keyboardVisible ? 0 : 1,
           },
         ],
 
@@ -46,14 +65,14 @@ export default function Tabs() {
         }}
       />
 
-      {/* SCAN – FAB */}
+      {/* SCAN */}
       <Tab.Screen
         name="ScanTab"
         component={ScanStack}
         options={{
           title: "Quét QR",
           tabBarIcon: ({ color }) => (
-            <Ionicons name="qr-code-outline" size={30} color={color} />
+            <Ionicons name="qr-code-outline" size={28} color={color} />
           ),
         }}
       />
@@ -72,20 +91,6 @@ export default function Tabs() {
     </Tab.Navigator>
   );
 }
-
-// function FabButton({ onPress }: any) {
-//   return (
-//     <TouchableOpacity
-//       activeOpacity={0.85}
-//       onPress={onPress}
-//       style={styles.fabWrapper}
-//     >
-//       <View style={styles.fab}>
-//         <Ionicons name="qr-code-outline" size={30} color="#fff" />
-//       </View>
-//     </TouchableOpacity>
-//   );
-// }
 
 const styles = StyleSheet.create({
   tabBar: {
@@ -108,31 +113,5 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
     marginTop: 2,
-  },
-
-  fabWrapper: {
-    position: "absolute",
-    top: -28,
-    alignSelf: "center",
-  },
-
-  fab: {
-    width: FAB_SIZE,
-    height: FAB_SIZE,
-    borderRadius: FAB_SIZE / 2,
-    backgroundColor: "#FF3333",
-    justifyContent: "center",
-    alignItems: "center",
-
-    ...(Platform.OS === "ios"
-      ? {
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.25,
-          shadowRadius: 6,
-        }
-      : {
-          elevation: 12,
-        }),
   },
 });

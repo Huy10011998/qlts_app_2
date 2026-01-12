@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { View, StyleSheet, Alert, ScrollView } from "react-native";
-import { DetailsProps, Field } from "../../types/Index";
+import { View, StyleSheet, Alert } from "react-native";
+import { DetailsProps } from "../../types/Index";
 import { useParams } from "../../hooks/useParams";
 import { getDetails } from "../../services/Index";
 import IsLoading from "../ui/IconLoading";
@@ -10,6 +10,7 @@ import { GroupFields } from "../../utils/parser/GroupFields";
 import { ToggleGroupUtil } from "../../utils/parser/ToggleGroup";
 import { getFieldValue } from "../../utils/fields/GetFieldValue";
 import { TAB_ITEMS } from "../../utils/Helper";
+import { useAutoReload } from "../../hooks/useAutoReload";
 
 export default function AssetRelatedDetails({ children }: DetailsProps) {
   const { id, nameClass, field } = useParams();
@@ -38,26 +39,27 @@ export default function AssetRelatedDetails({ children }: DetailsProps) {
     setActiveTab(tabKey);
   };
 
+  const fetchDetails = async () => {
+    setIsLoading(true);
+    try {
+      if (!id || !nameClass) throw new Error("Thiếu ID hoặc nameClass");
+
+      const response = await getDetails(nameClass, id);
+      setItem(response.data);
+    } catch (e) {
+      error(e);
+      Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchDetails = async () => {
-      setIsLoading(true);
-      try {
-        if (!id || !nameClass) throw new Error("Thiếu ID hoặc nameClass");
-
-        const response = await getDetails(nameClass, id);
-        setItem(response.data);
-      } catch (e) {
-        error(e);
-        Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     setActiveTab("list");
     fetchDetails();
   }, [id, nameClass]);
 
+  useAutoReload(fetchDetails);
   if (isLoading) {
     return <IsLoading size="large" color="#FF3333" />;
   }
@@ -73,13 +75,13 @@ export default function AssetRelatedDetails({ children }: DetailsProps) {
         item,
         getFieldValue,
         TAB_ITEMS,
-        fieldActive: [],
-        nameClass: "",
+        fieldActive: fieldActive || [],
+        nameClass: nameClass || "",
       })}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9F9F9", paddingBottom: 20 },
+  container: { flex: 1, backgroundColor: "#F9F9F9" },
 });

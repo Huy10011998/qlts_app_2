@@ -24,8 +24,6 @@ import { RenderInputByType } from "../form/RenderInputByType";
 import { useImageLoader } from "../../hooks/useImageLoader";
 import { update } from "../../services/data/CallApi";
 import { useNavigation } from "@react-navigation/native";
-import { useDispatch } from "react-redux";
-import { AppDispatch } from "../../store";
 import { setShouldRefreshDetails } from "../../store/AssetSlice";
 
 import {
@@ -38,6 +36,7 @@ import { ParseFieldActive } from "../../utils/parser/ParseFieldActive";
 import { GroupFields } from "../../utils/parser/GroupFields";
 import { ToggleGroupUtil } from "../../utils/parser/ToggleGroup";
 import { fetchReferenceByField } from "../../utils/fetchField/FetchReferenceField";
+import { useAppDispatch } from "../../store/Hooks";
 
 // Main Component
 export default function AssetEditItem() {
@@ -68,7 +67,7 @@ export default function AssetEditItem() {
   const [images, setImages] = useState<Record<string, string>>({});
 
   // Redux
-  const dispatch = useDispatch<AppDispatch>();
+  const dispatch = useAppDispatch();
 
   // init collapsed
   useEffect(() => {
@@ -501,6 +500,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
+    color: "#333",
   },
 
   updateButton: {

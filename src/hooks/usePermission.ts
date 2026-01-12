@@ -1,3 +1,4 @@
+// hooks/usePermission.ts
 import { useSelector } from "react-redux";
 import { RootState } from "../store";
 import { normalizeClassName } from "../utils/Helper";
@@ -10,7 +11,7 @@ export function usePermission() {
   const isFullPermission = () => permissions?.includes("Group.1");
 
   const can = (module: string, action: string) => {
-    if (!loaded) return false; // Chưa load xong permissions
+    if (!loaded) return false;
     if (isFullPermission()) return true;
     if (!permissions || permissions.length === 0) return false;
 
@@ -18,5 +19,5 @@ export function usePermission() {
     return permissions.includes(`Class.${normalized}.${action}`);
   };
 
-  return { can, isFullPermission, loaded };
+  return { can, isFullPermission, loaded, permissions };
 }

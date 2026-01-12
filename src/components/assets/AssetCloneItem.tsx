@@ -23,8 +23,6 @@ import { fetchEnumByField } from "../../utils/fetchField/FetchEnumField";
 import { RenderInputByType } from "../form/RenderInputByType";
 import { useImageLoader } from "../../hooks/useImageLoader";
 import { useNavigation } from "@react-navigation/native";
-import { useDispatch } from "react-redux";
-import { AppDispatch } from "../../store";
 import { setShouldRefreshList } from "../../store/AssetSlice";
 
 import {
@@ -38,12 +36,13 @@ import { GroupFields } from "../../utils/parser/GroupFields";
 import { ToggleGroupUtil } from "../../utils/parser/ToggleGroup";
 import { insert } from "../../services/data/CallApi";
 import { fetchReferenceByField } from "../../utils/fetchField/FetchReferenceField";
+import { useAppDispatch } from "../../store/Hooks";
 
 export default function AssetCloneItem() {
   const { item, field, nameClass } = useParams();
   const navigation = useNavigation<AssetCloneItemNavigationProp>();
 
-  const dispatch = useDispatch<AppDispatch>();
+  const dispatch = useAppDispatch();
 
   // Active fields
   const fieldActive = useMemo(() => ParseFieldActive(field), [field]);
@@ -404,6 +403,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
+    color: "#333",
   },
 
   createCloneButton: {

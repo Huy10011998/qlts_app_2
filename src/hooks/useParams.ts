@@ -8,6 +8,7 @@ export function useParams<RouteName extends keyof RootStackParamList>() {
   return {
     propertyReference: params?.propertyReference,
     nameClass: params?.nameClass,
+    nameClassRoot: params?.nameClassRoot,
     id: params?.id,
     field: params?.field,
     name: params?.name,

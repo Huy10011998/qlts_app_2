@@ -19,17 +19,16 @@ import { loginApi } from "../../services/auth/AuthApi";
 import IsLoading from "../../components/ui/IconLoading";
 import { getPermission } from "../../services/Index";
 import { setPermissions } from "../../store/PermissionSlice";
-import { AppDispatch } from "../../store";
-import { useDispatch } from "react-redux";
 import {
   hardResetApi,
   setRefreshInApi,
   setTokenInApi,
 } from "../../services/data/CallApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useAppDispatch } from "../../store/Hooks";
 
 export default function LoginScreen() {
-  const { setToken, setRefreshToken, setIosAuthenticated } = useAuth();
+  const { setToken, setRefreshToken, setIosAuthenticated, token } = useAuth();
 
   const [userName, setUserName] = useState("");
   const [userPassword, setUserPassword] = useState("");
@@ -39,7 +38,11 @@ export default function LoginScreen() {
 
   const rnBiometrics = useRef(new ReactNativeBiometrics()).current;
 
-  const dispatch = useDispatch<AppDispatch>();
+  const dispatch = useAppDispatch();
+
+  useEffect(() => {
+    console.log("===", token);
+  }, []);
 
   // Enable / Disable Login button
   useEffect(() => {

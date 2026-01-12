@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { formatDMY, parseDate } from "../../utils/Date";
+import { formatDMY, parseDate } from "../../../utils/Date";
 
 export const DatePickerModalIOS = ({
   value,

@@ -116,11 +116,18 @@ export const refreshTokenFlow = async (): Promise<string> => {
       log("[API] Refresh token success");
       return data.accessToken;
     } catch (err: any) {
-      const status = err?.response?.status;
+      // NETWORK ERROR → KHÔNG logout
+      if (!err.response) {
+        warn("[API] Refresh failed due to network");
+        throw err;
+      }
+
+      const status = err.response.status;
       if (status === 401 || status === 403 || err?.NEED_LOGIN) {
         await clearTokenStorage();
         throwNeedLogin();
       }
+
       throw err;
     } finally {
       refreshPromise = null;
@@ -208,8 +215,15 @@ api.interceptors.response.use(
           Authorization: `Bearer ${token}`,
         },
       });
-    } catch (refreshErr) {
+    } catch (refreshErr: any) {
       onRefreshed(null);
+
+      // Network error → chờ auto reload
+      if (!refreshErr?.response) {
+        warn("[API] Refresh network error → wait for reconnect");
+        return Promise.reject(refreshErr);
+      }
+
       return Promise.reject({ NEED_LOGIN: true });
     } finally {
       isRefreshing = false;
@@ -255,12 +269,12 @@ export const getList = async <T = any,>(
 export const getBuildTree = async <T = any,>(nameClass: string) =>
   callApi<T>("POST", `/${nameClass}/build-tree`, {});
 
-export const getDetails = async <T = any,>(nameClass: string, id: number) =>
+export const getDetails = async <T = any,>(nameClass: string, id: string) =>
   callApi<T>("POST", `/${nameClass}/get-details`, { id });
 
 export const getDetailsHistory = async <T = any,>(
   nameClass: string,
-  id: number
+  id: string
 ) =>
   callApi<T>("POST", `/${nameClass}/get-list-history-detail`, { log_ID: id });
 
@@ -372,3 +386,8 @@ export const getPermission = async <T = any,>() =>
 
 export const tuDongTang = async <T = any,>(nameClass: string, payload: {}) =>
   callApi<T>("POST", `/${nameClass}/tu-dong-tang`, payload);
+
+export const getParentValue = async <T = any,>(
+  nameClass: string,
+  payload: {}
+) => callApi<T>("POST", `/${nameClass}/parent-value`, payload);

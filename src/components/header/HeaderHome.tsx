@@ -7,12 +7,13 @@ import {
   Linking,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { TabsScreenNavigationProp } from "../../types";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { StackNavigation } from "../../types/Navigator.d";
 
 export default function HeaderHome() {
-  const navigation = useNavigation<TabsScreenNavigationProp>();
+  const navigation = useNavigation<StackNavigation<"Tabs">>();
+
   const insets = useSafeAreaInsets(); // lấy safe area
 
   const handleOpenWebsite = () => {
@@ -23,7 +24,7 @@ export default function HeaderHome() {
     <View style={[styles.headerContainer, { paddingTop: insets.top + 8 }]}>
       <TouchableOpacity onPress={handleOpenWebsite}>
         <Image
-          source={require("../../assets/images/logo-cholimex.jpg")}
+          source={require("../../assets/images/logo-cholimex-trans.jpg")}
           style={styles.logo}
           resizeMode="contain"
         />

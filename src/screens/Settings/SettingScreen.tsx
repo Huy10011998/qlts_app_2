@@ -19,13 +19,13 @@ import { useAuth } from "../../context/AuthContext";
 import IsLoading from "../../components/ui/IconLoading";
 import { changePasswordApi } from "../../services/Index";
 import { API_ENDPOINTS } from "../../config/Index";
-import { SettingScreenNavigationProp, UserInfo } from "../../types";
+import { StackNavigation, UserInfo } from "../../types";
 import { callApi, hardResetApi } from "../../services/data/CallApi";
 import ReactNativeBiometrics from "react-native-biometrics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { clearPermissions } from "../../store/PermissionSlice";
-import { useDispatch } from "react-redux";
-import { AppDispatch } from "../../store";
+import { useAutoReload } from "../../hooks/useAutoReload";
+import { useAppDispatch } from "../../store/Hooks";
 
 // HEADER COMPONEN
 const SettingHeader: React.FC<{ name?: string; avatarUrl?: string }> = ({
@@ -86,36 +86,39 @@ const SettingScreen = () => {
 
   const [isFaceIdEnabled, setIsFaceIdEnabled] = useState(false);
 
-  const navigation = useNavigation<SettingScreenNavigationProp>();
+  const navigation = useNavigation<StackNavigation<"Profile">>();
   const { logout } = useAuth();
 
-  const dispatch = useDispatch<AppDispatch>();
+  const dispatch = useAppDispatch();
 
   // LOAD USER INFO + FACEID
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const response = await callApi<{ success: boolean; data: UserInfo }>(
+        "POST",
+        API_ENDPOINTS.GET_INFO,
+        {}
+      );
+      setUser(response.data);
+
+      // Load FaceID status
+      const flag = await AsyncStorage.getItem("faceid-enabled");
+      setIsFaceIdEnabled(flag === "1");
+    } catch (error: any) {
+      if (error?.NEED_LOGIN) return;
+      Alert.alert("Lỗi", "Không thể tải thông tin người dùng.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        const response = await callApi<{ success: boolean; data: UserInfo }>(
-          "POST",
-          API_ENDPOINTS.GET_INFO,
-          {}
-        );
-        setUser(response.data);
-
-        // Load FaceID status
-        const flag = await AsyncStorage.getItem("faceid-enabled");
-        setIsFaceIdEnabled(flag === "1");
-      } catch (error: any) {
-        if (error?.NEED_LOGIN) return;
-        Alert.alert("Lỗi", "Không thể tải thông tin người dùng.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchData();
   }, []);
+
+  // AUTO RELOAD
+  useAutoReload(fetchData);
 
   // FACE ID TOGGLE
   const handleToggleFaceID = async (value: boolean) => {
@@ -325,7 +328,7 @@ const SettingScreen = () => {
             <Text style={styles.modalTitle}>Đổi mật khẩu</Text>
 
             <TextInput
-              style={styles.input}
+              style={[styles.input, { color: "#333" }]}
               placeholder="Mật khẩu cũ"
               placeholderTextColor="#999"
               secureTextEntry
@@ -334,7 +337,7 @@ const SettingScreen = () => {
             />
 
             <TextInput
-              style={styles.input}
+              style={[styles.input, { color: "#333" }]}
               placeholder="Mật khẩu mới"
               placeholderTextColor="#999"
               secureTextEntry
@@ -343,7 +346,7 @@ const SettingScreen = () => {
             />
 
             <TextInput
-              style={styles.input}
+              style={[styles.input, { color: "#333" }]}
               placeholder="Xác nhận mật khẩu mới"
               placeholderTextColor="#999"
               secureTextEntry
