@@ -15,7 +15,6 @@ export default function AssetDetailsScreen() {
   // reload permission mỗi lần quay lại màn
   useFocusEffect(
     useCallback(() => {
-      console.log("[PERMISSION] reload on AssetDetailsScreen focus");
       dispatch(reloadPermissions());
     }, [dispatch])
   );

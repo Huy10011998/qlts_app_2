@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { StyleSheet, Platform, Keyboard } from "react-native";
+import { StyleSheet, Platform } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -14,40 +14,20 @@ const TAB_HEIGHT = 56;
 
 export default function Tabs() {
   const insets = useSafeAreaInsets();
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
-
-  // ==========================
-  // KEYBOARD LISTENER
-  // ==========================
-  useEffect(() => {
-    const showSub = Keyboard.addListener("keyboardDidShow", () => {
-      setKeyboardVisible(true);
-    });
-
-    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
-      setKeyboardVisible(false);
-    });
-
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
 
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarShowLabel: true,
+        tabBarHideOnKeyboard: true,
+        lazy: false,
         tabBarStyle: [
           styles.tabBar,
           {
-            height: keyboardVisible ? 0 : TAB_HEIGHT + insets.bottom,
-            paddingBottom: keyboardVisible ? 0 : insets.bottom,
-            opacity: keyboardVisible ? 0 : 1,
+            height: TAB_HEIGHT + insets.bottom,
+            paddingBottom: insets.bottom,
           },
         ],
-
         tabBarLabelStyle: styles.label,
         tabBarActiveTintColor: "#fff",
         tabBarInactiveTintColor: "#ffd6d6",
@@ -62,6 +42,7 @@ export default function Tabs() {
           tabBarIcon: ({ color }) => (
             <Ionicons name="home" size={24} color={color} />
           ),
+          freezeOnBlur: true,
         }}
       />
 
@@ -72,7 +53,7 @@ export default function Tabs() {
         options={{
           title: "Quét QR",
           tabBarIcon: ({ color }) => (
-            <Ionicons name="qr-code-outline" size={28} color={color} />
+            <Ionicons name="qr-code-outline" size={24} color={color} />
           ),
         }}
       />
@@ -95,18 +76,8 @@ export default function Tabs() {
 const styles = StyleSheet.create({
   tabBar: {
     backgroundColor: "#FF3333",
-    borderTopWidth: 0,
-
-    ...(Platform.OS === "ios"
-      ? {
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: -3 },
-          shadowOpacity: 0.15,
-          shadowRadius: 6,
-        }
-      : {
-          elevation: 20,
-        }),
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(0,0,0,0.08)",
   },
 
   label: {

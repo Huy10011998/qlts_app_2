@@ -9,6 +9,7 @@ import { RootState } from "../store/index.ts";
 import { useSelector } from "react-redux";
 import { getPermission } from "../services/Index.tsx";
 import { useAppDispatch } from "../store/Hooks.ts";
+import { log } from "../utils/Logger.ts";
 
 export default function RootNavigator() {
   const { token, isLoading, iosAuthenticated, authReady } = useAuth();
@@ -33,7 +34,7 @@ export default function RootNavigator() {
           dispatch(setPermissions(res.data));
         }
       } catch (err) {
-        console.log("Get permission failed", err);
+        log("Get permission failed", err);
         dispatch(clearPermissions());
       }
     };

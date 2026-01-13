@@ -12,7 +12,7 @@ export default function AppBootstrap() {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-    /* ===== NET INFO ===== */
+    // NET INFO
     let lastConnected = true;
 
     const unsubscribeNetInfo = NetInfo.addEventListener((state) => {
@@ -22,14 +22,14 @@ export default function AppBootstrap() {
       lastConnected = !!state.isConnected;
     });
 
-    /* ===== APP STATE ===== */
+    // APP STATE
     let currentState: AppStateStatus = AppState.currentState;
 
     const subAppState = AppState.addEventListener("change", (nextState) => {
       if (currentState.match(/inactive|background/) && nextState === "active") {
         log("[APP] App foreground");
 
-        // 🔥 reload data + permission
+        // reload data + permission
         emitAppRefetch("foreground");
         dispatch(reloadPermissions());
       }

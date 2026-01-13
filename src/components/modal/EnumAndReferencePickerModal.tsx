@@ -8,7 +8,7 @@ import {
   StyleSheet,
   TouchableWithoutFeedback,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PropsEnum } from "../../types/Components.d";
 
 export default function EnumAndReferencePickerModal({
@@ -18,6 +18,8 @@ export default function EnumAndReferencePickerModal({
   onClose,
   onSelect,
 }: PropsEnum) {
+  const insets = useSafeAreaInsets();
+
   return (
     <Modal
       animationType="slide"
@@ -26,13 +28,20 @@ export default function EnumAndReferencePickerModal({
       statusBarTranslucent
       presentationStyle="overFullScreen"
     >
-      {/* Overlay - bấm ra ngoài để đóng */}
+      {/* Overlay */}
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.modalOverlay} />
       </TouchableWithoutFeedback>
 
-      {/* Modal Content */}
-      <SafeAreaView edges={["bottom"]} style={styles.modalContainer}>
+      {/* Bottom Sheet */}
+      <View
+        style={[
+          styles.modalContainer,
+          {
+            paddingBottom: insets.bottom > 0 ? insets.bottom : 16,
+          },
+        ]}
+      >
         {/* Drag handle */}
         <View style={styles.dragHandle} />
 
@@ -43,13 +52,17 @@ export default function EnumAndReferencePickerModal({
         <ScrollView
           style={styles.listWrapper}
           showsVerticalScrollIndicator={false}
+          bounces={false}
         >
           {items.map((item, idx) => (
             <TouchableOpacity
               key={idx}
               style={styles.modalItem}
               activeOpacity={0.7}
-              onPress={() => onSelect(item.value)}
+              onPress={() => {
+                onSelect(item.value);
+                onClose();
+              }}
             >
               <Text style={styles.modalItemText}>{item.text}</Text>
             </TouchableOpacity>
@@ -64,7 +77,7 @@ export default function EnumAndReferencePickerModal({
         >
           <Text style={styles.modalCancelText}>Đóng</Text>
         </TouchableOpacity>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }
@@ -119,7 +132,7 @@ const styles = StyleSheet.create({
 
   modalItem: {
     paddingVertical: 14,
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: "#eee",
   },
 

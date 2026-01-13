@@ -82,8 +82,8 @@ android {
         applicationId "com.qlts_app_2"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 22
-        versionName "1.0.21"
+        versionCode 25
+        versionName "1.0.24"
     }
     signingConfigs {
         release {

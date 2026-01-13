@@ -311,6 +311,7 @@ export const RenderInputByType = ({
               styles.input,
               {
                 padding: 12,
+                paddingRight: 20,
                 fontSize: 14,
                 color: hasValue ? "#000" : "#999",
               },

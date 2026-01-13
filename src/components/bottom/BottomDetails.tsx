@@ -20,7 +20,7 @@ export default function BottomBarDetails({
 }: BottomBarProps) {
   const SCREEN_WIDTH = Dimensions.get("window").width;
 
-  /* ===== PERMISSION ===== */
+  // PERMISSION
   const { nameClass } = useParams();
 
   const { can, loaded, permissions } = usePermission();
@@ -28,9 +28,9 @@ export default function BottomBarDetails({
   const hasAttachPermission = useMemo(() => {
     if (!loaded || !nameClass) return false;
     return can(nameClass, "AttachFile");
-  }, [loaded, nameClass, permissions]); // 🔥 QUAN TRỌNG
+  }, [loaded, nameClass, permissions]); // QUAN TRỌNG
 
-  /* ===== FILTER TAB ===== */
+  // FILTER TAB
   const visibleTabs = useMemo(() => {
     return tabs.filter((tab) => {
       if (tab.key === "attach") return hasAttachPermission;
@@ -38,7 +38,7 @@ export default function BottomBarDetails({
     });
   }, [tabs, hasAttachPermission]);
 
-  /* ===== RESET activeTab nếu tab bị ẩn ===== */
+  // RESET activeTab nếu tab bị ẩn
   useEffect(() => {
     if (visibleTabs.length === 0) return;
 
@@ -47,7 +47,7 @@ export default function BottomBarDetails({
     }
   }, [visibleTabs, activeTab, onTabPress]);
 
-  /* ===== SIZE ===== */
+  // SIZE
   if (visibleTabs.length === 0) {
     return null; // hoặc View rỗng
   }
@@ -55,7 +55,7 @@ export default function BottomBarDetails({
 
   const UNDERLINE_WIDTH = TAB_WIDTH * 0.6;
 
-  /* ===== UNDERLINE ===== */
+  // UNDERLINE
   const activeIndex = visibleTabs.findIndex((t) => t.key === activeTab);
   const index = activeIndex >= 0 ? activeIndex : 0;
 
@@ -76,7 +76,7 @@ export default function BottomBarDetails({
     }).start();
   }, [index]);
 
-  /* ===== HANDLER ===== */
+  // HANDLER
   const handlePress = (tabKey: string, label: string, i: number) => {
     onTabPress(tabKey, label);
     Animated.spring(underlineX, {
@@ -85,7 +85,7 @@ export default function BottomBarDetails({
     }).start();
   };
 
-  /* ===== RENDER ===== */
+  // RENDER
   return (
     <View style={styles.bottomBar}>
       <Animated.View

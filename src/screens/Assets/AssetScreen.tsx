@@ -1,4 +1,10 @@
-import React, { useEffect, useState, useMemo, useRef } from "react";
+import React, {
+  useEffect,
+  useState,
+  useMemo,
+  useRef,
+  useCallback,
+} from "react";
 import {
   View,
   Text,
@@ -14,7 +20,7 @@ import {
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import {
   DropdownProps,
   GetMenuActiveResponse,
@@ -29,6 +35,8 @@ import { removeVietnameseTones } from "../../utils/Helper";
 import { callApi } from "../../services/data/CallApi";
 import { error } from "../../utils/Logger";
 import { useAutoReload } from "../../hooks/useAutoReload";
+import { reloadPermissions } from "../../store/PermissionActions";
+import { useAppDispatch } from "../../store/Hooks";
 
 if (
   Platform.OS === "android" &&

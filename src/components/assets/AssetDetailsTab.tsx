@@ -71,7 +71,6 @@ export default function AssetDeTailsTab({
       nameClassRoot: nameClassRoot,
       titleHeader: item.moTa ?? "Danh sách",
     });
-    console.log("===item", item.propertyReference);
   };
 
   const renderItem = ({ item }: { item: MenuItemResponse }) => (

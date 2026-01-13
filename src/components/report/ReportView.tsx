@@ -40,9 +40,6 @@ const ReportView: React.FC<ReportViewProps> = ({ title, onClose }) => {
         API_ENDPOINTS.PREVIEW_MAYTINH_THONGKE_CNTT
       );
 
-      console.log("===tuNgay", from);
-      console.log("===denNgay", to);
-
       const html = `
 <html>
   <head>

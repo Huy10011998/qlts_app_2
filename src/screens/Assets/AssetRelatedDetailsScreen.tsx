@@ -4,7 +4,6 @@ import { useCallback } from "react";
 
 import AssetDetails from "../../components/assets/AssetDetails";
 import TabContent from "../../components/tabs/TabContent";
-import BottomBarDetails from "../../components/bottom/BottomDetails";
 
 import { useAppDispatch } from "../../store/Hooks";
 import { reloadPermissions } from "../../store/PermissionActions";
@@ -15,7 +14,6 @@ export default function AssetDetailsScreen() {
   // reload permission mỗi lần quay lại màn
   useFocusEffect(
     useCallback(() => {
-      console.log("[PERMISSION] reload on AssetDetailsScreen focus");
       dispatch(reloadPermissions());
     }, [dispatch])
   );

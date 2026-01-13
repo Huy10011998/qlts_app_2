@@ -16,7 +16,7 @@ import {
   ScrollView,
   RefreshControl,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import {
   Field,
   PropertyResponse,
@@ -47,6 +47,7 @@ import { error } from "../../utils/Logger";
 import { usePermission } from "../../hooks/usePermission";
 import { useAutoReload } from "../../hooks/useAutoReload";
 import { useAppDispatch } from "../../store/Hooks";
+import { reloadPermissions } from "../../store/PermissionActions";
 
 if (
   Platform.OS === "android" &&
@@ -239,6 +240,13 @@ export default function AssetList() {
     dispatch(resetSelectedTreeNode());
   }, []);
 
+  // reload permission mỗi lần quay lại màn
+  useFocusEffect(
+    useCallback(() => {
+      dispatch(reloadPermissions());
+    }, [dispatch])
+  );
+
   const shouldRefresh = useSelector(
     (state: RootState) => state.asset.shouldRefreshList
   );
@@ -336,7 +344,7 @@ export default function AssetList() {
           setFieldActive(activeFields);
 
           setFieldShowMobile(
-            activeFields.filter((f: { isShowMobile: any }) => f.isShowMobile)
+            activeFields.filter((f: any) => Boolean(Number(f.isShowMobile)))
           );
         }
 
@@ -495,7 +503,7 @@ export default function AssetList() {
         renderItem={({ item }) => (
           <ListCardAsset
             item={item}
-            fields={fieldShowMobile}
+            fields={fieldShowMobile.length ? fieldShowMobile : fieldActive}
             icon={propertyClass?.iconMobile || ""}
             onPress={() => handlePress(item)}
           />
