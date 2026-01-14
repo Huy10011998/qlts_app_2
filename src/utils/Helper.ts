@@ -20,33 +20,33 @@ export function capitalizeFirstLetter(str?: string): string {
   if (!str) return "";
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
-
-// maytinh -> MayTinh
+// change nameClass permission
 export const normalizeClassName = (name?: string) => {
   if (!name) return "";
 
-  // B1: làm sạch ký tự đặc biệt
-  let clean = name.replace(/[_\-\s]+/g, "");
+  // ✅ CASE 1: Backend class (có dấu _ và chữ hoa)
+  // => KHÔNG ĐỤNG
+  if (/_/.test(name) && /[A-Z]/.test(name)) {
+    return name.trim();
+  }
 
-  // B2: nếu toàn bộ lowercase → tách theo kiểu 2 từ (maytinh → may + tinh)
-  if (/^[a-z]+$/.test(clean)) {
-    // chia giữa theo heuristic: tìm chuỗi consonant + vowel + "tinh" (fix theo domain VN)
-    // bạn có thể tự bổ sung nếu sau này có Class khác (e.g. xeoto → xe + oto)
+  // CASE 2: camelCase / PascalCase không _
+  if (!/_/.test(name) && /[A-Z]/.test(name)) {
+    return name.trim();
+  }
+
+  // CASE 3: lowercase hoặc dạng user input (maytinh, may_tinh)
+  let clean = name.replace(/[_\-\s]+/g, " ");
+
+  // lowercase liền nhau
+  if (/^[a-z\s]+$/.test(clean)) {
     return clean
-      .replace(/(.{3,}?)(tinh)/i, "$1 $2")
       .split(" ")
       .map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
       .join("");
   }
 
-  // B3: Nếu dạng camelCase hoặc PascalCase (mayTinh, MayTinh)
-  clean = clean.replace(/([a-z])([A-Z])/g, "$1 $2");
-
-  // B4: viết hoa chuẩn từng từ rồi nối lại
-  return clean
-    .split(" ")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-    .join("");
+  return clean.trim();
 };
 
 // Các tab mặc định

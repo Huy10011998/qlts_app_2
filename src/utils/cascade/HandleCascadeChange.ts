@@ -1,4 +1,5 @@
 import { HandleCascadeChangeProps } from "../../types/Components.d";
+import { TypeProperty } from "../Enum";
 import { fetchReferenceByFieldWithParent } from "./FetchReferenceByFieldWithParent";
 
 export const handleCascadeChange = ({
@@ -37,7 +38,14 @@ export const handleCascadeChange = ({
       // Nếu field hiện tại KHÔNG phải là parent → skip
       if (!parents.includes(name)) return;
 
-      // Clear giá trị
+      //  bỏ qua Date / Time
+      if (
+        f.typeProperty === TypeProperty.Date ||
+        f.typeProperty === TypeProperty.Time
+      ) {
+        return;
+      }
+
       next[f.name] = null;
 
       // Clear reference data

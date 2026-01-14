@@ -2,11 +2,15 @@ import axios, { AxiosError, AxiosInstance } from "axios";
 import { Buffer } from "buffer";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_ENDPOINTS, BASE_URL } from "../../config/Index";
-import { error, log, warn } from "../../utils/Logger";
+import { log, warn } from "../../utils/Logger";
+import { LogoutReason } from "../../types/Context.d";
 
 // GLOBAL LOGOUT HANDLER
-let onAuthLogout: (() => Promise<void>) | null = null;
-export const setOnAuthLogout = (cb: (() => Promise<void>) | null) => {
+let onAuthLogout: ((reason?: LogoutReason) => Promise<void>) | null = null;
+
+export const setOnAuthLogout = (
+  cb: ((reason?: LogoutReason) => Promise<void>) | null
+) => {
   onAuthLogout = cb;
 };
 
@@ -154,10 +158,16 @@ api.interceptors.response.use(
   async (err: AxiosError & { NEED_LOGIN?: boolean }) => {
     const originalRequest: any = err.config;
 
+    // chỉ check offline khi thật sự là network error
+    if (!err.response) {
+      warn("[API] Network error → reject fast");
+      return Promise.reject(Object.assign(err, { OFFLINE: true }));
+    }
+
     // Nếu refresh trả NEED_LOGIN
     if (err.NEED_LOGIN) {
       warn("[API] Refresh failed → redirect to login");
-      if (onAuthLogout) await onAuthLogout();
+      if (onAuthLogout) await onAuthLogout("EXPIRED");
       return Promise.reject(err);
     }
 
@@ -172,12 +182,6 @@ api.interceptors.response.use(
 
     originalRequest._retry = true;
     warn("[API] 401 → retry with refresh");
-
-    // Nếu offline hoặc lỗi mạng → không logout
-    if (!err.response && err.message === "Network Error") {
-      error("[API] Network error → do not logout");
-      return Promise.reject(err);
-    }
 
     // Nếu đang refresh: đợi
     if (isRefreshing) {
@@ -218,13 +222,19 @@ api.interceptors.response.use(
     } catch (refreshErr: any) {
       onRefreshed(null);
 
-      // Network error → chờ auto reload
+      // NETWORK ERROR → không logout
       if (!refreshErr?.response) {
-        warn("[API] Refresh network error → wait for reconnect");
+        warn("[API] Refresh network error → wait");
         return Promise.reject(refreshErr);
       }
 
-      return Promise.reject({ NEED_LOGIN: true });
+      // ❗ REFRESH FAIL THẬT → LOGOUT NGAY
+      warn("[API] Refresh token invalid → logout");
+      if (onAuthLogout) {
+        await onAuthLogout("EXPIRED");
+      }
+
+      return Promise.reject(refreshErr);
     } finally {
       isRefreshing = false;
     }

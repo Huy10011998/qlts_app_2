@@ -16,6 +16,14 @@ export function usePermission() {
     if (!permissions || permissions.length === 0) return false;
 
     const normalized = normalizeClassName(module);
+    const key = `Class.${normalized}.${action}`;
+    console.log("CHECK PERMISSION:", {
+      module,
+      normalized,
+      action,
+      key,
+      has: permissions?.includes(key),
+    });
     return permissions.includes(`Class.${normalized}.${action}`);
   };
 

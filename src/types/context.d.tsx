@@ -1,4 +1,5 @@
-// Context cho xác thực
+export type LogoutReason = "EXPIRED" | "MANUAL" | "OTHER";
+
 export type AuthContextType = {
   token: string | null;
   isLoading: boolean;
@@ -8,6 +9,7 @@ export type AuthContextType = {
   setToken: (token: string | null) => Promise<void>;
   setRefreshToken: (token: string | null) => Promise<void>;
   logout: () => Promise<void>;
+  logoutReason?: LogoutReason;
 };
 
 // Payload của JWT

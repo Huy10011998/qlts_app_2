@@ -20,9 +20,11 @@ export const DatePickerModalAndroid = ({
   const [showPicker, setShowPicker] = useState(false);
   const [tempDate, setTempDate] = useState<Date>(parseDate(value));
 
-  // ✅ sync khi value từ cha thay đổi
+  // sync khi value từ cha thay đổi
   useEffect(() => {
-    setTempDate(parseDate(value));
+    if (value) {
+      setTempDate(parseDate(value));
+    }
   }, [value]);
 
   const handleDateChange = (event: any, selectedDate?: Date) => {

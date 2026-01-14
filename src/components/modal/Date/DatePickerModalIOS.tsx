@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Modal,
   Platform,
@@ -19,7 +19,15 @@ export const DatePickerModalIOS = ({
   onChange: (val: string) => void;
 }) => {
   const [showPicker, setShowPicker] = useState(false);
-  const [tempDate, setTempDate] = useState<Date>(parseDate(value));
+  const [tempDate, setTempDate] = useState<Date>(
+    value ? parseDate(value) : new Date()
+  );
+
+  useEffect(() => {
+    if (value) {
+      setTempDate(parseDate(value));
+    }
+  }, [value]);
 
   const handleDateChange = (_: any, selectedDate?: Date) => {
     if (selectedDate) {

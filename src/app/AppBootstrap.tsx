@@ -1,5 +1,4 @@
-// bootstrap/AppBootstrap.tsx
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { AppState, AppStateStatus } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
 
@@ -7,34 +6,43 @@ import { log } from "../utils/Logger";
 import { emitAppRefetch } from "../utils/AppRefetchBus";
 import { reloadPermissions } from "../store/PermissionActions";
 import { useAppDispatch } from "../store/Hooks";
+import { getPermission } from "../services/Index";
 
 export default function AppBootstrap() {
   const dispatch = useAppDispatch();
 
-  useEffect(() => {
-    // NET INFO
-    let lastConnected = true;
+  const appState = useRef<AppStateStatus>(AppState.currentState);
+  const lastConnected = useRef<boolean | null>(null);
 
+  useEffect(() => {
+    // NETWORK
     const unsubscribeNetInfo = NetInfo.addEventListener((state) => {
-      if (!lastConnected && state.isConnected) {
+      const isConnected = !!state.isConnected;
+
+      if (lastConnected.current === false && isConnected) {
+        log("[APP] Network reconnected");
         emitAppRefetch("network");
       }
-      lastConnected = !!state.isConnected;
+
+      lastConnected.current = isConnected;
     });
 
     // APP STATE
-    let currentState: AppStateStatus = AppState.currentState;
-
     const subAppState = AppState.addEventListener("change", (nextState) => {
-      if (currentState.match(/inactive|background/) && nextState === "active") {
+      if (
+        appState.current.match(/inactive|background/) &&
+        nextState === "active"
+      ) {
         log("[APP] App foreground");
 
-        // reload data + permission
         emitAppRefetch("foreground");
         dispatch(reloadPermissions());
+
+        // trigger silent refresh / auth check
+        getPermission().catch(() => {});
       }
 
-      currentState = nextState;
+      appState.current = nextState;
     });
 
     return () => {

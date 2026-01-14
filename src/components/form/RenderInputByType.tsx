@@ -41,22 +41,6 @@ export const RenderInputByType = ({
     return null;
   }
 
-  // APPLY DEFAULT FOR ADD MODE ONLY
-  useEffect(() => {
-    if (mode === "add" && !value && f.defaultDateNow) {
-      const def = getDefaultValueForField(f);
-      handleChange(f.name, def);
-    }
-  }, [mode]);
-
-  // APPLY DEFAULT TIME FOR ADD MODE ONLY
-  useEffect(() => {
-    if (mode === "add" && !value && f.defaultTimeNow) {
-      const def = getDefaultValueForField(f);
-      handleChange(f.name, def);
-    }
-  }, [mode]);
-
   // LIST ITEMS (ENUM / REFERENCE)
   const items =
     f.typeProperty === TypeProperty.Reference

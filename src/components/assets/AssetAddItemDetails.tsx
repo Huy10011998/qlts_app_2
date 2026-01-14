@@ -28,7 +28,11 @@ import { RootState } from "../../store/Index";
 import { setShouldRefreshList } from "../../store/AssetSlice";
 import { usePermission } from "../../hooks/usePermission";
 
-import { formatDateForBE, getDefaultValueForField } from "../../utils/Date";
+import {
+  formatDateForBE,
+  formatDMY,
+  getDefaultValueForField,
+} from "../../utils/Date";
 
 import { ParseFieldActive } from "../../utils/parser/ParseFieldActive";
 import { GroupFields } from "../../utils/parser/GroupFields";
@@ -79,11 +83,6 @@ export default function AssetAddItemDetails() {
     if (!selectedTreeValue) return [];
     return selectedTreeValue.split(",").map((v) => v.trim());
   }, [selectedTreeValue]);
-
-  log("selectedTreeProperty: ", selectedTreeProperty);
-  log("selectedTreeValue: ", selectedTreeValue);
-
-  log("fieldActive: ", fieldActive);
 
   // Khi chọn cây → set giá trị cha vào form
   useEffect(() => {
@@ -170,6 +169,39 @@ export default function AssetAddItemDetails() {
     });
   }, [rawTreeValues, selectedTreeValue, propertyClass, nameClass]);
 
+  useEffect(() => {
+    const mode = "add";
+
+    if (mode !== "add") return;
+
+    setFormData((prev) => {
+      const next = { ...prev };
+
+      fieldActive.forEach((f) => {
+        if (
+          f.typeProperty === TypeProperty.Date &&
+          f.defaultDateNow &&
+          !next[f.name]
+        ) {
+          next[f.name] = formatDMY(new Date());
+        }
+
+        if (
+          f.typeProperty === TypeProperty.Time &&
+          f.defaultTimeNow &&
+          !next[f.name]
+        ) {
+          const now = new Date();
+          next[f.name] = `${String(now.getHours()).padStart(2, "0")}:${String(
+            now.getMinutes()
+          ).padStart(2, "0")}`;
+        }
+      });
+
+      return next;
+    });
+  }, [fieldActive]);
+
   useImageLoader({
     fieldActive,
     formData,
@@ -211,9 +243,12 @@ export default function AssetAddItemDetails() {
       // Format date
       fieldActive.forEach((f) => {
         if (f.typeProperty === TypeProperty.Date) {
-          payloadData[f.name] = formatDateForBE(payloadData[f.name]);
+          const v = payloadData[f.name];
+          payloadData[f.name] = v ? formatDateForBE(v) : null;
         }
       });
+
+      console.log("PAYLOAD DATA (before wrap):", payloadData);
 
       const payload = {
         entities: [payloadData],

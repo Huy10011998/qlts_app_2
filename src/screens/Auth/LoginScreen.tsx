@@ -44,6 +44,17 @@ export default function LoginScreen() {
     console.log("===", token);
   }, []);
 
+  const { logoutReason } = useAuth();
+
+  useEffect(() => {
+    if (logoutReason === "EXPIRED") {
+      Alert.alert(
+        "Phiên đăng nhập đã hết hạn",
+        "Vui lòng đăng nhập lại để tiếp tục sử dụng ứng dụng."
+      );
+    }
+  }, [logoutReason]);
+
   // Enable / Disable Login button
   useEffect(() => {
     setIsLoginDisabled(!(userName.trim() && userPassword.trim()));
@@ -81,6 +92,7 @@ export default function LoginScreen() {
 
         // Lấy quyền
         const permissionRes = await getPermission();
+        console.log("===permissionRes", permissionRes.data);
         dispatch(setPermissions(permissionRes.data));
 
         if (Platform.OS === "ios") {

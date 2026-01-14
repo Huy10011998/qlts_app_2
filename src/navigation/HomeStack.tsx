@@ -87,7 +87,7 @@ export default function HomeStack() {
         options={({ route }) => {
           const title = route.params?.titleHeader
             ? capitalizeFirstLetter(route.params.titleHeader)
-            : "Linh kiện";
+            : "Danh sách";
 
           return {
             title,

@@ -83,8 +83,9 @@ export const validateDates = (
 export function formatDateForBE(date: any): string | null {
   if (!date) return null;
 
-  // ===== FE truyền Date object =====
   if (date instanceof Date) {
+    if (isNaN(date.getTime())) return null;
+
     const yyyy = date.getFullYear();
     const mm = String(date.getMonth() + 1).padStart(2, "0");
     const dd = String(date.getDate()).padStart(2, "0");
@@ -92,15 +93,14 @@ export function formatDateForBE(date: any): string | null {
     return `${yyyy}-${mm}-${dd}T00:00:00`;
   }
 
-  // ===== FE truyền string =====
   if (typeof date === "string") {
-    // Case: đã đúng yyyy-MM-dd hoặc yyyy-MM-ddTHH:mm:ss
-    if (/^\d{4}-\d{2}-\d{2}/.test(date)) {
+    // yyyy-MM-dd hoặc yyyy-MM-ddTHH:mm:ss
+    if (/^\d{4}-\d{2}-\d{2}(T.*)?$/.test(date)) {
       const [ymd] = date.split("T");
       return `${ymd}T00:00:00`;
     }
 
-    // Case: dd-MM-yyyy
+    // dd-MM-yyyy
     if (/^\d{2}-\d{2}-\d{4}$/.test(date)) {
       const [dd, mm, yyyy] = date.split("-");
       return `${yyyy}-${mm}-${dd}T00:00:00`;

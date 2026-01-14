@@ -227,7 +227,15 @@ export default function AssetList() {
   const [loadingTree, setLoadingTree] = useState(false);
 
   // Filter conditions
-  const [conditions, setConditions] = useState<any[]>([]);
+  const [conditions, setConditions] = useState<
+    {
+      property: string;
+      operator: SqlOperator;
+      value: string;
+      type: TypeProperty;
+    }[]
+  >([]);
+
   const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
 
   const [isFirstLoad, setIsFirstLoad] = useState(true);
@@ -265,16 +273,17 @@ export default function AssetList() {
     setIsRefreshingTop(false);
   };
 
+  const treeLoadedRef = useRef(false);
+
   const openMenu = async () => {
     setMenuVisible(true);
 
-    if (nameClass) {
+    if (nameClass && !treeLoadedRef.current) {
       try {
         setLoadingTree(true);
         const res = await getBuildTree(nameClass);
-        const tree = buildTree(res.data || []);
-
-        setTreeData(tree);
+        setTreeData(buildTree(res.data || []));
+        treeLoadedRef.current = true;
       } catch (e) {
         error("Lỗi load tree:", e);
       } finally {
@@ -297,11 +306,11 @@ export default function AssetList() {
     }).start(() => setMenuVisible(false));
   };
 
-  const toggleMenu = () => {
+  const toggleMenu = useCallback(() => {
     if (!propertyClass?.isBuildTree) return;
     if (menuVisible) closeMenu();
     else openMenu();
-  };
+  }, [menuVisible, propertyClass?.isBuildTree]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -348,7 +357,7 @@ export default function AssetList() {
           );
         }
 
-        if (!isLoadMore && !propertyClass) {
+        if (!isLoadMore && !propertyClass && nameClass) {
           const responsePropertyClass = await getPropertyClass(nameClass);
           setPropertyClass(responsePropertyClass?.data);
         }
@@ -467,6 +476,18 @@ export default function AssetList() {
     });
   }, [debouncedSearch, conditions]);
 
+  const renderItem = useCallback(
+    ({ item }: { item: Record<string, any> }) => (
+      <ListCardAsset
+        item={item}
+        fields={fieldShowMobile.length ? fieldShowMobile : fieldActive}
+        icon={propertyClass?.iconMobile || ""}
+        onPress={() => handlePress(item)}
+      />
+    ),
+    [fieldShowMobile, fieldActive, propertyClass]
+  );
+
   if (
     isLoading &&
     !isRefreshingTop &&
@@ -499,15 +520,8 @@ export default function AssetList() {
       {/* List */}
       <FlatList
         data={taisan}
-        keyExtractor={(item) => String(item.id)}
-        renderItem={({ item }) => (
-          <ListCardAsset
-            item={item}
-            fields={fieldShowMobile.length ? fieldShowMobile : fieldActive}
-            icon={propertyClass?.iconMobile || ""}
-            onPress={() => handlePress(item)}
-          />
-        )}
+        keyExtractor={(item, index) => String(item.id ?? index)}
+        renderItem={renderItem}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshingTop}
@@ -517,7 +531,12 @@ export default function AssetList() {
             progressViewOffset={50}
           />
         }
+        maxToRenderPerBatch={10}
+        updateCellsBatchingPeriod={50}
+        initialNumToRender={10}
+        windowSize={5}
         scrollEventThrottle={16}
+        removeClippedSubviews={true}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
         ListFooterComponent={isLoadingMore ? <IsLoading /> : null}

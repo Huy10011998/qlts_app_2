@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState, memo } from "react";
 import {
   View,
   Text,
@@ -14,35 +14,38 @@ import { convertToResizePath, fetchImage } from "../../utils/Image";
 import { getFieldValue } from "../../utils/fields/GetFieldValue";
 import { parseLink } from "../../utils/Link";
 
-export default function ListCardAsset({
+function ListCardAsset({
   item,
   fields = [],
   icon,
   onPress = () => {},
 }: CardItemProps) {
+  // chỉ lấy các field Image
+  const imageFields = useMemo(
+    () => fields.filter((f) => f.typeProperty === TypeProperty.Image),
+    [fields]
+  );
+
   const [images, setImages] = useState<Record<string, string>>({});
   const [, setLoadingImages] = useState<Record<string, boolean>>({});
 
-  // Fetch ảnh cho các field type Image
+  // Fetch ảnh 1 lần khi item thay đổi
   useEffect(() => {
-    fields.forEach((field) => {
-      const value = getFieldValue(item, field);
+    imageFields.forEach((field) => {
+      const raw = getFieldValue(item, field);
+      if (typeof raw !== "string" || raw === "---") return;
 
-      if (
-        field.typeProperty === TypeProperty.Image &&
-        typeof value === "string" &&
-        value !== "---"
-      ) {
-        // Convert path sang Resize trước khi fetch
-        const resizePath = convertToResizePath(value);
+      const resizePath = convertToResizePath(raw);
 
-        fetchImage(field.name, resizePath, setLoadingImages, setImages);
-      }
+      if (images[field.name]) return;
+
+      fetchImage(field.name, resizePath, setLoadingImages, setImages);
     });
-  }, [item, fields]);
+  }, [item, imageFields]);
 
   return (
     <TouchableOpacity style={styles.card} onPress={() => onPress(item)}>
+      {/* AVATAR */}
       <View style={styles.avatar}>
         <Ionicons
           name={icon || "document-text-outline"}
@@ -51,32 +54,23 @@ export default function ListCardAsset({
         />
       </View>
 
+      {/* INFO */}
       <View style={styles.info}>
         {fields.map((field) => {
           const rawValue = getFieldValue(item, field);
-
-          const currentValue =
+          const value =
             rawValue === null || rawValue === undefined
               ? "---"
               : String(rawValue);
 
-          // IMAGE
+          // IMAGE (giống code ban đầu)
           if (field.typeProperty === TypeProperty.Image) {
+            const uri = images[field.name];
             return (
-              <View key={field.name} style={{ marginBottom: 6 }}>
-                <Text style={styles.label}>{field.moTa}: </Text>
-
-                {images[field.name] ? (
-                  <Image
-                    source={{ uri: images[field.name] }}
-                    style={{
-                      width: 60,
-                      height: 60,
-                      borderRadius: 6,
-                      marginTop: 4,
-                      resizeMode: "cover",
-                    }}
-                  />
+              <View key={field.name} style={styles.block}>
+                <Text style={styles.label}>{field.moTa}:</Text>
+                {uri ? (
+                  <Image source={{ uri }} style={styles.bodyImage} />
                 ) : (
                   <Text style={styles.text}>---</Text>
                 )}
@@ -84,38 +78,31 @@ export default function ListCardAsset({
             );
           }
 
-          // LINK
+          /** 🔗 LINK */
           if (field.typeProperty === TypeProperty.Link) {
+            const parsed = parseLink(value);
             return (
-              <View key={field.name} style={{ marginBottom: 6 }}>
+              <Text key={field.name} style={styles.text}>
                 <Text style={styles.label}>{field.moTa}: </Text>
-                {currentValue !== "---" ? (
-                  (() => {
-                    const parsed = parseLink(currentValue);
-                    return parsed ? (
-                      <TouchableOpacity
-                        onPress={() => Linking.openURL(parsed.url)}
-                      >
-                        <Text style={[styles.text, styles.link]}>
-                          {parsed.text}
-                        </Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <Text style={styles.text}>{currentValue}</Text>
-                    );
-                  })()
+                {parsed ? (
+                  <Text
+                    style={styles.link}
+                    onPress={() => parsed.url && Linking.openURL(parsed.url)}
+                  >
+                    {parsed.text}
+                  </Text>
                 ) : (
-                  <Text style={styles.text}>---</Text>
+                  value
                 )}
-              </View>
+              </Text>
             );
           }
 
-          // 🔤 NORMAL TEXT
+          /** 🔤 TEXT */
           return (
             <Text key={field.name} style={styles.text}>
               <Text style={styles.label}>{field.moTa}: </Text>
-              {currentValue}
+              {value}
             </Text>
           );
         })}
@@ -123,6 +110,8 @@ export default function ListCardAsset({
     </TouchableOpacity>
   );
 }
+
+export default memo(ListCardAsset);
 
 const styles = StyleSheet.create({
   card: {
@@ -146,7 +135,32 @@ const styles = StyleSheet.create({
   },
 
   info: { flex: 1 },
-  text: { fontSize: 14, color: "#000", marginBottom: 2 },
-  label: { fontWeight: "bold", color: "#000" },
-  link: { color: "#1D4ED8", textDecorationLine: "underline" },
+
+  block: {
+    marginBottom: 6,
+  },
+
+  bodyImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    marginTop: 4,
+    resizeMode: "cover",
+  },
+
+  text: {
+    fontSize: 14,
+    color: "#000",
+    marginBottom: 2,
+  },
+
+  label: {
+    fontWeight: "bold",
+    color: "#000",
+  },
+
+  link: {
+    color: "#1D4ED8",
+    textDecorationLine: "underline",
+  },
 });

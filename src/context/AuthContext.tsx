@@ -14,7 +14,7 @@ import {
   setTokenInApi,
   setRefreshInApi,
 } from "../services/data/CallApi";
-import { AuthContextType } from "../types/Context.d";
+import { AuthContextType, LogoutReason } from "../types/Context.d";
 
 // CONTEXT
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,9 +23,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const [token, setTokenState] = useState<string | null>(null);
-  const [authReady, setAuthReady] = useState(false); // NEW
+  const [authReady, setAuthReady] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [iosAuthenticated, setIosAuthenticated] = useState(false);
+  const [logoutReason, setLogoutReason] = useState<LogoutReason | undefined>();
 
   // TOKEN HANDLERS
 
@@ -64,8 +65,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
   // LOGOUT
 
-  const logout = async () => {
+  const logout = async (reason: LogoutReason = "OTHER") => {
     log("[Auth] Logout → hard reset");
+    setLogoutReason(reason);
     setIsLoading(true);
     try {
       hardResetApi();
@@ -114,8 +116,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   // API → LOGOUT HANDLER
 
   useEffect(() => {
-    setOnAuthLogout(async () => {
-      await logout();
+    setOnAuthLogout(async (reason?: LogoutReason) => {
+      await logout(reason);
     });
     return () => setOnAuthLogout(null);
   }, []);
@@ -131,6 +133,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         setToken,
         setRefreshToken,
         logout,
+        logoutReason,
       }}
     >
       {children}
