@@ -21,6 +21,11 @@ export interface LoginResponse {
 }
 
 export interface PropertyResponse {
+  prefix: string | undefined;
+  prentTuDongTang: string | undefined;
+  formatTuDongTang: string | undefined;
+  propertyTuDongTang: string | undefined;
+  isTuDongTang: boolean | undefined;
   fields(fields: any): Field;
   iconMobile: string;
   isBuildTree: boolean;

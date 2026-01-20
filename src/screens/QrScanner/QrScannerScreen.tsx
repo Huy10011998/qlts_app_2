@@ -1,4 +1,4 @@
-import React, { Fragment, useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -6,28 +6,69 @@ import {
   Platform,
   StyleSheet,
   TouchableOpacity,
+  Animated,
 } from "react-native";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+
 import { request, PERMISSIONS, RESULTS } from "react-native-permissions";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import ReactNativeHapticFeedback from "react-native-haptic-feedback";
+
 import {
   Camera,
   Code,
   CodeScanner,
   useCameraDevice,
   useCodeScanner,
+  useCameraFormat,
 } from "react-native-vision-camera";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
-import { getClassReference, getFieldActive } from "../../services/Index";
-import { error, log } from "../../utils/Logger";
+import { getFieldActive } from "../../services/Index";
+import { error } from "../../utils/Logger";
 
 export default function QrScannerScreen() {
-  const [hasPermission, setHasPermission] = useState(false);
-  const device = useCameraDevice("back") as any;
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
 
-  const [isScanned, setIsScanned] = useState<boolean>(false);
+  const device = useCameraDevice("back");
+  const format = device
+    ? useCameraFormat(device, [
+        { videoResolution: { width: 1280, height: 720 } },
+        { fps: 30 },
+      ])
+    : undefined;
 
-  // ✅ Xin quyền camera
+  const [hasPermission, setHasPermission] = useState(false);
+  const [isActive, setIsActive] = useState(false);
+  const scannedRef = useRef(false);
+
+  /* ---------- Scan line ---------- */
+  const scanLineAnim = useRef(new Animated.Value(0)).current;
+
+  const startScanLine = () => {
+    scanLineAnim.setValue(0);
+    Animated.loop(
+      Animated.timing(scanLineAnim, {
+        toValue: 1,
+        duration: 2200,
+        useNativeDriver: true,
+      }),
+    ).start();
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      setIsActive(true);
+      scannedRef.current = false;
+      startScanLine();
+      return () => setIsActive(false);
+    }, []),
+  );
+
+  /* ---------- Permission ---------- */
   useEffect(() => {
     (async () => {
       const result =
@@ -35,223 +76,202 @@ export default function QrScannerScreen() {
           ? await request(PERMISSIONS.IOS.CAMERA)
           : await request(PERMISSIONS.ANDROID.CAMERA);
 
-      if (result === RESULTS.GRANTED) {
-        setHasPermission(true);
-      } else {
-        Alert.alert(
-          "Thông báo",
-          "Bạn cần cấp quyền camera trong Cài đặt để sử dụng chức năng quét QR."
-        );
+      if (result === RESULTS.GRANTED) setHasPermission(true);
+      else {
+        Alert.alert("Thông báo", "Bạn cần cấp quyền camera để quét QR");
       }
     })();
   }, []);
 
-  // ✅ Reset state mỗi khi quay lại màn hình scan
-  useFocusEffect(
-    React.useCallback(() => {
-      setIsScanned(false);
-    }, [])
-  );
-
-  // ✅ Xử lý khi scan QR
+  /* ---------- QR Scan ---------- */
   const codeScanner: CodeScanner = useCodeScanner({
     codeTypes: ["qr"],
     onCodeScanned: async (codes: Code[]) => {
-      if (codes.length === 0 || isScanned) return;
+      if (scannedRef.current || !codes.length) return;
 
-      setIsScanned(true);
+      scannedRef.current = true;
+      setIsActive(false);
 
-      const rawData = codes[0]?.value ?? "";
-      log("QR Data:", rawData);
+      ReactNativeHapticFeedback.trigger("impactLight");
 
-      const parts = rawData
-        .replace(/^\//, "") // bỏ dấu / đầu
-        .split("/")
-        .map((p) => p.trim())
-        .filter(Boolean);
-
-      log("QR parts:", parts);
+      const raw = codes[0]?.value ?? "";
+      const parts = raw.replace(/^\//, "").split("/").filter(Boolean);
 
       try {
-        // CASE 1: maytinh/1493
         if (parts.length === 2) {
           const [nameClass, id] = parts;
-
-          const response = await getFieldActive(nameClass);
-          const fieldActive = response?.data || [];
+          const res = await getFieldActive(nameClass);
 
           navigation.navigate("QrDetails", {
             id,
             titleHeader: nameClass,
             nameClass,
-            field: fieldActive,
+            field: res?.data || [],
           });
           return;
         }
 
-        // CASE 2: NoiDia_KhuVuc/NoiDia_Tablet/125
-        if (parts.length === 3) {
-          const [nameClassRoot, propertyReference, idRoot] = parts;
-          const response = await getClassReference(nameClassRoot);
-          const data = response?.data?.[0]?.propertyReference;
-
-          navigation.navigate("HomeTab", {
-            screen: "AssetRelatedList",
-            params: {
-              idRoot,
-              nameClassRoot: nameClassRoot,
-              nameClass: propertyReference,
-              propertyReference: data,
-            },
-          });
-
-          return;
-        }
-
-        // QR không hợp lệ
-        throw new Error("INVALID_QR_FORMAT");
+        throw new Error("INVALID_QR");
       } catch (e) {
-        error("QR scan error:", e);
-        Alert.alert("QR không hợp lệ", rawData, [
-          { text: "OK", onPress: () => setIsScanned(false) },
+        error(e);
+        Alert.alert("QR không hợp lệ", raw, [
+          {
+            text: "OK",
+            onPress: () => {
+              scannedRef.current = false;
+              setIsActive(true);
+              startScanLine();
+            },
+          },
         ]);
       }
     },
   });
 
-  if (!device) return <Fragment />;
-
-  if (!hasPermission) {
+  if (!device || !format || !hasPermission) {
     return (
       <View style={styles.center}>
-        <Text>Đang chờ cấp quyền camera...</Text>
+        <Text>Đang khởi tạo camera...</Text>
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1 }}>
+    <SafeAreaView style={styles.root} edges={[]}>
+      {/* CAMERA */}
       <Camera
         style={StyleSheet.absoluteFill}
         device={device}
-        isActive={true}
+        format={format}
+        isActive={isActive}
         codeScanner={codeScanner}
+        resizeMode="cover"
+        enableZoomGesture
+        zoom={device.neutralZoom ?? 1}
       />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerText}>Mã QR của tôi</Text>
-        </View>
+      {/* HEADER (VCB STYLE) */}
+      <View
+        pointerEvents="box-none"
+        style={[styles.header, { paddingTop: insets.top + 8 }]}
+      >
         <TouchableOpacity
-          style={styles.closeBtn}
-          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          onPress={() => {
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            }
+          }}
         >
-          <Ionicons name="close" size={30} color="#fff" />
+          <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
+
+        <Text style={styles.headerTitle}>Quét mã QR</Text>
+
+        <View style={styles.headerRight}>
+          <Ionicons name="flash-outline" size={22} color="#fff" />
+          <Ionicons
+            name="settings-outline"
+            size={22}
+            color="#fff"
+            style={{ marginLeft: 16 }}
+          />
+        </View>
       </View>
 
-      {/* Khung quét */}
-      <View style={styles.scanFrameContainer}>
-        <View style={styles.scanFrame}>
-          <View style={[styles.corner, styles.topLeft]} />
-          <View style={[styles.corner, styles.topRight]} />
-          <View style={[styles.corner, styles.bottomLeft]} />
-          <View style={[styles.corner, styles.bottomRight]} />
+      {/* OVERLAY */}
+      <View style={styles.overlay} pointerEvents="none">
+        <View style={styles.mask} />
+        <View style={styles.centerRow}>
+          <View style={styles.mask} />
+
+          <View style={styles.scanBox}>
+            <Animated.View
+              style={[
+                styles.scanLine,
+                {
+                  transform: [
+                    {
+                      translateY: scanLineAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, 240],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            />
+          </View>
+
+          <View style={styles.mask} />
         </View>
-        <Text style={styles.scanText}>Quét mã QR</Text>
+        <View style={styles.mask} />
       </View>
+    </SafeAreaView>
+  );
+}
+
+/* ---------- SMALL COMPONENT ---------- */
+function BottomItem({ icon, label }: any) {
+  return (
+    <View style={styles.bottomItem}>
+      <Ionicons name={icon} size={22} color="#fff" />
+      <Text style={styles.bottomText}>{label}</Text>
     </View>
   );
 }
 
+/* ---------- STYLES ---------- */
 const styles = StyleSheet.create({
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
+  root: { flex: 1, backgroundColor: "#000" },
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
 
   header: {
     position: "absolute",
-    top: 50,
     left: 0,
     right: 0,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-  },
-
-  headerCenter: {
-    alignItems: "center",
-  },
-
-  closeBtn: {
-    position: "absolute",
-    right: 10,
-    top: 0,
-  },
-
-  headerText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "500",
-    backgroundColor: "rgba(0,0,0,0.4)",
     paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 16,
+    backgroundColor: "rgba(0,0,0,0.45)",
   },
 
-  scanFrameContainer: {
+  headerTitle: {
     flex: 1,
-    justifyContent: "center",
+    marginLeft: 16,
+    color: "#ffffff",
+    fontSize: 17,
+    fontWeight: "bold",
+  },
+
+  headerRight: {
+    flexDirection: "row",
     alignItems: "center",
   },
 
-  scanFrame: {
-    width: 250,
-    height: 250,
-    position: "relative",
+  overlay: { ...StyleSheet.absoluteFillObject },
+  mask: { flex: 1, backgroundColor: "rgba(0,0,0,0.55)" },
+
+  centerRow: { flexDirection: "row" },
+
+  scanBox: {
+    width: 240,
+    height: 240,
+    overflow: "hidden",
   },
 
-  corner: {
-    width: 40,
-    height: 40,
-    borderColor: "#fff",
-    position: "absolute",
+  scanLine: {
+    height: 2,
+    backgroundColor: "#00FF88",
   },
 
-  topLeft: {
-    top: 0,
-    left: 0,
-    borderLeftWidth: 6,
-    borderTopWidth: 6,
+  bottomItem: {
+    alignItems: "center",
   },
 
-  topRight: {
-    top: 0,
-    right: 0,
-    borderRightWidth: 6,
-    borderTopWidth: 6,
-  },
-
-  bottomLeft: {
-    bottom: 0,
-    left: 0,
-    borderLeftWidth: 6,
-    borderBottomWidth: 6,
-  },
-
-  bottomRight: {
-    bottom: 0,
-    right: 0,
-    borderRightWidth: 6,
-    borderBottomWidth: 6,
-  },
-
-  scanText: {
-    marginTop: 20,
+  bottomText: {
+    marginTop: 6,
     color: "#fff",
-    fontSize: 16,
+    fontSize: 12,
   },
 });

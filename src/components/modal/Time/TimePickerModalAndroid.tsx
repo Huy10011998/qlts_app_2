@@ -25,13 +25,19 @@ export const TimePickerModalAndroid = ({
     setTempTime(parseTime(value));
   }, [value]);
 
-  const handleTimeChange = (_: any, selectedDate?: Date) => {
+  const handleTimeChange = (event: any, selectedDate?: Date) => {
     setShowPicker(false);
 
-    if (!selectedDate) return;
+    // ❌ Bấm CANCEL
+    if (event.type === "dismissed") {
+      return;
+    }
 
-    setTempTime(selectedDate);
-    onChange(formatHHMM(selectedDate));
+    // ✅ Bấm OK
+    if (event.type === "set" && selectedDate) {
+      setTempTime(selectedDate);
+      onChange(formatHHMM(selectedDate));
+    }
   };
 
   return (
@@ -55,9 +61,10 @@ export const TimePickerModalAndroid = ({
         <DateTimePicker
           value={tempTime}
           mode="time"
-          display="default"
-          is24Hour
+          display="spinner"
+          is24Hour={true}
           onChange={handleTimeChange}
+          themeVariant="light"
         />
       )}
     </View>

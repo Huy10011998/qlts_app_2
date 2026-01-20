@@ -26,9 +26,6 @@ import AssetAddRelatedItem from "../components/assets/AssetAddRelatedItem";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-/**
- * Common header config
- */
 const headerWithBack = HeaderDetails({ showBackButton: true });
 
 export default function HomeStack() {

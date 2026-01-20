@@ -40,17 +40,23 @@ export default function LoginScreen() {
 
   const dispatch = useAppDispatch();
 
+  const { logoutReason, clearLogoutReason } = useAuth();
+
   useEffect(() => {
     console.log("===", token);
   }, []);
-
-  const { logoutReason } = useAuth();
 
   useEffect(() => {
     if (logoutReason === "EXPIRED") {
       Alert.alert(
         "Phiên đăng nhập đã hết hạn",
-        "Vui lòng đăng nhập lại để tiếp tục sử dụng ứng dụng."
+        "Vui lòng đăng nhập lại để tiếp tục sử dụng ứng dụng.",
+        [
+          {
+            text: "OK",
+            onPress: () => clearLogoutReason(),
+          },
+        ],
       );
     }
   }, [logoutReason]);
@@ -92,7 +98,6 @@ export default function LoginScreen() {
 
         // Lấy quyền
         const permissionRes = await getPermission();
-        console.log("===permissionRes", permissionRes.data);
         dispatch(setPermissions(permissionRes.data));
 
         if (Platform.OS === "ios") {
@@ -106,12 +111,12 @@ export default function LoginScreen() {
       if (status === 401) {
         Alert.alert(
           "Đăng nhập thất bại",
-          message || "Sai tài khoản hoặc mật khẩu."
+          message || "Sai tài khoản hoặc mật khẩu.",
         );
       } else if (!err.response) {
         Alert.alert(
           "Lỗi kết nối",
-          "Không thể kết nối đến máy chủ. Vui lòng kiểm tra mạng."
+          "Không thể kết nối đến máy chủ. Vui lòng kiểm tra mạng.",
         );
       } else {
         Alert.alert("Lỗi", "Có lỗi xảy ra. Vui lòng thử lại.");
@@ -141,7 +146,7 @@ export default function LoginScreen() {
       if (enabled !== "1") {
         Alert.alert(
           "FaceID",
-          "Bạn chưa bật đăng nhập bằng FaceID trong Cài đặt. Vui lòng đăng nhập bằng tài khoản và mật khẩu, sau đó vào Cài đặt để bật tính năng này."
+          "Bạn chưa bật đăng nhập bằng FaceID trong Cài đặt. Vui lòng đăng nhập bằng tài khoản và mật khẩu, sau đó vào Cài đặt để bật tính năng này.",
         );
         return;
       }
@@ -168,7 +173,7 @@ export default function LoginScreen() {
 
       const response = await loginApi(
         credentials.username,
-        credentials.password
+        credentials.password,
       );
 
       if (response?.data?.accessToken) {

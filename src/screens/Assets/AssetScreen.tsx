@@ -1,10 +1,4 @@
-import React, {
-  useEffect,
-  useState,
-  useMemo,
-  useRef,
-  useCallback,
-} from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -20,7 +14,7 @@ import {
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import {
   DropdownProps,
   GetMenuActiveResponse,
@@ -35,8 +29,6 @@ import { removeVietnameseTones } from "../../utils/Helper";
 import { callApi } from "../../services/data/CallApi";
 import { error } from "../../utils/Logger";
 import { useAutoReload } from "../../hooks/useAutoReload";
-import { reloadPermissions } from "../../store/PermissionActions";
-import { useAppDispatch } from "../../store/Hooks";
 
 if (
   Platform.OS === "android" &&
@@ -213,7 +205,7 @@ export default function AssetScreen() {
 
   const handleToggle = (id: string | number) => {
     setExpandedIds((prev) =>
-      prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id],
     );
   };
   const fetchingRef = useRef(false);
@@ -230,7 +222,7 @@ export default function AssetScreen() {
       const response = (await callApi(
         "POST",
         API_ENDPOINTS.GET_MENU_ACTIVE,
-        {}
+        {},
       )) as GetMenuActiveResponse;
 
       if (!Array.isArray(response?.data)) {

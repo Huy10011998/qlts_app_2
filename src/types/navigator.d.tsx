@@ -15,7 +15,7 @@ export type PropertyClass = {
   prefix?: string;
 };
 
-// ⚠️ chỉnh mode thành optional
+// chỉnh mode thành optional
 export type OptionalParams = {
   propertyReference?: string;
   nameClass?: string;
@@ -53,6 +53,7 @@ export type HomeTabParamList = {
     nameClass: string;
     propertyReference: string;
     nameClassRoot?: string;
+    titleHeader?: string;
   };
 
   AssetList: {
@@ -138,6 +139,14 @@ export type RootStackParamList = {
   /** ================= QR (NESTED) ================= */
   ScanTab: NavigatorScreenParams<ScanTabParamList>;
 
+  QrReview: {
+    nameClass: string;
+    propertyReference: string;
+    idRoot: string;
+    nameClassRoot?: string;
+    titleHeader?: string;
+  };
+
   /** ================= CRUD ================= */
   AssetAddItem: {
     field: string;
@@ -202,3 +211,6 @@ export type AssetCloneItemNavigationProp = StackNavigation<"AssetCloneItem">;
 export type ScanTabNavigationProp = NativeStackNavigationProp<ScanTabParamList>;
 
 export type QrDetailsRouteProp = RouteProp<ScanTabParamList, "QrDetails">;
+
+export type QrReviewNavigationProp = StackNavigation<"QrReview">;
+export type QrReviewRouteProp = StackRoute<"QrReview">;

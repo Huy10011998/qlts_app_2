@@ -13,6 +13,7 @@ import {
   setOnAuthLogout,
   setTokenInApi,
   setRefreshInApi,
+  resetAuthState,
 } from "../services/data/CallApi";
 import { AuthContextType, LogoutReason } from "../types/Context.d";
 
@@ -81,7 +82,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       setTokenState(null);
       setIosAuthenticated(false);
       setIsLoading(false);
+      resetAuthState();
     }
+  };
+
+  const clearLogoutReason = () => {
+    setLogoutReason(undefined);
   };
 
   // BOOTSTRAP APP
@@ -134,6 +140,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         setRefreshToken,
         logout,
         logoutReason,
+        clearLogoutReason,
       }}
     >
       {children}

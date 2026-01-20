@@ -2,10 +2,11 @@
 import { useSelector } from "react-redux";
 import { RootState } from "../store";
 import { normalizeClassName } from "../utils/Helper";
+import { log } from "../utils/Logger";
 
 export function usePermission() {
   const { permissions, loaded } = useSelector(
-    (state: RootState) => state.permission
+    (state: RootState) => state.permission,
   );
 
   const isFullPermission = () => permissions?.includes("Group.1");
@@ -17,7 +18,7 @@ export function usePermission() {
 
     const normalized = normalizeClassName(module);
     const key = `Class.${normalized}.${action}`;
-    console.log("CHECK PERMISSION:", {
+    log("CHECK PERMISSION:", {
       module,
       normalized,
       action,

@@ -67,7 +67,7 @@ export default function AssetAddItemDetails() {
 
   const [images, setImages] = useState<Record<string, string>>({});
   const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>(
-    {}
+    {},
   );
 
   //Check Permission
@@ -76,7 +76,7 @@ export default function AssetAddItemDetails() {
   // Lấy node từ redux
   const dispatch = useAppDispatch();
   const { selectedTreeValue, selectedTreeProperty } = useSelector(
-    (state: RootState) => state.asset
+    (state: RootState) => state.asset,
   );
 
   const rawTreeValues = useMemo(() => {
@@ -148,7 +148,7 @@ export default function AssetAddItemDetails() {
     const parentProps = propertyClass.prentTuDongTang?.split(",") || [];
     const validParentValues = parentProps
       .map((prop: any, idx: string | number) =>
-        Number(rawTreeValues[Number(idx)])
+        Number(rawTreeValues[Number(idx)]),
       )
       .filter((v: number) => !isNaN(v) && v >= 0)
       .join(",");
@@ -169,6 +169,7 @@ export default function AssetAddItemDetails() {
     });
   }, [rawTreeValues, selectedTreeValue, propertyClass, nameClass]);
 
+  // default ngày và thời gian
   useEffect(() => {
     const mode = "add";
 
@@ -193,7 +194,7 @@ export default function AssetAddItemDetails() {
         ) {
           const now = new Date();
           next[f.name] = `${String(now.getHours()).padStart(2, "0")}:${String(
-            now.getMinutes()
+            now.getMinutes(),
           ).padStart(2, "0")}`;
         }
       });
@@ -248,8 +249,6 @@ export default function AssetAddItemDetails() {
         }
       });
 
-      console.log("PAYLOAD DATA (before wrap):", payloadData);
-
       const payload = {
         entities: [payloadData],
         saveHistory: true,
@@ -272,7 +271,7 @@ export default function AssetAddItemDetails() {
             },
           },
         ],
-        { cancelable: false }
+        { cancelable: false },
       );
     } catch (err) {
       Alert.alert("Lỗi", "Không thể tạo mới!");

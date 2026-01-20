@@ -21,17 +21,16 @@ import { useRoute, useNavigation } from "@react-navigation/native";
 import {
   Field,
   PropertyResponse,
-  AssetDetailsNavigationProp,
+  QrReviewNavigationProp,
   StackRoute,
-  mapPropertyResponseToPropertyClass,
 } from "../../types/Index";
 import {
   getFieldActive,
   getList,
   getPropertyClass,
 } from "../../services/Index";
-import ListCardAsset from "../../components/list/ListCardAsset";
-import IsLoading from "../../components/ui/IconLoading";
+import ListCardAsset from "../list/ListCardAsset";
+import IsLoading from "../ui/IconLoading";
 import { SqlOperator, TypeProperty } from "../../utils/Enum";
 import { useDebounce } from "../../hooks/useDebounce";
 import { error } from "../../utils/Logger";
@@ -50,9 +49,9 @@ if (
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-export default function AssetRelatedList() {
-  const route = useRoute<StackRoute<"AssetRelatedList">>();
-  const navigation = useNavigation<AssetDetailsNavigationProp>();
+export default function QrReview() {
+  const route = useRoute<StackRoute<"QrReview">>();
+  const navigation = useNavigation<QrReviewNavigationProp>();
 
   const { nameClass, idRoot, propertyReference, nameClassRoot } = route.params;
 
@@ -298,15 +297,11 @@ export default function AssetRelatedList() {
 
       {loaded && can(nameClass, "Insert") && (
         <RelatedAddItem
-          onPress={() =>
-            navigation.navigate("AssetAddRelatedItem", {
-              field: JSON.stringify(fieldActive),
-              nameClass,
-              propertyClass: mapPropertyResponseToPropertyClass(propertyClass),
-              idRoot,
-              nameClassRoot,
-            })
-          }
+          nameClass={nameClass}
+          field={fieldActive}
+          propertyClass={propertyClass}
+          idRoot={idRoot}
+          nameClassRoot={nameClassRoot}
         />
       )}
     </View>

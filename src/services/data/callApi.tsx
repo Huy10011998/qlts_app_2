@@ -63,6 +63,7 @@ export const resetAuthState = () => {
   cachedRefresh = null;
   isRefreshing = false;
   refreshSubscribers = [];
+  refreshPromise = null;
 };
 
 export const hardResetApi = () => {
@@ -82,6 +83,7 @@ const throwNeedLogin = (): never => {
 
 // REFRESH FLOW
 let isRefreshing = false;
+let isLoggingOut = false;
 let refreshPromise: Promise<string> | null = null;
 let refreshSubscribers: ((token: string | null) => void)[] = [];
 
@@ -155,25 +157,30 @@ api.interceptors.request.use(async (config) => {
 // RESPONSE
 api.interceptors.response.use(
   (res) => res,
-  async (err: AxiosError & { NEED_LOGIN?: boolean }) => {
+  async (err: AxiosError & { NEED_LOGIN?: boolean; OFFLINE?: boolean }) => {
     const originalRequest: any = err.config;
 
-    // chỉ check offline khi thật sự là network error
+    /** ===== NETWORK ERROR ===== */
     if (!err.response) {
       warn("[API] Network error → reject fast");
       return Promise.reject(Object.assign(err, { OFFLINE: true }));
     }
 
-    // Nếu refresh trả NEED_LOGIN
+    /** ===== REFRESH FAILED HARD ===== */
     if (err.NEED_LOGIN) {
-      warn("[API] Refresh failed → redirect to login");
-      if (onAuthLogout) await onAuthLogout("EXPIRED");
+      warn("[API] NEED_LOGIN → logout");
+
+      if (!isLoggingOut) {
+        isLoggingOut = true;
+        await onAuthLogout?.("EXPIRED");
+      }
+
       return Promise.reject(err);
     }
 
-    // Không phải lỗi 401 hoặc đã retry
+    /** ===== NOT 401 OR ALREADY RETRIED ===== */
     if (
-      err.response?.status !== 401 ||
+      err.response.status !== 401 ||
       !originalRequest ||
       originalRequest._retry
     ) {
@@ -181,60 +188,59 @@ api.interceptors.response.use(
     }
 
     originalRequest._retry = true;
-    warn("[API] 401 → retry with refresh");
+    warn("[API] 401 → try refresh");
 
-    // Nếu đang refresh: đợi
+    /** ===== WAIT FOR REFRESH ===== */
     if (isRefreshing) {
       return new Promise((resolve, reject) => {
         subscribeTokenRefresh((newToken) => {
-          if (newToken) {
-            resolve(
-              api({
-                ...originalRequest,
-                headers: {
-                  ...originalRequest.headers,
-                  Authorization: `Bearer ${newToken}`,
-                },
-              })
-            );
-          } else {
+          if (!newToken) {
             reject(
               Object.assign(new Error("NEED_LOGIN"), { NEED_LOGIN: true })
             );
+            return;
           }
+
+          resolve(
+            api({
+              ...originalRequest,
+              headers: {
+                ...originalRequest.headers,
+                Authorization: `Bearer ${newToken}`,
+              },
+            })
+          );
         });
       });
     }
 
-    // Tự refresh
+    /** ===== DO REFRESH ===== */
     isRefreshing = true;
+
     try {
-      const token = await refreshTokenFlow();
-      onRefreshed(token);
+      const newToken = await refreshTokenFlow();
+      onRefreshed(newToken);
 
       return api({
         ...originalRequest,
         headers: {
           ...originalRequest.headers,
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${newToken}`,
         },
       });
     } catch (refreshErr: any) {
       onRefreshed(null);
 
-      // NETWORK ERROR → không logout
+      /** NETWORK ERROR → DON'T LOGOUT */
       if (!refreshErr?.response) {
-        warn("[API] Refresh network error → wait");
-        return Promise.reject(refreshErr);
+        warn("[API] Refresh network error");
+        return Promise.reject(Object.assign(refreshErr, { OFFLINE: true }));
       }
 
-      // ❗ REFRESH FAIL THẬT → LOGOUT NGAY
-      warn("[API] Refresh token invalid → logout");
-      if (onAuthLogout) {
-        await onAuthLogout("EXPIRED");
-      }
+      /** REFRESH TOKEN INVALID → LOGOUT */
+      warn("[API] Refresh invalid → logout");
 
-      return Promise.reject(refreshErr);
+      return Promise.reject(Object.assign(refreshErr, { NEED_LOGIN: true }));
     } finally {
       isRefreshing = false;
     }
@@ -293,7 +299,7 @@ export const getClassReference = async <T = any,>(nameClass: string) =>
     referenceName: nameClass,
   });
 
-export const getListHistory = async <T = any,>(id: number, nameClass: string) =>
+export const getListHistory = async <T = any,>(id: string, nameClass: string) =>
   callApi<T>("POST", `/${nameClass}/get-list-history`, { id });
 
 export const getListAttachFile = async (

@@ -34,6 +34,7 @@ export default function AssetDeTailsTab({
         if (!id || !nameClass) throw new Error("Thiếu ID hoặc nameClass");
 
         const response = await getClassReference(nameClass);
+        console.log("====response", response?.data?.[0]?.moTa);
         const data = response?.data;
         log("Class reference data:", data);
         if (!Array.isArray(data)) {

@@ -20,7 +20,12 @@ import IsLoading from "../../components/ui/IconLoading";
 import { changePasswordApi } from "../../services/Index";
 import { API_ENDPOINTS } from "../../config/Index";
 import { StackNavigation, UserInfo } from "../../types";
-import { callApi, hardResetApi } from "../../services/data/CallApi";
+import {
+  callApi,
+  clearTokenStorage,
+  hardResetApi,
+  resetAuthState,
+} from "../../services/data/CallApi";
 import ReactNativeBiometrics from "react-native-biometrics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { clearPermissions } from "../../store/PermissionSlice";
@@ -98,7 +103,7 @@ const SettingScreen = () => {
       const response = await callApi<{ success: boolean; data: UserInfo }>(
         "POST",
         API_ENDPOINTS.GET_INFO,
-        {}
+        {},
       );
       setUser(response.data);
 
@@ -183,18 +188,20 @@ const SettingScreen = () => {
     try {
       // 0. Reset API state ngay lập tức
       hardResetApi();
+      resetAuthState();
 
-      // 1. Logout auth (token + keychain + storage)
+      // 1. Clear token
+      await clearTokenStorage();
+
+      // 2. Logout auth (context / server / navigation)
       await logout();
 
-      // 2. Clear Redux permissions
+      // 3. Clear Redux permissions
       dispatch(clearPermissions());
 
-      // 3. Clear FaceID setting
+      // 4. Clear FaceID
       setIsFaceIdEnabled(false);
       await AsyncStorage.removeItem("faceid-enabled");
-
-      // App tự quay về Login
     } catch (e) {
       Alert.alert("Lỗi", "Không thể đăng xuất.");
     } finally {
@@ -321,6 +328,8 @@ const SettingScreen = () => {
         transparent
         animationType="fade"
         visible={isModalVisible}
+        statusBarTranslucent
+        presentationStyle="overFullScreen"
         onRequestClose={() => setIsModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
@@ -442,8 +451,10 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
+    padding: 12,
     borderRadius: 8,
-    padding: 10,
+    paddingVertical: 12,
+    color: "#333",
     marginBottom: 12,
   },
 

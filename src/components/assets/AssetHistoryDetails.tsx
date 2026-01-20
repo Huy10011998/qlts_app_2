@@ -19,14 +19,14 @@ export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
   const [collapsedGroups, setCollapsedGroups] = useState<
     Record<string, boolean>
   >({});
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [item, setItem] = useState<any>(null);
   const [previousItem, setPreviousItem] = useState<any>(null);
 
   // parse fields safely
   const fieldActive = useMemo(() => ParseFieldActive(field), [field]);
 
-  // grouped by groupLayout (kept as-is style D)
+  // grouped by groupLayout
   const groupedFields = useMemo(() => GroupFields(fieldActive), [fieldActive]);
 
   const toggleGroup = (groupName: string) => {
@@ -38,7 +38,11 @@ export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
   };
 
   const fetchDetails = async () => {
+    // 👉 RESET để UI render "--"
+    setItem(null);
+    setPreviousItem(null);
     setIsLoading(true);
+
     try {
       if (!id || !nameClass) throw new Error("Thiếu ID hoặc nameClass");
 
@@ -50,8 +54,6 @@ export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
       if (id_previous) {
         const prevResponse = await getDetailsHistory(nameClass, id_previous);
         setPreviousItem(prevResponse.data);
-      } else {
-        setPreviousItem(null);
       }
     } catch (e) {
       error(e);
@@ -82,12 +84,15 @@ export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
     return String(currentValue ?? "") !== String(prevValue ?? "");
   };
 
-  if (isLoading) {
-    return <IsLoading size="large" color="#FF3333" />;
-  }
-
   return (
     <View style={styles.container}>
+      {/* Loading dạng overlay – KHÔNG che UI */}
+      {isLoading && (
+        <View style={styles.loadingOverlay}>
+          <IsLoading size="small" color="#FF3333" />
+        </View>
+      )}
+
       {children({
         activeTab,
         setActiveTab: handleChangeTab,
@@ -104,5 +109,14 @@ export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9F9F9" },
+  container: {
+    flex: 1,
+    backgroundColor: "#F9F9F9",
+  },
+  loadingOverlay: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    zIndex: 10,
+  },
 });

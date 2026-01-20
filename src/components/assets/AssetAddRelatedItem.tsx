@@ -32,7 +32,11 @@ import { RootState } from "../../store/Index";
 import { setShouldRefreshList } from "../../store/AssetSlice";
 import { usePermission } from "../../hooks/usePermission";
 
-import { formatDateForBE, getDefaultValueForField } from "../../utils/Date";
+import {
+  formatDateForBE,
+  formatDMY,
+  getDefaultValueForField,
+} from "../../utils/Date";
 
 import { ParseFieldActive } from "../../utils/parser/ParseFieldActive";
 import { GroupFields } from "../../utils/parser/GroupFields";
@@ -43,6 +47,8 @@ import { useAppDispatch } from "../../store/Hooks";
 export default function AssetAddRelatedItem() {
   const { field, nameClass, propertyClass, idRoot, nameClassRoot } =
     useParams();
+
+  console.log("propertyClass", propertyClass);
 
   const navigation = useNavigation<AssetAddRelatedItemNavigationProp>();
 
@@ -67,7 +73,7 @@ export default function AssetAddRelatedItem() {
 
   const [images, setImages] = useState<Record<string, string>>({});
   const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>(
-    {}
+    {},
   );
 
   //Check Permission
@@ -76,7 +82,7 @@ export default function AssetAddRelatedItem() {
   // Lấy node từ redux
   const dispatch = useAppDispatch();
   const { selectedTreeValue, selectedTreeProperty } = useSelector(
-    (state: RootState) => state.asset
+    (state: RootState) => state.asset,
   );
 
   const rawTreeValues = useMemo(() => {
@@ -148,7 +154,7 @@ export default function AssetAddRelatedItem() {
     const parentProps = propertyClass.prentTuDongTang?.split(",") || [];
     const validParentValues = parentProps
       .map((_prop: any, idx: string | number) =>
-        Number(rawTreeValues[Number(idx)])
+        Number(rawTreeValues[Number(idx)]),
       )
       .filter((v: number) => !isNaN(v) && v >= 0)
       .join(",");
@@ -169,13 +175,39 @@ export default function AssetAddRelatedItem() {
     });
   }, [rawTreeValues, selectedTreeValue, propertyClass, nameClass]);
 
-  useImageLoader({
-    fieldActive,
-    formData,
-    fetchImage,
-    setImages,
-    setLoadingImages,
-  });
+  // default ngày và thời gian
+  useEffect(() => {
+    const mode = "add";
+
+    if (mode !== "add") return;
+
+    setFormData((prev) => {
+      const next = { ...prev };
+
+      fieldActive.forEach((f) => {
+        if (
+          f.typeProperty === TypeProperty.Date &&
+          f.defaultDateNow &&
+          !next[f.name]
+        ) {
+          next[f.name] = formatDMY(new Date());
+        }
+
+        if (
+          f.typeProperty === TypeProperty.Time &&
+          f.defaultTimeNow &&
+          !next[f.name]
+        ) {
+          const now = new Date();
+          next[f.name] = `${String(now.getHours()).padStart(2, "0")}:${String(
+            now.getMinutes(),
+          ).padStart(2, "0")}`;
+        }
+      });
+
+      return next;
+    });
+  }, [fieldActive]);
 
   useEffect(() => {
     if (!idRoot || !nameClassRoot || !nameClass) return;
@@ -206,7 +238,7 @@ export default function AssetAddRelatedItem() {
             await fetchReferenceByField(
               f.referenceName,
               f.name,
-              setReferenceData
+              setReferenceData,
             );
           }
         }
@@ -229,6 +261,14 @@ export default function AssetAddRelatedItem() {
       isMounted = false;
     };
   }, [idRoot, nameClassRoot, nameClass, fieldActive]);
+
+  useImageLoader({
+    fieldActive,
+    formData,
+    fetchImage,
+    setImages,
+    setLoadingImages,
+  });
 
   const handleChange = (name: string, value: any) => {
     handleCascadeChange({
@@ -289,7 +329,7 @@ export default function AssetAddRelatedItem() {
             },
           },
         ],
-        { cancelable: false }
+        { cancelable: false },
       );
     } catch (err) {
       Alert.alert("Lỗi", "Không thể tạo mới!");

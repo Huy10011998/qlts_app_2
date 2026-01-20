@@ -22,7 +22,7 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 
 import { QrDetailsProps, RootStackParamList } from "../../types/Index";
 import { useParams } from "../../hooks/useParams";
-import { getDetails } from "../../services/Index";
+import { getClassReference, getDetails } from "../../services/Index";
 import IsLoading from "../ui/IconLoading";
 import { error, log } from "../../utils/Logger";
 import { ParseFieldActive } from "../../utils/parser/ParseFieldActive";
@@ -109,6 +109,31 @@ export default function QrDetails({ children }: QrDetailsProps) {
     });
   }, [navigation, toggleMenu]);
 
+  const handlePress = async () => {
+    if (!nameClass || !id) {
+      Alert.alert("Lỗi", "Thiếu thông tin nameClass hoặc id");
+      return;
+    }
+
+    try {
+      const response = await getClassReference(nameClass);
+      const propertyData = response?.data?.[0]?.propertyReference;
+      const titleHeader = response?.data?.[0]?.moTa;
+      const propertyReference = response?.data?.[0]?.name;
+
+      navigation.navigate("QrReview", {
+        idRoot: id,
+        nameClassRoot: nameClass,
+        nameClass: propertyReference,
+        propertyReference: propertyData,
+        titleHeader,
+      });
+    } catch (e) {
+      error(e);
+      Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
+    }
+  };
+
   //  DATA FETCHING
   useEffect(() => {
     const fetchDetails = async () => {
@@ -182,6 +207,13 @@ export default function QrDetails({ children }: QrDetailsProps) {
                 onPress={() => log("Trung chuyển")}
               >
                 <Text style={styles.menuItemText}>Trung chuyển</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => handlePress()}
+              >
+                <Text style={styles.menuItemText}>Đánh giá</Text>
               </TouchableOpacity>
             </ScrollView>
           </Animated.View>

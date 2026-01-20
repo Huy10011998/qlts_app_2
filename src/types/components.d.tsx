@@ -16,6 +16,8 @@ import {
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { TAB_ITEMS } from "../utils/Helper";
 import { TabItem } from "./Context.d";
+import { PropertyResponse } from "./Api.d";
+import { PropertyClass } from "./Navigator.d";
 
 export interface CardItemProps {
   item: Record<string, any>;
@@ -101,7 +103,7 @@ export interface TabContentProps {
   isFieldChanged?: (
     field: Field,
     currentItem: any,
-    previousItem: any
+    previousItem: any,
   ) => boolean;
 }
 
@@ -121,7 +123,7 @@ export interface GroupListProps {
   isFieldChanged?: (
     field: Field,
     currentItem: any,
-    previousItem: any
+    previousItem: any,
   ) => boolean;
 }
 
@@ -186,7 +188,7 @@ export interface DetailsHistoryProps {
     isFieldChanged: (
       field: Field,
       currentItem: any,
-      previousItem: any
+      previousItem: any,
     ) => boolean;
   }) => React.ReactNode;
 }
@@ -309,3 +311,17 @@ export interface PreviewImgByTypeProps {
   setImages: any;
   setLoadingImages: any;
 }
+
+export const mapPropertyResponseToPropertyClass = (
+  data?: PropertyResponse,
+): PropertyClass | undefined => {
+  if (!data) return undefined;
+
+  return {
+    isTuDongTang: data.isTuDongTang,
+    propertyTuDongTang: data.propertyTuDongTang,
+    formatTuDongTang: data.formatTuDongTang,
+    prentTuDongTang: data.prentTuDongTang,
+    prefix: data.prefix,
+  };
+};

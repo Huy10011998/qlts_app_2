@@ -83,7 +83,7 @@ export default function AssetGroupList({
               fields.map((field) => {
                 const currentValue = getFieldValue(item, field) || "---";
                 const prevValue =
-                  previousItem && getFieldValue(previousItem, field);
+                  (previousItem && getFieldValue(previousItem, field)) || "---";
 
                 const changed =
                   isFieldChanged && previousItem
@@ -94,7 +94,7 @@ export default function AssetGroupList({
                   <View key={field.name} style={styles.fieldRow}>
                     <Text style={styles.label}>{field.moTa}: </Text>
 
-                    {/* Case Image */}
+                    {/* IMAGE */}
                     {field.typeProperty === TypeProperty.Image ? (
                       currentValue !== "---" ? (
                         loadingImages[field.name] ? (
@@ -119,24 +119,42 @@ export default function AssetGroupList({
                         <Text style={styles.value}>---</Text>
                       )
                     ) : field.typeProperty === TypeProperty.Link ? (
-                      currentValue !== "---" ? (
-                        (() => {
-                          const parsed = parseLink(currentValue);
-                          return parsed ? (
-                            <TouchableOpacity
-                              onPress={() => Linking.openURL(parsed.url)}
-                            >
-                              <Text style={[styles.value, styles.link]}>
-                                {parsed.text}
+                      (() => {
+                        const prevParsed = parseLink(prevValue);
+                        const currentParsed =
+                          currentValue !== "---"
+                            ? parseLink(currentValue)
+                            : null;
+
+                        return (
+                          <Text
+                            style={[
+                              styles.value,
+                              changed && { color: "red", fontWeight: "600" },
+                            ]}
+                          >
+                            {changed && (
+                              <Text>
+                                {prevParsed?.text || prevValue || "---"}{" "}
+                                {" -> "}
                               </Text>
-                            </TouchableOpacity>
-                          ) : (
-                            <Text style={styles.value}>{currentValue}</Text>
-                          );
-                        })()
-                      ) : (
-                        <Text style={styles.value}>---</Text>
-                      )
+                            )}
+
+                            {currentParsed ? (
+                              <Text
+                                style={styles.link}
+                                onPress={() =>
+                                  Linking.openURL(currentParsed.url)
+                                }
+                              >
+                                {currentParsed.text}
+                              </Text>
+                            ) : (
+                              <Text>---</Text>
+                            )}
+                          </Text>
+                        );
+                      })()
                     ) : (
                       <Text
                         style={[
@@ -145,9 +163,7 @@ export default function AssetGroupList({
                         ]}
                       >
                         {changed
-                          ? `${prevValue || "---"}  ->  ${
-                              currentValue || "---"
-                            }`
+                          ? `${prevValue}  ->  ${currentValue}`
                           : currentValue}
                       </Text>
                     )}

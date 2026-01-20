@@ -31,7 +31,6 @@ export const RenderInputByType = ({
   setModalVisible,
   setActiveEnumField,
   mode,
-  getDefaultValueForField,
 }: RenderInputByTypeProps) => {
   // INITIAL VALUE
   const value = formData[f.name];

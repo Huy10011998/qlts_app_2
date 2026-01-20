@@ -1,8 +1,9 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { StyleSheet, Platform } from "react-native";
+import { StyleSheet } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { getFocusedRouteNameFromRoute } from "@react-navigation/native";
 
 import HomeStack from "./HomeStack";
 import SettingStack from "./SettingStack";
@@ -21,16 +22,14 @@ export default function Tabs() {
         headerShown: false,
         tabBarHideOnKeyboard: true,
         lazy: false,
-        tabBarStyle: [
-          styles.tabBar,
-          {
-            height: TAB_HEIGHT + insets.bottom,
-            paddingBottom: insets.bottom,
-          },
-        ],
         tabBarLabelStyle: styles.label,
         tabBarActiveTintColor: "#fff",
-        tabBarInactiveTintColor: "#ffd6d6",
+        tabBarStyle: {
+          backgroundColor: "#FF3333",
+          borderTopWidth: StyleSheet.hairlineWidth,
+          height: TAB_HEIGHT + insets.bottom,
+          paddingBottom: insets.bottom,
+        },
       }}
     >
       {/* HOME */}
@@ -50,11 +49,25 @@ export default function Tabs() {
       <Tab.Screen
         name="ScanTab"
         component={ScanStack}
-        options={{
-          title: "Quét QR",
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="qr-code-outline" size={24} color={color} />
-          ),
+        options={({ route }) => {
+          const routeName = getFocusedRouteNameFromRoute(route) ?? "Scan";
+          const isScanScreen = routeName === "Scan";
+
+          return {
+            title: "Quét QR",
+            tabBarIcon: ({ color }) => (
+              <Ionicons name="qr-code-outline" size={24} color={color} />
+            ),
+            tabBarStyle: [
+              {
+                backgroundColor: isScanScreen ? "#3A3A3A" : "#FF3333",
+                borderTopWidth: StyleSheet.hairlineWidth,
+                borderTopColor: "#000",
+                height: TAB_HEIGHT + insets.bottom,
+                paddingBottom: insets.bottom,
+              },
+            ],
+          };
         }}
       />
 
@@ -74,12 +87,6 @@ export default function Tabs() {
 }
 
 const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: "#FF3333",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(0,0,0,0.08)",
-  },
-
   label: {
     fontSize: 11,
     fontWeight: "600",
