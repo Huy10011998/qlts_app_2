@@ -9,7 +9,7 @@ import { LogoutReason } from "../../types/Context.d";
 let onAuthLogout: ((reason?: LogoutReason) => Promise<void>) | null = null;
 
 export const setOnAuthLogout = (
-  cb: ((reason?: LogoutReason) => Promise<void>) | null
+  cb: ((reason?: LogoutReason) => Promise<void>) | null,
 ) => {
   onAuthLogout = cb;
 };
@@ -62,6 +62,7 @@ export const resetAuthState = () => {
   cachedToken = null;
   cachedRefresh = null;
   isRefreshing = false;
+  isLoggingOut = false; // ✅ BẮT BUỘC
   refreshSubscribers = [];
   refreshPromise = null;
 };
@@ -196,7 +197,7 @@ api.interceptors.response.use(
         subscribeTokenRefresh((newToken) => {
           if (!newToken) {
             reject(
-              Object.assign(new Error("NEED_LOGIN"), { NEED_LOGIN: true })
+              Object.assign(new Error("NEED_LOGIN"), { NEED_LOGIN: true }),
             );
             return;
           }
@@ -208,7 +209,7 @@ api.interceptors.response.use(
                 ...originalRequest.headers,
                 Authorization: `Bearer ${newToken}`,
               },
-            })
+            }),
           );
         });
       });
@@ -244,7 +245,7 @@ api.interceptors.response.use(
     } finally {
       isRefreshing = false;
     }
-  }
+  },
 );
 
 // Generic API wrapper
@@ -252,7 +253,7 @@ export const callApi = async <T,>(
   method: "GET" | "POST" | "PUT" | "DELETE",
   url: string,
   data?: any,
-  configOverride?: any
+  configOverride?: any,
 ): Promise<T> => {
   const response = await api.request<T>({
     method,
@@ -271,7 +272,7 @@ export const getList = async <T = any,>(
   skipSize: number,
   searchText: string,
   conditions: any[],
-  conditionsAll: any[]
+  conditionsAll: any[],
 ) =>
   callApi<T>("POST", `/${nameClass}/get-list`, {
     orderby,
@@ -290,7 +291,7 @@ export const getDetails = async <T = any,>(nameClass: string, id: string) =>
 
 export const getDetailsHistory = async <T = any,>(
   nameClass: string,
-  id: string
+  id: string,
 ) =>
   callApi<T>("POST", `/${nameClass}/get-list-history-detail`, { log_ID: id });
 
@@ -309,23 +310,23 @@ export const getListAttachFile = async (
   skipSize: number,
   searchText: string,
   conditions: any[],
-  conditionsAll: any[]
+  conditionsAll: any[],
 ) =>
   callApi<{ data: { items: Record<string, any>[]; totalCount: number } }>(
     "POST",
     `/${nameClass}/get-attach-file`,
-    { orderby, pageSize, skipSize, searchText, conditions, conditionsAll }
+    { orderby, pageSize, skipSize, searchText, conditions, conditionsAll },
   );
 
 export const getPreviewAttachFile = async (
   name: string,
   path: string,
-  nameClass: string
+  nameClass: string,
 ) => {
   const res = await api.post(
     `/${nameClass}/preview-attach-file`,
     { name, path, isMobile: true },
-    { responseType: "arraybuffer", timeout: 10000 }
+    { responseType: "arraybuffer", timeout: 10000 },
   );
   return {
     headers: res.headers,
@@ -353,7 +354,7 @@ export const getPreviewAttachProperty = async (path: string) => {
 
 export const getPreviewBC = async (
   param: Record<string, any>,
-  path: string
+  path: string,
 ) => {
   const res = await api.post(path, param, {
     responseType: "arraybuffer",
@@ -373,12 +374,12 @@ export const update = async <T = any,>(nameClass: string, payload: any) =>
 
 export const deleteItems = async <T = any,>(
   nameClass: string,
-  body: { iDs: number[]; saveHistory: boolean }
+  body: { iDs: number[]; saveHistory: boolean },
 ) => callApi<T>("POST", `/${nameClass}/delete`, body);
 
 export const checkReferenceUsage = async <T = any,>(
   nameClass: string,
-  iDs: number[]
+  iDs: number[],
 ) => callApi<T>("POST", `/${nameClass}/check-reference-usage`, { iDs });
 
 export const uploadAttachProperty = async ({ file }: { file: any }) => {
@@ -392,7 +393,7 @@ export const uploadAttachProperty = async ({ file }: { file: any }) => {
     "POST",
     `/Common/attach-property`,
     form,
-    { headers: { "Content-Type": "multipart/form-data" } }
+    { headers: { "Content-Type": "multipart/form-data" } },
   );
   return res.data;
 };
@@ -405,5 +406,5 @@ export const tuDongTang = async <T = any,>(nameClass: string, payload: {}) =>
 
 export const getParentValue = async <T = any,>(
   nameClass: string,
-  payload: {}
+  payload: {},
 ) => callApi<T>("POST", `/${nameClass}/parent-value`, payload);

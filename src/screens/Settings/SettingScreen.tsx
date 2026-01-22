@@ -96,6 +96,14 @@ const SettingScreen = () => {
 
   const dispatch = useAppDispatch();
 
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
   // LOAD USER INFO + FACEID
   const fetchData = async () => {
     setIsLoading(true);
@@ -111,10 +119,14 @@ const SettingScreen = () => {
       const flag = await AsyncStorage.getItem("faceid-enabled");
       setIsFaceIdEnabled(flag === "1");
     } catch (error: any) {
-      if (error?.NEED_LOGIN) return;
+      if (error?.NEED_LOGIN) {
+        return; // không alert, không set state
+      }
       Alert.alert("Lỗi", "Không thể tải thông tin người dùng.");
     } finally {
-      setIsLoading(false);
+      if (isMounted.current) {
+        setIsLoading(false);
+      }
     }
   };
 
