@@ -26,6 +26,7 @@ import {
 } from "../../services/data/CallApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAppDispatch } from "../../store/Hooks";
+import { log } from "../../utils/Logger";
 
 export default function LoginScreen() {
   const { setToken, setRefreshToken, setIosAuthenticated, token } = useAuth();
@@ -43,7 +44,7 @@ export default function LoginScreen() {
   const { logoutReason, clearLogoutReason } = useAuth();
 
   useEffect(() => {
-    console.log("===", token);
+    log("===", token);
   }, []);
 
   useEffect(() => {

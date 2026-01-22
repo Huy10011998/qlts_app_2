@@ -2,6 +2,7 @@ export type LogoutReason = "EXPIRED" | "MANUAL" | "OTHER";
 
 export type AuthContextType = {
   token: string | null;
+  isAuthenticated: boolean;
   isLoading: boolean;
   iosAuthenticated: boolean;
   authReady: boolean;

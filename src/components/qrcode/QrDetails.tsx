@@ -133,7 +133,6 @@ export default function QrDetails({ children }: QrDetailsProps) {
       Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
     }
   };
-
   //  DATA FETCHING
   useEffect(() => {
     const fetchDetails = async () => {
@@ -185,29 +184,34 @@ export default function QrDetails({ children }: QrDetailsProps) {
           >
             <ScrollView contentContainerStyle={styles.menuContent}>
               <Text style={styles.menuTitle}>Menu</Text>
+              {nameClass !== "BinhChuaChay" &&
+                nameClass !== "HongChuaChay" &&
+                nameClass !== "TuChuaChay" && (
+                  <>
+                    <TouchableOpacity
+                      style={styles.menuItem}
+                      onPress={() => log("Báo hỏng")}
+                    >
+                      <Text style={styles.menuItemText}>
+                        Báo hỏng / Yêu cầu sửa chữa
+                      </Text>
+                    </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() => log("Báo hỏng")}
-              >
-                <Text style={styles.menuItemText}>
-                  Báo hỏng / Yêu cầu sửa chữa
-                </Text>
-              </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.menuItem}
+                      onPress={() => log("Thanh lý")}
+                    >
+                      <Text style={styles.menuItemText}>Thanh lý</Text>
+                    </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() => log("Thanh lý")}
-              >
-                <Text style={styles.menuItemText}>Thanh lý</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() => log("Trung chuyển")}
-              >
-                <Text style={styles.menuItemText}>Trung chuyển</Text>
-              </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.menuItem}
+                      onPress={() => log("Trung chuyển")}
+                    >
+                      <Text style={styles.menuItemText}>Trung chuyển</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
 
               <TouchableOpacity
                 style={styles.menuItem}

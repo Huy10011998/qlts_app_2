@@ -28,6 +28,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [iosAuthenticated, setIosAuthenticated] = useState(false);
   const [logoutReason, setLogoutReason] = useState<LogoutReason | undefined>();
+  const isAuthenticated = !!token;
 
   // TOKEN HANDLERS
 
@@ -132,6 +133,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     <AuthContext.Provider
       value={{
         token,
+        isAuthenticated,
         authReady, // expose
         isLoading,
         iosAuthenticated,

@@ -16,8 +16,9 @@ export default function App() {
       <StatusBar
         translucent={false}
         backgroundColor="#FF3333"
-        barStyle={isDarkMode ? "light-content" : "dark-content"}
+        barStyle="light-content"
       />
+
       <Provider store={store}>
         <AuthProvider>
           <NavigationContainer>

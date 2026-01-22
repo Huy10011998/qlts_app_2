@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Animated,
+  AppState,
 } from "react-native";
 import {
   SafeAreaView,
@@ -25,46 +26,75 @@ import {
   useCodeScanner,
   useCameraFormat,
 } from "react-native-vision-camera";
+
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { getFieldActive } from "../../services/Index";
 import { error } from "../../utils/Logger";
 
+/* ========================================================= */
 export default function QrScannerScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
 
+  /* ---------- AppState ---------- */
+  const [appState, setAppState] = useState(AppState.currentState);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", setAppState);
+    return () => sub.remove();
+  }, []);
+
+  /* ---------- Camera ---------- */
   const device = useCameraDevice("back");
-  const format = device
-    ? useCameraFormat(device, [
-        { videoResolution: { width: 1280, height: 720 } },
-        { fps: 30 },
-      ])
-    : undefined;
+
+  const format =
+    useCameraFormat(device, [
+      { videoResolution: { width: 1280, height: 720 } },
+      { fps: 30 },
+    ]) ?? device?.formats[0];
 
   const [hasPermission, setHasPermission] = useState(false);
-  const [isActive, setIsActive] = useState(false);
+  const [screenActive, setScreenActive] = useState(false);
   const scannedRef = useRef(false);
 
-  /* ---------- Scan line ---------- */
+  const cameraActive = screenActive && appState === "active";
+
+  /* ---------- Scan Line Animation ---------- */
   const scanLineAnim = useRef(new Animated.Value(0)).current;
+  const scanLoopRef = useRef<Animated.CompositeAnimation | null>(null);
 
   const startScanLine = () => {
     scanLineAnim.setValue(0);
-    Animated.loop(
+    scanLoopRef.current = Animated.loop(
       Animated.timing(scanLineAnim, {
         toValue: 1,
         duration: 2200,
         useNativeDriver: true,
       }),
-    ).start();
+    );
+    scanLoopRef.current.start();
   };
 
+  const stopScanLine = () => {
+    scanLoopRef.current?.stop();
+  };
+
+  /* ---------- Screen Focus ---------- */
   useFocusEffect(
-    React.useCallback(() => {
-      setIsActive(true);
+    useCallback(() => {
       scannedRef.current = false;
+
+      const timeout = setTimeout(() => {
+        setScreenActive(true);
+      }, 100); // 🔑 fix camera đen Android
+
       startScanLine();
-      return () => setIsActive(false);
+
+      return () => {
+        clearTimeout(timeout);
+        setScreenActive(false);
+        stopScanLine();
+      };
     }, []),
   );
 
@@ -76,21 +106,23 @@ export default function QrScannerScreen() {
           ? await request(PERMISSIONS.IOS.CAMERA)
           : await request(PERMISSIONS.ANDROID.CAMERA);
 
-      if (result === RESULTS.GRANTED) setHasPermission(true);
-      else {
+      if (result === RESULTS.GRANTED) {
+        setHasPermission(true);
+      } else {
         Alert.alert("Thông báo", "Bạn cần cấp quyền camera để quét QR");
       }
     })();
   }, []);
 
-  /* ---------- QR Scan ---------- */
+  /* ---------- QR Scanner ---------- */
   const codeScanner: CodeScanner = useCodeScanner({
     codeTypes: ["qr"],
     onCodeScanned: async (codes: Code[]) => {
-      if (scannedRef.current || !codes.length) return;
+      if (!codes.length || scannedRef.current) return;
 
       scannedRef.current = true;
-      setIsActive(false);
+      setScreenActive(false);
+      stopScanLine();
 
       ReactNativeHapticFeedback.trigger("impactLight");
 
@@ -98,20 +130,17 @@ export default function QrScannerScreen() {
       const parts = raw.replace(/^\//, "").split("/").filter(Boolean);
 
       try {
-        if (parts.length === 2) {
-          const [nameClass, id] = parts;
-          const res = await getFieldActive(nameClass);
+        if (parts.length !== 2) throw new Error("INVALID_QR");
 
-          navigation.navigate("QrDetails", {
-            id,
-            titleHeader: nameClass,
-            nameClass,
-            field: res?.data || [],
-          });
-          return;
-        }
+        const [nameClass, id] = parts;
+        const res = await getFieldActive(nameClass);
 
-        throw new Error("INVALID_QR");
+        navigation.navigate("QrDetails", {
+          id,
+          titleHeader: nameClass,
+          nameClass,
+          field: res?.data || [],
+        });
       } catch (e) {
         error(e);
         Alert.alert("QR không hợp lệ", raw, [
@@ -119,7 +148,7 @@ export default function QrScannerScreen() {
             text: "OK",
             onPress: () => {
               scannedRef.current = false;
-              setIsActive(true);
+              setScreenActive(true);
               startScanLine();
             },
           },
@@ -128,39 +157,39 @@ export default function QrScannerScreen() {
     },
   });
 
+  /* ---------- Loading ---------- */
   if (!device || !format || !hasPermission) {
     return (
       <View style={styles.center}>
-        <Text>Đang khởi tạo camera...</Text>
+        <Text style={{ color: "#fff" }}>Đang khởi tạo camera...</Text>
       </View>
     );
   }
 
+  /* ---------- UI ---------- */
   return (
     <SafeAreaView style={styles.root} edges={[]}>
-      {/* CAMERA */}
       <Camera
         style={StyleSheet.absoluteFill}
         device={device}
         format={format}
-        isActive={isActive}
+        isActive={cameraActive}
         codeScanner={codeScanner}
         resizeMode="cover"
         enableZoomGesture
         zoom={device.neutralZoom ?? 1}
       />
 
-      {/* HEADER (VCB STYLE) */}
+      {/* HEADER */}
       <View
         pointerEvents="box-none"
         style={[styles.header, { paddingTop: insets.top + 8 }]}
       >
         <TouchableOpacity
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          hitSlop={10}
           onPress={() => {
-            if (navigation.canGoBack()) {
-              navigation.goBack();
-            }
+            setScreenActive(false);
+            navigation.goBack();
           }}
         >
           <Ionicons name="arrow-back" size={24} color="#fff" />
@@ -184,7 +213,6 @@ export default function QrScannerScreen() {
         <View style={styles.mask} />
         <View style={styles.centerRow}>
           <View style={styles.mask} />
-
           <View style={styles.scanBox}>
             <Animated.View
               style={[
@@ -194,7 +222,7 @@ export default function QrScannerScreen() {
                     {
                       translateY: scanLineAnim.interpolate({
                         inputRange: [0, 1],
-                        outputRange: [0, 240],
+                        outputRange: [0, 238],
                       }),
                     },
                   ],
@@ -202,7 +230,6 @@ export default function QrScannerScreen() {
               ]}
             />
           </View>
-
           <View style={styles.mask} />
         </View>
         <View style={styles.mask} />
@@ -211,17 +238,8 @@ export default function QrScannerScreen() {
   );
 }
 
-/* ---------- SMALL COMPONENT ---------- */
-function BottomItem({ icon, label }: any) {
-  return (
-    <View style={styles.bottomItem}>
-      <Ionicons name={icon} size={22} color="#fff" />
-      <Text style={styles.bottomText}>{label}</Text>
-    </View>
-  );
-}
-
-/* ---------- STYLES ---------- */
+/* ========================================================= */
+/* STYLES */
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#000" },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
@@ -239,7 +257,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     marginLeft: 16,
-    color: "#ffffff",
+    color: "#fff",
     fontSize: 17,
     fontWeight: "bold",
   },
@@ -263,15 +281,5 @@ const styles = StyleSheet.create({
   scanLine: {
     height: 2,
     backgroundColor: "#00FF88",
-  },
-
-  bottomItem: {
-    alignItems: "center",
-  },
-
-  bottomText: {
-    marginTop: 6,
-    color: "#fff",
-    fontSize: 12,
   },
 });

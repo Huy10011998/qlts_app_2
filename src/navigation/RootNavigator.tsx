@@ -9,21 +9,19 @@ import { RootState } from "../store/index.ts";
 import { useSelector } from "react-redux";
 import { getPermission } from "../services/Index.tsx";
 import { useAppDispatch } from "../store/Hooks.ts";
-import { log } from "../utils/Logger.ts";
 
 export default function RootNavigator() {
-  const { token, isLoading, iosAuthenticated, authReady } = useAuth();
+  const { isAuthenticated, isLoading, iosAuthenticated, authReady } = useAuth();
   const dispatch = useAppDispatch();
-
   const { loaded } = useSelector((state: RootState) => state.permission);
 
   useEffect(() => {
-    if (!token) {
+    if (!isAuthenticated) {
       dispatch(clearPermissions());
       return;
     }
 
-    if (loaded) return; // chặn gọi dư
+    if (loaded) return;
 
     let cancelled = false;
 
@@ -33,32 +31,30 @@ export default function RootNavigator() {
         if (!cancelled) {
           dispatch(setPermissions(res.data));
         }
-      } catch (err) {
-        log("Get permission failed", err);
+      } catch {
         dispatch(clearPermissions());
       }
     };
 
     fetchPermissions();
-
     return () => {
       cancelled = true;
     };
-  }, [token, loaded]);
+  }, [isAuthenticated, loaded]);
 
   if (!authReady || isLoading) {
     return <IsLoading />;
   }
 
-  // Android: token là đủ
   if (Platform.OS === "android") {
-    return token ? <AppNavigator /> : <AuthNavigator />;
+    return isAuthenticated ? <AppNavigator /> : <AuthNavigator />;
   }
 
-  // iOS: phải FaceID thành công
   if (Platform.OS === "ios") {
-    if (!token) return <AuthNavigator />;
+    if (!isAuthenticated) return <AuthNavigator />;
     if (!iosAuthenticated) return <AuthNavigator />;
     return <AppNavigator />;
   }
+
+  return null;
 }

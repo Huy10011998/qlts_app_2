@@ -48,8 +48,6 @@ export default function AssetAddRelatedItem() {
   const { field, nameClass, propertyClass, idRoot, nameClassRoot } =
     useParams();
 
-  console.log("propertyClass", propertyClass);
-
   const navigation = useNavigation<AssetAddRelatedItemNavigationProp>();
 
   // Parse fields safely
