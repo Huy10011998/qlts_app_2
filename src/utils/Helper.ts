@@ -69,7 +69,8 @@ export function getMatchedKey(item: Record<string, any>, name: string) {
   // match remove underscore / lowercase
   found = keys.find(
     (k) =>
-      k.replace(/_/g, "").toLowerCase() === name.replace(/_/g, "").toLowerCase()
+      k.replace(/_/g, "").toLowerCase() ===
+      name.replace(/_/g, "").toLowerCase(),
   );
   if (found) return found;
 
@@ -86,7 +87,7 @@ export const getDepth = (field: any, all: any[]): number => {
       ...parents.map((p: any) => {
         const parentField = all.find((f) => f.name === p);
         return parentField ? getDepth(parentField, all) : 0;
-      })
+      }),
     )
   );
 };
@@ -100,3 +101,22 @@ export const formatVND = (value: string | number) => {
 };
 
 export const unFormatVND = (value: string) => value.replace(/\./g, "");
+
+// Promise với timeout
+export const withTimeout = <T>(promise: Promise<T>, ms = 8000): Promise<T> =>
+  new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error("TIMEOUT"));
+    }, ms);
+
+    promise.then(
+      (res) => {
+        clearTimeout(timer);
+        resolve(res);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });

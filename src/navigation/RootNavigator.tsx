@@ -31,7 +31,13 @@ export default function RootNavigator() {
         if (!cancelled) {
           dispatch(setPermissions(res.data));
         }
-      } catch {
+      } catch (err: any) {
+        // offline → giữ permissions cũ
+        if (!err?.response) {
+          return;
+        }
+
+        // chỉ clear khi auth lỗi
         dispatch(clearPermissions());
       }
     };

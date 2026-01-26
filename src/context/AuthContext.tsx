@@ -14,8 +14,11 @@ import {
   setTokenInApi,
   setRefreshInApi,
   resetAuthState,
+  refreshTokenFlow,
 } from "../services/data/CallApi";
 import { AuthContextType, LogoutReason } from "../types/Context.d";
+import { AppState } from "react-native";
+import { withTimeout } from "../utils/Helper";
 
 // CONTEXT
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,8 +33,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [logoutReason, setLogoutReason] = useState<LogoutReason | undefined>();
   const isAuthenticated = !!token;
 
-  // TOKEN HANDLERS
+  // APP STATE HANDLER
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", async (state) => {
+      if (state === "active" && isAuthenticated) {
+        try {
+          resetAuthState();
+          await withTimeout(refreshTokenFlow(), 8000);
+        } catch (err: any) {
+          // MẤT MẠNG → KHÔNG logout
+          if (!err?.response) {
+            log("[Auth] Skip refresh due to offline");
+            return;
+          }
 
+          // TOKEN HẾT HẠN / INVALID
+          await logout("EXPIRED");
+        }
+      }
+    });
+
+    return () => sub.remove();
+  }, [isAuthenticated]);
+
+  // TOKEN HANDLERS
   const setToken = async (value: string | null) => {
     try {
       if (value) {

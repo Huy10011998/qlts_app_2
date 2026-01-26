@@ -4,6 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_ENDPOINTS, BASE_URL } from "../../config/Index";
 import { log, warn } from "../../utils/Logger";
 import { LogoutReason } from "../../types/Context.d";
+import { withTimeout } from "../../utils/Helper";
 
 // GLOBAL LOGOUT HANDLER
 let onAuthLogout: ((reason?: LogoutReason) => Promise<void>) | null = null;
@@ -105,9 +106,12 @@ export const refreshTokenFlow = async (): Promise<string> => {
       const refreshToken = await getRefreshToken();
       if (!refreshToken) throwNeedLogin();
 
-      const res = await refreshApi.post(API_ENDPOINTS.REFRESH_TOKEN, {
-        value: refreshToken,
-      });
+      const res = await withTimeout(
+        refreshApi.post(API_ENDPOINTS.REFRESH_TOKEN, {
+          value: refreshToken,
+        }),
+        8000,
+      );
 
       const data = res?.data?.data;
       if (!data?.accessToken) throwNeedLogin();
@@ -219,7 +223,7 @@ api.interceptors.response.use(
     isRefreshing = true;
 
     try {
-      const newToken = await refreshTokenFlow();
+      const newToken = await withTimeout(refreshTokenFlow(), 8000);
       onRefreshed(newToken);
 
       return api({
