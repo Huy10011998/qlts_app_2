@@ -17,15 +17,21 @@ export function usePermission() {
     if (!permissions || permissions.length === 0) return false;
 
     const normalized = normalizeClassName(module);
-    const key = `Class.${normalized}.${action}`;
+
+    // so sánh KHÔNG phân biệt hoa thường
+    const key = `Class.${normalized}.${action}`.toLowerCase();
+
+    const hasPermission = permissions.some((p) => p.toLowerCase() === key);
+
     log("CHECK PERMISSION:", {
       module,
       normalized,
       action,
       key,
-      has: permissions?.includes(key),
+      has: hasPermission,
     });
-    return permissions.includes(`Class.${normalized}.${action}`);
+
+    return hasPermission;
   };
 
   return { can, isFullPermission, loaded, permissions };

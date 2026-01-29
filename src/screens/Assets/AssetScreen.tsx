@@ -187,19 +187,27 @@ export default function AssetScreen() {
     const keyword = removeVietnameseTones(debouncedSearch);
     const expandedSet = new Set<string | number>();
 
-    const walk = (nodes: Item[]) => {
+    const dfs = (nodes: Item[]): boolean => {
+      let hasMatchInBranch = false;
+
       nodes.forEach((node) => {
-        if (
-          removeVietnameseTones(node.label).includes(keyword) &&
-          node.children.length
-        ) {
-          expandedSet.add(node.id);
+        const selfMatch = removeVietnameseTones(node.label).includes(keyword);
+
+        const childMatch = node.children?.length ? dfs(node.children) : false;
+
+        if (childMatch) {
+          expandedSet.add(node.id); // mở cha
         }
-        if (node.children.length) walk(node.children);
+
+        if (selfMatch || childMatch) {
+          hasMatchInBranch = true;
+        }
       });
+
+      return hasMatchInBranch;
     };
 
-    walk(data);
+    dfs(data);
     setExpandedIds(Array.from(expandedSet));
   }, [debouncedSearch, data]);
 
@@ -210,7 +218,7 @@ export default function AssetScreen() {
   };
   const fetchingRef = useRef(false);
 
-  const fetchData = async () => {
+  const fetchData = React.useCallback(async () => {
     if (fetchingRef.current) return;
     fetchingRef.current = true;
 
@@ -243,7 +251,7 @@ export default function AssetScreen() {
       fetchingRef.current = false;
       if (showLoading) setIsFetching(false);
     }
-  };
+  }, [data.length]);
 
   useEffect(() => {
     fetchData();

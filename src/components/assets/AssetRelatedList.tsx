@@ -17,7 +17,11 @@ import {
   UIManager,
   RefreshControl,
 } from "react-native";
-import { useRoute, useNavigation } from "@react-navigation/native";
+import {
+  useRoute,
+  useNavigation,
+  useFocusEffect,
+} from "@react-navigation/native";
 import {
   Field,
   PropertyResponse,
@@ -220,6 +224,7 @@ export default function AssetRelatedList() {
       id: String(item.id),
       field: JSON.stringify(fieldActive),
       nameClass,
+      propertyClass,
     });
   };
 
@@ -228,12 +233,14 @@ export default function AssetRelatedList() {
   );
 
   // Redux
-  useEffect(() => {
-    if (shouldRefresh) {
-      fetchData(false);
-      dispatch(resetShouldRefreshList());
-    }
-  }, [shouldRefresh]);
+  useFocusEffect(
+    React.useCallback(() => {
+      if (shouldRefresh) {
+        refreshTop(); // reset skip + fetch đúng lifecycle
+        dispatch(resetShouldRefreshList());
+      }
+    }, [shouldRefresh]),
+  );
 
   if (
     isLoading &&

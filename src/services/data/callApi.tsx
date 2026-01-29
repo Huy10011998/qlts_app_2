@@ -59,22 +59,24 @@ export const clearTokenStorage = async () => {
   await AsyncStorage.multiRemove(["token", "refreshToken"]);
 };
 
+export const resetRefreshState = () => {
+  isRefreshing = false;
+  refreshSubscribers = [];
+  refreshPromise = null; // 🔥 BẮT BUỘC
+};
+
 export const resetAuthState = () => {
   cachedToken = null;
   cachedRefresh = null;
-  isRefreshing = false;
-  isLoggingOut = false; // ✅ BẮT BUỘC
-  refreshSubscribers = [];
-  refreshPromise = null;
+  resetRefreshState();
+  isLoggingOut = false;
 };
 
 export const hardResetApi = () => {
   log("[API] Hard reset API state");
   cachedToken = null;
   cachedRefresh = null;
-  isRefreshing = false;
-  refreshSubscribers = [];
-  refreshPromise = null;
+  resetRefreshState();
 };
 
 const throwNeedLogin = (): never => {
@@ -127,7 +129,6 @@ export const refreshTokenFlow = async (): Promise<string> => {
       log("[API] Refresh token success");
       return data.accessToken;
     } catch (err: any) {
-      // NETWORK ERROR → KHÔNG logout
       if (!err.response) {
         warn("[API] Refresh failed due to network");
         throw err;
@@ -167,8 +168,9 @@ api.interceptors.response.use(
 
     /** ===== NETWORK ERROR ===== */
     if (!err.response) {
-      warn("[API] Network error → reject fast");
-      return Promise.reject(Object.assign(err, { OFFLINE: true }));
+      // KHÔNG gắn OFFLINE ở đây
+      // để request tiếp theo / retry / refresh quyết định
+      return Promise.reject(err);
     }
 
     /** ===== REFRESH FAILED HARD ===== */
@@ -177,7 +179,11 @@ api.interceptors.response.use(
 
       if (!isLoggingOut) {
         isLoggingOut = true;
-        await onAuthLogout?.("EXPIRED");
+        try {
+          await onAuthLogout?.("EXPIRED");
+        } finally {
+          isLoggingOut = false; // 🔥 bắt buộc
+        }
       }
 
       return Promise.reject(err);
@@ -234,16 +240,7 @@ api.interceptors.response.use(
         },
       });
     } catch (refreshErr: any) {
-      onRefreshed(null);
-
-      /** NETWORK ERROR → DON'T LOGOUT */
-      if (!refreshErr?.response) {
-        warn("[API] Refresh network error");
-        return Promise.reject(Object.assign(refreshErr, { OFFLINE: true }));
-      }
-
-      /** REFRESH TOKEN INVALID → LOGOUT */
-      warn("[API] Refresh invalid → logout");
+      onRefreshed(null); // chỉ để resolve subscriber
 
       return Promise.reject(Object.assign(refreshErr, { NEED_LOGIN: true }));
     } finally {

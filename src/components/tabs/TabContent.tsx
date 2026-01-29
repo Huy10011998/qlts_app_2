@@ -13,6 +13,7 @@ import AssetListAttachFile from "../assets/AssetAttachFile";
 import AssetDeTailsTab from "../assets/AssetDetailsTab";
 import AssetListHistory from "../assets/AssetListHistory";
 import AssetNoteDetails from "../assets/AssetNoteDetails";
+import { useParams } from "../../hooks/useParams";
 
 export default function TabContent({
   activeTab,
@@ -33,6 +34,7 @@ export default function TabContent({
   const detailScreens = ["AssetDetails", "QrDetails", "AssetRelatedDetails"];
   const isDetailsScreen = detailScreens.includes(route.name);
 
+  const { propertyClass } = useParams();
   const nameClassRoot = nameClass;
 
   /* ACTION HANDLERS */
@@ -52,7 +54,7 @@ export default function TabContent({
 
         Alert.alert(
           "Không thể xóa tài sản",
-          `Tài sản đang được tham chiếu tại:\n\n${refMessage}`
+          `Tài sản đang được tham chiếu tại:\n\n${refMessage}`,
         );
         return;
       }
@@ -72,7 +74,7 @@ export default function TabContent({
             onPress: () => confirmDelete(),
           },
         ],
-        { cancelable: true }
+        { cancelable: true },
       );
     } catch (err) {
       Alert.alert("Lỗi", "Không thể kiểm tra dữ liệu tham chiếu!");
@@ -120,6 +122,7 @@ export default function TabContent({
       navigation.navigate("AssetCloneItem", {
         item,
         nameClass,
+        propertyClass,
         field: JSON.stringify(fieldActive ?? []),
       });
     } catch (err) {

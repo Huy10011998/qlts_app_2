@@ -52,7 +52,7 @@ export default function AssetEditItem() {
   // states
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [originalItem, setOriginalItem] = useState<Record<string, any>>(
-    item ? { ...item } : {}
+    item ? { ...item } : {},
   );
   const [collapsedGroups, setCollapsedGroups] = useState<
     Record<string, boolean>
@@ -62,7 +62,7 @@ export default function AssetEditItem() {
   const [modalVisible, setModalVisible] = useState(false);
   const [activeEnumField, setActiveEnumField] = useState<Field | null>(null);
   const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>(
-    {}
+    {},
   );
   const [images, setImages] = useState<Record<string, string>>({});
 
@@ -174,7 +174,7 @@ export default function AssetEditItem() {
             f.referenceName!,
             f.name,
             parentValues,
-            setReferenceData
+            setReferenceData,
           );
         }
       }
@@ -436,7 +436,7 @@ export default function AssetEditItem() {
                 [
                   { text: "Huỷ", style: "cancel" },
                   { text: "Đặt lại", onPress: handleReset },
-                ]
+                ],
               )
             }
           >
@@ -568,5 +568,35 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.6)",
     padding: 4,
     borderRadius: 20,
+  },
+
+  boolRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 6,
+  },
+
+  boolLabel: {
+    flex: 1,
+    paddingRight: 12,
+  },
+
+  tooltipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "flex-start",
+  },
+
+  tooltipLabel: {
+    color: "#FF3333",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+
+  tooltipText: {
+    color: "#333",
+    fontSize: 14,
+    flexShrink: 1,
   },
 });

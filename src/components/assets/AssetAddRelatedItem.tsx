@@ -533,4 +533,34 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: "#f2f2f2",
   },
+
+  boolRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 6,
+  },
+
+  boolLabel: {
+    flex: 1,
+    paddingRight: 12,
+  },
+
+  tooltipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "flex-start",
+  },
+
+  tooltipLabel: {
+    color: "#FF3333",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+
+  tooltipText: {
+    color: "#333",
+    fontSize: 14,
+    flexShrink: 1,
+  },
 });

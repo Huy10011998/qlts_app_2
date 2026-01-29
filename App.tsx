@@ -1,5 +1,5 @@
 import React from "react";
-import { StatusBar, useColorScheme } from "react-native";
+import { StatusBar } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
 import RootNavigator from "./src/navigation/RootNavigator";
@@ -9,8 +9,6 @@ import { store } from "./src/store/Index";
 import AppBootstrap from "./src/app/AppBootstrap";
 
 export default function App() {
-  const isDarkMode = useColorScheme() === "dark";
-
   return (
     <SafeAreaProvider>
       <StatusBar
@@ -21,8 +19,8 @@ export default function App() {
 
       <Provider store={store}>
         <AuthProvider>
+          <AppBootstrap />
           <NavigationContainer>
-            <AppBootstrap />
             <RootNavigator />
           </NavigationContainer>
         </AuthProvider>

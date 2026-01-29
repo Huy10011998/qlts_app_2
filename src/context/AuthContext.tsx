@@ -2,10 +2,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, {
   createContext,
   ReactNode,
+  useCallback,
   useContext,
   useEffect,
   useState,
 } from "react";
+import NetInfo from "@react-native-community/netinfo";
 import * as Keychain from "react-native-keychain";
 import { error, log } from "../utils/Logger";
 import {
@@ -33,28 +35,48 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [logoutReason, setLogoutReason] = useState<LogoutReason | undefined>();
   const isAuthenticated = !!token;
 
+  const logout = useCallback(async (reason: LogoutReason = "OTHER") => {
+    log("[Auth] Logout → hard reset");
+    setLogoutReason(reason);
+    setIsLoading(true);
+    try {
+      hardResetApi();
+      await AsyncStorage.multiRemove([
+        "token",
+        "refreshToken",
+        "faceid-enabled",
+      ]);
+      await Keychain.resetGenericPassword({ service: "auth-login" });
+    } finally {
+      setTokenState(null);
+      setIosAuthenticated(false);
+      setIsLoading(false);
+      resetAuthState();
+    }
+  }, []); // Empty deps vì không phụ thuộc vào state nào
+
   // APP STATE HANDLER
   useEffect(() => {
     const sub = AppState.addEventListener("change", async (state) => {
       if (state === "active" && isAuthenticated) {
         try {
-          resetAuthState();
-          await withTimeout(refreshTokenFlow(), 8000);
-        } catch (err: any) {
-          // MẤT MẠNG → KHÔNG logout
-          if (!err?.response) {
-            log("[Auth] Skip refresh due to offline");
+          const net = await NetInfo.fetch();
+          if (!net.isConnected) {
+            log("[Auth] Skip refresh (offline)");
             return;
           }
 
-          // TOKEN HẾT HẠN / INVALID
-          await logout("EXPIRED");
+          await withTimeout(refreshTokenFlow(), 8000);
+        } catch (err: any) {
+          if (err?.NEED_LOGIN) {
+            await logout("EXPIRED");
+          }
         }
       }
     });
 
     return () => sub.remove();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, logout]); // Thêm logout vào đây
 
   // TOKEN HANDLERS
   const setToken = async (value: string | null) => {
@@ -90,34 +112,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
-  // LOGOUT
-
-  const logout = async (reason: LogoutReason = "OTHER") => {
-    log("[Auth] Logout → hard reset");
-    setLogoutReason(reason);
-    setIsLoading(true);
-    try {
-      hardResetApi();
-      await AsyncStorage.multiRemove([
-        "token",
-        "refreshToken",
-        "faceid-enabled",
-      ]);
-      await Keychain.resetGenericPassword({ service: "auth-login" });
-    } finally {
-      setTokenState(null);
-      setIosAuthenticated(false);
-      setIsLoading(false);
-      resetAuthState();
-    }
-  };
-
   const clearLogoutReason = () => {
     setLogoutReason(undefined);
   };
 
   // BOOTSTRAP APP
 
+  // BOOTSTRAP APP
   useEffect(() => {
     const bootstrapAuth = async () => {
       try {
@@ -127,7 +128,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         ]);
 
         setTokenState(storedToken);
-        setTokenInApi(storedToken); // RẤT QUAN TRỌNG
+        setTokenInApi(storedToken);
         setRefreshInApi(storedRefresh);
 
         log("[Auth] Bootstrap done", {
@@ -138,21 +139,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         error("[Auth] Bootstrap failed", e);
         await logout();
       } finally {
-        setAuthReady(true); // AUTH SẴN SÀNG
+        setAuthReady(true);
       }
     };
 
     bootstrapAuth();
-  }, []);
+  }, [logout]); // Thêm logout
 
   // API → LOGOUT HANDLER
-
   useEffect(() => {
     setOnAuthLogout(async (reason?: LogoutReason) => {
       await logout(reason);
     });
     return () => setOnAuthLogout(null);
-  }, []);
+  }, [logout]); // Thêm logout
 
   return (
     <AuthContext.Provider

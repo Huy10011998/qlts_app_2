@@ -126,6 +126,7 @@ export type RootStackParamList = {
     nameClass: string;
     titleHeader?: string;
     field?: AssetField;
+    propertyClass?: PropertyClass;
   };
 
   AssetAddRelatedItem: {
@@ -165,6 +166,7 @@ export type RootStackParamList = {
     item: AssetItem;
     field: string;
     nameClass?: string;
+    propertyClass?: PropertyClass;
   };
 };
 

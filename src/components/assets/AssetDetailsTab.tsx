@@ -35,7 +35,7 @@ export default function AssetDeTailsTab({
 
         const response = await getClassReference(nameClass);
         const data = response?.data;
-        log("Class reference data:", data);
+
         if (!Array.isArray(data)) {
           throw new Error("Dữ liệu trả về không hợp lệ");
         }

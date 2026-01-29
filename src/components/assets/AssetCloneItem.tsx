@@ -34,12 +34,14 @@ import {
 import { ParseFieldActive } from "../../utils/parser/ParseFieldActive";
 import { GroupFields } from "../../utils/parser/GroupFields";
 import { ToggleGroupUtil } from "../../utils/parser/ToggleGroup";
-import { insert } from "../../services/data/CallApi";
+import { insert, tuDongTang } from "../../services/data/CallApi";
 import { fetchReferenceByField } from "../../utils/fetchField/FetchReferenceField";
 import { useAppDispatch } from "../../store/Hooks";
+import { RootState } from "../../store";
+import { useSelector } from "react-redux";
 
 export default function AssetCloneItem() {
-  const { item, field, nameClass } = useParams();
+  const { item, field, propertyClass, nameClass } = useParams();
   const navigation = useNavigation<AssetCloneItemNavigationProp>();
 
   const dispatch = useAppDispatch();
@@ -58,7 +60,7 @@ export default function AssetCloneItem() {
   const [modalVisible, setModalVisible] = useState(false);
   const [activeEnumField, setActiveEnumField] = useState<Field | null>(null);
   const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>(
-    {}
+    {},
   );
   const [images, setImages] = useState<Record<string, string>>({});
 
@@ -68,6 +70,14 @@ export default function AssetCloneItem() {
     Object.keys(groupedFields).forEach((k) => (next[k] = false));
     setCollapsedGroups(next);
   }, [groupedFields]);
+
+  // Lấy node từ redux
+  const { selectedTreeValue } = useSelector((state: RootState) => state.asset);
+
+  const rawTreeValues = useMemo(() => {
+    if (!selectedTreeValue) return [];
+    return selectedTreeValue.split(",").map((v) => v.trim());
+  }, [selectedTreeValue]);
 
   // Init formData từ item gốc (nhưng xoá ID)
   useEffect(() => {
@@ -142,6 +152,39 @@ export default function AssetCloneItem() {
     });
   }, [fieldActive]);
 
+  // Auto tăng mã
+  useEffect(() => {
+    if (!propertyClass?.isTuDongTang || !nameClass) return;
+
+    const fieldName = propertyClass.propertyTuDongTang;
+    if (!fieldName) return;
+
+    if (formData[fieldName] != null) return;
+
+    const parentProps = propertyClass.prentTuDongTang?.split(",") || [];
+    const validParentValues = parentProps
+      .map((_prop: any, idx: string | number) =>
+        Number(rawTreeValues[Number(idx)]),
+      )
+      .filter((v: number) => !isNaN(v) && v >= 0)
+      .join(",");
+
+    tuDongTang(nameClass, {
+      propertyTuDongTang: fieldName,
+      formatTuDongTang: propertyClass.formatTuDongTang,
+      prentTuDongTang: propertyClass.prentTuDongTang,
+      prentTuDongTang_Value: validParentValues,
+      prefix: propertyClass.prefix,
+    }).then((autoRes) => {
+      if (autoRes?.data) {
+        setFormData((prev) => ({
+          ...prev,
+          [fieldName]: autoRes.data,
+        }));
+      }
+    });
+  }, [rawTreeValues, selectedTreeValue, propertyClass, nameClass]);
+
   // fetch Reference có cha (Cascade)
   useEffect(() => {
     fieldActive.forEach((f) => {
@@ -154,7 +197,7 @@ export default function AssetCloneItem() {
             f.referenceName!,
             f.name,
             parentValue,
-            setReferenceData
+            setReferenceData,
           );
         }
       }
@@ -207,7 +250,7 @@ export default function AssetCloneItem() {
 
       // Xoá ID / đặt lại ID = 0
       ["id", "ID", "Id"].forEach(
-        (k) => payloadData[k] && delete payloadData[k]
+        (k) => payloadData[k] && delete payloadData[k],
       );
       payloadData["id"] = 0;
 
@@ -241,7 +284,7 @@ export default function AssetCloneItem() {
 
       // Xoá tất cả trường _MoTa liên quan reference
       Object.keys(payloadData).forEach(
-        (k) => k.endsWith("_MoTa") && delete payloadData[k]
+        (k) => k.endsWith("_MoTa") && delete payloadData[k],
       );
 
       // Final payload giống Create
@@ -277,7 +320,7 @@ export default function AssetCloneItem() {
             },
           },
         ],
-        { cancelable: false }
+        { cancelable: false },
       );
     } catch (err) {
       Alert.alert("Lỗi", "Không thể tạo bản sao!");
@@ -368,7 +411,7 @@ export default function AssetCloneItem() {
           if (activeEnumField) {
             handleChange(
               activeEnumField.name,
-              value === "" ? "" : isNaN(value) ? value : Number(value)
+              value === "" ? "" : isNaN(value) ? value : Number(value),
             );
           }
           setModalVisible(false);
@@ -459,5 +502,35 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.6)",
     padding: 4,
     borderRadius: 20,
+  },
+
+  boolRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 6,
+  },
+
+  boolLabel: {
+    flex: 1,
+    paddingRight: 12,
+  },
+
+  tooltipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "flex-start",
+  },
+
+  tooltipLabel: {
+    color: "#FF3333",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+
+  tooltipText: {
+    color: "#333",
+    fontSize: 14,
+    flexShrink: 1,
   },
 });

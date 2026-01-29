@@ -137,12 +137,22 @@ export const RenderInputByType = ({
     // BOOL
     case TypeProperty.Bool:
       return (
-        <View style={styles.switchRow}>
+        <View style={styles.boolRow}>
+          <View style={styles.boolLabel}>
+            {f.tooltip && (
+              <View style={styles.tooltipRow}>
+                <Text style={styles.tooltipLabel}>Kiểm tra: </Text>
+                <Text style={styles.tooltipText}>{f.tooltip}</Text>
+              </View>
+            )}
+          </View>
+
           <Switch
             value={!!value}
             onValueChange={(v) => handleChange(f.name, v)}
+            trackColor={{ false: "#ccc", true: "#FF3333" }}
+            thumbColor={value ? "#ffffff" : "#f4f3f4"}
           />
-          <Text>{value ? "Có" : "Không"}</Text>
         </View>
       );
 
@@ -190,7 +200,7 @@ export const RenderInputByType = ({
                 f.name,
                 handleChange,
                 setImages,
-                setLoadingImages
+                setLoadingImages,
               );
             }}
           >

@@ -15,6 +15,7 @@ import { getFieldValue } from "../../utils/fields/GetFieldValue";
 import { TAB_ITEMS } from "../../utils/Helper";
 import { useAutoReload } from "../../hooks/useAutoReload";
 import { useAppDispatch } from "../../store/Hooks";
+import { useFocusEffect } from "@react-navigation/native";
 
 export default function AssetDetails({ children }: DetailsProps) {
   const { id, nameClass, field, activeTab: tabFromParams } = useParams();
@@ -32,7 +33,7 @@ export default function AssetDetails({ children }: DetailsProps) {
   // Redux
   const dispatch = useAppDispatch();
   const shouldRefreshDetails = useSelector(
-    (state: RootState) => state.asset.shouldRefreshDetails
+    (state: RootState) => state.asset.shouldRefreshDetails,
   );
 
   const toggleGroup = (groupName: string) => {
@@ -55,12 +56,14 @@ export default function AssetDetails({ children }: DetailsProps) {
     }
   }, [id, nameClass]);
 
-  useEffect(() => {
-    if (shouldRefreshDetails) {
-      fetchDetails();
-      dispatch(resetShouldRefreshDetails()); // reset lại
-    }
-  }, [shouldRefreshDetails]);
+  useFocusEffect(
+    useCallback(() => {
+      if (shouldRefreshDetails) {
+        fetchDetails();
+        dispatch(resetShouldRefreshDetails());
+      }
+    }, [shouldRefreshDetails, fetchDetails]),
+  );
 
   useAutoReload(fetchDetails);
 

@@ -44,6 +44,7 @@ export interface Field {
   notShowSplit: boolean;
   isShowMobile: boolean;
   defaultTimeNow: boolean;
+  tooltip: string;
 }
 
 // Loại dữ liệu Menu hoặc danh mục

@@ -16,7 +16,7 @@ import {
   Dimensions,
   ScrollView,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
@@ -29,6 +29,11 @@ import { ParseFieldActive } from "../../utils/parser/ParseFieldActive";
 import { GroupFields } from "../../utils/parser/GroupFields";
 import { ToggleGroupUtil } from "../../utils/parser/ToggleGroup";
 import { getFieldValue } from "../../utils/fields/GetFieldValue";
+import { useAppDispatch } from "../../store/Hooks";
+import { useSelector } from "react-redux";
+import { RootState } from "../../store";
+import { resetShouldRefreshDetails } from "../../store/AssetSlice";
+import { useAutoReload } from "../../hooks/useAutoReload";
 
 const { width } = Dimensions.get("window");
 const MENU_WIDTH = width * 0.6;
@@ -59,6 +64,12 @@ export default function QrDetails({ children }: QrDetailsProps) {
   const handleChangeTab = (tabKey: string) => {
     setActiveTab(tabKey);
   };
+
+  // Redux
+  const dispatch = useAppDispatch();
+  const shouldRefreshDetails = useSelector(
+    (state: RootState) => state.asset.shouldRefreshDetails,
+  );
 
   const toggleGroup = (groupName: string) => {
     setCollapsedGroups((prev) => ToggleGroupUtil(prev, groupName));
@@ -133,29 +144,38 @@ export default function QrDetails({ children }: QrDetailsProps) {
       Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
     }
   };
-  //  DATA FETCHING
-  useEffect(() => {
-    const fetchDetails = async () => {
-      setIsLoading(true);
-      try {
-        if (!id || !nameClass) throw new Error("Thiếu ID hoặc nameClass");
-        const res = await getDetails(nameClass, id);
-        setItem(res.data);
-      } catch (err) {
-        error(err);
-        Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    setActiveTab("list");
-    fetchDetails();
+  const fetchDetails = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      if (!id || !nameClass) throw new Error("Thiếu ID hoặc nameClass");
+      const response = await getDetails(nameClass, id);
+      setItem(response.data);
+    } catch (e) {
+      error(e);
+      Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
+    } finally {
+      setIsLoading(false);
+    }
   }, [id, nameClass]);
 
-  if (isLoading) {
-    return <IsLoading size="large" color="#FF3333" />;
-  }
+  useFocusEffect(
+    useCallback(() => {
+      if (shouldRefreshDetails) {
+        fetchDetails();
+        dispatch(resetShouldRefreshDetails());
+      }
+    }, [shouldRefreshDetails, fetchDetails]),
+  );
+
+  useAutoReload(fetchDetails);
+
+  // fetch lần đầu khi mount
+  useEffect(() => {
+    if (id && nameClass) fetchDetails();
+    else setIsLoading(false);
+  }, [id, nameClass, fetchDetails]);
+
+  if (isLoading) return <IsLoading size="large" color="#FF3333" />;
 
   //  RENDER
   return (

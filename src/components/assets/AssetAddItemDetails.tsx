@@ -37,7 +37,6 @@ import {
 import { ParseFieldActive } from "../../utils/parser/ParseFieldActive";
 import { GroupFields } from "../../utils/parser/GroupFields";
 import { ToggleGroupUtil } from "../../utils/parser/ToggleGroup";
-import { log } from "../../utils/Logger";
 import { fetchReferenceByField } from "../../utils/fetchField/FetchReferenceField";
 import { useAppDispatch } from "../../store/Hooks";
 

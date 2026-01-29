@@ -28,8 +28,9 @@ import {
 } from "react-native-vision-camera";
 
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
-import { getFieldActive } from "../../services/Index";
+import { getFieldActive, getPropertyClass } from "../../services/Index";
 import { error } from "../../utils/Logger";
+import { property } from "lodash";
 
 /* ========================================================= */
 export default function QrScannerScreen() {
@@ -134,12 +135,14 @@ export default function QrScannerScreen() {
 
         const [nameClass, id] = parts;
         const res = await getFieldActive(nameClass);
+        const resProp = await getPropertyClass(nameClass);
 
         navigation.navigate("QrDetails", {
           id,
           titleHeader: nameClass,
           nameClass,
           field: res?.data || [],
+          propertyClass: resProp?.data,
         });
       } catch (e) {
         error(e);

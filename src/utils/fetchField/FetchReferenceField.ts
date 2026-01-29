@@ -5,13 +5,18 @@ import { log } from "../Logger";
 export const fetchReferenceByField = async (
   referenceName: string,
   fieldName: string,
-  setReference: React.Dispatch<React.SetStateAction<Record<string, any[]>>>
+  setReference: React.Dispatch<React.SetStateAction<Record<string, any[]>>>,
 ) => {
   try {
+    if (!referenceName) {
+      console.warn("Thiếu referenceName để fetch reference field");
+      return;
+    }
+
     const res = await callApi<{ success: boolean; data: { items: any[] } }>(
       "POST",
       API_ENDPOINTS.GET_CATEGORY,
-      { type: referenceName }
+      { type: referenceName },
     );
 
     const items = (res.data?.items ?? []).map((x: any) => ({

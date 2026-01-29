@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
   Platform,
 } from "react-native";
 import * as Keychain from "react-native-keychain";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useAuth } from "../../context/AuthContext";
 import IsLoading from "../../components/ui/IconLoading";
@@ -95,46 +95,52 @@ const SettingScreen = () => {
   const { logout } = useAuth();
 
   const dispatch = useAppDispatch();
-
-  const isMounted = useRef(true);
-
-  useEffect(() => {
-    return () => {
-      isMounted.current = false;
-    };
-  }, []);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const loadingRef = useRef(false);
+  const isLoggingOutRef = useRef(false);
 
   // LOAD USER INFO + FACEID
-  const fetchData = async () => {
+
+  const fetchData = React.useCallback(async () => {
+    if (loadingRef.current || isLoggingOutRef.current) return;
+
+    loadingRef.current = true;
     setIsLoading(true);
+
     try {
       const response = await callApi<{ success: boolean; data: UserInfo }>(
         "POST",
         API_ENDPOINTS.GET_INFO,
         {},
       );
-      setUser(response.data);
 
-      // Load FaceID status
+      setUser(response.data);
+      setHasLoadedOnce(true);
+
       const flag = await AsyncStorage.getItem("faceid-enabled");
       setIsFaceIdEnabled(flag === "1");
     } catch (error: any) {
-      if (error?.NEED_LOGIN) {
-        return; // không alert, không set state
+      setHasLoadedOnce(true);
+
+      if (error?.OFFLINE || error?.NEED_LOGIN) {
+        return;
       }
+
       Alert.alert("Lỗi", "Không thể tải thông tin người dùng.");
     } finally {
-      if (isMounted.current) {
-        setIsLoading(false);
-      }
+      loadingRef.current = false;
+      setIsLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchData();
   }, []);
 
-  // AUTO RELOAD
+  // AUTO RELOAD ON FOCUS
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchData();
+      return () => {};
+    }, [fetchData]),
+  );
+
   useAutoReload(fetchData);
 
   // FACE ID TOGGLE
@@ -196,26 +202,17 @@ const SettingScreen = () => {
   const handlePressLogout = async () => {
     if (isLoading) return;
 
+    isLoggingOutRef.current = true;
     setIsLoading(true);
+
     try {
-      // 0. Reset API state ngay lập tức
       hardResetApi();
       resetAuthState();
-
-      // 1. Clear token
       await clearTokenStorage();
-
-      // 2. Logout auth (context / server / navigation)
       await logout();
-
-      // 3. Clear Redux permissions
       dispatch(clearPermissions());
-
-      // 4. Clear FaceID
       setIsFaceIdEnabled(false);
       await AsyncStorage.removeItem("faceid-enabled");
-    } catch (e) {
-      Alert.alert("Lỗi", "Không thể đăng xuất.");
     } finally {
       setIsLoading(false);
     }
@@ -286,7 +283,7 @@ const SettingScreen = () => {
     }
   };
 
-  if (isLoading || !user) {
+  if (isLoading || (!user && !hasLoadedOnce)) {
     return <IsLoading size="large" color="#FF3333" />;
   }
 

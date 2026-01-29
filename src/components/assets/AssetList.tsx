@@ -85,7 +85,7 @@ function buildTree(data: TreeNode[]): TreeNode[] {
 
 //  Hàm gom conditions từ node → root
 function getConditionsFromNode(
-  node: TreeNode & { parentNode?: TreeNode | null }
+  node: TreeNode & { parentNode?: TreeNode | null },
 ) {
   const conditions: any[] = [];
   const seen = new Set<string>(); // để loại trùng property+value
@@ -252,11 +252,11 @@ export default function AssetList() {
   useFocusEffect(
     useCallback(() => {
       dispatch(reloadPermissions());
-    }, [dispatch])
+    }, [dispatch]),
   );
 
   const shouldRefresh = useSelector(
-    (state: RootState) => state.asset.shouldRefreshList
+    (state: RootState) => state.asset.shouldRefreshList,
   );
 
   // Check Permission
@@ -327,12 +327,14 @@ export default function AssetList() {
   }, [toggleMenu, propertyClass?.isBuildTree]);
 
   // Redux
-  useEffect(() => {
-    if (shouldRefresh) {
-      fetchData(false);
-      dispatch(resetShouldRefreshList());
-    }
-  }, [shouldRefresh]);
+  useFocusEffect(
+    React.useCallback(() => {
+      if (shouldRefresh) {
+        refreshTop(); // reset skip + fetch đúng lifecycle
+        dispatch(resetShouldRefreshList());
+      }
+    }, [shouldRefresh]),
+  );
 
   //  Fetch data
   const fetchData = useCallback(
@@ -353,7 +355,7 @@ export default function AssetList() {
           setFieldActive(activeFields);
 
           setFieldShowMobile(
-            activeFields.filter((f: any) => Boolean(Number(f.isShowMobile)))
+            activeFields.filter((f: any) => Boolean(Number(f.isShowMobile))),
           );
         }
 
@@ -371,7 +373,7 @@ export default function AssetList() {
           currentSkip,
           debouncedSearch,
           conditions,
-          []
+          [],
         );
 
         const newItems: Record<string, any>[] = response?.data?.items || [];
@@ -405,7 +407,7 @@ export default function AssetList() {
       debouncedSearch,
       conditions,
       isFirstLoad,
-    ]
+    ],
   );
 
   useAutoReload(fetchData);
@@ -446,7 +448,7 @@ export default function AssetList() {
         value: node.value ?? null,
         property: node.property ?? null,
         text: node.text ?? null,
-      })
+      }),
     );
 
     // Build điều kiện từ node → root
@@ -485,7 +487,7 @@ export default function AssetList() {
         onPress={() => handlePress(item)}
       />
     ),
-    [fieldShowMobile, fieldActive, propertyClass]
+    [fieldShowMobile, fieldActive, propertyClass],
   );
 
   if (

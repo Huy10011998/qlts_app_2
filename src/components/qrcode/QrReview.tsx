@@ -17,9 +17,14 @@ import {
   UIManager,
   RefreshControl,
 } from "react-native";
-import { useRoute, useNavigation } from "@react-navigation/native";
+import {
+  useRoute,
+  useNavigation,
+  useFocusEffect,
+} from "@react-navigation/native";
 import {
   Field,
+  mapPropertyResponseToPropertyClass,
   PropertyResponse,
   QrReviewNavigationProp,
   StackRoute,
@@ -227,12 +232,14 @@ export default function QrReview() {
   );
 
   // Redux
-  useEffect(() => {
-    if (shouldRefresh) {
-      fetchData(false);
-      dispatch(resetShouldRefreshList());
-    }
-  }, [shouldRefresh]);
+  useFocusEffect(
+    React.useCallback(() => {
+      if (shouldRefresh) {
+        refreshTop(); // reset skip + fetch đúng lifecycle
+        dispatch(resetShouldRefreshList());
+      }
+    }, [shouldRefresh]),
+  );
 
   if (
     isLoading &&
@@ -297,11 +304,15 @@ export default function QrReview() {
 
       {loaded && can(nameClass, "Insert") && (
         <RelatedAddItem
-          nameClass={nameClass}
-          field={fieldActive}
-          propertyClass={propertyClass}
-          idRoot={idRoot}
-          nameClassRoot={nameClassRoot}
+          onPress={() =>
+            navigation.navigate("AssetAddRelatedItem", {
+              field: JSON.stringify(fieldActive),
+              nameClass,
+              propertyClass: mapPropertyResponseToPropertyClass(propertyClass),
+              idRoot,
+              nameClassRoot,
+            })
+          }
         />
       )}
     </View>

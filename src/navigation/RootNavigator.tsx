@@ -21,32 +21,35 @@ export default function RootNavigator() {
       return;
     }
 
-    if (loaded) return;
-
     let cancelled = false;
 
     const fetchPermissions = async () => {
       try {
         const res = await getPermission();
+
         if (!cancelled) {
           dispatch(setPermissions(res.data));
         }
       } catch (err: any) {
-        // offline → giữ permissions cũ
-        if (!err?.response) {
-          return;
-        }
+        // offline → giữ permissions
+        if (!err?.response) return;
 
-        // chỉ clear khi auth lỗi
+        // chỉ clear khi auth thực sự lỗi
         dispatch(clearPermissions());
       }
     };
 
-    fetchPermissions();
+    //  chỉ fetch khi:
+    // - chưa load
+    // - HOẶC vừa login lại
+    if (!loaded) {
+      fetchPermissions();
+    }
+
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, loaded]);
+  }, [isAuthenticated]);
 
   if (!authReady || isLoading) {
     return <IsLoading />;
