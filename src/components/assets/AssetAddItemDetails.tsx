@@ -41,33 +41,37 @@ import { fetchReferenceByField } from "../../utils/fetchField/FetchReferenceFiel
 import { useAppDispatch } from "../../store/Hooks";
 
 export default function AssetAddItemDetails() {
+  // Lấy params
   const { field, nameClass, propertyClass } = useParams();
-
+  // Navigation
   const navigation = useNavigation<AssetAddItemNavigationProp>();
-
   // Parse fields safely
   const fieldActive = useMemo(() => ParseFieldActive(field), [field]);
-
   // grouped by groupLayout (kept as-is style D)
   const groupedFields = useMemo(() => GroupFields(fieldActive), [fieldActive]);
-
+  // States
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [collapsedGroups, setCollapsedGroups] = useState<
     Record<string, boolean>
   >({});
-
+  // Load enum & reference data
   const [enumData, setEnumData] = useState<Record<string, any[]>>({});
   const [referenceData, setReferenceData] = useState<Record<string, any[]>>({});
-
+  // Modal states
   const [modalVisible, setModalVisible] = useState(false);
   const [activeEnumField, setActiveEnumField] = useState<Field | null>(null);
-
+  // Submitting state
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  // Image states
   const [images, setImages] = useState<Record<string, string>>({});
   const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>(
     {},
   );
+  // Initial auto code ref
+  const initialAutoCodeRef = React.useRef<string | null>(null);
+  // Parent value for auto-increment
+  const parentField = propertyClass?.prentTuDongTang;
+  const parentValue = parentField ? formData[parentField] : undefined;
 
   //Check Permission
   const { can } = usePermission();
@@ -160,15 +164,58 @@ export default function AssetAddItemDetails() {
       prefix: propertyClass.prefix,
     }).then((autoRes) => {
       if (autoRes?.data) {
+        setFormData((prev) => {
+          // LƯU MÃ GỐC 1 LẦN DUY NHẤT
+          if (!initialAutoCodeRef.current) {
+            initialAutoCodeRef.current = autoRes.data;
+          }
+
+          return {
+            ...prev,
+            [fieldName]: autoRes.data,
+          };
+        });
+      }
+    });
+  }, [rawTreeValues, selectedTreeValue, propertyClass, nameClass]);
+
+  // CHỈ KHI USER ĐỔI prentTuDongTang → GỌI LẠI AUTO TĂNG
+  useEffect(() => {
+    if (!propertyClass?.isTuDongTang || !nameClass) return;
+    if (!parentField) return;
+
+    const fieldName = propertyClass.propertyTuDongTang;
+    if (!fieldName) return;
+
+    // CASE 1: NULL → quay về mã gốc
+    if (parentValue == null || parentValue === "") {
+      if (initialAutoCodeRef.current) {
+        setFormData((prev) => ({
+          ...prev,
+          [fieldName]: initialAutoCodeRef.current,
+        }));
+      }
+      return;
+    }
+
+    // CASE 2: có parent → auto tăng
+    tuDongTang(nameClass, {
+      propertyTuDongTang: fieldName,
+      formatTuDongTang: propertyClass.formatTuDongTang,
+      prentTuDongTang: propertyClass.prentTuDongTang,
+      prentTuDongTang_Value: String(parentValue),
+      prefix: propertyClass.prefix,
+    }).then((autoRes) => {
+      if (autoRes?.data) {
         setFormData((prev) => ({
           ...prev,
           [fieldName]: autoRes.data,
         }));
       }
     });
-  }, [rawTreeValues, selectedTreeValue, propertyClass, nameClass]);
+  }, [parentValue, nameClass]);
 
-  // default ngày và thời gian
+  // Set default date/time now
   useEffect(() => {
     const mode = "add";
 
@@ -202,6 +249,7 @@ export default function AssetAddItemDetails() {
     });
   }, [fieldActive]);
 
+  //  Load images
   useImageLoader({
     fieldActive,
     formData,
@@ -210,6 +258,7 @@ export default function AssetAddItemDetails() {
     setLoadingImages,
   });
 
+  // Handle change with cascade
   const handleChange = (name: string, value: any) => {
     handleCascadeChange({
       name,
@@ -220,6 +269,7 @@ export default function AssetAddItemDetails() {
     });
   };
 
+  //  Handle create
   const handleCreate = async () => {
     if (nameClass && !can(nameClass, "Insert")) {
       Alert.alert("Không có quyền", "Bạn không có quyền tạo mới dữ liệu!");

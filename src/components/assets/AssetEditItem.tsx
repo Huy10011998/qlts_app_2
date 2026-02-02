@@ -76,7 +76,7 @@ export default function AssetEditItem() {
     setCollapsedGroups(next);
   }, [groupedFields]);
 
-  // initialize formData using smart mapping (exact -> normalize -> fallback)
+  // initialize formData from item and fieldActive whenever they change
   useEffect(() => {
     const initial: Record<string, any> = {};
     if (!fieldActive || !fieldActive.length) {
@@ -148,6 +148,7 @@ export default function AssetEditItem() {
     setCollapsedGroups((prev) => ToggleGroupUtil(prev, groupName));
   };
 
+  // Auto load enum & reference không có parent khi mở
   useEffect(() => {
     fieldActive.forEach((f) => {
       if (f.typeProperty === TypeProperty.Enum && f.enumName)

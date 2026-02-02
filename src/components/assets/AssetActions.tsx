@@ -52,9 +52,11 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     marginBottom: 8,
   },
+
   iconBtn: {
     marginLeft: 10,
   },
+
   iconWrapper: {
     backgroundColor: "rgba(255, 255, 255, 0.9)",
     borderRadius: 14,
