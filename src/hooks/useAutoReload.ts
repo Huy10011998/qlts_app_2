@@ -8,10 +8,15 @@ type Options = {
 
 export function useAutoReload(
   reloadFn: () => void | Promise<void>,
-  options?: Options
+  options?: Options,
 ) {
   const { enabled = true, debounceMs = 800 } = options || {};
+
   const lastRunRef = useRef(0);
+  const fnRef = useRef(reloadFn);
+
+  // luôn giữ fn mới nhất
+  fnRef.current = reloadFn;
 
   useEffect(() => {
     if (!enabled) return;
@@ -21,9 +26,9 @@ export function useAutoReload(
       if (now - lastRunRef.current < debounceMs) return;
 
       lastRunRef.current = now;
-      reloadFn();
+      fnRef.current(); // không dùng reloadFn trực tiếp
     });
 
     return unsubscribe;
-  }, [enabled, debounceMs, reloadFn]);
+  }, [enabled, debounceMs]);
 }

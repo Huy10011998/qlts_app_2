@@ -8,37 +8,34 @@ export const handleCascadeChange = ({
   fieldActive,
   setFormData,
   setReferenceData,
+
+  // thêm 2 cái này (optional để không vỡ code cũ)
+  setRefPage,
+  setRefHasMore,
 }: HandleCascadeChangeProps) => {
   setFormData((prev: any) => {
     const next = { ...prev, [name]: value };
 
-    const fieldCurrent = fieldActive.find((f) => f.name === name);
-    if (!fieldCurrent) return next;
+    const fieldIndex = fieldActive.findIndex((f) => f.name === name);
+    if (fieldIndex === -1) return next;
 
-    // Không cascade nếu value invalid
-    if (
+    const isInvalid =
       value === null ||
       value === "" ||
-      (typeof value === "number" && value < 0)
-    ) {
-      return next;
-    }
+      (typeof value === "number" && value < 0);
 
-    // Danh sách field phía sau
-    const cascadeFields = fieldActive.slice(
-      fieldActive.findIndex((f) => f.name === name) + 1
-    );
+    // ⭐ tất cả field phía sau
+    const cascadeFields = fieldActive.slice(fieldIndex + 1);
 
     cascadeFields.forEach((f) => {
-      // Chỉ xử lý field có parentsFields
       if (!f.parentsFields) return;
 
-      const parents = f.parentsFields.split(",");
+      const parents = f.parentsFields.split(",").map((p: string) => p.trim());
 
-      // Nếu field hiện tại KHÔNG phải là parent → skip
+      // field hiện tại không phải parent của nó
       if (!parents.includes(name)) return;
 
-      //  bỏ qua Date / Time
+      // bỏ qua Date / Time
       if (
         f.typeProperty === TypeProperty.Date ||
         f.typeProperty === TypeProperty.Time
@@ -46,28 +43,42 @@ export const handleCascadeChange = ({
         return;
       }
 
+      //STEP 1 — CLEAR CHILD
       next[f.name] = null;
 
-      // Clear reference data
-      setReferenceData((prev) => ({
-        ...prev,
-        [f.name]: [],
+      setReferenceData((prevRef: any) => ({
+        ...prevRef,
+        [f.name]: {
+          items: [],
+          totalCount: 0,
+        },
       }));
 
-      // Kiểm tra có đủ parent value chưa
+      //  STEP 2 — RESET PAGINATION
+      setRefPage?.(0);
+      setRefHasMore?.(true);
+
+      // STEP 3 — nếu parent invalid → STOP
+      if (isInvalid) return;
+
+      // STEP 4 — check đủ parent chưa
       const parentValues = parents
         .map((p: string | number) => next[p])
         .filter((v: string | null) => v != null && v !== "");
 
       if (parentValues.length !== parents.length) return;
 
-      // Fetch lại reference theo parent
+      // STEP 5 — FETCH LẠI từ page 0
       if (f.referenceName) {
         fetchReferenceByFieldWithParent(
           f.referenceName,
           f.name,
           parentValues.join(","),
-          setReferenceData
+          setReferenceData,
+          {
+            pageSize: 20,
+            skipSize: 0, //  luôn reset
+          },
         );
       }
     });

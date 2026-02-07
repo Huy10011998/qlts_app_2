@@ -330,7 +330,7 @@ export default function AssetList() {
   useFocusEffect(
     React.useCallback(() => {
       if (shouldRefresh) {
-        refreshTop(); // reset skip + fetch đúng lifecycle
+        fetchData(false);
         dispatch(resetShouldRefreshList());
       }
     }, [shouldRefresh]),
@@ -431,6 +431,7 @@ export default function AssetList() {
         field: JSON.stringify(fieldActive),
         nameClass,
         titleHeader,
+        propertyClass,
       });
     } catch (e) {
       error(e);

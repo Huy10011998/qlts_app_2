@@ -256,6 +256,9 @@ export interface PropsEnum {
   items: EnumItem[];
   onClose: () => void;
   onSelect: (value: any) => void;
+  onSearch?: (keyword: string) => void;
+  onLoadMore?: () => void;
+  loadingMore?: boolean;
 }
 
 export type AddItemAssetProps = {
@@ -280,7 +283,19 @@ export interface HandleCascadeChangeProps {
   value: any;
   fieldActive: any[];
   setFormData: Dispatch<SetStateAction<any>>;
-  setReferenceData: Dispatch<SetStateAction<Record<string, any[]>>>;
+  setReferenceData: Dispatch<
+    SetStateAction<
+      Record<
+        string,
+        {
+          items: any[];
+          totalCount: number;
+        }
+      >
+    >
+  >;
+  setRefPage?: (v: number) => void;
+  setRefHasMore?: (v: boolean) => void;
 }
 
 export interface RenderInputByTypeProps {
@@ -296,12 +311,12 @@ export interface RenderInputByTypeProps {
   styles: any;
 
   // picker modal share
-  setModalVisible: any;
-  setActiveEnumField: any;
   setLoadingImages: any;
 
   mode: "add" | "edit" | "clone";
   getDefaultValueForField: (f: Field) => any;
+
+  openEnumReferanceModal: (field: Field) => void;
 }
 
 export interface PreviewImgByTypeProps {

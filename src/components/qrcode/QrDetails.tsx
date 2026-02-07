@@ -144,6 +144,7 @@ export default function QrDetails({ children }: QrDetailsProps) {
       Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
     }
   };
+
   const fetchDetails = useCallback(async () => {
     setIsLoading(true);
     try {

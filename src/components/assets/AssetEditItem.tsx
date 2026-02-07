@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -19,7 +19,6 @@ import { useParams } from "../../hooks/useParams";
 import { fetchImage, pickImage } from "../../utils/Image";
 import { fetchReferenceByFieldWithParent } from "../../utils/cascade/FetchReferenceByFieldWithParent";
 import { handleCascadeChange } from "../../utils/cascade/Index";
-import { fetchEnumByField } from "../../utils/fetchField/FetchEnumField";
 import { RenderInputByType } from "../form/RenderInputByType";
 import { useImageLoader } from "../../hooks/useImageLoader";
 import { update } from "../../services/data/CallApi";
@@ -32,53 +31,56 @@ import {
   normalizeDateFromBE,
 } from "../../utils/Date";
 
-import { ParseFieldActive } from "../../utils/parser/ParseFieldActive";
-import { GroupFields } from "../../utils/parser/GroupFields";
-import { ToggleGroupUtil } from "../../utils/parser/ToggleGroup";
-import { fetchReferenceByField } from "../../utils/fetchField/FetchReferenceField";
 import { useAppDispatch } from "../../store/Hooks";
+import { useEnumAndReferenceLoader } from "../../hooks/AssetAddItem/useEnumAndReferenceLoader";
+import { useGroupedFields } from "../../hooks/AssetAddItem/useGroupedFields";
+import IsLoading from "../ui/IconLoading";
+import { useOpenReferenceModal } from "../../hooks/AssetAddItem/useOpenReferenceModal";
+import { useReferenceFetcher } from "../../hooks/AssetAddItem/useReferenceData";
+import { useModalItems } from "../../hooks/AssetAddItem/useModalItems";
 
-// Main Component
 export default function AssetEditItem() {
+  /* ===== PARAMS ===== */
   const { item, field, nameClass } = useParams();
-
   const navigation = useNavigation<AssetEditItemNavigationProp>();
+  const dispatch = useAppDispatch();
 
-  // parse fields safely
-  const fieldActive = useMemo(() => ParseFieldActive(field), [field]);
-  // grouped by groupLayout (kept as-is style D)
-  const groupedFields = useMemo(() => GroupFields(fieldActive), [fieldActive]);
-
-  // states
+  // Form Data State
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [originalItem, setOriginalItem] = useState<Record<string, any>>(
     item ? { ...item } : {},
   );
-  const [collapsedGroups, setCollapsedGroups] = useState<
-    Record<string, boolean>
-  >({});
+
+  // Enum & Reference Data State
   const [enumData, setEnumData] = useState<Record<string, any[]>>({});
-  const [referenceData, setReferenceData] = useState<Record<string, any[]>>({});
+  const [referenceData, setReferenceData] = useState<
+    Record<string, { items: any[]; totalCount: number }>
+  >({});
   const [modalVisible, setModalVisible] = useState(false);
   const [activeEnumField, setActiveEnumField] = useState<Field | null>(null);
   const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>(
     {},
   );
+
+  /* ===== REFERENCE LOAD MORE ===== */
+  const PAGE_SIZE = 20;
+  const [refPage, setRefPage] = useState(0);
+  const [refKeyword, setRefKeyword] = useState("");
+  const [refLoadingMore, setRefLoadingMore] = useState(false);
+  const [refHasMore, setRefHasMore] = useState(true);
+  const [refSearching, setRefSearching] = useState(false);
+
+  // Image State
   const [images, setImages] = useState<Record<string, string>>({});
 
-  // Redux
-  const dispatch = useAppDispatch();
+  /* ===== GROUP + FIELD ===== */
+  const { fieldActive, groupedFields, collapsedGroups, toggleGroup } =
+    useGroupedFields(field);
 
-  // init collapsed
-  useEffect(() => {
-    const next: Record<string, boolean> = {};
-    Object.keys(groupedFields).forEach((k) => (next[k] = false));
-    setCollapsedGroups(next);
-  }, [groupedFields]);
-
-  // initialize formData from item and fieldActive whenever they change
+  // SET FORM DATA WHEN ITEM OR FIELD ACTIVE CHANGED
   useEffect(() => {
     const initial: Record<string, any> = {};
+
     if (!fieldActive || !fieldActive.length) {
       setFormData(item ? { ...item } : {});
       setOriginalItem(item ? { ...item } : {});
@@ -144,23 +146,13 @@ export default function AssetEditItem() {
     setOriginalItem(item ? { ...item } : {});
   }, [fieldActive, item]);
 
-  const toggleGroup = (groupName: string) => {
-    setCollapsedGroups((prev) => ToggleGroupUtil(prev, groupName));
-  };
-
-  // Auto load enum & reference không có parent khi mở
-  useEffect(() => {
-    fieldActive.forEach((f) => {
-      if (f.typeProperty === TypeProperty.Enum && f.enumName)
-        fetchEnumByField(f.enumName, f.name, setEnumData);
-      if (
-        f.typeProperty === TypeProperty.Reference &&
-        f.referenceName &&
-        !f.parentsFields
-      )
-        fetchReferenceByField(f.referenceName, f.name, setReferenceData);
-    });
-  }, [fieldActive]);
+  /* ===== ENUM / REFERENCE ===== */
+  useEnumAndReferenceLoader(
+    fieldActive,
+    setEnumData,
+    setReferenceData,
+    referenceData,
+  );
 
   // Auto load reference có parent khi mở màn hình EDIT
   useEffect(() => {
@@ -182,7 +174,7 @@ export default function AssetEditItem() {
     });
   }, [formData]); // chạy khi formData được set từ item lúc mở màn hình
 
-  // load image khi giá trị thay đổi
+  /* ===== IMAGE LOADER ===== */
   useImageLoader({
     fieldActive,
     formData,
@@ -207,6 +199,28 @@ export default function AssetEditItem() {
     });
   };
 
+  /* ===== OPEN ENUM & REFERANCE MODAL ===== */
+  const { openReferenceModal } = useOpenReferenceModal({
+    formData,
+    setActiveEnumField,
+    setRefKeyword,
+    setRefPage,
+    setRefHasMore,
+    setModalVisible,
+    setReferenceData,
+    pageSize: PAGE_SIZE,
+  });
+
+  /* ===== FETCH REFERENCE DATA ON SEARCH ===== */
+  const { fetchReferenceData } = useReferenceFetcher(
+    setReferenceData,
+    PAGE_SIZE,
+  );
+
+  // ===== MODAL ITEMS ===== //
+  const modalItems = useModalItems(activeEnumField, referenceData, enumData);
+
+  // SUBMIT - UPDATE
   const handleUpdate = async () => {
     try {
       if (!originalItem?.id) {
@@ -397,6 +411,7 @@ export default function AssetEditItem() {
                     <View key={f.id ?? f.name} style={styles.fieldBlock}>
                       <Text style={styles.label}>{f.moTa ?? f.name}</Text>
                       <RenderInputByType
+                        openEnumReferanceModal={openReferenceModal}
                         f={f}
                         formData={formData}
                         enumData={enumData}
@@ -409,8 +424,6 @@ export default function AssetEditItem() {
                         setImages={setImages}
                         mode="edit"
                         styles={styles}
-                        setModalVisible={setModalVisible}
-                        setActiveEnumField={setActiveEnumField}
                         getDefaultValueForField={getDefaultValueForField}
                       />
                     </View>
@@ -447,32 +460,77 @@ export default function AssetEditItem() {
       </ScrollView>
 
       <EnumAndReferencePickerModal
+        isSearching={refSearching}
+        loadingMore={refLoadingMore}
         visible={modalVisible}
-        title={`${activeEnumField?.moTa ?? ""}`}
-        items={
+        title={`${activeEnumField?.moTa || activeEnumField?.name}`}
+        items={modalItems}
+        total={
           activeEnumField
-            ? [
-                {
-                  value: "",
-                  text: `${activeEnumField.moTa ?? activeEnumField.name}`,
-                },
-                ...(activeEnumField.typeProperty === TypeProperty.Reference
-                  ? referenceData[activeEnumField.name] || []
-                  : enumData[activeEnumField.name] || []),
-              ]
-            : []
+            ? referenceData[activeEnumField.name]?.totalCount || 0
+            : 0
+        }
+        loadedCount={
+          activeEnumField
+            ? (referenceData[activeEnumField.name]?.items ?? []).filter(
+                (i) => i.value !== "",
+              ).length
+            : 0
         }
         onClose={() => setModalVisible(false)}
         onSelect={(value) => {
           if (activeEnumField) {
-            let finalValue: any = value;
-            if (value === "") finalValue = "";
-            else if (!isNaN(value)) finalValue = Number(value);
+            let finalValue = value;
+            if (value !== "" && !isNaN(value)) {
+              finalValue = Number(value);
+            }
             handleChange(activeEnumField.name, finalValue);
           }
           setModalVisible(false);
         }}
+        onSearch={(textSearch) => {
+          if (!activeEnumField) return;
+
+          setRefSearching(true);
+          setRefKeyword(textSearch);
+          setRefPage(0);
+          setRefHasMore(true);
+
+          fetchReferenceData(activeEnumField, {
+            textSearch,
+            page: 0,
+            append: false,
+          }).finally(() => setRefSearching(false));
+        }}
+        onLoadMore={() => {
+          if (!activeEnumField || refLoadingMore || refSearching || !refHasMore)
+            return;
+
+          const fieldName = activeEnumField.name;
+          const ref = referenceData[fieldName];
+
+          if (!ref) return;
+
+          // guard cực mạnh
+          if (!ref || ref.totalCount <= ref.items.length) {
+            setRefHasMore(false);
+            return;
+          }
+
+          setRefLoadingMore(true);
+
+          fetchReferenceData(activeEnumField, {
+            textSearch: refKeyword,
+            page: refPage + 1,
+            append: true,
+          }).finally(() => {
+            setRefPage((p) => p + 1);
+            setRefLoadingMore(false);
+          });
+        }}
       />
+
+      {refLoadingMore && <IsLoading size="large" color="#FF3333"></IsLoading>}
     </KeyboardAvoidingView>
   );
 }

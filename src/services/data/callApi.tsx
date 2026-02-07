@@ -256,13 +256,40 @@ export const callApi = async <T,>(
   data?: any,
   configOverride?: any,
 ): Promise<T> => {
-  const response = await api.request<T>({
+  log("🌐 API REQUEST:", {
     method,
     url,
     data,
-    ...configOverride,
+    configOverride,
   });
-  return response.data;
+
+  try {
+    const response = await api.request<T>({
+      method,
+      url,
+      data,
+      ...configOverride,
+    });
+
+    log("✅ API RESPONSE:", {
+      url,
+      data: response.data,
+      status: response.status,
+    });
+
+    return response.data;
+  } catch (error: any) {
+    log("❌ API ERROR:", {
+      url,
+      method,
+      requestData: data,
+      status: error?.response?.status,
+      response: error?.response?.data,
+      message: error.message,
+    });
+
+    throw error; // nhớ throw lại để screen handle
+  }
 };
 
 // API functions

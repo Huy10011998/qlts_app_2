@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -9,247 +9,129 @@ import {
   Platform,
   KeyboardAvoidingView,
 } from "react-native";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import { useNavigation } from "@react-navigation/native";
+import { useSelector } from "react-redux";
+
 import { useParams } from "../../hooks/useParams";
+import { usePermission } from "../../hooks/usePermission";
+import { useImageLoader } from "../../hooks/useImageLoader";
+
+import { RootState } from "../../store/Index";
+import { useAppDispatch } from "../../store/Hooks";
+import { setShouldRefreshList } from "../../store/AssetSlice";
+
 import { AssetAddItemNavigationProp, Field } from "../../types/Index";
 import { TypeProperty } from "../../utils/Enum";
-import Ionicons from "react-native-vector-icons/Ionicons";
+import { formatDateForBE, getDefaultValueForField } from "../../utils/Date";
+
 import EnumAndReferencePickerModal from "../modal/EnumAndReferencePickerModal";
 import IsLoading from "../ui/IconLoading";
-import { useNavigation } from "@react-navigation/native";
-import { handleCascadeChange } from "../../utils/cascade/Index";
-import { fetchEnumByField } from "../../utils/fetchField/FetchEnumField";
+
 import { fetchImage, pickImage } from "../../utils/Image";
+import { insert } from "../../services/data/CallApi";
 import { RenderInputByType } from "../form/RenderInputByType";
-import { useImageLoader } from "../../hooks/useImageLoader";
-import { insert, tuDongTang } from "../../services/data/CallApi";
 
-import { useSelector } from "react-redux";
-import { RootState } from "../../store/Index";
-import { setShouldRefreshList } from "../../store/AssetSlice";
-import { usePermission } from "../../hooks/usePermission";
-
-import {
-  formatDateForBE,
-  formatDMY,
-  getDefaultValueForField,
-} from "../../utils/Date";
-
-import { ParseFieldActive } from "../../utils/parser/ParseFieldActive";
-import { GroupFields } from "../../utils/parser/GroupFields";
-import { ToggleGroupUtil } from "../../utils/parser/ToggleGroup";
-import { fetchReferenceByField } from "../../utils/fetchField/FetchReferenceField";
-import { useAppDispatch } from "../../store/Hooks";
+/* ======================= HOOKS ======================= */
+import { useGroupedFields } from "../../hooks/AssetAddItem/useGroupedFields";
+import { useCascadeForm } from "../../hooks/AssetAddItem/useCascadeForm";
+import { useTreeToForm } from "../../hooks/AssetAddItem/useTreeToForm";
+import { useEnumAndReferenceLoader } from "../../hooks/AssetAddItem/useEnumAndReferenceLoader";
+import { useDefaultDateTime } from "../../hooks/AssetAddItem/useDefaultDateTime";
+import { useAutoIncrementCode } from "../../hooks/AssetAddItem/useAutoIncrementCode";
+import { useModalItems } from "../../hooks/AssetAddItem/useModalItems";
+import { useReferenceFetcher } from "../../hooks/AssetAddItem/useReferenceData";
+import { useOpenReferenceModal } from "../../hooks/AssetAddItem/useOpenReferenceModal";
+/* ===================================================== */
 
 export default function AssetAddItemDetails() {
-  // Lấy params
+  /* ===== PARAMS ===== */
   const { field, nameClass, propertyClass } = useParams();
-  // Navigation
   const navigation = useNavigation<AssetAddItemNavigationProp>();
-  // Parse fields safely
-  const fieldActive = useMemo(() => ParseFieldActive(field), [field]);
-  // grouped by groupLayout (kept as-is style D)
-  const groupedFields = useMemo(() => GroupFields(fieldActive), [fieldActive]);
-  // States
-  const [formData, setFormData] = useState<Record<string, any>>({});
-  const [collapsedGroups, setCollapsedGroups] = useState<
-    Record<string, boolean>
-  >({});
-  // Load enum & reference data
-  const [enumData, setEnumData] = useState<Record<string, any[]>>({});
-  const [referenceData, setReferenceData] = useState<Record<string, any[]>>({});
-  // Modal states
-  const [modalVisible, setModalVisible] = useState(false);
-  const [activeEnumField, setActiveEnumField] = useState<Field | null>(null);
-  // Submitting state
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  // Image states
-  const [images, setImages] = useState<Record<string, string>>({});
-  const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>(
-    {},
-  );
-  // Initial auto code ref
-  const initialAutoCodeRef = React.useRef<string | null>(null);
-  // Parent value for auto-increment
-  const parentField = propertyClass?.prentTuDongTang;
-  const parentValue = parentField ? formData[parentField] : undefined;
-
-  //Check Permission
   const { can } = usePermission();
-
-  // Lấy node từ redux
   const dispatch = useAppDispatch();
+
+  /* ===== REDUX ===== */
   const { selectedTreeValue, selectedTreeProperty } = useSelector(
     (state: RootState) => state.asset,
   );
 
+  // ===== RAW TREE VALUES ===== //
   const rawTreeValues = useMemo(() => {
     if (!selectedTreeValue) return [];
     return selectedTreeValue.split(",").map((v) => v.trim());
   }, [selectedTreeValue]);
 
-  // Khi chọn cây → set giá trị cha vào form
-  useEffect(() => {
-    if (!selectedTreeProperty || !selectedTreeValue) return;
+  /* ===== FORM CORE ===== */
+  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [enumData, setEnumData] = useState<Record<string, any[]>>({});
+  const [referenceData, setReferenceData] = useState<
+    Record<string, { items: any[]; totalCount: number }>
+  >({});
 
-    const props = selectedTreeProperty.split(",");
-    const rawValues = selectedTreeValue.split(",");
+  /* ===== UI STATE ===== */
+  const [modalVisible, setModalVisible] = useState(false);
+  const [activeEnumField, setActiveEnumField] = useState<Field | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-    props.forEach((p, i) => {
-      const f = fieldActive.find((fi) => fi.name === p);
-      if (!f) return;
+  /* ===== IMAGE ===== */
+  const [images, setImages] = useState<Record<string, string>>({});
+  const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>(
+    {},
+  );
 
-      const raw = rawValues[i];
-      if (raw == null) return;
+  /* ===== REFERENCE LOAD MORE ===== */
+  const PAGE_SIZE = 20;
+  const [refPage, setRefPage] = useState(0);
+  const [refKeyword, setRefKeyword] = useState("");
+  const [refLoadingMore, setRefLoadingMore] = useState(false);
+  const [refHasMore, setRefHasMore] = useState(true);
+  const [refSearching, setRefSearching] = useState(false);
 
-      const numVal = Number(raw);
-      if (!isNaN(numVal) && numVal < 0) return;
+  /* ===== GROUP + FIELD ===== */
+  const { fieldActive, groupedFields, collapsedGroups, toggleGroup } =
+    useGroupedFields(field);
 
-      handleChange(f.name, String(numVal)); // gọi handleChange thay vì setFormData trực tiếp
-    });
+  /* ===== CASCADE ===== */
+  const { handleChange } = useCascadeForm(
+    fieldActive,
+    setFormData,
+    setReferenceData,
+  );
 
-    // Clear referenceData trước khi cascade chạy
-    setReferenceData({});
-  }, [selectedTreeProperty, selectedTreeValue, fieldActive]);
+  /* ===== TREE → FORM ===== */
+  useTreeToForm({
+    selectedTreeProperty,
+    selectedTreeValue,
+    fieldActive,
+    handleChange,
+    setReferenceData,
+  });
 
-  // Expand group mặc định
-  useEffect(() => {
-    const next: Record<string, boolean> = {};
-    Object.keys(groupedFields).forEach((k) => (next[k] = false));
-    setCollapsedGroups(next);
-  }, [groupedFields]);
+  /* ===== ENUM / REFERENCE ===== */
+  useEnumAndReferenceLoader(
+    fieldActive,
+    setEnumData,
+    setReferenceData,
+    referenceData,
+  );
 
-  const toggleGroup = (groupName: string) => {
-    setCollapsedGroups((prev) => ToggleGroupUtil(prev, groupName));
-  };
+  /* ===== DEFAULT DATE / TIME ===== */
+  useDefaultDateTime(fieldActive, setFormData);
 
-  // Load enum & reference basic
-  useEffect(() => {
-    fieldActive.forEach((f) => {
-      if (f.typeProperty === TypeProperty.Enum && f.enumName) {
-        fetchEnumByField(f.enumName, f.name, setEnumData);
-      }
+  /* ===== AUTO INCREMENT ===== */
+  const parentField = propertyClass?.prentTuDongTang;
+  const parentValue = parentField ? formData[parentField] : undefined;
+  useAutoIncrementCode({
+    nameClass,
+    propertyClass,
+    formData,
+    rawTreeValues,
+    parentValue,
+    setFormData,
+  });
 
-      if (
-        f.typeProperty === TypeProperty.Reference &&
-        f.referenceName &&
-        !f.parentsFields
-      ) {
-        fetchReferenceByField(f.referenceName, f.name, setReferenceData);
-      }
-    });
-  }, [fieldActive]);
-
-  // Auto tăng mã
-  useEffect(() => {
-    if (!propertyClass?.isTuDongTang || !nameClass) return;
-
-    const fieldName = propertyClass.propertyTuDongTang;
-    if (!fieldName) return;
-
-    if (formData[fieldName] != null) return;
-
-    const parentProps = propertyClass.prentTuDongTang?.split(",") || [];
-    const validParentValues = parentProps
-      .map((prop: any, idx: string | number) =>
-        Number(rawTreeValues[Number(idx)]),
-      )
-      .filter((v: number) => !isNaN(v) && v >= 0)
-      .join(",");
-
-    tuDongTang(nameClass, {
-      propertyTuDongTang: fieldName,
-      formatTuDongTang: propertyClass.formatTuDongTang,
-      prentTuDongTang: propertyClass.prentTuDongTang,
-      prentTuDongTang_Value: validParentValues,
-      prefix: propertyClass.prefix,
-    }).then((autoRes) => {
-      if (autoRes?.data) {
-        setFormData((prev) => {
-          // LƯU MÃ GỐC 1 LẦN DUY NHẤT
-          if (!initialAutoCodeRef.current) {
-            initialAutoCodeRef.current = autoRes.data;
-          }
-
-          return {
-            ...prev,
-            [fieldName]: autoRes.data,
-          };
-        });
-      }
-    });
-  }, [rawTreeValues, selectedTreeValue, propertyClass, nameClass]);
-
-  // CHỈ KHI USER ĐỔI prentTuDongTang → GỌI LẠI AUTO TĂNG
-  useEffect(() => {
-    if (!propertyClass?.isTuDongTang || !nameClass) return;
-    if (!parentField) return;
-
-    const fieldName = propertyClass.propertyTuDongTang;
-    if (!fieldName) return;
-
-    // CASE 1: NULL → quay về mã gốc
-    if (parentValue == null || parentValue === "") {
-      if (initialAutoCodeRef.current) {
-        setFormData((prev) => ({
-          ...prev,
-          [fieldName]: initialAutoCodeRef.current,
-        }));
-      }
-      return;
-    }
-
-    // CASE 2: có parent → auto tăng
-    tuDongTang(nameClass, {
-      propertyTuDongTang: fieldName,
-      formatTuDongTang: propertyClass.formatTuDongTang,
-      prentTuDongTang: propertyClass.prentTuDongTang,
-      prentTuDongTang_Value: String(parentValue),
-      prefix: propertyClass.prefix,
-    }).then((autoRes) => {
-      if (autoRes?.data) {
-        setFormData((prev) => ({
-          ...prev,
-          [fieldName]: autoRes.data,
-        }));
-      }
-    });
-  }, [parentValue, nameClass]);
-
-  // Set default date/time now
-  useEffect(() => {
-    const mode = "add";
-
-    if (mode !== "add") return;
-
-    setFormData((prev) => {
-      const next = { ...prev };
-
-      fieldActive.forEach((f) => {
-        if (
-          f.typeProperty === TypeProperty.Date &&
-          f.defaultDateNow &&
-          !next[f.name]
-        ) {
-          next[f.name] = formatDMY(new Date());
-        }
-
-        if (
-          f.typeProperty === TypeProperty.Time &&
-          f.defaultTimeNow &&
-          !next[f.name]
-        ) {
-          const now = new Date();
-          next[f.name] = `${String(now.getHours()).padStart(2, "0")}:${String(
-            now.getMinutes(),
-          ).padStart(2, "0")}`;
-        }
-      });
-
-      return next;
-    });
-  }, [fieldActive]);
-
-  //  Load images
+  /* ===== IMAGE LOADER ===== */
   useImageLoader({
     fieldActive,
     formData,
@@ -258,23 +140,34 @@ export default function AssetAddItemDetails() {
     setLoadingImages,
   });
 
-  // Handle change with cascade
-  const handleChange = (name: string, value: any) => {
-    handleCascadeChange({
-      name,
-      value,
-      fieldActive,
-      setFormData,
-      setReferenceData,
-    });
-  };
+  /* ===== OPEN ENUM & REFERANCE MODAL ===== */
+  const { openReferenceModal } = useOpenReferenceModal({
+    formData,
+    setActiveEnumField,
+    setRefKeyword,
+    setRefPage,
+    setRefHasMore,
+    setModalVisible,
+    setReferenceData,
+    pageSize: PAGE_SIZE,
+  });
 
-  //  Handle create
+  /* ===== FETCH REFERENCE DATA ON SEARCH ===== */
+  const { fetchReferenceData } = useReferenceFetcher(
+    setReferenceData,
+    PAGE_SIZE,
+  );
+
+  // ===== MODAL ITEMS ===== //
+  const modalItems = useModalItems(activeEnumField, referenceData, enumData);
+
+  /* ===== SUBMIT ===== */
   const handleCreate = async () => {
     if (nameClass && !can(nameClass, "Insert")) {
       Alert.alert("Không có quyền", "Bạn không có quyền tạo mới dữ liệu!");
       return;
     }
+
     if (!Object.keys(formData).length) {
       Alert.alert("Thông báo", "Vui lòng nhập ít nhất một trường!");
       return;
@@ -290,7 +183,6 @@ export default function AssetAddItemDetails() {
 
       const payloadData = { ...formData };
 
-      // Format date
       fieldActive.forEach((f) => {
         if (f.typeProperty === TypeProperty.Date) {
           const v = payloadData[f.name];
@@ -298,37 +190,30 @@ export default function AssetAddItemDetails() {
         }
       });
 
-      const payload = {
+      await insert(nameClass, {
         entities: [payloadData],
         saveHistory: true,
-      };
+      });
 
-      await insert(nameClass, payload);
-
-      Alert.alert(
-        "Thành công",
-        "Tạo mới thành công!",
-        [
-          {
-            text: "OK",
-            onPress: () => {
-              setFormData({});
-              setImages({});
-
-              dispatch(setShouldRefreshList(true));
-              navigation.goBack();
-            },
+      Alert.alert("Thành công", "Tạo mới thành công!", [
+        {
+          text: "OK",
+          onPress: () => {
+            setFormData({});
+            setImages({});
+            dispatch(setShouldRefreshList(true));
+            navigation.goBack();
           },
-        ],
-        { cancelable: false },
-      );
-    } catch (err) {
+        },
+      ]);
+    } catch {
       Alert.alert("Lỗi", "Không thể tạo mới!");
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  /* ======================= UI ======================= */
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -348,18 +233,19 @@ export default function AssetAddItemDetails() {
                 <Ionicons
                   name={collapsed ? "chevron-down" : "chevron-up"}
                   size={26}
-                  color={"#FF3333"}
+                  color="#FF3333"
                 />
               </TouchableOpacity>
 
               {!collapsed &&
                 fields.map((f) => {
-                  if (f.isReadOnly) return null; // ẨN TOÀN BỘ FIELD
+                  if (f.isReadOnly) return null;
 
                   return (
                     <View key={f.id ?? f.name} style={styles.fieldBlock}>
                       <Text style={styles.label}>{f.moTa}</Text>
                       <RenderInputByType
+                        openEnumReferanceModal={openReferenceModal}
                         f={f}
                         formData={formData}
                         enumData={enumData}
@@ -370,8 +256,6 @@ export default function AssetAddItemDetails() {
                         pickImage={pickImage}
                         mode="add"
                         styles={styles}
-                        setModalVisible={setModalVisible}
-                        setActiveEnumField={setActiveEnumField}
                         getDefaultValueForField={getDefaultValueForField}
                         images={images}
                         setImages={setImages}
@@ -396,37 +280,78 @@ export default function AssetAddItemDetails() {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Picker Modal */}
       <EnumAndReferencePickerModal
+        isSearching={refSearching}
+        loadingMore={refLoadingMore}
         visible={modalVisible}
         title={`${activeEnumField?.moTa || activeEnumField?.name}`}
-        items={
+        items={modalItems}
+        total={
           activeEnumField
-            ? [
-                { value: "", text: `${activeEnumField.moTa}` },
-                ...(activeEnumField.typeProperty === TypeProperty.Reference
-                  ? referenceData[activeEnumField.name] || []
-                  : enumData[activeEnumField.name] || []),
-              ]
-            : []
+            ? referenceData[activeEnumField.name]?.totalCount || 0
+            : 0
+        }
+        loadedCount={
+          activeEnumField
+            ? (referenceData[activeEnumField.name]?.items ?? []).filter(
+                (i) => i.value !== "",
+              ).length
+            : 0
         }
         onClose={() => setModalVisible(false)}
         onSelect={(value) => {
           if (activeEnumField) {
             let finalValue = value;
-
-            if (value === "") {
-              finalValue = "";
-            } else if (!isNaN(value)) {
+            if (value !== "" && !isNaN(value)) {
               finalValue = Number(value);
             }
-
             handleChange(activeEnumField.name, finalValue);
           }
-
           setModalVisible(false);
         }}
+        onSearch={(textSearch) => {
+          if (!activeEnumField) return;
+
+          setRefSearching(true);
+          setRefKeyword(textSearch);
+          setRefPage(0);
+          setRefHasMore(true);
+
+          fetchReferenceData(activeEnumField, {
+            textSearch,
+            page: 0,
+            append: false,
+          }).finally(() => setRefSearching(false));
+        }}
+        onLoadMore={() => {
+          if (!activeEnumField || refLoadingMore || refSearching || !refHasMore)
+            return;
+
+          const fieldName = activeEnumField.name;
+          const ref = referenceData[fieldName];
+
+          if (!ref) return;
+
+          // guard cực mạnh
+          if (!ref || ref.totalCount <= ref.items.length) {
+            setRefHasMore(false);
+            return;
+          }
+
+          setRefLoadingMore(true);
+
+          fetchReferenceData(activeEnumField, {
+            textSearch: refKeyword,
+            page: refPage + 1,
+            append: true,
+          }).finally(() => {
+            setRefPage((p) => p + 1);
+            setRefLoadingMore(false);
+          });
+        }}
       />
+
+      {refLoadingMore && <IsLoading size="large" color="#FF3333"></IsLoading>}
 
       {isSubmitting && (
         <View style={styles.loadingOverlay}>
@@ -437,6 +362,7 @@ export default function AssetAddItemDetails() {
   );
 }
 
+/* ======================= STYLE ======================= */
 const styles = StyleSheet.create({
   groupCard: {
     backgroundColor: "#fff",
@@ -525,5 +451,35 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 10,
     backgroundColor: "#f2f2f2",
+  },
+
+  boolRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 6,
+  },
+
+  boolLabel: {
+    flex: 1,
+    paddingRight: 12,
+  },
+
+  tooltipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "flex-start",
+  },
+
+  tooltipLabel: {
+    color: "#FF3333",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+
+  tooltipText: {
+    color: "#333",
+    fontSize: 14,
+    flexShrink: 1,
   },
 });

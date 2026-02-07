@@ -28,9 +28,8 @@ export const RenderInputByType = ({
   setLoadingImages,
   setImages,
   styles,
-  setModalVisible,
-  setActiveEnumField,
   mode,
+  openEnumReferanceModal,
 }: RenderInputByTypeProps) => {
   // INITIAL VALUE
   const value = formData[f.name];
@@ -43,13 +42,15 @@ export const RenderInputByType = ({
   // LIST ITEMS (ENUM / REFERENCE)
   const items =
     f.typeProperty === TypeProperty.Reference
-      ? referenceData[f.name] || []
+      ? referenceData[f.name]?.items || []
       : enumData[f.name] || [];
 
   const hasValue =
     value !== null && value !== undefined && value !== "" && value !== 0;
 
-  const selectedItem = items.find((x: any) => x.value == value);
+  const selectedItem = Array.isArray(items)
+    ? items.find((x: any) => x.value == value)
+    : undefined;
 
   const displayText = hasValue
     ? selectedItem?.text ?? formData?.[`${f.name}_MoTa`] ?? String(value)
@@ -295,8 +296,7 @@ export const RenderInputByType = ({
       return (
         <TouchableOpacity
           onPress={() => {
-            setActiveEnumField(f);
-            setModalVisible(true);
+            openEnumReferanceModal?.(f);
           }}
         >
           <Text

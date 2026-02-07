@@ -41,26 +41,9 @@ export default function LoginScreen() {
 
   const dispatch = useAppDispatch();
 
-  const { logoutReason, clearLogoutReason } = useAuth();
-
   useEffect(() => {
     log("===", token);
   }, []);
-
-  useEffect(() => {
-    if (logoutReason === "EXPIRED") {
-      Alert.alert(
-        "Phiên đăng nhập đã hết hạn",
-        "Vui lòng đăng nhập lại để tiếp tục sử dụng ứng dụng.",
-        [
-          {
-            text: "OK",
-            onPress: () => clearLogoutReason(),
-          },
-        ],
-      );
-    }
-  }, [logoutReason]);
 
   // Enable / Disable Login button
   useEffect(() => {

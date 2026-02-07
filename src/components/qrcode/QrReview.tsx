@@ -235,7 +235,7 @@ export default function QrReview() {
   useFocusEffect(
     React.useCallback(() => {
       if (shouldRefresh) {
-        refreshTop(); // reset skip + fetch đúng lifecycle
+        fetchData(false);
         dispatch(resetShouldRefreshList());
       }
     }, [shouldRefresh]),

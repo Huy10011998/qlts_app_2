@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -19,7 +19,6 @@ import { useParams } from "../../hooks/useParams";
 import { fetchImage, pickImage } from "../../utils/Image";
 import { fetchReferenceByFieldWithParent } from "../../utils/cascade/FetchReferenceByFieldWithParent";
 import { handleCascadeChange } from "../../utils/cascade/Index";
-import { fetchEnumByField } from "../../utils/fetchField/FetchEnumField";
 import { RenderInputByType } from "../form/RenderInputByType";
 import { useImageLoader } from "../../hooks/useImageLoader";
 import { useNavigation } from "@react-navigation/native";
@@ -31,60 +30,81 @@ import {
   normalizeDateFromBE,
 } from "../../utils/Date";
 
-import { ParseFieldActive } from "../../utils/parser/ParseFieldActive";
-import { GroupFields } from "../../utils/parser/GroupFields";
-import { ToggleGroupUtil } from "../../utils/parser/ToggleGroup";
-import { insert, tuDongTang } from "../../services/data/CallApi";
-import { fetchReferenceByField } from "../../utils/fetchField/FetchReferenceField";
+import { insert } from "../../services/data/CallApi";
 import { useAppDispatch } from "../../store/Hooks";
 import { RootState } from "../../store";
 import { useSelector } from "react-redux";
+import { useGroupedFields } from "../../hooks/AssetAddItem/useGroupedFields";
+import { useEnumAndReferenceLoader } from "../../hooks/AssetAddItem/useEnumAndReferenceLoader";
+import { useAutoIncrementCode } from "../../hooks/AssetAddItem/useAutoIncrementCode";
+import IsLoading from "../ui/IconLoading";
+import { useOpenReferenceModal } from "../../hooks/AssetAddItem/useOpenReferenceModal";
+import { useReferenceFetcher } from "../../hooks/AssetAddItem/useReferenceData";
+import { useModalItems } from "../../hooks/AssetAddItem/useModalItems";
 
 export default function AssetCloneItem() {
+  /* ===== PARAMS ===== */
   const { item, field, propertyClass, nameClass } = useParams();
   const navigation = useNavigation<AssetCloneItemNavigationProp>();
-
   const dispatch = useAppDispatch();
 
-  // Active fields
-  const fieldActive = useMemo(() => ParseFieldActive(field), [field]);
-  const groupedFields = useMemo(() => GroupFields(fieldActive), [fieldActive]);
-
-  // states
+  // State
   const [formData, setFormData] = useState<Record<string, any>>({});
-  const [collapsedGroups, setCollapsedGroups] = useState<
-    Record<string, boolean>
-  >({});
+
+  // Enum & Reference Data State
   const [enumData, setEnumData] = useState<Record<string, any[]>>({});
-  const [referenceData, setReferenceData] = useState<Record<string, any[]>>({});
+  const [referenceData, setReferenceData] = useState<
+    Record<string, { items: any[]; totalCount: number }>
+  >({});
   const [modalVisible, setModalVisible] = useState(false);
   const [activeEnumField, setActiveEnumField] = useState<Field | null>(null);
   const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>(
     {},
   );
+
+  /* ===== REFERENCE LOAD MORE ===== */
+  const PAGE_SIZE = 20;
+  const [refPage, setRefPage] = useState(0);
+  const [refKeyword, setRefKeyword] = useState("");
+  const [refLoadingMore, setRefLoadingMore] = useState(false);
+  const [refHasMore, setRefHasMore] = useState(true);
+  const [refSearching, setRefSearching] = useState(false);
+
+  // Image State
   const [images, setImages] = useState<Record<string, string>>({});
 
-  // init collapse group
-  useEffect(() => {
-    const next: Record<string, boolean> = {};
-    Object.keys(groupedFields).forEach((k) => (next[k] = false));
-    setCollapsedGroups(next);
-  }, [groupedFields]);
-
-  // Lấy node từ redux
+  /* ===== REDUX ===== */
   const { selectedTreeValue } = useSelector((state: RootState) => state.asset);
 
+  //  ===== RAW TREE VALUES ===== //
   const rawTreeValues = useMemo(() => {
     if (!selectedTreeValue) return [];
     return selectedTreeValue.split(",").map((v) => v.trim());
   }, [selectedTreeValue]);
 
+  /* ===== GROUP + FIELD ===== */
+  const { fieldActive, groupedFields, collapsedGroups, toggleGroup } =
+    useGroupedFields(field);
+
+  const didInitRef = useRef(false);
   // Init formData từ item gốc (nhưng xoá ID)
   useEffect(() => {
     const initial: Record<string, any> = {};
 
+    if (didInitRef.current) return;
+    didInitRef.current = true;
+
+    const autoField = propertyClass?.propertyTuDongTang;
+
     fieldActive.forEach((f) => {
       const name = f.name;
+
+      //  CLONE → KHÔNG COPY AUTO CODE
+      if (name === autoField) {
+        // KHÔNG set gì hết -> backend auto
+        return;
+      }
+
       const matchedKey = getMatchedKey(item || {}, name);
       const raw = matchedKey ? item?.[matchedKey] : undefined;
 
@@ -111,10 +131,12 @@ export default function AssetCloneItem() {
 
         case TypeProperty.Reference: {
           initial[name] = raw ?? "";
+
           const rawText =
             (matchedKey && item?.[`${matchedKey}_MoTa`]) ??
             item?.[`${name}_MoTa`] ??
             "";
+
           initial[`${name}_MoTa`] = rawText ?? "";
           break;
         }
@@ -134,56 +156,28 @@ export default function AssetCloneItem() {
     });
 
     setFormData(initial);
-  }, [fieldActive, item]);
+  }, []);
 
-  // fetch Enum & Reference không có cha
-  useEffect(() => {
-    fieldActive.forEach((f) => {
-      if (f.typeProperty === TypeProperty.Enum && f.enumName) {
-        fetchEnumByField(f.enumName, f.name, setEnumData);
-      }
-      if (
-        f.typeProperty === TypeProperty.Reference &&
-        f.referenceName &&
-        !f.parentsFields
-      ) {
-        fetchReferenceByField(f.referenceName, f.name, setReferenceData);
-      }
-    });
-  }, [fieldActive]);
+  /* ===== ENUM / REFERENCE ===== */
+  useEnumAndReferenceLoader(
+    fieldActive,
+    setEnumData,
+    setReferenceData,
+    referenceData,
+  );
 
-  // Auto tăng mã
-  useEffect(() => {
-    if (!propertyClass?.isTuDongTang || !nameClass) return;
+  /* ===== AUTO INCREMENT ===== */
+  const parentField = propertyClass?.prentTuDongTang;
+  const parentValue = parentField ? formData[parentField] : undefined;
 
-    const fieldName = propertyClass.propertyTuDongTang;
-    if (!fieldName) return;
-
-    if (formData[fieldName] != null) return;
-
-    const parentProps = propertyClass.prentTuDongTang?.split(",") || [];
-    const validParentValues = parentProps
-      .map((_prop: any, idx: string | number) =>
-        Number(rawTreeValues[Number(idx)]),
-      )
-      .filter((v: number) => !isNaN(v) && v >= 0)
-      .join(",");
-
-    tuDongTang(nameClass, {
-      propertyTuDongTang: fieldName,
-      formatTuDongTang: propertyClass.formatTuDongTang,
-      prentTuDongTang: propertyClass.prentTuDongTang,
-      prentTuDongTang_Value: validParentValues,
-      prefix: propertyClass.prefix,
-    }).then((autoRes) => {
-      if (autoRes?.data) {
-        setFormData((prev) => ({
-          ...prev,
-          [fieldName]: autoRes.data,
-        }));
-      }
-    });
-  }, [rawTreeValues, selectedTreeValue, propertyClass, nameClass]);
+  useAutoIncrementCode({
+    nameClass,
+    propertyClass,
+    formData,
+    rawTreeValues,
+    parentValue,
+    setFormData,
+  });
 
   // fetch Reference có cha (Cascade)
   useEffect(() => {
@@ -204,7 +198,7 @@ export default function AssetCloneItem() {
     });
   }, [formData]);
 
-  // auto load image
+  /* ===== IMAGE LOADER ===== */
   useImageLoader({
     fieldActive,
     formData,
@@ -228,11 +222,28 @@ export default function AssetCloneItem() {
     });
   };
 
-  const toggleGroup = (groupName: string) => {
-    setCollapsedGroups((prev) => ToggleGroupUtil(prev, groupName));
-  };
+  /* ===== OPEN ENUM & REFERANCE MODAL ===== */
+  const { openReferenceModal } = useOpenReferenceModal({
+    formData,
+    setActiveEnumField,
+    setRefKeyword,
+    setRefPage,
+    setRefHasMore,
+    setModalVisible,
+    setReferenceData,
+    pageSize: PAGE_SIZE,
+  });
 
-  // CREATE NEW (CLONE)
+  /* ===== FETCH REFERENCE DATA ON SEARCH ===== */
+  const { fetchReferenceData } = useReferenceFetcher(
+    setReferenceData,
+    PAGE_SIZE,
+  );
+
+  // ===== MODAL ITEMS ===== //
+  const modalItems = useModalItems(activeEnumField, referenceData, enumData);
+
+  // SUBMIT - CLONE
   const handleClone = async () => {
     if (!Object.keys(formData).length) {
       Alert.alert("Thông báo", "Không có dữ liệu để clone!");
@@ -357,6 +368,7 @@ export default function AssetCloneItem() {
                     <View key={f.id ?? f.name} style={styles.fieldBlock}>
                       <Text style={styles.label}>{f.moTa ?? f.name}</Text>
                       <RenderInputByType
+                        openEnumReferanceModal={openReferenceModal}
                         f={f}
                         formData={formData}
                         enumData={enumData}
@@ -369,8 +381,6 @@ export default function AssetCloneItem() {
                         handleChange={handleChange}
                         mode="clone"
                         styles={styles}
-                        setModalVisible={setModalVisible}
-                        setActiveEnumField={setActiveEnumField}
                         getDefaultValueForField={getDefaultValueForField}
                       />
                     </View>
@@ -391,32 +401,77 @@ export default function AssetCloneItem() {
 
       {/* Select modal */}
       <EnumAndReferencePickerModal
+        isSearching={refSearching}
+        loadingMore={refLoadingMore}
         visible={modalVisible}
-        title={`${activeEnumField?.moTa ?? ""}`}
-        items={
+        title={`${activeEnumField?.moTa || activeEnumField?.name}`}
+        items={modalItems}
+        total={
           activeEnumField
-            ? [
-                {
-                  value: "",
-                  text: `${activeEnumField.moTa ?? activeEnumField.name}`,
-                },
-                ...(activeEnumField.typeProperty === TypeProperty.Reference
-                  ? referenceData[activeEnumField.name] || []
-                  : enumData[activeEnumField.name] || []),
-              ]
-            : []
+            ? referenceData[activeEnumField.name]?.totalCount || 0
+            : 0
+        }
+        loadedCount={
+          activeEnumField
+            ? (referenceData[activeEnumField.name]?.items ?? []).filter(
+                (i) => i.value !== "",
+              ).length
+            : 0
         }
         onClose={() => setModalVisible(false)}
         onSelect={(value) => {
           if (activeEnumField) {
-            handleChange(
-              activeEnumField.name,
-              value === "" ? "" : isNaN(value) ? value : Number(value),
-            );
+            let finalValue = value;
+            if (value !== "" && !isNaN(value)) {
+              finalValue = Number(value);
+            }
+            handleChange(activeEnumField.name, finalValue);
           }
           setModalVisible(false);
         }}
+        onSearch={(textSearch) => {
+          if (!activeEnumField) return;
+
+          setRefSearching(true);
+          setRefKeyword(textSearch);
+          setRefPage(0);
+          setRefHasMore(true);
+
+          fetchReferenceData(activeEnumField, {
+            textSearch,
+            page: 0,
+            append: false,
+          }).finally(() => setRefSearching(false));
+        }}
+        onLoadMore={() => {
+          if (!activeEnumField || refLoadingMore || refSearching || !refHasMore)
+            return;
+
+          const fieldName = activeEnumField.name;
+          const ref = referenceData[fieldName];
+
+          if (!ref) return;
+
+          // guard cực mạnh
+          if (!ref || ref.totalCount <= ref.items.length) {
+            setRefHasMore(false);
+            return;
+          }
+
+          setRefLoadingMore(true);
+
+          fetchReferenceData(activeEnumField, {
+            textSearch: refKeyword,
+            page: refPage + 1,
+            append: true,
+          }).finally(() => {
+            setRefPage((p) => p + 1);
+            setRefLoadingMore(false);
+          });
+        }}
       />
+
+      {refLoadingMore && <IsLoading size="large" color="#FF3333"></IsLoading>}
     </KeyboardAvoidingView>
   );
 }

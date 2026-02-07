@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Platform } from "react-native";
+import { Alert, Platform } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import AppNavigator from "./AppNavigator.tsx";
 import AuthNavigator from "./AuthNavigator.tsx";
@@ -14,6 +14,22 @@ export default function RootNavigator() {
   const { isAuthenticated, isLoading, iosAuthenticated, authReady } = useAuth();
   const dispatch = useAppDispatch();
   const { loaded } = useSelector((state: RootState) => state.permission);
+  const { logoutReason, clearLogoutReason } = useAuth();
+
+  useEffect(() => {
+    if (logoutReason === "EXPIRED") {
+      Alert.alert(
+        "Phiên đăng nhập đã hết hạn",
+        "Vui lòng đăng nhập lại để tiếp tục sử dụng ứng dụng.",
+        [
+          {
+            text: "OK",
+            onPress: () => clearLogoutReason(),
+          },
+        ],
+      );
+    }
+  }, [logoutReason]);
 
   useEffect(() => {
     if (!isAuthenticated) {
