@@ -62,7 +62,7 @@ export const clearTokenStorage = async () => {
 export const resetRefreshState = () => {
   isRefreshing = false;
   refreshSubscribers = [];
-  refreshPromise = null; // 🔥 BẮT BUỘC
+  refreshPromise = null;
 };
 
 export const resetAuthState = () => {
@@ -242,7 +242,20 @@ api.interceptors.response.use(
     } catch (refreshErr: any) {
       onRefreshed(null); // chỉ để resolve subscriber
 
-      return Promise.reject(Object.assign(refreshErr, { NEED_LOGIN: true }));
+      if (refreshErr?.NEED_LOGIN) {
+        warn("[API] Refresh expired → logout");
+
+        if (!isLoggingOut) {
+          isLoggingOut = true;
+          try {
+            await onAuthLogout?.("EXPIRED");
+          } finally {
+            isLoggingOut = false;
+          }
+        }
+      }
+
+      return Promise.reject(refreshErr);
     } finally {
       isRefreshing = false;
     }

@@ -1,6 +1,7 @@
 import { API_ENDPOINTS } from "../../config/API";
 import { callApi } from "../../services/Index";
 import { cascadeRequestTracker } from "../cascade/CascadeRequestTracker";
+import { log } from "../Logger";
 
 export const fetchReferenceByField = async (
   referenceName: string,
@@ -60,6 +61,6 @@ export const fetchReferenceByField = async (
       };
     });
   } catch (e) {
-    console.log("Fetch reference error:", e);
+    log("Fetch reference error:", e);
   }
 };

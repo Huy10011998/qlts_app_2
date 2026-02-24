@@ -7,7 +7,6 @@ import React, {
   useEffect,
   useState,
 } from "react";
-import NetInfo from "@react-native-community/netinfo";
 import * as Keychain from "react-native-keychain";
 import { error, log } from "../utils/Logger";
 import {
@@ -16,11 +15,8 @@ import {
   setTokenInApi,
   setRefreshInApi,
   resetAuthState,
-  refreshTokenFlow,
 } from "../services/data/CallApi";
 import { AuthContextType, LogoutReason } from "../types/Context.d";
-import { AppState } from "react-native";
-import { withTimeout } from "../utils/Helper";
 
 // CONTEXT
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -54,29 +50,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       resetAuthState();
     }
   }, []); // Empty deps vì không phụ thuộc vào state nào
-
-  // APP STATE HANDLER
-  useEffect(() => {
-    const sub = AppState.addEventListener("change", async (state) => {
-      if (state === "active" && isAuthenticated) {
-        try {
-          const net = await NetInfo.fetch();
-          if (!net.isConnected) {
-            log("[Auth] Skip refresh (offline)");
-            return;
-          }
-
-          await withTimeout(refreshTokenFlow(), 8000);
-        } catch (err: any) {
-          if (err?.NEED_LOGIN) {
-            await logout("EXPIRED");
-          }
-        }
-      }
-    });
-
-    return () => sub.remove();
-  }, [isAuthenticated, logout]); // Thêm logout vào đây
 
   // TOKEN HANDLERS
   const setToken = async (value: string | null) => {
