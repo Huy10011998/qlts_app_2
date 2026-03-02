@@ -82,6 +82,13 @@ export type RootStackParamList = {
 
   /** ================= ASSET ================= */
   Asset: undefined;
+  Camera: undefined;
+  CameraList: {
+    iD_Camera: number;
+    iD_Camera_MoTa: string;
+    iD_Camera_Ma: string;
+  };
+  CameraListGrid: undefined;
 
   AssetList: {
     nameClass?: string;

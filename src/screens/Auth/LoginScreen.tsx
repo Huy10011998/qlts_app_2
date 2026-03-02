@@ -41,10 +41,6 @@ export default function LoginScreen() {
 
   const dispatch = useAppDispatch();
 
-  useEffect(() => {
-    log("===", token);
-  }, []);
-
   // Enable / Disable Login button
   useEffect(() => {
     setIsLoginDisabled(!(userName.trim() && userPassword.trim()));

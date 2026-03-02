@@ -1,4 +1,10 @@
-import React, { useEffect, useState, useMemo, useRef } from "react";
+import React, {
+  useEffect,
+  useState,
+  useMemo,
+  useRef,
+  useCallback,
+} from "react";
 import {
   View,
   Text,
@@ -11,6 +17,7 @@ import {
   TextInput,
   Modal,
   StyleSheet,
+  KeyboardAvoidingView,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
@@ -37,75 +44,62 @@ if (
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-// Component cho mỗi item dropdown
-const DropdownItem: React.FC<
-  DropdownProps & {
+//
+// DROPDOWN ITEM (MEMO)
+//
+
+const DropdownItem = React.memo(
+  ({
+    item,
+    level = 0,
+    expandedIds,
+    onToggle,
+    onShowReport,
+    isSearching,
+  }: DropdownProps & {
     onShowReport: (item: Item) => void;
-  }
-> = ({ item, level = 0, expandedIds, onToggle, onShowReport }) => {
-  const navigation = useNavigation<StackNavigation<"AssetList">>();
+    isSearching: boolean;
+  }) => {
+    const navigation = useNavigation<StackNavigation<"AssetList">>();
 
-  const hasChildren = item.children && item.children.length > 0;
-  const expanded = expandedIds.includes(item.id);
+    const hasChildren = item.children?.length > 0;
+    const expanded = expandedIds.includes(item.id);
 
-  const handlePress = () => {
-    if (hasChildren) {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      onToggle(item.id);
-    } else if (item.isReport) {
-      // Nếu là báo cáo thì mở modal ReportView
-      onShowReport(item);
-    } else if (item.contentName_Mobile) {
-      navigation.navigate("AssetList", {
-        nameClass: item.contentName_Mobile,
-        titleHeader: item.label,
-      });
-    }
-  };
+    const handlePress = () => {
+      if (hasChildren) {
+        if (!isSearching) {
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        }
+        onToggle(item.id);
+      } else if (item.isReport) {
+        onShowReport(item);
+      } else if (item.contentName_Mobile) {
+        navigation.navigate("AssetList", {
+          nameClass: item.contentName_Mobile,
+          titleHeader: item.label,
+        });
+      }
+    };
 
-  return (
-    <View style={{ paddingLeft: level > 0 ? 20 : 0, marginVertical: 4 }}>
-      <Pressable
-        onPress={handlePress}
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          padding: 14,
-          borderRadius: 8,
-          borderWidth: 1,
-          borderColor: "#eee",
-          shadowColor: "#000",
-          backgroundColor: "#fff",
-          shadowOpacity: 0.05,
-          shadowRadius: 4,
-          elevation: 1,
-        }}
-      >
-        {item.isReport ? (
-          <MaterialIcons name="bar-chart" size={18} color="red" />
-        ) : item.contentName_Mobile ? (
-          <MaterialIcons name="book" size={18} color="red" />
-        ) : expanded ? (
-          <Ionicons name="folder-open" size={18} color="red" />
-        ) : (
-          <Ionicons name="folder" size={18} color="red" />
-        )}
+    return (
+      <View style={{ paddingLeft: level > 0 ? 20 : 0, marginVertical: 4 }}>
+        <Pressable style={styles.item} onPress={handlePress}>
+          {item.isReport ? (
+            <MaterialIcons name="bar-chart" size={18} color="red" />
+          ) : item.contentName_Mobile ? (
+            <MaterialIcons name="book" size={18} color="red" />
+          ) : expanded ? (
+            <Ionicons name="folder-open" size={18} color="red" />
+          ) : (
+            <Ionicons name="folder" size={18} color="red" />
+          )}
 
-        <Text
-          style={{
-            marginLeft: 6,
-            fontSize: 13,
-            fontWeight: "bold",
-            color: "#333",
-          }}
-        >
-          {item.label}
-        </Text>
-      </Pressable>
+          <Text style={styles.label}>{item.label}</Text>
+        </Pressable>
 
-      {expanded && hasChildren && (
-        <View style={{ marginTop: 4 }}>
-          {item.children.map((child) => (
+        {expanded &&
+          hasChildren &&
+          item.children.map((child) => (
             <DropdownItem
               key={child.id}
               item={child}
@@ -113,34 +107,44 @@ const DropdownItem: React.FC<
               expandedIds={expandedIds}
               onToggle={onToggle}
               onShowReport={onShowReport}
+              isSearching={isSearching}
             />
           ))}
-        </View>
-      )}
-    </View>
-  );
-};
+      </View>
+    );
+  },
+);
+
+//
+// MAIN SCREEN
+//
 
 export default function AssetScreen() {
   const [data, setData] = useState<Item[]>([]);
   const [isFetching, setIsFetching] = useState(true);
   const [search, setSearch] = useState("");
   const [expandedIds, setExpandedIds] = useState<(string | number)[]>([]);
-  const searchInputRef = useRef<TextInput>(null);
+  const [reportItem, setReportItem] = useState<Item | null>(null);
 
-  // debounce search
+  const fetchingRef = useRef(false);
+
   const debouncedSearch = useDebounce(search, 400);
   const [isSearching, setIsSearching] = useState(false);
 
-  // State modal report
-  const [reportItem, setReportItem] = useState<Item | null>(null);
+  const firstLoadRef = useRef(true);
+
+  //
+  // BUILD TREE
+  //
 
   const buildTree = (items: Item[]) => {
     const map: Record<string | number, Item> = {};
     const roots: Item[] = [];
+
     items.forEach((item) => {
       map[item.id] = { ...item, children: [] };
     });
+
     items.forEach((item) => {
       if (item.parent === null) {
         roots.push(map[item.id]);
@@ -148,84 +152,20 @@ export default function AssetScreen() {
         map[item.parent].children.push(map[item.id]);
       }
     });
+
     return roots;
   };
 
-  const filteredData = useMemo(() => {
-    if (!debouncedSearch.trim()) {
-      return data;
-    }
+  //
+  // FETCH
+  //
 
-    const keyword = removeVietnameseTones(debouncedSearch);
-    const expandedSet = new Set<string | number>();
-
-    const filterTree = (nodes: Item[]): Item[] =>
-      nodes
-        .map((node) => {
-          const match = removeVietnameseTones(node.label).includes(keyword);
-          const filteredChildren = node.children.length
-            ? filterTree(node.children)
-            : [];
-
-          if (match || filteredChildren.length > 0) {
-            if (filteredChildren.length > 0) expandedSet.add(node.id);
-            return { ...node, children: filteredChildren };
-          }
-          return null;
-        })
-        .filter((n): n is Item => n !== null);
-
-    return filterTree(data);
-  }, [debouncedSearch, data]);
-
-  useEffect(() => {
-    if (!debouncedSearch.trim()) {
-      setExpandedIds([]);
-      return;
-    }
-
-    const keyword = removeVietnameseTones(debouncedSearch);
-    const expandedSet = new Set<string | number>();
-
-    const dfs = (nodes: Item[]): boolean => {
-      let hasMatchInBranch = false;
-
-      nodes.forEach((node) => {
-        const selfMatch = removeVietnameseTones(node.label).includes(keyword);
-
-        const childMatch = node.children?.length ? dfs(node.children) : false;
-
-        if (childMatch) {
-          expandedSet.add(node.id); // mở cha
-        }
-
-        if (selfMatch || childMatch) {
-          hasMatchInBranch = true;
-        }
-      });
-
-      return hasMatchInBranch;
-    };
-
-    dfs(data);
-    setExpandedIds(Array.from(expandedSet));
-  }, [debouncedSearch, data]);
-
-  const handleToggle = (id: string | number) => {
-    setExpandedIds((prev) =>
-      prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id],
-    );
-  };
-  const fetchingRef = useRef(false);
-
-  const fetchData = React.useCallback(async () => {
+  const fetchData = useCallback(async () => {
     if (fetchingRef.current) return;
     fetchingRef.current = true;
 
-    const showLoading = data.length === 0;
-
     try {
-      if (showLoading) setIsFetching(true);
+      setIsFetching(true);
 
       const response = (await callApi(
         "POST",
@@ -234,7 +174,7 @@ export default function AssetScreen() {
       )) as GetMenuActiveResponse;
 
       if (!Array.isArray(response?.data)) {
-        throw new Error("Dữ liệu trả về không hợp lệ.");
+        throw new Error("Invalid data");
       }
 
       const menuAccount = response.data
@@ -244,22 +184,89 @@ export default function AssetScreen() {
       setData(buildTree(menuAccount));
     } catch (e) {
       error("API error:", e);
-      if (showLoading) {
-        Alert.alert("Lỗi", "Không thể tải dữ liệu menu.");
-      }
+      Alert.alert("Lỗi", "Không thể tải dữ liệu menu.");
     } finally {
       fetchingRef.current = false;
-      if (showLoading) setIsFetching(false);
+      setIsFetching(false);
     }
-  }, [data.length]);
+  }, []);
 
   useEffect(() => {
     fetchData();
   }, []);
 
-  useAutoReload(fetchData);
+  useAutoReload(() => {
+    if (firstLoadRef.current) {
+      firstLoadRef.current = false;
+      return;
+    }
+    fetchData();
+  });
 
-  // show loading nhỏ trong search khi gõ
+  //
+  // SEARCH + AUTO EXPAND (1 LẦN DUYỆT)
+  //
+
+  const { filteredData, autoExpanded } = useMemo(() => {
+    if (!debouncedSearch.trim()) {
+      return { filteredData: data, autoExpanded: [] };
+    }
+
+    const keyword = removeVietnameseTones(debouncedSearch.toLowerCase());
+
+    const expandedSet = new Set<string | number>();
+
+    const filterTree = (nodes: Item[]): Item[] =>
+      nodes
+        .map((node) => {
+          const match = removeVietnameseTones(
+            node.label.toLowerCase(),
+          ).includes(keyword);
+
+          const children = node.children?.length
+            ? filterTree(node.children)
+            : [];
+
+          if (children.length > 0) {
+            expandedSet.add(node.id);
+          }
+
+          if (match || children.length > 0) {
+            return { ...node, children };
+          }
+
+          return null;
+        })
+        .filter(Boolean) as Item[];
+
+    return {
+      filteredData: filterTree(data),
+      autoExpanded: Array.from(expandedSet),
+    };
+  }, [debouncedSearch, data]);
+
+  useEffect(() => {
+    if (debouncedSearch.trim()) {
+      setExpandedIds(autoExpanded);
+    } else {
+      setExpandedIds([]);
+    }
+  }, [debouncedSearch, autoExpanded]);
+
+  //
+  // TOGGLE
+  //
+
+  const handleToggle = (id: string | number) => {
+    setExpandedIds((prev) =>
+      prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id],
+    );
+  };
+
+  //
+  // SEARCH LOADING
+  //
+
   useEffect(() => {
     if (search !== debouncedSearch) {
       setIsSearching(true);
@@ -268,86 +275,124 @@ export default function AssetScreen() {
     }
   }, [search, debouncedSearch]);
 
+  //
+  // RENDER
+  //
+
   if (isFetching && !debouncedSearch)
     return <IsLoading size="large" color="#FF3333" />;
 
   return (
-    <View style={{ flex: 1 }}>
-      {/* Ô tìm kiếm */}
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          margin: 12,
-          borderWidth: 1,
-          borderColor: "#ccc",
-          borderRadius: 8,
-          backgroundColor: "#fff",
-          paddingHorizontal: 12,
-        }}
-      >
-        <TextInput
-          ref={searchInputRef}
-          placeholder="Tìm kiếm..."
-          placeholderTextColor="#999"
-          value={search}
-          onChangeText={setSearch}
-          style={{
-            flex: 1,
-            paddingVertical: 10,
-            color: "#333",
-          }}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <View style={{ flex: 1 }}>
+        {/* SEARCH */}
+        <View style={styles.searchBox}>
+          <TextInput
+            placeholder="Tìm kiếm..."
+            placeholderTextColor="#999"
+            value={search}
+            onChangeText={setSearch}
+            style={styles.searchInput}
+          />
+          <View style={styles.spinnerWrapper}>
+            {isSearching && <IsLoading size="small" color="#FF3333" />}
+          </View>
+        </View>
+
+        {/* LIST */}
+        <FlatList
+          data={filteredData}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item }) => (
+            <DropdownItem
+              item={item}
+              expandedIds={expandedIds}
+              onToggle={handleToggle}
+              onShowReport={setReportItem}
+              isSearching={!!debouncedSearch}
+            />
+          )}
+          contentContainerStyle={styles.listContent}
+          removeClippedSubviews
+          initialNumToRender={20}
+          windowSize={10}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
         />
-        {isSearching && (
-          <IsLoading
-            size="small"
-            color="#FF3333"
-            style={styles.searchSpinner}
-          />
-        )}
+
+        {/* MODAL REPORT */}
+        <Modal
+          visible={!!reportItem}
+          animationType="slide"
+          onRequestClose={() => setReportItem(null)}
+        >
+          {reportItem && (
+            <ReportView
+              title={reportItem.label}
+              onClose={() => setReportItem(null)}
+            />
+          )}
+        </Modal>
       </View>
-
-      {/* Danh sách menu */}
-      <FlatList
-        data={filteredData}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <DropdownItem
-            item={item}
-            expandedIds={expandedIds}
-            onToggle={handleToggle}
-            onShowReport={setReportItem}
-          />
-        )}
-        contentContainerStyle={{
-          paddingVertical: 12,
-          paddingHorizontal: 12,
-        }}
-        style={{ marginBottom: 0, flex: 1 }}
-      />
-
-      {/* Modal báo cáo */}
-      <Modal
-        visible={!!reportItem}
-        animationType="slide"
-        onRequestClose={() => setReportItem(null)}
-      >
-        {reportItem && (
-          <ReportView
-            title={reportItem.label}
-            onClose={() => setReportItem(null)}
-          />
-        )}
-      </Modal>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
+//
+// STYLES
+//
+
 const styles = StyleSheet.create({
-  searchSpinner: {
-    position: "absolute",
-    right: 20,
-    top: "50%",
-    marginTop: -10,
+  item: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#eee",
+    backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+
+  label: {
+    marginLeft: 6,
+    fontSize: 13,
+    fontWeight: "bold",
+    color: "#333",
+  },
+
+  searchBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    margin: 12,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    backgroundColor: "#fff",
+    paddingHorizontal: 12,
+  },
+
+  searchInput: {
+    flex: 1,
+    paddingVertical: 10,
+    color: "#333",
+  },
+
+  spinnerWrapper: {
+    width: 24,
+    height: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  listContent: {
+    paddingVertical: 12,
+    paddingHorizontal: 12,
   },
 });

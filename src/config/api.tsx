@@ -3,6 +3,7 @@ export const BASE_URL = "https://api.cholimexfood.com.vn/api";
 export const BASE_URL_PDF = "https://api.cholimexfood.com.vn/";
 
 export const API_ENDPOINTS = {
+  // ASSET
   GET_MENU_ACTIVE: `${BASE_URL}/Common/get-menu-active`,
   LOGIN: `${BASE_URL}/Authorization/login`,
   REFRESH_TOKEN: `${BASE_URL}/Authorization/refresh-token`,
@@ -15,6 +16,8 @@ export const API_ENDPOINTS = {
   PREVIEW_MAYTINH_THONGKE_CNTT: `${BASE_URL}/MayTinh/thong-ke-cntt`,
   GET_CATEGORY_ENUM: `${BASE_URL}/Common/get-category-enum`,
   GET_CATEGORY: `${BASE_URL}/Common/get-category`,
-
+  // PERMISSION
   GET_PERMISSION: `${BASE_URL}/Common/get-permission`,
+  // CAMERA
+  GET_VUNG_CAMERA_STEAM: `${BASE_URL}/VungCamera_ChiTiet/get-vung-camera-steam`,
 };

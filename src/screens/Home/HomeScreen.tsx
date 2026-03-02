@@ -82,6 +82,14 @@ const HomeScreen: React.FC = () => {
       label: "Ticket",
       iconName: "pricetag-outline",
     },
+    {
+      id: "4",
+      label: "Camera",
+      iconName: "camera-outline",
+      onPress: () => {
+        navigation.navigate("Camera");
+      },
+    },
   ];
 
   return (

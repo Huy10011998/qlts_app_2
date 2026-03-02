@@ -11,10 +11,16 @@ import { getPermission } from "../services/Index.tsx";
 import { useAppDispatch } from "../store/Hooks.ts";
 
 export default function RootNavigator() {
-  const { isAuthenticated, isLoading, iosAuthenticated, authReady } = useAuth();
+  const {
+    isAuthenticated,
+    isLoading,
+    iosAuthenticated,
+    authReady,
+    logoutReason,
+    clearLogoutReason,
+  } = useAuth();
   const dispatch = useAppDispatch();
   const { loaded } = useSelector((state: RootState) => state.permission);
-  const { logoutReason, clearLogoutReason } = useAuth();
 
   useEffect(() => {
     if (logoutReason === "EXPIRED") {

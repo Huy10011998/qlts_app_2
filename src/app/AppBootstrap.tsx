@@ -6,6 +6,9 @@ import { emitAppRefetch } from "../utils/AppRefetchBus";
 import { reloadPermissions } from "../store/PermissionActions";
 import { useAppDispatch } from "../store/Hooks";
 import { useAuth } from "../context/AuthContext";
+import messaging from "@react-native-firebase/messaging";
+import { PermissionsAndroid, Platform } from "react-native";
+import notifee, { AndroidImportance } from "@notifee/react-native";
 
 export default function AppBootstrap() {
   const dispatch = useAppDispatch();
@@ -60,9 +63,7 @@ export default function AppBootstrap() {
   };
 
   useEffect(() => {
-    /**
-     * NETWORK LISTENER
-     */
+    // NET INFO LISTENER
     const unsubscribeNetInfo = NetInfo.addEventListener((state) => {
       const isConnected =
         state.isConnected === true && state.isInternetReachable !== false;
@@ -78,9 +79,7 @@ export default function AppBootstrap() {
       lastConnected.current = isConnected;
     });
 
-    /**
-     * APP FOREGROUND LISTENER
-     */
+    // APP STATE LISTENER
     const subAppState = AppState.addEventListener(
       "change",
       async (nextState) => {
@@ -117,6 +116,67 @@ export default function AppBootstrap() {
       }
     };
   }, [dispatch, isAuthenticated, authReady]);
+
+  // // FCM Init & Foreground Handler
+  // useEffect(() => {
+  //   if (!isAuthenticated) return;
+  //   if (authReady === false) return;
+
+  //   async function initFCM() {
+  //     try {
+  //       if (Platform.OS === "android" && Platform.Version >= 33) {
+  //         await PermissionsAndroid.request(
+  //           PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+  //         );
+  //       }
+
+  //       await messaging().requestPermission();
+
+  //       const token = await messaging().getToken();
+
+  //       log("[FCM] TOKEN:");
+  //       log(token);
+
+  //       // TODO: gửi token lên backend
+  //       // await api.saveFcmToken(token);
+  //     } catch (e) {
+  //       log("[FCM] ERROR:");
+  //       log(e);
+  //     }
+  //   }
+
+  //   initFCM();
+  // }, [isAuthenticated, authReady]);
+
+  // // Lắng nghe tin nhắn khi app đang ở foreground
+  // useEffect(() => {
+  //   const unsubscribe = messaging().onMessage(async (remoteMessage) => {
+  //     log("[FCM] FOREGROUND MESSAGE:");
+
+  //     const channelId = await notifee.createChannel({
+  //       id: "default",
+  //       name: "Default Channel",
+
+  //       importance: AndroidImportance.HIGH,
+  //     });
+
+  //     await notifee.displayNotification({
+  //       title: remoteMessage.notification?.title,
+
+  //       body: remoteMessage.notification?.body,
+
+  //       android: {
+  //         channelId,
+
+  //         pressAction: {
+  //           id: "default",
+  //         },
+  //       },
+  //     });
+  //   });
+
+  //   return unsubscribe;
+  // }, []);
 
   return null;
 }

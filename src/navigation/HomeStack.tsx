@@ -23,6 +23,9 @@ import AssetAddItemScreen from "../screens/Assets/AssetAddItemScreen";
 import AssetEditItemScreen from "../screens/Assets/AssetEditItemScreen";
 import AssetCloneItemScreen from "../screens/Assets/AssetCloneItemScreen";
 import AssetAddRelatedItem from "../components/assets/AssetAddRelatedItem";
+import CameraScreen from "../screens/Camera/CameraScreen";
+import CameraListScreen from "../screens/Camera/CameraListScreen";
+import CameraListGridScreen from "../screens/Camera/CameraListGirdScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -143,6 +146,33 @@ export default function HomeStack() {
         component={AssetAddRelatedItem}
         options={{
           title: "Thêm mới",
+          ...headerWithBack,
+        }}
+      />
+
+      <Stack.Screen
+        name="Camera"
+        component={CameraScreen}
+        options={{
+          title: "Hệ thống Camera",
+          ...headerWithBack,
+        }}
+      />
+
+      <Stack.Screen
+        name="CameraList"
+        component={CameraListScreen}
+        options={{
+          title: "Danh sách Camera",
+          ...headerWithBack,
+        }}
+      />
+
+      <Stack.Screen
+        name="CameraListGrid"
+        component={CameraListGridScreen}
+        options={{
+          title: "Live View Camera",
           ...headerWithBack,
         }}
       />

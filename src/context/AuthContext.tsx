@@ -31,6 +31,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [logoutReason, setLogoutReason] = useState<LogoutReason | undefined>();
   const isAuthenticated = !!token;
 
+  useEffect(() => {
+    log("[Auth] Token changed:", token);
+  }, [token]);
+
   const logout = useCallback(async (reason: LogoutReason = "OTHER") => {
     log("[Auth] Logout → hard reset");
     setLogoutReason(reason);
