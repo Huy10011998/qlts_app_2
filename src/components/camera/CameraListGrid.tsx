@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  StatusBar,
   Dimensions,
   Animated,
   Modal,
@@ -138,6 +137,15 @@ const CameraListGrid: React.FC = () => {
     }
   }, [fullscreenCam]);
 
+  // Khi vào fullscreen → dừng grid để tiết kiệm tài nguyên, tránh WebView bị reload khi xoay
+  React.useEffect(() => {
+    if (fullscreenCam) {
+      setIsPaused(true); // Mở fullscreen → dừng grid
+    } else {
+      setIsPaused(false); // Đóng fullscreen → chạy lại grid
+    }
+  }, [fullscreenCam]);
+
   // Lock portrait khi vào màn hình, unlock khi rời
   React.useEffect(() => {
     Orientation.lockToPortrait();
@@ -207,9 +215,22 @@ const CameraListGrid: React.FC = () => {
     setShowLayoutPicker(false);
   };
 
+  const lastTapRef = React.useRef<{ [key: string]: number }>({});
+
   const handleCamPress = (cam: any, idx: number) => {
     setActiveIndex(idx);
-    setFullscreenCam(cam);
+    const now = Date.now();
+    const key = cam.iD_Camera?.toString() ?? idx.toString();
+    const lastTap = lastTapRef.current[key] ?? 0;
+
+    if (now - lastTap < 300) {
+      // Double tap → mở fullscreen
+      setFullscreenCam(cam);
+      lastTapRef.current[key] = 0;
+    } else {
+      // Single tap → chỉ set active
+      lastTapRef.current[key] = now;
+    }
   };
 
   const handleFullscreenPrev = () => {
@@ -240,8 +261,6 @@ const CameraListGrid: React.FC = () => {
 
   return (
     <GestureHandlerRootView style={styles.root}>
-      <StatusBar barStyle="light-content" backgroundColor="#000" />
-
       {/* ── TOP HALF ── */}
       <GestureDetector gesture={swipeGesture}>
         <View style={styles.topHalf}>
@@ -258,7 +277,7 @@ const CameraListGrid: React.FC = () => {
                   onPress={() => handleCamPress(cam, idx)}
                   style={[styles.cell, { width: cellW, height: cellH }]}
                 >
-                  {!isPaused && (
+                  {!isPaused && !fullscreenCam && (
                     <WebView
                       source={{
                         html: buildStreamHTML(cam.iD_Camera_Ma),
@@ -415,14 +434,13 @@ const CameraListGrid: React.FC = () => {
         statusBarTranslucent
         onRequestClose={closeFullscreen}
       >
-        <StatusBar hidden />
         <View style={styles.fsContainer}>
           {/* Header overlay */}
           <View
             style={[
               styles.fsHeader,
               isLandscape
-                ? { paddingTop: 12, paddingLeft: insets.left || 16 }
+                ? { paddingTop: 48, paddingLeft: insets.left || 16 }
                 : { paddingTop: insets.top || 48 },
             ]}
           >
@@ -500,7 +518,7 @@ const CameraListGrid: React.FC = () => {
               styles.fsFooter,
               isLandscape
                 ? { paddingBottom: 12, paddingRight: insets.right || 16 }
-                : { paddingBottom: insets.bottom || 16 },
+                : { paddingBottom: insets.bottom || 34 },
             ]}
           >
             <TouchableOpacity
@@ -533,7 +551,7 @@ const CameraListGrid: React.FC = () => {
 export default CameraListGrid;
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#fff" },
+  root: { flex: 1 },
 
   topHalf: { flex: 5, backgroundColor: "#000", overflow: "hidden" },
 
@@ -570,7 +588,6 @@ const styles = StyleSheet.create({
 
   cellBottom: {
     marginTop: "auto" as any,
-    backgroundColor: "rgba(0,0,0,0.5)",
     paddingHorizontal: 5,
     paddingVertical: 3,
   },
@@ -685,14 +702,13 @@ const styles = StyleSheet.create({
   layoutOptionTextActive: { color: "#e53935", fontWeight: "700" },
 
   // ── FULLSCREEN
-  fsContainer: { flex: 1, backgroundColor: "#000" },
+  fsContainer: { flex: 1 },
 
   fsHeader: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 12,
     paddingBottom: 10,
-    backgroundColor: "rgba(0,0,0,0.6)",
     position: "absolute",
     top: 0,
     left: 0,
@@ -717,7 +733,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingTop: 14,
-    backgroundColor: "rgba(0,0,0,0.6)",
     position: "absolute",
     bottom: 0,
     left: 0,

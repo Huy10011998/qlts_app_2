@@ -5,7 +5,6 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  StatusBar,
   ListRenderItemInfo,
   Modal,
   Dimensions,
@@ -17,13 +16,11 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TouchableWithoutFeedback } from "react-native";
-
 import { useNavigation } from "@react-navigation/native";
 
 const GO2RTC_HOST = "http://192.168.100.13:8859";
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
-// Tự build HTML WebRTC — tự động play, không có UI go2rtc
 const buildStreamHTML = (src: string) => `
 <!DOCTYPE html>
 <html>
@@ -98,7 +95,6 @@ const CameraList: React.FC = () => {
   const route = useRoute<any>();
   const { cameras, zoneName } = route.params;
   const insets = useSafeAreaInsets();
-
   const navigation = useNavigation<any>();
 
   const [layoutCount, setLayoutCount] = React.useState<number>(4);
@@ -121,7 +117,6 @@ const CameraList: React.FC = () => {
 
   const numColumns = getNumColumns();
   const itemWidth = SCREEN_WIDTH / numColumns - 16;
-
   const totalPages = Math.ceil(totalCameras / layoutCount);
   const pagedCameras = cameras.slice(
     page * layoutCount,
@@ -135,10 +130,7 @@ const CameraList: React.FC = () => {
   };
 
   const handleNavigate = () => {
-    navigation.navigate("CameraListGrid", {
-      cameras,
-      zoneName,
-    });
+    navigation.navigate("CameraListGrid", { cameras, zoneName });
   };
 
   const renderItem = React.useCallback(
@@ -175,14 +167,13 @@ const CameraList: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#eee" />
-
       {/* Header */}
       <View style={styles.headerRow}>
         <Text style={styles.pageTitle}>
           {zoneName} ({totalCameras} Camera)
         </Text>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
+
+        <View style={styles.headerRight}>
           <TouchableOpacity onPress={handleNavigate}>
             <Ionicons name="apps" size={24} color="#333" />
           </TouchableOpacity>
@@ -301,10 +292,10 @@ const CameraList: React.FC = () => {
         statusBarTranslucent
         onRequestClose={() => setFullscreenCamera(null)}
       >
-        <StatusBar hidden />
         <View
           style={[styles.fullscreenContainer, { paddingBottom: insets.bottom }]}
         >
+          {/* Header */}
           <View
             style={[styles.fullscreenHeader, { paddingTop: insets.top || 48 }]}
           >
@@ -316,7 +307,7 @@ const CameraList: React.FC = () => {
             </TouchableOpacity>
           </View>
 
-          {/* ✅ HTML tự build WebRTC — tự play ngay, không có UI go2rtc */}
+          {/* WebView load thẳng go2rtc stream.html — có đầy đủ UI controls */}
           {fullscreenCamera && (
             <WebView
               source={{
@@ -334,6 +325,8 @@ const CameraList: React.FC = () => {
               originWhitelist={["*"]}
               allowFileAccess
               allowUniversalAccessFromFileURLs
+              allowsFullscreenVideo
+              javaScriptCanOpenWindowsAutomatically
             />
           )}
         </View>
@@ -347,7 +340,6 @@ export default CameraList;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#eee",
   },
 
   headerRow: {
@@ -359,9 +351,17 @@ const styles = StyleSheet.create({
   },
 
   pageTitle: {
-    fontSize: 18,
+    flex: 1,
+    fontSize: 16,
     fontWeight: "600",
     color: "#000",
+    marginRight: 12,
+  },
+
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
   },
 
   card: {
@@ -398,6 +398,7 @@ const styles = StyleSheet.create({
 
   webview: {
     flex: 1,
+    backgroundColor: "#000",
   },
 
   pagination: {
