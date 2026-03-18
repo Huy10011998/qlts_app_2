@@ -449,3 +449,6 @@ export const getParentValue = async <T = any,>(
   nameClass: string,
   payload: {},
 ) => callApi<T>("POST", `/${nameClass}/parent-value`, payload);
+
+export const getTokenViewCamera = async <T = any,>() =>
+  callApi<T>("POST", API_ENDPOINTS.GET_TOKEN_VIEW_CAMERA);

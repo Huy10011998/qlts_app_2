@@ -340,3 +340,19 @@ export const mapPropertyResponseToPropertyClass = (
     prefix: data.prefix,
   };
 };
+
+export interface CameraCellProps {
+  cam: any;
+  idx: number;
+  isActive: boolean;
+  isPaused: boolean;
+  isWebViewActive: boolean;
+  cellW: number;
+  cellH: number;
+  token: string;
+  pageKey: number;
+  onPress: (cam: any, idx: number) => void;
+  onDoubleTap: (cam: any, idx: number) => void;
+  webviewRefRegister?: React.MutableRefObject<Record<string, any>>;
+  onTokenExpired?: () => void;
+}

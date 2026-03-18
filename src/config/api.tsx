@@ -20,4 +20,6 @@ export const API_ENDPOINTS = {
   GET_PERMISSION: `${BASE_URL}/Common/get-permission`,
   // CAMERA
   GET_VUNG_CAMERA_STEAM: `${BASE_URL}/VungCamera_ChiTiet/get-vung-camera-steam`,
+  // GET TOKEN CAMERA
+  GET_TOKEN_VIEW_CAMERA: `${BASE_URL}/Common/get-token-view-camera`,
 };

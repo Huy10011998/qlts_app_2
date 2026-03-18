@@ -31,18 +31,26 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     return true
   }
+
+  func application(
+    _ application: UIApplication,
+    supportedInterfaceOrientationsFor window: UIWindow?
+  ) -> UIInterfaceOrientationMask {
+    return Orientation.getSupportedInterfaceOrientations()
+  }
 }
 
+// 👇 THÊM LẠI ĐOẠN NÀY
 class ReactNativeDelegate: RCTDefaultReactNativeFactoryDelegate {
   override func sourceURL(for bridge: RCTBridge) -> URL? {
-    self.bundleURL()
+    return self.bundleURL()
   }
 
   override func bundleURL() -> URL? {
 #if DEBUG
-    RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: "index")
+    return RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: "index")
 #else
-    Bundle.main.url(forResource: "main", withExtension: "jsbundle")
+    return Bundle.main.url(forResource: "main", withExtension: "jsbundle")
 #endif
   }
 }

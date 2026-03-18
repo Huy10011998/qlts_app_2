@@ -37,6 +37,18 @@
 	<dict>
   	<key>NSAllowsArbitraryLoads</key>
   	<true/>
+		<key>NSExceptionDomains</key>
+    <dict>
+        <key>api.cholimexfood.com.vn</key>
+        <dict>
+            <key>NSIncludesSubdomains</key>
+            <true/>
+            <key>NSExceptionAllowsInsecureHTTPLoads</key>
+            <true/>
+            <key>NSExceptionRequiresForwardSecrecy</key>
+            <false/>
+        </dict>
+    </dict>
   	<key>NSAllowsLocalNetworking</key>
   	<true/>
 	</dict>
