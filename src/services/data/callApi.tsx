@@ -1,10 +1,32 @@
-import axios, { AxiosError, AxiosInstance } from "axios";
+import axios, {
+  AxiosError,
+  AxiosHeaders,
+  AxiosInstance,
+  AxiosRequestConfig,
+  InternalAxiosRequestConfig,
+} from "axios";
 import { Buffer } from "buffer";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_ENDPOINTS, BASE_URL } from "../../config/Index";
 import { log, warn } from "../../utils/Logger";
 import { LogoutReason } from "../../types/Context.d";
 import { withTimeout } from "../../utils/Helper";
+
+type ApiMethod = "GET" | "POST" | "PUT" | "DELETE";
+
+type AuthenticatedRequestConfig = InternalAxiosRequestConfig & {
+  _retry?: boolean;
+};
+
+type ApiError = AxiosError & {
+  NEED_LOGIN?: boolean;
+  code?: string;
+};
+
+const AUTH_STORAGE_KEYS = {
+  accessToken: "token",
+  refreshToken: "refreshToken",
+} as const;
 
 // GLOBAL LOGOUT HANDLER
 let onAuthLogout: ((reason?: LogoutReason) => Promise<void>) | null = null;
@@ -28,77 +50,149 @@ const refreshApi = axios.create({
   headers: { "Content-Type": "application/json;charset=UTF-8" },
 });
 
-// IN-MEMORY CACHE
+// IN-MEMORY TOKEN CACHE
 let cachedToken: string | null = null;
 let cachedRefresh: string | null = null;
+let tokenLoaded = false;
+let refreshLoaded = false;
+
+const syncAccessToken = (token: string | null) => {
+  cachedToken = token;
+  tokenLoaded = true;
+};
+
+const syncRefreshToken = (refreshToken: string | null) => {
+  cachedRefresh = refreshToken;
+  refreshLoaded = true;
+};
 
 export const setTokenInApi = (token: string | null) => {
-  cachedToken = token;
+  syncAccessToken(token);
 };
 
 export const setRefreshInApi = (refresh: string | null) => {
-  cachedRefresh = refresh;
+  syncRefreshToken(refresh);
 };
 
 const getToken = async () => {
-  if (cachedToken) return cachedToken;
-  cachedToken = await AsyncStorage.getItem("token");
+  if (tokenLoaded) return cachedToken;
+  cachedToken = await AsyncStorage.getItem(AUTH_STORAGE_KEYS.accessToken);
+  tokenLoaded = true;
   return cachedToken;
 };
 
 const getRefreshToken = async () => {
-  if (cachedRefresh) return cachedRefresh;
-  cachedRefresh = await AsyncStorage.getItem("refreshToken");
+  if (refreshLoaded) return cachedRefresh;
+  cachedRefresh = await AsyncStorage.getItem(AUTH_STORAGE_KEYS.refreshToken);
+  refreshLoaded = true;
   return cachedRefresh;
 };
 
 export const clearTokenStorage = async () => {
   log("[API] Clearing cached tokens");
-  cachedToken = null;
-  cachedRefresh = null;
-  await AsyncStorage.multiRemove(["token", "refreshToken"]);
+  syncAccessToken(null);
+  syncRefreshToken(null);
+  await AsyncStorage.multiRemove([
+    AUTH_STORAGE_KEYS.accessToken,
+    AUTH_STORAGE_KEYS.refreshToken,
+  ]);
 };
 
 export const resetRefreshState = () => {
-  isRefreshing = false;
-  refreshSubscribers = [];
   refreshPromise = null;
 };
 
 export const resetAuthState = () => {
-  cachedToken = null;
-  cachedRefresh = null;
+  syncAccessToken(null);
+  syncRefreshToken(null);
   resetRefreshState();
-  isLoggingOut = false;
+  logoutPromise = null;
 };
 
 export const hardResetApi = () => {
   log("[API] Hard reset API state");
-  cachedToken = null;
-  cachedRefresh = null;
+  syncAccessToken(null);
+  syncRefreshToken(null);
   resetRefreshState();
+  logoutPromise = null;
 };
 
-const throwNeedLogin = (): never => {
+const createNeedLoginError = (): Error & { NEED_LOGIN: true } => {
   const e = new Error("NEED_LOGIN");
-  (e as any).NEED_LOGIN = true;
-  throw e;
+  (e as Error & { NEED_LOGIN: true }).NEED_LOGIN = true;
+  return e as Error & { NEED_LOGIN: true };
+};
+
+const isNeedLoginError = (error: unknown): error is Error & { NEED_LOGIN: true } =>
+  Boolean((error as { NEED_LOGIN?: boolean } | undefined)?.NEED_LOGIN);
+
+const isAuthFailureStatus = (status?: number) => status === 401 || status === 403;
+
+const isTimeoutError = (error: unknown) =>
+  (error as { message?: string; code?: string } | undefined)?.message ===
+    "TIMEOUT" ||
+  (error as { message?: string; code?: string } | undefined)?.code ===
+    "ECONNABORTED";
+
+const withAuthHeader = (
+  headers: InternalAxiosRequestConfig["headers"] | undefined,
+  token: string,
+) => {
+  const nextHeaders = AxiosHeaders.from(headers ?? {});
+  nextHeaders.set("Authorization", `Bearer ${token}`);
+  return nextHeaders;
+};
+
+const logRequest = (method: ApiMethod, url: string, hasBody: boolean) => {
+  log("[API] Request", { method, url, hasBody });
+};
+
+const logResponse = (method: ApiMethod, url: string, status: number) => {
+  log("[API] Response", { method, url, status });
+};
+
+const logError = (
+  method: ApiMethod,
+  url: string,
+  error: unknown,
+  hasBody: boolean,
+) => {
+  if (!axios.isAxiosError(error)) {
+    warn("[API] Unknown error", { method, url, hasBody, error });
+    return;
+  }
+
+  const responseMessage =
+    typeof error.response?.data === "object" && error.response?.data !== null
+      ? (error.response.data as { message?: string }).message
+      : undefined;
+
+  warn("[API] Error", {
+    method,
+    url,
+    hasBody,
+    status: error.response?.status,
+    code: error.code,
+    message: responseMessage ?? error.message,
+  });
+};
+
+const triggerLogoutOnce = async (reason: LogoutReason = "EXPIRED") => {
+  if (!onAuthLogout) return;
+  if (!logoutPromise) {
+    logoutPromise = (async () => {
+      await onAuthLogout?.(reason);
+    })().finally(() => {
+      logoutPromise = null;
+    });
+  }
+
+  await logoutPromise;
 };
 
 // REFRESH FLOW
-let isRefreshing = false;
-let isLoggingOut = false;
 let refreshPromise: Promise<string> | null = null;
-let refreshSubscribers: ((token: string | null) => void)[] = [];
-
-const subscribeTokenRefresh = (cb: (token: string | null) => void) => {
-  refreshSubscribers.push(cb);
-};
-
-const onRefreshed = (token: string | null) => {
-  refreshSubscribers.forEach((cb) => cb(token));
-  refreshSubscribers = [];
-};
+let logoutPromise: Promise<void> | null = null;
 
 export const refreshTokenFlow = async (): Promise<string> => {
   if (refreshPromise) return refreshPromise;
@@ -106,7 +200,7 @@ export const refreshTokenFlow = async (): Promise<string> => {
   refreshPromise = (async () => {
     try {
       const refreshToken = await getRefreshToken();
-      if (!refreshToken) throwNeedLogin();
+      if (!refreshToken) throw createNeedLoginError();
 
       const res = await withTimeout(
         refreshApi.post(API_ENDPOINTS.REFRESH_TOKEN, {
@@ -116,28 +210,32 @@ export const refreshTokenFlow = async (): Promise<string> => {
       );
 
       const data = res?.data?.data;
-      if (!data?.accessToken) throwNeedLogin();
+      if (!data?.accessToken) throw createNeedLoginError();
 
-      await AsyncStorage.setItem("token", data.accessToken);
-      setTokenInApi(data.accessToken);
+      const nextRefreshToken = data.refreshToken ?? refreshToken;
+      syncAccessToken(data.accessToken);
+      syncRefreshToken(nextRefreshToken);
 
-      if (data.refreshToken) {
-        await AsyncStorage.setItem("refreshToken", data.refreshToken);
-        cachedRefresh = data.refreshToken;
-      }
+      void AsyncStorage.multiSet([
+        [AUTH_STORAGE_KEYS.accessToken, data.accessToken],
+        [AUTH_STORAGE_KEYS.refreshToken, nextRefreshToken],
+      ]).catch((storageErr) => {
+        warn("[API] Persist refreshed token failed", storageErr);
+      });
 
       log("[API] Refresh token success");
       return data.accessToken;
     } catch (err: any) {
-      if (!err.response) {
-        warn("[API] Refresh failed due to network");
-        throw err;
+      if (isNeedLoginError(err) || isAuthFailureStatus(err?.response?.status)) {
+        await clearTokenStorage();
+        throw createNeedLoginError();
       }
 
-      const status = err.response.status;
-      if (status === 401 || status === 403 || err?.NEED_LOGIN) {
-        await clearTokenStorage();
-        throwNeedLogin();
+      if (!err?.response || isTimeoutError(err)) {
+        warn("[API] Refresh failed due to network", {
+          code: err?.code,
+          message: err?.message,
+        });
       }
 
       throw err;
@@ -154,7 +252,7 @@ api.interceptors.request.use(async (config) => {
   const token = await getToken();
 
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+    config.headers = withAuthHeader(config.headers, token);
   }
 
   return config;
@@ -163,36 +261,21 @@ api.interceptors.request.use(async (config) => {
 // RESPONSE
 api.interceptors.response.use(
   (res) => res,
-  async (err: AxiosError & { NEED_LOGIN?: boolean; OFFLINE?: boolean }) => {
-    const originalRequest: any = err.config;
+  async (err: ApiError) => {
+    const originalRequest = err.config as AuthenticatedRequestConfig | undefined;
 
-    /** ===== NETWORK ERROR ===== */
-    if (!err.response) {
-      // KHÔNG gắn OFFLINE ở đây
-      // để request tiếp theo / retry / refresh quyết định
-      return Promise.reject(err);
-    }
-
-    /** ===== REFRESH FAILED HARD ===== */
-    if (err.NEED_LOGIN) {
+    if (isNeedLoginError(err)) {
       warn("[API] NEED_LOGIN → logout");
-
-      if (!isLoggingOut) {
-        isLoggingOut = true;
-        try {
-          await onAuthLogout?.("EXPIRED");
-        } finally {
-          isLoggingOut = false; // 🔥 bắt buộc
-        }
-      }
-
+      await triggerLogoutOnce("EXPIRED");
       return Promise.reject(err);
     }
 
-    /** ===== NOT 401 OR ALREADY RETRIED ===== */
+    if (!err.response || !originalRequest) {
+      return Promise.reject(err);
+    }
+
     if (
       err.response.status !== 401 ||
-      !originalRequest ||
       originalRequest._retry
     ) {
       return Promise.reject(err);
@@ -201,80 +284,33 @@ api.interceptors.response.use(
     originalRequest._retry = true;
     warn("[API] 401 → try refresh");
 
-    /** ===== WAIT FOR REFRESH ===== */
-    if (isRefreshing) {
-      return new Promise((resolve, reject) => {
-        subscribeTokenRefresh((newToken) => {
-          if (!newToken) {
-            reject(
-              Object.assign(new Error("NEED_LOGIN"), { NEED_LOGIN: true }),
-            );
-            return;
-          }
-
-          resolve(
-            api({
-              ...originalRequest,
-              headers: {
-                ...originalRequest.headers,
-                Authorization: `Bearer ${newToken}`,
-              },
-            }),
-          );
-        });
-      });
-    }
-
-    /** ===== DO REFRESH ===== */
-    isRefreshing = true;
-
     try {
-      const newToken = await withTimeout(refreshTokenFlow(), 8000);
-      onRefreshed(newToken);
+      const newToken = await refreshTokenFlow();
 
       return api({
         ...originalRequest,
-        headers: {
-          ...originalRequest.headers,
-          Authorization: `Bearer ${newToken}`,
-        },
+        headers: withAuthHeader(originalRequest.headers, newToken),
       });
     } catch (refreshErr: any) {
-      onRefreshed(null); // chỉ để resolve subscriber
-
-      if (refreshErr?.NEED_LOGIN) {
+      if (isNeedLoginError(refreshErr)) {
         warn("[API] Refresh expired → logout");
-
-        if (!isLoggingOut) {
-          isLoggingOut = true;
-          try {
-            await onAuthLogout?.("EXPIRED");
-          } finally {
-            isLoggingOut = false;
-          }
-        }
+        await triggerLogoutOnce("EXPIRED");
       }
 
       return Promise.reject(refreshErr);
-    } finally {
-      isRefreshing = false;
     }
   },
 );
 
 // Generic API wrapper
 export const callApi = async <T,>(
-  method: "GET" | "POST" | "PUT" | "DELETE",
+  method: ApiMethod,
   url: string,
   data?: any,
-  configOverride?: any,
+  configOverride?: AxiosRequestConfig,
 ): Promise<T> => {
-  log("🌐 API REQUEST:", {
-    method,
-    url,
-    data,
-    configOverride,
-  });
+  const hasBody = data !== undefined && data !== null;
+  logRequest(method, url, hasBody);
 
   try {
     const response = await api.request<T>({
@@ -284,24 +320,12 @@ export const callApi = async <T,>(
       ...configOverride,
     });
 
-    log("✅ API RESPONSE:", {
-      url,
-      data: response.data,
-      status: response.status,
-    });
+    logResponse(method, url, response.status);
 
     return response.data;
-  } catch (error: any) {
-    log("❌ API ERROR:", {
-      url,
-      method,
-      requestData: data,
-      status: error?.response?.status,
-      response: error?.response?.data,
-      message: error.message,
-    });
-
-    throw error; // nhớ throw lại để screen handle
+  } catch (error) {
+    logError(method, url, error, hasBody);
+    throw error;
   }
 };
 
@@ -449,6 +473,9 @@ export const getParentValue = async <T = any,>(
   nameClass: string,
   payload: {},
 ) => callApi<T>("POST", `/${nameClass}/parent-value`, payload);
+
+export const getVungCamera = async <T = any,>() =>
+  callApi<T>("POST", API_ENDPOINTS.GET_VUNG_CAMERA_STEAM);
 
 export const getTokenViewCamera = async <T = any,>() =>
   callApi<T>("POST", API_ENDPOINTS.GET_TOKEN_VIEW_CAMERA);

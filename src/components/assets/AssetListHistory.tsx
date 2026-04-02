@@ -13,6 +13,7 @@ import orderBy from "lodash/orderBy";
 import { useNavigation } from "@react-navigation/native";
 import { error } from "../../utils/Logger";
 import { useAutoReload } from "../../hooks/useAutoReload";
+import { useSafeAlert } from "../../hooks/useSafeAlert";
 
 export default function AssetListHistory() {
   const [lichsu, setLichsu] = useState<Record<string, any>[]>([]);
@@ -29,6 +30,7 @@ export default function AssetListHistory() {
   const pageSize = 20;
 
   const navigation = useNavigation<StackNavigation<"AssetListHistory">>();
+  const { isMounted, showAlertIfActive } = useSafeAlert();
 
   const handlePress = async (item: Record<string, any>, index: number) => {
     const currentIndex = lichsu.findIndex((x) => x.id === item.id);
@@ -44,9 +46,11 @@ export default function AssetListHistory() {
       });
     } catch (e) {
       error(e);
-      Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
+      showAlertIfActive("Lỗi", `Không thể tải chi tiết ${nameClass}`);
     } finally {
-      setIsLoading(false);
+      if (isMounted()) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -87,11 +91,13 @@ export default function AssetListHistory() {
         setTotal(totalItems);
       } catch (e) {
         error(e);
-        Alert.alert("Lỗi", "Không thể tải dữ liệu.");
+        showAlertIfActive("Lỗi", "Không thể tải dữ liệu.");
         if (!isLoadMore) setLichsu([]);
       } finally {
-        setIsLoading(false);
-        setIsLoadingMore(false);
+        if (isMounted()) {
+          setIsLoading(false);
+          setIsLoadingMore(false);
+        }
       }
     },
     [nameClass, fieldActive.length, propertyClass, skipSize, id]

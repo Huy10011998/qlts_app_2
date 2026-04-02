@@ -34,6 +34,7 @@ import WebView from "react-native-webview";
 import { getTokenViewCamera } from "../../services/data/CallApi";
 import { subscribeAppRefetch } from "../../utils/AppRefetchBus";
 import { CameraCellProps } from "../../types/Components.d";
+import { useIsFocused } from "@react-navigation/native";
 
 const GO2RTC_HOST = "https://api.cholimexfood.com.vn/camera-stream";
 
@@ -396,10 +397,12 @@ const CameraCell = React.memo(
     isActive,
     isPaused,
     isWebViewActive,
+    isSnapshotActive,
     cellW,
     cellH,
     token,
     pageKey,
+    snapshotTimestamp,
     onPress,
     onDoubleTap,
     webviewRefRegister,
@@ -436,13 +439,43 @@ const CameraCell = React.memo(
     );
 
     const shouldRenderWebView = !isPaused && isWebViewActive && !!token;
+    const shouldRenderSnapshot =
+      !isPaused && !shouldRenderWebView && !!isSnapshotActive;
+    const snapshotUrl =
+      token && snapshotTimestamp
+        ? `${GO2RTC_HOST}/api/frame.jpeg?src=${cam.iD_Camera_Ma}_snap&t=${snapshotTimestamp}`
+        : null;
+    const [displayedSnapshotUrl, setDisplayedSnapshotUrl] = React.useState<
+      string | null
+    >(null);
+    const [preloadSnapshotUrl, setPreloadSnapshotUrl] = React.useState<
+      string | null
+    >(null);
+
+    React.useEffect(() => {
+      if (!shouldRenderSnapshot || !snapshotUrl) {
+        setDisplayedSnapshotUrl(null);
+        setPreloadSnapshotUrl(null);
+        return;
+      }
+
+      if (!displayedSnapshotUrl) {
+        setDisplayedSnapshotUrl(snapshotUrl);
+        setPreloadSnapshotUrl(null);
+        return;
+      }
+
+      if (snapshotUrl !== displayedSnapshotUrl) {
+        setPreloadSnapshotUrl(snapshotUrl);
+      }
+    }, [displayedSnapshotUrl, shouldRenderSnapshot, snapshotUrl]);
 
     return (
       <GestureDetector gesture={composed}>
         <View style={[styles.cell, { width: cellW, height: cellH }]}>
           {shouldRenderWebView ? (
             <WebView
-              key={`webview-${cam.iD_Camera}-${pageKey}`}
+              key={`webview-${cam.iD_Camera}-${pageKey}-${token}`}
               ref={webviewRefCb}
               source={{
                 // ── Fix #3: Không nhúng token vào HTML ──
@@ -479,12 +512,44 @@ const CameraCell = React.memo(
                 if (data === "token_expired") onTokenExpired?.();
               }}
             />
+          ) : shouldRenderSnapshot && displayedSnapshotUrl ? (
+            <>
+              <Image
+                source={{
+                  uri: displayedSnapshotUrl,
+                  headers: { Authorization: `Bearer ${token}` },
+                }}
+                style={StyleSheet.absoluteFill}
+                resizeMode="cover"
+                fadeDuration={0}
+              />
+              {preloadSnapshotUrl && (
+                <Image
+                  source={{
+                    uri: preloadSnapshotUrl,
+                    headers: { Authorization: `Bearer ${token}` },
+                  }}
+                  style={[StyleSheet.absoluteFill, styles.hiddenSnapshot]}
+                  resizeMode="cover"
+                  fadeDuration={0}
+                  onLoad={() => {
+                    setDisplayedSnapshotUrl(preloadSnapshotUrl);
+                    setPreloadSnapshotUrl(null);
+                  }}
+                  onError={() => {
+                    setPreloadSnapshotUrl(null);
+                  }}
+                />
+              )}
+            </>
           ) : (
             <View style={styles.cellPlaceholder}>
               {!token && !isPaused ? (
                 <ActivityIndicator size="small" color="#555" />
               ) : !isPaused ? (
-                <Text style={styles.cellPlaceholderText}>Nhấn đúp để xem</Text>
+                <Text style={styles.cellPlaceholderText}>
+                  {isSnapshotActive ? "Dang cap nhat anh..." : "Nhan dup de xem"}
+                </Text>
               ) : null}
             </View>
           )}
@@ -495,6 +560,11 @@ const CameraCell = React.memo(
                 <View style={styles.liveBadge}>
                   <View style={styles.liveDot} />
                   <Text style={styles.liveText}>Trực tiếp</Text>
+                </View>
+              )}
+              {!isActive && shouldRenderSnapshot && (
+                <View style={styles.snapshotBadge}>
+                  <Text style={styles.snapshotText}>Anh 5s</Text>
                 </View>
               )}
             </View>
@@ -515,10 +585,12 @@ const CameraCell = React.memo(
     prev.isActive === next.isActive &&
     prev.isPaused === next.isPaused &&
     prev.isWebViewActive === next.isWebViewActive &&
+    prev.isSnapshotActive === next.isSnapshotActive &&
     prev.cellW === next.cellW &&
     prev.cellH === next.cellH &&
     prev.token === next.token &&
     prev.pageKey === next.pageKey &&
+    prev.snapshotTimestamp === next.snapshotTimestamp &&
     prev.cam.iD_Camera === next.cam.iD_Camera &&
     prev.onPress === next.onPress &&
     prev.onDoubleTap === next.onDoubleTap &&
@@ -531,6 +603,7 @@ const CameraListGrid: React.FC = () => {
   const navigation = useNavigation<any>();
   const { cameras = [], zoneName = "Camera" } = route.params ?? {};
   const insets = useSafeAreaInsets();
+  const isFocused = useIsFocused();
 
   const [layoutCount, setLayoutCount] = React.useState(16);
   const [activeIndex, setActiveIndex] = React.useState(0);
@@ -545,6 +618,13 @@ const CameraListGrid: React.FC = () => {
   const [isLandscape, setIsLandscape] = React.useState(false);
   const [cameraToken, setCameraToken] = React.useState<string>("");
   const [thumbTimestamp, setThumbTimestamp] = React.useState<number>(0);
+  const [gridSnapshotTimestamps, setGridSnapshotTimestamps] = React.useState<{
+    groupA: number;
+    groupB: number;
+  }>({
+    groupA: 0,
+    groupB: 0,
+  });
   const [fsVideoKey, setFsVideoKey] = React.useState(0);
   const [pendingThumbUrl, setPendingThumbUrl] = React.useState<string | null>(
     null,
@@ -552,9 +632,18 @@ const CameraListGrid: React.FC = () => {
 
   const webviewRefs = React.useRef<Record<string, any>>({});
   const fullscreenWebViewRef = React.useRef<any>(null);
-  const isFirstFocusRef = React.useRef(true);
+  const isFocusedRef = React.useRef(false);
   // ── Fix #9: Proactive token refresh ──
   const tokenRefreshTimerRef = React.useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
+  const snapshotRefreshTimerRef = React.useRef<ReturnType<
+    typeof setInterval
+  > | null>(null);
+  const startStreamsTimeoutRef = React.useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
+  const syncTokenTimeoutRef = React.useRef<ReturnType<
     typeof setTimeout
   > | null>(null);
   // ── Fix #5: WebView ping watchdog ──
@@ -583,6 +672,8 @@ const CameraListGrid: React.FC = () => {
   const SW = screenDims.width;
   const [cols, rows] = LAYOUT_OPTIONS[layoutCount] ?? [4, 4];
   const perPage = cols * rows;
+  const liveCellLimit =
+    Platform.OS === "android" ? Math.min(8, perPage) : perPage;
   const totalPages = Math.ceil(cameras.length / perPage);
   const pagedCameras = cameras.slice(page * perPage, (page + 1) * perPage);
   pagedCamerasRef.current = pagedCameras;
@@ -599,6 +690,9 @@ const CameraListGrid: React.FC = () => {
   React.useEffect(() => {
     totalPagesRef.current = totalPages;
   }, [totalPages]);
+  React.useEffect(() => {
+    isFocusedRef.current = isFocused;
+  }, [isFocused]);
 
   React.useEffect(() => {
     const sub = Dimensions.addEventListener("change", ({ window }) =>
@@ -651,13 +745,44 @@ const CameraListGrid: React.FC = () => {
     }
   }, []);
 
+  const stopAllStreams = React.useCallback(() => {
+    if (startStreamsTimeoutRef.current) {
+      clearTimeout(startStreamsTimeoutRef.current);
+      startStreamsTimeoutRef.current = null;
+    }
+    Object.values(webviewRefs.current).forEach((ref) => {
+      ref?.postMessage?.("stop");
+    });
+    fullscreenWebViewRef.current?.postMessage?.("stop");
+  }, []);
+
+  const startAllStreams = React.useCallback(() => {
+    if (startStreamsTimeoutRef.current) {
+      clearTimeout(startStreamsTimeoutRef.current);
+    }
+    startStreamsTimeoutRef.current = setTimeout(() => {
+      if (!isFocusedRef.current) return;
+      Object.values(webviewRefs.current).forEach((ref) => {
+        ref?.postMessage?.("start");
+      });
+      fullscreenWebViewRef.current?.postMessage?.("start");
+      startStreamsTimeoutRef.current = null;
+    }, 300);
+  }, []);
+
   const fetchCameraToken = React.useCallback(async () => {
+    if (!isFocusedRef.current) return;
     try {
       const res: any = await getTokenViewCamera();
-      if (res?.data) {
+      if (res?.data && isFocusedRef.current) {
         const newToken = res.data;
+        const snapshotNow = Date.now();
         setCameraToken(newToken);
-        setThumbTimestamp(Date.now());
+        setThumbTimestamp(snapshotNow);
+        setGridSnapshotTimestamps({
+          groupA: snapshotNow,
+          groupB: snapshotNow + 1,
+        });
         scheduleProactiveRefresh(newToken);
         // Grid WebView: postMessage token mới
         Object.values(webviewRefs.current).forEach((ref) => {
@@ -683,21 +808,100 @@ const CameraListGrid: React.FC = () => {
 
   useFocusEffect(
     React.useCallback(() => {
-      if (isFirstFocusRef.current) {
-        isFirstFocusRef.current = false;
-        setCameraToken("");
-        setThumbTimestamp(0);
-      }
       fetchCameraToken();
+      startAllStreams();
+
       return () => {
-        if (tokenRefreshTimerRef.current)
+        if (tokenRefreshTimerRef.current) {
           clearTimeout(tokenRefreshTimerRef.current);
+          tokenRefreshTimerRef.current = null;
+        }
+        if (syncTokenTimeoutRef.current) {
+          clearTimeout(syncTokenTimeoutRef.current);
+          syncTokenTimeoutRef.current = null;
+        }
+        stopAllStreams();
       };
-    }, [fetchCameraToken]),
+    }, [fetchCameraToken, startAllStreams, stopAllStreams]),
   );
 
   React.useEffect(() => {
+    if (!isFocused) {
+      stopAllStreams();
+    }
+  }, [isFocused, stopAllStreams]);
+
+  React.useEffect(() => {
+    if (!cameraToken) return;
+
+    if (syncTokenTimeoutRef.current) {
+      clearTimeout(syncTokenTimeoutRef.current);
+    }
+
+    syncTokenTimeoutRef.current = setTimeout(() => {
+      if (!isFocusedRef.current) return;
+      Object.entries(webviewRefs.current).forEach(([id, ref]) => {
+        ref?.postMessage?.(
+          JSON.stringify({ type: "token", value: cameraToken }),
+        );
+      });
+
+      fullscreenWebViewRef.current?.postMessage?.(
+        JSON.stringify({ type: "token", value: cameraToken }),
+      );
+      syncTokenTimeoutRef.current = null;
+    }, 300);
+
+    return () => {
+      if (syncTokenTimeoutRef.current) {
+        clearTimeout(syncTokenTimeoutRef.current);
+        syncTokenTimeoutRef.current = null;
+      }
+    };
+  }, [cameraToken]);
+
+  React.useEffect(() => {
+    if (snapshotRefreshTimerRef.current) {
+      clearInterval(snapshotRefreshTimerRef.current);
+      snapshotRefreshTimerRef.current = null;
+    }
+
+    if (
+      Platform.OS !== "android" ||
+      !isFocused ||
+      isPaused ||
+      !cameraToken ||
+      perPage <= liveCellLimit
+    ) {
+      return;
+    }
+
+    let refreshGroup: "groupA" | "groupB" = "groupA";
+    setGridSnapshotTimestamps({
+      groupA: Date.now(),
+      groupB: Date.now() + 1,
+    });
+    snapshotRefreshTimerRef.current = setInterval(() => {
+      if (!isFocusedRef.current || isPaused) return;
+      const nextTimestamp = Date.now();
+      setGridSnapshotTimestamps((prev) => {
+        const next = { ...prev, [refreshGroup]: nextTimestamp };
+        refreshGroup = refreshGroup === "groupA" ? "groupB" : "groupA";
+        return next;
+      });
+    }, 2500);
+
+    return () => {
+      if (snapshotRefreshTimerRef.current) {
+        clearInterval(snapshotRefreshTimerRef.current);
+        snapshotRefreshTimerRef.current = null;
+      }
+    };
+  }, [cameraToken, isFocused, isPaused, perPage, liveCellLimit]);
+
+  React.useEffect(() => {
     const unsub = subscribeAppRefetch(() => {
+      if (!isFocusedRef.current) return;
       fetchCameraTokenRef.current?.();
     });
     return () => unsub();
@@ -705,6 +909,7 @@ const CameraListGrid: React.FC = () => {
 
   React.useEffect(() => {
     const sub = AppState.addEventListener("change", (state) => {
+      if (!isFocusedRef.current && state === "active") return;
       const msg = state === "active" ? "start" : "stop";
       Object.values(webviewRefs.current).forEach((ref) => {
         if (ref?.postMessage) ref.postMessage(msg);
@@ -741,6 +946,7 @@ const CameraListGrid: React.FC = () => {
     if (webviewPingIntervalRef.current)
       clearInterval(webviewPingIntervalRef.current);
     webviewPingIntervalRef.current = setInterval(() => {
+      if (!isFocusedRef.current) return;
       Object.entries(webviewRefs.current).forEach(([id, ref]) => {
         if (!ref?.postMessage) return;
         ref.postMessage("ping");
@@ -801,10 +1007,19 @@ const CameraListGrid: React.FC = () => {
 
   React.useEffect(() => {
     return () => {
+      stopAllStreams();
+      if (tokenRefreshTimerRef.current)
+        clearTimeout(tokenRefreshTimerRef.current);
+      if (snapshotRefreshTimerRef.current)
+        clearInterval(snapshotRefreshTimerRef.current);
+      if (startStreamsTimeoutRef.current)
+        clearTimeout(startStreamsTimeoutRef.current);
+      if (syncTokenTimeoutRef.current)
+        clearTimeout(syncTokenTimeoutRef.current);
       if (androidFallbackRef.current) clearTimeout(androidFallbackRef.current);
       if (androidWatchdogRef.current) clearInterval(androidWatchdogRef.current);
     };
-  }, []);
+  }, [stopAllStreams]);
 
   const cellW = SW / cols;
   const cellH =
@@ -979,22 +1194,38 @@ const CameraListGrid: React.FC = () => {
             onLayout={(e) => setGridContainerH(e.nativeEvent.layout.height)}
           >
             {pagedCameras.map((cam: any, idx: number) => (
-              <CameraCell
-                key={`${page}-${cam.iD_Camera?.toString() ?? idx}`}
-                cam={cam}
-                idx={idx}
-                isActive={idx === activeIndex}
-                isPaused={isPaused}
-                isWebViewActive={idx < 16}
-                cellW={cellW}
-                cellH={cellH}
-                token={cameraToken}
-                pageKey={page}
-                onPress={handleCamPress}
-                onDoubleTap={handleCamDoubleTap}
-                webviewRefRegister={webviewRefs}
-                onTokenExpired={handleTokenExpired}
-              />
+              (() => {
+                const isAndroidSnapshot =
+                  Platform.OS === "android" &&
+                  idx >= liveCellLimit;
+                const snapshotGroup =
+                  (idx - liveCellLimit) % 2 === 0 ? "groupA" : "groupB";
+
+                return (
+                  <CameraCell
+                    key={`${page}-${cam.iD_Camera?.toString() ?? idx}`}
+                    cam={cam}
+                    idx={idx}
+                    isActive={idx === activeIndex}
+                    isPaused={isPaused}
+                    isWebViewActive={idx < liveCellLimit}
+                    isSnapshotActive={isAndroidSnapshot}
+                    cellW={cellW}
+                    cellH={cellH}
+                    token={cameraToken}
+                    pageKey={page}
+                    snapshotTimestamp={
+                      isAndroidSnapshot
+                        ? gridSnapshotTimestamps[snapshotGroup]
+                        : undefined
+                    }
+                    onPress={handleCamPress}
+                    onDoubleTap={handleCamDoubleTap}
+                    webviewRefRegister={webviewRefs}
+                    onTokenExpired={handleTokenExpired}
+                  />
+                );
+              })()
             ))}
           </Animated.View>
 
@@ -1366,6 +1597,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  hiddenSnapshot: { opacity: 0, zIndex: -1 },
   cellPlaceholderText: { color: "#555", fontSize: 8, textAlign: "center" },
   liveBadge: {
     flexDirection: "row",
@@ -1378,6 +1610,14 @@ const styles = StyleSheet.create({
   },
   liveDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: "#fff" },
   liveText: { color: "#fff", fontSize: 8, fontWeight: "700" },
+  snapshotBadge: {
+    marginLeft: "auto",
+    backgroundColor: "rgba(0,0,0,0.55)",
+    borderRadius: 3,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+  },
+  snapshotText: { color: "#fff", fontSize: 7, fontWeight: "600" },
   paginationRow: {
     flexDirection: "row",
     justifyContent: "center",

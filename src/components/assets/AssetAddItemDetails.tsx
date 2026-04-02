@@ -42,6 +42,7 @@ import { useAutoIncrementCode } from "../../hooks/AssetAddItem/useAutoIncrementC
 import { useModalItems } from "../../hooks/AssetAddItem/useModalItems";
 import { useReferenceFetcher } from "../../hooks/AssetAddItem/useReferenceData";
 import { useOpenReferenceModal } from "../../hooks/AssetAddItem/useOpenReferenceModal";
+import { useSafeAlert } from "../../hooks/useSafeAlert";
 /* ===================================================== */
 
 export default function AssetAddItemDetails() {
@@ -160,6 +161,7 @@ export default function AssetAddItemDetails() {
 
   // ===== MODAL ITEMS ===== //
   const modalItems = useModalItems(activeEnumField, referenceData, enumData);
+  const { isMounted, showAlertIfActive } = useSafeAlert();
 
   /* ===== SUBMIT ===== */
   const handleCreate = async () => {
@@ -195,7 +197,7 @@ export default function AssetAddItemDetails() {
         saveHistory: true,
       });
 
-      Alert.alert("Thành công", "Tạo mới thành công!", [
+      showAlertIfActive("Thành công", "Tạo mới thành công!", [
         {
           text: "OK",
           onPress: () => {
@@ -207,9 +209,11 @@ export default function AssetAddItemDetails() {
         },
       ]);
     } catch {
-      Alert.alert("Lỗi", "Không thể tạo mới!");
+      showAlertIfActive("Lỗi", "Không thể tạo mới!");
     } finally {
-      setIsSubmitting(false);
+      if (isMounted()) {
+        setIsSubmitting(false);
+      }
     }
   };
 

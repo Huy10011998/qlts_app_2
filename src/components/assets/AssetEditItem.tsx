@@ -38,6 +38,7 @@ import IsLoading from "../ui/IconLoading";
 import { useOpenReferenceModal } from "../../hooks/AssetAddItem/useOpenReferenceModal";
 import { useReferenceFetcher } from "../../hooks/AssetAddItem/useReferenceData";
 import { useModalItems } from "../../hooks/AssetAddItem/useModalItems";
+import { useSafeAlert } from "../../hooks/useSafeAlert";
 
 export default function AssetEditItem() {
   /* ===== PARAMS ===== */
@@ -219,6 +220,7 @@ export default function AssetEditItem() {
 
   // ===== MODAL ITEMS ===== //
   const modalItems = useModalItems(activeEnumField, referenceData, enumData);
+  const { showAlertIfActive } = useSafeAlert();
 
   // SUBMIT - UPDATE
   const handleUpdate = async () => {
@@ -309,7 +311,7 @@ export default function AssetEditItem() {
 
       await update(nameClass, body);
 
-      Alert.alert("Thành công", "Cập nhật thành công!", [
+      showAlertIfActive("Thành công", "Cập nhật thành công!", [
         {
           text: "OK",
           onPress: () => {
@@ -323,7 +325,7 @@ export default function AssetEditItem() {
         },
       ]);
     } catch (err) {
-      Alert.alert("Lỗi", "Không thể cập nhật dữ liệu!");
+      showAlertIfActive("Lỗi", "Không thể cập nhật dữ liệu!");
     }
   };
 

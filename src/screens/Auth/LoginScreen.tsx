@@ -26,10 +26,14 @@ import {
 } from "../../services/data/CallApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAppDispatch } from "../../store/Hooks";
-import { log } from "../../utils/Logger";
+import {
+  AUTH_LOGIN_SERVICE,
+  FACE_ID_ENABLED_KEY,
+  FACE_ID_LOGIN_SERVICE,
+} from "../../constants/AuthStorage";
 
 export default function LoginScreen() {
-  const { setToken, setRefreshToken, setIosAuthenticated, token } = useAuth();
+  const { setToken, setRefreshToken, setIosAuthenticated } = useAuth();
 
   const [userName, setUserName] = useState("");
   const [userPassword, setUserPassword] = useState("");
@@ -69,11 +73,10 @@ export default function LoginScreen() {
         setTokenInApi(res.data.accessToken);
         setRefreshInApi(res.data.refreshToken ?? null);
 
-        // Lưu lại login thường (không phải FaceID)
+        // Lưu thông tin đăng nhập để có thể bật FaceID từ màn Cài đặt.
         await Keychain.setGenericPassword(userName, userPassword, {
-          service: "auth-login",
-          accessible: Keychain.ACCESSIBLE.WHEN_PASSCODE_SET_THIS_DEVICE_ONLY,
-          accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET,
+          service: AUTH_LOGIN_SERVICE,
+          accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
         });
 
         // Lấy quyền
@@ -122,7 +125,7 @@ export default function LoginScreen() {
       }
 
       // Check user có bật FaceID trong Settings chưa
-      const enabled = await AsyncStorage.getItem("faceid-enabled");
+      const enabled = await AsyncStorage.getItem(FACE_ID_ENABLED_KEY);
       if (enabled !== "1") {
         Alert.alert(
           "FaceID",
@@ -133,7 +136,7 @@ export default function LoginScreen() {
 
       // Get credentials → iOS sẽ auto prompt FaceID
       const credentials = await Keychain.getGenericPassword({
-        service: "auth-login",
+        service: FACE_ID_LOGIN_SERVICE,
         authenticationPrompt: {
           title: "Xác thực",
           subtitle: "Sử dụng FaceID để đăng nhập",

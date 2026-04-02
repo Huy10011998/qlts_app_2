@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -31,6 +31,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { clearPermissions } from "../../store/PermissionSlice";
 import { useAutoReload } from "../../hooks/useAutoReload";
 import { useAppDispatch } from "../../store/Hooks";
+import {
+  AUTH_LOGIN_SERVICE,
+  FACE_ID_ENABLED_KEY,
+  FACE_ID_LOGIN_SERVICE,
+} from "../../constants/AuthStorage";
 
 // HEADER COMPONEN
 const SettingHeader: React.FC<{ name?: string; avatarUrl?: string }> = ({
@@ -98,14 +103,35 @@ const SettingScreen = () => {
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const loadingRef = useRef(false);
   const isLoggingOutRef = useRef(false);
+  const isMountedRef = useRef(true);
+  const isScreenActiveRef = useRef(false);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      isScreenActiveRef.current = false;
+    };
+  }, []);
+
+  const canUpdateScreen = () =>
+    isMountedRef.current &&
+    isScreenActiveRef.current &&
+    !isLoggingOutRef.current;
+
+  const showAlertIfActive = (title: string, message: string) => {
+    if (!canUpdateScreen()) return;
+    Alert.alert(title, message);
+  };
 
   // LOAD USER INFO + FACEID
 
   const fetchData = React.useCallback(async () => {
-    if (loadingRef.current || isLoggingOutRef.current) return;
+    if (loadingRef.current || !canUpdateScreen()) return;
 
     loadingRef.current = true;
-    setIsLoading(true);
+    if (isMountedRef.current) {
+      setIsLoading(true);
+    }
 
     try {
       const response = await callApi<{ success: boolean; data: UserInfo }>(
@@ -114,30 +140,40 @@ const SettingScreen = () => {
         {},
       );
 
+      if (!canUpdateScreen()) return;
+
       setUser(response.data);
       setHasLoadedOnce(true);
 
-      const flag = await AsyncStorage.getItem("faceid-enabled");
+      const flag = await AsyncStorage.getItem(FACE_ID_ENABLED_KEY);
+      if (!canUpdateScreen()) return;
       setIsFaceIdEnabled(flag === "1");
     } catch (error: any) {
-      setHasLoadedOnce(true);
+      if (canUpdateScreen()) {
+        setHasLoadedOnce(true);
+      }
 
       if (error?.OFFLINE || error?.NEED_LOGIN) {
         return;
       }
 
-      Alert.alert("Lỗi", "Không thể tải thông tin người dùng.");
+      showAlertIfActive("Lỗi", "Không thể tải thông tin người dùng.");
     } finally {
       loadingRef.current = false;
-      setIsLoading(false);
+      if (isMountedRef.current && isScreenActiveRef.current) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
   // AUTO RELOAD ON FOCUS
   useFocusEffect(
     React.useCallback(() => {
+      isScreenActiveRef.current = true;
       fetchData();
-      return () => {};
+      return () => {
+        isScreenActiveRef.current = false;
+      };
     }, [fetchData]),
   );
 
@@ -147,8 +183,8 @@ const SettingScreen = () => {
   const handleToggleFaceID = async (value: boolean) => {
     if (!value) {
       // Tắt FaceID
-      await Keychain.resetGenericPassword({ service: "faceid-login" });
-      await AsyncStorage.setItem("faceid-enabled", "0");
+      await Keychain.resetGenericPassword({ service: FACE_ID_LOGIN_SERVICE });
+      await AsyncStorage.setItem(FACE_ID_ENABLED_KEY, "0");
       setIsFaceIdEnabled(false);
       Alert.alert("FaceID", "Đã tắt đăng nhập bằng FaceID.");
       return;
@@ -156,7 +192,7 @@ const SettingScreen = () => {
 
     try {
       const saved = await Keychain.getGenericPassword({
-        service: "user-login",
+        service: AUTH_LOGIN_SERVICE,
       });
 
       const { available } = await rnBiometrics.isSensorAvailable();
@@ -172,23 +208,14 @@ const SettingScreen = () => {
         return;
       }
 
-      const result = await rnBiometrics.simplePrompt({
-        promptMessage: "Xác thực để bật FaceID",
-      });
-
-      if (!result.success) {
-        setIsFaceIdEnabled(false);
-        return;
-      }
-
       await Keychain.setGenericPassword(saved.username, saved.password, {
-        service: "faceid-login",
+        service: FACE_ID_LOGIN_SERVICE,
         accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
         accessible: Keychain.ACCESSIBLE.WHEN_PASSCODE_SET_THIS_DEVICE_ONLY,
       });
 
       // Lưu flag tránh auto FaceID khi mở Setting
-      await AsyncStorage.setItem("faceid-enabled", "1");
+      await AsyncStorage.setItem(FACE_ID_ENABLED_KEY, "1");
 
       setIsFaceIdEnabled(true);
       Alert.alert("FaceID", "Đã bật đăng nhập bằng FaceID!");
@@ -212,7 +239,6 @@ const SettingScreen = () => {
       await logout();
       dispatch(clearPermissions());
       setIsFaceIdEnabled(false);
-      await AsyncStorage.removeItem("faceid-enabled");
     } finally {
       setIsLoading(false);
     }
@@ -246,17 +272,18 @@ const SettingScreen = () => {
       if (response?.success) {
         // Cập nhật mật khẩu vào Keychain
         const saved = await Keychain.getGenericPassword({
-          service: "user-login",
+          service: AUTH_LOGIN_SERVICE,
         });
 
         if (saved) {
           await Keychain.setGenericPassword(saved.username, newPassword, {
-            service: "user-login",
+            service: AUTH_LOGIN_SERVICE,
+            accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
           });
 
           if (isFaceIdEnabled) {
             await Keychain.setGenericPassword(saved.username, newPassword, {
-              service: "faceid-login",
+              service: FACE_ID_LOGIN_SERVICE,
               accessControl:
                 Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
               accessible:
@@ -397,7 +424,12 @@ const SettingScreen = () => {
 // STYLE
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
-  profileHeader: { alignItems: "center", padding: 16 },
+  profileHeader: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+  },
 
   avatar: {
     width: 60,
@@ -407,7 +439,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     overflow: "hidden",
-    marginRight: 12,
   },
 
   avatarImage: { width: "100%", height: "100%", resizeMode: "cover" },

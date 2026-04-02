@@ -15,12 +15,14 @@ import { API_ENDPOINTS } from "../../config/Index";
 import { error } from "../../utils/Logger";
 import { formatToSlash, validateDates } from "../../utils/Date";
 import { DatePicker } from "../dataPicker/DataPicker";
+import { useSafeAlert } from "../../hooks/useSafeAlert";
 
 const ReportView: React.FC<ReportViewProps> = ({ title, onClose }) => {
   const [fromDate, setFromDate] = useState<string>("");
   const [toDate, setToDate] = useState<string>("");
   const [reportHtml, setReportHtml] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const { isMounted, showAlertIfActive } = useSafeAlert();
 
   const handleSubmit = async () => {
     if (!fromDate || !toDate) {
@@ -79,9 +81,11 @@ const ReportView: React.FC<ReportViewProps> = ({ title, onClose }) => {
       setReportHtml(html);
     } catch (err) {
       error("Lỗi khi gọi API:", err);
-      Alert.alert("Lỗi", "Không thể tải báo cáo.");
+      showAlertIfActive("Lỗi", "Không thể tải báo cáo.");
     } finally {
-      setLoading(false);
+      if (isMounted()) {
+        setLoading(false);
+      }
     }
   };
 

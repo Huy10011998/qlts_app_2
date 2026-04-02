@@ -39,6 +39,7 @@ import { useLoadParentValue } from "../../hooks/AssetAddItem/useLoadParentValue"
 import { useOpenReferenceModal } from "../../hooks/AssetAddItem/useOpenReferenceModal";
 import { useReferenceFetcher } from "../../hooks/AssetAddItem/useReferenceData";
 import { useModalItems } from "../../hooks/AssetAddItem/useModalItems";
+import { useSafeAlert } from "../../hooks/useSafeAlert";
 
 export default function AssetAddRelatedItem() {
   /* ===== PARAMS ===== */
@@ -175,6 +176,7 @@ export default function AssetAddRelatedItem() {
 
   // ===== MODAL ITEMS ===== //
   const modalItems = useModalItems(activeEnumField, referenceData, enumData);
+  const { isMounted, showAlertIfActive } = useSafeAlert();
 
   // HANDLE CREATE
   const handleCreate = async () => {
@@ -211,7 +213,7 @@ export default function AssetAddRelatedItem() {
 
       await insert(nameClass, payload);
 
-      Alert.alert(
+      showAlertIfActive(
         "Thành công",
         "Tạo mới thành công!",
         [
@@ -229,9 +231,11 @@ export default function AssetAddRelatedItem() {
         { cancelable: false },
       );
     } catch (err) {
-      Alert.alert("Lỗi", "Không thể tạo mới!");
+      showAlertIfActive("Lỗi", "Không thể tạo mới!");
     } finally {
-      setIsSubmitting(false);
+      if (isMounted()) {
+        setIsSubmitting(false);
+      }
     }
   };
 

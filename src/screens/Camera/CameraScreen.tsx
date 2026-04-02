@@ -20,10 +20,11 @@ import { API_ENDPOINTS } from "../../config/Index";
 import { useDebounce } from "../../hooks/useDebounce";
 import IsLoading from "../../components/ui/IconLoading";
 import { removeVietnameseTones } from "../../utils/Helper";
-import { callApi } from "../../services/data/CallApi";
+import { callApi, getVungCamera } from "../../services/data/CallApi";
 import { error } from "../../utils/Logger";
 import { useAutoReload } from "../../hooks/useAutoReload";
 import { KeyboardAvoidingView } from "react-native";
+import { useSafeAlert } from "../../hooks/useSafeAlert";
 
 if (
   Platform.OS === "android" &&
@@ -163,6 +164,7 @@ export default function CameraScreen() {
 
   const fetchingRef = useRef(false);
   const firstLoadRef = useRef(true);
+  const { isMounted, showAlertIfActive } = useSafeAlert();
 
   //
   // BUILD TREE
@@ -217,20 +219,18 @@ export default function CameraScreen() {
     setIsFetching(true);
 
     try {
-      const response: any = await callApi(
-        "POST",
-        API_ENDPOINTS.GET_VUNG_CAMERA_STEAM,
-        {},
-      );
+      const response: any = await getVungCamera();
 
       setRawData(response.data);
       setData(buildTree(response.data));
     } catch (e) {
       error("API error:", e);
-      Alert.alert("Lỗi", "Không tải được dữ liệu camera.");
+      showAlertIfActive("Lỗi", "Không tải được dữ liệu camera.");
     } finally {
       fetchingRef.current = false;
-      setIsFetching(false);
+      if (isMounted()) {
+        setIsFetching(false);
+      }
     }
   };
 

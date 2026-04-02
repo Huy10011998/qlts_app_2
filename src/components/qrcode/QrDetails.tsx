@@ -34,6 +34,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "../../store";
 import { resetShouldRefreshDetails } from "../../store/AssetSlice";
 import { useAutoReload } from "../../hooks/useAutoReload";
+import { useSafeAlert } from "../../hooks/useSafeAlert";
 
 const { width } = Dimensions.get("window");
 const MENU_WIDTH = width * 0.6;
@@ -70,6 +71,7 @@ export default function QrDetails({ children }: QrDetailsProps) {
   const shouldRefreshDetails = useSelector(
     (state: RootState) => state.asset.shouldRefreshDetails,
   );
+  const { isMounted, showAlertIfActive } = useSafeAlert();
 
   const toggleGroup = (groupName: string) => {
     setCollapsedGroups((prev) => ToggleGroupUtil(prev, groupName));
@@ -141,7 +143,7 @@ export default function QrDetails({ children }: QrDetailsProps) {
       });
     } catch (e) {
       error(e);
-      Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
+      showAlertIfActive("Lỗi", `Không thể tải chi tiết ${nameClass}`);
     }
   };
 
@@ -153,9 +155,11 @@ export default function QrDetails({ children }: QrDetailsProps) {
       setItem(response.data);
     } catch (e) {
       error(e);
-      Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
+      showAlertIfActive("Lỗi", `Không thể tải chi tiết ${nameClass}`);
     } finally {
-      setIsLoading(false);
+      if (isMounted()) {
+        setIsLoading(false);
+      }
     }
   }, [id, nameClass]);
 

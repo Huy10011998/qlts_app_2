@@ -17,6 +17,11 @@ import {
   resetAuthState,
 } from "../services/data/CallApi";
 import { AuthContextType, LogoutReason } from "../types/Context.d";
+import {
+  AUTH_LOGIN_SERVICE,
+  FACE_ID_ENABLED_KEY,
+  FACE_ID_LOGIN_SERVICE,
+} from "../constants/AuthStorage";
 
 // CONTEXT
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -44,9 +49,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       await AsyncStorage.multiRemove([
         "token",
         "refreshToken",
-        "faceid-enabled",
+        FACE_ID_ENABLED_KEY,
       ]);
-      await Keychain.resetGenericPassword({ service: "auth-login" });
+      await Promise.all([
+        Keychain.resetGenericPassword({ service: AUTH_LOGIN_SERVICE }),
+        Keychain.resetGenericPassword({ service: FACE_ID_LOGIN_SERVICE }),
+      ]);
     } finally {
       setTokenState(null);
       setIosAuthenticated(false);

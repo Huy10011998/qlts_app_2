@@ -14,6 +14,7 @@ import AssetDeTailsTab from "../assets/AssetDetailsTab";
 import AssetListHistory from "../assets/AssetListHistory";
 import AssetNoteDetails from "../assets/AssetNoteDetails";
 import { useParams } from "../../hooks/useParams";
+import { useSafeAlert } from "../../hooks/useSafeAlert";
 
 export default function TabContent({
   activeTab,
@@ -36,6 +37,7 @@ export default function TabContent({
 
   const { propertyClass } = useParams();
   const nameClassRoot = nameClass;
+  const { showAlertIfActive } = useSafeAlert();
 
   /* ACTION HANDLERS */
   const handleDelete = async () => {
@@ -52,7 +54,7 @@ export default function TabContent({
       if (Array.isArray(refList) && refList.length > 0) {
         const refMessage = refList.map((e) => `• ${e.message}`).join("\n");
 
-        Alert.alert(
+        showAlertIfActive(
           "Không thể xóa tài sản",
           `Tài sản đang được tham chiếu tại:\n\n${refMessage}`,
         );
@@ -77,7 +79,7 @@ export default function TabContent({
         { cancelable: true },
       );
     } catch (err) {
-      Alert.alert("Lỗi", "Không thể kiểm tra dữ liệu tham chiếu!");
+      showAlertIfActive("Lỗi", "Không thể kiểm tra dữ liệu tham chiếu!");
     }
   };
 
@@ -90,7 +92,7 @@ export default function TabContent({
 
       await deleteItems(nameClass || "", deleteBody);
 
-      Alert.alert("Thành công", "Đã xoá tài sản!", [
+      showAlertIfActive("Thành công", "Đã xoá tài sản!", [
         {
           text: "OK",
           onPress: () => {
@@ -100,7 +102,7 @@ export default function TabContent({
         },
       ]);
     } catch (err) {
-      Alert.alert("Lỗi", "Không thể xoá tài sản!");
+      showAlertIfActive("Lỗi", "Không thể xoá tài sản!");
     }
   };
 
@@ -113,7 +115,7 @@ export default function TabContent({
       });
     } catch (err) {
       error(err);
-      Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
+      showAlertIfActive("Lỗi", `Không thể tải chi tiết ${nameClass}`);
     }
   };
 
@@ -127,7 +129,7 @@ export default function TabContent({
       });
     } catch (err) {
       error(err);
-      Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
+      showAlertIfActive("Lỗi", `Không thể tải chi tiết ${nameClass}`);
     }
   };
 

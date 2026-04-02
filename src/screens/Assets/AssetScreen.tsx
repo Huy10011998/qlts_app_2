@@ -36,6 +36,7 @@ import { removeVietnameseTones } from "../../utils/Helper";
 import { callApi } from "../../services/data/CallApi";
 import { error } from "../../utils/Logger";
 import { useAutoReload } from "../../hooks/useAutoReload";
+import { useSafeAlert } from "../../hooks/useSafeAlert";
 
 if (
   Platform.OS === "android" &&
@@ -132,6 +133,7 @@ export default function AssetScreen() {
   const [isSearching, setIsSearching] = useState(false);
 
   const firstLoadRef = useRef(true);
+  const { isMounted, showAlertIfActive } = useSafeAlert();
 
   //
   // BUILD TREE
@@ -184,10 +186,12 @@ export default function AssetScreen() {
       setData(buildTree(menuAccount));
     } catch (e) {
       error("API error:", e);
-      Alert.alert("Lỗi", "Không thể tải dữ liệu menu.");
+      showAlertIfActive("Lỗi", "Không thể tải dữ liệu menu.");
     } finally {
       fetchingRef.current = false;
-      setIsFetching(false);
+      if (isMounted()) {
+        setIsFetching(false);
+      }
     }
   }, []);
 

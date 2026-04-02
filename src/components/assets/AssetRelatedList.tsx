@@ -46,6 +46,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "../../store";
 import { useAppDispatch } from "../../store/Hooks";
 import { resetShouldRefreshList } from "../../store/AssetSlice";
+import { useSafeAlert } from "../../hooks/useSafeAlert";
 
 if (
   Platform.OS === "android" &&
@@ -101,6 +102,7 @@ export default function AssetRelatedList() {
   const isFetchingRef = useRef(false);
 
   const { can, loaded } = usePermission();
+  const { isMounted, showAlertIfActive } = useSafeAlert();
 
   const dispatch = useAppDispatch();
 
@@ -162,15 +164,17 @@ export default function AssetRelatedList() {
         setTotal(totalCount);
       } catch (e) {
         error(e);
-        Alert.alert("Lỗi", "Không thể tải dữ liệu");
+        showAlertIfActive("Lỗi", "Không thể tải dữ liệu");
         if (!isLoadMore) setData([]);
       } finally {
         isFetchingRef.current = false;
-        setIsLoading(false);
-        setIsLoadingMore(false);
-        setIsSearching(false);
-        setIsRefreshingTop(false);
-        setIsFirstLoad(false);
+        if (isMounted()) {
+          setIsLoading(false);
+          setIsLoadingMore(false);
+          setIsSearching(false);
+          setIsRefreshingTop(false);
+          setIsFirstLoad(false);
+        }
       }
     },
     [
@@ -196,7 +200,7 @@ export default function AssetRelatedList() {
     setIsLoading(true);
 
     fetchData(false).finally(() => {
-      if (isSearch) setIsSearching(false);
+      if (isSearch && isMounted()) setIsSearching(false);
     });
   }, [debouncedSearch]);
 

@@ -8,6 +8,7 @@ import IsLoading from "../ui/IconLoading";
 import ListCardAttachFile from "../list/ListCardAttachFile";
 import { error } from "../../utils/Logger";
 import { useAutoReload } from "../../hooks/useAutoReload";
+import { useSafeAlert } from "../../hooks/useSafeAlert";
 
 export default function AssetListAttachFile() {
   const [file, setFile] = useState<FileItem[]>([]);
@@ -19,6 +20,7 @@ export default function AssetListAttachFile() {
   const { id, nameClass: paramNameClass } = useParams();
   const nameClass = paramNameClass;
   const pageSize = 20;
+  const { isMounted, showAlertIfActive } = useSafeAlert();
 
   const conditions = useMemo<Conditions[]>(
     () => [
@@ -70,11 +72,13 @@ export default function AssetListAttachFile() {
         setTotal(totalItems);
       } catch (e) {
         error("API error:", e);
-        Alert.alert("Lỗi", "Không thể tải dữ liệu.");
+        showAlertIfActive("Lỗi", "Không thể tải dữ liệu.");
         if (!isLoadMore) setFile([]);
       } finally {
-        setIsLoading(false);
-        setIsLoadingMore(false);
+        if (isMounted()) {
+          setIsLoading(false);
+          setIsLoadingMore(false);
+        }
       }
     },
     [nameClass, skipSize, conditions]

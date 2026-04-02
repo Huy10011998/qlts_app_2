@@ -48,6 +48,7 @@ import { usePermission } from "../../hooks/usePermission";
 import { useAutoReload } from "../../hooks/useAutoReload";
 import { useAppDispatch } from "../../store/Hooks";
 import { reloadPermissions } from "../../store/PermissionActions";
+import { useSafeAlert } from "../../hooks/useSafeAlert";
 
 if (
   Platform.OS === "android" &&
@@ -239,6 +240,7 @@ export default function AssetList() {
   const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
 
   const [isFirstLoad, setIsFirstLoad] = useState(true);
+  const { isMounted, showAlertIfActive } = useSafeAlert();
 
   // Redux
   const dispatch = useAppDispatch();
@@ -392,12 +394,14 @@ export default function AssetList() {
         setTotal(totalItems);
       } catch (e) {
         error("API error:", e);
-        Alert.alert("Lỗi", "Không thể tải dữ liệu.");
+        showAlertIfActive("Lỗi", "Không thể tải dữ liệu.");
         if (!isLoadMore) setTaiSan([]);
       } finally {
-        setIsLoading(false);
-        setIsLoadingMore(false);
-        setIsFirstLoad(false);
+        if (isMounted()) {
+          setIsLoading(false);
+          setIsLoadingMore(false);
+          setIsFirstLoad(false);
+        }
       }
     },
     [
@@ -435,7 +439,7 @@ export default function AssetList() {
       });
     } catch (e) {
       error(e);
-      Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
+      showAlertIfActive("Lỗi", `Không thể tải chi tiết ${nameClass}`);
     }
   };
 

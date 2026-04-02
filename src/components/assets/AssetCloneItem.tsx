@@ -41,6 +41,7 @@ import IsLoading from "../ui/IconLoading";
 import { useOpenReferenceModal } from "../../hooks/AssetAddItem/useOpenReferenceModal";
 import { useReferenceFetcher } from "../../hooks/AssetAddItem/useReferenceData";
 import { useModalItems } from "../../hooks/AssetAddItem/useModalItems";
+import { useSafeAlert } from "../../hooks/useSafeAlert";
 
 export default function AssetCloneItem() {
   /* ===== PARAMS ===== */
@@ -242,6 +243,7 @@ export default function AssetCloneItem() {
 
   // ===== MODAL ITEMS ===== //
   const modalItems = useModalItems(activeEnumField, referenceData, enumData);
+  const { showAlertIfActive } = useSafeAlert();
 
   // SUBMIT - CLONE
   const handleClone = async () => {
@@ -306,7 +308,7 @@ export default function AssetCloneItem() {
 
       await insert(nameClass, payload);
 
-      Alert.alert(
+      showAlertIfActive(
         "Thành công",
         "Đã tạo bản sao!",
         [
@@ -334,7 +336,7 @@ export default function AssetCloneItem() {
         { cancelable: false },
       );
     } catch (err) {
-      Alert.alert("Lỗi", "Không thể tạo bản sao!");
+      showAlertIfActive("Lỗi", "Không thể tạo bản sao!");
     }
   };
 

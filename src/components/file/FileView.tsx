@@ -17,6 +17,7 @@ import { ViewerProps } from "../../types/Index";
 import { getPreviewAttachFile } from "../../services/Index";
 import IsLoading from "../ui/IconLoading";
 import { error } from "../../utils/Logger";
+import { useSafeAlert } from "../../hooks/useSafeAlert";
 
 export default function FileView({ visible, onClose, params }: ViewerProps) {
   const [fileData, setFileData] = useState<string | null>(null);
@@ -25,6 +26,7 @@ export default function FileView({ visible, onClose, params }: ViewerProps) {
   const [useUrlFallback, setUseUrlFallback] = useState(false);
 
   const windowHeight = Dimensions.get("window").height;
+  const { isMounted, showAlertIfActive } = useSafeAlert();
 
   // animation opacity
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -53,8 +55,10 @@ export default function FileView({ visible, onClose, params }: ViewerProps) {
       setFileData(data);
     } catch (err) {
       error("Fetch file error:", err);
-      Alert.alert("Lỗi", "Không thể tải file. Sử dụng fallback URL cho PDF.");
-      setUseUrlFallback(true);
+      showAlertIfActive("Lỗi", "Không thể tải file. Sử dụng fallback URL cho PDF.");
+      if (isMounted()) {
+        setUseUrlFallback(true);
+      }
     } finally {
       fadeOut();
     }
@@ -73,7 +77,11 @@ export default function FileView({ visible, onClose, params }: ViewerProps) {
       toValue: 0,
       duration: 300,
       useNativeDriver: true,
-    }).start(() => setLoading(false));
+    }).start(() => {
+      if (isMounted()) {
+        setLoading(false);
+      }
+    });
   };
 
   const renderFile = () => {

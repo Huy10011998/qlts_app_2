@@ -13,6 +13,7 @@ import { getClassReference } from "../../services/Index";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import IsLoading from "../ui/IconLoading";
 import { error, log } from "../../utils/Logger";
+import { useSafeAlert } from "../../hooks/useSafeAlert";
 
 export default function AssetDeTailsTab({
   nameClassRoot,
@@ -23,6 +24,7 @@ export default function AssetDeTailsTab({
   const route = useRoute<StackRoute<"AssetDetails">>();
 
   const { id, nameClass } = route.params;
+  const { isMounted, showAlertIfActive } = useSafeAlert();
 
   const [isLoading, setIsLoading] = useState(true);
   const [items, setItems] = useState<MenuItemResponse[]>([]);
@@ -53,9 +55,11 @@ export default function AssetDeTailsTab({
         );
       } catch (e) {
         error(e);
-        Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
+        showAlertIfActive("Lỗi", `Không thể tải chi tiết ${nameClass}`);
       } finally {
-        setIsLoading(false);
+        if (isMounted()) {
+          setIsLoading(false);
+        }
       }
     };
 

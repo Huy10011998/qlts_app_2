@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "logo-cholimex.jpg",
+      "filename" : "1024.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "logo-cholimex 1.jpg",
+      "filename" : "1024 1.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "logo-cholimex 2.jpg",
+      "filename" : "1024 2.png",
       "idiom" : "universal",
       "scale" : "3x"
     }

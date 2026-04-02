@@ -14,13 +14,16 @@ import {
   AppState,
 } from "react-native";
 import { Buffer } from "buffer";
-import { useRoute } from "@react-navigation/native";
+import {
+  useRoute,
+  useNavigation,
+  useFocusEffect,
+} from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TouchableWithoutFeedback } from "react-native";
-import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import Video from "react-native-video";
 import WebView from "react-native-webview";
 import { getTokenViewCamera } from "../../services/data/CallApi";
@@ -29,7 +32,7 @@ import Orientation from "react-native-orientation-locker";
 
 const GO2RTC_HOST = "https://api.cholimexfood.com.vn/camera-stream";
 
-// ── Fix: Token không nhúng vào HTML — nhận qua postMessage sau onLoad ──
+// ── Fullscreen HTML cho iOS (giữ nguyên logic cũ) ──
 const buildFullscreenHTML = (src: string) => `<!DOCTYPE html>
 <html><head>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
@@ -200,7 +203,7 @@ window.addEventListener('message',function(e){handleMsg(e.data);});
 document.addEventListener('message',function(e){handleMsg(e.data);});
 </script></body></html>`;
 
-// ── Decode JWT để schedule proactive refresh ──
+// ── Decode JWT expiry ──
 const decodeTokenExpiry = (token: string): number | null => {
   try {
     const base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
@@ -217,18 +220,9 @@ const CameraList: React.FC = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
 
-  // ── Fix: screenWidth động theo orientation ──
   const [screenWidth, setScreenWidth] = React.useState(
     Dimensions.get("window").width,
   );
-
-  React.useEffect(() => {
-    const sub = Dimensions.addEventListener("change", ({ window }) => {
-      setScreenWidth(window.width);
-    });
-    return () => sub.remove();
-  }, []);
-
   const [layoutCount, setLayoutCount] = React.useState<number>(4);
   const [showLayoutModal, setShowLayoutModal] = React.useState(false);
   const [fullscreenCamera, setFullscreenCamera] = React.useState<any | null>(
@@ -250,7 +244,7 @@ const CameraList: React.FC = () => {
     typeof setTimeout
   > | null>(null);
 
-  // ── Android stall detection ──
+  // Android stall detection
   const lastProgressRef = React.useRef<number>(Date.now());
   const androidWatchdogRef = React.useRef<ReturnType<
     typeof setInterval
@@ -264,21 +258,15 @@ const CameraList: React.FC = () => {
   const [androidVideoKey, setAndroidVideoKey] = React.useState(0);
 
   const clearAndroidTimers = React.useCallback(() => {
-    if (androidFallbackRef.current) {
-      clearTimeout(androidFallbackRef.current);
-      androidFallbackRef.current = null;
-    }
-    if (androidReconnectRef.current) {
-      clearTimeout(androidReconnectRef.current);
-      androidReconnectRef.current = null;
-    }
-    if (androidWatchdogRef.current) {
-      clearInterval(androidWatchdogRef.current);
-      androidWatchdogRef.current = null;
-    }
+    if (androidFallbackRef.current) clearTimeout(androidFallbackRef.current);
+    if (androidReconnectRef.current) clearTimeout(androidReconnectRef.current);
+    if (androidWatchdogRef.current) clearInterval(androidWatchdogRef.current);
+    androidFallbackRef.current = null;
+    androidReconnectRef.current = null;
+    androidWatchdogRef.current = null;
   }, []);
 
-  // ── Proactive token refresh ──
+  // Proactive token refresh
   const scheduleProactiveRefresh = React.useCallback((token: string) => {
     if (tokenRefreshTimerRef.current)
       clearTimeout(tokenRefreshTimerRef.current);
@@ -317,6 +305,17 @@ const CameraList: React.FC = () => {
     fetchCameraTokenRef.current = fetchCameraToken;
   }, [fetchCameraToken]);
 
+  // ── Orientation Listener (giống CameraListGrid) ──
+  React.useEffect(() => {
+    const handler = (orientation: string) => {
+      setIsLandscape(
+        orientation === "LANDSCAPE-LEFT" || orientation === "LANDSCAPE-RIGHT",
+      );
+    };
+    Orientation.addOrientationListener(handler);
+    return () => Orientation.removeOrientationListener(handler);
+  }, []);
+
   useFocusEffect(
     React.useCallback(() => {
       if (isFirstFocusRef.current) {
@@ -333,17 +332,8 @@ const CameraList: React.FC = () => {
   );
 
   React.useEffect(() => {
-    const unsub = subscribeAppRefetch(() => {
-      fetchCameraTokenRef.current?.();
-    });
+    const unsub = subscribeAppRefetch(() => fetchCameraTokenRef.current?.());
     return () => unsub();
-  }, []);
-
-  // ── Reset orientation khi unmount màn hình ──
-  React.useEffect(() => {
-    return () => {
-      Orientation.lockToPortrait();
-    };
   }, []);
 
   React.useEffect(() => {
@@ -357,35 +347,41 @@ const CameraList: React.FC = () => {
     return () => sub.remove();
   }, []);
 
-  // ── Clear pending thumb khi video đã sẵn sàng ──
   React.useEffect(() => {
     if (videoReady) setPendingThumbUrl(null);
   }, [videoReady]);
 
   React.useEffect(() => {
-    return () => clearAndroidTimers();
+    return () => {
+      Orientation.lockToPortrait();
+      clearAndroidTimers();
+    };
   }, [clearAndroidTimers]);
 
-  const totalCameras = cameras.length;
+  // Screen width update
+  React.useEffect(() => {
+    const sub = Dimensions.addEventListener("change", ({ window }) => {
+      setScreenWidth(window.width);
+    });
+    return () => sub.remove();
+  }, []);
 
   const closeFullscreen = () => {
     Orientation.lockToPortrait();
-    setIsLandscape(false);
     clearAndroidTimers();
     setVideoReady(false);
     setFullscreenCamera(null);
     setPendingThumbUrl(null);
+    setIsLandscape(false);
   };
 
-  const toggleOrientation = () => {
+  const toggleOrientation = React.useCallback(() => {
     if (isLandscape) {
       Orientation.lockToPortrait();
-      setIsLandscape(false);
     } else {
-      Orientation.lockToLandscape();
-      setIsLandscape(true);
+      Orientation.lockToLandscapeLeft();
     }
-  };
+  }, [isLandscape]);
 
   const handleAndroidReady = () => {
     clearAndroidTimers();
@@ -393,7 +389,6 @@ const CameraList: React.FC = () => {
     setVideoReady(true);
   };
 
-  // ── Android stall watchdog ──
   const startAndroidWatchdog = React.useCallback(() => {
     if (Platform.OS !== "android") return;
     if (androidWatchdogRef.current) clearInterval(androidWatchdogRef.current);
@@ -427,14 +422,16 @@ const CameraList: React.FC = () => {
 
   const openFullscreen = React.useCallback(
     (item: any) => {
-      Orientation.lockToLandscape();
-      setIsLandscape(true);
       setPendingThumbUrl(
         `${GO2RTC_HOST}/api/frame.jpeg?src=${item.iD_Camera_Ma}_snap&t=${thumbTimestamp}`,
       );
       setVideoReady(false);
       setAndroidVideoKey(0);
       setFullscreenCamera(item);
+
+      // Mở fullscreen portrait, không xoay — chờ user bấm nút xoay
+      Orientation.unlockAllOrientations();
+
       if (Platform.OS === "android") startAndroidFallback();
     },
     [startAndroidFallback, thumbTimestamp],
@@ -450,9 +447,8 @@ const CameraList: React.FC = () => {
   };
 
   const numColumns = getNumColumns();
-  // ── Fix: dùng screenWidth động thay vì SCREEN_WIDTH tĩnh ──
   const itemWidth = screenWidth / numColumns - 16;
-  const totalPages = Math.ceil(totalCameras / layoutCount);
+  const totalPages = Math.ceil(cameras.length / layoutCount);
   const pagedCameras = cameras.slice(
     page * layoutCount,
     (page + 1) * layoutCount,
@@ -497,11 +493,7 @@ const CameraList: React.FC = () => {
               />
             ) : (
               <View style={[styles.preview, { backgroundColor: "#111" }]}>
-                <ActivityIndicator
-                  size="small"
-                  color="#555"
-                  style={{ flex: 1 }}
-                />
+                <ActivityIndicator size="small" color="#555" />
               </View>
             )}
           </TouchableOpacity>
@@ -521,7 +513,7 @@ const CameraList: React.FC = () => {
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <Text style={styles.pageTitle}>
-          {zoneName} ({totalCameras} Camera)
+          {zoneName} ({cameras.length} Camera)
         </Text>
         <View style={styles.headerRight}>
           <TouchableOpacity onPress={handleNavigate}>
@@ -576,12 +568,12 @@ const CameraList: React.FC = () => {
         </View>
       )}
 
+      {/* Layout Modal */}
       <Modal
         visible={showLayoutModal}
         animationType="slide"
         transparent
         statusBarTranslucent
-        presentationStyle="overFullScreen"
       >
         <TouchableWithoutFeedback onPress={() => setShowLayoutModal(false)}>
           <View style={styles.modalOverlay}>
@@ -627,6 +619,7 @@ const CameraList: React.FC = () => {
         </TouchableWithoutFeedback>
       </Modal>
 
+      {/* Fullscreen Modal - ĐÃ CHỈNH GIỐNG CAMERA LIST GRID */}
       <Modal
         visible={fullscreenCamera !== null}
         animationType="fade"
@@ -635,18 +628,29 @@ const CameraList: React.FC = () => {
         hardwareAccelerated
         onRequestClose={closeFullscreen}
       >
-        <View
-          style={[styles.fullscreenContainer, { paddingBottom: insets.bottom }]}
-        >
+        <View style={styles.fullscreenContainer}>
           <View
-            style={[styles.fullscreenHeader, { paddingTop: insets.top || 48 }]}
+            style={[
+              styles.fsHeader,
+              isLandscape
+                ? { paddingTop: 48, paddingLeft: insets.left || 16 }
+                : { paddingTop: insets.top || 48 },
+            ]}
           >
-            <Text style={styles.fullscreenTitle} numberOfLines={1}>
-              {fullscreenCamera?.iD_Camera_MoTa}
-            </Text>
             <TouchableOpacity
+              style={styles.fsHeaderBtn}
+              onPress={closeFullscreen}
+            >
+              <Ionicons name="chevron-down" size={26} color="#fff" />
+            </TouchableOpacity>
+
+            <Text style={styles.fsTitle} numberOfLines={1}>
+              {fullscreenCamera?.iD_Camera_MoTa ?? "Camera"}
+            </Text>
+
+            <TouchableOpacity
+              style={styles.fsHeaderBtn}
               onPress={() => setIsFullMuted((v) => !v)}
-              style={styles.muteBtn}
             >
               <Ionicons
                 name={
@@ -656,9 +660,10 @@ const CameraList: React.FC = () => {
                 color="#fff"
               />
             </TouchableOpacity>
+
             <TouchableOpacity
+              style={styles.fsHeaderBtn}
               onPress={toggleOrientation}
-              style={styles.muteBtn}
             >
               <MaterialCommunityIcons
                 name={
@@ -670,12 +675,9 @@ const CameraList: React.FC = () => {
                 color="#fff"
               />
             </TouchableOpacity>
-            <TouchableOpacity onPress={closeFullscreen}>
-              <Ionicons name="close" size={28} color="#fff" />
-            </TouchableOpacity>
           </View>
 
-          <View style={{ flex: 1, backgroundColor: "#000" }}>
+          <View style={styles.fsVideoArea}>
             {fullscreenCamera && cameraToken ? (
               <>
                 {Platform.OS === "android" && (
@@ -702,9 +704,7 @@ const CameraList: React.FC = () => {
                       bufferForPlaybackAfterRebufferMs: 1000,
                     }}
                     onReadyForDisplay={handleAndroidReady}
-                    onProgress={() => {
-                      lastProgressRef.current = Date.now();
-                    }}
+                    onProgress={() => (lastProgressRef.current = Date.now())}
                     onError={() => {
                       clearAndroidTimers();
                       androidReconnectRef.current = setTimeout(() => {
@@ -751,11 +751,9 @@ const CameraList: React.FC = () => {
                     }}
                     onMessage={(e) => {
                       const data = e.nativeEvent.data;
-                      if (data === "ready") {
-                        setVideoReady(true);
-                      } else if (data === "token_expired") {
+                      if (data === "ready") setVideoReady(true);
+                      else if (data === "token_expired")
                         fetchCameraTokenRef.current?.();
-                      }
                     }}
                   />
                 )}
@@ -807,7 +805,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginVertical: 12,
   },
-  headerRight: { flexDirection: "row", alignItems: "center", gap: 16 },
   pageTitle: {
     flex: 1,
     fontSize: 16,
@@ -815,6 +812,7 @@ const styles = StyleSheet.create({
     color: "#000",
     marginRight: 12,
   },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 16 },
   card: {
     backgroundColor: "#FFF",
     borderRadius: 12,
@@ -824,8 +822,8 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   cardHeader: { marginBottom: 4 },
-  cardTitle: { fontSize: 12, marginLeft: 4, flex: 1 },
   titleRow: { flexDirection: "row", alignItems: "center" },
+  cardTitle: { fontSize: 12, marginLeft: 4, flex: 1 },
   videoWrapper: {
     width: "100%",
     aspectRatio: 16 / 9,
@@ -833,6 +831,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     overflow: "hidden",
   },
+  preview: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 8,
+    backgroundColor: "#000",
+  },
+
   pagination: {
     flexDirection: "row",
     justifyContent: "center",
@@ -858,33 +863,24 @@ const styles = StyleSheet.create({
     minWidth: 60,
     textAlign: "center",
   },
+
   modalOverlay: {
     flex: 1,
     justifyContent: "flex-end",
     backgroundColor: "rgba(0,0,0,0.4)",
   },
-  activeText: { color: "red", fontWeight: "600" },
   sheetContainer: {
     backgroundColor: "#fff",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    paddingBottom: 20,
-    maxHeight: "85%",
   },
   handleWrapper: { alignItems: "center", paddingTop: 10, paddingBottom: 6 },
-  handle: {
-    width: 45,
-    height: 5,
-    backgroundColor: "#ccc",
-    borderRadius: 3,
-    alignSelf: "center",
-    marginBottom: 12,
-  },
+  handle: { width: 45, height: 5, backgroundColor: "#ccc", borderRadius: 3 },
   sheetTitle: {
     fontSize: 18,
     fontWeight: "600",
     textAlign: "center",
-    marginBottom: 12,
+    marginBottom: 8,
     color: "#333",
   },
   sheetTitleChild: {
@@ -893,13 +889,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     color: "#aaa",
   },
-  listItem: {
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    backgroundColor: "#fff",
-  },
+  listItem: { paddingVertical: 16, paddingHorizontal: 20 },
   listItemText: { fontSize: 16, color: "#333", textAlign: "center" },
   itemBorder: { borderTopWidth: 0.5, borderColor: "#e5e5e5" },
+  activeItem: { backgroundColor: "#f5f5f5" },
+  activeText: { color: "red", fontWeight: "600" },
   closeBtn: {
     marginTop: 10,
     marginHorizontal: 16,
@@ -908,36 +902,31 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: "center",
   },
-  closeText: {
-    textAlign: "center",
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-  },
-  activeItem: { backgroundColor: "#f5f5f5" },
+  closeText: { fontSize: 16, fontWeight: "600", color: "#333" },
+
+  // Fullscreen styles - Giống CameraListGrid
   fullscreenContainer: { flex: 1, backgroundColor: "#000" },
-  fullscreenHeader: {
+  fsHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    backgroundColor: "rgba(0,0,0,0.6)",
+    paddingHorizontal: 12,
+    paddingBottom: 10,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
   },
-  fullscreenTitle: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+  fsHeaderBtn: { padding: 6 },
+  fsTitle: {
     flex: 1,
-    marginRight: 12,
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "600",
+    textAlign: "center",
+    marginHorizontal: 4,
   },
-  muteBtn: { marginRight: 12 },
-  preview: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 8,
-    backgroundColor: "#000",
-  },
+  fsVideoArea: { flex: 1, backgroundColor: "#000" },
   thumbOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.35)",

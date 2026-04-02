@@ -1,12 +1,18 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { StyleSheet, Dimensions, View, Animated } from "react-native";
 import { WebView } from "react-native-webview";
 import { CenterTextProps } from "../../types";
 import IsLoading from "../ui/IconLoading";
 
 export default function AssetNoteDetails({ text }: CenterTextProps) {
-  const [loading, setLoading] = useState(true);
-  const opacity = useState(new Animated.Value(1))[0]; // animation cho overlay
+  const safeText =
+    typeof text === "string" && text.trim().length > 0 ? text : "---";
+  const shouldShowLoader = safeText !== "---";
+  const [loading, setLoading] = useState(shouldShowLoader);
+  const opacity = useState(new Animated.Value(shouldShowLoader ? 1 : 0))[0]; // animation cho overlay
+  const webViewKey = `asset-note-${shouldShowLoader ? "content" : "empty"}-${
+    safeText.length
+  }`;
 
   const htmlContent = `
   <html>
@@ -14,6 +20,7 @@ export default function AssetNoteDetails({ text }: CenterTextProps) {
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <style>
         body { 
+          margin: 0;
           font-size: 14px; 
           padding: 10px; 
           color: #000; 
@@ -22,7 +29,7 @@ export default function AssetNoteDetails({ text }: CenterTextProps) {
         span, div { white-space: pre-wrap; }
       </style>
     </head>
-    <body>${text}</body>
+    <body>${safeText}</body>
   </html>
 `;
 
@@ -34,17 +41,28 @@ export default function AssetNoteDetails({ text }: CenterTextProps) {
     }).start(() => setLoading(false));
   };
 
+  useEffect(() => {
+    setLoading(shouldShowLoader);
+    opacity.setValue(shouldShowLoader ? 1 : 0);
+  }, [opacity, shouldShowLoader, safeText]);
+
   return (
     <View style={styles.container}>
       <WebView
+        key={webViewKey}
         originWhitelist={["*"]}
         source={{ html: htmlContent }}
         style={styles.webview}
         scrollEnabled
-        onLoadStart={() => setLoading(true)}
+        onLoadStart={() => {
+          if (shouldShowLoader) {
+            opacity.setValue(1);
+            setLoading(true);
+          }
+        }}
         onLoadEnd={handleLoadEnd}
       />
-      {loading && (
+      {shouldShowLoader && loading && (
         <Animated.View style={[styles.loadingOverlay, { opacity }]}>
           <IsLoading size="large" color="#FF3333" />
         </Animated.View>

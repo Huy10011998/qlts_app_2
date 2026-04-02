@@ -10,6 +10,7 @@ import { GroupFields } from "../../utils/parser/GroupFields";
 import { ToggleGroupUtil } from "../../utils/parser/ToggleGroup";
 import { getFieldValue } from "../../utils/fields/GetFieldValue";
 import { useAutoReload } from "../../hooks/useAutoReload";
+import { useSafeAlert } from "../../hooks/useSafeAlert";
 
 export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
   const route = useRoute<StackRoute<"AssetHistoryDetail">>();
@@ -22,6 +23,7 @@ export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [item, setItem] = useState<any>(null);
   const [previousItem, setPreviousItem] = useState<any>(null);
+  const { isMounted, showAlertIfActive } = useSafeAlert();
 
   // parse fields safely
   const fieldActive = useMemo(() => ParseFieldActive(field), [field]);
@@ -57,9 +59,11 @@ export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
       }
     } catch (e) {
       error(e);
-      Alert.alert("Lỗi", `Không thể tải chi tiết lịch sử ${nameClass}`);
+      showAlertIfActive("Lỗi", `Không thể tải chi tiết lịch sử ${nameClass}`);
     } finally {
-      setIsLoading(false);
+      if (isMounted()) {
+        setIsLoading(false);
+      }
     }
   };
 

@@ -347,10 +347,12 @@ export interface CameraCellProps {
   isActive: boolean;
   isPaused: boolean;
   isWebViewActive: boolean;
+  isSnapshotActive?: boolean;
   cellW: number;
   cellH: number;
   token: string;
   pageKey: number;
+  snapshotTimestamp?: number;
   onPress: (cam: any, idx: number) => void;
   onDoubleTap: (cam: any, idx: number) => void;
   webviewRefRegister?: React.MutableRefObject<Record<string, any>>;

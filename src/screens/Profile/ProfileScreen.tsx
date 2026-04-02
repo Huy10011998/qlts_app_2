@@ -6,10 +6,12 @@ import { User } from "../../types/Index";
 import { callApi } from "../../services/data/CallApi";
 import { error } from "../../utils/Logger";
 import { useAutoReload } from "../../hooks/useAutoReload";
+import { useSafeAlert } from "../../hooks/useSafeAlert";
 
 const ProfileScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [user, setUser] = useState<User | null>(null);
+  const { isMounted, showAlertIfActive } = useSafeAlert();
 
   const fetchUserInfo = async () => {
     setIsLoading(true);
@@ -22,9 +24,11 @@ const ProfileScreen: React.FC = () => {
       setUser(response.data);
     } catch (e) {
       error("API error:", e);
-      Alert.alert("Lỗi", "Không thể tải hồ sơ cá nhân.");
+      showAlertIfActive("Lỗi", "Không thể tải hồ sơ cá nhân.");
     } finally {
-      setIsLoading(false);
+      if (isMounted()) {
+        setIsLoading(false);
+      }
     }
   };
 

@@ -16,6 +16,7 @@ import { useAppDispatch } from "../../store/Hooks";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store";
 import { resetShouldRefreshDetails } from "../../store/AssetSlice";
+import { useSafeAlert } from "../../hooks/useSafeAlert";
 
 export default function AssetRelatedDetails({ children }: DetailsProps) {
   const { id, nameClass, field } = useParams();
@@ -27,6 +28,7 @@ export default function AssetRelatedDetails({ children }: DetailsProps) {
 
   const [isLoading, setIsLoading] = useState(true);
   const [item, setItem] = useState<any>(null);
+  const { isMounted, showAlertIfActive } = useSafeAlert();
 
   // Redux
   const dispatch = useAppDispatch();
@@ -59,9 +61,11 @@ export default function AssetRelatedDetails({ children }: DetailsProps) {
       setItem(response.data);
     } catch (e) {
       error(e);
-      Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
+      showAlertIfActive("Lỗi", `Không thể tải chi tiết ${nameClass}`);
     } finally {
-      setIsLoading(false);
+      if (isMounted()) {
+        setIsLoading(false);
+      }
     }
   };
 

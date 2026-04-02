@@ -16,6 +16,7 @@ import { TAB_ITEMS } from "../../utils/Helper";
 import { useAutoReload } from "../../hooks/useAutoReload";
 import { useAppDispatch } from "../../store/Hooks";
 import { useFocusEffect } from "@react-navigation/native";
+import { useSafeAlert } from "../../hooks/useSafeAlert";
 
 export default function AssetDetails({ children }: DetailsProps) {
   const { id, nameClass, field, activeTab: tabFromParams } = useParams();
@@ -32,6 +33,7 @@ export default function AssetDetails({ children }: DetailsProps) {
 
   // Redux
   const dispatch = useAppDispatch();
+  const { isMounted, showAlertIfActive } = useSafeAlert();
   const shouldRefreshDetails = useSelector(
     (state: RootState) => state.asset.shouldRefreshDetails,
   );
@@ -50,9 +52,11 @@ export default function AssetDetails({ children }: DetailsProps) {
       setItem(response.data);
     } catch (e) {
       error(e);
-      Alert.alert("Lỗi", `Không thể tải chi tiết ${nameClass}`);
+      showAlertIfActive("Lỗi", `Không thể tải chi tiết ${nameClass}`);
     } finally {
-      setIsLoading(false);
+      if (isMounted()) {
+        setIsLoading(false);
+      }
     }
   }, [id, nameClass]);
 
