@@ -1,6 +1,6 @@
 #ifndef BridgingHeader_h
 #define BridgingHeader_h
 
-#import "Orientation.h"
+#import <react_native_orientation_locker/Orientation.h>
 
 #endif

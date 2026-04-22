@@ -581,8 +581,8 @@ const CameraCell = React.memo(
               ) : !isPaused ? (
                 <Text style={styles.cellPlaceholderText}>
                   {isSnapshotActive
-                    ? "Dang cap nhat anh..."
-                    : "Nhan dup de xem"}
+                    ? "Đang cập nhật ảnh..."
+                    : "Nhấn đúp để xem"}
                 </Text>
               ) : null}
             </View>
@@ -1265,10 +1265,33 @@ const CameraListGrid: React.FC = () => {
   const closeFullscreen = () => {
     if (androidFallbackRef.current) clearTimeout(androidFallbackRef.current);
     if (androidWatchdogRef.current) clearInterval(androidWatchdogRef.current);
+    if (Platform.OS === "ios") {
+      Orientation.unlockAllOrientations();
+      setTimeout(() => Orientation.lockToPortrait(), 0);
+    } else {
+      Orientation.lockToPortrait();
+    }
     setVideoReady(false);
     setFsVideoKey(0);
     setFullscreenCam(null);
     setPendingThumbUrl(null);
+    setIsLandscape(false);
+  };
+
+  const toggleFullscreenOrientation = () => {
+    if (isLandscape) {
+      setIsLandscape(false);
+      if (Platform.OS === "ios") {
+        Orientation.unlockAllOrientations();
+        setTimeout(() => Orientation.lockToPortrait(), 0);
+      } else {
+        Orientation.lockToPortrait();
+      }
+      return;
+    }
+
+    setIsLandscape(true);
+    Orientation.lockToLandscapeLeft();
   };
 
   return (
@@ -1433,6 +1456,7 @@ const CameraListGrid: React.FC = () => {
         transparent={false}
         statusBarTranslucent
         hardwareAccelerated
+        supportedOrientations={["portrait", "landscape-left", "landscape-right"]}
         onRequestClose={closeFullscreen}
       >
         <View style={styles.fsContainer}>
@@ -1467,11 +1491,7 @@ const CameraListGrid: React.FC = () => {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.fsHeaderBtn}
-              onPress={() => {
-                isLandscape
-                  ? Orientation.lockToPortrait()
-                  : Orientation.lockToLandscapeLeft();
-              }}
+              onPress={toggleFullscreenOrientation}
             >
               <MaterialCommunityIcons
                 name={

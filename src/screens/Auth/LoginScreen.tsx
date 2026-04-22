@@ -255,6 +255,7 @@ export default function LoginScreen() {
             <TextInput
               style={styles.textInput}
               placeholder="Tài khoản"
+              placeholderTextColor={"#888"}
               value={userName}
               onChangeText={setUserName}
             />
@@ -265,6 +266,7 @@ export default function LoginScreen() {
               style={styles.textInput}
               secureTextEntry={!isPasswordVisible}
               placeholder="Mật khẩu"
+              placeholderTextColor={"#888"}
               value={userPassword}
               onChangeText={setUserPassword}
             />

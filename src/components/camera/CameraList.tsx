@@ -419,7 +419,12 @@ const CameraList: React.FC = () => {
   }, []);
 
   const closeFullscreen = () => {
-    Orientation.lockToPortrait();
+    if (Platform.OS === "ios") {
+      Orientation.unlockAllOrientations();
+      setTimeout(() => Orientation.lockToPortrait(), 0);
+    } else {
+      Orientation.lockToPortrait();
+    }
     clearAndroidTimers();
     setVideoReady(false);
     setFullscreenCamera(null);
@@ -429,8 +434,15 @@ const CameraList: React.FC = () => {
 
   const toggleOrientation = React.useCallback(() => {
     if (isLandscape) {
-      Orientation.lockToPortrait();
+      setIsLandscape(false);
+      if (Platform.OS === "ios") {
+        Orientation.unlockAllOrientations();
+        setTimeout(() => Orientation.lockToPortrait(), 0);
+      } else {
+        Orientation.lockToPortrait();
+      }
     } else {
+      setIsLandscape(true);
       Orientation.lockToLandscapeLeft();
     }
   }, [isLandscape]);
@@ -675,6 +687,7 @@ const CameraList: React.FC = () => {
         transparent={false}
         statusBarTranslucent
         hardwareAccelerated
+        supportedOrientations={["portrait", "landscape-left", "landscape-right"]}
         onRequestClose={closeFullscreen}
       >
         <View style={styles.fullscreenContainer}>

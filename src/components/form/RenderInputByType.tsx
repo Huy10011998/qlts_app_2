@@ -151,7 +151,7 @@ export const RenderInputByType = ({
           <Switch
             value={!!value}
             onValueChange={(v) => handleChange(f.name, v)}
-            trackColor={{ false: "#ccc", true: "#FF3333" }}
+            trackColor={{ false: "#888", true: "#FF3333" }}
             thumbColor={value ? "#ffffff" : "#f4f3f4"}
           />
         </View>
