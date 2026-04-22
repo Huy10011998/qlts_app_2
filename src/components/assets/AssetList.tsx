@@ -49,6 +49,7 @@ import { useAutoReload } from "../../hooks/useAutoReload";
 import { useAppDispatch } from "../../store/Hooks";
 import { reloadPermissions } from "../../store/PermissionActions";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
+import { isAuthExpiredError } from "../../services/data/CallApi";
 
 if (
   Platform.OS === "android" &&
@@ -394,7 +395,9 @@ export default function AssetList() {
         setTotal(totalItems);
       } catch (e) {
         error("API error:", e);
-        showAlertIfActive("Lỗi", "Không thể tải dữ liệu.");
+        if (!isAuthExpiredError(e)) {
+          showAlertIfActive("Lỗi", "Không thể tải dữ liệu.");
+        }
         if (!isLoadMore) setTaiSan([]);
       } finally {
         if (isMounted()) {
@@ -414,6 +417,7 @@ export default function AssetList() {
     ],
   );
 
+  // Tự động reload khi có sự kiện từ add/edit item
   useAutoReload(fetchData);
 
   useEffect(() => {

@@ -28,6 +28,8 @@ const AUTH_STORAGE_KEYS = {
   refreshToken: "refreshToken",
 } as const;
 
+const ACCESS_TOKEN_REFRESH_LEEWAY_MS = 60_000;
+
 // GLOBAL LOGOUT HANDLER
 let onAuthLogout: ((reason?: LogoutReason) => Promise<void>) | null = null;
 
@@ -128,11 +130,55 @@ const isNeedLoginError = (error: unknown): error is Error & { NEED_LOGIN: true }
 
 const isAuthFailureStatus = (status?: number) => status === 401 || status === 403;
 
+export const isAuthExpiredError = (error: unknown) => {
+  if (isNeedLoginError(error)) return true;
+
+  const status = (error as { response?: { status?: number } } | undefined)
+    ?.response?.status;
+
+  return isAuthFailureStatus(status);
+};
+
 const isTimeoutError = (error: unknown) =>
   (error as { message?: string; code?: string } | undefined)?.message ===
     "TIMEOUT" ||
   (error as { message?: string; code?: string } | undefined)?.code ===
     "ECONNABORTED";
+
+const decodeJwtPayload = (token: string): { exp?: number } | null => {
+  try {
+    const [, payload] = token.split(".");
+    if (!payload) return null;
+
+    const normalizedPayload = payload
+      .replace(/-/g, "+")
+      .replace(/_/g, "/")
+      .padEnd(Math.ceil(payload.length / 4) * 4, "=");
+
+    const decodedPayload = Buffer.from(normalizedPayload, "base64").toString(
+      "utf8",
+    );
+
+    return JSON.parse(decodedPayload) as { exp?: number };
+  } catch {
+    return null;
+  }
+};
+
+export const getAccessTokenExpiry = (token: string): number | null => {
+  const exp = decodeJwtPayload(token)?.exp;
+  if (typeof exp !== "number") return null;
+  return exp * 1000;
+};
+
+export const shouldRefreshAccessToken = (
+  token: string,
+  leewayMs = ACCESS_TOKEN_REFRESH_LEEWAY_MS,
+) => {
+  const expiry = getAccessTokenExpiry(token);
+  if (!expiry) return false;
+  return expiry - Date.now() <= leewayMs;
+};
 
 const withAuthHeader = (
   headers: InternalAxiosRequestConfig["headers"] | undefined,
@@ -247,9 +293,18 @@ export const refreshTokenFlow = async (): Promise<string> => {
   return refreshPromise;
 };
 
+const ensureValidAccessToken = async () => {
+  const token = await getToken();
+  if (!token) return null;
+  if (!shouldRefreshAccessToken(token)) return token;
+
+  warn("[API] Access token near expiry → refresh before request");
+  return refreshTokenFlow();
+};
+
 // REQUEST
 api.interceptors.request.use(async (config) => {
-  const token = await getToken();
+  const token = await ensureValidAccessToken();
 
   if (token) {
     config.headers = withAuthHeader(config.headers, token);

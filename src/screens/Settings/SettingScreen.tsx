@@ -13,7 +13,7 @@ import {
   Platform,
 } from "react-native";
 import * as Keychain from "react-native-keychain";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useAuth } from "../../context/AuthContext";
 import IsLoading from "../../components/ui/IconLoading";
@@ -29,7 +29,6 @@ import {
 import ReactNativeBiometrics from "react-native-biometrics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { clearPermissions } from "../../store/PermissionSlice";
-import { useAutoReload } from "../../hooks/useAutoReload";
 import { useAppDispatch } from "../../store/Hooks";
 import {
   AUTH_LOGIN_SERVICE,
@@ -37,7 +36,7 @@ import {
   FACE_ID_LOGIN_SERVICE,
 } from "../../constants/AuthStorage";
 
-// HEADER COMPONEN
+// HEADER COMPONENT
 const SettingHeader: React.FC<{ name?: string; avatarUrl?: string }> = ({
   name,
   avatarUrl,
@@ -53,6 +52,7 @@ const SettingHeader: React.FC<{ name?: string; avatarUrl?: string }> = ({
     <Text style={styles.name}>{name || "---"}</Text>
   </View>
 );
+
 // ITEM BUTTON
 const SettingItem: React.FC<{
   iconName: string;
@@ -67,7 +67,8 @@ const SettingItem: React.FC<{
     <Ionicons name="chevron-forward" size={20} color="#999" />
   </TouchableOpacity>
 );
-// ITEM SWITC
+
+// ITEM SWITCH
 const SettingSwitchItem: React.FC<{
   iconName: string;
   label: string;
@@ -97,14 +98,24 @@ const SettingScreen = () => {
   const [isFaceIdEnabled, setIsFaceIdEnabled] = useState(false);
 
   const navigation = useNavigation<StackNavigation<"Profile">>();
-  const { logout } = useAuth();
+  const { logout, logoutReason } = useAuth();
+  const isFocused = useIsFocused();
 
   const dispatch = useAppDispatch();
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+
+  // FIX: dùng ref để tránh user vào deps của useCallback gây loop
+  const userRef = useRef<UserInfo | undefined>(undefined);
+  const hasLoadedOnceRef = useRef(false);
+
   const loadingRef = useRef(false);
   const isLoggingOutRef = useRef(false);
   const isMountedRef = useRef(true);
   const isScreenActiveRef = useRef(false);
+  const isFocusedRef = useRef(false);
+  const lastErrorAlertAtRef = useRef(0);
+  // FIX: ref theo dõi blocking loader để tránh stale closure trong finally
+  const blockingLoaderActiveRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -113,78 +124,119 @@ const SettingScreen = () => {
     };
   }, []);
 
+  useEffect(() => {
+    hasLoadedOnceRef.current = hasLoadedOnce;
+  }, [hasLoadedOnce]);
+
+  useEffect(() => {
+    isFocusedRef.current = isFocused;
+  }, [isFocused]);
+
   const canUpdateScreen = () =>
     isMountedRef.current &&
     isScreenActiveRef.current &&
-    !isLoggingOutRef.current;
+    isFocusedRef.current &&
+    !isLoggingOutRef.current &&
+    logoutReason !== "EXPIRED";
 
   const showAlertIfActive = (title: string, message: string) => {
     if (!canUpdateScreen()) return;
+    const now = Date.now();
+    if (now - lastErrorAlertAtRef.current < 1500) return;
+    lastErrorAlertAtRef.current = now;
     Alert.alert(title, message);
   };
 
-  // LOAD USER INFO + FACEID
+  const isAuthExpiredError = (error: any) =>
+    error?.NEED_LOGIN ||
+    error?.response?.status === 401 ||
+    error?.response?.status === 403;
 
+  // FIX: bỏ `user` khỏi deps, dùng userRef thay thế để tránh re-create loop
   const fetchData = React.useCallback(async () => {
     if (loadingRef.current || !canUpdateScreen()) return;
 
     loadingRef.current = true;
-    if (isMountedRef.current) {
+
+    const shouldShowBlockingLoader =
+      !hasLoadedOnceRef.current && !userRef.current;
+    blockingLoaderActiveRef.current = shouldShowBlockingLoader;
+
+    if (isMountedRef.current && shouldShowBlockingLoader) {
       setIsLoading(true);
     }
 
     try {
-      const response = await callApi<{ success: boolean; data: UserInfo }>(
-        "POST",
-        API_ENDPOINTS.GET_INFO,
-        {},
-      );
+      const [response, flag] = await Promise.all([
+        callApi<{ success: boolean; data: UserInfo }>(
+          "POST",
+          API_ENDPOINTS.GET_INFO,
+          {},
+        ),
+        AsyncStorage.getItem(FACE_ID_ENABLED_KEY),
+      ]);
 
       if (!canUpdateScreen()) return;
 
+      userRef.current = response.data;
+      hasLoadedOnceRef.current = true;
       setUser(response.data);
       setHasLoadedOnce(true);
-
-      const flag = await AsyncStorage.getItem(FACE_ID_ENABLED_KEY);
-      if (!canUpdateScreen()) return;
       setIsFaceIdEnabled(flag === "1");
     } catch (error: any) {
       if (canUpdateScreen()) {
+        hasLoadedOnceRef.current = true;
         setHasLoadedOnce(true);
       }
 
-      if (error?.OFFLINE || error?.NEED_LOGIN) {
+      const isOffline = !error?.response || error?.code === "ECONNABORTED";
+      if (
+        isOffline ||
+        error?.OFFLINE ||
+        isAuthExpiredError(error) ||
+        !canUpdateScreen()
+      ) {
         return;
       }
 
       showAlertIfActive("Lỗi", "Không thể tải thông tin người dùng.");
     } finally {
       loadingRef.current = false;
-      if (isMountedRef.current && isScreenActiveRef.current) {
+      // FIX: dùng blockingLoaderActiveRef thay vì closure variable
+      if (
+        blockingLoaderActiveRef.current &&
+        isMountedRef.current &&
+        isScreenActiveRef.current
+      ) {
         setIsLoading(false);
+        blockingLoaderActiveRef.current = false;
       }
     }
   }, []);
 
-  // AUTO RELOAD ON FOCUS
-  useFocusEffect(
-    React.useCallback(() => {
-      isScreenActiveRef.current = true;
-      fetchData();
-      return () => {
-        isScreenActiveRef.current = false;
-      };
-    }, [fetchData]),
-  );
+  useEffect(() => {
+    if (!isFocused) {
+      isScreenActiveRef.current = false;
+      return;
+    }
 
-  useAutoReload(fetchData);
+    isScreenActiveRef.current = true;
+    fetchData();
 
-  // FACE ID TOGGLE
+    return () => {
+      isScreenActiveRef.current = false;
+    };
+  }, [fetchData, isFocused]);
+
+  // FIX: thêm isMountedRef guard sau mỗi await quan trọng
   const handleToggleFaceID = async (value: boolean) => {
+    if (!isMountedRef.current) return;
+
     if (!value) {
       // Tắt FaceID
       await Keychain.resetGenericPassword({ service: FACE_ID_LOGIN_SERVICE });
       await AsyncStorage.setItem(FACE_ID_ENABLED_KEY, "0");
+      if (!isMountedRef.current) return;
       setIsFaceIdEnabled(false);
       Alert.alert("FaceID", "Đã tắt đăng nhập bằng FaceID.");
       return;
@@ -195,7 +247,12 @@ const SettingScreen = () => {
         service: AUTH_LOGIN_SERVICE,
       });
 
+      if (!isMountedRef.current) return;
+
       const { available } = await rnBiometrics.isSensorAvailable();
+
+      if (!isMountedRef.current) return;
+
       if (!available) {
         Alert.alert("FaceID", "Thiết bị không hỗ trợ FaceID.");
         setIsFaceIdEnabled(false);
@@ -214,12 +271,14 @@ const SettingScreen = () => {
         accessible: Keychain.ACCESSIBLE.WHEN_PASSCODE_SET_THIS_DEVICE_ONLY,
       });
 
-      // Lưu flag tránh auto FaceID khi mở Setting
       await AsyncStorage.setItem(FACE_ID_ENABLED_KEY, "1");
+
+      if (!isMountedRef.current) return;
 
       setIsFaceIdEnabled(true);
       Alert.alert("FaceID", "Đã bật đăng nhập bằng FaceID!");
     } catch (error) {
+      if (!isMountedRef.current) return;
       Alert.alert("Lỗi", "Không thể bật FaceID.");
       setIsFaceIdEnabled(false);
     }
@@ -230,7 +289,7 @@ const SettingScreen = () => {
     if (isLoading) return;
 
     isLoggingOutRef.current = true;
-    setIsLoading(true);
+    if (isMountedRef.current) setIsLoading(true);
 
     try {
       hardResetApi();
@@ -238,10 +297,19 @@ const SettingScreen = () => {
       await clearTokenStorage();
       await logout();
       dispatch(clearPermissions());
-      setIsFaceIdEnabled(false);
+      // FIX: không cần setIsFaceIdEnabled vì component sắp unmount sau logout
     } finally {
-      setIsLoading(false);
+      // FIX: guard trước khi setState sau logout (component có thể đã unmount)
+      if (isMountedRef.current) setIsLoading(false);
     }
+  };
+
+  // FIX: helper reset modal state dùng chung cho cả nút Hủy và back gesture
+  const closeModal = () => {
+    setIsModalVisible(false);
+    setOldPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
   };
 
   // CHANGE PASSWORD
@@ -293,20 +361,20 @@ const SettingScreen = () => {
         }
 
         Alert.alert("Thành công", "Đổi mật khẩu thành công!");
-        setIsModalVisible(false);
-        setOldPassword("");
-        setNewPassword("");
-        setConfirmPassword("");
+        closeModal(); // FIX: dùng closeModal để reset toàn bộ input
       } else {
         Alert.alert("Lỗi", response?.message || "Đổi mật khẩu thất bại!");
       }
     } catch (error: any) {
+      if (isAuthExpiredError(error) || logoutReason === "EXPIRED") {
+        return;
+      }
       const message =
         error.response?.data?.message ||
         "Không thể đổi mật khẩu. Vui lòng thử lại.";
       Alert.alert("Lỗi", message);
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) setIsLoading(false);
     }
   };
 
@@ -366,7 +434,7 @@ const SettingScreen = () => {
         visible={isModalVisible}
         statusBarTranslucent
         presentationStyle="overFullScreen"
-        onRequestClose={() => setIsModalVisible(false)}
+        onRequestClose={closeModal} // FIX: reset input khi đóng bằng back gesture
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -402,7 +470,7 @@ const SettingScreen = () => {
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.button, styles.cancelButton]}
-                onPress={() => setIsModalVisible(false)}
+                onPress={closeModal} // FIX: dùng closeModal
               >
                 <Text style={styles.buttonText}>Hủy</Text>
               </TouchableOpacity>
@@ -421,6 +489,7 @@ const SettingScreen = () => {
     </View>
   );
 };
+
 // STYLE
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },

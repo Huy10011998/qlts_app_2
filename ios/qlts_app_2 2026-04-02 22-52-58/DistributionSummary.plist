@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>qlts_app_2.ipa</key>
+	<array>
+		<dict>
+			<key>architectures</key>
+			<array>
+				<string>arm64</string>
+			</array>
+			<key>buildNumber</key>
+			<string>1</string>
+			<key>certificate</key>
+			<dict>
+				<key>SHA1</key>
+				<string>2AF2146D0B5520023B9FB0F33086321275663C22</string>
+				<key>dateExpires</key>
+				<string>02/04/2027</string>
+				<key>type</key>
+				<string>Cloud Managed Apple Distribution</string>
+			</dict>
+			<key>embeddedBinaries</key>
+			<array>
+				<dict>
+					<key>architectures</key>
+					<array>
+						<string>arm64</string>
+					</array>
+					<key>buildNumber</key>
+					<string>0.12.0</string>
+					<key>certificate</key>
+					<dict>
+						<key>SHA1</key>
+						<string>2AF2146D0B5520023B9FB0F33086321275663C22</string>
+						<key>dateExpires</key>
+						<string>02/04/2027</string>
+						<key>type</key>
+						<string>Cloud Managed Apple Distribution</string>
+					</dict>
+					<key>name</key>
+					<string>hermes.framework</string>
+					<key>symbols</key>
+					<true/>
+					<key>team</key>
+					<dict>
+						<key>id</key>
+						<string>59N25792JT</string>
+						<key>name</key>
+						<string>CHOLIMEX FOOD JOINT STOCK COMPANY</string>
+					</dict>
+					<key>versionNumber</key>
+					<string>0.12.0</string>
+				</dict>
+			</array>
+			<key>entitlements</key>
+			<dict>
+				<key>application-identifier</key>
+				<string>59N25792JT.com.cholimexfood.qltsapp2</string>
+				<key>beta-reports-active</key>
+				<true/>
+				<key>com.apple.developer.team-identifier</key>
+				<string>59N25792JT</string>
+				<key>get-task-allow</key>
+				<false/>
+				<key>keychain-access-groups</key>
+				<array/>
+			</dict>
+			<key>name</key>
+			<string>qlts_app_2.app</string>
+			<key>profile</key>
+			<dict>
+				<key>UUID</key>
+				<string>15f452e1-ba29-4de8-83cd-0d871628db6d</string>
+				<key>dateExpires</key>
+				<string>02/04/2027</string>
+				<key>name</key>
+				<string>iOS Team Store Provisioning Profile: com.cholimexfood.qltsapp2</string>
+			</dict>
+			<key>symbols</key>
+			<true/>
+			<key>team</key>
+			<dict>
+				<key>id</key>
+				<string>59N25792JT</string>
+				<key>name</key>
+				<string>CHOLIMEX FOOD JOINT STOCK COMPANY</string>
+			</dict>
+			<key>versionNumber</key>
+			<string>1.0</string>
+		</dict>
+	</array>
+</dict>
+</plist>

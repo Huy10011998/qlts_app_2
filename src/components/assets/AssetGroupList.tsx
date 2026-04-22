@@ -27,7 +27,7 @@ export default function AssetGroupList({
 }: GroupListProps) {
   const [images, setImages] = useState<Record<string, string>>({});
   const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>(
-    {}
+    {},
   );
 
   const [modalVisible, setModalVisible] = useState(false);

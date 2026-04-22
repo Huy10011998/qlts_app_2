@@ -14,6 +14,7 @@ export const fetchReferenceByField = async (
     pageSize?: number;
     skipSize?: number;
     append?: boolean;
+    currentIds?: Array<string | number>;
   },
 ) => {
   // chặn stale request
@@ -26,10 +27,12 @@ export const fetchReferenceByField = async (
       pageSize = 20,
       skipSize = 0,
       append = false,
+      currentIds = [],
     } = options || {};
 
     const payload = {
       type: referenceName,
+      currentID: currentIds,
       textSearch,
       pageSize,
       skipSize,
@@ -50,13 +53,18 @@ export const fetchReferenceByField = async (
 
     setReference((prev) => {
       const oldItems = prev[fieldName]?.items || [];
-      const newItems = append ? [...oldItems, ...items] : items;
+      const nextItems = append ? [...oldItems, ...items] : items;
+      const uniqueItems = Array.from(
+        new Map(
+          nextItems.map((item: any) => [String(item.value), item] as const),
+        ).values(),
+      );
 
       return {
         ...prev,
         [fieldName]: {
-          items: newItems,
-          totalCount: res.data?.totalCount ?? newItems.length,
+          items: uniqueItems,
+          totalCount: res.data?.totalCount ?? uniqueItems.length,
         },
       };
     });

@@ -180,7 +180,7 @@ export default function AssetScreen() {
       }
 
       const menuAccount = response.data
-        .filter((item) => item.typeGroup === 0)
+        .filter((item) => item.iD_GroupMenu === 2)
         .sort((a, b) => Number(a.stt) - Number(b.stt));
 
       setData(buildTree(menuAccount));

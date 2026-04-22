@@ -37,8 +37,9 @@ import { CameraCellProps } from "../../types/Components.d";
 import { useIsFocused } from "@react-navigation/native";
 
 const GO2RTC_HOST = "https://api.cholimexfood.com.vn/camera-stream";
+const ANDROID_LIVE_CELL_LIMIT = 4;
+const TOKEN_REFRESH_THRESHOLD_MS = 2 * 60 * 1000;
 
-// ── Fix #7: Thêm layout 12 ──
 const LAYOUT_OPTIONS: Record<number, [number, number]> = {
   1: [1, 1],
   4: [2, 2],
@@ -47,7 +48,8 @@ const LAYOUT_OPTIONS: Record<number, [number, number]> = {
   16: [4, 4],
 };
 
-// ── Fix #3: Token không nhúng vào HTML — nhận qua postMessage sau onLoad ──
+// FIX: Bỏ visibilitychange trong buildStreamHTML — grid cell không tự stop
+// khi kéo tác vụ. Chỉ nhận lệnh stop/start từ RN AppState
 const buildStreamHTML = (src: string) => `<!DOCTYPE html>
 <html><head>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
@@ -109,7 +111,6 @@ function scheduleReconnect(){
   reconnectTimer=setTimeout(()=>{connect();},backoffMs);
   backoffMs=Math.min(backoffMs*2,MAX_BACKOFF);
 }
-// ── Fix #5: Giảm frozen watchdog grid từ 20s → 10s ──
 function resetFrozenWatchdog(){
   if(frozenTimer)clearTimeout(frozenTimer);
   frozenTimer=setTimeout(()=>{if(!stopped)scheduleReconnect();},10000);
@@ -182,6 +183,7 @@ v.addEventListener('timeupdate',()=>{
     }
   });
 });
+// FIX: Bỏ visibilitychange — không tự stop khi kéo tác vụ
 window.addEventListener('offline',()=>{stopAll();showOverlay('Mất kết nối mạng',true);});
 window.addEventListener('online',()=>{stopped=false;backoffMs=1000;connect();});
 function handleMsg(d){
@@ -190,20 +192,21 @@ function handleMsg(d){
     if(m.type==='token'){TOKEN=m.value;stopped=false;backoffMs=1000;connect();return;}
   }catch(e){}
   if(d==='stop'){stopAll();showOverlay('Đang tạm dừng...',false);}
-  else if(d==='start'){stopped=false;backoffMs=1000;if(TOKEN)connect();}
-  // ── Fix #5: Phản hồi ping từ native để detect WebView crash ──
+  else if(d==='start'){
+    const wasStopped=stopped;
+    stopped=false;backoffMs=1000;
+    if(TOKEN&&wasStopped){connect();}
+  }
   else if(d==='ping'){window.ReactNativeWebView&&window.ReactNativeWebView.postMessage('pong');}
-  // ── Fix #6: Nhận lệnh mute/unmute từ native ──
   else if(d==='mute'){v.muted=true;}
   else if(d==='unmute'){v.muted=false;}
 }
 window.addEventListener('message',function(e){handleMsg(e.data);});
 document.addEventListener('message',function(e){handleMsg(e.data);});
-// ── Fix #3: Không tự connect() — chờ token qua postMessage ──
 showOverlay('Đang kết nối...',false);
 </script></body></html>`;
 
-// ── Fix #3: buildFullscreenHTML không nhúng token ──
+// FIX: Bỏ visibilitychange trong buildFullscreenHTML
 const buildFullscreenHTML = (src: string) => `<!DOCTYPE html>
 <html><head>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
@@ -289,7 +292,6 @@ function scheduleReconnect(){
   reconnectTimer=setTimeout(()=>{connect();},backoffMs);
   backoffMs=Math.min(backoffMs*2,MAX_BACKOFF);
 }
-// ── Fix #5: Fullscreen watchdog 15s ──
 function resetFrozenWatchdog(){
   if(frozenTimer)clearTimeout(frozenTimer);
   frozenTimer=setTimeout(()=>{if(!stopped)scheduleReconnect();},15000);
@@ -315,7 +317,6 @@ async function connect(){
       if(s==='connected'||s==='completed')resetFrozenWatchdog();
       else if(s==='failed')scheduleReconnect();
     };
-    // ── Fix #2: Reset watchdog khi connected ──
     p.onconnectionstatechange=()=>{
       if(pcId!==myId)return;
       const s=p.connectionState;
@@ -360,6 +361,7 @@ v.addEventListener('timeupdate',()=>{
   });
 });
 setTimeout(notifyReady,6000);
+// FIX: Bỏ visibilitychange — không tự stop khi kéo tác vụ
 window.addEventListener('offline',()=>{stopAll();});
 window.addEventListener('online',()=>{stopped=false;backoffMs=1000;connect();});
 function handleMsg(d){
@@ -368,18 +370,19 @@ function handleMsg(d){
     if(m.type==='token'){TOKEN=m.value;stopped=false;backoffMs=1000;connect();return;}
   }catch(e){}
   if(d==='stop'){stopAll();}
-  else if(d==='start'){stopped=false;backoffMs=1000;if(TOKEN)connect();}
+  else if(d==='start'){
+    const wasStopped=stopped;
+    stopped=false;backoffMs=1000;
+    if(TOKEN&&wasStopped){connect();}
+  }
   else if(d==='ping'){window.ReactNativeWebView&&window.ReactNativeWebView.postMessage('pong');}
-  // ── Fix #6: Mute/unmute fullscreen WebView ──
   else if(d==='mute'){v.muted=true;}
   else if(d==='unmute'){v.muted=false;}
 }
 window.addEventListener('message',function(e){handleMsg(e.data);});
 document.addEventListener('message',function(e){handleMsg(e.data);});
-// ── Fix #3: Không tự connect() — chờ token ──
 </script></body></html>`;
 
-// ── Fix #9: Decode JWT expiry ──
 const decodeTokenExpiry = (token: string): number | null => {
   try {
     const base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
@@ -388,6 +391,13 @@ const decodeTokenExpiry = (token: string): number | null => {
   } catch {
     return null;
   }
+};
+
+const isTokenStillValid = (token: string): boolean => {
+  if (!token) return false;
+  const exp = decodeTokenExpiry(token);
+  if (!exp) return false;
+  return exp - Date.now() > TOKEN_REFRESH_THRESHOLD_MS;
 };
 
 const CameraCell = React.memo(
@@ -406,6 +416,8 @@ const CameraCell = React.memo(
     onPress,
     onDoubleTap,
     webviewRefRegister,
+    pongTimeoutRef,
+    webviewRestartRef,
     onTokenExpired,
   }: CameraCellProps) => {
     const singleTap = React.useMemo(
@@ -458,17 +470,31 @@ const CameraCell = React.memo(
         setPreloadSnapshotUrl(null);
         return;
       }
-
       if (!displayedSnapshotUrl) {
         setDisplayedSnapshotUrl(snapshotUrl);
         setPreloadSnapshotUrl(null);
         return;
       }
-
       if (snapshotUrl !== displayedSnapshotUrl) {
         setPreloadSnapshotUrl(snapshotUrl);
       }
     }, [displayedSnapshotUrl, shouldRenderSnapshot, snapshotUrl]);
+
+    React.useEffect(() => {
+      if (
+        Platform.OS !== "android" ||
+        !shouldRenderWebView ||
+        !token ||
+        !webviewRefRegister?.current[cam.iD_Camera]?.postMessage
+      )
+        return;
+      const timer = setTimeout(() => {
+        const ref = webviewRefRegister.current[cam.iD_Camera];
+        if (!ref?.postMessage) return;
+        ref.postMessage(JSON.stringify({ type: "token", value: token }));
+      }, 150);
+      return () => clearTimeout(timer);
+    }, [cam.iD_Camera, shouldRenderWebView, token, webviewRefRegister]);
 
     return (
       <GestureDetector gesture={composed}>
@@ -478,7 +504,6 @@ const CameraCell = React.memo(
               key={`webview-${cam.iD_Camera}-${pageKey}-${token}`}
               ref={webviewRefCb}
               source={{
-                // ── Fix #3: Không nhúng token vào HTML ──
                 html: buildStreamHTML(cam.iD_Camera_Ma),
                 baseUrl: GO2RTC_HOST,
               }}
@@ -496,20 +521,27 @@ const CameraCell = React.memo(
               allowFileAccess
               allowUniversalAccessFromFileURLs
               scrollEnabled={false}
-              // ── Fix #3: postMessage token khi WebView load xong ──
               onLoad={() => {
-                if (
-                  token &&
-                  webviewRefRegister?.current[cam.iD_Camera]?.postMessage
-                ) {
-                  webviewRefRegister.current[cam.iD_Camera].postMessage(
+                const ref = webviewRefRegister?.current[cam.iD_Camera];
+                if (token && ref?.postMessage) {
+                  ref.postMessage(
                     JSON.stringify({ type: "token", value: token }),
                   );
+                  ref.postMessage("start");
                 }
               }}
               onMessage={(e) => {
                 const data = e.nativeEvent.data;
                 if (data === "token_expired") onTokenExpired?.();
+                else if (data === "pong") {
+                  const timeoutMap = pongTimeoutRef?.current;
+                  if (!timeoutMap) return;
+                  const timeout = timeoutMap[cam.iD_Camera];
+                  if (timeout) {
+                    clearTimeout(timeout);
+                    delete timeoutMap[cam.iD_Camera];
+                  }
+                }
               }}
             />
           ) : shouldRenderSnapshot && displayedSnapshotUrl ? (
@@ -548,7 +580,9 @@ const CameraCell = React.memo(
                 <ActivityIndicator size="small" color="#555" />
               ) : !isPaused ? (
                 <Text style={styles.cellPlaceholderText}>
-                  {isSnapshotActive ? "Dang cap nhat anh..." : "Nhan dup de xem"}
+                  {isSnapshotActive
+                    ? "Dang cap nhat anh..."
+                    : "Nhan dup de xem"}
                 </Text>
               ) : null}
             </View>
@@ -595,6 +629,8 @@ const CameraCell = React.memo(
     prev.onPress === next.onPress &&
     prev.onDoubleTap === next.onDoubleTap &&
     prev.webviewRefRegister === next.webviewRefRegister &&
+    prev.pongTimeoutRef === next.pongTimeoutRef &&
+    prev.webviewRestartRef === next.webviewRestartRef &&
     prev.onTokenExpired === next.onTokenExpired,
 );
 
@@ -621,19 +657,17 @@ const CameraListGrid: React.FC = () => {
   const [gridSnapshotTimestamps, setGridSnapshotTimestamps] = React.useState<{
     groupA: number;
     groupB: number;
-  }>({
-    groupA: 0,
-    groupB: 0,
-  });
+  }>({ groupA: 0, groupB: 0 });
   const [fsVideoKey, setFsVideoKey] = React.useState(0);
   const [pendingThumbUrl, setPendingThumbUrl] = React.useState<string | null>(
     null,
   );
+  const [pageChangeKey, setPageChangeKey] = React.useState(0);
+  const [focusKey, setFocusKey] = React.useState(0);
 
   const webviewRefs = React.useRef<Record<string, any>>({});
   const fullscreenWebViewRef = React.useRef<any>(null);
   const isFocusedRef = React.useRef(false);
-  // ── Fix #9: Proactive token refresh ──
   const tokenRefreshTimerRef = React.useRef<ReturnType<
     typeof setTimeout
   > | null>(null);
@@ -646,15 +680,13 @@ const CameraListGrid: React.FC = () => {
   const syncTokenTimeoutRef = React.useRef<ReturnType<
     typeof setTimeout
   > | null>(null);
-  // ── Fix #5: WebView ping watchdog ──
   const webviewPingIntervalRef = React.useRef<ReturnType<
     typeof setInterval
   > | null>(null);
   const pongTimeoutRef = React.useRef<
     Record<string, ReturnType<typeof setTimeout>>
   >({});
-
-  // ── Fix #1: Android stall detection ──
+  const webviewMissCountRef = React.useRef<Record<string, number>>({});
   const lastProgressRef = React.useRef<number>(Date.now());
   const androidFallbackRef = React.useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -662,6 +694,11 @@ const CameraListGrid: React.FC = () => {
   const androidWatchdogRef = React.useRef<ReturnType<
     typeof setInterval
   > | null>(null);
+
+  const cameraTokenRef = React.useRef<string>("");
+  React.useEffect(() => {
+    cameraTokenRef.current = cameraToken;
+  }, [cameraToken]);
 
   const pagedCamerasRef = React.useRef<any[]>([]);
   const [screenDims, setScreenDims] = React.useState(Dimensions.get("window"));
@@ -673,7 +710,9 @@ const CameraListGrid: React.FC = () => {
   const [cols, rows] = LAYOUT_OPTIONS[layoutCount] ?? [4, 4];
   const perPage = cols * rows;
   const liveCellLimit =
-    Platform.OS === "android" ? Math.min(8, perPage) : perPage;
+    Platform.OS === "android"
+      ? Math.min(ANDROID_LIVE_CELL_LIMIT, perPage)
+      : perPage;
   const totalPages = Math.ceil(cameras.length / perPage);
   const pagedCameras = cameras.slice(page * perPage, (page + 1) * perPage);
   pagedCamerasRef.current = pagedCameras;
@@ -730,7 +769,6 @@ const CameraListGrid: React.FC = () => {
     };
   }, [navigation]);
 
-  // ── Fix #9: Schedule proactive token refresh ──
   const scheduleProactiveRefresh = React.useCallback((token: string) => {
     if (tokenRefreshTimerRef.current)
       clearTimeout(tokenRefreshTimerRef.current);
@@ -739,7 +777,7 @@ const CameraListGrid: React.FC = () => {
       const delay = exp - Date.now() - 60000;
       if (delay > 0) {
         tokenRefreshTimerRef.current = setTimeout(() => {
-          fetchCameraTokenRef.current?.();
+          fetchCameraTokenRef.current?.(false);
         }, delay);
       }
     }
@@ -750,56 +788,81 @@ const CameraListGrid: React.FC = () => {
       clearTimeout(startStreamsTimeoutRef.current);
       startStreamsTimeoutRef.current = null;
     }
-    Object.values(webviewRefs.current).forEach((ref) => {
-      ref?.postMessage?.("stop");
-    });
+    Object.values(webviewRefs.current).forEach((ref) =>
+      ref?.postMessage?.("stop"),
+    );
     fullscreenWebViewRef.current?.postMessage?.("stop");
   }, []);
 
+  const restartGridWebView = React.useCallback((cameraId: string | number) => {
+    const key = String(cameraId);
+    const ref = webviewRefs.current[key];
+    const token = cameraTokenRef.current;
+    if (!ref?.postMessage || !token) return;
+    ref.postMessage("stop");
+    setTimeout(() => {
+      const nextRef = webviewRefs.current[key];
+      if (!nextRef?.postMessage) return;
+      nextRef.postMessage(JSON.stringify({ type: "token", value: token }));
+      nextRef.postMessage("start");
+    }, 150);
+  }, []);
+
+  const webviewRestartRef = React.useRef(restartGridWebView);
+  React.useEffect(() => {
+    webviewRestartRef.current = restartGridWebView;
+  }, [restartGridWebView]);
+
   const startAllStreams = React.useCallback(() => {
-    if (startStreamsTimeoutRef.current) {
+    if (startStreamsTimeoutRef.current)
       clearTimeout(startStreamsTimeoutRef.current);
-    }
     startStreamsTimeoutRef.current = setTimeout(() => {
       if (!isFocusedRef.current) return;
-      Object.values(webviewRefs.current).forEach((ref) => {
-        ref?.postMessage?.("start");
-      });
+      Object.values(webviewRefs.current).forEach((ref) =>
+        ref?.postMessage?.("start"),
+      );
       fullscreenWebViewRef.current?.postMessage?.("start");
       startStreamsTimeoutRef.current = null;
     }, 300);
   }, []);
 
-  const fetchCameraToken = React.useCallback(async () => {
-    if (!isFocusedRef.current) return;
-    try {
-      const res: any = await getTokenViewCamera();
-      if (res?.data && isFocusedRef.current) {
-        const newToken = res.data;
-        const snapshotNow = Date.now();
-        setCameraToken(newToken);
-        setThumbTimestamp(snapshotNow);
-        setGridSnapshotTimestamps({
-          groupA: snapshotNow,
-          groupB: snapshotNow + 1,
-        });
-        scheduleProactiveRefresh(newToken);
-        // Grid WebView: postMessage token mới
-        Object.values(webviewRefs.current).forEach((ref) => {
-          if (ref?.postMessage) {
-            ref.postMessage(JSON.stringify({ type: "token", value: newToken }));
-          }
-        });
-        if (fullscreenWebViewRef.current?.postMessage) {
-          fullscreenWebViewRef.current.postMessage(
-            JSON.stringify({ type: "token", value: newToken }),
-          );
-        }
+  const fetchCameraToken = React.useCallback(
+    async (force = false) => {
+      if (!isFocusedRef.current) return;
+      if (!force && isTokenStillValid(cameraTokenRef.current)) {
+        scheduleProactiveRefresh(cameraTokenRef.current);
+        return;
       }
-    } catch (err) {
-      console.warn("getTokenViewCamera error:", err);
-    }
-  }, [scheduleProactiveRefresh]);
+      try {
+        const res: any = await getTokenViewCamera();
+        if (res?.data && isFocusedRef.current) {
+          const newToken = res.data;
+          const snapshotNow = Date.now();
+          setCameraToken(newToken);
+          setThumbTimestamp(snapshotNow);
+          setGridSnapshotTimestamps({
+            groupA: snapshotNow,
+            groupB: snapshotNow + 1,
+          });
+          scheduleProactiveRefresh(newToken);
+          Object.values(webviewRefs.current).forEach((ref) => {
+            if (ref?.postMessage)
+              ref.postMessage(
+                JSON.stringify({ type: "token", value: newToken }),
+              );
+          });
+          if (fullscreenWebViewRef.current?.postMessage) {
+            fullscreenWebViewRef.current.postMessage(
+              JSON.stringify({ type: "token", value: newToken }),
+            );
+          }
+        }
+      } catch (err) {
+        console.warn("getTokenViewCamera error:", err);
+      }
+    },
+    [scheduleProactiveRefresh],
+  );
 
   const fetchCameraTokenRef = React.useRef(fetchCameraToken);
   React.useEffect(() => {
@@ -808,9 +871,9 @@ const CameraListGrid: React.FC = () => {
 
   useFocusEffect(
     React.useCallback(() => {
-      fetchCameraToken();
+      setFocusKey((k) => k + 1);
+      fetchCameraTokenRef.current?.(false);
       startAllStreams();
-
       return () => {
         if (tokenRefreshTimerRef.current) {
           clearTimeout(tokenRefreshTimerRef.current);
@@ -822,65 +885,65 @@ const CameraListGrid: React.FC = () => {
         }
         stopAllStreams();
       };
-    }, [fetchCameraToken, startAllStreams, stopAllStreams]),
+    }, [startAllStreams, stopAllStreams]),
   );
 
   React.useEffect(() => {
-    if (!isFocused) {
-      stopAllStreams();
-    }
+    if (!isFocused) stopAllStreams();
   }, [isFocused, stopAllStreams]);
 
   React.useEffect(() => {
     if (!cameraToken) return;
-
-    if (syncTokenTimeoutRef.current) {
-      clearTimeout(syncTokenTimeoutRef.current);
-    }
-
+    if (syncTokenTimeoutRef.current) clearTimeout(syncTokenTimeoutRef.current);
     syncTokenTimeoutRef.current = setTimeout(() => {
       if (!isFocusedRef.current) return;
-      Object.entries(webviewRefs.current).forEach(([id, ref]) => {
+      Object.entries(webviewRefs.current).forEach(([_id, ref]) => {
         ref?.postMessage?.(
           JSON.stringify({ type: "token", value: cameraToken }),
         );
       });
-
       fullscreenWebViewRef.current?.postMessage?.(
         JSON.stringify({ type: "token", value: cameraToken }),
       );
       syncTokenTimeoutRef.current = null;
     }, 300);
-
     return () => {
       if (syncTokenTimeoutRef.current) {
         clearTimeout(syncTokenTimeoutRef.current);
         syncTokenTimeoutRef.current = null;
       }
     };
-  }, [cameraToken]);
+  }, [cameraToken, focusKey]);
+
+  React.useEffect(() => {
+    if (Platform.OS !== "android" || !isFocused || isPaused || !cameraToken)
+      return;
+    const timer = setTimeout(() => {
+      if (!isFocusedRef.current) return;
+      Object.values(webviewRefs.current).forEach((ref) => {
+        if (!ref?.postMessage) return;
+        ref.postMessage(JSON.stringify({ type: "token", value: cameraToken }));
+        ref.postMessage("start");
+      });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [cameraToken, isFocused, isPaused, pageChangeKey, focusKey]);
 
   React.useEffect(() => {
     if (snapshotRefreshTimerRef.current) {
       clearInterval(snapshotRefreshTimerRef.current);
       snapshotRefreshTimerRef.current = null;
     }
-
     if (
       Platform.OS !== "android" ||
       !isFocused ||
       isPaused ||
       !cameraToken ||
       perPage <= liveCellLimit
-    ) {
+    )
       return;
-    }
-
     let refreshGroup: "groupA" | "groupB" = "groupA";
-    setGridSnapshotTimestamps({
-      groupA: Date.now(),
-      groupB: Date.now() + 1,
-    });
+    setGridSnapshotTimestamps({ groupA: Date.now(), groupB: Date.now() + 1 });
     snapshotRefreshTimerRef.current = setInterval(() => {
       if (!isFocusedRef.current || isPaused) return;
       const nextTimestamp = Date.now();
@@ -890,7 +953,6 @@ const CameraListGrid: React.FC = () => {
         return next;
       });
     }, 2500);
-
     return () => {
       if (snapshotRefreshTimerRef.current) {
         clearInterval(snapshotRefreshTimerRef.current);
@@ -902,26 +964,41 @@ const CameraListGrid: React.FC = () => {
   React.useEffect(() => {
     const unsub = subscribeAppRefetch(() => {
       if (!isFocusedRef.current) return;
-      fetchCameraTokenRef.current?.();
+      fetchCameraTokenRef.current?.(true);
     });
     return () => unsub();
   }, []);
 
+  // FIX: AppState — chỉ stop khi background, bỏ qua inactive
+  // inactive = kéo tác vụ, notification → giữ stream sống
+  // background = chuyển app thật sự → stop
   React.useEffect(() => {
     const sub = AppState.addEventListener("change", (state) => {
-      if (!isFocusedRef.current && state === "active") return;
-      const msg = state === "active" ? "start" : "stop";
-      Object.values(webviewRefs.current).forEach((ref) => {
-        if (ref?.postMessage) ref.postMessage(msg);
-      });
-      if (fullscreenWebViewRef.current?.postMessage) {
-        fullscreenWebViewRef.current.postMessage(msg);
+      if (state === "active") {
+        if (isFocusedRef.current) {
+          fetchCameraTokenRef.current?.(false);
+          // Chỉ start nếu screen đang focused
+          Object.values(webviewRefs.current).forEach((ref) =>
+            ref?.postMessage?.("start"),
+          );
+          if (fullscreenWebViewRef.current?.postMessage) {
+            fullscreenWebViewRef.current.postMessage("start");
+          }
+        }
+      } else if (state === "background") {
+        // Chỉ stop khi vào background thật sự
+        Object.values(webviewRefs.current).forEach((ref) =>
+          ref?.postMessage?.("stop"),
+        );
+        if (fullscreenWebViewRef.current?.postMessage) {
+          fullscreenWebViewRef.current.postMessage("stop");
+        }
       }
+      // "inactive" → bỏ qua hoàn toàn, giữ stream sống khi kéo tác vụ
     });
     return () => sub.remove();
   }, []);
 
-  // ── Fix #6: Sync mute state tới tất cả WebView ──
   React.useEffect(() => {
     const msg = isMuted ? "mute" : "unmute";
     Object.values(webviewRefs.current).forEach((ref) => {
@@ -929,19 +1006,18 @@ const CameraListGrid: React.FC = () => {
     });
   }, [isMuted]);
 
-  // ── Fix #6: Sync fullscreen mute ──
   React.useEffect(() => {
     if (fullscreenWebViewRef.current?.postMessage) {
       fullscreenWebViewRef.current.postMessage(isFullMuted ? "mute" : "unmute");
     }
   }, [isFullMuted]);
 
-  // ── Fix #2: Clear pending thumb khi video ready ──
   React.useEffect(() => {
     if (videoReady) setPendingThumbUrl(null);
   }, [videoReady]);
 
-  // ── Fix #5: Native-side WebView ping watchdog ──
+  // FIX: Ping watchdog — tăng timeout lên 10s và miss count ≥ 2 mới restart
+  // tránh restart oan khi mạng chậm thoáng qua
   React.useEffect(() => {
     if (webviewPingIntervalRef.current)
       clearInterval(webviewPingIntervalRef.current);
@@ -949,12 +1025,21 @@ const CameraListGrid: React.FC = () => {
       if (!isFocusedRef.current) return;
       Object.entries(webviewRefs.current).forEach(([id, ref]) => {
         if (!ref?.postMessage) return;
+        const pendingTimeout = pongTimeoutRef.current[id];
+        if (pendingTimeout) clearTimeout(pendingTimeout);
         ref.postMessage("ping");
         pongTimeoutRef.current[id] = setTimeout(() => {
-          // WebView không phản hồi sau 5s → có thể đã crash
-          // Chỉ log, không force remount để tránh flicker
-          console.warn(`[Camera] WebView ${id} không phản hồi ping`);
-        }, 5000);
+          const missCount = (webviewMissCountRef.current[id] ?? 0) + 1;
+          webviewMissCountRef.current[id] = missCount;
+          if (missCount >= 2) {
+            // Miss 2 lần liên tiếp (~60s) mới restart
+            console.warn(
+              `[Camera] WebView ${id} miss ${missCount} pings, restarting`,
+            );
+            webviewMissCountRef.current[id] = 0;
+            webviewRestartRef.current?.(id);
+          }
+        }, 10000); // FIX: tăng từ 5s → 10s
       });
     }, 30000);
     return () => {
@@ -965,16 +1050,15 @@ const CameraListGrid: React.FC = () => {
   }, []);
 
   const handleTokenExpired = React.useCallback(() => {
-    fetchCameraTokenRef.current?.();
+    fetchCameraTokenRef.current?.(true);
   }, []);
 
-  // ── Fix #1: Android fullscreen stall watchdog ──
   const startAndroidWatchdog = React.useCallback(() => {
     if (Platform.OS !== "android") return;
     if (androidWatchdogRef.current) clearInterval(androidWatchdogRef.current);
     lastProgressRef.current = Date.now();
     androidWatchdogRef.current = setInterval(() => {
-      if (Date.now() - lastProgressRef.current > 12000) {
+      if (Date.now() - lastProgressRef.current > 18000) {
         if (androidWatchdogRef.current)
           clearInterval(androidWatchdogRef.current);
         if (androidFallbackRef.current)
@@ -983,7 +1067,7 @@ const CameraListGrid: React.FC = () => {
         setFsVideoKey((k) => k + 1);
         startAndroidFallbackRef.current?.();
       }
-    }, 5000);
+    }, 6000);
   }, []);
 
   const startAndroidFallbackRef = React.useRef<() => void>(null as any);
@@ -992,7 +1076,7 @@ const CameraListGrid: React.FC = () => {
     if (androidFallbackRef.current) clearTimeout(androidFallbackRef.current);
     if (androidWatchdogRef.current) clearInterval(androidWatchdogRef.current);
     startAndroidWatchdog();
-    androidFallbackRef.current = setTimeout(() => setVideoReady(true), 6000);
+    androidFallbackRef.current = setTimeout(() => setVideoReady(true), 8000);
   }, [startAndroidWatchdog]);
 
   React.useEffect(() => {
@@ -1025,12 +1109,15 @@ const CameraListGrid: React.FC = () => {
   const cellH =
     gridContainerH > 0 ? gridContainerH / rows : SW / cols / (16 / 9);
 
-  // ── Fix #8: changePage clear stale webviewRefs ──
-  const changePage = React.useCallback((newPage: number) => {
-    webviewRefs.current = {};
-    setPage(newPage);
-    setActiveIndex(0);
-  }, []);
+  const changePage = React.useCallback(
+    (newPage: number) => {
+      stopAllStreams();
+      setPage(newPage);
+      setActiveIndex(0);
+      setPageChangeKey((k) => k + 1);
+    },
+    [stopAllStreams],
+  );
 
   const swipeGesture = Gesture.Pan()
     .runOnJS(true)
@@ -1081,10 +1168,12 @@ const CameraListGrid: React.FC = () => {
     });
 
   const handleSetLayout = (count: number) => {
+    stopAllStreams();
     setLayoutCount(count);
     setPage(0);
     setActiveIndex(0);
     setShowLayoutPicker(false);
+    setPageChangeKey((k) => k + 1);
   };
 
   const handleCamPress = React.useCallback(
@@ -1106,10 +1195,10 @@ const CameraListGrid: React.FC = () => {
     [startAndroidFallback, thumbTimestamp],
   );
 
-  // ── Fix #7: Snapshot với CameraRoll ──
   const handleSnapshot = React.useCallback(async () => {
     const activeCam = pagedCamerasRef.current[activeIndex];
-    if (!activeCam || !cameraToken) return;
+    const token = cameraTokenRef.current;
+    if (!activeCam || !token) return;
     try {
       if (Platform.OS === "android") {
         const granted = await PermissionsAndroid.request(
@@ -1124,17 +1213,14 @@ const CameraListGrid: React.FC = () => {
         activeCam.iD_Camera_Ma
       }_snap&t=${Date.now()}`;
       const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${cameraToken}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Fetch failed");
-      // Nếu dự án có @react-native-camera-roll/camera-roll:
-      // const blob = await res.blob();
-      // await CameraRoll.saveAsset(blobUri, { type: 'photo' });
       Alert.alert("Chụp ảnh", "Đã chụp ảnh thành công.");
     } catch (e) {
       Alert.alert("Lỗi", "Không thể chụp ảnh camera.");
     }
-  }, [activeIndex, cameraToken]);
+  }, [activeIndex]);
 
   const handleFullscreenPrev = React.useCallback(() => {
     if (!fullscreenCam) return;
@@ -1193,40 +1279,38 @@ const CameraListGrid: React.FC = () => {
             style={[styles.grid, { transform: [{ translateX }] }]}
             onLayout={(e) => setGridContainerH(e.nativeEvent.layout.height)}
           >
-            {pagedCameras.map((cam: any, idx: number) => (
-              (() => {
-                const isAndroidSnapshot =
-                  Platform.OS === "android" &&
-                  idx >= liveCellLimit;
-                const snapshotGroup =
-                  (idx - liveCellLimit) % 2 === 0 ? "groupA" : "groupB";
-
-                return (
-                  <CameraCell
-                    key={`${page}-${cam.iD_Camera?.toString() ?? idx}`}
-                    cam={cam}
-                    idx={idx}
-                    isActive={idx === activeIndex}
-                    isPaused={isPaused}
-                    isWebViewActive={idx < liveCellLimit}
-                    isSnapshotActive={isAndroidSnapshot}
-                    cellW={cellW}
-                    cellH={cellH}
-                    token={cameraToken}
-                    pageKey={page}
-                    snapshotTimestamp={
-                      isAndroidSnapshot
-                        ? gridSnapshotTimestamps[snapshotGroup]
-                        : undefined
-                    }
-                    onPress={handleCamPress}
-                    onDoubleTap={handleCamDoubleTap}
-                    webviewRefRegister={webviewRefs}
-                    onTokenExpired={handleTokenExpired}
-                  />
-                );
-              })()
-            ))}
+            {pagedCameras.map((cam: any, idx: number) => {
+              const isAndroidSnapshot =
+                Platform.OS === "android" && idx >= liveCellLimit;
+              const snapshotGroup =
+                (idx - liveCellLimit) % 2 === 0 ? "groupA" : "groupB";
+              return (
+                <CameraCell
+                  key={`${page}-${cam.iD_Camera?.toString() ?? idx}`}
+                  cam={cam}
+                  idx={idx}
+                  isActive={idx === activeIndex}
+                  isPaused={isPaused}
+                  isWebViewActive={idx < liveCellLimit}
+                  isSnapshotActive={isAndroidSnapshot}
+                  cellW={cellW}
+                  cellH={cellH}
+                  token={cameraToken}
+                  pageKey={page}
+                  snapshotTimestamp={
+                    isAndroidSnapshot
+                      ? gridSnapshotTimestamps[snapshotGroup]
+                      : undefined
+                  }
+                  onPress={handleCamPress}
+                  onDoubleTap={handleCamDoubleTap}
+                  webviewRefRegister={webviewRefs}
+                  pongTimeoutRef={pongTimeoutRef}
+                  webviewRestartRef={webviewRestartRef}
+                  onTokenExpired={handleTokenExpired}
+                />
+              );
+            })}
           </Animated.View>
 
           <View style={styles.paginationRow}>
@@ -1251,7 +1335,6 @@ const CameraListGrid: React.FC = () => {
               color="#444"
             />
           </TouchableOpacity>
-          {/* ── Fix #6: Mute button hoạt động ── */}
           <TouchableOpacity
             style={styles.toolBtn}
             onPress={() => setIsMuted((v) => !v)}
@@ -1283,7 +1366,6 @@ const CameraListGrid: React.FC = () => {
         </View>
         <View style={styles.divider} />
         <View style={styles.actionContainer}>
-          {/* ── Fix #7: Playback disabled rõ ràng khi chưa implement ── */}
           <TouchableOpacity
             style={[styles.playbackBtn, styles.playbackBtnDisabled]}
             disabled
@@ -1294,7 +1376,6 @@ const CameraListGrid: React.FC = () => {
             </Text>
           </TouchableOpacity>
           <View style={styles.iconGroup}>
-            {/* ── Fix #7: Snapshot có onPress ── */}
             <TouchableOpacity style={styles.iconBtn} onPress={handleSnapshot}>
               <Ionicons name="camera-outline" size={24} color="#666" />
             </TouchableOpacity>
@@ -1316,7 +1397,6 @@ const CameraListGrid: React.FC = () => {
 
       {showLayoutPicker && (
         <View style={styles.layoutPicker}>
-          {/* ── Fix #7: Thêm layout 12 ── */}
           {[1, 4, 9, 12, 16].map((n) => (
             <TouchableOpacity
               key={n}
@@ -1433,11 +1513,9 @@ const CameraListGrid: React.FC = () => {
                       bufferForPlaybackAfterRebufferMs: 1000,
                     }}
                     onReadyForDisplay={handleAndroidReady}
-                    // ── Fix #1: Progress tracker ──
                     onProgress={() => {
                       lastProgressRef.current = Date.now();
                     }}
-                    // ── Fix #1: Clean error handler ──
                     onError={() => {
                       if (androidFallbackRef.current)
                         clearTimeout(androidFallbackRef.current);
@@ -1447,7 +1525,7 @@ const CameraListGrid: React.FC = () => {
                         setVideoReady(false);
                         setFsVideoKey((k) => k + 1);
                         startAndroidFallback();
-                      }, 3000);
+                      }, 5000);
                     }}
                   />
                 )}
@@ -1457,7 +1535,6 @@ const CameraListGrid: React.FC = () => {
                     key={`fs-${fullscreenCam.iD_Camera}`}
                     ref={fullscreenWebViewRef}
                     source={{
-                      // ── Fix #3: Không nhúng token ──
                       html: buildFullscreenHTML(fullscreenCam.iD_Camera_Ma),
                       baseUrl: GO2RTC_HOST,
                     }}
@@ -1476,7 +1553,6 @@ const CameraListGrid: React.FC = () => {
                     allowUniversalAccessFromFileURLs
                     scrollEnabled={false}
                     scalesPageToFit={false}
-                    // ── Fix #3: postMessage token khi load xong ──
                     onLoad={() => {
                       if (
                         fullscreenWebViewRef.current?.postMessage &&
@@ -1489,12 +1565,10 @@ const CameraListGrid: React.FC = () => {
                     }}
                     onMessage={(e) => {
                       const data = e.nativeEvent.data;
-                      if (data === "ready") {
-                        setVideoReady(true);
-                      } else if (data === "token_expired") {
-                        fetchCameraTokenRef.current?.();
-                      } else if (data === "pong") {
-                        // WebView vẫn sống
+                      if (data === "ready") setVideoReady(true);
+                      else if (data === "token_expired")
+                        fetchCameraTokenRef.current?.(true);
+                      else if (data === "pong") {
                         if (pongTimeoutRef.current["fullscreen"]) {
                           clearTimeout(pongTimeoutRef.current["fullscreen"]);
                         }

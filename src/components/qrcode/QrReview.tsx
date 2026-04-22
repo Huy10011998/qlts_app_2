@@ -47,6 +47,7 @@ import { RootState } from "../../store";
 import { useAppDispatch } from "../../store/Hooks";
 import { resetShouldRefreshList } from "../../store/AssetSlice";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
+import { isAuthExpiredError } from "../../services/data/CallApi";
 
 if (
   Platform.OS === "android" &&
@@ -164,7 +165,9 @@ export default function QrReview() {
         setTotal(totalCount);
       } catch (e) {
         error(e);
-        showAlertIfActive("Lỗi", "Không thể tải dữ liệu");
+        if (!isAuthExpiredError(e)) {
+          showAlertIfActive("Lỗi", "Không thể tải dữ liệu");
+        }
         if (!isLoadMore) setData([]);
       } finally {
         isFetchingRef.current = false;

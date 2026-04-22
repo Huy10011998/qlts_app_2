@@ -4,7 +4,6 @@ import {
   Text,
   Pressable,
   FlatList,
-  Alert,
   LayoutAnimation,
   Platform,
   UIManager,
@@ -16,11 +15,10 @@ import { useNavigation } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 
-import { API_ENDPOINTS } from "../../config/Index";
 import { useDebounce } from "../../hooks/useDebounce";
 import IsLoading from "../../components/ui/IconLoading";
 import { removeVietnameseTones } from "../../utils/Helper";
-import { callApi, getVungCamera } from "../../services/data/CallApi";
+import { getVungCamera } from "../../services/data/CallApi";
 import { error } from "../../utils/Logger";
 import { useAutoReload } from "../../hooks/useAutoReload";
 import { KeyboardAvoidingView } from "react-native";

@@ -219,7 +219,12 @@ export default function AssetEditItem() {
   );
 
   // ===== MODAL ITEMS ===== //
-  const modalItems = useModalItems(activeEnumField, referenceData, enumData);
+  const modalItems = useModalItems(
+    activeEnumField,
+    referenceData,
+    enumData,
+    formData,
+  );
   const { showAlertIfActive } = useSafeAlert();
 
   // SUBMIT - UPDATE
@@ -467,6 +472,7 @@ export default function AssetEditItem() {
         visible={modalVisible}
         title={`${activeEnumField?.moTa || activeEnumField?.name}`}
         items={modalItems}
+        selectedValue={activeEnumField ? formData[activeEnumField.name] : null}
         total={
           activeEnumField
             ? referenceData[activeEnumField.name]?.totalCount || 0
@@ -482,11 +488,17 @@ export default function AssetEditItem() {
         onClose={() => setModalVisible(false)}
         onSelect={(value) => {
           if (activeEnumField) {
+            const selectedItem = modalItems.find((item) => item.value == value);
             let finalValue = value;
             if (value !== "" && !isNaN(value)) {
               finalValue = Number(value);
             }
             handleChange(activeEnumField.name, finalValue);
+            setFormData((prev) => ({
+              ...prev,
+              [`${activeEnumField.name}_MoTa`]:
+                value === "" ? "" : selectedItem?.text ?? String(value),
+            }));
           }
           setModalVisible(false);
         }}

@@ -72,16 +72,16 @@ const HomeScreen: React.FC = () => {
         navigation.navigate("Asset");
       },
     },
-    {
-      id: "2",
-      label: "Công việc",
-      iconName: "briefcase-outline",
-    },
-    {
-      id: "3",
-      label: "Ticket",
-      iconName: "pricetag-outline",
-    },
+    // {
+    //   id: "2",
+    //   label: "Công việc",
+    //   iconName: "briefcase-outline",
+    // },
+    // {
+    //   id: "3",
+    //   label: "Ticket",
+    //   iconName: "pricetag-outline",
+    // },
     {
       id: "4",
       label: "Camera",

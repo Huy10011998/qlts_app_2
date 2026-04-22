@@ -9,6 +9,7 @@ import ListCardAttachFile from "../list/ListCardAttachFile";
 import { error } from "../../utils/Logger";
 import { useAutoReload } from "../../hooks/useAutoReload";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
+import { isAuthExpiredError } from "../../services/data/CallApi";
 
 export default function AssetListAttachFile() {
   const [file, setFile] = useState<FileItem[]>([]);
@@ -72,7 +73,9 @@ export default function AssetListAttachFile() {
         setTotal(totalItems);
       } catch (e) {
         error("API error:", e);
-        showAlertIfActive("Lỗi", "Không thể tải dữ liệu.");
+        if (!isAuthExpiredError(e)) {
+          showAlertIfActive("Lỗi", "Không thể tải dữ liệu.");
+        }
         if (!isLoadMore) setFile([]);
       } finally {
         if (isMounted()) {

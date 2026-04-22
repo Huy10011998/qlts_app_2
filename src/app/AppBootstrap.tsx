@@ -1,79 +1,104 @@
 import { useEffect, useRef } from "react";
-import { AppState, AppStateStatus } from "react-native";
+import { AppState, AppStateStatus, Platform } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
 import { log } from "../utils/Logger";
 import { emitAppRefetch } from "../utils/AppRefetchBus";
 import { reloadPermissions } from "../store/PermissionActions";
 import { useAppDispatch } from "../store/Hooks";
 import { useAuth } from "../context/AuthContext";
-import messaging from "@react-native-firebase/messaging";
-import { PermissionsAndroid, Platform } from "react-native";
-import notifee, { AndroidImportance } from "@notifee/react-native";
 
 export default function AppBootstrap() {
   const dispatch = useAppDispatch();
 
-  // Nếu AuthProvider có authReady -> nên lấy luôn
-  const { isAuthenticated, authReady } = useAuth() as {
+  const { isAuthenticated, authReady, iosAuthenticated } = useAuth() as {
     isAuthenticated: boolean;
     authReady?: boolean;
+    iosAuthenticated: boolean;
   };
 
   const appState = useRef<AppStateStatus>(AppState.currentState);
   const lastConnected = useRef<boolean | null>(null);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryAttempt = useRef(0);
-
-  // Guard chống spam reload
   const isReloading = useRef(false);
+
   const MAX_RETRY_ATTEMPTS = 4;
   const BASE_RETRY_MS = 5000;
 
-  const safeReloadPermissions = async () => {
-    if (!isAuthenticated) return;
-    if (authReady === false) return;
+  // FIX: dùng ref để luôn đọc giá trị auth mới nhất trong listeners
+  // tránh stale closure khi useEffect deps là []
+  const isAuthenticatedRef = useRef(isAuthenticated);
+  const iosAuthenticatedRef = useRef(iosAuthenticated);
+  const authReadyRef = useRef(authReady);
+
+  useEffect(() => {
+    isAuthenticatedRef.current = isAuthenticated;
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    iosAuthenticatedRef.current = iosAuthenticated;
+  }, [iosAuthenticated]);
+
+  useEffect(() => {
+    authReadyRef.current = authReady;
+  }, [authReady]);
+
+  // FIX: dùng useRef cho function để tránh stale closure trong listeners
+  const safeReloadRef = useRef<() => Promise<void> | undefined>(undefined);
+
+  safeReloadRef.current = async () => {
+    if (!isAuthenticatedRef.current) return;
+    if (authReadyRef.current === false) return;
+    if (Platform.OS === "ios" && !iosAuthenticatedRef.current) return;
     if (isReloading.current) return;
 
     isReloading.current = true;
 
-    const ok = await dispatch(reloadPermissions());
+    try {
+      const ok = await dispatch(reloadPermissions());
 
-    if (ok) {
-      retryAttempt.current = 0;
-      if (retryTimer.current) {
-        clearTimeout(retryTimer.current);
-        retryTimer.current = null;
+      if (ok) {
+        retryAttempt.current = 0;
+        if (retryTimer.current) {
+          clearTimeout(retryTimer.current);
+          retryTimer.current = null;
+        }
+      } else if (
+        !retryTimer.current &&
+        retryAttempt.current < MAX_RETRY_ATTEMPTS
+      ) {
+        const delay = Math.min(
+          BASE_RETRY_MS * 2 ** retryAttempt.current,
+          30000,
+        );
+        retryAttempt.current += 1;
+        retryTimer.current = setTimeout(() => {
+          retryTimer.current = null;
+          void safeReloadRef.current?.();
+        }, delay);
       }
-    } else if (
-      !retryTimer.current &&
-      retryAttempt.current < MAX_RETRY_ATTEMPTS
-    ) {
-      const delay = Math.min(BASE_RETRY_MS * 2 ** retryAttempt.current, 30000);
-      retryAttempt.current += 1;
-      retryTimer.current = setTimeout(() => {
-        retryTimer.current = null;
-        void safeReloadPermissions();
-      }, delay);
-    }
-
-    // tránh spam liên tục khi app foreground nhiều lần
-    setTimeout(() => {
+    } finally {
+      // FIX: reset ngay sau khi xong thay vì setTimeout 3s cứng
+      // tránh block reload hợp lệ nếu fetch mất > 3s
       isReloading.current = false;
-    }, 3000);
+    }
   };
 
   useEffect(() => {
+    // FIX: deps [] — listeners chỉ đăng ký 1 lần, không re-subscribe
+    // khi isAuthenticated/iosAuthenticated thay đổi
+    // → không miss network/foreground event trong lúc re-subscribe
+
     // NET INFO LISTENER
     const unsubscribeNetInfo = NetInfo.addEventListener((state) => {
       const isConnected =
         state.isConnected === true && state.isInternetReachable !== false;
 
-      // từ offline -> online
+      // từ offline → online
       if (lastConnected.current === false && isConnected) {
         log("[APP] Network reconnected");
-
         emitAppRefetch("network");
-        void safeReloadPermissions();
+        void safeReloadRef.current?.();
       }
 
       lastConnected.current = isConnected;
@@ -96,11 +121,8 @@ export default function AppBootstrap() {
           }
 
           log("[APP] App returned to foreground");
-
           emitAppRefetch("foreground");
-
-          // reload ngay — interceptor sẽ tự refresh token nếu cần
-          void safeReloadPermissions();
+          void safeReloadRef.current?.();
         }
 
         appState.current = nextState;
@@ -115,68 +137,7 @@ export default function AppBootstrap() {
         retryTimer.current = null;
       }
     };
-  }, [dispatch, isAuthenticated, authReady]);
-
-  // // FCM Init & Foreground Handler
-  // useEffect(() => {
-  //   if (!isAuthenticated) return;
-  //   if (authReady === false) return;
-
-  //   async function initFCM() {
-  //     try {
-  //       if (Platform.OS === "android" && Platform.Version >= 33) {
-  //         await PermissionsAndroid.request(
-  //           PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
-  //         );
-  //       }
-
-  //       await messaging().requestPermission();
-
-  //       const token = await messaging().getToken();
-
-  //       log("[FCM] TOKEN:");
-  //       log(token);
-
-  //       // TODO: gửi token lên backend
-  //       // await api.saveFcmToken(token);
-  //     } catch (e) {
-  //       log("[FCM] ERROR:");
-  //       log(e);
-  //     }
-  //   }
-
-  //   initFCM();
-  // }, [isAuthenticated, authReady]);
-
-  // // Lắng nghe tin nhắn khi app đang ở foreground
-  // useEffect(() => {
-  //   const unsubscribe = messaging().onMessage(async (remoteMessage) => {
-  //     log("[FCM] FOREGROUND MESSAGE:");
-
-  //     const channelId = await notifee.createChannel({
-  //       id: "default",
-  //       name: "Default Channel",
-
-  //       importance: AndroidImportance.HIGH,
-  //     });
-
-  //     await notifee.displayNotification({
-  //       title: remoteMessage.notification?.title,
-
-  //       body: remoteMessage.notification?.body,
-
-  //       android: {
-  //         channelId,
-
-  //         pressAction: {
-  //           id: "default",
-  //         },
-  //       },
-  //     });
-  //   });
-
-  //   return unsubscribe;
-  // }, []);
+  }, []); // FIX: empty deps — stable listeners
 
   return null;
 }

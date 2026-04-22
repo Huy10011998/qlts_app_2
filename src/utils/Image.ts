@@ -53,7 +53,7 @@ export const fetchImage = async (
   setLoadingImages: React.Dispatch<
     React.SetStateAction<Record<string, boolean>>
   >,
-  setImages: React.Dispatch<React.SetStateAction<Record<string, string>>>
+  setImages: React.Dispatch<React.SetStateAction<Record<string, string>>>,
 ) => {
   try {
     if (!path || path.trim() === "--") return;
@@ -104,7 +104,7 @@ export const pickImage = async (
   setImages: React.Dispatch<React.SetStateAction<Record<string, any>>>,
   setLoadingImages: React.Dispatch<
     React.SetStateAction<Record<string, boolean>>
-  >
+  >,
 ) => {
   try {
     const res = await launchImageLibrary({

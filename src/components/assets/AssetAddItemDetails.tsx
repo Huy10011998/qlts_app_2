@@ -160,7 +160,12 @@ export default function AssetAddItemDetails() {
   );
 
   // ===== MODAL ITEMS ===== //
-  const modalItems = useModalItems(activeEnumField, referenceData, enumData);
+  const modalItems = useModalItems(
+    activeEnumField,
+    referenceData,
+    enumData,
+    formData,
+  );
   const { isMounted, showAlertIfActive } = useSafeAlert();
 
   /* ===== SUBMIT ===== */
@@ -184,6 +189,10 @@ export default function AssetAddItemDetails() {
       setIsSubmitting(true);
 
       const payloadData = { ...formData };
+
+      Object.keys(payloadData).forEach((key) => {
+        if (key.endsWith("_MoTa")) delete payloadData[key];
+      });
 
       fieldActive.forEach((f) => {
         if (f.typeProperty === TypeProperty.Date) {
@@ -290,6 +299,7 @@ export default function AssetAddItemDetails() {
         visible={modalVisible}
         title={`${activeEnumField?.moTa || activeEnumField?.name}`}
         items={modalItems}
+        selectedValue={activeEnumField ? formData[activeEnumField.name] : null}
         total={
           activeEnumField
             ? referenceData[activeEnumField.name]?.totalCount || 0
@@ -305,11 +315,17 @@ export default function AssetAddItemDetails() {
         onClose={() => setModalVisible(false)}
         onSelect={(value) => {
           if (activeEnumField) {
+            const selectedItem = modalItems.find((item) => item.value == value);
             let finalValue = value;
             if (value !== "" && !isNaN(value)) {
               finalValue = Number(value);
             }
             handleChange(activeEnumField.name, finalValue);
+            setFormData((prev) => ({
+              ...prev,
+              [`${activeEnumField.name}_MoTa`]:
+                value === "" ? "" : selectedItem?.text ?? String(value),
+            }));
           }
           setModalVisible(false);
         }}
@@ -485,5 +501,14 @@ const styles = StyleSheet.create({
     color: "#333",
     fontSize: 14,
     flexShrink: 1,
+  },
+
+  removeImageButton: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    padding: 4,
+    borderRadius: 20,
   },
 });

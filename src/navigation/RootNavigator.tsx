@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { Alert, Platform } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import AppNavigator from "./AppNavigator.tsx";
@@ -19,26 +19,42 @@ export default function RootNavigator() {
     logoutReason,
     clearLogoutReason,
   } = useAuth();
+
   const dispatch = useAppDispatch();
   const { loaded } = useSelector((state: RootState) => state.permission);
 
+  // 🚫 chống spam alert
+  const hasShownExpiredRef = useRef(false);
+
+  // ===== HANDLE TOKEN EXPIRED =====
   useEffect(() => {
-    if (logoutReason === "EXPIRED") {
+    if (logoutReason === "EXPIRED" && !hasShownExpiredRef.current) {
+      hasShownExpiredRef.current = true;
+
       Alert.alert(
-        "Phiên đăng nhập đã hết hạn",
-        "Vui lòng đăng nhập lại để tiếp tục sử dụng ứng dụng.",
+        "Phiên đăng nhập đã hết",
+        "Vui lòng đăng nhập lại.",
         [
           {
             text: "OK",
-            onPress: () => clearLogoutReason(),
+            onPress: () => {
+              clearLogoutReason();
+              hasShownExpiredRef.current = false;
+            },
           },
         ],
+        { cancelable: false },
       );
     }
-  }, [logoutReason]);
+  }, [logoutReason, clearLogoutReason]);
 
+  // ===== LOAD PERMISSIONS =====
   useEffect(() => {
-    if (!isAuthenticated) {
+    const canLoadPermissions =
+      isAuthenticated && (Platform.OS !== "ios" || iosAuthenticated);
+
+    // ❌ không đủ điều kiện → clear
+    if (!canLoadPermissions) {
       dispatch(clearPermissions());
       return;
     }
@@ -53,17 +69,15 @@ export default function RootNavigator() {
           dispatch(setPermissions(res.data));
         }
       } catch (err: any) {
-        // offline → giữ permissions
+        // offline → giữ nguyên
         if (!err?.response) return;
 
-        // chỉ clear khi auth thực sự lỗi
+        // auth lỗi thật → clear
         dispatch(clearPermissions());
       }
     };
 
-    //  chỉ fetch khi:
-    // - chưa load
-    // - HOẶC vừa login lại
+    // chỉ fetch khi chưa load
     if (!loaded) {
       fetchPermissions();
     }
@@ -71,16 +85,19 @@ export default function RootNavigator() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated]);
+  }, [dispatch, iosAuthenticated, isAuthenticated, loaded]);
 
+  // ===== LOADING STATE =====
   if (!authReady || isLoading) {
     return <IsLoading />;
   }
 
+  // ===== ANDROID =====
   if (Platform.OS === "android") {
     return isAuthenticated ? <AppNavigator /> : <AuthNavigator />;
   }
 
+  // ===== IOS =====
   if (Platform.OS === "ios") {
     if (!isAuthenticated) return <AuthNavigator />;
     if (!iosAuthenticated) return <AuthNavigator />;

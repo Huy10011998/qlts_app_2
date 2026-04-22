@@ -10,6 +10,7 @@ import {
   FlatList,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Ionicons from "react-native-vector-icons/Ionicons";
 import { PropsEnum } from "../../types/Components.d";
 import { useDebounce } from "../../hooks/useDebounce";
 import IsLoading from "../ui/IconLoading";
@@ -25,6 +26,7 @@ export default function EnumAndReferencePickerModal({
   visible,
   title,
   items,
+  selectedValue,
   onClose,
   onSelect,
   onLoadMore,
@@ -59,10 +61,14 @@ export default function EnumAndReferencePickerModal({
   /* ===== RENDER ITEM ===== */
   const renderItem = ({ item }: any) => {
     const isEmptyValue = item.value === "";
+    const isSelected =
+      selectedValue !== null &&
+      selectedValue !== undefined &&
+      String(item.value) === String(selectedValue);
 
     return (
       <TouchableOpacity
-        style={styles.modalItem}
+        style={[styles.modalItem, isSelected && styles.modalItemSelected]}
         activeOpacity={0.7}
         onPress={() => {
           onSelect(item.value);
@@ -70,10 +76,17 @@ export default function EnumAndReferencePickerModal({
         }}
       >
         <Text
-          style={[styles.modalItemText, isEmptyValue && styles.emptyItemText]}
+          style={[
+            styles.modalItemText,
+            isEmptyValue && styles.emptyItemText,
+            isSelected && styles.modalItemTextSelected,
+          ]}
         >
           {item.text}
         </Text>
+        {isSelected ? (
+          <Ionicons name="checkmark-circle" size={20} color="#16A34A" />
+        ) : null}
       </TouchableOpacity>
     );
   };
@@ -216,13 +229,28 @@ const styles = StyleSheet.create({
 
   modalItem: {
     paddingVertical: 14,
+    paddingHorizontal: 4,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: "#eee",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
 
   modalItemText: {
     fontSize: 15,
     color: "#000",
+    flex: 1,
+    paddingRight: 12,
+  },
+
+  modalItemSelected: {
+    backgroundColor: "#F0FDF4",
+  },
+
+  modalItemTextSelected: {
+    fontWeight: "700",
+    color: "#15803D",
   },
 
   modalCancel: {

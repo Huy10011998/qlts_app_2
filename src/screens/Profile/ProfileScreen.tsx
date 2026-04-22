@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, Image, ScrollView, Alert } from "react-native";
+import React, { useState, useEffect, useRef } from "react";
+import { View, Text, StyleSheet, Image, ScrollView } from "react-native";
 import IsLoading from "../../components/ui/IconLoading";
 import { API_ENDPOINTS } from "../../config/Index";
 import { User } from "../../types/Index";
 import { callApi } from "../../services/data/CallApi";
 import { error } from "../../utils/Logger";
-import { useAutoReload } from "../../hooks/useAutoReload";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 
 const ProfileScreen: React.FC = () => {
@@ -13,31 +12,36 @@ const ProfileScreen: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const { isMounted, showAlertIfActive } = useSafeAlert();
 
+  // FIX: thêm loadingRef chống double-call khi re-focus nhanh
+  const loadingRef = useRef(false);
+
   const fetchUserInfo = async () => {
-    setIsLoading(true);
+    if (loadingRef.current) return;
+    loadingRef.current = true;
+
+    // FIX: guard isMounted trước khi setIsLoading(true)
+    if (isMounted()) setIsLoading(true);
+
     try {
       const response = await callApi<{ success: boolean; data: User }>(
         "POST",
         API_ENDPOINTS.GET_INFO,
-        {}
+        {},
       );
-      setUser(response.data);
+      if (isMounted()) setUser(response.data);
     } catch (e) {
       error("API error:", e);
       showAlertIfActive("Lỗi", "Không thể tải hồ sơ cá nhân.");
     } finally {
-      if (isMounted()) {
-        setIsLoading(false);
-      }
+      loadingRef.current = false;
+      if (isMounted()) setIsLoading(false);
     }
   };
 
+  // Profile là dữ liệu tĩnh, không cần reload mỗi lần re-focus
   useEffect(() => {
     fetchUserInfo();
   }, []);
-
-  // AUTO RELOAD
-  useAutoReload(fetchUserInfo);
 
   const renderRow = (label: string, value?: string) => (
     <View style={styles.row}>

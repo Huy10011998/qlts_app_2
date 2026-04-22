@@ -23,7 +23,6 @@ import {
   FACE_ID_LOGIN_SERVICE,
 } from "../constants/AuthStorage";
 
-// CONTEXT
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({
@@ -34,41 +33,42 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [iosAuthenticated, setIosAuthenticated] = useState(false);
   const [logoutReason, setLogoutReason] = useState<LogoutReason | undefined>();
-  const isAuthenticated = !!token;
 
-  useEffect(() => {
-    log("[Auth] Token changed:", token);
-  }, [token]);
+  const isAuthenticated = !!token;
 
   const logout = useCallback(async (reason: LogoutReason = "OTHER") => {
     log("[Auth] Logout → hard reset");
     setLogoutReason(reason);
     setIsLoading(true);
+    setTokenState(null);
+    setIosAuthenticated(false);
+    hardResetApi();
+
     try {
-      hardResetApi();
-      await AsyncStorage.multiRemove([
-        "token",
-        "refreshToken",
-        FACE_ID_ENABLED_KEY,
-      ]);
-      await Promise.all([
-        Keychain.resetGenericPassword({ service: AUTH_LOGIN_SERVICE }),
-        Keychain.resetGenericPassword({ service: FACE_ID_LOGIN_SERVICE }),
-      ]);
+      await AsyncStorage.multiRemove(["token", "refreshToken"]);
+
+      if (reason !== "EXPIRED") {
+        await AsyncStorage.removeItem(FACE_ID_ENABLED_KEY);
+        await Promise.all([
+          Keychain.resetGenericPassword({ service: AUTH_LOGIN_SERVICE }),
+          Keychain.resetGenericPassword({ service: FACE_ID_LOGIN_SERVICE }),
+        ]);
+      }
+    } catch (e) {
+      error("[Auth] Logout cleanup failed", e);
     } finally {
-      setTokenState(null);
-      setIosAuthenticated(false);
       setIsLoading(false);
       resetAuthState();
     }
-  }, []); // Empty deps vì không phụ thuộc vào state nào
+  }, []);
 
   // TOKEN HANDLERS
   const setToken = async (value: string | null) => {
     try {
       if (value) {
         await AsyncStorage.setItem("token", value);
-        setTokenInApi(value); // sync API
+        setTokenInApi(value);
+        setLogoutReason(undefined);
         log("[Auth] Save access token");
       } else {
         await AsyncStorage.removeItem("token");
@@ -85,7 +85,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     try {
       if (value) {
         await AsyncStorage.setItem("refreshToken", value);
-        setRefreshInApi(value); // sync API
+        setRefreshInApi(value);
         log("[Auth] Save refresh token");
       } else {
         await AsyncStorage.removeItem("refreshToken");
@@ -102,11 +102,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   // BOOTSTRAP APP
-
-  // BOOTSTRAP APP
   useEffect(() => {
     const bootstrapAuth = async () => {
       try {
+        // FIX: load cả 2 token song song
         const [storedToken, storedRefresh] = await Promise.all([
           AsyncStorage.getItem("token"),
           AsyncStorage.getItem("refreshToken"),
@@ -129,7 +128,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     };
 
     bootstrapAuth();
-  }, [logout]); // Thêm logout
+  }, [logout]);
 
   // API → LOGOUT HANDLER
   useEffect(() => {
@@ -137,14 +136,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       await logout(reason);
     });
     return () => setOnAuthLogout(null);
-  }, [logout]); // Thêm logout
+  }, [logout]);
 
   return (
     <AuthContext.Provider
       value={{
         token,
         isAuthenticated,
-        authReady, // expose
+        authReady,
         isLoading,
         iosAuthenticated,
         setIosAuthenticated,
@@ -159,8 +158,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     </AuthContext.Provider>
   );
 };
-
-// HOOK
 
 export const useAuth = () => {
   const context = useContext(AuthContext);

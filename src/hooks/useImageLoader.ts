@@ -34,7 +34,7 @@ export const useImageLoader = ({
 
           prevImageValues.current[f.name] = newVal;
         }
-      }
+      },
     );
   }, [formData]);
 };

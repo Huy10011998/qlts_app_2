@@ -5,10 +5,12 @@ import {
   AlertOptions,
 } from "react-native";
 import { useIsFocused } from "@react-navigation/native";
+import { useAuth } from "../context/AuthContext";
 
 export const useSafeAlert = () => {
   const isFocused = useIsFocused();
   const isMountedRef = useRef(true);
+  const { logoutReason } = useAuth();
 
   useEffect(() => {
     return () => {
@@ -19,8 +21,11 @@ export const useSafeAlert = () => {
   const isMounted = useCallback(() => isMountedRef.current, []);
 
   const isActive = useCallback(
-    () => isMountedRef.current && isFocused,
-    [isFocused],
+    () =>
+      isMountedRef.current &&
+      isFocused &&
+      logoutReason !== "EXPIRED",
+    [isFocused, logoutReason],
   );
 
   const showAlertIfActive = useCallback(
@@ -30,10 +35,16 @@ export const useSafeAlert = () => {
       buttons?: AlertButton[],
       options?: AlertOptions,
     ) => {
-      if (!isMountedRef.current || !isFocused) return;
+      if (
+        !isMountedRef.current ||
+        !isFocused ||
+        logoutReason === "EXPIRED"
+      ) {
+        return;
+      }
       Alert.alert(title, message, buttons, options);
     },
-    [isFocused],
+    [isFocused, logoutReason],
   );
 
   return {

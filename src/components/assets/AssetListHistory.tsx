@@ -14,6 +14,7 @@ import { useNavigation } from "@react-navigation/native";
 import { error } from "../../utils/Logger";
 import { useAutoReload } from "../../hooks/useAutoReload";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
+import { isAuthExpiredError } from "../../services/data/CallApi";
 
 export default function AssetListHistory() {
   const [lichsu, setLichsu] = useState<Record<string, any>[]>([]);
@@ -91,7 +92,9 @@ export default function AssetListHistory() {
         setTotal(totalItems);
       } catch (e) {
         error(e);
-        showAlertIfActive("Lỗi", "Không thể tải dữ liệu.");
+        if (!isAuthExpiredError(e)) {
+          showAlertIfActive("Lỗi", "Không thể tải dữ liệu.");
+        }
         if (!isLoadMore) setLichsu([]);
       } finally {
         if (isMounted()) {

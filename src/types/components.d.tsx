@@ -254,6 +254,7 @@ export interface PropsEnum {
   visible: boolean;
   title: string;
   items: EnumItem[];
+  selectedValue?: any;
   onClose: () => void;
   onSelect: (value: any) => void;
   onSearch?: (keyword: string) => void;
@@ -356,5 +357,9 @@ export interface CameraCellProps {
   onPress: (cam: any, idx: number) => void;
   onDoubleTap: (cam: any, idx: number) => void;
   webviewRefRegister?: React.MutableRefObject<Record<string, any>>;
+  pongTimeoutRef?: React.MutableRefObject<
+    Record<string, ReturnType<typeof setTimeout>>
+  >;
+  webviewRestartRef?: React.MutableRefObject<(cameraId: string | number) => void>;
   onTokenExpired?: () => void;
 }

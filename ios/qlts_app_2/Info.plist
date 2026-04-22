@@ -35,29 +35,35 @@
 	<true/>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-  	<key>NSAllowsArbitraryLoads</key>
-  	<true/>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
 		<key>NSExceptionDomains</key>
-    <dict>
-        <key>api.cholimexfood.com.vn</key>
-        <dict>
-            <key>NSIncludesSubdomains</key>
-            <true/>
-            <key>NSExceptionAllowsInsecureHTTPLoads</key>
-            <true/>
-            <key>NSExceptionRequiresForwardSecrecy</key>
-            <false/>
-        </dict>
-    </dict>
-  	<key>NSAllowsLocalNetworking</key>
-  	<true/>
+		<dict>
+			<key>api.cholimexfood.com.vn</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSExceptionRequiresForwardSecrecy</key>
+				<false/>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+			</dict>
+		</dict>
 	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>Ứng dụng cần dùng camera để quét QR code</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Ứng dụng cần sử dụng Face ID để đăng nhập nhanh.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Ứng dụng cần truy cập thư viện ảnh để chọn và tải ảnh lên khi làm việc.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Ứng dụng cần quyền lưu ảnh vào thư viện khi bạn thực hiện tải hoặc chụp ảnh.</string>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>Ứng dụng cần quyền truy cập thư viện media theo cấu hình quyền của hệ thống.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string></string>
+	<string>Ứng dụng cần sử dụng vị trí khi đang mở để hỗ trợ các chức năng liên quan đến địa điểm.</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UIAppFonts</key>

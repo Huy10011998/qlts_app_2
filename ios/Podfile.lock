@@ -60,8 +60,16 @@ PODS:
     - GoogleUtilities/Logger
     - GoogleUtilities/Privacy
   - hermes-engine (0.81.1):
-    - hermes-engine/Pre-built (= 0.81.1)
-  - hermes-engine/Pre-built (0.81.1)
+    - hermes-engine/cdp (= 0.81.1)
+    - hermes-engine/Hermes (= 0.81.1)
+    - hermes-engine/inspector (= 0.81.1)
+    - hermes-engine/inspector_chrome (= 0.81.1)
+    - hermes-engine/Public (= 0.81.1)
+  - hermes-engine/cdp (0.81.1)
+  - hermes-engine/Hermes (0.81.1)
+  - hermes-engine/inspector (0.81.1)
+  - hermes-engine/inspector_chrome (0.81.1)
+  - hermes-engine/Public (0.81.1)
   - nanopb (3.30910.0):
     - nanopb/decode (= 3.30910.0)
     - nanopb/encode (= 3.30910.0)
@@ -3285,7 +3293,7 @@ SPEC CHECKSUMS:
   glog: 5683914934d5b6e4240e497e0f4a3b42d1854183
   GoogleDataTransport: aae35b7ea0c09004c3797d53c8c41f66f219d6a7
   GoogleUtilities: 00c88b9a86066ef77f0da2fab05f65d7768ed8e1
-  hermes-engine: 4f8246b1f6d79f625e0d99472d1f3a71da4d28ca
+  hermes-engine: c1c0a56fe542595215c1bff70c34b46a7525f51f
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
   RCT-Folly: 59ec0ac1f2f39672a0c6e6cecdd39383b764646f
@@ -3377,6 +3385,6 @@ SPEC CHECKSUMS:
   VisionCamera: 3ea10c46a5c612f5f89fb46a54bef4a0de8b58a7
   Yoga: f95f7e60346fa6828def95fbe5017346ccc8940e
 
-PODFILE CHECKSUM: 78a96d6d106c462df4a83b68e429b13da4bc7ca5
+PODFILE CHECKSUM: 3d86b820f3db3311ca6fbe8705cb9cdf88b4c567
 
 COCOAPODS: 1.16.2

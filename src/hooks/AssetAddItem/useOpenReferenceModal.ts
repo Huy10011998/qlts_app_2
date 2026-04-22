@@ -32,6 +32,10 @@ export const useOpenReferenceModal = ({
       const params = {
         pageSize,
         skipSize: 0,
+        currentIds:
+          formData[f.name] != null && formData[f.name] !== ""
+            ? [formData[f.name]]
+            : [],
       };
 
       // ⭐ CHECK CASCADE TRƯỚC

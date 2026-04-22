@@ -32,7 +32,12 @@ import Orientation from "react-native-orientation-locker";
 
 const GO2RTC_HOST = "https://api.cholimexfood.com.vn/camera-stream";
 
-// ── Fullscreen HTML cho iOS (giữ nguyên logic cũ) ──
+// Ngưỡng: nếu token còn hơn 2 phút thì không fetch lại
+const TOKEN_REFRESH_THRESHOLD_MS = 2 * 60 * 1000;
+
+// ── Fullscreen HTML cho iOS ──
+// FIX: Bỏ visibilitychange listener — không tự stopAll() khi kéo tác vụ
+// Chỉ nhận lệnh stop/start từ RN (AppState), tránh ngắt stream khi inactive
 const buildFullscreenHTML = (src: string) => `<!DOCTYPE html>
 <html><head>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
@@ -176,27 +181,34 @@ async function connect(){
     connecting=false;resetFrozenWatchdog();
   }catch(e){connecting=false;if(!stopped)scheduleReconnect();}
 }
+let rafPending=false;
 v.addEventListener('timeupdate',()=>{
-  if(v.currentTime!==lastTime){
-    lastTime=v.currentTime;
-    if(v.currentTime>0){notifyReady();backoffMs=1000;}
-    resetFrozenWatchdog();
-  }
+  if(rafPending)return;rafPending=true;
+  requestAnimationFrame(()=>{
+    rafPending=false;
+    if(v.currentTime!==lastTime){
+      lastTime=v.currentTime;
+      if(v.currentTime>0){notifyReady();backoffMs=1000;}
+      resetFrozenWatchdog();
+    }
+  });
 });
 setTimeout(notifyReady,6000);
-document.addEventListener('visibilitychange',()=>{
-  if(document.hidden){stopAll();}
-  else{stopped=false;backoffMs=1000;connect();}
-});
+// FIX: Bỏ visibilitychange — không tự stop khi kéo tác vụ (inactive)
+// Chỉ xử lý mất mạng thật sự
 window.addEventListener('offline',()=>{stopAll();});
-window.addEventListener('online',()=>{stopped=false;backoffMs=1000;connect();});
+window.addEventListener('online',()=>{if(!stopped){stopped=false;backoffMs=1000;connect();}});
 function handleMsg(d){
   try{
     const m=typeof d==='string'?JSON.parse(d):d;
     if(m.type==='token'){TOKEN=m.value;stopped=false;backoffMs=1000;connect();return;}
   }catch(e){}
   if(d==='stop'){stopAll();}
-  else if(d==='start'){stopped=false;backoffMs=1000;if(TOKEN)connect();}
+  else if(d==='start'){
+    const wasStopped=stopped;
+    stopped=false;backoffMs=1000;
+    if(TOKEN&&wasStopped){connect();}
+  }
   else if(d==='ping'){window.ReactNativeWebView&&window.ReactNativeWebView.postMessage('pong');}
 }
 window.addEventListener('message',function(e){handleMsg(e.data);});
@@ -212,6 +224,14 @@ const decodeTokenExpiry = (token: string): number | null => {
   } catch {
     return null;
   }
+};
+
+// ── Kiểm tra token còn hạn đủ dùng không ──
+const isTokenStillValid = (token: string): boolean => {
+  if (!token) return false;
+  const exp = decodeTokenExpiry(token);
+  if (!exp) return false;
+  return exp - Date.now() > TOKEN_REFRESH_THRESHOLD_MS;
 };
 
 const CameraList: React.FC = () => {
@@ -244,6 +264,12 @@ const CameraList: React.FC = () => {
     typeof setTimeout
   > | null>(null);
 
+  // Ref luôn giữ token mới nhất, tránh stale closure
+  const cameraTokenRef = React.useRef<string>("");
+  React.useEffect(() => {
+    cameraTokenRef.current = cameraToken;
+  }, [cameraToken]);
+
   // Android stall detection
   const lastProgressRef = React.useRef<number>(Date.now());
   const androidWatchdogRef = React.useRef<ReturnType<
@@ -266,7 +292,7 @@ const CameraList: React.FC = () => {
     androidWatchdogRef.current = null;
   }, []);
 
-  // Proactive token refresh
+  // Proactive token refresh — lên lịch refresh trước khi token hết hạn 60s
   const scheduleProactiveRefresh = React.useCallback((token: string) => {
     if (tokenRefreshTimerRef.current)
       clearTimeout(tokenRefreshTimerRef.current);
@@ -275,37 +301,50 @@ const CameraList: React.FC = () => {
       const delay = exp - Date.now() - 60000;
       if (delay > 0) {
         tokenRefreshTimerRef.current = setTimeout(() => {
-          fetchCameraTokenRef.current?.();
+          fetchCameraTokenRef.current?.(false);
         }, delay);
       }
     }
   }, []);
 
-  const fetchCameraToken = React.useCallback(async () => {
-    try {
-      const res: any = await getTokenViewCamera();
-      if (res?.data) {
-        const newToken = res.data;
-        setCameraToken(newToken);
-        setThumbTimestamp(Date.now());
-        scheduleProactiveRefresh(newToken);
-        if (fullscreenWebViewRef.current?.postMessage) {
-          fullscreenWebViewRef.current.postMessage(
-            JSON.stringify({ type: "token", value: newToken }),
-          );
-        }
+  /**
+   * fetchCameraToken:
+   * - force = false: kiểm tra token còn hạn → bỏ qua nếu còn dùng được
+   *   → thumbnail KHÔNG reload khi chuyển app ngắn / kéo tác vụ
+   * - force = true: bỏ qua kiểm tra (token_expired / AppRefetch)
+   */
+  const fetchCameraToken = React.useCallback(
+    async (force = false) => {
+      if (!force && isTokenStillValid(cameraTokenRef.current)) {
+        scheduleProactiveRefresh(cameraTokenRef.current);
+        return;
       }
-    } catch (err) {
-      console.warn("getTokenViewCamera error:", err);
-    }
-  }, [scheduleProactiveRefresh]);
+      try {
+        const res: any = await getTokenViewCamera();
+        if (res?.data) {
+          const newToken = res.data;
+          setCameraToken(newToken);
+          setThumbTimestamp(Date.now());
+          scheduleProactiveRefresh(newToken);
+          if (fullscreenWebViewRef.current?.postMessage) {
+            fullscreenWebViewRef.current.postMessage(
+              JSON.stringify({ type: "token", value: newToken }),
+            );
+          }
+        }
+      } catch (err) {
+        console.warn("getTokenViewCamera error:", err);
+      }
+    },
+    [scheduleProactiveRefresh],
+  );
 
   const fetchCameraTokenRef = React.useRef(fetchCameraToken);
   React.useEffect(() => {
     fetchCameraTokenRef.current = fetchCameraToken;
   }, [fetchCameraToken]);
 
-  // ── Orientation Listener (giống CameraListGrid) ──
+  // Orientation listener
   React.useEffect(() => {
     const handler = (orientation: string) => {
       setIsLandscape(
@@ -321,28 +360,42 @@ const CameraList: React.FC = () => {
       if (isFirstFocusRef.current) {
         isFirstFocusRef.current = false;
         setCameraToken("");
+        cameraTokenRef.current = "";
         setThumbTimestamp(0);
       }
-      fetchCameraToken();
+      fetchCameraTokenRef.current?.(false);
       return () => {
         if (tokenRefreshTimerRef.current)
           clearTimeout(tokenRefreshTimerRef.current);
       };
-    }, [fetchCameraToken]),
+    }, []),
   );
 
+  // AppRefetch bus
   React.useEffect(() => {
-    const unsub = subscribeAppRefetch(() => fetchCameraTokenRef.current?.());
+    const unsub = subscribeAppRefetch(() =>
+      fetchCameraTokenRef.current?.(true),
+    );
     return () => unsub();
   }, []);
 
+  // FIX: AppState — chỉ stop khi background thật sự, bỏ qua inactive
+  // inactive = kéo thanh tác vụ, notification → không cần ngắt stream
+  // background = chuyển sang app khác thật sự → mới stop
   React.useEffect(() => {
     const sub = AppState.addEventListener("change", (state) => {
-      if (fullscreenWebViewRef.current?.postMessage) {
-        fullscreenWebViewRef.current.postMessage(
-          state === "active" ? "start" : "stop",
-        );
+      if (state === "active") {
+        fetchCameraTokenRef.current?.(false);
+        if (fullscreenWebViewRef.current?.postMessage) {
+          fullscreenWebViewRef.current.postMessage("start");
+        }
+      } else if (state === "background") {
+        // Chỉ stop khi vào background thật sự
+        if (fullscreenWebViewRef.current?.postMessage) {
+          fullscreenWebViewRef.current.postMessage("stop");
+        }
       }
+      // "inactive" → bỏ qua, giữ stream sống khi kéo tác vụ
     });
     return () => sub.remove();
   }, []);
@@ -358,7 +411,6 @@ const CameraList: React.FC = () => {
     };
   }, [clearAndroidTimers]);
 
-  // Screen width update
   React.useEffect(() => {
     const sub = Dimensions.addEventListener("change", ({ window }) => {
       setScreenWidth(window.width);
@@ -428,10 +480,7 @@ const CameraList: React.FC = () => {
       setVideoReady(false);
       setAndroidVideoKey(0);
       setFullscreenCamera(item);
-
-      // Mở fullscreen portrait, không xoay — chờ user bấm nút xoay
       Orientation.unlockAllOrientations();
-
       if (Platform.OS === "android") startAndroidFallback();
     },
     [startAndroidFallback, thumbTimestamp],
@@ -619,7 +668,7 @@ const CameraList: React.FC = () => {
         </TouchableWithoutFeedback>
       </Modal>
 
-      {/* Fullscreen Modal - ĐÃ CHỈNH GIỐNG CAMERA LIST GRID */}
+      {/* Fullscreen Modal */}
       <Modal
         visible={fullscreenCamera !== null}
         animationType="fade"
@@ -643,11 +692,9 @@ const CameraList: React.FC = () => {
             >
               <Ionicons name="chevron-down" size={26} color="#fff" />
             </TouchableOpacity>
-
             <Text style={styles.fsTitle} numberOfLines={1}>
               {fullscreenCamera?.iD_Camera_MoTa ?? "Camera"}
             </Text>
-
             <TouchableOpacity
               style={styles.fsHeaderBtn}
               onPress={() => setIsFullMuted((v) => !v)}
@@ -660,7 +707,6 @@ const CameraList: React.FC = () => {
                 color="#fff"
               />
             </TouchableOpacity>
-
             <TouchableOpacity
               style={styles.fsHeaderBtn}
               onPress={toggleOrientation}
@@ -753,7 +799,7 @@ const CameraList: React.FC = () => {
                       const data = e.nativeEvent.data;
                       if (data === "ready") setVideoReady(true);
                       else if (data === "token_expired")
-                        fetchCameraTokenRef.current?.();
+                        fetchCameraTokenRef.current?.(true);
                     }}
                   />
                 )}
@@ -837,7 +883,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "#000",
   },
-
   pagination: {
     flexDirection: "row",
     justifyContent: "center",
@@ -863,7 +908,6 @@ const styles = StyleSheet.create({
     minWidth: 60,
     textAlign: "center",
   },
-
   modalOverlay: {
     flex: 1,
     justifyContent: "flex-end",
@@ -903,8 +947,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   closeText: { fontSize: 16, fontWeight: "600", color: "#333" },
-
-  // Fullscreen styles - Giống CameraListGrid
   fullscreenContainer: { flex: 1, backgroundColor: "#000" },
   fsHeader: {
     flexDirection: "row",

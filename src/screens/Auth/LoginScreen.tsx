@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useCallback, useEffect, useState, useRef } from "react";
 import {
   Alert,
   Image,
@@ -12,7 +12,6 @@ import {
   View,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
-import ReactNativeBiometrics from "react-native-biometrics";
 import * as Keychain from "react-native-keychain";
 import { useAuth } from "../../context/AuthContext";
 import { loginApi } from "../../services/auth/AuthApi";
@@ -21,8 +20,10 @@ import { getPermission } from "../../services/Index";
 import { setPermissions } from "../../store/PermissionSlice";
 import {
   hardResetApi,
+  refreshTokenFlow,
   setRefreshInApi,
   setTokenInApi,
+  shouldRefreshAccessToken,
 } from "../../services/data/CallApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAppDispatch } from "../../store/Hooks";
@@ -32,8 +33,16 @@ import {
   FACE_ID_LOGIN_SERVICE,
 } from "../../constants/AuthStorage";
 
+const FACE_ID_REFRESH_LEEWAY_MS = 60 * 1000;
+
 export default function LoginScreen() {
-  const { setToken, setRefreshToken, setIosAuthenticated } = useAuth();
+  const {
+    logout,
+    logoutReason,
+    setToken,
+    setRefreshToken,
+    setIosAuthenticated,
+  } = useAuth();
 
   const [userName, setUserName] = useState("");
   const [userPassword, setUserPassword] = useState("");
@@ -41,19 +50,90 @@ export default function LoginScreen() {
   const [isLoginDisabled, setIsLoginDisabled] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
-  const rnBiometrics = useRef(new ReactNativeBiometrics()).current;
+  const [isTokenReady, setIsTokenReady] = useState(false);
+  const [isFaceIdEnabled, setIsFaceIdEnabled] = useState(false);
 
+  const isFaceIDRunning = useRef(false);
   const dispatch = useAppDispatch();
 
-  // Enable / Disable Login button
   useEffect(() => {
     setIsLoginDisabled(!(userName.trim() && userPassword.trim()));
   }, [userName, userPassword]);
 
-  // Reset trạng thái loading khi quay lại màn Login
+  // PREP TOKEN + SYNC KEYCHAIN
+  const prepareTokenForFaceID = useCallback(async () => {
+    try {
+      const enabled = await AsyncStorage.getItem(FACE_ID_ENABLED_KEY);
+
+      if (enabled !== "1") {
+        await Keychain.resetGenericPassword({
+          service: FACE_ID_LOGIN_SERVICE,
+        });
+        setIsFaceIdEnabled(false);
+        setIsTokenReady(true);
+        return;
+      }
+
+      setIsFaceIdEnabled(true);
+
+      const [storedAccessToken, storedRefreshToken] = await Promise.all([
+        AsyncStorage.getItem("token"),
+        AsyncStorage.getItem("refreshToken"),
+      ]);
+
+      if (!storedAccessToken || !storedRefreshToken) {
+        setIsTokenReady(true);
+        return;
+      }
+
+      if (logoutReason === "EXPIRED") {
+        setIsTokenReady(true);
+        return;
+      }
+
+      setRefreshInApi(storedRefreshToken);
+
+      const needsRefresh = shouldRefreshAccessToken(
+        storedAccessToken,
+        FACE_ID_REFRESH_LEEWAY_MS,
+      );
+
+      if (needsRefresh) {
+        setIsLoading(true);
+        try {
+          const refreshed = await refreshTokenFlow();
+          await setToken(refreshed);
+          setTokenInApi(refreshed);
+        } catch (err: any) {
+          const needLogin =
+            err?.NEED_LOGIN ||
+            err?.response?.status === 401 ||
+            err?.response?.status === 403;
+
+          if (needLogin) {
+            await logout("EXPIRED");
+            return;
+          }
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        setTokenInApi(storedAccessToken);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setIsTokenReady(true);
+    }
+  }, [logout, logoutReason, setToken]);
+
   useEffect(() => {
-    setIsLoading(false);
-  }, []);
+    if (Platform.OS === "ios") {
+      prepareTokenForFaceID();
+    } else {
+      setIsTokenReady(true);
+    }
+  }, [prepareTokenForFaceID]);
 
   // LOGIN THƯỜNG
   const handlePressLogin = async () => {
@@ -63,7 +143,7 @@ export default function LoginScreen() {
     setIsLoading(true);
 
     try {
-      hardResetApi(); // reset CallApi state before login
+      hardResetApi();
       const res = await loginApi(userName, userPassword);
 
       if (res?.data?.accessToken) {
@@ -73,13 +153,11 @@ export default function LoginScreen() {
         setTokenInApi(res.data.accessToken);
         setRefreshInApi(res.data.refreshToken ?? null);
 
-        // Lưu thông tin đăng nhập để có thể bật FaceID từ màn Cài đặt.
         await Keychain.setGenericPassword(userName, userPassword, {
           service: AUTH_LOGIN_SERVICE,
           accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
         });
 
-        // Lấy quyền
         const permissionRes = await getPermission();
         dispatch(setPermissions(permissionRes.data));
 
@@ -97,44 +175,44 @@ export default function LoginScreen() {
           message || "Sai tài khoản hoặc mật khẩu.",
         );
       } else if (!err.response) {
-        Alert.alert(
-          "Lỗi kết nối",
-          "Không thể kết nối đến máy chủ. Vui lòng kiểm tra mạng.",
-        );
+        Alert.alert("Lỗi kết nối", "Không thể kết nối đến máy chủ.");
       } else {
-        Alert.alert("Lỗi", "Có lỗi xảy ra. Vui lòng thử lại.");
+        Alert.alert("Lỗi", "Có lỗi xảy ra.");
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const isFaceIDRunning = useRef(false);
+  // HANDLE PRESS FACEID (có giải thích)
+  const handleFaceIDPress = async () => {
+    if (isLoading) return;
 
-  // LOGIN BẰNG FACEID (chỉ dùng Keychain prompt)
+    if (!isTokenReady) {
+      Alert.alert(
+        "Đang chuẩn bị",
+        "Ứng dụng đang chuẩn bị FaceID. Vui lòng đợi.",
+      );
+      return;
+    }
+
+    if (!isFaceIdEnabled) {
+      Alert.alert(
+        "FaceID chưa bật",
+        "Bạn cần đăng nhập và bật FaceID trong Cài đặt.",
+      );
+      return;
+    }
+
+    handleFaceIDLogin();
+  };
+
+  // LOGIN FACEID
   const handleFaceIDLogin = async () => {
     if (isFaceIDRunning.current) return;
     isFaceIDRunning.current = true;
 
     try {
-      // Check sensor (không trigger prompt)
-      const { available } = await rnBiometrics.isSensorAvailable();
-      if (!available) {
-        Alert.alert("FaceID", "Thiết bị không hỗ trợ FaceID.");
-        return;
-      }
-
-      // Check user có bật FaceID trong Settings chưa
-      const enabled = await AsyncStorage.getItem(FACE_ID_ENABLED_KEY);
-      if (enabled !== "1") {
-        Alert.alert(
-          "FaceID",
-          "Bạn chưa bật đăng nhập bằng FaceID trong Cài đặt. Vui lòng đăng nhập bằng tài khoản và mật khẩu, sau đó vào Cài đặt để bật tính năng này.",
-        );
-        return;
-      }
-
-      // Get credentials → iOS sẽ auto prompt FaceID
       const credentials = await Keychain.getGenericPassword({
         service: FACE_ID_LOGIN_SERVICE,
         authenticationPrompt: {
@@ -146,41 +224,19 @@ export default function LoginScreen() {
       });
 
       if (!credentials) {
-        Alert.alert("FaceID", "Không tìm thấy thông tin đăng nhập FaceID.");
+        Alert.alert("FaceID", "Không tìm thấy thông tin đăng nhập.");
         return;
       }
 
-      setIsLoading(true);
-
-      hardResetApi();
-
-      const response = await loginApi(
-        credentials.username,
-        credentials.password,
-      );
-
-      if (response?.data?.accessToken) {
-        await setToken(response.data.accessToken);
-        await setRefreshToken(response.data.refreshToken ?? null);
-
-        setTokenInApi(response.data.accessToken);
-        setRefreshInApi(response.data.refreshToken ?? null);
-
-        const permissionRes = await getPermission();
-        dispatch(setPermissions(permissionRes.data));
-
-        setIosAuthenticated(true);
-      } else {
-        Alert.alert("Đăng nhập thất bại", "Sai tài khoản hoặc mật khẩu.");
-      }
+      setIosAuthenticated(true);
     } catch (err: any) {
-      // iOS: user cancel FaceID → err.code = -128
-      if (err?.code !== "-128") {
+      const code = err?.code;
+      const isCancelled = code === -128 || code === "-128";
+      if (!isCancelled) {
         Alert.alert("Lỗi", "Không thể đăng nhập bằng FaceID.");
       }
     } finally {
-      setIsLoading(false);
-      isFaceIDRunning.current = false; // luôn reset → bấm lần 2 OK
+      isFaceIDRunning.current = false;
     }
   };
 
@@ -199,7 +255,6 @@ export default function LoginScreen() {
             <TextInput
               style={styles.textInput}
               placeholder="Tài khoản"
-              placeholderTextColor="#888"
               value={userName}
               onChangeText={setUserName}
             />
@@ -210,13 +265,11 @@ export default function LoginScreen() {
               style={styles.textInput}
               secureTextEntry={!isPasswordVisible}
               placeholder="Mật khẩu"
-              placeholderTextColor="#888"
               value={userPassword}
               onChangeText={setUserPassword}
             />
 
             <TouchableOpacity
-              style={styles.iconEyeContainer}
               onPress={() => setIsPasswordVisible(!isPasswordVisible)}
             >
               <Image
@@ -240,20 +293,31 @@ export default function LoginScreen() {
             </TouchableOpacity>
 
             {Platform.OS === "ios" && (
-              <TouchableOpacity
-                style={styles.faceID}
-                onPress={handleFaceIDLogin}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <IsLoading size="large" color="#FF3333" />
-                ) : (
-                  <Image
-                    source={require("../../assets/images/faceid-icon2.png")}
-                    style={styles.faceIDIcon}
-                  />
+              <View style={{ alignItems: "center" }}>
+                <TouchableOpacity
+                  style={[
+                    styles.faceID,
+                    (!isTokenReady || !isFaceIdEnabled) && { opacity: 0.5 },
+                  ]}
+                  onPress={handleFaceIDPress}
+                >
+                  {isLoading ? (
+                    <IsLoading size="large" color="#FF3333" />
+                  ) : (
+                    <Image
+                      source={require("../../assets/images/faceid-icon2.png")}
+                      style={styles.faceIDIcon}
+                    />
+                  )}
+                </TouchableOpacity>
+
+                {/* Hint text */}
+                {(!isFaceIdEnabled || !isTokenReady) && (
+                  <Text style={styles.hint}>
+                    {!isFaceIdEnabled ? "Chưa bật FaceID" : "Đang chuẩn bị..."}
+                  </Text>
                 )}
-              </TouchableOpacity>
+              </View>
             )}
           </View>
         </View>
@@ -266,7 +330,6 @@ const styles = StyleSheet.create({
   top: { justifyContent: "center", alignItems: "center", width: "100%" },
   logo: { resizeMode: "contain", width: 300, height: 150 },
   bottom: { width: "100%", paddingHorizontal: 20 },
-
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -277,13 +340,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginBottom: 16,
     height: 50,
-    elevation: 2,
   },
-
   textInput: { flex: 1, fontSize: 15, color: "#333" },
-  iconEyeContainer: { padding: 6 },
   iconEye: { width: 22, height: 22 },
-
   btn: {
     flex: 1,
     height: 55,
@@ -293,10 +352,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 12,
   },
-
   disabledBtn: { backgroundColor: "#ccc" },
-  btnText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-
+  btnText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
   faceID: {
     width: 55,
     height: 55,
@@ -305,8 +362,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
   faceIDIcon: { width: 34, height: 34 },
-
   row: { flexDirection: "row", alignItems: "center", marginTop: 24 },
+  hint: { fontSize: 12, color: "#999", marginTop: 4, fontWeight: "bold" },
 });

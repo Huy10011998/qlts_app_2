@@ -144,6 +144,7 @@ export default function AssetAddRelatedItem() {
     fieldActive,
     getParentValue,
     setReferenceData,
+    setFormData,
     handleChange,
   });
 
@@ -175,7 +176,12 @@ export default function AssetAddRelatedItem() {
   );
 
   // ===== MODAL ITEMS ===== //
-  const modalItems = useModalItems(activeEnumField, referenceData, enumData);
+  const modalItems = useModalItems(
+    activeEnumField,
+    referenceData,
+    enumData,
+    formData,
+  );
   const { isMounted, showAlertIfActive } = useSafeAlert();
 
   // HANDLE CREATE
@@ -198,6 +204,10 @@ export default function AssetAddRelatedItem() {
       setIsSubmitting(true);
 
       const payloadData = { ...formData };
+
+      Object.keys(payloadData).forEach((key) => {
+        if (key.endsWith("_MoTa")) delete payloadData[key];
+      });
 
       // Format date
       fieldActive.forEach((f) => {
@@ -265,7 +275,6 @@ export default function AssetAddRelatedItem() {
               {!collapsed &&
                 fields.map((f) => {
                   if (f.isReadOnly) return null; // ẨN TOÀN BỘ FIELD
-
                   return (
                     <View key={f.id ?? f.name} style={styles.fieldBlock}>
                       <Text style={styles.label}>{f.moTa}</Text>
@@ -312,6 +321,7 @@ export default function AssetAddRelatedItem() {
         visible={modalVisible}
         title={`${activeEnumField?.moTa || activeEnumField?.name}`}
         items={modalItems}
+        selectedValue={activeEnumField ? formData[activeEnumField.name] : null}
         total={
           activeEnumField
             ? referenceData[activeEnumField.name]?.totalCount || 0
@@ -327,11 +337,17 @@ export default function AssetAddRelatedItem() {
         onClose={() => setModalVisible(false)}
         onSelect={(value) => {
           if (activeEnumField) {
+            const selectedItem = modalItems.find((item) => item.value == value);
             let finalValue = value;
             if (value !== "" && !isNaN(value)) {
               finalValue = Number(value);
             }
             handleChange(activeEnumField.name, finalValue);
+            setFormData((prev) => ({
+              ...prev,
+              [`${activeEnumField.name}_MoTa`]:
+                value === "" ? "" : selectedItem?.text ?? String(value),
+            }));
           }
           setModalVisible(false);
         }}
