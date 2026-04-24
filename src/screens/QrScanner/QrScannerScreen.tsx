@@ -29,8 +29,13 @@ import {
 } from "react-native-vision-camera";
 
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
-import { getFieldActive, getPropertyClass } from "../../services/Index";
+import {
+  getDetails,
+  getFieldActive,
+  getPropertyClass,
+} from "../../services/Index";
 import { error } from "../../utils/Logger";
+import { useSafeAlert } from "../../hooks/useSafeAlert";
 
 /* ========================================================= */
 export default function QrScannerScreen() {
@@ -58,8 +63,10 @@ export default function QrScannerScreen() {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [screenActive, setScreenActive] = useState(false);
   const [initTimeout, setInitTimeout] = useState(false);
+  const [isTorchOn, setIsTorchOn] = useState(false);
   const scannedRef = useRef(false);
   const initTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { showAlertIfActive } = useSafeAlert();
 
   const cameraActive = screenActive && appState === "active";
 
@@ -90,6 +97,7 @@ export default function QrScannerScreen() {
     useCallback(() => {
       scannedRef.current = false;
       setInitTimeout(false);
+      setIsTorchOn(false);
 
       const timeout = setTimeout(() => {
         setScreenActive(true);
@@ -144,14 +152,52 @@ export default function QrScannerScreen() {
       ReactNativeHapticFeedback.trigger("impactLight");
 
       const raw = codes[0]?.value ?? "";
-      const parts = raw.replace(/^\//, "").split("/").filter(Boolean);
+      const normalizedRaw = raw.trim();
+
+      const resumeScanner = () => {
+        scannedRef.current = false;
+        setScreenActive(true);
+        startScanLine();
+      };
+
+      if (!normalizedRaw) {
+        showAlertIfActive("Mã QR không hợp lệ", undefined, [
+          {
+            text: "OK",
+            onPress: resumeScanner,
+          },
+        ]);
+        return;
+      }
+
+      const parts = normalizedRaw.replace(/^\//, "").split("/").filter(Boolean);
 
       try {
         if (parts.length !== 2) throw new Error("INVALID_QR");
 
         const [nameClass, id] = parts;
-        const res = await getFieldActive(nameClass);
-        const resProp = await getPropertyClass(nameClass);
+        const detailRes = await getDetails(nameClass, id);
+        const itemData = detailRes?.data;
+
+        if (
+          !itemData ||
+          (typeof itemData === "object" &&
+            !Array.isArray(itemData) &&
+            Object.keys(itemData).length === 0)
+        ) {
+          showAlertIfActive("Mã QR không hợp lệ", undefined, [
+            {
+              text: "OK",
+              onPress: resumeScanner,
+            },
+          ]);
+          return;
+        }
+
+        const [res, resProp] = await Promise.all([
+          getFieldActive(nameClass),
+          getPropertyClass(nameClass),
+        ]);
 
         navigation.navigate("QrDetails", {
           id,
@@ -159,17 +205,14 @@ export default function QrScannerScreen() {
           nameClass,
           field: res?.data || [],
           propertyClass: resProp?.data,
+          itemData,
         });
       } catch (e) {
         error(e);
-        Alert.alert("QR không hợp lệ", raw, [
+        showAlertIfActive("QR không hợp lệ", undefined, [
           {
             text: "OK",
-            onPress: () => {
-              scannedRef.current = false;
-              setScreenActive(true);
-              startScanLine();
-            },
+            onPress: resumeScanner,
           },
         ]);
       }
@@ -260,6 +303,7 @@ export default function QrScannerScreen() {
         device={device}
         format={format}
         isActive={cameraActive}
+        torch={isTorchOn ? "on" : "off"}
         codeScanner={codeScanner}
         resizeMode="cover"
         enableZoomGesture
@@ -286,12 +330,13 @@ export default function QrScannerScreen() {
         <View style={styles.headerRight}>
           <TouchableOpacity
             hitSlop={10}
-            onPress={() => {
-              // TODO: implement torch toggle nếu cần
-              // device.setTorch(...)
-            }}
+            onPress={() => setIsTorchOn((prev) => !prev)}
           >
-            <Ionicons name="flash-outline" size={22} color="#fff" />
+            <Ionicons
+              name={isTorchOn ? "flash" : "flash-off"}
+              size={22}
+              color="#fff"
+            />
           </TouchableOpacity>
         </View>
       </View>

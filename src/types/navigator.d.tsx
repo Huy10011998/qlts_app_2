@@ -31,6 +31,7 @@ export type OptionalParams = {
   activeTab?: string;
   titleHeader?: string;
   propertyClass?: PropertyClass;
+  itemData?: Record<string, any>;
 };
 
 // =====================================================
@@ -44,6 +45,8 @@ export type ScanTabParamList = {
     titleHeader?: string;
     nameClass?: string;
     field?: AssetField;
+    propertyClass?: PropertyClass;
+    itemData?: Record<string, any>;
   };
 };
 

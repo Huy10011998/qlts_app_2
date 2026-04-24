@@ -930,6 +930,37 @@ const CameraListGrid: React.FC = () => {
   }, [cameraToken, isFocused, isPaused, pageChangeKey, focusKey]);
 
   React.useEffect(() => {
+    if (!isFocused) {
+      stopAllStreams();
+      return;
+    }
+
+    if (isPaused) {
+      stopAllStreams();
+      return;
+    }
+
+    if (!cameraToken) return;
+
+    const timer = setTimeout(() => {
+      if (!isFocusedRef.current || isPaused) return;
+      startAllStreams();
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [
+    cameraToken,
+    focusKey,
+    isFocused,
+    isPaused,
+    layoutCount,
+    page,
+    pageChangeKey,
+    startAllStreams,
+    stopAllStreams,
+  ]);
+
+  React.useEffect(() => {
     if (snapshotRefreshTimerRef.current) {
       clearInterval(snapshotRefreshTimerRef.current);
       snapshotRefreshTimerRef.current = null;
@@ -1319,7 +1350,7 @@ const CameraListGrid: React.FC = () => {
                   cellW={cellW}
                   cellH={cellH}
                   token={cameraToken}
-                  pageKey={page}
+                  pageKey={pageChangeKey}
                   snapshotTimestamp={
                     isAndroidSnapshot
                       ? gridSnapshotTimestamps[snapshotGroup]

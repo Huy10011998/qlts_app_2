@@ -40,7 +40,7 @@ const { width } = Dimensions.get("window");
 const MENU_WIDTH = width * 0.6;
 
 export default function QrDetails({ children }: QrDetailsProps) {
-  const { id, nameClass, field } = useParams();
+  const { id, nameClass, field, itemData } = useParams();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
@@ -148,20 +148,29 @@ export default function QrDetails({ children }: QrDetailsProps) {
   };
 
   const fetchDetails = useCallback(async () => {
+    // Guard đầu — sau dòng này TypeScript biết id và nameClass là string
+    if (!id || !nameClass) {
+      setIsLoading(false);
+      return;
+    }
+
+    if (itemData) {
+      setItem(itemData);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     try {
-      if (!id || !nameClass) throw new Error("Thiếu ID hoặc nameClass");
-      const response = await getDetails(nameClass, id);
+      const response = await getDetails(nameClass, id); // ✅ không lỗi
       setItem(response.data);
     } catch (e) {
       error(e);
       showAlertIfActive("Lỗi", `Không thể tải chi tiết ${nameClass}`);
     } finally {
-      if (isMounted()) {
-        setIsLoading(false);
-      }
+      if (isMounted()) setIsLoading(false);
     }
-  }, [id, nameClass]);
+  }, [id, nameClass, itemData]);
 
   useFocusEffect(
     useCallback(() => {
