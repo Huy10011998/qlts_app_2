@@ -239,6 +239,7 @@ function resetZoom(){scale=1;tx=0;ty=0;applyTransform(1,0,0);}
 
 let touches=[],pinchStartDist=0,pinchStartScale=1;
 let panStartX=0,panStartY=0,lastTapTime=0;
+let swipeStartX=0,swipeStartY=0,swipeLastX=0,swipeLastY=0,swipeTracking=false,didPinch=false;
 function dist(a,b){return Math.hypot(b.clientX-a.clientX,b.clientY-a.clientY);}
 function mid(a,b){return{x:(a.clientX+b.clientX)/2,y:(a.clientY+b.clientY)/2};}
 
@@ -248,15 +249,21 @@ container.addEventListener('touchstart',e=>{
     const now=Date.now();
     if(now-lastTapTime<300)resetZoom();
     lastTapTime=now;
+    swipeStartX=touches[0].clientX;swipeStartY=touches[0].clientY;
+    swipeLastX=swipeStartX;swipeLastY=swipeStartY;swipeTracking=true;didPinch=false;
     panStartX=touches[0].clientX-tx;panStartY=touches[0].clientY-ty;
   }
   if(touches.length===2){
+    swipeTracking=false;didPinch=true;
     pinchStartDist=dist(touches[0],touches[1]);pinchStartScale=scale;lastTx=tx;lastTy=ty;
   }
 },{passive:false});
 
 container.addEventListener('touchmove',e=>{
   e.preventDefault();touches=[...e.touches];
+  if(touches.length===1){
+    swipeLastX=touches[0].clientX;swipeLastY=touches[0].clientY;
+  }
   if(touches.length===1&&scale>1){
     tx=touches[0].clientX-panStartX;ty=touches[0].clientY-panStartY;
     [tx,ty]=clampTrans(scale,tx,ty);applyTransform(scale,tx,ty);
@@ -273,9 +280,21 @@ container.addEventListener('touchmove',e=>{
 },{passive:false});
 
 container.addEventListener('touchend',e=>{
+  if(e.changedTouches&&e.changedTouches.length){
+    swipeLastX=e.changedTouches[0].clientX;swipeLastY=e.changedTouches[0].clientY;
+  }
   touches=[...e.touches];
   if(touches.length===1){panStartX=touches[0].clientX-tx;panStartY=touches[0].clientY-ty;lastTx=tx;lastTy=ty;}
-  if(touches.length===0&&scale<1.05)resetZoom();
+  if(touches.length===0){
+    if(swipeTracking&&!didPinch&&scale<=1.05){
+      const dx=swipeLastX-swipeStartX,dy=swipeLastY-swipeStartY;
+      if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.35){
+        window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(dx<0?'swipe_next':'swipe_prev');
+      }
+    }
+    swipeTracking=false;
+    if(scale<1.05)resetZoom();
+  }
 },{passive:false});
 
 let pc=null,reconnectTimer=null,frozenTimer=null;
@@ -664,6 +683,8 @@ const CameraListGrid: React.FC = () => {
   );
   const [pageChangeKey, setPageChangeKey] = React.useState(0);
   const [focusKey, setFocusKey] = React.useState(0);
+  const [isSwitchingFullscreen, setIsSwitchingFullscreen] =
+    React.useState(false);
 
   const webviewRefs = React.useRef<Record<string, any>>({});
   const fullscreenWebViewRef = React.useRef<any>(null);
@@ -703,8 +724,12 @@ const CameraListGrid: React.FC = () => {
   const pagedCamerasRef = React.useRef<any[]>([]);
   const [screenDims, setScreenDims] = React.useState(Dimensions.get("window"));
   const translateX = React.useRef(new Animated.Value(0)).current;
+  const fsTranslateX = React.useRef(new Animated.Value(0)).current;
+  const fsSwitchOpacity = React.useRef(new Animated.Value(0)).current;
   const pageRef = React.useRef(0);
   const totalPagesRef = React.useRef(0);
+  const [gridRenderKey, setGridRenderKey] = React.useState(0);
+  const fullscreenCamRef = React.useRef<any>(null);
 
   const SW = screenDims.width;
   const [cols, rows] = LAYOUT_OPTIONS[layoutCount] ?? [4, 4];
@@ -716,6 +741,9 @@ const CameraListGrid: React.FC = () => {
   const totalPages = Math.ceil(cameras.length / perPage);
   const pagedCameras = cameras.slice(page * perPage, (page + 1) * perPage);
   pagedCamerasRef.current = pagedCameras;
+  const fullscreenIndex = fullscreenCam
+    ? cameras.findIndex((cam: any) => cam.iD_Camera === fullscreenCam.iD_Camera)
+    : -1;
 
   const displayThumbUrl =
     pendingThumbUrl ??
@@ -732,6 +760,10 @@ const CameraListGrid: React.FC = () => {
   React.useEffect(() => {
     isFocusedRef.current = isFocused;
   }, [isFocused]);
+
+  React.useEffect(() => {
+    fullscreenCamRef.current = fullscreenCam;
+  }, [fullscreenCam]);
 
   React.useEffect(() => {
     const sub = Dimensions.addEventListener("change", ({ window }) =>
@@ -918,6 +950,11 @@ const CameraListGrid: React.FC = () => {
   React.useEffect(() => {
     if (Platform.OS !== "android" || !isFocused || isPaused || !cameraToken)
       return;
+    if (fullscreenCamRef.current) return;
+
+    // THÊM: Không restart grid khi đang fullscreen
+    if (fullscreenCam) return;
+
     const timer = setTimeout(() => {
       if (!isFocusedRef.current) return;
       Object.values(webviewRefs.current).forEach((ref) => {
@@ -927,20 +964,29 @@ const CameraListGrid: React.FC = () => {
       });
     }, 500);
     return () => clearTimeout(timer);
-  }, [cameraToken, isFocused, isPaused, pageChangeKey, focusKey]);
+  }, [
+    cameraToken,
+    fullscreenCam,
+    isFocused,
+    isPaused,
+    pageChangeKey,
+    focusKey,
+  ]);
 
   React.useEffect(() => {
     if (!isFocused) {
       stopAllStreams();
       return;
     }
-
     if (isPaused) {
       stopAllStreams();
       return;
     }
-
     if (!cameraToken) return;
+    if (fullscreenCamRef.current) return; // ← dùng ref thay state
+
+    // THÊM: Không restart grid khi đang xem fullscreen
+    if (fullscreenCam) return;
 
     const timer = setTimeout(() => {
       if (!isFocusedRef.current || isPaused) return;
@@ -951,6 +997,7 @@ const CameraListGrid: React.FC = () => {
   }, [
     cameraToken,
     focusKey,
+    fullscreenCam, // thêm dependency
     isFocused,
     isPaused,
     layoutCount,
@@ -1044,8 +1091,25 @@ const CameraListGrid: React.FC = () => {
   }, [isFullMuted]);
 
   React.useEffect(() => {
-    if (videoReady) setPendingThumbUrl(null);
-  }, [videoReady]);
+    if (!videoReady) return;
+
+    setPendingThumbUrl(null);
+    if (!isSwitchingFullscreen) return;
+
+    Animated.timing(fsSwitchOpacity, {
+      toValue: 0,
+      duration: 180,
+      useNativeDriver: true,
+    }).start(() => {
+      setIsSwitchingFullscreen(false);
+    });
+  }, [fsSwitchOpacity, isSwitchingFullscreen, videoReady]);
+
+  React.useEffect(() => {
+    // THÊM: Bỏ qua khi đang fullscreen vì Modal có thể làm isFocused flicker
+    if (fullscreenCamRef.current) return;
+    if (!isFocused) stopAllStreams();
+  }, [isFocused, stopAllStreams]);
 
   // FIX: Ping watchdog — tăng timeout lên 10s và miss count ≥ 2 mới restart
   // tránh restart oan khi mạng chậm thoáng qua
@@ -1145,6 +1209,7 @@ const CameraListGrid: React.FC = () => {
       stopAllStreams();
       setPage(newPage);
       setActiveIndex(0);
+      setGridRenderKey((k) => k + 1); // ← dùng gridRenderKey thay pageChangeKey
       setPageChangeKey((k) => k + 1);
     },
     [stopAllStreams],
@@ -1204,6 +1269,7 @@ const CameraListGrid: React.FC = () => {
     setPage(0);
     setActiveIndex(0);
     setShowLayoutPicker(false);
+    setGridRenderKey((k) => k + 1); // reset WebView
     setPageChangeKey((k) => k + 1);
   };
 
@@ -1220,10 +1286,148 @@ const CameraListGrid: React.FC = () => {
       setActiveIndex(idx);
       setVideoReady(false);
       setFsVideoKey(0);
+      fsTranslateX.setValue(0);
+      fsSwitchOpacity.setValue(0);
+      setIsSwitchingFullscreen(false);
       setFullscreenCam(cam);
       if (Platform.OS === "android") startAndroidFallback();
     },
-    [startAndroidFallback, thumbTimestamp],
+    [fsSwitchOpacity, fsTranslateX, startAndroidFallback, thumbTimestamp],
+  );
+
+  const switchFullscreenCamera = React.useCallback(
+    (nextIndex: number, direction: "next" | "prev") => {
+      const nextCam = cameras[nextIndex];
+      if (!nextCam) return;
+
+      // Chỉ stop fullscreen WebView, KHÔNG stop grid
+      fullscreenWebViewRef.current?.postMessage?.("stop");
+      if (androidFallbackRef.current) clearTimeout(androidFallbackRef.current);
+      if (androidWatchdogRef.current) clearInterval(androidWatchdogRef.current);
+
+      const nextPage = Math.floor(nextIndex / perPage);
+      const nextLocalIndex = nextIndex % perPage;
+
+      setPendingThumbUrl(
+        `${GO2RTC_HOST}/api/frame.jpeg?src=${nextCam.iD_Camera_Ma}_snap&t=${thumbTimestamp}`,
+      );
+      setVideoReady(false);
+      setFsVideoKey(0);
+      setFullscreenCam(nextCam);
+      setActiveIndex(nextLocalIndex);
+
+      // Chỉ update page nếu thực sự đổi page, và KHÔNG tăng pageChangeKey
+      if (nextPage !== pageRef.current) {
+        setPage(nextPage);
+      }
+      // REMOVED: setPageChangeKey — không cần restart grid khi đang ở fullscreen
+
+      fsTranslateX.setValue(direction === "next" ? SW : -SW);
+      Animated.timing(fsTranslateX, {
+        toValue: 0,
+        duration: 240,
+        useNativeDriver: true,
+      }).start();
+      if (Platform.OS === "android") startAndroidFallback();
+    },
+    [cameras, fsTranslateX, perPage, startAndroidFallback, SW, thumbTimestamp],
+  );
+
+  const handleFullscreenSwipe = React.useCallback(
+    (direction: "next" | "prev", animateOut = true) => {
+      if (fullscreenIndex < 0) return;
+      const nextIndex =
+        direction === "next" ? fullscreenIndex + 1 : fullscreenIndex - 1;
+      if (nextIndex < 0 || nextIndex >= cameras.length) {
+        Animated.spring(fsTranslateX, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 100,
+          friction: 10,
+        }).start();
+        return;
+      }
+
+      setIsSwitchingFullscreen(true);
+      Animated.timing(fsSwitchOpacity, {
+        toValue: 1,
+        duration: 120,
+        useNativeDriver: true,
+      }).start();
+
+      const switchNow = () => switchFullscreenCamera(nextIndex, direction);
+
+      if (!animateOut) {
+        switchNow();
+        return;
+      }
+
+      Animated.timing(fsTranslateX, {
+        toValue: direction === "next" ? -SW : SW,
+        duration: 220,
+        useNativeDriver: true,
+      }).start(switchNow);
+    },
+    [
+      cameras.length,
+      fsSwitchOpacity,
+      fsTranslateX,
+      fullscreenIndex,
+      switchFullscreenCamera,
+      SW,
+    ],
+  );
+
+  const fullscreenSwipeGesture = React.useMemo(
+    () =>
+      Gesture.Pan()
+        .runOnJS(true)
+        .activeOffsetX([-35, 35])
+        .failOffsetY([-20, 20])
+        .onUpdate((e) => {
+          if (fullscreenIndex < 0) return;
+          const isAtFirst = fullscreenIndex === 0;
+          const isAtLast = fullscreenIndex === cameras.length - 1;
+          const isPullingPastStart = isAtFirst && e.translationX > 0;
+          const isPullingPastEnd = isAtLast && e.translationX < 0;
+          fsTranslateX.setValue(
+            isPullingPastStart || isPullingPastEnd
+              ? e.translationX * 0.2
+              : e.translationX,
+          );
+        })
+        .onEnd((e) => {
+          if (fullscreenIndex < 0) return;
+          const THRESHOLD = SW * 0.22;
+          if (
+            e.translationX < -THRESHOLD &&
+            fullscreenIndex < cameras.length - 1
+          ) {
+            Animated.timing(fsTranslateX, {
+              toValue: -SW,
+              duration: 220,
+              useNativeDriver: true,
+            }).start(() => {
+              handleFullscreenSwipe("next", false);
+            });
+          } else if (e.translationX > THRESHOLD && fullscreenIndex > 0) {
+            Animated.timing(fsTranslateX, {
+              toValue: SW,
+              duration: 220,
+              useNativeDriver: true,
+            }).start(() => {
+              handleFullscreenSwipe("prev", false);
+            });
+          } else {
+            Animated.spring(fsTranslateX, {
+              toValue: 0,
+              useNativeDriver: true,
+              tension: 100,
+              friction: 10,
+            }).start();
+          }
+        }),
+    [SW, cameras.length, fsTranslateX, fullscreenIndex, handleFullscreenSwipe],
   );
 
   const handleSnapshot = React.useCallback(async () => {
@@ -1253,46 +1457,6 @@ const CameraListGrid: React.FC = () => {
     }
   }, [activeIndex]);
 
-  const handleFullscreenPrev = React.useCallback(() => {
-    if (!fullscreenCam) return;
-    const list = pagedCamerasRef.current;
-    const idx = list.findIndex(
-      (c: any) => c.iD_Camera === fullscreenCam.iD_Camera,
-    );
-    if (idx > 0) {
-      setPendingThumbUrl(
-        `${GO2RTC_HOST}/api/frame.jpeg?src=${
-          list[idx - 1].iD_Camera_Ma
-        }_snap&t=${thumbTimestamp}`,
-      );
-      setVideoReady(false);
-      setFsVideoKey(0);
-      setFullscreenCam(list[idx - 1]);
-      setActiveIndex(idx - 1);
-      if (Platform.OS === "android") startAndroidFallback();
-    }
-  }, [fullscreenCam, startAndroidFallback, thumbTimestamp]);
-
-  const handleFullscreenNext = React.useCallback(() => {
-    if (!fullscreenCam) return;
-    const list = pagedCamerasRef.current;
-    const idx = list.findIndex(
-      (c: any) => c.iD_Camera === fullscreenCam.iD_Camera,
-    );
-    if (idx < list.length - 1) {
-      setPendingThumbUrl(
-        `${GO2RTC_HOST}/api/frame.jpeg?src=${
-          list[idx + 1].iD_Camera_Ma
-        }_snap&t=${thumbTimestamp}`,
-      );
-      setVideoReady(false);
-      setFsVideoKey(0);
-      setFullscreenCam(list[idx + 1]);
-      setActiveIndex(idx + 1);
-      if (Platform.OS === "android") startAndroidFallback();
-    }
-  }, [fullscreenCam, startAndroidFallback, thumbTimestamp]);
-
   const closeFullscreen = () => {
     if (androidFallbackRef.current) clearTimeout(androidFallbackRef.current);
     if (androidWatchdogRef.current) clearInterval(androidWatchdogRef.current);
@@ -1304,9 +1468,20 @@ const CameraListGrid: React.FC = () => {
     }
     setVideoReady(false);
     setFsVideoKey(0);
+    fsTranslateX.setValue(0);
+    fsSwitchOpacity.setValue(0);
+    setIsSwitchingFullscreen(false);
     setFullscreenCam(null);
     setPendingThumbUrl(null);
     setIsLandscape(false);
+
+    // THÊM: Delay start grid sau khi Modal đóng hoàn toàn
+    setTimeout(() => {
+      if (!isFocusedRef.current) return;
+      Object.values(webviewRefs.current).forEach((ref) =>
+        ref?.postMessage?.("start"),
+      );
+    }, 400);
   };
 
   const toggleFullscreenOrientation = () => {
@@ -1340,7 +1515,7 @@ const CameraListGrid: React.FC = () => {
                 (idx - liveCellLimit) % 2 === 0 ? "groupA" : "groupB";
               return (
                 <CameraCell
-                  key={`${page}-${cam.iD_Camera?.toString() ?? idx}`}
+                  key={`${gridRenderKey}-${cam.iD_Camera?.toString() ?? idx}`}
                   cam={cam}
                   idx={idx}
                   isActive={idx === activeIndex}
@@ -1487,7 +1662,11 @@ const CameraListGrid: React.FC = () => {
         transparent={false}
         statusBarTranslucent
         hardwareAccelerated
-        supportedOrientations={["portrait", "landscape-left", "landscape-right"]}
+        supportedOrientations={[
+          "portrait",
+          "landscape-left",
+          "landscape-right",
+        ]}
         onRequestClose={closeFullscreen}
       >
         <View style={styles.fsContainer}>
@@ -1536,128 +1715,166 @@ const CameraListGrid: React.FC = () => {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.fsVideoArea}>
-            {fullscreenCam && cameraToken ? (
-              <>
-                {Platform.OS === "android" && (
-                  <Video
-                    key={`${fullscreenCam.iD_Camera}-${fsVideoKey}`}
-                    source={{
-                      uri: `${GO2RTC_HOST}/api/stream.m3u8?src=${fullscreenCam.iD_Camera_Ma}_main&mp4=flac`,
-                      headers: { Authorization: `Bearer ${cameraToken}` },
-                    }}
-                    style={[
-                      StyleSheet.absoluteFill,
-                      { opacity: videoReady ? 1 : 0 },
-                    ]}
-                    resizeMode="contain"
-                    muted={isFullMuted}
-                    repeat
-                    controls={false}
-                    disableFocus
-                    useTextureView={false}
-                    hideShutterView
-                    bufferConfig={{
-                      minBufferMs: 1000,
-                      maxBufferMs: 3000,
-                      bufferForPlaybackMs: 500,
-                      bufferForPlaybackAfterRebufferMs: 1000,
-                    }}
-                    onReadyForDisplay={handleAndroidReady}
-                    onProgress={() => {
-                      lastProgressRef.current = Date.now();
-                    }}
-                    onError={() => {
-                      if (androidFallbackRef.current)
-                        clearTimeout(androidFallbackRef.current);
-                      if (androidWatchdogRef.current)
-                        clearInterval(androidWatchdogRef.current);
-                      androidFallbackRef.current = setTimeout(() => {
-                        setVideoReady(false);
-                        setFsVideoKey((k) => k + 1);
-                        startAndroidFallback();
-                      }, 5000);
-                    }}
-                  />
-                )}
-
-                {Platform.OS === "ios" && (
-                  <WebView
-                    key={`fs-${fullscreenCam.iD_Camera}`}
-                    ref={fullscreenWebViewRef}
-                    source={{
-                      html: buildFullscreenHTML(fullscreenCam.iD_Camera_Ma),
-                      baseUrl: GO2RTC_HOST,
-                    }}
-                    style={[
-                      StyleSheet.absoluteFill,
-                      { opacity: videoReady ? 1 : 0 },
-                    ]}
-                    javaScriptEnabled
-                    domStorageEnabled
-                    allowsInlineMediaPlayback
-                    mediaPlaybackRequiresUserAction={false}
-                    cacheEnabled={false}
-                    mixedContentMode="always"
-                    originWhitelist={["*"]}
-                    allowFileAccess
-                    allowUniversalAccessFromFileURLs
-                    scrollEnabled={false}
-                    scalesPageToFit={false}
-                    onLoad={() => {
-                      if (
-                        fullscreenWebViewRef.current?.postMessage &&
-                        cameraToken
-                      ) {
-                        fullscreenWebViewRef.current.postMessage(
-                          JSON.stringify({ type: "token", value: cameraToken }),
-                        );
-                      }
-                    }}
-                    onMessage={(e) => {
-                      const data = e.nativeEvent.data;
-                      if (data === "ready") setVideoReady(true);
-                      else if (data === "token_expired")
-                        fetchCameraTokenRef.current?.(true);
-                      else if (data === "pong") {
-                        if (pongTimeoutRef.current["fullscreen"]) {
-                          clearTimeout(pongTimeoutRef.current["fullscreen"]);
-                        }
-                      }
-                    }}
-                  />
-                )}
-
-                {!videoReady && (
-                  <View style={StyleSheet.absoluteFill}>
-                    {displayThumbUrl && (
-                      <Image
-                        source={{
-                          uri: displayThumbUrl,
-                          headers: { Authorization: `Bearer ${cameraToken}` },
-                        }}
-                        style={StyleSheet.absoluteFill}
-                        resizeMode="contain"
-                        blurRadius={2}
-                      />
-                    )}
-                    <View style={styles.thumbOverlay} />
-                    <ActivityIndicator
-                      size="large"
-                      color="#fff"
-                      style={styles.spinner}
+          <GestureDetector gesture={fullscreenSwipeGesture}>
+            <Animated.View
+              style={[
+                styles.fsVideoArea,
+                { transform: [{ translateX: fsTranslateX }] },
+              ]}
+            >
+              {fullscreenCam && cameraToken ? (
+                <>
+                  {Platform.OS === "android" && (
+                    <Video
+                      key={`${fullscreenCam.iD_Camera}-${fsVideoKey}`}
+                      source={{
+                        uri: `${GO2RTC_HOST}/api/stream.m3u8?src=${fullscreenCam.iD_Camera_Ma}_main&mp4=flac`,
+                        headers: { Authorization: `Bearer ${cameraToken}` },
+                      }}
+                      style={[
+                        StyleSheet.absoluteFill,
+                        { opacity: videoReady ? 1 : 0 },
+                      ]}
+                      resizeMode="contain"
+                      muted={isFullMuted}
+                      repeat
+                      controls={false}
+                      disableFocus
+                      useTextureView={false}
+                      hideShutterView
+                      bufferConfig={{
+                        minBufferMs: 1000,
+                        maxBufferMs: 3000,
+                        bufferForPlaybackMs: 500,
+                        bufferForPlaybackAfterRebufferMs: 1000,
+                      }}
+                      onReadyForDisplay={handleAndroidReady}
+                      onProgress={() => {
+                        lastProgressRef.current = Date.now();
+                      }}
+                      onError={() => {
+                        if (androidFallbackRef.current)
+                          clearTimeout(androidFallbackRef.current);
+                        if (androidWatchdogRef.current)
+                          clearInterval(androidWatchdogRef.current);
+                        androidFallbackRef.current = setTimeout(() => {
+                          setVideoReady(false);
+                          setFsVideoKey((k) => k + 1);
+                          startAndroidFallback();
+                        }, 5000);
+                      }}
                     />
-                  </View>
-                )}
-              </>
-            ) : (
-              <ActivityIndicator
-                size="large"
-                color="#fff"
-                style={styles.spinner}
-              />
-            )}
-          </View>
+                  )}
+
+                  {Platform.OS === "ios" && (
+                    <WebView
+                      key={`fs-${fullscreenCam.iD_Camera}`}
+                      ref={fullscreenWebViewRef}
+                      source={{
+                        html: buildFullscreenHTML(fullscreenCam.iD_Camera_Ma),
+                        baseUrl: GO2RTC_HOST,
+                      }}
+                      style={[
+                        StyleSheet.absoluteFill,
+                        { opacity: videoReady ? 1 : 0 },
+                      ]}
+                      javaScriptEnabled
+                      domStorageEnabled
+                      allowsInlineMediaPlayback
+                      mediaPlaybackRequiresUserAction={false}
+                      cacheEnabled={false}
+                      mixedContentMode="always"
+                      originWhitelist={["*"]}
+                      allowFileAccess
+                      allowUniversalAccessFromFileURLs
+                      scrollEnabled={false}
+                      scalesPageToFit={false}
+                      onLoad={() => {
+                        if (
+                          fullscreenWebViewRef.current?.postMessage &&
+                          cameraToken
+                        ) {
+                          fullscreenWebViewRef.current.postMessage(
+                            JSON.stringify({
+                              type: "token",
+                              value: cameraToken,
+                            }),
+                          );
+                        }
+                      }}
+                      onMessage={(e) => {
+                        const data = e.nativeEvent.data;
+                        if (data === "ready") setVideoReady(true);
+                        else if (data === "token_expired")
+                          fetchCameraTokenRef.current?.(true);
+                        else if (data === "swipe_next")
+                          handleFullscreenSwipe("next");
+                        else if (data === "swipe_prev")
+                          handleFullscreenSwipe("prev");
+                        else if (data === "pong") {
+                          if (pongTimeoutRef.current["fullscreen"]) {
+                            clearTimeout(pongTimeoutRef.current["fullscreen"]);
+                          }
+                        }
+                      }}
+                    />
+                  )}
+
+                  {!videoReady && (
+                    <View style={StyleSheet.absoluteFill}>
+                      {displayThumbUrl && (
+                        <Image
+                          source={{
+                            uri: displayThumbUrl,
+                            headers: { Authorization: `Bearer ${cameraToken}` },
+                          }}
+                          style={StyleSheet.absoluteFill}
+                          resizeMode="contain"
+                          blurRadius={2}
+                        />
+                      )}
+                      <View style={styles.thumbOverlay} />
+                      <ActivityIndicator
+                        size="large"
+                        color="#fff"
+                        style={styles.spinner}
+                      />
+                    </View>
+                  )}
+                  {Platform.OS === "android" && (
+                    <GestureDetector gesture={fullscreenSwipeGesture}>
+                      <View style={styles.fsSwipeOverlay} />
+                    </GestureDetector>
+                  )}
+                  {isSwitchingFullscreen && (
+                    <Animated.View
+                      pointerEvents="none"
+                      style={[
+                        styles.fsSwitchOverlay,
+                        { opacity: fsSwitchOpacity },
+                      ]}
+                    >
+                      <ActivityIndicator size="small" color="#fff" />
+                      <Text style={styles.fsSwitchText}>
+                        Đang chuyển camera...
+                      </Text>
+                      {cameras.length > 1 && fullscreenIndex >= 0 && (
+                        <Text style={styles.fsSwitchCount}>
+                          {fullscreenIndex + 1} / {cameras.length}
+                        </Text>
+                      )}
+                    </Animated.View>
+                  )}
+                </>
+              ) : (
+                <ActivityIndicator
+                  size="large"
+                  color="#fff"
+                  style={styles.spinner}
+                />
+              )}
+            </Animated.View>
+          </GestureDetector>
 
           <View
             style={[
@@ -1667,24 +1884,10 @@ const CameraListGrid: React.FC = () => {
                 : { paddingBottom: 48 },
             ]}
           >
-            <TouchableOpacity
-              style={styles.fsNavBtn}
-              onPress={handleFullscreenPrev}
-            >
-              <Ionicons name="chevron-back" size={22} color="#fff" />
-              <Text style={styles.fsNavText}>Trước</Text>
-            </TouchableOpacity>
             <View style={styles.fsLiveBadge}>
               <View style={styles.fsLiveDot} />
               <Text style={styles.fsLiveText}>Trực tiếp</Text>
             </View>
-            <TouchableOpacity
-              style={styles.fsNavBtn}
-              onPress={handleFullscreenNext}
-            >
-              <Text style={styles.fsNavText}>Tiếp</Text>
-              <Ionicons name="chevron-forward" size={22} color="#fff" />
-            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -1835,6 +2038,35 @@ const styles = StyleSheet.create({
   layoutOptionTextActive: { color: "#e53935", fontWeight: "700" },
   fsContainer: { flex: 1, backgroundColor: "#000" },
   fsVideoArea: { flex: 1, backgroundColor: "#000" },
+  fsSwipeOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "transparent",
+    zIndex: 5,
+  },
+  fsSwitchOverlay: {
+    position: "absolute",
+    alignSelf: "center",
+    top: "50%",
+    marginTop: -42,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.58)",
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    zIndex: 8,
+  },
+  fsSwitchText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "600",
+    marginTop: 8,
+  },
+  fsSwitchCount: {
+    color: "rgba(255,255,255,0.75)",
+    fontSize: 11,
+    marginTop: 3,
+  },
   fsHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -1858,7 +2090,7 @@ const styles = StyleSheet.create({
   fsFooter: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "center",
     paddingHorizontal: 20,
     paddingTop: 14,
     position: "absolute",
@@ -1866,14 +2098,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
   },
-  fsNavBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  fsNavText: { color: "#fff", fontSize: 14, fontWeight: "500" },
   fsLiveBadge: {
     flexDirection: "row",
     alignItems: "center",

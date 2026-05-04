@@ -237,18 +237,6 @@ export default function CameraScreen() {
   }, []);
 
   //
-  // AUTO RELOAD (không chạy lần đầu)
-  //
-
-  useAutoReload(() => {
-    if (firstLoadRef.current) {
-      firstLoadRef.current = false;
-      return;
-    }
-    fetchData();
-  });
-
-  //
   // SEARCH (pure useMemo)
   //
 

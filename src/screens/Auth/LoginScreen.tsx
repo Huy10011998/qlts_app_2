@@ -20,10 +20,8 @@ import { getPermission } from "../../services/Index";
 import { setPermissions } from "../../store/PermissionSlice";
 import {
   hardResetApi,
-  refreshTokenFlow,
   setRefreshInApi,
   setTokenInApi,
-  shouldRefreshAccessToken,
 } from "../../services/data/CallApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAppDispatch } from "../../store/Hooks";
@@ -33,12 +31,8 @@ import {
   FACE_ID_LOGIN_SERVICE,
 } from "../../constants/AuthStorage";
 
-const FACE_ID_REFRESH_LEEWAY_MS = 60 * 1000;
-
 export default function LoginScreen() {
   const {
-    logout,
-    logoutReason,
     setToken,
     setRefreshToken,
     setIosAuthenticated,
@@ -60,7 +54,7 @@ export default function LoginScreen() {
     setIsLoginDisabled(!(userName.trim() && userPassword.trim()));
   }, [userName, userPassword]);
 
-  // PREP TOKEN + SYNC KEYCHAIN
+  // PREP FACEID STATE
   const prepareTokenForFaceID = useCallback(async () => {
     try {
       const enabled = await AsyncStorage.getItem(FACE_ID_ENABLED_KEY);
@@ -75,57 +69,12 @@ export default function LoginScreen() {
       }
 
       setIsFaceIdEnabled(true);
-
-      const [storedAccessToken, storedRefreshToken] = await Promise.all([
-        AsyncStorage.getItem("token"),
-        AsyncStorage.getItem("refreshToken"),
-      ]);
-
-      if (!storedAccessToken || !storedRefreshToken) {
-        setIsTokenReady(true);
-        return;
-      }
-
-      if (logoutReason === "EXPIRED") {
-        setIsTokenReady(true);
-        return;
-      }
-
-      setRefreshInApi(storedRefreshToken);
-
-      const needsRefresh = shouldRefreshAccessToken(
-        storedAccessToken,
-        FACE_ID_REFRESH_LEEWAY_MS,
-      );
-
-      if (needsRefresh) {
-        setIsLoading(true);
-        try {
-          const refreshed = await refreshTokenFlow();
-          await setToken(refreshed);
-          setTokenInApi(refreshed);
-        } catch (err: any) {
-          const needLogin =
-            err?.NEED_LOGIN ||
-            err?.response?.status === 401 ||
-            err?.response?.status === 403;
-
-          if (needLogin) {
-            await logout("EXPIRED");
-            return;
-          }
-        } finally {
-          setIsLoading(false);
-        }
-      } else {
-        setTokenInApi(storedAccessToken);
-      }
     } catch {
       // ignore
     } finally {
       setIsTokenReady(true);
     }
-  }, [logout, logoutReason, setToken]);
+  }, []);
 
   useEffect(() => {
     if (Platform.OS === "ios") {
@@ -225,6 +174,16 @@ export default function LoginScreen() {
 
       if (!credentials) {
         Alert.alert("FaceID", "Không tìm thấy thông tin đăng nhập.");
+        return;
+      }
+
+      const storedAccessToken = await AsyncStorage.getItem("token");
+
+      if (!storedAccessToken) {
+        Alert.alert(
+          "Phiên đăng nhập đã hết",
+          "Vui lòng đăng nhập lại bằng tài khoản và mật khẩu.",
+        );
         return;
       }
 
