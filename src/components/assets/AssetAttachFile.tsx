@@ -38,7 +38,7 @@ export default function AssetListAttachFile() {
         type: TypeProperty.String,
       },
     ],
-    [id, nameClass]
+    [id, nameClass],
   );
 
   const fetchData = useCallback(
@@ -57,7 +57,7 @@ export default function AssetListAttachFile() {
           currentSkip,
           "",
           conditions,
-          []
+          [],
         );
         const newItems: FileItem[] = response?.data?.items || [];
         const totalItems: number = response?.data?.totalCount || 0;
@@ -84,7 +84,7 @@ export default function AssetListAttachFile() {
         }
       }
     },
-    [nameClass, skipSize, conditions]
+    [nameClass, skipSize, conditions],
   );
 
   useEffect(() => {
@@ -109,7 +109,7 @@ export default function AssetListAttachFile() {
 
   const categories = Object.keys(groupedData);
 
-  if (isLoading) return <IsLoading size="large" color="#FF3333" />;
+  if (isLoading) return <IsLoading size="large" color="#E31E24" />;
 
   return (
     <View style={styles.container}>
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
   categoryText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#FF3333",
+    color: "#E31E24",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,

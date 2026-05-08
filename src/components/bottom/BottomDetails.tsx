@@ -13,12 +13,16 @@ import { BottomBarProps } from "../../types/Index";
 import { usePermission } from "../../hooks/usePermission";
 import { useParams } from "../../hooks/useParams";
 
+const BRAND_RED = "#E31E24";
+const SHELL_INSET = 12;
+
 export default function BottomBarDetails({
   tabs,
   activeTab,
   onTabPress,
 }: BottomBarProps) {
   const SCREEN_WIDTH = Dimensions.get("window").width;
+  const BAR_WIDTH = SCREEN_WIDTH - SHELL_INSET * 2;
 
   // PERMISSION
   const { nameClass } = useParams();
@@ -51,7 +55,7 @@ export default function BottomBarDetails({
   if (visibleTabs.length === 0) {
     return null; // hoặc View rỗng
   }
-  const TAB_WIDTH = SCREEN_WIDTH / visibleTabs.length;
+  const TAB_WIDTH = BAR_WIDTH / visibleTabs.length;
 
   const UNDERLINE_WIDTH = TAB_WIDTH * 0.6;
 
@@ -87,7 +91,8 @@ export default function BottomBarDetails({
 
   // RENDER
   return (
-    <View style={styles.bottomBar}>
+    <View style={styles.shell}>
+      <View style={styles.bottomBar}>
       <Animated.View
         pointerEvents="none"
         style={[
@@ -106,7 +111,13 @@ export default function BottomBarDetails({
             onPress={() => handlePress(tab.key, tab.label, i)}
             activeOpacity={0.8}
           >
-            <Ionicons name={tab.icon} size={26} color="#FF3333" />
+            <View style={[styles.iconWrap, isActive && styles.iconWrapActive]}>
+              <Ionicons
+                name={tab.icon}
+                size={20}
+                color={isActive ? BRAND_RED : "#8A95A3"}
+              />
+            </View>
             <Text
               style={[styles.bottomLabel, isActive && styles.bottomLabelActive]}
             >
@@ -115,34 +126,63 @@ export default function BottomBarDetails({
           </TouchableOpacity>
         );
       })}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  shell: {
+    position: "absolute",
+    left: SHELL_INSET,
+    right: SHELL_INSET,
+    bottom: 10,
+  },
   bottomBar: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#fff",
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 70,
+    height: 74,
+    borderRadius: 22,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#EDF0F5",
+    shadowColor: "#1A2340",
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+    overflow: "hidden",
   },
-  bottomItem: { alignItems: "center", justifyContent: "center" },
+  bottomItem: {
+    alignItems: "center",
+    justifyContent: "center",
+    height: "100%",
+    flexShrink: 0,
+  },
+  iconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F5F7FB",
+    marginBottom: 4,
+  },
+  iconWrapActive: {
+    backgroundColor: "#FFF3F3",
+  },
   bottomLabel: {
-    fontSize: 12,
-    marginTop: 2,
+    fontSize: 11.5,
     fontWeight: "600",
-    color: "#FF3333",
+    color: "#8A95A3",
   },
-  bottomLabelActive: { fontWeight: "800" },
+  bottomLabelActive: { fontWeight: "700", color: BRAND_RED },
   underline: {
     position: "absolute",
-    bottom: 8,
-    height: 2,
-    backgroundColor: "#FF3333",
-    borderRadius: 1,
+    top: 0,
+    height: 3,
+    backgroundColor: BRAND_RED,
+    borderBottomLeftRadius: 3,
+    borderBottomRightRadius: 3,
   },
 });

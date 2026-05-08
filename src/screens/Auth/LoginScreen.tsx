@@ -16,27 +16,21 @@ import * as Keychain from "react-native-keychain";
 import { useAuth } from "../../context/AuthContext";
 import { loginApi } from "../../services/auth/AuthApi";
 import IsLoading from "../../components/ui/IconLoading";
-import { getPermission } from "../../services/Index";
-import { setPermissions } from "../../store/PermissionSlice";
 import {
   hardResetApi,
   setRefreshInApi,
   setTokenInApi,
 } from "../../services/data/CallApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useAppDispatch } from "../../store/Hooks";
 import {
   AUTH_LOGIN_SERVICE,
   FACE_ID_ENABLED_KEY,
   FACE_ID_LOGIN_SERVICE,
 } from "../../constants/AuthStorage";
+import { log } from "../../utils/Logger";
 
 export default function LoginScreen() {
-  const {
-    setToken,
-    setRefreshToken,
-    setIosAuthenticated,
-  } = useAuth();
+  const { setToken, setRefreshToken, setIosAuthenticated, token } = useAuth();
 
   const [userName, setUserName] = useState("");
   const [userPassword, setUserPassword] = useState("");
@@ -48,7 +42,14 @@ export default function LoginScreen() {
   const [isFaceIdEnabled, setIsFaceIdEnabled] = useState(false);
 
   const isFaceIDRunning = useRef(false);
-  const dispatch = useAppDispatch();
+
+  useEffect(() => {
+    log("LoginScreen mounted, token:", token);
+
+    return () => {
+      log("LoginScreen unmounted");
+    };
+  }, [token]);
 
   useEffect(() => {
     setIsLoginDisabled(!(userName.trim() && userPassword.trim()));
@@ -84,6 +85,57 @@ export default function LoginScreen() {
     }
   }, [prepareTokenForFaceID]);
 
+  const syncFaceIdCredentials = useCallback(
+    async (nextUserName: string, nextPassword: string) => {
+      if (Platform.OS !== "ios") return;
+
+      const enabled = await AsyncStorage.getItem(FACE_ID_ENABLED_KEY);
+
+      if (enabled !== "1") {
+        await Keychain.resetGenericPassword({
+          service: FACE_ID_LOGIN_SERVICE,
+        });
+        setIsFaceIdEnabled(false);
+        return;
+      }
+
+      await Keychain.setGenericPassword(nextUserName, nextPassword, {
+        service: FACE_ID_LOGIN_SERVICE,
+        accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
+        accessible: Keychain.ACCESSIBLE.WHEN_PASSCODE_SET_THIS_DEVICE_ONLY,
+      });
+      setIsFaceIdEnabled(true);
+    },
+    [],
+  );
+
+  const completeLogin = useCallback(
+    async (
+      accessToken: string,
+      refreshToken: string | null | undefined,
+      nextUserName: string,
+      nextPassword: string,
+    ) => {
+      await setToken(accessToken);
+      await setRefreshToken(refreshToken ?? null);
+
+      setTokenInApi(accessToken);
+      setRefreshInApi(refreshToken ?? null);
+
+      await Keychain.setGenericPassword(nextUserName, nextPassword, {
+        service: AUTH_LOGIN_SERVICE,
+        accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+      });
+
+      await syncFaceIdCredentials(nextUserName, nextPassword);
+
+      if (Platform.OS === "ios") {
+        setIosAuthenticated(true);
+      }
+    },
+    [setIosAuthenticated, setRefreshToken, setToken, syncFaceIdCredentials],
+  );
+
   // LOGIN THƯỜNG
   const handlePressLogin = async () => {
     if (isLoading) return;
@@ -96,23 +148,12 @@ export default function LoginScreen() {
       const res = await loginApi(userName, userPassword);
 
       if (res?.data?.accessToken) {
-        await setToken(res.data.accessToken);
-        await setRefreshToken(res.data.refreshToken ?? null);
-
-        setTokenInApi(res.data.accessToken);
-        setRefreshInApi(res.data.refreshToken ?? null);
-
-        await Keychain.setGenericPassword(userName, userPassword, {
-          service: AUTH_LOGIN_SERVICE,
-          accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-        });
-
-        const permissionRes = await getPermission();
-        dispatch(setPermissions(permissionRes.data));
-
-        if (Platform.OS === "ios") {
-          setIosAuthenticated(true);
-        }
+        await completeLogin(
+          res.data.accessToken,
+          res.data.refreshToken,
+          userName,
+          userPassword,
+        );
       }
     } catch (err: any) {
       const status = err.response?.status;
@@ -136,6 +177,7 @@ export default function LoginScreen() {
   // HANDLE PRESS FACEID (có giải thích)
   const handleFaceIDPress = async () => {
     if (isLoading) return;
+    if (Platform.OS !== "ios") return;
 
     if (!isTokenReady) {
       Alert.alert(
@@ -158,8 +200,10 @@ export default function LoginScreen() {
 
   // LOGIN FACEID
   const handleFaceIDLogin = async () => {
+    if (Platform.OS !== "ios") return;
     if (isFaceIDRunning.current) return;
     isFaceIDRunning.current = true;
+    setIsLoading(true);
 
     try {
       const credentials = await Keychain.getGenericPassword({
@@ -177,24 +221,53 @@ export default function LoginScreen() {
         return;
       }
 
-      const storedAccessToken = await AsyncStorage.getItem("token");
+      hardResetApi();
+      const res = await loginApi(credentials.username, credentials.password);
 
-      if (!storedAccessToken) {
+      if (!res?.data?.accessToken) {
+        Alert.alert("Lỗi", "Không thể hoàn tất đăng nhập bằng FaceID.");
+        return;
+      }
+
+      await completeLogin(
+        res.data.accessToken,
+        res.data.refreshToken,
+        credentials.username,
+        credentials.password,
+      );
+    } catch (err: any) {
+      const code = err?.code;
+      const isCancelled = code === -128 || code === "-128";
+      const status = err?.response?.status;
+      const message = err?.response?.data?.message;
+
+      if (isCancelled) {
+        return;
+      }
+
+      if (status === 401) {
+        await AsyncStorage.setItem(FACE_ID_ENABLED_KEY, "0");
+        await Keychain.resetGenericPassword({
+          service: FACE_ID_LOGIN_SERVICE,
+        });
+        setIsFaceIdEnabled(false);
+
         Alert.alert(
-          "Phiên đăng nhập đã hết",
-          "Vui lòng đăng nhập lại bằng tài khoản và mật khẩu.",
+          "FaceID không hợp lệ",
+          message ||
+            "Thông tin đăng nhập đã thay đổi. Vui lòng đăng nhập lại bằng tài khoản và mật khẩu.",
         );
         return;
       }
 
-      setIosAuthenticated(true);
-    } catch (err: any) {
-      const code = err?.code;
-      const isCancelled = code === -128 || code === "-128";
-      if (!isCancelled) {
-        Alert.alert("Lỗi", "Không thể đăng nhập bằng FaceID.");
+      if (!err?.response) {
+        Alert.alert("Lỗi kết nối", "Không thể kết nối đến máy chủ.");
+        return;
       }
+
+      Alert.alert("Lỗi", "Không thể đăng nhập bằng FaceID.");
     } finally {
+      setIsLoading(false);
       isFaceIDRunning.current = false;
     }
   };
@@ -263,7 +336,7 @@ export default function LoginScreen() {
                   onPress={handleFaceIDPress}
                 >
                   {isLoading ? (
-                    <IsLoading size="large" color="#FF3333" />
+                    <IsLoading size="large" color="#E31E24" />
                   ) : (
                     <Image
                       source={require("../../assets/images/faceid-icon2.png")}
@@ -271,13 +344,6 @@ export default function LoginScreen() {
                     />
                   )}
                 </TouchableOpacity>
-
-                {/* Hint text */}
-                {(!isFaceIdEnabled || !isTokenReady) && (
-                  <Text style={styles.hint}>
-                    {!isFaceIdEnabled ? "Chưa bật FaceID" : "Đang chuẩn bị..."}
-                  </Text>
-                )}
               </View>
             )}
           </View>
@@ -308,7 +374,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 55,
     borderRadius: 12,
-    backgroundColor: "#FF3333",
+    backgroundColor: "#E31E24",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
@@ -325,5 +391,4 @@ const styles = StyleSheet.create({
   },
   faceIDIcon: { width: 34, height: 34 },
   row: { flexDirection: "row", alignItems: "center", marginTop: 24 },
-  hint: { fontSize: 12, color: "#999", marginTop: 4, fontWeight: "bold" },
 });

@@ -1,4 +1,3 @@
-// hooks/usePermission.ts
 import { useSelector } from "react-redux";
 import { RootState } from "../store";
 import { normalizeClassName } from "../utils/Helper";

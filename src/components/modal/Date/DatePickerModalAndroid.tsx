@@ -55,7 +55,7 @@ export const DatePickerModalAndroid = ({
           {value || "Chọn Ngày (dd-MM-yyyy)"}
         </Text>
 
-        <Ionicons name="calendar-outline" size={24} color="#FF3333" />
+        <Ionicons name="calendar-outline" size={24} color="#E31E24" />
       </TouchableOpacity>
 
       {showPicker && Platform.OS === "android" && (

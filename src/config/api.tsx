@@ -22,4 +22,12 @@ export const API_ENDPOINTS = {
   GET_VUNG_CAMERA_STEAM: `${BASE_URL}/VungCamera_ChiTiet/get-vung-camera-steam`,
   // GET TOKEN CAMERA
   GET_TOKEN_VIEW_CAMERA: `${BASE_URL}/Common/get-token-view-camera`,
+  //GET ACTIVE DHCD
+  GET_ACTIVE_DHCD: `${BASE_URL}/DaiHoiCoDong/get-active-dhcd`,
+  //GET CODONG DHCD
+  GET_CODONG_DHCD: `${BASE_URL}/DaiHoiCoDong/get-codong-dhcd`,
+  // DIEM DANH DHCD
+  DIEM_DANH_DHCD: `${BASE_URL}/DaiHoiCoDong_CoDong/diem-danh-dhcd`,
+  HUY_DIEM_DANH_DHCD: `${BASE_URL}/DaiHoiCoDong_CoDong/huy-diem-danh-dhcd`,
+  LUU_Y_KIEN_CO_DONG_DHCD: `${BASE_URL}/DaiHoiCoDong_CoDong/luu-ykien-codong`,
 };

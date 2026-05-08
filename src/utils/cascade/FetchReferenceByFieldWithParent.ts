@@ -44,6 +44,13 @@ export const fetchReferenceByFieldWithParent = async (
       payload.lstParent = String(parentValue);
     }
 
+    log("[fetchReferenceByFieldWithParent] request:", {
+      fieldName,
+      referenceName,
+      parentValue,
+      payload,
+    });
+
     const res = await callApi<{
       success: boolean;
       data: {
@@ -54,7 +61,7 @@ export const fetchReferenceByFieldWithParent = async (
 
     // QUAN TRỌNG — chặn stale response
     if (cascadeRequestTracker[fieldName] !== requestId) {
-      return;
+      return { items: [], totalCount: 0 };
     }
 
     const items = (res.data?.items ?? []).map((x: any) => ({
@@ -62,6 +69,14 @@ export const fetchReferenceByFieldWithParent = async (
       text: x.text,
       typeMulti: x.typeMulti ?? null,
     }));
+
+    log("[fetchReferenceByFieldWithParent] response:", {
+      fieldName,
+      referenceName,
+      totalCount: res.data?.totalCount ?? items.length,
+      items,
+      rawItems: res.data?.items ?? [],
+    });
 
     setReference((prev) => {
       const oldItems = prev[fieldName]?.items || [];
@@ -80,7 +95,13 @@ export const fetchReferenceByFieldWithParent = async (
         },
       };
     });
+
+    return {
+      items,
+      totalCount: res.data?.totalCount ?? items.length,
+    };
   } catch (e) {
     log("Fetch cascade error:", e);
+    return { items: [], totalCount: 0 };
   }
 };

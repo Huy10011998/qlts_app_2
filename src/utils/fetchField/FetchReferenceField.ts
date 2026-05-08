@@ -42,7 +42,7 @@ export const fetchReferenceByField = async (
 
     // nếu không phải request mới nhất → bỏ
     if (cascadeRequestTracker[fieldName] !== requestId) {
-      return;
+      return { items: [], totalCount: 0 };
     }
 
     const items = (res.data?.items ?? []).map((x: any) => ({
@@ -68,7 +68,13 @@ export const fetchReferenceByField = async (
         },
       };
     });
+
+    return {
+      items,
+      totalCount: res.data?.totalCount ?? items.length,
+    };
   } catch (e) {
     log("Fetch reference error:", e);
+    return { items: [], totalCount: 0 };
   }
 };

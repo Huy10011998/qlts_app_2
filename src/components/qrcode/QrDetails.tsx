@@ -189,7 +189,7 @@ export default function QrDetails({ children }: QrDetailsProps) {
     else setIsLoading(false);
   }, [id, nameClass, fetchDetails]);
 
-  if (isLoading) return <IsLoading size="large" color="#FF3333" />;
+  if (isLoading) return <IsLoading size="large" color="#E31E24" />;
 
   //  RENDER
   return (

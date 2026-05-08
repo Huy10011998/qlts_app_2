@@ -120,3 +120,44 @@ export const withTimeout = <T>(promise: Promise<T>, ms = 8000): Promise<T> =>
       },
     );
   });
+
+// ─── Color Tokens (Light Theme) ───────────────────────────────────────────────
+export const C = {
+  red: "#E31E24",
+  redDeep: "#B91219",
+  redLight: "#FF4D52",
+  bg: "#F0F2F8",
+  card: "#FFFFFF",
+  text: "#0F1923",
+  textSub: "#8A95A3",
+  border: "#EDF0F5",
+
+  // Icon palette — vivid, distinct per action
+  blue: "#3B82F6",
+  amber: "#F59E0B",
+  violet: "#7C3AED",
+  emerald: "#10B981",
+  rose: "#F43F5E",
+  sky: "#0EA5E9",
+
+  surface: "#FFFFFF",
+  surfaceAlt: "#F0F2F6",
+  borderStrong: "#CDD3DE",
+  accent: "#1A3C8F", // deep navy blue — primary
+  accentLight: "#EEF2FB",
+  gold: "#B8942A",
+  goldLight: "#FDF6E3",
+  goldBorder: "#E8D48A",
+  textPrimary: "#111827",
+  textSecondary: "#4B5563",
+  textMuted: "#9CA3AF",
+  green: "#059669",
+  greenLight: "#ECFDF5",
+  greenBorder: "#A7F3D0",
+  redBorder: "#FECACA",
+  amberLight: "#FFFBEB",
+  amberBorder: "#FDE68A",
+  slate: "#64748B",
+  slateLight: "#F8FAFC",
+  slateBorder: "#E2E8F0",
+};

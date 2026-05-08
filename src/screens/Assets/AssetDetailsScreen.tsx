@@ -61,6 +61,6 @@ export default function AssetDetailsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9F9F9" },
-  content: { flex: 1, paddingBottom: 60 },
+  container: { flex: 1, backgroundColor: "#F0F2F8" },
+  content: { flex: 1, paddingBottom: 94 },
 });

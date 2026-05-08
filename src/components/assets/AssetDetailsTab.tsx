@@ -3,17 +3,19 @@ import {
   View,
   Text,
   FlatList,
-  TouchableOpacity,
+  Pressable,
   StyleSheet,
-  Alert,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { MenuItemResponse, StackNavigation, StackRoute } from "../../types";
 import { getClassReference } from "../../services/Index";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import IsLoading from "../ui/IconLoading";
-import { error, log } from "../../utils/Logger";
+import { error } from "../../utils/Logger";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
+
+const BRAND_RED = "#E31E24";
+const BG = "#F0F2F8";
 
 export default function AssetDeTailsTab({
   nameClassRoot,
@@ -78,23 +80,20 @@ export default function AssetDeTailsTab({
   };
 
   const renderItem = ({ item }: { item: MenuItemResponse }) => (
-    <TouchableOpacity
-      style={styles.item}
-      activeOpacity={0.7}
+    <Pressable
+      style={({ pressed }) => [styles.item, pressed && styles.itemPressed]}
       onPress={() => handlePress(item)}
     >
-      <Ionicons
-        name={item.icon as any}
-        size={26}
-        color="#FF3333"
-        style={styles.icon}
-      />
+      <View style={styles.iconWrap}>
+        <Ionicons name={item.icon as any} size={18} color={BRAND_RED} />
+      </View>
       <Text style={styles.label}>{item.label}</Text>
-    </TouchableOpacity>
+      <Ionicons name="chevron-forward" size={14} color="#C7C7CC" />
+    </Pressable>
   );
 
   if (isLoading) {
-    return <IsLoading size="large" color="#FF3333" />;
+    return <IsLoading size="large" color={BRAND_RED} />;
   }
 
   return (
@@ -103,11 +102,16 @@ export default function AssetDeTailsTab({
         data={items}
         keyExtractor={(item) => String(item.id)}
         renderItem={renderItem}
-        contentContainerStyle={{ paddingBottom: 70 }}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        contentContainerStyle={styles.listContent}
         ListEmptyComponent={
-          <View style={{ padding: 20 }}>
-            <Text>---</Text>
+          <View style={styles.emptyWrap}>
+            <View style={styles.emptyIconWrap}>
+              <Ionicons name="albums-outline" size={32} color="#C7C7CC" />
+            </View>
+            <Text style={styles.emptyTitle}>Không có dữ liệu liên quan</Text>
+            <Text style={styles.emptySub}>
+              Danh mục liên kết sẽ hiển thị tại đây khi có dữ liệu
+            </Text>
           </View>
         }
       />
@@ -118,30 +122,76 @@ export default function AssetDeTailsTab({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
-    paddingTop: 10,
+    backgroundColor: BG,
   },
-
+  listContent: {
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    paddingBottom: 96,
+  },
   item: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    marginBottom: 8,
+    shadowColor: "#1A2340",
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+    gap: 10,
   },
-
-  icon: {
-    marginRight: 12,
+  itemPressed: {
+    opacity: 0.75,
   },
-
+  iconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: "#FFF5F5",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   label: {
-    fontSize: 14,
-    color: "#000",
-    fontWeight: "bold",
+    flex: 1,
+    fontSize: 13.5,
+    color: "#0F1923",
+    fontWeight: "600",
+    lineHeight: 18,
   },
-
-  separator: {
-    height: 1,
-    backgroundColor: "#eee",
-    marginLeft: 56,
+  emptyWrap: {
+    alignItems: "center",
+    paddingTop: 60,
+    paddingHorizontal: 32,
+  },
+  emptyIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 22,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+    shadowColor: "#1A2340",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  emptyTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#374151",
+    marginBottom: 6,
+    textAlign: "center",
+  },
+  emptySub: {
+    fontSize: 12,
+    color: "#8A95A3",
+    textAlign: "center",
+    lineHeight: 18,
   },
 });

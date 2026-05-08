@@ -9,14 +9,14 @@ const Stack = createNativeStackNavigator();
 export default function SettingStack() {
   return (
     <Stack.Navigator>
+      {/* SettingScreen tự render header đỏ + avatar + wave riêng */}
       <Stack.Screen
         name="Setting"
         component={SettingScreen}
-        options={{
-          title: "Cài đặt",
-          ...HeaderDetails({ showBackButton: false }),
-        }}
+        options={{ headerShown: false }}
       />
+
+      {/* ProfileScreen dùng header chuẩn với back button */}
       <Stack.Screen
         name="Profile"
         component={ProfileScreen}

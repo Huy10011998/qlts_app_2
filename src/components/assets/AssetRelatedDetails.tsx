@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { View, StyleSheet, Alert } from "react-native";
+import { View, StyleSheet } from "react-native";
 import { DetailsProps } from "../../types/Index";
 import { useParams } from "../../hooks/useParams";
 import { getDetails } from "../../services/Index";
@@ -17,6 +17,9 @@ import { useSelector } from "react-redux";
 import { RootState } from "../../store";
 import { resetShouldRefreshDetails } from "../../store/AssetSlice";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
+
+const BG = "#F0F2F8";
+const BRAND_RED = "#E31E24";
 
 export default function AssetRelatedDetails({ children }: DetailsProps) {
   const { id, nameClass, field } = useParams();
@@ -85,7 +88,7 @@ export default function AssetRelatedDetails({ children }: DetailsProps) {
 
   useAutoReload(fetchDetails);
   if (isLoading) {
-    return <IsLoading size="large" color="#FF3333" />;
+    return <IsLoading size="large" color={BRAND_RED} />;
   }
 
   return (
@@ -107,5 +110,5 @@ export default function AssetRelatedDetails({ children }: DetailsProps) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9F9F9" },
+  container: { flex: 1, backgroundColor: BG },
 });

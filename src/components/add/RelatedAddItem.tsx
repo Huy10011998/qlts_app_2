@@ -1,5 +1,5 @@
 import React, { memo } from "react";
-import { TouchableOpacity, StyleSheet, Platform } from "react-native";
+import { TouchableOpacity, StyleSheet, Platform, View, Text } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -23,7 +23,10 @@ function RelatedAddItemComponent({ onPress }: Props) {
       hitSlop={12}
       style={[styles.fab, { bottom }]}
     >
-      <Ionicons name="add" size={34} color="#fff" />
+      <View style={styles.iconWrap}>
+        <Ionicons name="add" size={22} color="#fff" />
+      </View>
+      <Text style={styles.label}>Thêm mới</Text>
     </TouchableOpacity>
   );
 }
@@ -34,21 +37,38 @@ const styles = StyleSheet.create({
   fab: {
     position: "absolute",
     right: FAB_OFFSET,
-    width: FAB_SIZE,
     height: FAB_SIZE,
+    minWidth: 148,
+    paddingHorizontal: 18,
     borderRadius: FAB_SIZE / 2,
-    backgroundColor: "#FF3333",
+    backgroundColor: "#E31E24",
     alignItems: "center",
     justifyContent: "center",
+    flexDirection: "row",
     ...(Platform.OS === "ios"
       ? {
-          shadowColor: "#000",
-          shadowOpacity: 0.25,
+          shadowColor: "#1A2340",
+          shadowOpacity: 0.18,
           shadowOffset: { width: 0, height: 4 },
-          shadowRadius: 6,
+          shadowRadius: 10,
         }
       : {
           elevation: 10,
         }),
+  },
+  iconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "rgba(255,255,255,0.18)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  label: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "700",
+    letterSpacing: 0.1,
   },
 });

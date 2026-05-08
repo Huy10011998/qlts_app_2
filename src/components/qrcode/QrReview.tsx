@@ -254,7 +254,7 @@ export default function QrReview() {
     !isLoadingMore &&
     !isSearching // thêm điều kiện này
   ) {
-    return <IsLoading size="large" color="#FF3333" />;
+    return <IsLoading size="large" color="#E31E24" />;
   }
   return (
     <View style={{ flex: 1 }}>
@@ -270,7 +270,7 @@ export default function QrReview() {
         {isSearching && (
           <IsLoading
             size="small"
-            color="#FF3333"
+            color="#E31E24"
             style={styles.searchSpinner}
           />
         )}
@@ -292,8 +292,8 @@ export default function QrReview() {
           <RefreshControl
             refreshing={isRefreshingTop}
             onRefresh={refreshTop}
-            colors={["#FF3333"]}
-            tintColor="#FF3333"
+            colors={["#E31E24"]}
+            tintColor="#E31E24"
           />
         }
         onEndReached={handleLoadMore}

@@ -15,6 +15,13 @@ type Props = {
   pageSize: number;
 };
 
+type LoadReferenceModalOptions = {
+  textSearch?: string;
+  page?: number;
+  append?: boolean;
+  currentIds?: Array<string | number>;
+};
+
 export const useOpenReferenceModal = ({
   formData,
   setActiveEnumField,
@@ -25,20 +32,31 @@ export const useOpenReferenceModal = ({
   setReferenceData,
   pageSize,
 }: Props) => {
-  const openReferenceModal = useCallback(
-    (f: Field) => {
-      if (!f.referenceName) return;
+  const loadReferenceModalData = useCallback(
+    async (
+      f: Field,
+      {
+        textSearch = "",
+        page = 0,
+        append = false,
+        currentIds,
+      }: LoadReferenceModalOptions = {},
+    ) => {
+      if (!f.referenceName) return false;
+
+      const fallbackCurrentIds =
+        formData[f.name] != null && formData[f.name] !== ""
+          ? [formData[f.name]]
+          : [];
 
       const params = {
+        textSearch,
         pageSize,
-        skipSize: 0,
-        currentIds:
-          formData[f.name] != null && formData[f.name] !== ""
-            ? [formData[f.name]]
-            : [],
+        skipSize: page * pageSize,
+        append,
+        currentIds: currentIds ?? fallbackCurrentIds,
       };
 
-      // ⭐ CHECK CASCADE TRƯỚC
       if (f.parentsFields) {
         const parents = f.parentsFields.split(",");
 
@@ -46,30 +64,42 @@ export const useOpenReferenceModal = ({
           .map((p) => formData[p])
           .filter((v) => v != null && v !== "");
 
-        // ❗ KHÔNG mở modal nếu thiếu parent
         if (parentValues.length !== parents.length) {
           Alert.alert(
             "Thông báo",
             "Vui lòng chọn đầy đủ thông tin cấp trên trước!",
           );
-          return;
+          return false;
         }
 
-        fetchReferenceByFieldWithParent(
+        await fetchReferenceByFieldWithParent(
           f.referenceName,
           f.name,
           parentValues.join(","),
           setReferenceData,
           params,
         );
-      } else {
-        fetchReferenceByField(
-          f.referenceName,
-          f.name,
-          setReferenceData,
-          params,
-        );
+
+        return true;
       }
+
+      await fetchReferenceByField(
+        f.referenceName,
+        f.name,
+        setReferenceData,
+        params,
+      );
+
+      return true;
+    },
+    [formData, pageSize, setReferenceData],
+  );
+
+  const openReferenceModal = useCallback(
+    async (f: Field) => {
+      if (!f.referenceName) return;
+      const didLoad = await loadReferenceModalData(f);
+      if (!didLoad) return;
 
       // RESET STATE SAU KHI PASS VALIDATION
       setActiveEnumField(f);
@@ -81,16 +111,14 @@ export const useOpenReferenceModal = ({
       setModalVisible(true);
     },
     [
-      formData,
+      loadReferenceModalData,
       setActiveEnumField,
       setRefKeyword,
       setRefPage,
       setRefHasMore,
       setModalVisible,
-      setReferenceData,
-      pageSize,
     ],
   );
 
-  return { openReferenceModal };
+  return { openReferenceModal, loadReferenceModalData };
 };

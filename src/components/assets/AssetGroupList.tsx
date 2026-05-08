@@ -74,7 +74,7 @@ export default function AssetGroupList({
               <Ionicons
                 name={isCollapsed ? "chevron-down" : "chevron-up"}
                 size={26}
-                color="#FF3333"
+                color="#E31E24"
               />
             </TouchableOpacity>
 
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  groupTitle: { fontSize: 16, fontWeight: "700", color: "#FF3333" },
+  groupTitle: { fontSize: 16, fontWeight: "700", color: "#E31E24" },
 
   fieldRow: {
     flexDirection: "row",

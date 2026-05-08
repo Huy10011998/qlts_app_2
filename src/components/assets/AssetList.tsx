@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   FlatList,
-  Alert,
   StyleSheet,
   LayoutAnimation,
   Platform,
@@ -60,6 +59,15 @@ if (
 
 const { width } = Dimensions.get("window");
 const MENU_WIDTH = width * 0.6;
+const BRAND_RED = "#E31E24";
+const BG = "#F0F2F8";
+const CARD_SHADOW = {
+  shadowColor: "#1A2340",
+  shadowOpacity: 0.07,
+  shadowRadius: 8,
+  shadowOffset: { width: 0, height: 2 },
+  elevation: 2,
+};
 
 //  Build tree từ flat list
 function buildTree(data: TreeNode[]): TreeNode[] {
@@ -138,11 +146,13 @@ const TreeNodeItem = ({
   level = 0,
   onSelect,
   expandAll = false,
+  selectedNode,
 }: {
   node: TreeNode;
   level?: number;
   onSelect: (node: TreeNode) => void;
   expandAll?: boolean;
+  selectedNode: TreeNode | null;
 }) => {
   const [expanded, setExpanded] = useState(node.expanded || expandAll);
 
@@ -151,6 +161,7 @@ const TreeNodeItem = ({
   }, [expandAll]);
 
   const hasChildren = node.children && node.children.length > 0;
+  const isSelected = selectedNode?.index === node.index;
 
   const handleIconPress = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -158,28 +169,62 @@ const TreeNodeItem = ({
   };
 
   return (
-    <View style={{ marginLeft: level * 4, marginVertical: 4, marginRight: 8 }}>
-      <View style={styles.nodeRow}>
-        {hasChildren ? (
-          <TouchableOpacity onPress={handleIconPress}>
-            <Ionicons
-              name={expanded ? "chevron-down" : "chevron-forward"}
-              size={22}
-              color="#333"
-              style={{ marginRight: 6 }}
-            />
-          </TouchableOpacity>
-        ) : (
-          <View style={{ width: 22, marginRight: 6 }} />
+    <View style={[styles.nodeWrap, { paddingLeft: level > 0 ? 16 : 0 }]}>
+      <View
+        style={[
+          styles.nodeRow,
+          level > 0 && styles.nodeRowChild,
+          isSelected && styles.nodeRowSelected,
+        ]}
+      >
+        {level === 0 && (
+          <View
+            style={[
+              styles.nodeAccent,
+              { backgroundColor: isSelected ? BRAND_RED : "#E67700" },
+            ]}
+          />
         )}
 
         <TouchableOpacity
-          style={{ flex: 1 }}
+          style={styles.nodeTextWrap}
           onPress={() => onSelect(node)}
           activeOpacity={0.7}
         >
-          <Text style={styles.nodeText}>{node.text}</Text>
+          <View
+            style={[
+              styles.nodeIconWrap,
+              { backgroundColor: hasChildren ? "#FFF8F0" : "#EEF2FF" },
+            ]}
+          >
+            <Ionicons
+              name={hasChildren ? "folder-open" : "document-text-outline"}
+              size={16}
+              color={hasChildren ? "#E67700" : "#3B5BDB"}
+            />
+          </View>
+          <Text
+            style={[styles.nodeText, level > 0 && styles.nodeTextChild]}
+            numberOfLines={2}
+          >
+            {node.text}
+          </Text>
         </TouchableOpacity>
+
+        {hasChildren ? (
+          <TouchableOpacity
+            onPress={handleIconPress}
+            style={styles.nodeChevronWrap}
+          >
+            <Ionicons
+              name={expanded ? "chevron-up" : "chevron-down"}
+              size={13}
+              color="#E67700"
+            />
+          </TouchableOpacity>
+        ) : (
+          <Ionicons name="chevron-forward" size={14} color="#C7C7CC" />
+        )}
       </View>
 
       {hasChildren && expanded && (
@@ -190,7 +235,8 @@ const TreeNodeItem = ({
               node={child}
               level={level + 1}
               onSelect={onSelect}
-              expandAll={expandAll} // truyền xuống con
+              expandAll={expandAll}
+              selectedNode={selectedNode}
             />
           ))}
         </View>
@@ -505,27 +551,51 @@ export default function AssetList() {
     !isLoadingMore &&
     !isSearching // thêm điều kiện này
   ) {
-    return <IsLoading size="large" color="#FF3333" />;
+    return <IsLoading size="large" color="#E31E24" />;
   }
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={styles.container}>
       {/* Search */}
-      <View style={styles.searchWrapper}>
-        <TextInput
-          placeholder="Tìm kiếm..."
-          placeholderTextColor="#999"
-          value={searchText}
-          onChangeText={setSearchText}
-          style={styles.searchInput}
-        />
-        {isSearching && (
-          <IsLoading
-            size="small"
-            color="#FF3333"
-            style={styles.searchSpinner}
+      <View style={styles.searchWrap}>
+        <View style={styles.searchBox}>
+          <View style={styles.searchIconWrap}>
+            <Ionicons name="search-outline" size={16} color="#8A95A3" />
+          </View>
+          <TextInput
+            placeholder={`Tìm kiếm ${titleHeader?.toLowerCase() || "tài sản"}...`}
+            placeholderTextColor="#B0B8C4"
+            value={searchText}
+            onChangeText={setSearchText}
+            style={styles.searchInput}
+            clearButtonMode="while-editing"
+            returnKeyType="search"
           />
-        )}
+          {isSearching && (
+            <View style={styles.spinnerWrap}>
+              <IsLoading size="small" color={BRAND_RED} />
+            </View>
+          )}
+          {!isSearching && searchText.length > 0 && (
+            <Pressable
+              onPress={() => setSearchText("")}
+              style={styles.clearButton}
+            >
+              <Ionicons name="close-circle" size={16} color="#B0B8C4" />
+            </Pressable>
+          )}
+        </View>
+
+        <View style={styles.summaryRow}>
+          <View style={styles.summaryBadge}>
+            <Text style={styles.summaryBadgeText}>
+              {selectedNode ? selectedNode.text : "Tất cả"}
+            </Text>
+          </View>
+          <Text style={styles.summaryMeta}>
+            Tổng {total} • Đã tải {taisan.length}
+          </Text>
+        </View>
       </View>
 
       {/* List */}
@@ -537,8 +607,8 @@ export default function AssetList() {
           <RefreshControl
             refreshing={isRefreshingTop}
             onRefresh={refreshTop}
-            colors={["#FF3333"]} // Android
-            tintColor="#FF3333" // iOS
+            colors={["#E31E24"]} // Android
+            tintColor="#E31E24" // iOS
             progressViewOffset={50}
           />
         }
@@ -553,14 +623,34 @@ export default function AssetList() {
         ListFooterComponent={isLoadingMore ? <IsLoading /> : null}
         ListHeaderComponent={
           <View style={styles.stickyHeader}>
-            <Text style={styles.header}>
-              {selectedNode
-                ? `${selectedNode.text} - Tổng: ${total} (Đã tải: ${taisan.length})`
-                : `Tất cả - Tổng: ${total} (Đã tải: ${taisan.length})`}
-            </Text>
+            <View style={styles.filterCard}>
+              <View style={styles.filterCardIcon}>
+                <Ionicons name="funnel-outline" size={16} color={BRAND_RED} />
+              </View>
+              <View style={styles.filterCardContent}>
+                <Text style={styles.filterCardTitle} numberOfLines={1}>
+                  {selectedNode ? selectedNode.text : "Toàn bộ tài sản"}
+                </Text>
+                <Text style={styles.filterCardSub}>
+                  {total} kết quả • hiển thị {taisan.length}
+                </Text>
+              </View>
+            </View>
           </View>
         }
         stickyHeaderIndices={[0]}
+        contentContainerStyle={styles.listContent}
+        ListEmptyComponent={
+          <View style={styles.emptyWrap}>
+            <View style={styles.emptyIconWrap}>
+              <Ionicons name="cube-outline" size={32} color="#C7C7CC" />
+            </View>
+            <Text style={styles.emptyTitle}>Không tìm thấy tài sản</Text>
+            <Text style={styles.emptySub}>
+              Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc danh mục
+            </Text>
+          </View>
+        }
       />
 
       {/* Drawer */}
@@ -573,19 +663,28 @@ export default function AssetList() {
               { transform: [{ translateX: slideAnim }] },
             ]}
           >
-            <Text style={styles.menuTitle}>Menu</Text>
+            <View style={styles.menuHeader}>
+              <View>
+                <Text style={styles.menuTitle}>Danh mục</Text>
+                <Text style={styles.menuSubTitle}>Chọn nhóm để lọc tài sản</Text>
+              </View>
+              <Pressable onPress={closeMenu} style={styles.menuCloseButton}>
+                <Ionicons name="close" size={18} color="#6B7280" />
+              </Pressable>
+            </View>
             {loadingTree && <IsLoading size="small" />}
             {!loadingTree && treeData.length > 0 && (
               <ScrollView
-                style={{ flex: 1 }}
-                contentContainerStyle={{ paddingBottom: 0 }}
+                style={styles.menuScroll}
+                contentContainerStyle={styles.menuScrollContent}
               >
                 {treeData.map((node) => (
                   <TreeNodeItem
                     key={node.index}
                     node={node}
                     onSelect={handleSelectNode}
-                    expandAll={true} // mở hết
+                    expandAll={true}
+                    selectedNode={selectedNode}
                   />
                 ))}
               </ScrollView>
@@ -606,47 +705,124 @@ export default function AssetList() {
 }
 
 const styles = StyleSheet.create({
-  searchWrapper: {
-    position: "relative",
-    margin: 12,
+  container: {
+    flex: 1,
+    backgroundColor: BG,
   },
-
-  searchInput: {
-    borderWidth: 1,
-    borderColor: "#ccc",
+  searchWrap: {
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    paddingBottom: 8,
+    backgroundColor: BG,
+  },
+  searchBox: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#fff",
-    borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 12,
-    paddingRight: 36,
-    color: "#333",
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#EDF0F5",
+    ...CARD_SHADOW,
   },
-
-  searchSpinner: {
-    position: "absolute",
-    right: 20,
-    top: "50%",
-    marginTop: -10,
+  searchIconWrap: {
+    marginRight: 8,
+    width: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
   },
-
-  header: {
-    textAlign: "center",
+  searchInput: {
+    flex: 1,
+    paddingVertical: 13,
     fontSize: 14,
-    color: "#333",
-    fontWeight: "600",
+    color: "#0F1923",
+    fontWeight: "400",
   },
-
+  spinnerWrap: {
+    width: 24,
+    height: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 6,
+  },
+  clearButton: {
+    padding: 4,
+    marginLeft: 4,
+  },
+  summaryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 8,
+    gap: 12,
+  },
+  summaryBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "#FFF0F0",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: "#FFD6D6",
+    flexShrink: 1,
+  },
+  summaryBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: BRAND_RED,
+  },
+  summaryMeta: {
+    fontSize: 11.5,
+    color: "#8A95A3",
+    fontWeight: "500",
+  },
+  listContent: {
+    paddingBottom: 24,
+  },
   stickyHeader: {
-    backgroundColor: "#F3F4F6",
-    paddingVertical: 10,
+    backgroundColor: BG,
+    paddingHorizontal: 14,
+    paddingTop: 2,
+    paddingBottom: 10,
     zIndex: 10,
   },
-
+  filterCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#EDF0F5",
+    ...CARD_SHADOW,
+  },
+  filterCardIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFF5F5",
+    marginRight: 10,
+  },
+  filterCardContent: {
+    flex: 1,
+  },
+  filterCardTitle: {
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: "#0F1923",
+    marginBottom: 2,
+  },
+  filterCardSub: {
+    fontSize: 11.5,
+    color: "#8A95A3",
+  },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.3)",
+    backgroundColor: "rgba(15, 25, 35, 0.18)",
   },
-
   menuContainer: {
     position: "absolute",
     right: 0,
@@ -654,27 +830,134 @@ const styles = StyleSheet.create({
     height: "100%",
     backgroundColor: "#fff",
     padding: 16,
-    paddingBottom: 0,
+    paddingBottom: 12,
     elevation: 5,
     zIndex: 999,
   },
-
+  menuHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    marginBottom: 14,
+  },
   menuTitle: {
     fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 12,
-    color: "#333",
+    fontWeight: "700",
+    color: "#0F1923",
   },
-
+  menuSubTitle: {
+    marginTop: 4,
+    fontSize: 12,
+    color: "#8A95A3",
+  },
+  menuCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  menuScroll: {
+    flex: 1,
+  },
+  menuScrollContent: {
+    paddingBottom: 12,
+  },
+  nodeWrap: {
+    marginBottom: 6,
+  },
   nodeRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 6,
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    paddingVertical: 11,
+    paddingRight: 12,
+    paddingLeft: 0,
+    overflow: "hidden",
+    gap: 10,
+    ...CARD_SHADOW,
   },
-
+  nodeRowChild: {
+    backgroundColor: "#FAFBFE",
+    shadowOpacity: 0.03,
+    elevation: 1,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#EDF0F5",
+  },
+  nodeRowSelected: {
+    borderWidth: 1,
+    borderColor: "#FFD6D6",
+    backgroundColor: "#FFF8F8",
+  },
+  nodeAccent: {
+    width: 4,
+    alignSelf: "stretch",
+    borderTopRightRadius: 2,
+    borderBottomRightRadius: 2,
+    marginRight: 2,
+  },
+  nodeTextWrap: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  nodeIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
   nodeText: {
-    fontSize: 15,
-    color: "#333",
+    flex: 1,
+    fontSize: 13.5,
+    color: "#0F1923",
+    fontWeight: "600",
+    lineHeight: 18,
+  },
+  nodeTextChild: {
+    fontSize: 12.5,
     fontWeight: "500",
+    color: "#374151",
+  },
+  nodeChevronWrap: {
+    width: 24,
+    height: 24,
+    borderRadius: 7,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFF8F0",
+  },
+  emptyWrap: {
+    alignItems: "center",
+    paddingTop: 60,
+    paddingHorizontal: 32,
+  },
+  emptyIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 22,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+    ...CARD_SHADOW,
+  },
+  emptyTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#374151",
+    marginBottom: 6,
+    textAlign: "center",
+  },
+  emptySub: {
+    fontSize: 12,
+    color: "#8A95A3",
+    textAlign: "center",
+    lineHeight: 18,
   },
 });

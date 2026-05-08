@@ -54,7 +54,7 @@ export const TimePickerModalAndroid = ({
           {value || "Chọn giờ (HH:mm)"}
         </Text>
 
-        <Ionicons name="time-outline" size={24} color="#FF3333" />
+        <Ionicons name="time-outline" size={24} color="#E31E24" />
       </TouchableOpacity>
 
       {showPicker && Platform.OS === "android" && (

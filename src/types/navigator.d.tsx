@@ -179,6 +179,23 @@ export type RootStackParamList = {
     nameClass?: string;
     propertyClass?: PropertyClass;
   };
+
+  /** ================= SHAREHOLDERS MEETING ================= */
+  ShareholdersMeeting: {
+    meetingId: string;
+    meetingTitle: string;
+    meetingDate: string;
+    meetingTime: string;
+    meetingVenue: string;
+    totalShareholders: number;
+  };
+  ShareholdersMeetingScanner: {
+    meetingId: number;
+    scanMode: "attendance" | "voting";
+    votingOpinionId?: number;
+    votingOpinionTitle?: string;
+    votingChoice?: "agree" | "disagree" | "noOpinion";
+  };
 };
 
 // =====================================================
@@ -227,3 +244,6 @@ export type QrDetailsRouteProp = RouteProp<ScanTabParamList, "QrDetails">;
 
 export type QrReviewNavigationProp = StackNavigation<"QrReview">;
 export type QrReviewRouteProp = StackRoute<"QrReview">;
+
+type MeetingRoute = RouteProp<RootStackParamList, "ShareholdersMeeting">;
+export type ShareholdersMeetingRouteProp = MeetingRoute;

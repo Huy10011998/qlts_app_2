@@ -55,7 +55,10 @@ export default function FileView({ visible, onClose, params }: ViewerProps) {
       setFileData(data);
     } catch (err) {
       error("Fetch file error:", err);
-      showAlertIfActive("Lỗi", "Không thể tải file. Sử dụng fallback URL cho PDF.");
+      showAlertIfActive(
+        "Lỗi",
+        "Không thể tải file. Sử dụng fallback URL cho PDF.",
+      );
       if (isMounted()) {
         setUseUrlFallback(true);
       }
@@ -204,7 +207,7 @@ export default function FileView({ visible, onClose, params }: ViewerProps) {
             style={[styles.loadingOverlay, { opacity: fadeAnim }]}
             pointerEvents="none"
           >
-            <IsLoading size="large" color="#FF3333" />
+            <IsLoading size="large" color="#E31E24" />
           </Animated.View>
         )}
       </View>
@@ -219,7 +222,7 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === "ios" ? 50 : 20,
     paddingHorizontal: 16,
     paddingBottom: 10,
-    backgroundColor: "#FF3333",
+    backgroundColor: "#E31E24",
     flexDirection: "row",
     alignItems: "center",
   },

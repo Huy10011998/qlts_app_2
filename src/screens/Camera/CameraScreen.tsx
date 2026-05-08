@@ -9,6 +9,7 @@ import {
   UIManager,
   TextInput,
   StyleSheet,
+  KeyboardAvoidingView,
 } from "react-native";
 
 import { useNavigation } from "@react-navigation/native";
@@ -20,8 +21,6 @@ import IsLoading from "../../components/ui/IconLoading";
 import { removeVietnameseTones } from "../../utils/Helper";
 import { getVungCamera } from "../../services/data/CallApi";
 import { error } from "../../utils/Logger";
-import { useAutoReload } from "../../hooks/useAutoReload";
-import { KeyboardAvoidingView } from "react-native";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 
 if (
@@ -30,6 +29,9 @@ if (
 ) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
+
+const BRAND_RED = "#E31E24";
+const BG = "#F0F2F8";
 
 //
 // TYPE
@@ -41,6 +43,31 @@ interface CameraItem {
   label: string;
   children: CameraItem[];
 }
+
+const getItemTheme = (item: CameraItem, expanded: boolean) => {
+  if (item.children.length > 0) {
+    return expanded
+      ? {
+          icon: "folder-open",
+          lib: "ionicons",
+          bg: "#FFF5F5",
+          color: BRAND_RED,
+        }
+      : {
+          icon: "folder",
+          lib: "ionicons",
+          bg: "#FFF8F0",
+          color: "#E67700",
+        };
+  }
+
+  return {
+    icon: "videocam",
+    lib: "material",
+    bg: "#EEF2FF",
+    color: "#3B5BDB",
+  };
+};
 
 //
 // DROPDOWN ITEM
@@ -63,6 +90,7 @@ const DropdownItem = ({
 
   const hasChildren = item.children.length > 0;
   const expanded = expandedIds.includes(item.id);
+  const theme = getItemTheme(item, expanded);
 
   const getAllZoneIds = (zoneId: number, allZones: any[]): number[] => {
     const result = [zoneId];
@@ -100,35 +128,66 @@ const DropdownItem = ({
   };
 
   const handleToggle = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     onToggle(item.id);
   };
 
   return (
-    <View style={{ paddingLeft: level * 20, marginVertical: 4 }}>
-      <View style={styles.item}>
-        {hasChildren && (
-          <Pressable onPress={handleToggle} hitSlop={10}>
-            <Ionicons
-              name={expanded ? "chevron-down" : "chevron-forward"}
-              size={18}
-              color="#999"
-            />
-          </Pressable>
+    <View style={[styles.itemWrap, { paddingLeft: level > 0 ? 16 : 0 }]}>
+      <View style={[styles.itemCard, level > 0 && styles.itemCardChild]}>
+        {level === 0 && (
+          <View style={[styles.accent, { backgroundColor: theme.color }]} />
         )}
 
-        <Pressable style={styles.right} onPress={handleNavigate}>
-          {hasChildren ? (
-            expanded ? (
-              <Ionicons name="folder-open" size={18} color="red" />
+        <Pressable
+          style={({ pressed }) => [
+            styles.itemMainPressable,
+            pressed && styles.itemPressed,
+          ]}
+          onPress={handleNavigate}
+        >
+          <View style={[styles.iconWrap, { backgroundColor: theme.bg }]}>
+            {theme.lib === "material" ? (
+              <MaterialIcons
+                name={theme.icon as any}
+                size={16}
+                color={theme.color}
+              />
             ) : (
-              <Ionicons name="folder" size={18} color="red" />
-            )
-          ) : (
-            <MaterialIcons name="videocam" size={18} color="red" />
-          )}
-          <Text style={styles.label}>{item.label}</Text>
+              <Ionicons
+                name={theme.icon as any}
+                size={16}
+                color={theme.color}
+              />
+            )}
+          </View>
+
+          <Text
+            style={[styles.label, level > 0 && styles.labelChild]}
+            numberOfLines={2}
+          >
+            {item.label}
+          </Text>
         </Pressable>
+
+        {hasChildren ? (
+          <Pressable
+            onPress={handleToggle}
+            hitSlop={10}
+            style={({ pressed }) => [
+              styles.chevronWrap,
+              { backgroundColor: theme.bg },
+              pressed && styles.itemPressed,
+            ]}
+          >
+            <Ionicons
+              name={expanded ? "chevron-up" : "chevron-down"}
+              size={13}
+              color={theme.color}
+            />
+          </Pressable>
+        ) : (
+          <Ionicons name="chevron-forward" size={14} color="#C7C7CC" />
+        )}
       </View>
 
       {expanded &&
@@ -152,7 +211,7 @@ const DropdownItem = ({
 
 export default function CameraScreen() {
   const [data, setData] = useState<CameraItem[]>([]);
-  const [isFetching, setIsFetching] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
   const [search, setSearch] = useState("");
   const [isSearching, setIsSearching] = useState(false);
 
@@ -161,7 +220,6 @@ export default function CameraScreen() {
   const [rawData, setRawData] = useState<any[]>([]);
 
   const fetchingRef = useRef(false);
-  const firstLoadRef = useRef(true);
   const { isMounted, showAlertIfActive } = useSafeAlert();
 
   //
@@ -306,25 +364,50 @@ export default function CameraScreen() {
   // RENDER
   //
   if (isFetching && !debouncedSearch)
-    return <IsLoading size="large" color="#FF3333" />;
+    return <IsLoading size="large" color={BRAND_RED} />;
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
+      style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <View style={{ flex: 1 }}>
-        <View style={styles.searchBox}>
-          <TextInput
-            placeholder="Tìm kiếm..."
-            value={search}
-            onChangeText={setSearch}
-            placeholderTextColor="#999"
-            style={{ flex: 1, paddingVertical: 10, color: "#333" }}
-          />
-          <View style={styles.spinnerWrapper}>
-            {isSearching && <IsLoading size="small" color="#FF3333" />}
+      <View style={styles.container}>
+        <View style={styles.searchWrap}>
+          <View style={styles.searchBox}>
+            <View style={styles.searchIconWrap}>
+              <Ionicons name="search-outline" size={16} color="#8A95A3" />
+            </View>
+            <TextInput
+              placeholder="Tìm kiếm camera..."
+              value={search}
+              onChangeText={setSearch}
+              placeholderTextColor="#B0B8C4"
+              style={styles.searchInput}
+              clearButtonMode="while-editing"
+              returnKeyType="search"
+            />
+            {isSearching && (
+              <View style={styles.spinnerWrapper}>
+                <IsLoading size="small" color={BRAND_RED} />
+              </View>
+            )}
+            {!isSearching && search.length > 0 && (
+              <Pressable
+                onPress={() => setSearch("")}
+                style={styles.clearButton}
+              >
+                <Ionicons name="close-circle" size={16} color="#B0B8C4" />
+              </Pressable>
+            )}
           </View>
+
+          {debouncedSearch.trim() ? (
+            <View style={styles.resultBadge}>
+              <Text style={styles.resultText}>
+                {filteredTree.length} kết quả
+              </Text>
+            </View>
+          ) : null}
         </View>
 
         <FlatList
@@ -338,15 +421,23 @@ export default function CameraScreen() {
               rawData={rawData}
             />
           )}
-          contentContainerStyle={{
-            paddingVertical: 12,
-            paddingHorizontal: 12,
-          }}
+          contentContainerStyle={styles.listContent}
           removeClippedSubviews
           initialNumToRender={20}
           windowSize={10}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
+          ListEmptyComponent={
+            <View style={styles.emptyWrap}>
+              <View style={styles.emptyIconWrap}>
+                <Ionicons name="videocam-outline" size={32} color="#C7C7CC" />
+              </View>
+              <Text style={styles.emptyTitle}>Không tìm thấy camera</Text>
+              <Text style={styles.emptySub}>
+                Thử tìm kiếm với tên khu vực hoặc camera khác
+              </Text>
+            </View>
+          }
         />
       </View>
     </KeyboardAvoidingView>
@@ -358,57 +449,175 @@ export default function CameraScreen() {
 //
 
 const styles = StyleSheet.create({
-  item: {
+  container: {
+    flex: 1,
+    backgroundColor: BG,
+  },
+  itemWrap: {
+    marginBottom: 6,
+  },
+  itemCard: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    padding: 14,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#eee",
     backgroundColor: "#fff",
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
+    borderRadius: 14,
+    paddingVertical: 11,
+    paddingRight: 14,
+    paddingLeft: 0,
+    overflow: "hidden",
+    shadowColor: "#1A2340",
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+    gap: 10,
   },
-
-  right: {
+  itemCardChild: {
+    backgroundColor: "#FAFBFE",
+    shadowOpacity: 0.03,
+    elevation: 1,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#EDF0F5",
+  },
+  itemMainPressable: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
-    paddingLeft: 8,
+    gap: 10,
   },
-
+  itemPressed: {
+    opacity: 0.75,
+  },
+  accent: {
+    width: 4,
+    alignSelf: "stretch",
+    borderTopRightRadius: 2,
+    borderBottomRightRadius: 2,
+    marginRight: 2,
+  },
+  iconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
   label: {
-    marginLeft: 6,
-    fontSize: 13,
-    fontWeight: "bold",
-    color: "#333",
+    flex: 1,
+    fontSize: 13.5,
+    fontWeight: "600",
+    color: "#0F1923",
+    letterSpacing: 0.1,
+    lineHeight: 18,
   },
-
+  labelChild: {
+    fontSize: 12.5,
+    fontWeight: "500",
+    color: "#374151",
+  },
+  chevronWrap: {
+    width: 24,
+    height: 24,
+    borderRadius: 7,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  searchWrap: {
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    paddingBottom: 8,
+    backgroundColor: BG,
+  },
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
-    margin: 12,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
     backgroundColor: "#fff",
     paddingHorizontal: 12,
+    borderRadius: 14,
+    shadowColor: "#1A2340",
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#EDF0F5",
   },
-
-  searchSpinner: {
-    position: "absolute",
-    right: 20,
-    top: "50%",
-    marginTop: -10,
+  searchIconWrap: {
+    marginRight: 8,
+    width: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
   },
-
+  searchInput: {
+    flex: 1,
+    paddingVertical: 13,
+    fontSize: 14,
+    color: "#0F1923",
+    fontWeight: "400",
+  },
   spinnerWrapper: {
     width: 24,
     height: 24,
     alignItems: "center",
     justifyContent: "center",
+    marginLeft: 6,
+  },
+  clearButton: {
+    padding: 4,
+    marginLeft: 4,
+  },
+  resultBadge: {
+    alignSelf: "flex-start",
+    marginTop: 8,
+    backgroundColor: "#FFF0F0",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: "#FFD6D6",
+  },
+  resultText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: BRAND_RED,
+  },
+  listContent: {
+    paddingHorizontal: 14,
+    paddingTop: 4,
+    paddingBottom: 24,
+  },
+  emptyWrap: {
+    alignItems: "center",
+    paddingTop: 60,
+    paddingHorizontal: 32,
+  },
+  emptyIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 22,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+    shadowColor: "#1A2340",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  emptyTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#374151",
+    marginBottom: 6,
+    textAlign: "center",
+  },
+  emptySub: {
+    fontSize: 12,
+    color: "#8A95A3",
+    textAlign: "center",
+    lineHeight: 18,
   },
 });

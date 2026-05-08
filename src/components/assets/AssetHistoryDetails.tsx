@@ -78,7 +78,7 @@ export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
   const isFieldChanged = (
     field: Field,
     currentItem: any,
-    previousItem: any
+    previousItem: any,
   ): boolean => {
     if (!previousItem) return false;
 
@@ -93,7 +93,7 @@ export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
       {/* Loading dạng overlay – KHÔNG che UI */}
       {isLoading && (
         <View style={styles.loadingOverlay}>
-          <IsLoading size="small" color="#FF3333" />
+          <IsLoading size="small" color="#E31E24" />
         </View>
       )}
 

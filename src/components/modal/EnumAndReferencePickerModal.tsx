@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Modal,
   View,
@@ -39,6 +39,7 @@ export default function EnumAndReferencePickerModal({
   const insets = useSafeAreaInsets();
   const [searchText, setSearchText] = useState("");
   const debouncedSearch = useDebounce(searchText, 600);
+  const lastSearchRef = useRef("");
   const loaded =
     loadedCount ?? items?.filter((i) => i.value !== "").length ?? 0;
 
@@ -46,15 +47,17 @@ export default function EnumAndReferencePickerModal({
   useEffect(() => {
     if (!visible) return;
 
-    const isSearch = debouncedSearch.trim().length > 0;
-    if (!isSearch) return;
+    const nextSearch = debouncedSearch.trim();
+    if (nextSearch === lastSearchRef.current) return;
 
-    onSearch?.(debouncedSearch.trim());
-  }, [debouncedSearch, visible]);
+    lastSearchRef.current = nextSearch;
+    onSearch?.(nextSearch);
+  }, [debouncedSearch, visible, onSearch]);
 
   useEffect(() => {
     if (!visible) {
       setSearchText("");
+      lastSearchRef.current = "";
     }
   }, [visible]);
 
@@ -127,7 +130,7 @@ export default function EnumAndReferencePickerModal({
           {isSearching && (
             <IsLoading
               size="small"
-              color="#FF3333"
+              color="#E31E24"
               style={styles.searchSpinner}
             />
           )}

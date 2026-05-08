@@ -1,3 +1,5 @@
+import { ShareholderApiItem } from "./Index";
+
 // Loại dữ liệu điều kiện
 export type Conditions = {
   property: string;
@@ -111,3 +113,21 @@ export interface FetchEnumResponse {
 }
 
 export type SetEnumDataFn = (prev: Record<string, any>) => Record<string, any>;
+
+export interface ActiveMeetingResponse {
+  message?: string;
+  data?: {
+    id?: number;
+    ma?: string;
+    ten?: string;
+    ngayDaiHoi?: string | null;
+    nhiemKy?: string | null;
+    isActive?: boolean;
+    [key: string]: any;
+  } | null;
+}
+
+export interface ShareholderListResponse {
+  message?: string;
+  data?: ShareholderApiItem[] | null;
+}

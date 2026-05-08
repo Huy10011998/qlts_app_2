@@ -39,7 +39,7 @@ const ReportView: React.FC<ReportViewProps> = ({ title, onClose }) => {
       setLoading(true);
       const res = await getPreviewBC(
         { tuNgay: from, denNgay: to, isPreview: true },
-        API_ENDPOINTS.PREVIEW_MAYTINH_THONGKE_CNTT
+        API_ENDPOINTS.PREVIEW_MAYTINH_THONGKE_CNTT,
       );
 
       const html = `
@@ -97,7 +97,7 @@ const ReportView: React.FC<ReportViewProps> = ({ title, onClose }) => {
           paddingTop: Platform.OS === "ios" ? 50 : 20,
           paddingHorizontal: 16,
           paddingBottom: 10,
-          backgroundColor: "#FF3333",
+          backgroundColor: "#E31E24",
           flexDirection: "row",
           justifyContent: "space-between",
           alignItems: "center",
@@ -126,7 +126,7 @@ const ReportView: React.FC<ReportViewProps> = ({ title, onClose }) => {
 
         <TouchableOpacity
           style={{
-            backgroundColor: "#FF3333",
+            backgroundColor: "#E31E24",
             paddingVertical: 14,
             borderRadius: 8,
             alignItems: "center",

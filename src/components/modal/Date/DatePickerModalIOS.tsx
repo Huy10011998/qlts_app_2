@@ -20,7 +20,7 @@ export const DatePickerModalIOS = ({
 }) => {
   const [showPicker, setShowPicker] = useState(false);
   const [tempDate, setTempDate] = useState<Date>(
-    value ? parseDate(value) : new Date()
+    value ? parseDate(value) : new Date(),
   );
 
   useEffect(() => {
@@ -59,7 +59,7 @@ export const DatePickerModalIOS = ({
           {value || "Chọn Ngày (dd-MM-yyyy)"}
         </Text>
 
-        <Ionicons name="time-outline" size={24} color="#FF3333" />
+        <Ionicons name="time-outline" size={24} color="#E31E24" />
       </TouchableOpacity>
 
       <Modal
@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
 
   toolbarText: {
     fontSize: 18,
-    color: "#FF3333",
+    color: "#E31E24",
   },
 
   datePickerBox: {

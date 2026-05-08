@@ -4,7 +4,7 @@ import { StyleSheet } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getFocusedRouteNameFromRoute } from "@react-navigation/native";
-
+import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import HomeStack from "./HomeStack";
 import SettingStack from "./SettingStack";
 import ScanStack from "./ScanStack";
@@ -23,9 +23,9 @@ export default function Tabs() {
         tabBarHideOnKeyboard: true,
         lazy: false,
         tabBarLabelStyle: styles.label,
-        tabBarActiveTintColor: "#fff",
+        tabBarActiveTintColor: "#E31E24",
         tabBarStyle: {
-          backgroundColor: "#FF3333",
+          backgroundColor: "#fff",
           borderTopWidth: StyleSheet.hairlineWidth,
           height: TAB_HEIGHT + insets.bottom,
           paddingBottom: insets.bottom,
@@ -36,12 +36,26 @@ export default function Tabs() {
       <Tab.Screen
         name="HomeTab"
         component={HomeStack}
-        options={{
-          title: "Trang chủ",
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="home" size={24} color={color} />
-          ),
-          freezeOnBlur: true,
+        options={({ route }) => {
+          const routeName = getFocusedRouteNameFromRoute(route) ?? "Home";
+          const isMeetingScanner = routeName === "ShareholdersMeetingScanner";
+
+          return {
+            title: "Trang chủ",
+            tabBarIcon: ({ color }) => (
+              <Ionicons name="home" size={24} color={color} />
+            ),
+            freezeOnBlur: true,
+            tabBarStyle: [
+              {
+                backgroundColor: isMeetingScanner ? "#3A3A3A" : "#fff",
+                borderTopWidth: StyleSheet.hairlineWidth,
+                borderTopColor: isMeetingScanner ? "#000" : undefined,
+                height: TAB_HEIGHT + insets.bottom,
+                paddingBottom: insets.bottom,
+              },
+            ],
+          };
         }}
       />
 
@@ -55,12 +69,20 @@ export default function Tabs() {
 
           return {
             title: "Quét QR",
+            tabBarActiveTintColor: isScanScreen ? "#fff" : "#E31E24",
+            tabBarInactiveTintColor: isScanScreen
+              ? "rgba(255,255,255,0.68)"
+              : undefined,
             tabBarIcon: ({ color }) => (
-              <Ionicons name="qr-code-outline" size={24} color={color} />
+              <MaterialCommunityIcons
+                name="qrcode-scan"
+                size={24}
+                color={color}
+              />
             ),
             tabBarStyle: [
               {
-                backgroundColor: isScanScreen ? "#3A3A3A" : "#FF3333",
+                backgroundColor: isScanScreen ? "#3A3A3A" : "#fff",
                 borderTopWidth: StyleSheet.hairlineWidth,
                 borderTopColor: "#000",
                 height: TAB_HEIGHT + insets.bottom,

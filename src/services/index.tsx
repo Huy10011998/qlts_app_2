@@ -20,4 +20,5 @@ export {
   uploadAttachProperty,
   getPermission,
   tuDongTang,
+  luuYKienCoDongDhcd,
 } from "./data/CallApi";

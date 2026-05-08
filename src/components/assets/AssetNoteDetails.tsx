@@ -64,7 +64,7 @@ export default function AssetNoteDetails({ text }: CenterTextProps) {
       />
       {shouldShowLoader && loading && (
         <Animated.View style={[styles.loadingOverlay, { opacity }]}>
-          <IsLoading size="large" color="#FF3333" />
+          <IsLoading size="large" color="#E31E24" />
         </Animated.View>
       )}
     </View>

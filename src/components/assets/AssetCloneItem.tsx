@@ -39,9 +39,18 @@ import { useEnumAndReferenceLoader } from "../../hooks/AssetAddItem/useEnumAndRe
 import { useAutoIncrementCode } from "../../hooks/AssetAddItem/useAutoIncrementCode";
 import IsLoading from "../ui/IconLoading";
 import { useOpenReferenceModal } from "../../hooks/AssetAddItem/useOpenReferenceModal";
-import { useReferenceFetcher } from "../../hooks/AssetAddItem/useReferenceData";
 import { useModalItems } from "../../hooks/AssetAddItem/useModalItems";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
+
+const BRAND_RED = "#E31E24";
+const BG = "#F0F2F8";
+const CARD_SHADOW = {
+  shadowColor: "#1A2340",
+  shadowOpacity: 0.06,
+  shadowRadius: 8,
+  shadowOffset: { width: 0, height: 2 },
+  elevation: 2,
+};
 
 export default function AssetCloneItem() {
   /* ===== PARAMS ===== */
@@ -224,7 +233,7 @@ export default function AssetCloneItem() {
   };
 
   /* ===== OPEN ENUM & REFERANCE MODAL ===== */
-  const { openReferenceModal } = useOpenReferenceModal({
+  const { openReferenceModal, loadReferenceModalData } = useOpenReferenceModal({
     formData,
     setActiveEnumField,
     setRefKeyword,
@@ -234,12 +243,6 @@ export default function AssetCloneItem() {
     setReferenceData,
     pageSize: PAGE_SIZE,
   });
-
-  /* ===== FETCH REFERENCE DATA ON SEARCH ===== */
-  const { fetchReferenceData } = useReferenceFetcher(
-    setReferenceData,
-    PAGE_SIZE,
-  );
 
   // ===== MODAL ITEMS ===== //
   const modalItems = useModalItems(
@@ -348,9 +351,21 @@ export default function AssetCloneItem() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={{ flex: 1 }}
+      style={styles.container}
     >
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 20 }}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.heroCard}>
+          <View style={styles.heroIconWrap}>
+            <Ionicons name="copy-outline" size={20} color="#E67700" />
+          </View>
+          <View style={styles.heroContent}>
+            <Text style={styles.heroTitle}>Tạo bản sao tài sản</Text>
+            <Text style={styles.heroSub}>
+              Sao chép nhanh dữ liệu hiện có và điều chỉnh lại những trường cần thiết.
+            </Text>
+          </View>
+        </View>
+
         {Object.entries(groupedFields).map(([gName, fields]) => {
           const collapsed = collapsedGroups[gName];
           return (
@@ -359,12 +374,19 @@ export default function AssetCloneItem() {
                 style={styles.groupHeader}
                 onPress={() => toggleGroup(gName)}
               >
-                <Text style={styles.groupTitle}>{gName}</Text>
-                <Ionicons
-                  name={collapsed ? "chevron-down" : "chevron-up"}
-                  size={26}
-                  color={"#FF3333"}
-                />
+                <View style={styles.groupTitleWrap}>
+                  <View style={styles.groupIconWrap}>
+                    <Ionicons name="albums-outline" size={16} color={BRAND_RED} />
+                  </View>
+                  <Text style={styles.groupTitle}>{gName}</Text>
+                </View>
+                <View style={styles.chevronWrap}>
+                  <Ionicons
+                    name={collapsed ? "chevron-down" : "chevron-up"}
+                    size={14}
+                    color={BRAND_RED}
+                  />
+                </View>
               </TouchableOpacity>
 
               {!collapsed &&
@@ -402,6 +424,7 @@ export default function AssetCloneItem() {
           style={styles.createCloneButton}
           onPress={handleClone}
         >
+          <Ionicons name="copy-outline" size={18} color="#fff" />
           <Text style={styles.createCloneButtonText}>Tạo bản sao</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -451,7 +474,7 @@ export default function AssetCloneItem() {
           setRefPage(0);
           setRefHasMore(true);
 
-          fetchReferenceData(activeEnumField, {
+          loadReferenceModalData(activeEnumField, {
             textSearch,
             page: 0,
             append: false,
@@ -474,7 +497,7 @@ export default function AssetCloneItem() {
 
           setRefLoadingMore(true);
 
-          fetchReferenceData(activeEnumField, {
+          loadReferenceModalData(activeEnumField, {
             textSearch: refKeyword,
             page: refPage + 1,
             append: true,
@@ -485,45 +508,122 @@ export default function AssetCloneItem() {
         }}
       />
 
-      {refLoadingMore && <IsLoading size="large" color="#FF3333"></IsLoading>}
+      {refLoadingMore && <IsLoading size="large" color={BRAND_RED}></IsLoading>}
     </KeyboardAvoidingView>
   );
 }
 
 // UI
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: BG,
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  heroCard: {
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#EDF0F5",
+    flexDirection: "row",
+    alignItems: "center",
+    ...CARD_SHADOW,
+  },
+  heroIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: "#FFF8F0",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  heroContent: {
+    flex: 1,
+  },
+  heroTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#0F1923",
+    marginBottom: 2,
+  },
+  heroSub: {
+    fontSize: 12,
+    color: "#8A95A3",
+    lineHeight: 18,
+  },
   groupCard: {
     backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 12,
+    padding: 14,
+    borderRadius: 16,
     marginBottom: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#EDF0F5",
+    ...CARD_SHADOW,
   },
 
   groupHeader: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 12,
   },
-
-  groupTitle: { fontSize: 16, fontWeight: "700", color: "#FF3333" },
+  groupTitleWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  groupIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: "#FFF3F3",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  groupTitle: { fontSize: 15, fontWeight: "700", color: "#0F1923", flex: 1 },
+  chevronWrap: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFF3F3",
+  },
   fieldBlock: { marginBottom: 14 },
-  label: { fontSize: 14, fontWeight: "600", marginBottom: 6, color: "#333" },
+  label: {
+    fontSize: 13.5,
+    fontWeight: "600",
+    marginBottom: 7,
+    color: "#374151",
+  },
 
   input: {
     borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
+    borderColor: "#E3E8F0",
+    borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: "#333",
+    paddingVertical: 12,
+    color: "#0F1923",
+    backgroundColor: "#FBFCFE",
   },
 
   createCloneButton: {
-    backgroundColor: "#FF3333",
-    paddingVertical: 14,
-    borderRadius: 10,
+    backgroundColor: BRAND_RED,
+    paddingVertical: 15,
+    borderRadius: 14,
     alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
     marginTop: 8,
+    ...CARD_SHADOW,
   },
   createCloneButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
 
@@ -535,24 +635,25 @@ const styles = StyleSheet.create({
 
   textArea: {
     borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 6,
-    padding: 10,
+    borderColor: "#E3E8F0",
+    borderRadius: 12,
+    padding: 12,
     minHeight: 100,
     fontSize: 14,
-    color: "#000",
-    backgroundColor: "#fff",
+    color: "#0F1923",
+    backgroundColor: "#FBFCFE",
     textAlignVertical: "top",
   },
 
   uploadButton: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
+    justifyContent: "center",
+    paddingVertical: 12,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: "#FF3333",
-    borderRadius: 8,
+    borderColor: "#FFD6D6",
+    borderRadius: 12,
     backgroundColor: "#fff",
     marginTop: 6,
   },
@@ -592,7 +693,7 @@ const styles = StyleSheet.create({
   },
 
   tooltipLabel: {
-    color: "#FF3333",
+    color: BRAND_RED,
     fontWeight: "600",
     fontSize: 14,
   },

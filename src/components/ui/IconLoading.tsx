@@ -4,7 +4,7 @@ import { IsLoadingProps } from "../../types";
 
 export default function IsLoading({
   size = "large",
-  color = "#FF3333",
+  color = "#E31E24",
   style,
 }: IsLoadingProps) {
   return (

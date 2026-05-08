@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
-import { View, StyleSheet, Alert } from "react-native";
+import { View, StyleSheet } from "react-native";
 import { DetailsProps } from "../../types/Index";
 import { useParams } from "../../hooks/useParams";
 import { getDetails } from "../../services/Index";
@@ -17,6 +17,9 @@ import { useAutoReload } from "../../hooks/useAutoReload";
 import { useAppDispatch } from "../../store/Hooks";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
+
+const BG = "#F0F2F8";
+const BRAND_RED = "#E31E24";
 
 export default function AssetDetails({ children }: DetailsProps) {
   const { id, nameClass, field, activeTab: tabFromParams } = useParams();
@@ -77,7 +80,7 @@ export default function AssetDetails({ children }: DetailsProps) {
     else setIsLoading(false);
   }, [id, nameClass, fetchDetails]);
 
-  if (isLoading) return <IsLoading size="large" color="#FF3333" />;
+  if (isLoading) return <IsLoading size="large" color={BRAND_RED} />;
 
   return (
     <View style={styles.container}>
@@ -98,5 +101,5 @@ export default function AssetDetails({ children }: DetailsProps) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9F9F9" },
+  container: { flex: 1, backgroundColor: BG },
 });

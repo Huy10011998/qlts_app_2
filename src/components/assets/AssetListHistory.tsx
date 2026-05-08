@@ -68,7 +68,7 @@ export default function AssetListHistory() {
           const activeFields = responseFieldActive?.data || [];
           setFieldActive(activeFields);
           setFieldShowMobile(
-            activeFields.filter((f: { isShowMobile: any }) => f.isShowMobile)
+            activeFields.filter((f: { isShowMobile: any }) => f.isShowMobile),
           );
         }
 
@@ -103,7 +103,7 @@ export default function AssetListHistory() {
         }
       }
     },
-    [nameClass, fieldActive.length, propertyClass, skipSize, id]
+    [nameClass, fieldActive.length, propertyClass, skipSize, id],
   );
 
   useEffect(() => {
@@ -117,7 +117,7 @@ export default function AssetListHistory() {
     if (lichsu.length < total && !isLoadingMore) fetchData(true);
   };
 
-  if (isLoading) return <IsLoading size="large" color="#FF3333" />;
+  if (isLoading) return <IsLoading size="large" color="#E31E24" />;
 
   return (
     <View style={styles.container}>

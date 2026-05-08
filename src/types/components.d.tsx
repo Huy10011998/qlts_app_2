@@ -145,6 +145,10 @@ export interface HeaderContextProps {
   setTitle: (t: string) => void;
 }
 
+export interface HeaderHomeProps {
+  title?: string;
+}
+
 export interface DetailsProps {
   children: (props: {
     activeTab: string;
@@ -222,6 +226,8 @@ export type HeaderOptionsProps = {
   showBackButton?: boolean;
   showMenuButton?: boolean;
   onMenuPress?: () => void;
+  showQrScannerButton?: boolean;
+  onQrScannerPress?: () => void;
 };
 
 export interface ViewerProps {
@@ -360,6 +366,64 @@ export interface CameraCellProps {
   pongTimeoutRef?: React.MutableRefObject<
     Record<string, ReturnType<typeof setTimeout>>
   >;
-  webviewRestartRef?: React.MutableRefObject<(cameraId: string | number) => void>;
+  webviewRestartRef?: React.MutableRefObject<
+    (cameraId: string | number) => void
+  >;
   onTokenExpired?: () => void;
 }
+
+export type VoteChoice = "agree" | "disagree" | "abstain" | null;
+export type AttendanceFilter = "all" | "presentOrProxy" | "pending";
+export type ResolutionFilter = "all" | "open" | "pending" | "closed";
+
+export type AttendanceStatus = "present" | "pending";
+
+export interface Resolution {
+  id: string;
+  code: string;
+  title: string;
+  description: string;
+  status: "open" | "closed" | "pending";
+  votes: {
+    agree: number;
+    disagree: number;
+    abstain: number;
+    total: number;
+  };
+  userVote: VoteChoice;
+}
+
+export interface Shareholder {
+  id: string;
+  name: string;
+  shareholderId: string;
+  shares: number;
+  status: AttendanceStatus;
+}
+
+export interface ShareholderRowProps {
+  item: Shareholder;
+  onCheckIn: (id: string, shareholderId: string) => void;
+  onUndoCheckIn: (id: string, shareholderId: string) => void;
+  isSubmitting?: boolean;
+}
+
+export interface ResolutionCardProps {
+  item: Resolution;
+  onVote: (id: string, choice: VoteChoice) => void;
+}
+
+export type ScanControls = {
+  pause: () => void;
+  resume: () => void;
+  close: () => void;
+};
+
+export type QrScannerModalProps = {
+  visible: boolean;
+  title?: string;
+  subtitle?: string;
+  closeIconName?: string;
+  onClose: () => void;
+  onScan: (rawValue: string, controls: ScanControls) => void;
+};

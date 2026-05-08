@@ -50,7 +50,7 @@ export const TimePickerModalIOS = ({
         <Text style={{ color: value ? "#000" : "#999", flex: 1 }}>
           {value || "Chọn giờ (HH:mm)"}
         </Text>
-        <Ionicons name="time-outline" size={24} color="#FF3333" />
+        <Ionicons name="time-outline" size={24} color="#E31E24" />
       </TouchableOpacity>
 
       <Modal
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
 
   toolbarText: {
     fontSize: 18,
-    color: "#FF3333",
+    color: "#E31E24",
   },
 
   datePickerBox: {

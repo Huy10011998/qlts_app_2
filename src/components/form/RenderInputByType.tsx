@@ -15,6 +15,7 @@ import { formatVND, unFormatVND } from "../../utils/Helper";
 import IsLoading from "../ui/IconLoading";
 import { parseLinkHtml } from "../../utils/Link";
 import { DatePicker, TimePicker } from "../dataPicker/DataPicker";
+import { log } from "../../utils/Logger";
 
 export const RenderInputByType = ({
   f,
@@ -55,6 +56,20 @@ export const RenderInputByType = ({
   const displayText = hasValue
     ? selectedItem?.text ?? formData?.[`${f.name}_MoTa`] ?? String(value)
     : `Chọn ${f.moTa || f.name}`;
+
+  useEffect(() => {
+    if (f.typeProperty !== TypeProperty.Reference || !f.parentsFields) return;
+
+    log("[RenderInputByType] cascade reference display:", {
+      fieldName: f.name,
+      fieldMoTa: f.moTa,
+      value,
+      selectedItem,
+      moTaValue: formData?.[`${f.name}_MoTa`],
+      displayText,
+      items,
+    });
+  }, [displayText, f, formData, items, selectedItem, value]);
 
   const renderBasicInput = ({
     keyboardType = "default",
@@ -151,7 +166,7 @@ export const RenderInputByType = ({
           <Switch
             value={!!value}
             onValueChange={(v) => handleChange(f.name, v)}
-            trackColor={{ false: "#888", true: "#FF3333" }}
+            trackColor={{ false: "#888", true: "#E31E24" }}
             thumbColor={value ? "#ffffff" : "#f4f3f4"}
           />
         </View>
@@ -205,8 +220,8 @@ export const RenderInputByType = ({
               );
             }}
           >
-            <Ionicons name="image-outline" size={22} color="#FF3333" />
-            <Text style={{ marginLeft: 8, color: "#FF3333" }}>Chọn hình</Text>
+            <Ionicons name="image-outline" size={22} color="#E31E24" />
+            <Text style={{ marginLeft: 8, color: "#E31E24" }}>Chọn hình</Text>
           </TouchableOpacity>
 
           {loading ? (

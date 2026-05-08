@@ -12,12 +12,14 @@ import {
   ActivityIndicator,
   Platform,
   AppState,
+  Animated,
 } from "react-native";
 import { Buffer } from "buffer";
 import {
   useRoute,
   useNavigation,
   useFocusEffect,
+  useIsFocused,
 } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
@@ -29,6 +31,11 @@ import WebView from "react-native-webview";
 import { getTokenViewCamera } from "../../services/data/CallApi";
 import { subscribeAppRefetch } from "../../utils/AppRefetchBus";
 import Orientation from "react-native-orientation-locker";
+import {
+  GestureHandlerRootView,
+  GestureDetector,
+  Gesture,
+} from "react-native-gesture-handler";
 
 const GO2RTC_HOST = "https://api.cholimexfood.com.vn/camera-stream";
 
@@ -71,6 +78,7 @@ function resetZoom(){scale=1;tx=0;ty=0;applyTransform(1,0,0);}
 
 let touches=[],pinchStartDist=0,pinchStartScale=1;
 let panStartX=0,panStartY=0,lastTapTime=0;
+let swipeStartX=0,swipeStartY=0,swipeLastX=0,swipeLastY=0,swipeTracking=false,didPinch=false;
 function dist(t1,t2){return Math.hypot(t2.clientX-t1.clientX,t2.clientY-t1.clientY);}
 function midpoint(t1,t2){return{x:(t1.clientX+t2.clientX)/2,y:(t1.clientY+t2.clientY)/2};}
 
@@ -80,9 +88,12 @@ container.addEventListener('touchstart',e=>{
     const now=Date.now();
     if(now-lastTapTime<300){resetZoom();}
     lastTapTime=now;
+    swipeStartX=touches[0].clientX;swipeStartY=touches[0].clientY;
+    swipeLastX=swipeStartX;swipeLastY=swipeStartY;swipeTracking=true;didPinch=false;
     panStartX=touches[0].clientX-tx;panStartY=touches[0].clientY-ty;
   }
   if(touches.length===2){
+    swipeTracking=false;didPinch=true;
     pinchStartDist=dist(touches[0],touches[1]);pinchStartScale=scale;
     lastTx=tx;lastTy=ty;
   }
@@ -90,6 +101,9 @@ container.addEventListener('touchstart',e=>{
 
 container.addEventListener('touchmove',e=>{
   e.preventDefault();touches=[...e.touches];
+  if(touches.length===1){
+    swipeLastX=touches[0].clientX;swipeLastY=touches[0].clientY;
+  }
   if(touches.length===1&&scale>1){
     tx=touches[0].clientX-panStartX;ty=touches[0].clientY-panStartY;
     [tx,ty]=clampTranslation(scale,tx,ty);applyTransform(scale,tx,ty);
@@ -106,9 +120,21 @@ container.addEventListener('touchmove',e=>{
 },{passive:false});
 
 container.addEventListener('touchend',e=>{
+  if(e.changedTouches&&e.changedTouches.length){
+    swipeLastX=e.changedTouches[0].clientX;swipeLastY=e.changedTouches[0].clientY;
+  }
   touches=[...e.touches];
   if(touches.length===1){panStartX=touches[0].clientX-tx;panStartY=touches[0].clientY-ty;lastTx=tx;lastTy=ty;}
-  if(touches.length===0&&scale<1.05){resetZoom();}
+  if(touches.length===0){
+    if(swipeTracking&&!didPinch&&scale<=1.05){
+      const dx=swipeLastX-swipeStartX,dy=swipeLastY-swipeStartY;
+      if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.35){
+        window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(dx<0?'swipe_next':'swipe_prev');
+      }
+    }
+    swipeTracking=false;
+    if(scale<1.05){resetZoom();}
+  }
 },{passive:false});
 
 let pc=null,reconnectTimer=null,frozenTimer=null;
@@ -234,11 +260,66 @@ const isTokenStillValid = (token: string): boolean => {
   return exp - Date.now() > TOKEN_REFRESH_THRESHOLD_MS;
 };
 
+const CameraThumbnail = React.memo(
+  ({
+    cameraId,
+    cameraCode,
+    cameraToken,
+    thumbTimestamp,
+    focusKey,
+  }: {
+    cameraId: string | number;
+    cameraCode: string;
+    cameraToken: string;
+    thumbTimestamp: number;
+    focusKey: number;
+  }) => {
+    const [retryCount, setRetryCount] = React.useState(0);
+    const [isLoaded, setIsLoaded] = React.useState(false);
+
+    React.useEffect(() => {
+      setRetryCount(0);
+      setIsLoaded(false);
+    }, [cameraId, cameraToken, thumbTimestamp, focusKey]);
+
+    const frameUrl = `${GO2RTC_HOST}/api/frame.jpeg?src=${cameraCode}_snap&t=${thumbTimestamp}&rk=${focusKey}&rt=${retryCount}`;
+
+    return (
+      <View style={styles.preview}>
+        {!isLoaded && (
+          <View style={styles.previewLoading}>
+            <ActivityIndicator size="small" color="#555" />
+          </View>
+        )}
+        <Image
+          key={`thumb-${cameraId}-${focusKey}-${retryCount}`}
+          source={{
+            uri: frameUrl,
+            headers: { Authorization: `Bearer ${cameraToken}` },
+          }}
+          style={styles.preview}
+          resizeMode="cover"
+          onLoadStart={() => setIsLoaded(false)}
+          onLoadEnd={() => setIsLoaded(true)}
+          onError={() => {
+            setIsLoaded(false);
+            if (retryCount >= 3) return;
+            setTimeout(() => {
+              setRetryCount((prev) => prev + 1);
+            }, 500 * (retryCount + 1));
+          }}
+        />
+      </View>
+    );
+  },
+);
+
 const CameraList: React.FC = () => {
   const route = useRoute<any>();
   const { cameras, zoneName } = route.params;
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+  const isFocused = useIsFocused();
 
   const [screenWidth, setScreenWidth] = React.useState(
     Dimensions.get("window").width,
@@ -254,15 +335,22 @@ const CameraList: React.FC = () => {
   const [videoReady, setVideoReady] = React.useState(false);
   const [cameraToken, setCameraToken] = React.useState<string>("");
   const [thumbTimestamp, setThumbTimestamp] = React.useState<number>(0);
+  const [focusKey, setFocusKey] = React.useState(0);
   const [pendingThumbUrl, setPendingThumbUrl] = React.useState<string | null>(
     null,
   );
+  const translateX = React.useRef(new Animated.Value(0)).current;
+  const fsTranslateX = React.useRef(new Animated.Value(0)).current;
 
   const fullscreenWebViewRef = React.useRef<any>(null);
   const isFirstFocusRef = React.useRef(true);
+  const isFocusedRef = React.useRef(false);
+  const pageRef = React.useRef(0);
+  const totalPagesRef = React.useRef(0);
   const tokenRefreshTimerRef = React.useRef<ReturnType<
     typeof setTimeout
   > | null>(null);
+  const tokenRequestRef = React.useRef<Promise<string | null> | null>(null);
 
   // Ref luôn giữ token mới nhất, tránh stale closure
   const cameraTokenRef = React.useRef<string>("");
@@ -315,25 +403,40 @@ const CameraList: React.FC = () => {
    */
   const fetchCameraToken = React.useCallback(
     async (force = false) => {
+      if (!isFocusedRef.current) return;
       if (!force && isTokenStillValid(cameraTokenRef.current)) {
         scheduleProactiveRefresh(cameraTokenRef.current);
         return;
       }
+
+      if (tokenRequestRef.current) {
+        await tokenRequestRef.current;
+        return;
+      }
+
       try {
-        const res: any = await getTokenViewCamera();
-        if (res?.data) {
-          const newToken = res.data;
-          setCameraToken(newToken);
-          setThumbTimestamp(Date.now());
-          scheduleProactiveRefresh(newToken);
-          if (fullscreenWebViewRef.current?.postMessage) {
-            fullscreenWebViewRef.current.postMessage(
-              JSON.stringify({ type: "token", value: newToken }),
-            );
+        tokenRequestRef.current = (async () => {
+          const res: any = await getTokenViewCamera();
+          const newToken = res?.data ?? null;
+
+          if (newToken && isFocusedRef.current) {
+            setCameraToken(newToken);
+            setThumbTimestamp(Date.now());
+            scheduleProactiveRefresh(newToken);
+            if (fullscreenWebViewRef.current?.postMessage) {
+              fullscreenWebViewRef.current.postMessage(
+                JSON.stringify({ type: "token", value: newToken }),
+              );
+            }
           }
-        }
+
+          return newToken;
+        })();
+        await tokenRequestRef.current;
       } catch (err) {
         console.warn("getTokenViewCamera error:", err);
+      } finally {
+        tokenRequestRef.current = null;
       }
     },
     [scheduleProactiveRefresh],
@@ -343,6 +446,10 @@ const CameraList: React.FC = () => {
   React.useEffect(() => {
     fetchCameraTokenRef.current = fetchCameraToken;
   }, [fetchCameraToken]);
+
+  React.useEffect(() => {
+    isFocusedRef.current = isFocused;
+  }, [isFocused]);
 
   // Orientation listener
   React.useEffect(() => {
@@ -357,13 +464,14 @@ const CameraList: React.FC = () => {
 
   useFocusEffect(
     React.useCallback(() => {
+      setFocusKey((k) => k + 1);
       if (isFirstFocusRef.current) {
         isFirstFocusRef.current = false;
         setCameraToken("");
         cameraTokenRef.current = "";
         setThumbTimestamp(0);
       }
-      fetchCameraTokenRef.current?.(false);
+      fetchCameraTokenRef.current?.(true);
       return () => {
         if (tokenRefreshTimerRef.current)
           clearTimeout(tokenRefreshTimerRef.current);
@@ -385,9 +493,12 @@ const CameraList: React.FC = () => {
   React.useEffect(() => {
     const sub = AppState.addEventListener("change", (state) => {
       if (state === "active") {
-        fetchCameraTokenRef.current?.(false);
-        if (fullscreenWebViewRef.current?.postMessage) {
-          fullscreenWebViewRef.current.postMessage("start");
+        if (isFocusedRef.current) {
+          setFocusKey((k) => k + 1);
+          fetchCameraTokenRef.current?.(true);
+          if (fullscreenWebViewRef.current?.postMessage) {
+            fullscreenWebViewRef.current.postMessage("start");
+          }
         }
       } else if (state === "background") {
         // Chỉ stop khi vào background thật sự
@@ -401,8 +512,17 @@ const CameraList: React.FC = () => {
   }, []);
 
   React.useEffect(() => {
+    if (!isFocused) return;
+    setFocusKey((k) => k + 1);
+  }, [isFocused]);
+
+  React.useEffect(() => {
     if (videoReady) setPendingThumbUrl(null);
   }, [videoReady]);
+
+  React.useEffect(() => {
+    pageRef.current = page;
+  }, [page]);
 
   React.useEffect(() => {
     return () => {
@@ -427,6 +547,7 @@ const CameraList: React.FC = () => {
     }
     clearAndroidTimers();
     setVideoReady(false);
+    fsTranslateX.setValue(0);
     setFullscreenCamera(null);
     setPendingThumbUrl(null);
     setIsLandscape(false);
@@ -498,22 +619,26 @@ const CameraList: React.FC = () => {
     [startAndroidFallback, thumbTimestamp],
   );
 
-  const getNumColumns = () => {
-    if (layoutCount === 1) return 1;
-    if (layoutCount === 4) return 2;
-    if (layoutCount === 9) return 3;
-    if (layoutCount === 12) return 3;
-    if (layoutCount === 16) return 4;
-    return 2;
-  };
-
-  const numColumns = getNumColumns();
+  const numColumns = layoutCount === 1 ? 1 : 2;
   const itemWidth = screenWidth / numColumns - 16;
   const totalPages = Math.ceil(cameras.length / layoutCount);
   const pagedCameras = cameras.slice(
     page * layoutCount,
     (page + 1) * layoutCount,
   );
+  const fullscreenIndex = fullscreenCamera
+    ? cameras.findIndex(
+        (cam: any) => cam.iD_Camera === fullscreenCamera.iD_Camera,
+      )
+    : -1;
+
+  React.useEffect(() => {
+    totalPagesRef.current = totalPages;
+  }, [totalPages]);
+
+  const changePage = React.useCallback((newPage: number) => {
+    setPage(newPage);
+  }, []);
 
   const handleSetLayout = (count: number) => {
     setLayoutCount(count);
@@ -527,7 +652,6 @@ const CameraList: React.FC = () => {
 
   const renderItem = React.useCallback(
     ({ item }: ListRenderItemInfo<any>) => {
-      const frameUrl = `${GO2RTC_HOST}/api/frame.jpeg?src=${item.iD_Camera_Ma}_snap&t=${thumbTimestamp}`;
       return (
         <View style={[styles.card, { width: itemWidth }]}>
           <View style={styles.cardHeader}>
@@ -544,13 +668,12 @@ const CameraList: React.FC = () => {
             style={styles.videoWrapper}
           >
             {cameraToken && thumbTimestamp ? (
-              <Image
-                source={{
-                  uri: frameUrl,
-                  headers: { Authorization: `Bearer ${cameraToken}` },
-                }}
-                style={styles.preview}
-                resizeMode="cover"
+              <CameraThumbnail
+                cameraId={item.iD_Camera}
+                cameraCode={item.iD_Camera_Ma}
+                cameraToken={cameraToken}
+                thumbTimestamp={thumbTimestamp}
+                focusKey={focusKey}
               />
             ) : (
               <View style={[styles.preview, { backgroundColor: "#111" }]}>
@@ -561,7 +684,7 @@ const CameraList: React.FC = () => {
         </View>
       );
     },
-    [itemWidth, openFullscreen, cameraToken, thumbTimestamp],
+    [cameraToken, focusKey, itemWidth, openFullscreen, thumbTimestamp],
   );
 
   const displayThumbUrl =
@@ -569,9 +692,213 @@ const CameraList: React.FC = () => {
     (fullscreenCamera
       ? `${GO2RTC_HOST}/api/frame.jpeg?src=${fullscreenCamera.iD_Camera_Ma}_snap&t=${thumbTimestamp}`
       : null);
+  const visiblePageIndexes = React.useMemo(() => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, index) => index);
+    }
+
+    const maxVisibleDots = 7;
+    const half = Math.floor(maxVisibleDots / 2);
+    let start = Math.max(0, page - half);
+    let end = start + maxVisibleDots - 1;
+
+    if (end >= totalPages) {
+      end = totalPages - 1;
+      start = Math.max(0, end - maxVisibleDots + 1);
+    }
+
+    return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+  }, [page, totalPages]);
+
+  const swipeGesture = React.useMemo(
+    () =>
+      Gesture.Pan()
+        .runOnJS(true)
+        .activeOffsetX([-15, 15])
+        .failOffsetY([-10, 10])
+        .onUpdate((e) => {
+          const curPage = pageRef.current;
+          const total = totalPagesRef.current;
+          if (
+            (curPage === 0 && e.translationX > 0) ||
+            (curPage === total - 1 && e.translationX < 0)
+          ) {
+            translateX.setValue(e.translationX * 0.2);
+          } else {
+            translateX.setValue(e.translationX);
+          }
+        })
+        .onEnd((e) => {
+          const curPage = pageRef.current;
+          const total = totalPagesRef.current;
+          const threshold = screenWidth * 0.3;
+          if (e.translationX < -threshold && curPage < total - 1) {
+            Animated.timing(translateX, {
+              toValue: -screenWidth,
+              duration: 250,
+              useNativeDriver: true,
+            }).start(() => {
+              translateX.setValue(0);
+              changePage(curPage + 1);
+            });
+          } else if (e.translationX > threshold && curPage > 0) {
+            Animated.timing(translateX, {
+              toValue: screenWidth,
+              duration: 250,
+              useNativeDriver: true,
+            }).start(() => {
+              translateX.setValue(0);
+              changePage(curPage - 1);
+            });
+          } else {
+            Animated.spring(translateX, {
+              toValue: 0,
+              useNativeDriver: true,
+              tension: 100,
+              friction: 10,
+            }).start();
+          }
+        }),
+    [changePage, screenWidth, translateX],
+  );
+
+  const switchFullscreenCamera = React.useCallback(
+    (nextIndex: number, direction: "next" | "prev") => {
+      const nextCam = cameras[nextIndex];
+      if (!nextCam) return;
+
+      fullscreenWebViewRef.current?.postMessage?.("stop");
+      clearAndroidTimers();
+
+      setPendingThumbUrl(
+        `${GO2RTC_HOST}/api/frame.jpeg?src=${nextCam.iD_Camera_Ma}_snap&t=${thumbTimestamp}`,
+      );
+      setVideoReady(false);
+      setAndroidVideoKey(0);
+      setFullscreenCamera(nextCam);
+
+      const nextPage = Math.floor(nextIndex / layoutCount);
+      if (nextPage !== pageRef.current) {
+        setPage(nextPage);
+      }
+
+      fsTranslateX.setValue(direction === "next" ? screenWidth : -screenWidth);
+      Animated.timing(fsTranslateX, {
+        toValue: 0,
+        duration: 240,
+        useNativeDriver: true,
+      }).start();
+
+      if (Platform.OS === "android") startAndroidFallback();
+    },
+    [
+      cameras,
+      clearAndroidTimers,
+      fsTranslateX,
+      layoutCount,
+      screenWidth,
+      startAndroidFallback,
+      thumbTimestamp,
+    ],
+  );
+
+  const handleFullscreenSwipe = React.useCallback(
+    (direction: "next" | "prev", animateOut = true) => {
+      if (fullscreenIndex < 0) return;
+      const nextIndex =
+        direction === "next" ? fullscreenIndex + 1 : fullscreenIndex - 1;
+      if (nextIndex < 0 || nextIndex >= cameras.length) {
+        Animated.spring(fsTranslateX, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 100,
+          friction: 10,
+        }).start();
+        return;
+      }
+
+      const switchNow = () => switchFullscreenCamera(nextIndex, direction);
+
+      if (!animateOut) {
+        switchNow();
+        return;
+      }
+
+      Animated.timing(fsTranslateX, {
+        toValue: direction === "next" ? -screenWidth : screenWidth,
+        duration: 220,
+        useNativeDriver: true,
+      }).start(switchNow);
+    },
+    [
+      cameras.length,
+      fsTranslateX,
+      fullscreenIndex,
+      screenWidth,
+      switchFullscreenCamera,
+    ],
+  );
+
+  const fullscreenSwipeGesture = React.useMemo(
+    () =>
+      Gesture.Pan()
+        .runOnJS(true)
+        .activeOffsetX([-35, 35])
+        .failOffsetY([-20, 20])
+        .onUpdate((e) => {
+          if (fullscreenIndex < 0) return;
+          const isAtFirst = fullscreenIndex === 0;
+          const isAtLast = fullscreenIndex === cameras.length - 1;
+          const isPullingPastStart = isAtFirst && e.translationX > 0;
+          const isPullingPastEnd = isAtLast && e.translationX < 0;
+          fsTranslateX.setValue(
+            isPullingPastStart || isPullingPastEnd
+              ? e.translationX * 0.2
+              : e.translationX,
+          );
+        })
+        .onEnd((e) => {
+          if (fullscreenIndex < 0) return;
+          const threshold = screenWidth * 0.22;
+          if (
+            e.translationX < -threshold &&
+            fullscreenIndex < cameras.length - 1
+          ) {
+            Animated.timing(fsTranslateX, {
+              toValue: -screenWidth,
+              duration: 220,
+              useNativeDriver: true,
+            }).start(() => {
+              handleFullscreenSwipe("next", false);
+            });
+          } else if (e.translationX > threshold && fullscreenIndex > 0) {
+            Animated.timing(fsTranslateX, {
+              toValue: screenWidth,
+              duration: 220,
+              useNativeDriver: true,
+            }).start(() => {
+              handleFullscreenSwipe("prev", false);
+            });
+          } else {
+            Animated.spring(fsTranslateX, {
+              toValue: 0,
+              useNativeDriver: true,
+              tension: 100,
+              friction: 10,
+            }).start();
+          }
+        }),
+    [
+      cameras.length,
+      fsTranslateX,
+      fullscreenIndex,
+      handleFullscreenSwipe,
+      screenWidth,
+    ],
+  );
 
   return (
-    <View style={styles.container}>
+    <GestureHandlerRootView style={styles.container}>
       <View style={styles.headerRow}>
         <Text style={styles.pageTitle}>
           {zoneName} ({cameras.length} Camera)
@@ -586,48 +913,35 @@ const CameraList: React.FC = () => {
         </View>
       </View>
 
-      <FlatList
-        data={pagedCameras}
-        key={`${numColumns}-${page}`}
-        numColumns={numColumns}
-        keyExtractor={(item) => item.iD_Camera.toString()}
-        renderItem={renderItem}
-        showsVerticalScrollIndicator={false}
-        removeClippedSubviews
-      />
+      <GestureDetector gesture={swipeGesture}>
+        <View style={styles.listArea}>
+          <Animated.View
+            style={[styles.listAnimated, { transform: [{ translateX }] }]}
+          >
+            <FlatList
+              data={pagedCameras}
+              key={`${numColumns}-${page}-${focusKey}`}
+              numColumns={numColumns}
+              keyExtractor={(item) => item.iD_Camera.toString()}
+              renderItem={renderItem}
+              showsVerticalScrollIndicator={false}
+              removeClippedSubviews
+              contentContainerStyle={styles.listContent}
+              extraData={`${cameraToken}-${thumbTimestamp}-${focusKey}`}
+            />
+          </Animated.View>
 
-      {totalPages > 1 && (
-        <View style={styles.pagination}>
-          <TouchableOpacity
-            onPress={() => setPage((p) => p - 1)}
-            disabled={page === 0}
-            style={[styles.pageBtn, page === 0 && styles.pageBtnDisabled]}
-          >
-            <Ionicons
-              name="chevron-back"
-              size={20}
-              color={page === 0 ? "#ccc" : "#333"}
-            />
-          </TouchableOpacity>
-          <Text style={styles.pageText}>
-            {page + 1} / {totalPages}
-          </Text>
-          <TouchableOpacity
-            onPress={() => setPage((p) => p + 1)}
-            disabled={page === totalPages - 1}
-            style={[
-              styles.pageBtn,
-              page === totalPages - 1 && styles.pageBtnDisabled,
-            ]}
-          >
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color={page === totalPages - 1 ? "#ccc" : "#333"}
-            />
-          </TouchableOpacity>
+          {totalPages > 1 && (
+            <View style={styles.paginationRow}>
+              {visiblePageIndexes.map((i) => (
+                <TouchableOpacity key={i} onPress={() => changePage(i)}>
+                  <View style={[styles.dot, i === page && styles.dotActive]} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
-      )}
+      </GestureDetector>
 
       {/* Layout Modal */}
       <Modal
@@ -649,7 +963,7 @@ const CameraList: React.FC = () => {
               </View>
               <Text style={styles.sheetTitle}>Bố trí cửa sổ</Text>
               <Text style={styles.sheetTitleChild}>Chọn số lượng cửa sổ</Text>
-              {["1", "4", "9", "12", "16"].map((item, index) => (
+              {["1", "4", "8", "12", "16"].map((item, index) => (
                 <TouchableOpacity
                   key={item}
                   style={[
@@ -687,7 +1001,11 @@ const CameraList: React.FC = () => {
         transparent={false}
         statusBarTranslucent
         hardwareAccelerated
-        supportedOrientations={["portrait", "landscape-left", "landscape-right"]}
+        supportedOrientations={[
+          "portrait",
+          "landscape-left",
+          "landscape-right",
+        ]}
         onRequestClose={closeFullscreen}
       >
         <View style={styles.fullscreenContainer}>
@@ -737,119 +1055,148 @@ const CameraList: React.FC = () => {
           </View>
 
           <View style={styles.fsVideoArea}>
-            {fullscreenCamera && cameraToken ? (
-              <>
-                {Platform.OS === "android" && (
-                  <Video
-                    key={`${fullscreenCamera.iD_Camera}-${androidVideoKey}`}
-                    source={{
-                      uri: `${GO2RTC_HOST}/api/stream.m3u8?src=${fullscreenCamera.iD_Camera_Ma}_main&mp4=flac`,
-                      headers: { Authorization: `Bearer ${cameraToken}` },
-                    }}
-                    style={[
-                      StyleSheet.absoluteFill,
-                      { opacity: videoReady ? 1 : 0 },
-                    ]}
-                    resizeMode="contain"
-                    muted={isFullMuted}
-                    repeat
-                    controls={false}
-                    useTextureView={false}
-                    hideShutterView={true}
-                    bufferConfig={{
-                      minBufferMs: 1000,
-                      maxBufferMs: 3000,
-                      bufferForPlaybackMs: 500,
-                      bufferForPlaybackAfterRebufferMs: 1000,
-                    }}
-                    onReadyForDisplay={handleAndroidReady}
-                    onProgress={() => (lastProgressRef.current = Date.now())}
-                    onError={() => {
-                      clearAndroidTimers();
-                      androidReconnectRef.current = setTimeout(() => {
-                        setVideoReady(false);
-                        setAndroidVideoKey((k) => k + 1);
-                        startAndroidFallback();
-                      }, 3000);
-                    }}
-                  />
-                )}
-
-                {Platform.OS === "ios" && (
-                  <WebView
-                    key={fullscreenCamera.iD_Camera}
-                    ref={fullscreenWebViewRef}
-                    source={{
-                      html: buildFullscreenHTML(fullscreenCamera.iD_Camera_Ma),
-                      baseUrl: GO2RTC_HOST,
-                    }}
-                    style={[
-                      StyleSheet.absoluteFill,
-                      { opacity: videoReady ? 1 : 0 },
-                    ]}
-                    javaScriptEnabled
-                    domStorageEnabled
-                    allowsInlineMediaPlayback
-                    mediaPlaybackRequiresUserAction={false}
-                    cacheEnabled={false}
-                    mixedContentMode="always"
-                    originWhitelist={["*"]}
-                    allowFileAccess
-                    allowUniversalAccessFromFileURLs
-                    scrollEnabled={false}
-                    scalesPageToFit={false}
-                    onLoad={() => {
-                      if (
-                        fullscreenWebViewRef.current?.postMessage &&
-                        cameraToken
-                      ) {
-                        fullscreenWebViewRef.current.postMessage(
-                          JSON.stringify({ type: "token", value: cameraToken }),
-                        );
-                      }
-                    }}
-                    onMessage={(e) => {
-                      const data = e.nativeEvent.data;
-                      if (data === "ready") setVideoReady(true);
-                      else if (data === "token_expired")
-                        fetchCameraTokenRef.current?.(true);
-                    }}
-                  />
-                )}
-
-                {!videoReady && (
-                  <View style={StyleSheet.absoluteFill}>
-                    {displayThumbUrl && (
-                      <Image
+            <GestureDetector gesture={fullscreenSwipeGesture}>
+              <Animated.View
+                style={[
+                  StyleSheet.absoluteFill,
+                  { transform: [{ translateX: fsTranslateX }] },
+                ]}
+              >
+                {fullscreenCamera && cameraToken ? (
+                  <>
+                    {Platform.OS === "android" && (
+                      <Video
+                        key={`${fullscreenCamera.iD_Camera}-${androidVideoKey}`}
                         source={{
-                          uri: displayThumbUrl,
+                          uri: `${GO2RTC_HOST}/api/stream.m3u8?src=${fullscreenCamera.iD_Camera_Ma}_main&mp4=flac`,
                           headers: { Authorization: `Bearer ${cameraToken}` },
                         }}
-                        style={StyleSheet.absoluteFill}
+                        style={[
+                          StyleSheet.absoluteFill,
+                          { opacity: videoReady ? 1 : 0 },
+                        ]}
                         resizeMode="contain"
-                        blurRadius={2}
+                        muted={isFullMuted}
+                        repeat
+                        controls={false}
+                        useTextureView={false}
+                        hideShutterView={true}
+                        bufferConfig={{
+                          minBufferMs: 1000,
+                          maxBufferMs: 3000,
+                          bufferForPlaybackMs: 500,
+                          bufferForPlaybackAfterRebufferMs: 1000,
+                        }}
+                        onReadyForDisplay={handleAndroidReady}
+                        onProgress={() =>
+                          (lastProgressRef.current = Date.now())
+                        }
+                        onError={() => {
+                          clearAndroidTimers();
+                          androidReconnectRef.current = setTimeout(() => {
+                            setVideoReady(false);
+                            setAndroidVideoKey((k) => k + 1);
+                            startAndroidFallback();
+                          }, 3000);
+                        }}
                       />
                     )}
-                    <View style={styles.thumbOverlay} />
-                    <ActivityIndicator
-                      size="large"
-                      color="#fff"
-                      style={styles.spinner}
-                    />
-                  </View>
+
+                    {Platform.OS === "ios" && (
+                      <WebView
+                        key={fullscreenCamera.iD_Camera}
+                        ref={fullscreenWebViewRef}
+                        source={{
+                          html: buildFullscreenHTML(
+                            fullscreenCamera.iD_Camera_Ma,
+                          ),
+                          baseUrl: GO2RTC_HOST,
+                        }}
+                        style={[
+                          StyleSheet.absoluteFill,
+                          { opacity: videoReady ? 1 : 0 },
+                        ]}
+                        javaScriptEnabled
+                        domStorageEnabled
+                        allowsInlineMediaPlayback
+                        mediaPlaybackRequiresUserAction={false}
+                        cacheEnabled={false}
+                        mixedContentMode="always"
+                        originWhitelist={["*"]}
+                        allowFileAccess
+                        allowUniversalAccessFromFileURLs
+                        scrollEnabled={false}
+                        scalesPageToFit={false}
+                        onLoad={() => {
+                          if (
+                            fullscreenWebViewRef.current?.postMessage &&
+                            cameraToken
+                          ) {
+                            fullscreenWebViewRef.current.postMessage(
+                              JSON.stringify({
+                                type: "token",
+                                value: cameraToken,
+                              }),
+                            );
+                          }
+                        }}
+                        onMessage={(e) => {
+                          const data = e.nativeEvent.data;
+                          if (data === "ready") setVideoReady(true);
+                          else if (data === "token_expired")
+                            fetchCameraTokenRef.current?.(true);
+                          else if (data === "swipe_next")
+                            handleFullscreenSwipe("next");
+                          else if (data === "swipe_prev")
+                            handleFullscreenSwipe("prev");
+                        }}
+                      />
+                    )}
+
+                    {!videoReady && (
+                      <View style={StyleSheet.absoluteFill}>
+                        {displayThumbUrl && (
+                          <Image
+                            source={{
+                              uri: displayThumbUrl,
+                              headers: {
+                                Authorization: `Bearer ${cameraToken}`,
+                              },
+                            }}
+                            style={StyleSheet.absoluteFill}
+                            resizeMode="contain"
+                            blurRadius={2}
+                          />
+                        )}
+                        <View style={styles.thumbOverlay} />
+                        <ActivityIndicator
+                          size="large"
+                          color="#fff"
+                          style={styles.spinner}
+                        />
+                      </View>
+                    )}
+                  </>
+                ) : (
+                  <ActivityIndicator
+                    size="large"
+                    color="#fff"
+                    style={styles.spinner}
+                  />
                 )}
-              </>
-            ) : (
-              <ActivityIndicator
-                size="large"
-                color="#fff"
-                style={styles.spinner}
-              />
+              </Animated.View>
+            </GestureDetector>
+            {cameras.length > 1 && fullscreenIndex >= 0 && (
+              <View style={styles.fsPager}>
+                <Text style={styles.fsPagerText}>
+                  {fullscreenIndex + 1} / {cameras.length}
+                </Text>
+              </View>
             )}
           </View>
         </View>
       </Modal>
-    </View>
+    </GestureHandlerRootView>
   );
 };
 
@@ -857,6 +1204,9 @@ export default CameraList;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  listArea: { flex: 1, overflow: "hidden" },
+  listAnimated: { flex: 1 },
+  listContent: { paddingBottom: 8 },
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -896,30 +1246,28 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "#000",
   },
-  pagination: {
+  previewLoading: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#111",
+    borderRadius: 8,
+  },
+  paginationRow: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 10,
-    backgroundColor: "#eee",
-    gap: 16,
-  },
-  pageBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    height: 28,
     backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-    elevation: 2,
+    gap: 4,
+    paddingHorizontal: 12,
   },
-  pageBtnDisabled: { backgroundColor: "#f0f0f0", elevation: 0 },
-  pageText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-    minWidth: 60,
-    textAlign: "center",
+  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "#ccc" },
+  dotActive: {
+    width: 22,
+    height: 7,
+    backgroundColor: "#e53935",
+    borderRadius: 4,
   },
   modalOverlay: {
     flex: 1,
@@ -982,6 +1330,16 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   fsVideoArea: { flex: 1, backgroundColor: "#000" },
+  fsPager: {
+    position: "absolute",
+    bottom: 24,
+    alignSelf: "center",
+    backgroundColor: "rgba(0,0,0,0.45)",
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  fsPagerText: { color: "#fff", fontSize: 12, fontWeight: "600" },
   thumbOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.35)",

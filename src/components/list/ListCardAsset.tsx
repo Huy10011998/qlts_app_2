@@ -23,7 +23,7 @@ function ListCardAsset({
   // chỉ lấy các field Image
   const imageFields = useMemo(
     () => fields.filter((f) => f.typeProperty === TypeProperty.Image),
-    [fields]
+    [fields],
   );
 
   const [images, setImages] = useState<Record<string, string>>({});
@@ -50,7 +50,7 @@ function ListCardAsset({
         <Ionicons
           name={icon || "document-text-outline"}
           size={26}
-          color="#FF3333"
+          color="#E31E24"
         />
       </View>
 

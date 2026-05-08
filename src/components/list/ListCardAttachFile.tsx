@@ -11,7 +11,7 @@ export default function ListCardAttachFile({ item }: ListCardAttachFileProps) {
     <View>
       <View style={styles.card}>
         <View style={styles.avatar}>
-          <Ionicons name="document-text-outline" size={26} color="#FF3333" />
+          <Ionicons name="document-text-outline" size={26} color="#E31E24" />
         </View>
 
         <View style={styles.info}>
@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
   viewButton: {
     paddingVertical: 6,
     paddingHorizontal: 12,
-    backgroundColor: "#FF3333",
+    backgroundColor: "#E31E24",
     borderRadius: 8,
   },
 

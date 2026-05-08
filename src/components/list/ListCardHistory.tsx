@@ -10,7 +10,7 @@ export default function ListCardHistory({ item, onPress }: CardItemProps) {
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>
       <View style={styles.avatar}>
-        <Ionicons name="time-outline" size={26} color="#FF3333" />
+        <Ionicons name="time-outline" size={26} color="#E31E24" />
       </View>
 
       <View style={styles.info}>

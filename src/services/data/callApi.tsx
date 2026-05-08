@@ -125,10 +125,13 @@ const createNeedLoginError = (): Error & { NEED_LOGIN: true } => {
   return e as Error & { NEED_LOGIN: true };
 };
 
-const isNeedLoginError = (error: unknown): error is Error & { NEED_LOGIN: true } =>
+const isNeedLoginError = (
+  error: unknown,
+): error is Error & { NEED_LOGIN: true } =>
   Boolean((error as { NEED_LOGIN?: boolean } | undefined)?.NEED_LOGIN);
 
-const isAuthFailureStatus = (status?: number) => status === 401 || status === 403;
+const isAuthFailureStatus = (status?: number) =>
+  status === 401 || status === 403;
 
 export const isAuthExpiredError = (error: unknown) => {
   if (isNeedLoginError(error)) return true;
@@ -317,7 +320,9 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (res) => res,
   async (err: ApiError) => {
-    const originalRequest = err.config as AuthenticatedRequestConfig | undefined;
+    const originalRequest = err.config as
+      | AuthenticatedRequestConfig
+      | undefined;
 
     if (isNeedLoginError(err)) {
       warn("[API] NEED_LOGIN → logout");
@@ -329,10 +334,7 @@ api.interceptors.response.use(
       return Promise.reject(err);
     }
 
-    if (
-      err.response.status !== 401 ||
-      originalRequest._retry
-    ) {
+    if (err.response.status !== 401 || originalRequest._retry) {
       return Promise.reject(err);
     }
 
@@ -534,3 +536,34 @@ export const getVungCamera = async <T = any,>() =>
 
 export const getTokenViewCamera = async <T = any,>() =>
   callApi<T>("POST", API_ENDPOINTS.GET_TOKEN_VIEW_CAMERA);
+
+export const getActiveDhcd = async <T = any,>() =>
+  callApi<T>("POST", API_ENDPOINTS.GET_ACTIVE_DHCD);
+
+export const getCodongDhcd = async <T = any,>(dhcdId: string) =>
+  callApi<T>(
+    "POST",
+    `${API_ENDPOINTS.GET_CODONG_DHCD}?dhcdId=${encodeURIComponent(dhcdId)}`,
+  );
+
+export const diemDanhDhcd = async <T = any,>(
+  iD_DaiHoiCoDong_CoDong: number,
+) =>
+  callApi<T>("POST", API_ENDPOINTS.DIEM_DANH_DHCD, {
+    iD_DaiHoiCoDong_CoDong,
+  });
+
+export const huyDiemDanhDhcd = async <T = any,>(
+  iD_DaiHoiCoDong_CoDong: number,
+) =>
+  callApi<T>("POST", API_ENDPOINTS.HUY_DIEM_DANH_DHCD, {
+    iD_DaiHoiCoDong_CoDong,
+  });
+
+export const luuYKienCoDongDhcd = async <T = any,>(payload: {
+  iD_DaiHoiCoDong_YKien: number;
+  iD_DaiHoiCoDong_CoDongs: string;
+  trangThais: string;
+  nguoiNhap: number;
+}) =>
+  callApi<T>("POST", API_ENDPOINTS.LUU_Y_KIEN_CO_DONG_DHCD, payload);

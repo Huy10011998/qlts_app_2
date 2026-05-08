@@ -26,6 +26,8 @@ import AssetAddRelatedItem from "../components/assets/AssetAddRelatedItem";
 import CameraScreen from "../screens/Camera/CameraScreen";
 import CameraListScreen from "../screens/Camera/CameraListScreen";
 import CameraListGridScreen from "../screens/Camera/CameraListGirdScreen";
+import ShareholdersMeetingScreen from "../screens/ShareholdersMeeting/ShareholdersMeetingScreen";
+import ShareholdersMeetingScannerScreen from "../screens/ShareholdersMeeting/ShareholdersMeetingScannerScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -174,6 +176,23 @@ export default function HomeStack() {
         options={{
           title: "Live View Camera",
           ...headerWithBack,
+        }}
+      />
+
+      <Stack.Screen
+        name="ShareholdersMeeting"
+        component={ShareholdersMeetingScreen}
+        options={{
+          title: "Đại hội cổ đông",
+          ...headerWithBack,
+        }}
+      />
+
+      <Stack.Screen
+        name="ShareholdersMeetingScanner"
+        component={ShareholdersMeetingScannerScreen}
+        options={{
+          headerShown: false,
         }}
       />
     </Stack.Navigator>

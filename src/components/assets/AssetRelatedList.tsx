@@ -16,6 +16,7 @@ import {
   Platform,
   UIManager,
   RefreshControl,
+  TouchableOpacity,
 } from "react-native";
 import {
   useRoute,
@@ -48,6 +49,7 @@ import { useAppDispatch } from "../../store/Hooks";
 import { resetShouldRefreshList } from "../../store/AssetSlice";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { isAuthExpiredError } from "../../services/data/CallApi";
+import Ionicons from "react-native-vector-icons/Ionicons";
 
 if (
   Platform.OS === "android" &&
@@ -55,6 +57,16 @@ if (
 ) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
+
+const BRAND_RED = "#E31E24";
+const BG = "#F0F2F8";
+const CARD_SHADOW = {
+  shadowColor: "#1A2340",
+  shadowOpacity: 0.07,
+  shadowRadius: 8,
+  shadowOffset: { width: 0, height: 2 },
+  elevation: 2,
+};
 
 export default function AssetRelatedList() {
   const route = useRoute<StackRoute<"AssetRelatedList">>();
@@ -255,26 +267,48 @@ export default function AssetRelatedList() {
     !isLoadingMore &&
     !isSearching // thêm điều kiện này
   ) {
-    return <IsLoading size="large" color="#FF3333" />;
+    return <IsLoading size="large" color={BRAND_RED} />;
   }
   return (
-    <View style={{ flex: 1 }}>
+    <View style={styles.container}>
       {/* SEARCH */}
-      <View style={styles.searchWrapper}>
-        <TextInput
-          placeholder="Tìm kiếm..."
-          value={searchText}
-          placeholderTextColor="#999"
-          onChangeText={setSearchText}
-          style={styles.searchInput}
-        />
-        {isSearching && (
-          <IsLoading
-            size="small"
-            color="#FF3333"
-            style={styles.searchSpinner}
+      <View style={styles.searchWrap}>
+        <View style={styles.searchBox}>
+          <View style={styles.searchIconWrap}>
+            <Ionicons name="search-outline" size={16} color="#8A95A3" />
+          </View>
+          <TextInput
+            placeholder="Tìm kiếm dữ liệu liên quan..."
+            value={searchText}
+            placeholderTextColor="#B0B8C4"
+            onChangeText={setSearchText}
+            style={styles.searchInput}
+            clearButtonMode="while-editing"
+            returnKeyType="search"
           />
-        )}
+          {isSearching && (
+            <View style={styles.spinnerWrap}>
+              <IsLoading size="small" color={BRAND_RED} />
+            </View>
+          )}
+          {!isSearching && searchText.length > 0 && (
+            <TouchableOpacity
+              onPress={() => setSearchText("")}
+              style={styles.clearButton}
+            >
+              <Ionicons name="close-circle" size={16} color="#B0B8C4" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <View style={styles.summaryRow}>
+          <View style={styles.summaryBadge}>
+            <Text style={styles.summaryBadgeText}>Dữ liệu liên quan</Text>
+          </View>
+          <Text style={styles.summaryMeta}>
+            Tổng {total} • Đã tải {data.length}
+          </Text>
+        </View>
       </View>
 
       {/* LIST */}
@@ -293,8 +327,8 @@ export default function AssetRelatedList() {
           <RefreshControl
             refreshing={isRefreshingTop}
             onRefresh={refreshTop}
-            colors={["#FF3333"]}
-            tintColor="#FF3333"
+            colors={[BRAND_RED]}
+            tintColor={BRAND_RED}
           />
         }
         onEndReached={handleLoadMore}
@@ -302,12 +336,34 @@ export default function AssetRelatedList() {
         ListFooterComponent={isLoadingMore ? <IsLoading /> : null}
         ListHeaderComponent={
           <View style={styles.stickyHeader}>
-            <Text style={styles.header}>
-              Tổng: {total} (Đã tải: {data.length})
-            </Text>
+            <View style={styles.filterCard}>
+              <View style={styles.filterCardIcon}>
+                <Ionicons name="link-outline" size={16} color={BRAND_RED} />
+              </View>
+              <View style={styles.filterCardContent}>
+                <Text style={styles.filterCardTitle} numberOfLines={1}>
+                  Danh sách liên quan
+                </Text>
+                <Text style={styles.filterCardSub}>
+                  {total} kết quả • hiển thị {data.length}
+                </Text>
+              </View>
+            </View>
           </View>
         }
         stickyHeaderIndices={[0]}
+        contentContainerStyle={styles.listContent}
+        ListEmptyComponent={
+          <View style={styles.emptyWrap}>
+            <View style={styles.emptyIconWrap}>
+              <Ionicons name="albums-outline" size={32} color="#C7C7CC" />
+            </View>
+            <Text style={styles.emptyTitle}>Không có dữ liệu liên quan</Text>
+            <Text style={styles.emptySub}>
+              Thử tìm kiếm bằng từ khóa khác hoặc thêm mới dữ liệu liên kết
+            </Text>
+          </View>
+        }
       />
 
       {loaded && can(nameClass, "Insert") && (
@@ -328,39 +384,150 @@ export default function AssetRelatedList() {
 }
 
 const styles = StyleSheet.create({
-  searchWrapper: {
-    position: "relative",
-    margin: 12,
+  container: {
+    flex: 1,
+    backgroundColor: BG,
   },
-
-  searchInput: {
-    borderWidth: 1,
-    borderColor: "#ccc",
+  searchWrap: {
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    paddingBottom: 8,
+    backgroundColor: BG,
+  },
+  searchBox: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#fff",
-    borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 12,
-    paddingRight: 36,
-    color: "#333",
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#EDF0F5",
+    ...CARD_SHADOW,
   },
-
-  searchSpinner: {
-    position: "absolute",
-    right: 20,
-    top: "50%",
-    marginTop: -10,
+  searchIconWrap: {
+    marginRight: 8,
+    width: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
   },
-
-  header: {
-    textAlign: "center",
+  searchInput: {
+    flex: 1,
+    paddingVertical: 13,
     fontSize: 14,
-    color: "#333",
-    fontWeight: "600",
+    color: "#0F1923",
+    fontWeight: "400",
   },
-
+  spinnerWrap: {
+    width: 24,
+    height: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 6,
+  },
+  clearButton: {
+    padding: 4,
+    marginLeft: 4,
+  },
+  summaryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 8,
+    gap: 12,
+  },
+  summaryBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "#FFF0F0",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: "#FFD6D6",
+    flexShrink: 1,
+  },
+  summaryBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: BRAND_RED,
+  },
+  summaryMeta: {
+    fontSize: 11.5,
+    color: "#8A95A3",
+    fontWeight: "500",
+  },
+  listContent: {
+    paddingBottom: 24,
+  },
   stickyHeader: {
-    backgroundColor: "#F3F4F6",
-    paddingVertical: 10,
+    backgroundColor: BG,
+    paddingHorizontal: 14,
+    paddingTop: 2,
+    paddingBottom: 10,
     zIndex: 10,
+  },
+  filterCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#EDF0F5",
+    ...CARD_SHADOW,
+  },
+  filterCardIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFF5F5",
+    marginRight: 10,
+  },
+  filterCardContent: {
+    flex: 1,
+  },
+  filterCardTitle: {
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: "#0F1923",
+    marginBottom: 2,
+  },
+  filterCardSub: {
+    fontSize: 11.5,
+    color: "#8A95A3",
+  },
+  emptyWrap: {
+    alignItems: "center",
+    paddingTop: 60,
+    paddingHorizontal: 32,
+  },
+  emptyIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 22,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+    shadowColor: "#1A2340",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  emptyTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#374151",
+    marginBottom: 6,
+    textAlign: "center",
+  },
+  emptySub: {
+    fontSize: 12,
+    color: "#8A95A3",
+    textAlign: "center",
+    lineHeight: 18,
   },
 });

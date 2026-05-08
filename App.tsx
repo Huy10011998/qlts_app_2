@@ -13,7 +13,7 @@ export default function App() {
     <SafeAreaProvider>
       <StatusBar
         translucent={false}
-        backgroundColor="#FF3333"
+        backgroundColor="#E31E24"
         barStyle="light-content"
       />
 

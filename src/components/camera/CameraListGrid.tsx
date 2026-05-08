@@ -444,7 +444,7 @@ const CameraCell = React.memo(
         Gesture.Tap()
           .runOnJS(true)
           .onEnd(() => onPress(cam, idx)),
-      [cam.iD_Camera, idx, onPress],
+      [cam.iD_Camera, idx, onPress]
     );
     const doubleTap = React.useMemo(
       () =>
@@ -452,11 +452,11 @@ const CameraCell = React.memo(
           .runOnJS(true)
           .numberOfTaps(2)
           .onEnd(() => onDoubleTap(cam, idx)),
-      [cam.iD_Camera, idx, onDoubleTap],
+      [cam.iD_Camera, idx, onDoubleTap]
     );
     const composed = React.useMemo(
       () => Gesture.Exclusive(doubleTap, singleTap),
-      [doubleTap, singleTap],
+      [doubleTap, singleTap]
     );
 
     const webviewRefCb = React.useCallback(
@@ -466,7 +466,7 @@ const CameraCell = React.memo(
           else delete webviewRefRegister.current[cam.iD_Camera];
         }
       },
-      [cam.iD_Camera, webviewRefRegister],
+      [cam.iD_Camera, webviewRefRegister]
     );
 
     const shouldRenderWebView = !isPaused && isWebViewActive && !!token;
@@ -544,7 +544,7 @@ const CameraCell = React.memo(
                 const ref = webviewRefRegister?.current[cam.iD_Camera];
                 if (token && ref?.postMessage) {
                   ref.postMessage(
-                    JSON.stringify({ type: "token", value: token }),
+                    JSON.stringify({ type: "token", value: token })
                   );
                   ref.postMessage("start");
                 }
@@ -650,7 +650,7 @@ const CameraCell = React.memo(
     prev.webviewRefRegister === next.webviewRefRegister &&
     prev.pongTimeoutRef === next.pongTimeoutRef &&
     prev.webviewRestartRef === next.webviewRestartRef &&
-    prev.onTokenExpired === next.onTokenExpired,
+    prev.onTokenExpired === next.onTokenExpired
 );
 
 const CameraListGrid: React.FC = () => {
@@ -679,7 +679,7 @@ const CameraListGrid: React.FC = () => {
   }>({ groupA: 0, groupB: 0 });
   const [fsVideoKey, setFsVideoKey] = React.useState(0);
   const [pendingThumbUrl, setPendingThumbUrl] = React.useState<string | null>(
-    null,
+    null
   );
   const [pageChangeKey, setPageChangeKey] = React.useState(0);
   const [focusKey, setFocusKey] = React.useState(0);
@@ -710,7 +710,7 @@ const CameraListGrid: React.FC = () => {
   const webviewMissCountRef = React.useRef<Record<string, number>>({});
   const lastProgressRef = React.useRef<number>(Date.now());
   const androidFallbackRef = React.useRef<ReturnType<typeof setTimeout> | null>(
-    null,
+    null
   );
   const androidWatchdogRef = React.useRef<ReturnType<
     typeof setInterval
@@ -750,6 +750,23 @@ const CameraListGrid: React.FC = () => {
     (fullscreenCam && thumbTimestamp
       ? `${GO2RTC_HOST}/api/frame.jpeg?src=${fullscreenCam.iD_Camera_Ma}_snap&t=${thumbTimestamp}`
       : null);
+  const visiblePageIndexes = React.useMemo(() => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, index) => index);
+    }
+
+    const maxVisibleDots = 7;
+    const half = Math.floor(maxVisibleDots / 2);
+    let start = Math.max(0, page - half);
+    let end = start + maxVisibleDots - 1;
+
+    if (end >= totalPages) {
+      end = totalPages - 1;
+      start = Math.max(0, end - maxVisibleDots + 1);
+    }
+
+    return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+  }, [page, totalPages]);
 
   React.useEffect(() => {
     pageRef.current = page;
@@ -767,7 +784,7 @@ const CameraListGrid: React.FC = () => {
 
   React.useEffect(() => {
     const sub = Dimensions.addEventListener("change", ({ window }) =>
-      setScreenDims(window),
+      setScreenDims(window)
     );
     return () => sub?.remove();
   }, []);
@@ -775,7 +792,7 @@ const CameraListGrid: React.FC = () => {
   React.useEffect(() => {
     const handler = (orientation: string) => {
       setIsLandscape(
-        orientation === "LANDSCAPE-LEFT" || orientation === "LANDSCAPE-RIGHT",
+        orientation === "LANDSCAPE-LEFT" || orientation === "LANDSCAPE-RIGHT"
       );
       setScreenDims(Dimensions.get("window"));
     };
@@ -821,7 +838,7 @@ const CameraListGrid: React.FC = () => {
       startStreamsTimeoutRef.current = null;
     }
     Object.values(webviewRefs.current).forEach((ref) =>
-      ref?.postMessage?.("stop"),
+      ref?.postMessage?.("stop")
     );
     fullscreenWebViewRef.current?.postMessage?.("stop");
   }, []);
@@ -851,7 +868,7 @@ const CameraListGrid: React.FC = () => {
     startStreamsTimeoutRef.current = setTimeout(() => {
       if (!isFocusedRef.current) return;
       Object.values(webviewRefs.current).forEach((ref) =>
-        ref?.postMessage?.("start"),
+        ref?.postMessage?.("start")
       );
       fullscreenWebViewRef.current?.postMessage?.("start");
       startStreamsTimeoutRef.current = null;
@@ -880,12 +897,12 @@ const CameraListGrid: React.FC = () => {
           Object.values(webviewRefs.current).forEach((ref) => {
             if (ref?.postMessage)
               ref.postMessage(
-                JSON.stringify({ type: "token", value: newToken }),
+                JSON.stringify({ type: "token", value: newToken })
               );
           });
           if (fullscreenWebViewRef.current?.postMessage) {
             fullscreenWebViewRef.current.postMessage(
-              JSON.stringify({ type: "token", value: newToken }),
+              JSON.stringify({ type: "token", value: newToken })
             );
           }
         }
@@ -893,7 +910,7 @@ const CameraListGrid: React.FC = () => {
         console.warn("getTokenViewCamera error:", err);
       }
     },
-    [scheduleProactiveRefresh],
+    [scheduleProactiveRefresh]
   );
 
   const fetchCameraTokenRef = React.useRef(fetchCameraToken);
@@ -917,7 +934,7 @@ const CameraListGrid: React.FC = () => {
         }
         stopAllStreams();
       };
-    }, [startAllStreams, stopAllStreams]),
+    }, [startAllStreams, stopAllStreams])
   );
 
   React.useEffect(() => {
@@ -931,11 +948,11 @@ const CameraListGrid: React.FC = () => {
       if (!isFocusedRef.current) return;
       Object.entries(webviewRefs.current).forEach(([_id, ref]) => {
         ref?.postMessage?.(
-          JSON.stringify({ type: "token", value: cameraToken }),
+          JSON.stringify({ type: "token", value: cameraToken })
         );
       });
       fullscreenWebViewRef.current?.postMessage?.(
-        JSON.stringify({ type: "token", value: cameraToken }),
+        JSON.stringify({ type: "token", value: cameraToken })
       );
       syncTokenTimeoutRef.current = null;
     }, 300);
@@ -1057,7 +1074,7 @@ const CameraListGrid: React.FC = () => {
           fetchCameraTokenRef.current?.(false);
           // Chỉ start nếu screen đang focused
           Object.values(webviewRefs.current).forEach((ref) =>
-            ref?.postMessage?.("start"),
+            ref?.postMessage?.("start")
           );
           if (fullscreenWebViewRef.current?.postMessage) {
             fullscreenWebViewRef.current.postMessage("start");
@@ -1066,7 +1083,7 @@ const CameraListGrid: React.FC = () => {
       } else if (state === "background") {
         // Chỉ stop khi vào background thật sự
         Object.values(webviewRefs.current).forEach((ref) =>
-          ref?.postMessage?.("stop"),
+          ref?.postMessage?.("stop")
         );
         if (fullscreenWebViewRef.current?.postMessage) {
           fullscreenWebViewRef.current.postMessage("stop");
@@ -1129,7 +1146,7 @@ const CameraListGrid: React.FC = () => {
           if (missCount >= 2) {
             // Miss 2 lần liên tiếp (~60s) mới restart
             console.warn(
-              `[Camera] WebView ${id} miss ${missCount} pings, restarting`,
+              `[Camera] WebView ${id} miss ${missCount} pings, restarting`
             );
             webviewMissCountRef.current[id] = 0;
             webviewRestartRef.current?.(id);
@@ -1212,7 +1229,7 @@ const CameraListGrid: React.FC = () => {
       setGridRenderKey((k) => k + 1); // ← dùng gridRenderKey thay pageChangeKey
       setPageChangeKey((k) => k + 1);
     },
-    [stopAllStreams],
+    [stopAllStreams]
   );
 
   const swipeGesture = Gesture.Pan()
@@ -1275,13 +1292,13 @@ const CameraListGrid: React.FC = () => {
 
   const handleCamPress = React.useCallback(
     (cam: any, idx: number) => setActiveIndex(idx),
-    [],
+    []
   );
 
   const handleCamDoubleTap = React.useCallback(
     (cam: any, idx: number) => {
       setPendingThumbUrl(
-        `${GO2RTC_HOST}/api/frame.jpeg?src=${cam.iD_Camera_Ma}_snap&t=${thumbTimestamp}`,
+        `${GO2RTC_HOST}/api/frame.jpeg?src=${cam.iD_Camera_Ma}_snap&t=${thumbTimestamp}`
       );
       setActiveIndex(idx);
       setVideoReady(false);
@@ -1292,7 +1309,7 @@ const CameraListGrid: React.FC = () => {
       setFullscreenCam(cam);
       if (Platform.OS === "android") startAndroidFallback();
     },
-    [fsSwitchOpacity, fsTranslateX, startAndroidFallback, thumbTimestamp],
+    [fsSwitchOpacity, fsTranslateX, startAndroidFallback, thumbTimestamp]
   );
 
   const switchFullscreenCamera = React.useCallback(
@@ -1309,7 +1326,7 @@ const CameraListGrid: React.FC = () => {
       const nextLocalIndex = nextIndex % perPage;
 
       setPendingThumbUrl(
-        `${GO2RTC_HOST}/api/frame.jpeg?src=${nextCam.iD_Camera_Ma}_snap&t=${thumbTimestamp}`,
+        `${GO2RTC_HOST}/api/frame.jpeg?src=${nextCam.iD_Camera_Ma}_snap&t=${thumbTimestamp}`
       );
       setVideoReady(false);
       setFsVideoKey(0);
@@ -1330,7 +1347,7 @@ const CameraListGrid: React.FC = () => {
       }).start();
       if (Platform.OS === "android") startAndroidFallback();
     },
-    [cameras, fsTranslateX, perPage, startAndroidFallback, SW, thumbTimestamp],
+    [cameras, fsTranslateX, perPage, startAndroidFallback, SW, thumbTimestamp]
   );
 
   const handleFullscreenSwipe = React.useCallback(
@@ -1375,7 +1392,7 @@ const CameraListGrid: React.FC = () => {
       fullscreenIndex,
       switchFullscreenCamera,
       SW,
-    ],
+    ]
   );
 
   const fullscreenSwipeGesture = React.useMemo(
@@ -1393,7 +1410,7 @@ const CameraListGrid: React.FC = () => {
           fsTranslateX.setValue(
             isPullingPastStart || isPullingPastEnd
               ? e.translationX * 0.2
-              : e.translationX,
+              : e.translationX
           );
         })
         .onEnd((e) => {
@@ -1427,7 +1444,7 @@ const CameraListGrid: React.FC = () => {
             }).start();
           }
         }),
-    [SW, cameras.length, fsTranslateX, fullscreenIndex, handleFullscreenSwipe],
+    [SW, cameras.length, fsTranslateX, fullscreenIndex, handleFullscreenSwipe]
   );
 
   const handleSnapshot = React.useCallback(async () => {
@@ -1437,7 +1454,7 @@ const CameraListGrid: React.FC = () => {
     try {
       if (Platform.OS === "android") {
         const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+          PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE
         );
         if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
           Alert.alert("Không có quyền", "Cần quyền lưu trữ để chụp ảnh.");
@@ -1479,7 +1496,7 @@ const CameraListGrid: React.FC = () => {
     setTimeout(() => {
       if (!isFocusedRef.current) return;
       Object.values(webviewRefs.current).forEach((ref) =>
-        ref?.postMessage?.("start"),
+        ref?.postMessage?.("start")
       );
     }, 400);
   };
@@ -1543,7 +1560,7 @@ const CameraListGrid: React.FC = () => {
           </Animated.View>
 
           <View style={styles.paginationRow}>
-            {Array.from({ length: totalPages }).map((_, i) => (
+            {visiblePageIndexes.map((i) => (
               <TouchableOpacity key={i} onPress={() => changePage(i)}>
                 <View style={[styles.dot, i === page && styles.dotActive]} />
               </TouchableOpacity>
@@ -1798,7 +1815,7 @@ const CameraListGrid: React.FC = () => {
                             JSON.stringify({
                               type: "token",
                               value: cameraToken,
-                            }),
+                            })
                           );
                         }
                       }}
@@ -1953,6 +1970,7 @@ const styles = StyleSheet.create({
     height: 28,
     backgroundColor: "#fff",
     gap: 4,
+    paddingHorizontal: 12,
   },
   dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "#ccc" },
   dotActive: {

@@ -39,3 +39,13 @@ export interface MenuItemResponse {
   propertyReference: string;
   moTa: string;
 }
+
+export interface ShareholderApiItem {
+  id: number;
+  isDiemDanh?: boolean;
+  maCoDong?: string | null;
+  tenCoDong?: string | null;
+  tongCoPhan?: number | null;
+  log_StartDate?: string | null;
+  [key: string]: any;
+}
