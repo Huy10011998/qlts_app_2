@@ -18,19 +18,25 @@ import { loginApi } from "../../services/auth/AuthApi";
 import IsLoading from "../../components/ui/IconLoading";
 import {
   hardResetApi,
+  refreshTokenFlow,
   setRefreshInApi,
   setTokenInApi,
+  shouldRefreshAccessToken,
 } from "../../services/data/CallApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   AUTH_LOGIN_SERVICE,
   FACE_ID_ENABLED_KEY,
   FACE_ID_LOGIN_SERVICE,
+  FACE_ID_MARKER_PASSWORD,
+  FACE_ID_MARKER_USERNAME,
 } from "../../constants/AuthStorage";
 import { log } from "../../utils/Logger";
+import { readStoredAuthTokens } from "../../context/authStorage";
 
 export default function LoginScreen() {
-  const { setToken, setRefreshToken, setIosAuthenticated, token } = useAuth();
+  const { setToken, setRefreshToken, setIosAuthenticated, token, logout } =
+    useAuth();
 
   const [userName, setUserName] = useState("");
   const [userPassword, setUserPassword] = useState("");
@@ -85,29 +91,30 @@ export default function LoginScreen() {
     }
   }, [prepareTokenForFaceID]);
 
-  const syncFaceIdCredentials = useCallback(
-    async (nextUserName: string, nextPassword: string) => {
-      if (Platform.OS !== "ios") return;
+  const syncFaceIdMarker = useCallback(async () => {
+    if (Platform.OS !== "ios") return;
 
-      const enabled = await AsyncStorage.getItem(FACE_ID_ENABLED_KEY);
+    const enabled = await AsyncStorage.getItem(FACE_ID_ENABLED_KEY);
 
-      if (enabled !== "1") {
-        await Keychain.resetGenericPassword({
-          service: FACE_ID_LOGIN_SERVICE,
-        });
-        setIsFaceIdEnabled(false);
-        return;
-      }
+    if (enabled !== "1") {
+      await Keychain.resetGenericPassword({
+        service: FACE_ID_LOGIN_SERVICE,
+      });
+      setIsFaceIdEnabled(false);
+      return;
+    }
 
-      await Keychain.setGenericPassword(nextUserName, nextPassword, {
+    await Keychain.setGenericPassword(
+      FACE_ID_MARKER_USERNAME,
+      FACE_ID_MARKER_PASSWORD,
+      {
         service: FACE_ID_LOGIN_SERVICE,
         accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
         accessible: Keychain.ACCESSIBLE.WHEN_PASSCODE_SET_THIS_DEVICE_ONLY,
-      });
-      setIsFaceIdEnabled(true);
-    },
-    [],
-  );
+      },
+    );
+    setIsFaceIdEnabled(true);
+  }, []);
 
   const completeLogin = useCallback(
     async (
@@ -127,14 +134,44 @@ export default function LoginScreen() {
         accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
       });
 
-      await syncFaceIdCredentials(nextUserName, nextPassword);
+      await syncFaceIdMarker();
 
       if (Platform.OS === "ios") {
         setIosAuthenticated(true);
       }
     },
-    [setIosAuthenticated, setRefreshToken, setToken, syncFaceIdCredentials],
+    [setIosAuthenticated, setRefreshToken, setToken, syncFaceIdMarker],
   );
+
+  const restoreStoredSession = useCallback(
+    async (accessToken: string, refreshToken: string | null) => {
+      await setToken(accessToken);
+      await setRefreshToken(refreshToken);
+      setTokenInApi(accessToken);
+      setRefreshInApi(refreshToken);
+      setIosAuthenticated(true);
+    },
+    [setIosAuthenticated, setRefreshToken, setToken],
+  );
+
+  const refreshSessionInBackground = useCallback(async () => {
+    try {
+      const nextAccessToken = await refreshTokenFlow();
+      const { refreshToken: latestRefreshToken } = await readStoredAuthTokens();
+
+      await setToken(nextAccessToken);
+      await setRefreshToken(latestRefreshToken ?? null);
+      setTokenInApi(nextAccessToken);
+      setRefreshInApi(latestRefreshToken ?? null);
+    } catch (err: any) {
+      const status = err?.response?.status;
+      const needsLogin = err?.NEED_LOGIN === true;
+
+      if (needsLogin || status === 401 || status === 403) {
+        await logout("EXPIRED");
+      }
+    }
+  }, [logout, setRefreshToken, setToken]);
 
   // LOGIN THƯỜNG
   const handlePressLogin = async () => {
@@ -221,42 +258,53 @@ export default function LoginScreen() {
         return;
       }
 
-      hardResetApi();
-      const res = await loginApi(credentials.username, credentials.password);
+      const { token: storedToken, refreshToken: storedRefreshToken } =
+        await readStoredAuthTokens();
 
-      if (!res?.data?.accessToken) {
-        Alert.alert("Lỗi", "Không thể hoàn tất đăng nhập bằng FaceID.");
+      if (!storedToken && !storedRefreshToken) {
+        Alert.alert("Phiên đăng nhập đã hết", "Vui lòng đăng nhập lại.");
         return;
       }
 
-      await completeLogin(
-        res.data.accessToken,
-        res.data.refreshToken,
-        credentials.username,
-        credentials.password,
+      if (storedToken) {
+        await restoreStoredSession(storedToken, storedRefreshToken ?? null);
+
+        if (
+          storedRefreshToken &&
+          shouldRefreshAccessToken(storedToken)
+        ) {
+          void refreshSessionInBackground();
+        }
+        return;
+      }
+
+      if (!storedRefreshToken) {
+        Alert.alert("Phiên đăng nhập đã hết", "Vui lòng đăng nhập lại.");
+        return;
+      }
+
+      await setRefreshToken(storedRefreshToken);
+      setRefreshInApi(storedRefreshToken);
+
+      const nextAccessToken = await refreshTokenFlow();
+      const { refreshToken: latestRefreshToken } = await readStoredAuthTokens();
+
+      await restoreStoredSession(
+        nextAccessToken,
+        latestRefreshToken ?? storedRefreshToken,
       );
     } catch (err: any) {
       const code = err?.code;
       const isCancelled = code === -128 || code === "-128";
       const status = err?.response?.status;
-      const message = err?.response?.data?.message;
+      const needsLogin = err?.NEED_LOGIN === true;
 
       if (isCancelled) {
         return;
       }
 
-      if (status === 401) {
-        await AsyncStorage.setItem(FACE_ID_ENABLED_KEY, "0");
-        await Keychain.resetGenericPassword({
-          service: FACE_ID_LOGIN_SERVICE,
-        });
-        setIsFaceIdEnabled(false);
-
-        Alert.alert(
-          "FaceID không hợp lệ",
-          message ||
-            "Thông tin đăng nhập đã thay đổi. Vui lòng đăng nhập lại bằng tài khoản và mật khẩu.",
-        );
+      if (needsLogin || status === 401 || status === 403) {
+        Alert.alert("Phiên đăng nhập đã hết", "Vui lòng đăng nhập lại.");
         return;
       }
 

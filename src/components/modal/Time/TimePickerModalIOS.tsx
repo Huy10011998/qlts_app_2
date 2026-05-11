@@ -1,15 +1,9 @@
 import { useState } from "react";
-import {
-  Modal,
-  Platform,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Platform, View } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import Ionicons from "react-native-vector-icons/Ionicons";
 import { formatHHMM, parseTime } from "../../../utils/Time";
+import IosSpinnerPickerSheet from "../../dataPicker/shared/IosSpinnerPickerSheet";
+import PickerFieldTrigger from "../../dataPicker/shared/PickerFieldTrigger";
 
 export const TimePickerModalIOS = ({
   value,
@@ -39,101 +33,31 @@ export const TimePickerModalIOS = ({
 
   return (
     <View>
-      <TouchableOpacity
-        style={styles.input}
+      <PickerFieldTrigger
+        iconName="time-outline"
+        placeholder="Chọn giờ (HH:mm)"
+        value={value}
         onPress={() => {
           setTempTime(parseTime(value));
           setShowPicker(true);
         }}
-        activeOpacity={0.8}
-      >
-        <Text style={{ color: value ? "#000" : "#999", flex: 1 }}>
-          {value || "Chọn giờ (HH:mm)"}
-        </Text>
-        <Ionicons name="time-outline" size={24} color="#E31E24" />
-      </TouchableOpacity>
+      />
 
-      <Modal
+      <IosSpinnerPickerSheet
         visible={showPicker}
-        transparent
-        animationType="slide"
-        onRequestClose={handleCancelTime}
+        onCancel={handleCancelTime}
+        onConfirm={handleConfirmTime}
       >
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1}>
-          <View style={styles.pickerContainer}>
-            <View style={styles.toolbar}>
-              <TouchableOpacity onPress={handleCancelTime}>
-                <Text style={styles.toolbarText}>Hủy</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleConfirmTime}>
-                <Text style={[styles.toolbarText, { fontWeight: "bold" }]}>
-                  Chọn
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.datePickerBox}>
-              <DateTimePicker
-                value={tempTime}
-                mode="time"
-                display="spinner"
-                is24Hour
-                onChange={handleTimeChange}
-                textColor="#000"
-                {...(Platform.OS === "ios" ? { themeVariant: "light" } : {})}
-              />
-            </View>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+        <DateTimePicker
+          value={tempTime}
+          mode="time"
+          display="spinner"
+          is24Hour
+          onChange={handleTimeChange}
+          textColor="#000"
+          {...(Platform.OS === "ios" ? { themeVariant: "light" } : {})}
+        />
+      </IosSpinnerPickerSheet>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  input: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: "#fff",
-  },
-
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "flex-end",
-  },
-
-  pickerContainer: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    overflow: "hidden",
-  },
-
-  toolbar: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderColor: "#eee",
-  },
-
-  toolbarText: {
-    fontSize: 18,
-    color: "#E31E24",
-  },
-
-  datePickerBox: {
-    backgroundColor: "#fff",
-    height: 250,
-    width: "100%",
-    alignItems: "center",
-  },
-});

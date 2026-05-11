@@ -1,6 +1,9 @@
 import { useCallback } from "react";
 import { Field } from "../../types/Model.d";
-import { fetchReferenceByField } from "../../utils/fetchField/FetchReferenceField";
+import {
+  buildReferenceFetchParams,
+  loadReferenceItemsForField,
+} from "./referenceLoaderHelpers";
 
 type FetchReferenceParams = {
   textSearch?: string;
@@ -17,21 +20,19 @@ export const useReferenceFetcher = (
       field: Field,
       { textSearch = "", page = 0, append = false }: FetchReferenceParams = {},
     ) => {
-      if (!field.referenceName) return;
-
-      await fetchReferenceByField(
-        field.referenceName,
-        field.name,
+      await loadReferenceItemsForField({
+        field,
+        formData: {},
         setReferenceData,
-        {
+        params: buildReferenceFetchParams({
           textSearch,
           pageSize: PAGE_SIZE,
-          skipSize: page * PAGE_SIZE,
+          page,
           append,
-        },
-      );
+        }),
+      });
     },
-    [setReferenceData],
+    [PAGE_SIZE, setReferenceData],
   );
 
   return { fetchReferenceData };

@@ -102,9 +102,14 @@ export default function AssetDeTailsTab({
         data={items}
         keyExtractor={(item) => String(item.id)}
         renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          items.length === 0 && styles.listContentEmpty,
+        ]}
         ListEmptyComponent={
-          <View style={styles.emptyWrap}>
+          <View
+            style={[styles.emptyWrap, items.length === 0 && styles.emptyWrapFull]}
+          >
             <View style={styles.emptyIconWrap}>
               <Ionicons name="albums-outline" size={32} color="#C7C7CC" />
             </View>
@@ -125,9 +130,13 @@ const styles = StyleSheet.create({
     backgroundColor: BG,
   },
   listContent: {
+    flexGrow: 1,
     paddingHorizontal: 14,
     paddingTop: 14,
     paddingBottom: 96,
+  },
+  listContentEmpty: {
+    flexGrow: 1,
   },
   item: {
     flexDirection: "row",
@@ -164,8 +173,11 @@ const styles = StyleSheet.create({
   },
   emptyWrap: {
     alignItems: "center",
-    paddingTop: 60,
     paddingHorizontal: 32,
+  },
+  emptyWrapFull: {
+    flex: 1,
+    justifyContent: "center",
   },
   emptyIconWrap: {
     width: 72,

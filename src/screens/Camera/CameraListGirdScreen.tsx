@@ -1,15 +1,11 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
 import CameraListGrid from "../../components/camera/CameraListGrid";
+import ScreenContainer from "../shared/ScreenContainer";
 
 export default function CameraListGridScreen() {
   return (
-    <View style={styles.container}>
+    <ScreenContainer backgroundColor="#F3F4F6">
       <CameraListGrid />
-    </View>
+    </ScreenContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F3F4F6" },
-});

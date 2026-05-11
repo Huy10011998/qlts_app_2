@@ -68,6 +68,35 @@ export type HomeTabParamList = {
   };
 };
 
+export type CameraRouteItem = {
+  iD_Camera: number;
+  iD_Camera_MoTa: string;
+  iD_Camera_Ma: string;
+};
+
+export type ShareholdersMeetingParams = {
+  meetingId: string;
+  meetingTitle: string;
+  meetingDate: string;
+  meetingTime: string;
+  meetingVenue: string;
+  totalShareholders: number;
+};
+
+export type ShareholdersMeetingScannerParams = {
+  meetingId: number;
+  scanMode: "attendance" | "voting";
+  votingOpinionId?: number;
+  votingOpinionTitle?: string;
+  votingChoice?: "agree" | "disagree" | "noOpinion";
+};
+
+export type TabsParamList = {
+  HomeTab: undefined;
+  ScanTab: NavigatorScreenParams<ScanTabParamList>;
+  SettingTab: undefined;
+};
+
 // =====================================================
 // ROOT STACK PARAM LIST
 // =====================================================
@@ -76,7 +105,7 @@ export type RootStackParamList = {
   Login: undefined;
 
   /** ================= ROOT ================= */
-  Tabs: undefined;
+  Tabs: NavigatorScreenParams<TabsParamList> | undefined;
   Home: undefined;
   HomeTab: NavigatorScreenParams<HomeTabParamList>;
   /** ================= SETTINGS ================= */
@@ -87,11 +116,14 @@ export type RootStackParamList = {
   Asset: undefined;
   Camera: undefined;
   CameraList: {
-    iD_Camera: number;
-    iD_Camera_MoTa: string;
-    iD_Camera_Ma: string;
+    zoneId: number;
+    zoneName: string;
+    cameras: CameraRouteItem[];
   };
-  CameraListGrid: undefined;
+  CameraListGrid: {
+    zoneName?: string;
+    cameras?: CameraRouteItem[];
+  };
 
   AssetList: {
     nameClass?: string;
@@ -181,21 +213,8 @@ export type RootStackParamList = {
   };
 
   /** ================= SHAREHOLDERS MEETING ================= */
-  ShareholdersMeeting: {
-    meetingId: string;
-    meetingTitle: string;
-    meetingDate: string;
-    meetingTime: string;
-    meetingVenue: string;
-    totalShareholders: number;
-  };
-  ShareholdersMeetingScanner: {
-    meetingId: number;
-    scanMode: "attendance" | "voting";
-    votingOpinionId?: number;
-    votingOpinionTitle?: string;
-    votingChoice?: "agree" | "disagree" | "noOpinion";
-  };
+  ShareholdersMeeting: ShareholdersMeetingParams;
+  ShareholdersMeetingScanner: ShareholdersMeetingScannerParams;
 };
 
 // =====================================================

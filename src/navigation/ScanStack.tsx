@@ -1,6 +1,5 @@
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { HeaderDetails } from "../components/header/HeaderDetails";
 import QrScannerScreen from "../screens/QrScanner/QrScannerScreen";
 import QrDetailsScreen from "../screens/QrScanner/QrDetailsScreen";
 import QrReviewScreen from "../screens/QrScanner/QrReviewScreen";
@@ -9,9 +8,9 @@ import AssetRelatedDetailsScreen from "../screens/Assets/AssetRelatedDetailsScre
 import AssetAddItemScreen from "../screens/Assets/AssetAddItemScreen";
 import AssetEditItemScreen from "../screens/Assets/AssetEditItemScreen";
 import AssetCloneItemScreen from "../screens/Assets/AssetCloneItemScreen";
+import { headerWithBack } from "./shared/navigationOptions";
 
 const Stack = createNativeStackNavigator();
-const headerWithBack = HeaderDetails({ showBackButton: true });
 
 export default function ScanStack() {
   return (

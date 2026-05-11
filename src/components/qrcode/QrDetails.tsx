@@ -1,20 +1,15 @@
 import React, {
   useEffect,
-  useMemo,
   useState,
-  useRef,
   useCallback,
 } from "react";
 import {
   View,
   StyleSheet,
   Alert,
-  Animated,
-  Pressable,
   Text,
   TouchableOpacity,
   Dimensions,
-  ScrollView,
 } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -25,9 +20,6 @@ import { useParams } from "../../hooks/useParams";
 import { getClassReference, getDetails } from "../../services/Index";
 import IsLoading from "../ui/IconLoading";
 import { error, log } from "../../utils/Logger";
-import { ParseFieldActive } from "../../utils/parser/ParseFieldActive";
-import { GroupFields } from "../../utils/parser/GroupFields";
-import { ToggleGroupUtil } from "../../utils/parser/ToggleGroup";
 import { getFieldValue } from "../../utils/fields/GetFieldValue";
 import { useAppDispatch } from "../../store/Hooks";
 import { useSelector } from "react-redux";
@@ -35,6 +27,9 @@ import { RootState } from "../../store";
 import { resetShouldRefreshDetails } from "../../store/AssetSlice";
 import { useAutoReload } from "../../hooks/useAutoReload";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
+import { useDetailViewState } from "../../hooks/useDetailViewState";
+import { useSlideInPanel } from "../../hooks/useSlideInPanel";
+import SlideInSidePanel from "../shared/SlideInSidePanel";
 
 const { width } = Dimensions.get("window");
 const MENU_WIDTH = width * 0.6;
@@ -45,26 +40,26 @@ export default function QrDetails({ children }: QrDetailsProps) {
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   //  STATE
-  const [activeTab, setActiveTab] = useState("list");
-  const [collapsedGroups, setCollapsedGroups] = useState<
-    Record<string, boolean>
-  >({});
   const [isLoading, setIsLoading] = useState(true);
   const [item, setItem] = useState<any>(null);
 
-  // Drawer
-  const [menuVisible, setMenuVisible] = useState(false);
-  const slideAnim = useRef(new Animated.Value(MENU_WIDTH)).current;
-  const isAnimating = useRef(false);
+  const {
+    activeTab,
+    collapsedGroups,
+    fieldActive,
+    groupedFields,
+    handleChangeTab,
+    toggleGroup,
+  } = useDetailViewState(field);
 
-  //  PARSER
-  const fieldActive = useMemo(() => ParseFieldActive(field), [field]);
-  const groupedFields = useMemo(() => GroupFields(fieldActive), [fieldActive]);
-
-  // HANDLERS
-  const handleChangeTab = (tabKey: string) => {
-    setActiveTab(tabKey);
-  };
+  const {
+    closePanel: closeMenu,
+    togglePanel: toggleMenu,
+    translateAnim: slideAnim,
+    visible: menuVisible,
+  } = useSlideInPanel({
+    initialOffset: MENU_WIDTH,
+  });
 
   // Redux
   const dispatch = useAppDispatch();
@@ -72,44 +67,6 @@ export default function QrDetails({ children }: QrDetailsProps) {
     (state: RootState) => state.asset.shouldRefreshDetails,
   );
   const { isMounted, showAlertIfActive } = useSafeAlert();
-
-  const toggleGroup = (groupName: string) => {
-    setCollapsedGroups((prev) => ToggleGroupUtil(prev, groupName));
-  };
-
-  // DRAWER
-  const openMenu = useCallback(() => {
-    if (isAnimating.current) return;
-    isAnimating.current = true;
-
-    setMenuVisible(true);
-    Animated.timing(slideAnim, {
-      toValue: 0,
-      duration: 300,
-      useNativeDriver: true,
-    }).start(() => {
-      isAnimating.current = false;
-    });
-  }, [slideAnim]);
-
-  const closeMenu = useCallback(() => {
-    if (isAnimating.current) return;
-    isAnimating.current = true;
-
-    Animated.timing(slideAnim, {
-      toValue: MENU_WIDTH,
-      duration: 300,
-      useNativeDriver: true,
-    }).start(() => {
-      isAnimating.current = false;
-      setMenuVisible(false);
-    });
-  }, [slideAnim]);
-
-  const toggleMenu = useCallback(() => {
-    if (menuVisible) closeMenu();
-    else openMenu();
-  }, [menuVisible, openMenu, closeMenu]);
 
   //  HEADER
   useEffect(() => {
@@ -206,57 +163,48 @@ export default function QrDetails({ children }: QrDetailsProps) {
         fieldActive: fieldActive || [],
       })}
 
-      {menuVisible && (
-        <>
-          <Pressable style={styles.overlay} onPress={closeMenu} />
-
-          <Animated.View
-            style={[
-              styles.menuContainer,
-              { transform: [{ translateX: slideAnim }] },
-            ]}
-          >
-            <ScrollView contentContainerStyle={styles.menuContent}>
-              <Text style={styles.menuTitle}>Menu</Text>
-              {nameClass !== "BinhChuaChay" &&
-                nameClass !== "HongChuaChay" &&
-                nameClass !== "TuChuaChay" && (
-                  <>
-                    <TouchableOpacity
-                      style={styles.menuItem}
-                      onPress={() => log("Báo hỏng")}
-                    >
-                      <Text style={styles.menuItemText}>
-                        Báo hỏng / Yêu cầu sửa chữa
-                      </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.menuItem}
-                      onPress={() => log("Thanh lý")}
-                    >
-                      <Text style={styles.menuItemText}>Thanh lý</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.menuItem}
-                      onPress={() => log("Trung chuyển")}
-                    >
-                      <Text style={styles.menuItemText}>Trung chuyển</Text>
-                    </TouchableOpacity>
-                  </>
-                )}
+      <SlideInSidePanel
+        bodyStyle={styles.menuContent}
+        onClose={closeMenu}
+        showCloseButton={false}
+        title="Menu"
+        translateX={slideAnim}
+        visible={menuVisible}
+        width={MENU_WIDTH}
+      >
+        {nameClass !== "BinhChuaChay" &&
+          nameClass !== "HongChuaChay" &&
+          nameClass !== "TuChuaChay" && (
+            <>
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => log("Báo hỏng")}
+              >
+                <Text style={styles.menuItemText}>
+                  Báo hỏng / Yêu cầu sửa chữa
+                </Text>
+              </TouchableOpacity>
 
               <TouchableOpacity
                 style={styles.menuItem}
-                onPress={() => handlePress()}
+                onPress={() => log("Thanh lý")}
               >
-                <Text style={styles.menuItemText}>Đánh giá</Text>
+                <Text style={styles.menuItemText}>Thanh lý</Text>
               </TouchableOpacity>
-            </ScrollView>
-          </Animated.View>
-        </>
-      )}
+
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => log("Trung chuyển")}
+              >
+                <Text style={styles.menuItemText}>Trung chuyển</Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+        <TouchableOpacity style={styles.menuItem} onPress={() => handlePress()}>
+          <Text style={styles.menuItemText}>Đánh giá</Text>
+        </TouchableOpacity>
+      </SlideInSidePanel>
     </View>
   );
 }
@@ -265,23 +213,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F9F9F9",
-  },
-
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.3)",
-    zIndex: 998,
-  },
-
-  menuContainer: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    bottom: 0,
-    width: MENU_WIDTH,
-    backgroundColor: "#fff",
-    zIndex: 999,
-    elevation: 10, // Android
   },
 
   menuContent: {

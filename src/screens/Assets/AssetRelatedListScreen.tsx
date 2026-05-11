@@ -1,18 +1,11 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
 import AssetRelatedList from "../../components/assets/AssetRelatedList";
+import ScreenContainer from "../shared/ScreenContainer";
 
 export default function AssetRelaterListScreen() {
   return (
-    <View style={styles.container}>
+    <ScreenContainer>
       <AssetRelatedList />
-    </View>
+    </ScreenContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F0F2F8",
-  },
-});

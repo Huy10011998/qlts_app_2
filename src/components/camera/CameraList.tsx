@@ -11,10 +11,8 @@ import {
   Image,
   ActivityIndicator,
   Platform,
-  AppState,
   Animated,
 } from "react-native";
-import { Buffer } from "buffer";
 import {
   useRoute,
   useNavigation,
@@ -28,291 +26,26 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TouchableWithoutFeedback } from "react-native";
 import Video from "react-native-video";
 import WebView from "react-native-webview";
-import { getTokenViewCamera } from "../../services/data/CallApi";
-import { subscribeAppRefetch } from "../../utils/AppRefetchBus";
 import Orientation from "react-native-orientation-locker";
 import {
   GestureHandlerRootView,
   GestureDetector,
   Gesture,
 } from "react-native-gesture-handler";
-
-const GO2RTC_HOST = "https://api.cholimexfood.com.vn/camera-stream";
-
-// Ngưỡng: nếu token còn hơn 2 phút thì không fetch lại
-const TOKEN_REFRESH_THRESHOLD_MS = 2 * 60 * 1000;
-
-// ── Fullscreen HTML cho iOS ──
-// FIX: Bỏ visibilitychange listener — không tự stopAll() khi kéo tác vụ
-// Chỉ nhận lệnh stop/start từ RN (AppState), tránh ngắt stream khi inactive
-const buildFullscreenHTML = (src: string) => `<!DOCTYPE html>
-<html><head>
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;background:#000;overflow:hidden;position:relative}
-#container{width:100%;height:100%;overflow:hidden;position:relative;touch-action:none}
-video{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none;
-  transform-origin:0 0;will-change:transform}
-</style></head><body>
-<div id="container"><video id="v" autoplay muted playsinline></video></div>
-<script>
-const HOST='${GO2RTC_HOST}';
-const SRC='${src}_main';
-let TOKEN='';
-const v=document.getElementById('v');
-const container=document.getElementById('container');
-
-let scale=1,minScale=1,maxScale=5;
-let tx=0,ty=0,lastTx=0,lastTy=0;
-function clamp(val,min,max){return Math.min(Math.max(val,min),max);}
-function clampTranslation(s,x,y){
-  const W=container.clientWidth,H=container.clientHeight;
-  const maxX=W*(s-1),maxY=H*(s-1);
-  return [clamp(x,-maxX,0),clamp(y,-maxY,0)];
-}
-function applyTransform(s,x,y){
-  v.style.transform='scale('+s+') translate('+(x/s)+'px,'+(y/s)+'px)';
-}
-function resetZoom(){scale=1;tx=0;ty=0;applyTransform(1,0,0);}
-
-let touches=[],pinchStartDist=0,pinchStartScale=1;
-let panStartX=0,panStartY=0,lastTapTime=0;
-let swipeStartX=0,swipeStartY=0,swipeLastX=0,swipeLastY=0,swipeTracking=false,didPinch=false;
-function dist(t1,t2){return Math.hypot(t2.clientX-t1.clientX,t2.clientY-t1.clientY);}
-function midpoint(t1,t2){return{x:(t1.clientX+t2.clientX)/2,y:(t1.clientY+t2.clientY)/2};}
-
-container.addEventListener('touchstart',e=>{
-  e.preventDefault();touches=[...e.touches];
-  if(touches.length===1){
-    const now=Date.now();
-    if(now-lastTapTime<300){resetZoom();}
-    lastTapTime=now;
-    swipeStartX=touches[0].clientX;swipeStartY=touches[0].clientY;
-    swipeLastX=swipeStartX;swipeLastY=swipeStartY;swipeTracking=true;didPinch=false;
-    panStartX=touches[0].clientX-tx;panStartY=touches[0].clientY-ty;
-  }
-  if(touches.length===2){
-    swipeTracking=false;didPinch=true;
-    pinchStartDist=dist(touches[0],touches[1]);pinchStartScale=scale;
-    lastTx=tx;lastTy=ty;
-  }
-},{passive:false});
-
-container.addEventListener('touchmove',e=>{
-  e.preventDefault();touches=[...e.touches];
-  if(touches.length===1){
-    swipeLastX=touches[0].clientX;swipeLastY=touches[0].clientY;
-  }
-  if(touches.length===1&&scale>1){
-    tx=touches[0].clientX-panStartX;ty=touches[0].clientY-panStartY;
-    [tx,ty]=clampTranslation(scale,tx,ty);applyTransform(scale,tx,ty);
-  }
-  if(touches.length===2){
-    const d=dist(touches[0],touches[1]);
-    let newScale=clamp(pinchStartScale*(d/pinchStartDist),minScale,maxScale);
-    const mid=midpoint(touches[0],touches[1]);
-    const dScale=newScale/scale;
-    tx=mid.x-(mid.x-lastTx)*dScale;ty=mid.y-(mid.y-lastTy)*dScale;
-    [tx,ty]=clampTranslation(newScale,tx,ty);
-    scale=newScale;lastTx=tx;lastTy=ty;applyTransform(scale,tx,ty);
-  }
-},{passive:false});
-
-container.addEventListener('touchend',e=>{
-  if(e.changedTouches&&e.changedTouches.length){
-    swipeLastX=e.changedTouches[0].clientX;swipeLastY=e.changedTouches[0].clientY;
-  }
-  touches=[...e.touches];
-  if(touches.length===1){panStartX=touches[0].clientX-tx;panStartY=touches[0].clientY-ty;lastTx=tx;lastTy=ty;}
-  if(touches.length===0){
-    if(swipeTracking&&!didPinch&&scale<=1.05){
-      const dx=swipeLastX-swipeStartX,dy=swipeLastY-swipeStartY;
-      if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.35){
-        window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(dx<0?'swipe_next':'swipe_prev');
-      }
-    }
-    swipeTracking=false;
-    if(scale<1.05){resetZoom();}
-  }
-},{passive:false});
-
-let pc=null,reconnectTimer=null,frozenTimer=null;
-let backoffMs=1000;const MAX_BACKOFF=10000;
-let lastTime=-1,connecting=false,stopped=false,notified=false,pcId=0;
-
-function notifyReady(){if(notified)return;notified=true;window.ReactNativeWebView.postMessage('ready');}
-function clearTimers(){
-  if(reconnectTimer){clearTimeout(reconnectTimer);reconnectTimer=null;}
-  if(frozenTimer){clearTimeout(frozenTimer);frozenTimer=null;}
-}
-function scheduleReconnect(){
-  if(stopped)return;clearTimers();
-  reconnectTimer=setTimeout(()=>{connect();},backoffMs);
-  backoffMs=Math.min(backoffMs*2,MAX_BACKOFF);
-}
-function resetFrozenWatchdog(){
-  if(frozenTimer)clearTimeout(frozenTimer);
-  frozenTimer=setTimeout(()=>{if(!stopped)scheduleReconnect();},15000);
-}
-function stopAll(){
-  stopped=true;connecting=false;clearTimers();pcId++;
-  if(pc){try{pc.close();}catch(e){}pc=null;}
-  v.srcObject=null;
-}
-async function connect(){
-  if(connecting||stopped||!TOKEN)return;
-  connecting=true;clearTimers();
-  if(pc){try{pc.close();}catch(e){}pc=null;}
-  v.srcObject=null;
-  const myId=++pcId;
-  try{
-    const p=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
-    pc=p;
-    p.ontrack=e=>{if(pcId!==myId)return;v.srcObject=e.streams[0];v.play().catch(()=>{});};
-    p.oniceconnectionstatechange=()=>{
-      if(pcId!==myId)return;
-      const s=p.iceConnectionState;
-      if(s==='connected'||s==='completed')resetFrozenWatchdog();
-      else if(s==='failed'||s==='disconnected')scheduleReconnect();
-    };
-    p.onconnectionstatechange=()=>{
-      if(pcId!==myId)return;
-      const s=p.connectionState;
-      if(s==='connected'){backoffMs=1000;resetFrozenWatchdog();}
-      else if(s==='failed'||s==='closed')scheduleReconnect();
-    };
-    p.addTransceiver('video',{direction:'recvonly'});
-    p.addTransceiver('audio',{direction:'recvonly'});
-    const offer=await p.createOffer();
-    if(pcId!==myId){p.close();return;}
-    await p.setLocalDescription(offer);
-    const r=await fetch(HOST+'/api/webrtc?src='+SRC,{
-      method:'POST',
-      headers:{'Content-Type':'application/sdp','Authorization':'Bearer '+TOKEN},
-      body:offer.sdp,
-      signal:AbortSignal.timeout(8000)
-    });
-    if(pcId!==myId){p.close();return;}
-    if(!r.ok){
-      if(r.status===401){
-        window.ReactNativeWebView&&window.ReactNativeWebView.postMessage('token_expired');
-      }
-      throw new Error('HTTP '+r.status);
-    }
-    const sdp=await r.text();
-    if(pcId!==myId){p.close();return;}
-    await p.setRemoteDescription({type:'answer',sdp});
-    if(pcId!==myId){p.close();return;}
-    connecting=false;resetFrozenWatchdog();
-  }catch(e){connecting=false;if(!stopped)scheduleReconnect();}
-}
-let rafPending=false;
-v.addEventListener('timeupdate',()=>{
-  if(rafPending)return;rafPending=true;
-  requestAnimationFrame(()=>{
-    rafPending=false;
-    if(v.currentTime!==lastTime){
-      lastTime=v.currentTime;
-      if(v.currentTime>0){notifyReady();backoffMs=1000;}
-      resetFrozenWatchdog();
-    }
-  });
-});
-setTimeout(notifyReady,6000);
-// FIX: Bỏ visibilitychange — không tự stop khi kéo tác vụ (inactive)
-// Chỉ xử lý mất mạng thật sự
-window.addEventListener('offline',()=>{stopAll();});
-window.addEventListener('online',()=>{if(!stopped){stopped=false;backoffMs=1000;connect();}});
-function handleMsg(d){
-  try{
-    const m=typeof d==='string'?JSON.parse(d):d;
-    if(m.type==='token'){TOKEN=m.value;stopped=false;backoffMs=1000;connect();return;}
-  }catch(e){}
-  if(d==='stop'){stopAll();}
-  else if(d==='start'){
-    const wasStopped=stopped;
-    stopped=false;backoffMs=1000;
-    if(TOKEN&&wasStopped){connect();}
-  }
-  else if(d==='ping'){window.ReactNativeWebView&&window.ReactNativeWebView.postMessage('pong');}
-}
-window.addEventListener('message',function(e){handleMsg(e.data);});
-document.addEventListener('message',function(e){handleMsg(e.data);});
-</script></body></html>`;
-
-// ── Decode JWT expiry ──
-const decodeTokenExpiry = (token: string): number | null => {
-  try {
-    const base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
-    const payload = JSON.parse(Buffer.from(base64, "base64").toString("utf8"));
-    return payload.exp ? payload.exp * 1000 : null;
-  } catch {
-    return null;
-  }
-};
-
-// ── Kiểm tra token còn hạn đủ dùng không ──
-const isTokenStillValid = (token: string): boolean => {
-  if (!token) return false;
-  const exp = decodeTokenExpiry(token);
-  if (!exp) return false;
-  return exp - Date.now() > TOKEN_REFRESH_THRESHOLD_MS;
-};
-
-const CameraThumbnail = React.memo(
-  ({
-    cameraId,
-    cameraCode,
-    cameraToken,
-    thumbTimestamp,
-    focusKey,
-  }: {
-    cameraId: string | number;
-    cameraCode: string;
-    cameraToken: string;
-    thumbTimestamp: number;
-    focusKey: number;
-  }) => {
-    const [retryCount, setRetryCount] = React.useState(0);
-    const [isLoaded, setIsLoaded] = React.useState(false);
-
-    React.useEffect(() => {
-      setRetryCount(0);
-      setIsLoaded(false);
-    }, [cameraId, cameraToken, thumbTimestamp, focusKey]);
-
-    const frameUrl = `${GO2RTC_HOST}/api/frame.jpeg?src=${cameraCode}_snap&t=${thumbTimestamp}&rk=${focusKey}&rt=${retryCount}`;
-
-    return (
-      <View style={styles.preview}>
-        {!isLoaded && (
-          <View style={styles.previewLoading}>
-            <ActivityIndicator size="small" color="#555" />
-          </View>
-        )}
-        <Image
-          key={`thumb-${cameraId}-${focusKey}-${retryCount}`}
-          source={{
-            uri: frameUrl,
-            headers: { Authorization: `Bearer ${cameraToken}` },
-          }}
-          style={styles.preview}
-          resizeMode="cover"
-          onLoadStart={() => setIsLoaded(false)}
-          onLoadEnd={() => setIsLoaded(true)}
-          onError={() => {
-            setIsLoaded(false);
-            if (retryCount >= 3) return;
-            setTimeout(() => {
-              setRetryCount((prev) => prev + 1);
-            }, 500 * (retryCount + 1));
-          }}
-        />
-      </View>
-    );
-  },
-);
+import CameraSnapshotThumbnail from "./shared/CameraSnapshotThumbnail";
+import { buildCameraFullscreenHTML } from "./shared/cameraStreamHtml";
+import { GO2RTC_HOST } from "./shared/cameraStreamConfig";
+import {
+  postCameraWebViewToken,
+  startCameraWebView,
+  stopCameraWebView,
+} from "./shared/cameraWebViewMessaging";
+import {
+  getCameraHlsUrl,
+  getCameraSnapshotUrl,
+  getVisiblePageIndexes,
+} from "./shared/cameraStreamUtils";
+import { useCameraViewToken } from "./shared/useCameraViewToken";
 
 const CameraList: React.FC = () => {
   const route = useRoute<any>();
@@ -333,8 +66,6 @@ const CameraList: React.FC = () => {
   const [isFullMuted, setIsFullMuted] = React.useState(false);
   const [isLandscape, setIsLandscape] = React.useState(false);
   const [videoReady, setVideoReady] = React.useState(false);
-  const [cameraToken, setCameraToken] = React.useState<string>("");
-  const [thumbTimestamp, setThumbTimestamp] = React.useState<number>(0);
   const [focusKey, setFocusKey] = React.useState(0);
   const [pendingThumbUrl, setPendingThumbUrl] = React.useState<string | null>(
     null,
@@ -347,16 +78,6 @@ const CameraList: React.FC = () => {
   const isFocusedRef = React.useRef(false);
   const pageRef = React.useRef(0);
   const totalPagesRef = React.useRef(0);
-  const tokenRefreshTimerRef = React.useRef<ReturnType<
-    typeof setTimeout
-  > | null>(null);
-  const tokenRequestRef = React.useRef<Promise<string | null> | null>(null);
-
-  // Ref luôn giữ token mới nhất, tránh stale closure
-  const cameraTokenRef = React.useRef<string>("");
-  React.useEffect(() => {
-    cameraTokenRef.current = cameraToken;
-  }, [cameraToken]);
 
   // Android stall detection
   const lastProgressRef = React.useRef<number>(Date.now());
@@ -371,6 +92,28 @@ const CameraList: React.FC = () => {
   > | null>(null);
   const [androidVideoKey, setAndroidVideoKey] = React.useState(0);
 
+  const {
+    cameraToken,
+    cameraTokenRef,
+    clearTokenRefreshTimer,
+    fetchCameraTokenRef,
+    setCameraToken,
+    setThumbTimestamp,
+    thumbTimestamp,
+  } = useCameraViewToken({
+    isFocused,
+    onActive: () => {
+      setFocusKey((k) => k + 1);
+      startCameraWebView(fullscreenWebViewRef.current);
+    },
+    onBackground: () => {
+      stopCameraWebView(fullscreenWebViewRef.current);
+    },
+    onTokenReceived: (newToken) => {
+      postCameraWebViewToken(fullscreenWebViewRef.current, newToken);
+    },
+  });
+
   const clearAndroidTimers = React.useCallback(() => {
     if (androidFallbackRef.current) clearTimeout(androidFallbackRef.current);
     if (androidReconnectRef.current) clearTimeout(androidReconnectRef.current);
@@ -379,73 +122,6 @@ const CameraList: React.FC = () => {
     androidReconnectRef.current = null;
     androidWatchdogRef.current = null;
   }, []);
-
-  // Proactive token refresh — lên lịch refresh trước khi token hết hạn 60s
-  const scheduleProactiveRefresh = React.useCallback((token: string) => {
-    if (tokenRefreshTimerRef.current)
-      clearTimeout(tokenRefreshTimerRef.current);
-    const exp = decodeTokenExpiry(token);
-    if (exp) {
-      const delay = exp - Date.now() - 60000;
-      if (delay > 0) {
-        tokenRefreshTimerRef.current = setTimeout(() => {
-          fetchCameraTokenRef.current?.(false);
-        }, delay);
-      }
-    }
-  }, []);
-
-  /**
-   * fetchCameraToken:
-   * - force = false: kiểm tra token còn hạn → bỏ qua nếu còn dùng được
-   *   → thumbnail KHÔNG reload khi chuyển app ngắn / kéo tác vụ
-   * - force = true: bỏ qua kiểm tra (token_expired / AppRefetch)
-   */
-  const fetchCameraToken = React.useCallback(
-    async (force = false) => {
-      if (!isFocusedRef.current) return;
-      if (!force && isTokenStillValid(cameraTokenRef.current)) {
-        scheduleProactiveRefresh(cameraTokenRef.current);
-        return;
-      }
-
-      if (tokenRequestRef.current) {
-        await tokenRequestRef.current;
-        return;
-      }
-
-      try {
-        tokenRequestRef.current = (async () => {
-          const res: any = await getTokenViewCamera();
-          const newToken = res?.data ?? null;
-
-          if (newToken && isFocusedRef.current) {
-            setCameraToken(newToken);
-            setThumbTimestamp(Date.now());
-            scheduleProactiveRefresh(newToken);
-            if (fullscreenWebViewRef.current?.postMessage) {
-              fullscreenWebViewRef.current.postMessage(
-                JSON.stringify({ type: "token", value: newToken }),
-              );
-            }
-          }
-
-          return newToken;
-        })();
-        await tokenRequestRef.current;
-      } catch (err) {
-        console.warn("getTokenViewCamera error:", err);
-      } finally {
-        tokenRequestRef.current = null;
-      }
-    },
-    [scheduleProactiveRefresh],
-  );
-
-  const fetchCameraTokenRef = React.useRef(fetchCameraToken);
-  React.useEffect(() => {
-    fetchCameraTokenRef.current = fetchCameraToken;
-  }, [fetchCameraToken]);
 
   React.useEffect(() => {
     isFocusedRef.current = isFocused;
@@ -473,43 +149,10 @@ const CameraList: React.FC = () => {
       }
       fetchCameraTokenRef.current?.(true);
       return () => {
-        if (tokenRefreshTimerRef.current)
-          clearTimeout(tokenRefreshTimerRef.current);
+        clearTokenRefreshTimer();
       };
-    }, []),
+    }, [clearTokenRefreshTimer, setCameraToken, setThumbTimestamp]),
   );
-
-  // AppRefetch bus
-  React.useEffect(() => {
-    const unsub = subscribeAppRefetch(() =>
-      fetchCameraTokenRef.current?.(true),
-    );
-    return () => unsub();
-  }, []);
-
-  // FIX: AppState — chỉ stop khi background thật sự, bỏ qua inactive
-  // inactive = kéo thanh tác vụ, notification → không cần ngắt stream
-  // background = chuyển sang app khác thật sự → mới stop
-  React.useEffect(() => {
-    const sub = AppState.addEventListener("change", (state) => {
-      if (state === "active") {
-        if (isFocusedRef.current) {
-          setFocusKey((k) => k + 1);
-          fetchCameraTokenRef.current?.(true);
-          if (fullscreenWebViewRef.current?.postMessage) {
-            fullscreenWebViewRef.current.postMessage("start");
-          }
-        }
-      } else if (state === "background") {
-        // Chỉ stop khi vào background thật sự
-        if (fullscreenWebViewRef.current?.postMessage) {
-          fullscreenWebViewRef.current.postMessage("stop");
-        }
-      }
-      // "inactive" → bỏ qua, giữ stream sống khi kéo tác vụ
-    });
-    return () => sub.remove();
-  }, []);
 
   React.useEffect(() => {
     if (!isFocused) return;
@@ -546,7 +189,6 @@ const CameraList: React.FC = () => {
       Orientation.lockToPortrait();
     }
     clearAndroidTimers();
-    setVideoReady(false);
     fsTranslateX.setValue(0);
     setFullscreenCamera(null);
     setPendingThumbUrl(null);
@@ -607,9 +249,7 @@ const CameraList: React.FC = () => {
 
   const openFullscreen = React.useCallback(
     (item: any) => {
-      setPendingThumbUrl(
-        `${GO2RTC_HOST}/api/frame.jpeg?src=${item.iD_Camera_Ma}_snap&t=${thumbTimestamp}`,
-      );
+      setPendingThumbUrl(getCameraSnapshotUrl(item.iD_Camera_Ma, thumbTimestamp));
       setVideoReady(false);
       setAndroidVideoKey(0);
       setFullscreenCamera(item);
@@ -668,7 +308,7 @@ const CameraList: React.FC = () => {
             style={styles.videoWrapper}
           >
             {cameraToken && thumbTimestamp ? (
-              <CameraThumbnail
+              <CameraSnapshotThumbnail
                 cameraId={item.iD_Camera}
                 cameraCode={item.iD_Camera_Ma}
                 cameraToken={cameraToken}
@@ -690,25 +330,12 @@ const CameraList: React.FC = () => {
   const displayThumbUrl =
     pendingThumbUrl ??
     (fullscreenCamera
-      ? `${GO2RTC_HOST}/api/frame.jpeg?src=${fullscreenCamera.iD_Camera_Ma}_snap&t=${thumbTimestamp}`
+      ? getCameraSnapshotUrl(fullscreenCamera.iD_Camera_Ma, thumbTimestamp)
       : null);
-  const visiblePageIndexes = React.useMemo(() => {
-    if (totalPages <= 7) {
-      return Array.from({ length: totalPages }, (_, index) => index);
-    }
-
-    const maxVisibleDots = 7;
-    const half = Math.floor(maxVisibleDots / 2);
-    let start = Math.max(0, page - half);
-    let end = start + maxVisibleDots - 1;
-
-    if (end >= totalPages) {
-      end = totalPages - 1;
-      start = Math.max(0, end - maxVisibleDots + 1);
-    }
-
-    return Array.from({ length: end - start + 1 }, (_, index) => start + index);
-  }, [page, totalPages]);
+  const visiblePageIndexes = React.useMemo(
+    () => getVisiblePageIndexes(page, totalPages),
+    [page, totalPages],
+  );
 
   const swipeGesture = React.useMemo(
     () =>
@@ -767,11 +394,11 @@ const CameraList: React.FC = () => {
       const nextCam = cameras[nextIndex];
       if (!nextCam) return;
 
-      fullscreenWebViewRef.current?.postMessage?.("stop");
+      stopCameraWebView(fullscreenWebViewRef.current);
       clearAndroidTimers();
 
       setPendingThumbUrl(
-        `${GO2RTC_HOST}/api/frame.jpeg?src=${nextCam.iD_Camera_Ma}_snap&t=${thumbTimestamp}`,
+        getCameraSnapshotUrl(nextCam.iD_Camera_Ma, thumbTimestamp),
       );
       setVideoReady(false);
       setAndroidVideoKey(0);
@@ -895,6 +522,19 @@ const CameraList: React.FC = () => {
       handleFullscreenSwipe,
       screenWidth,
     ],
+  );
+  const fullscreenDoubleTapGesture = React.useMemo(
+    () =>
+      Gesture.Tap()
+        .runOnJS(true)
+        .numberOfTaps(2)
+        .onEnd(closeFullscreen),
+    [closeFullscreen],
+  );
+  const fullscreenGesture = React.useMemo(
+    () =>
+      Gesture.Simultaneous(fullscreenSwipeGesture, fullscreenDoubleTapGesture),
+    [fullscreenDoubleTapGesture, fullscreenSwipeGesture],
   );
 
   return (
@@ -1055,7 +695,7 @@ const CameraList: React.FC = () => {
           </View>
 
           <View style={styles.fsVideoArea}>
-            <GestureDetector gesture={fullscreenSwipeGesture}>
+            <GestureDetector gesture={fullscreenGesture}>
               <Animated.View
                 style={[
                   StyleSheet.absoluteFill,
@@ -1068,7 +708,7 @@ const CameraList: React.FC = () => {
                       <Video
                         key={`${fullscreenCamera.iD_Camera}-${androidVideoKey}`}
                         source={{
-                          uri: `${GO2RTC_HOST}/api/stream.m3u8?src=${fullscreenCamera.iD_Camera_Ma}_main&mp4=flac`,
+                          uri: getCameraHlsUrl(fullscreenCamera.iD_Camera_Ma),
                           headers: { Authorization: `Bearer ${cameraToken}` },
                         }}
                         style={[
@@ -1107,7 +747,7 @@ const CameraList: React.FC = () => {
                         key={fullscreenCamera.iD_Camera}
                         ref={fullscreenWebViewRef}
                         source={{
-                          html: buildFullscreenHTML(
+                          html: buildCameraFullscreenHTML(
                             fullscreenCamera.iD_Camera_Ma,
                           ),
                           baseUrl: GO2RTC_HOST,
@@ -1128,23 +768,18 @@ const CameraList: React.FC = () => {
                         scrollEnabled={false}
                         scalesPageToFit={false}
                         onLoad={() => {
-                          if (
-                            fullscreenWebViewRef.current?.postMessage &&
-                            cameraToken
-                          ) {
-                            fullscreenWebViewRef.current.postMessage(
-                              JSON.stringify({
-                                type: "token",
-                                value: cameraToken,
-                              }),
-                            );
-                          }
+                          postCameraWebViewToken(
+                            fullscreenWebViewRef.current,
+                            cameraToken,
+                          );
                         }}
                         onMessage={(e) => {
                           const data = e.nativeEvent.data;
                           if (data === "ready") setVideoReady(true);
                           else if (data === "token_expired")
                             fetchCameraTokenRef.current?.(true);
+                          else if (data === "close_fullscreen")
+                            closeFullscreen();
                           else if (data === "swipe_next")
                             handleFullscreenSwipe("next");
                           else if (data === "swipe_prev")
@@ -1177,17 +812,22 @@ const CameraList: React.FC = () => {
                       </View>
                     )}
                   </>
-                ) : (
+                ) : fullscreenCamera ? (
                   <ActivityIndicator
                     size="large"
                     color="#fff"
                     style={styles.spinner}
                   />
-                )}
+                ) : null}
               </Animated.View>
             </GestureDetector>
-            {cameras.length > 1 && fullscreenIndex >= 0 && (
-              <View style={styles.fsPager}>
+            {fullscreenIndex >= 0 && cameras.length > 0 && (
+              <View
+                style={[
+                  styles.fsPager,
+                  { bottom: Math.max(insets.bottom, 16) + 20 },
+                ]}
+              >
                 <Text style={styles.fsPagerText}>
                   {fullscreenIndex + 1} / {cameras.length}
                 </Text>
@@ -1332,14 +972,11 @@ const styles = StyleSheet.create({
   fsVideoArea: { flex: 1, backgroundColor: "#000" },
   fsPager: {
     position: "absolute",
-    bottom: 24,
     alignSelf: "center",
-    backgroundColor: "rgba(0,0,0,0.45)",
-    borderRadius: 14,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 4,
   },
-  fsPagerText: { color: "#fff", fontSize: 12, fontWeight: "600" },
+  fsPagerText: { color: "#fff", fontSize: 14, fontWeight: "700" },
   thumbOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.35)",

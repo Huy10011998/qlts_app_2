@@ -1,10 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
-  Animated,
-  AppState,
   Linking,
-  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -22,13 +19,10 @@ import {
 } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import ReactNativeHapticFeedback from "react-native-haptic-feedback";
-import { request, PERMISSIONS, RESULTS } from "react-native-permissions";
 import {
   Camera,
   Code,
   CodeScanner,
-  useCameraDevice,
-  useCameraFormat,
   useCodeScanner,
 } from "react-native-vision-camera";
 import {
@@ -39,9 +33,17 @@ import {
 import {
   RootStackParamList,
   Shareholder,
-  ShareholderApiItem,
   ShareholderListResponse,
 } from "../../types/Index";
+import QrScannerGateView from "../../components/qrcode/shared/QrScannerGateView";
+import QrScannerViewportOverlay from "../../components/qrcode/shared/QrScannerViewportOverlay";
+import useQrScannerController from "../../components/qrcode/shared/useQrScannerController";
+import {
+  mapShareholderItem,
+  VOTING_CHOICE_LABEL_MAP,
+  VOTING_CHOICE_VALUE_MAP,
+  VotingChoice,
+} from "./shared/shareholdersMeetingHelpers";
 
 type AttendanceActionResponse = {
   message?: string;
@@ -51,8 +53,6 @@ type AttendanceActionResponse = {
   };
 };
 
-type VotingChoice = "agree" | "disagree" | "noOpinion";
-
 type VotingActionResponse = {
   message?: string;
   data?: {
@@ -61,20 +61,6 @@ type VotingActionResponse = {
     [key: string]: any;
   };
 };
-
-const votingChoiceLabelMap: Record<VotingChoice, string> = {
-  agree: "Tán thành",
-  disagree: "Không tán thành",
-  noOpinion: "Không có ý kiến",
-};
-
-const mapShareholderItem = (item: ShareholderApiItem): Shareholder => ({
-  id: String(item.id),
-  name: item.tenCoDong || "Không rõ tên",
-  shareholderId: item.maCoDong || "--",
-  shares: Number(item.tongCoPhan || 0),
-  status: item.isDiemDanh ? "present" : "pending",
-});
 
 export default function ShareholdersMeetingScannerScreen() {
   const navigation = useNavigation<any>();
@@ -88,50 +74,27 @@ export default function ShareholdersMeetingScannerScreen() {
     votingOpinionTitle,
     votingChoice,
   } = route.params;
-
-  const [appState, setAppState] = useState(AppState.currentState);
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [screenActive, setScreenActive] = useState(false);
-  const [initTimeout, setInitTimeout] = useState(false);
-  const [isTorchOn, setIsTorchOn] = useState(false);
   const [shareholders, setShareholders] = useState<Shareholder[]>([]);
-
-  const scannedRef = useRef(false);
-  const initTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const scanLineAnim = useRef(new Animated.Value(0)).current;
-  const scanLoopRef = useRef<Animated.CompositeAnimation | null>(null);
-
-  const device = useCameraDevice("back");
-  const format =
-    useCameraFormat(device, [
-      { videoResolution: { width: 1280, height: 720 } },
-      { fps: 30 },
-    ]) ?? device?.formats[0];
+  const {
+    activateScanner,
+    clearInitTimeoutTimer,
+    deactivateScanner,
+    device,
+    format,
+    hasPermission,
+    initTimeout,
+    isTorchOn,
+    pauseScanner,
+    resetScannerSession,
+    resumeScanner,
+    scanLineAnim,
+    scannedRef,
+    setIsTorchOn,
+    startInitTimeoutTimer,
+    cameraActive,
+  } = useQrScannerController({ enabled: true });
 
   const expectedQrPrefix = useMemo(() => "DaiHoiCoDong_CoDong", []);
-
-  const cameraActive = screenActive && appState === "active";
-
-  useEffect(() => {
-    const sub = AppState.addEventListener("change", setAppState);
-    return () => sub.remove();
-  }, []);
-
-  const startScanLine = useCallback(() => {
-    scanLineAnim.setValue(0);
-    scanLoopRef.current = Animated.loop(
-      Animated.timing(scanLineAnim, {
-        toValue: 1,
-        duration: 2200,
-        useNativeDriver: true,
-      }),
-    );
-    scanLoopRef.current.start();
-  }, [scanLineAnim]);
-
-  const stopScanLine = useCallback(() => {
-    scanLoopRef.current?.stop();
-  }, []);
 
   const reloadShareholders = useCallback(async () => {
     const shareholderRes = await getCodongDhcd<ShareholderListResponse>(
@@ -151,48 +114,27 @@ export default function ShareholdersMeetingScannerScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      scannedRef.current = false;
-      setInitTimeout(false);
-      setIsTorchOn(false);
+      resetScannerSession();
 
       const timeout = setTimeout(() => {
-        setScreenActive(true);
+        activateScanner();
       }, 100);
 
-      initTimerRef.current = setTimeout(() => {
-        setInitTimeout(true);
-      }, 5000);
-
-      startScanLine();
+      startInitTimeoutTimer();
 
       return () => {
         clearTimeout(timeout);
-        if (initTimerRef.current) {
-          clearTimeout(initTimerRef.current);
-          initTimerRef.current = null;
-        }
-        setScreenActive(false);
-        stopScanLine();
+        clearInitTimeoutTimer();
+        deactivateScanner();
       };
-    }, [startScanLine, stopScanLine]),
+    }, [
+      activateScanner,
+      clearInitTimeoutTimer,
+      deactivateScanner,
+      resetScannerSession,
+      startInitTimeoutTimer,
+    ]),
   );
-
-  const checkPermission = useCallback(async () => {
-    const result =
-      Platform.OS === "ios"
-        ? await request(PERMISSIONS.IOS.CAMERA)
-        : await request(PERMISSIONS.ANDROID.CAMERA);
-    setHasPermission(result === RESULTS.GRANTED);
-  }, []);
-
-  useEffect(() => {
-    void checkPermission();
-  }, [checkPermission]);
-
-  useEffect(() => {
-    if (appState !== "active" || hasPermission === true) return;
-    void checkPermission();
-  }, [appState, checkPermission, hasPermission]);
 
   const applyAttendanceStatus = useCallback((shareholderId: string) => {
     setShareholders((prev) =>
@@ -210,30 +152,18 @@ export default function ShareholdersMeetingScannerScreen() {
         throw new Error("VOTING_SELECTION_MISSING");
       }
 
-      const choiceValueMap: Record<VotingChoice, string> = {
-        agree: "1",
-        disagree: "0",
-        noOpinion: "2",
-      };
-
       return luuYKienCoDongDhcd<VotingActionResponse>({
         iD_DaiHoiCoDong_YKien: Number(votingOpinionId),
         iD_DaiHoiCoDong_CoDongs: String(shareholderId),
-        trangThais: choiceValueMap[votingChoice],
+        trangThais: VOTING_CHOICE_VALUE_MAP[votingChoice],
         nguoiNhap: 0,
       });
     },
     [votingChoice, votingOpinionId],
   );
 
-  const resumeScanner = useCallback(() => {
-    scannedRef.current = false;
-    setScreenActive(true);
-    startScanLine();
-  }, [startScanLine]);
-
   const handleInvalidQr = useCallback(
-    (message: string) => {
+    (message?: string) => {
       Alert.alert("QR không hợp lệ", message, [
         {
           text: "OK",
@@ -250,8 +180,7 @@ export default function ShareholdersMeetingScannerScreen() {
       if (!codes.length || scannedRef.current) return;
 
       scannedRef.current = true;
-      setScreenActive(false);
-      stopScanLine();
+      deactivateScanner();
 
       ReactNativeHapticFeedback.trigger("impactLight");
 
@@ -259,18 +188,14 @@ export default function ShareholdersMeetingScannerScreen() {
       const parts = rawValue.replace(/^\//, "").split("/").filter(Boolean);
 
       if (!rawValue || parts.length !== 2) {
-        handleInvalidQr("Mã QR không đúng định dạng.");
+        handleInvalidQr();
         return;
       }
 
       const [prefix, shareholderId] = parts;
 
       if (prefix !== expectedQrPrefix) {
-        handleInvalidQr(
-          scanMode === "attendance"
-            ? "Tab Điểm danh chỉ chấp nhận QR dạng DaiHoiCoDong_CoDong/{id}."
-            : "Tab Lấy ý kiến chỉ chấp nhận QR dạng DaiHoiCoDong_CoDong/{id}.",
-        );
+        handleInvalidQr();
         return;
       }
 
@@ -302,7 +227,7 @@ export default function ShareholdersMeetingScannerScreen() {
           ? `Xác nhận điểm danh cổ đông ${shareholder.shareholderId}?`
           : `Ghi nhận "${votingOpinionTitle || "ý kiến đã chọn"}" cho cổ đông ${
               shareholder.shareholderId
-            } với phân loại "${votingChoice ? votingChoiceLabelMap[votingChoice] : ""}"?`;
+            } với phân loại "${votingChoice ? VOTING_CHOICE_LABEL_MAP[votingChoice] : ""}"?`;
 
       Alert.alert(confirmTitle, confirmMessage, [
         {
@@ -378,7 +303,7 @@ export default function ShareholdersMeetingScannerScreen() {
                 `Đã lưu "${votingOpinionTitle || "ý kiến"}" cho cổ đông ${
                   shareholder.shareholderId
                 } với phân loại "${
-                  votingChoice ? votingChoiceLabelMap[votingChoice] : ""
+                  votingChoice ? VOTING_CHOICE_LABEL_MAP[votingChoice] : ""
                 }".`,
                 [
                   {
@@ -413,67 +338,30 @@ export default function ShareholdersMeetingScannerScreen() {
 
   if (!hasPermission) {
     return (
-      <SafeAreaView style={styles.gateRoot}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          hitSlop={10}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={24} color="#333" />
-        </TouchableOpacity>
-
-        <View style={styles.gateContent}>
-          <Ionicons name="camera-off-outline" size={56} color="#999" />
-          <Text style={styles.gateTitle}>Không có quyền camera</Text>
-          <Text style={styles.gateDesc}>
-            Ứng dụng cần quyền truy cập camera để quét mã QR.{"\n"}
-            Vui lòng cấp quyền trong phần Cài đặt.
-          </Text>
-          <TouchableOpacity
-            style={styles.settingsBtn}
-            onPress={() => Linking.openSettings()}
-          >
-            <Text style={styles.settingsBtnText}>Mở Cài đặt</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+      <QrScannerGateView
+        iconName="camera-off-outline"
+        title="Không có quyền camera"
+        description={`Ứng dụng cần quyền truy cập camera để quét mã QR.\nVui lòng cấp quyền trong phần Cài đặt.`}
+        actionLabel="Mở Cài đặt"
+        onAction={Linking.openSettings}
+        onBack={() => navigation.goBack()}
+        contentOffsetY={-60}
+      />
     );
   }
 
   if (!device || !format) {
     return (
-      <SafeAreaView style={styles.gateRoot}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          hitSlop={10}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={24} color="#333" />
-        </TouchableOpacity>
-
-        <View style={styles.gateContent}>
-          {initTimeout ? (
-            <>
-              <Ionicons name="alert-circle-outline" size={56} color="#FF3B30" />
-              <Text style={styles.gateTitle}>Không thể mở camera</Text>
-              <Text style={styles.gateDesc}>
-                Camera không phản hồi. Vui lòng thử lại.
-              </Text>
-              <TouchableOpacity
-                style={styles.settingsBtn}
-                onPress={() => navigation.goBack()}
-              >
-                <Text style={styles.settingsBtnText}>Quay lại</Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              <Ionicons name="camera-outline" size={56} color="#999" />
-              <Text style={styles.gateTitle}>Đang khởi tạo camera...</Text>
-            </>
-          )}
-        </View>
-      </SafeAreaView>
+      <QrScannerGateView
+        iconName={initTimeout ? "alert-circle-outline" : "camera-outline"}
+        iconColor={initTimeout ? "#FF3B30" : "#999"}
+        title={initTimeout ? "Không thể mở camera" : "Đang khởi tạo camera..."}
+        description={initTimeout ? "Camera không phản hồi. Vui lòng thử lại." : undefined}
+        actionLabel={initTimeout ? "Quay lại" : undefined}
+        onAction={initTimeout ? () => navigation.goBack() : undefined}
+        onBack={() => navigation.goBack()}
+        contentOffsetY={-60}
+      />
     );
   }
 
@@ -498,7 +386,7 @@ export default function ShareholdersMeetingScannerScreen() {
           style={styles.headerIconButton}
           hitSlop={10}
           onPress={() => {
-            setScreenActive(false);
+            deactivateScanner();
             navigation.goBack();
           }}
         >
@@ -507,11 +395,6 @@ export default function ShareholdersMeetingScannerScreen() {
 
         <View style={styles.headerTitleWrap}>
           <Text style={styles.headerTitle}>Quét mã QR</Text>
-          <Text style={styles.headerSubtitle}>
-            {scanMode === "attendance"
-              ? "Chấp nhận: DaiHoiCoDong_CoDong/{id}"
-              : `${votingChoice ? votingChoiceLabelMap[votingChoice] : "Lấy ý kiến"} · DaiHoiCoDong_CoDong/{id}`}
-          </Text>
         </View>
 
         <View style={styles.headerRight}>
@@ -529,76 +412,13 @@ export default function ShareholdersMeetingScannerScreen() {
         </View>
       </View>
 
-      <View style={styles.overlay} pointerEvents="none">
-        <View style={styles.mask} />
-        <View style={styles.centerRow}>
-          <View style={styles.mask} />
-          <View style={styles.scanBox}>
-            <Animated.View
-              style={[
-                styles.scanLine,
-                {
-                  transform: [
-                    {
-                      translateY: scanLineAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0, 238],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            />
-          </View>
-          <View style={styles.mask} />
-        </View>
-        <View style={styles.mask} />
-      </View>
+      <QrScannerViewportOverlay scanLineAnim={scanLineAnim} />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#000" },
-  gateRoot: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  backBtn: {
-    padding: 16,
-  },
-  gateContent: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 32,
-    marginTop: -60,
-  },
-  gateTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#222",
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  gateDesc: {
-    fontSize: 14,
-    color: "#666",
-    textAlign: "center",
-    lineHeight: 22,
-  },
-  settingsBtn: {
-    marginTop: 24,
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    backgroundColor: "#007AFF",
-    borderRadius: 10,
-  },
-  settingsBtnText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "600",
-  },
   header: {
     position: "absolute",
     left: 0,
@@ -626,26 +446,8 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "bold",
   },
-  headerSubtitle: {
-    color: "rgba(255,255,255,0.82)",
-    fontSize: 12,
-    marginTop: 2,
-  },
   headerRight: {
     width: 38,
     alignItems: "flex-end",
-  },
-  overlay: { ...StyleSheet.absoluteFillObject },
-  mask: { flex: 1, backgroundColor: "rgba(0,0,0,0.55)" },
-  centerRow: { flexDirection: "row" },
-  scanBox: {
-    width: 240,
-    height: 240,
-    overflow: "hidden",
-    borderRadius: 16,
-  },
-  scanLine: {
-    height: 2,
-    backgroundColor: "#00FF88",
   },
 });

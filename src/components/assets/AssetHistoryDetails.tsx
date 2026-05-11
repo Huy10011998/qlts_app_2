@@ -1,43 +1,32 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { View, StyleSheet, Alert } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, StyleSheet } from "react-native";
 import { useRoute } from "@react-navigation/native";
 import IsLoading from "../../components/ui/IconLoading";
 import { DetailsHistoryProps, Field, StackRoute } from "../../types/Index";
 import { getDetailsHistory } from "../../services/data/CallApi";
 import { error } from "../../utils/Logger";
-import { ParseFieldActive } from "../../utils/parser/ParseFieldActive";
-import { GroupFields } from "../../utils/parser/GroupFields";
-import { ToggleGroupUtil } from "../../utils/parser/ToggleGroup";
 import { getFieldValue } from "../../utils/fields/GetFieldValue";
 import { useAutoReload } from "../../hooks/useAutoReload";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
+import { useDetailViewState } from "../../hooks/useDetailViewState";
 
 export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
   const route = useRoute<StackRoute<"AssetHistoryDetail">>();
   const { id, id_previous, nameClass, field } = route.params;
 
-  const [activeTab, setActiveTab] = useState("list");
-  const [collapsedGroups, setCollapsedGroups] = useState<
-    Record<string, boolean>
-  >({});
   const [isLoading, setIsLoading] = useState(false);
   const [item, setItem] = useState<any>(null);
   const [previousItem, setPreviousItem] = useState<any>(null);
   const { isMounted, showAlertIfActive } = useSafeAlert();
 
-  // parse fields safely
-  const fieldActive = useMemo(() => ParseFieldActive(field), [field]);
-
-  // grouped by groupLayout
-  const groupedFields = useMemo(() => GroupFields(fieldActive), [fieldActive]);
-
-  const toggleGroup = (groupName: string) => {
-    setCollapsedGroups((prev) => ToggleGroupUtil(prev, groupName));
-  };
-
-  const handleChangeTab = (tabKey: string) => {
-    setActiveTab(tabKey);
-  };
+  const {
+    activeTab,
+    collapsedGroups,
+    groupedFields,
+    handleChangeTab,
+    setActiveTab,
+    toggleGroup,
+  } = useDetailViewState(field as string | undefined);
 
   const fetchDetails = async () => {
     // 👉 RESET để UI render "--"

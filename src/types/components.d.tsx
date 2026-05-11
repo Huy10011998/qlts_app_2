@@ -14,7 +14,7 @@ import {
   ViewStyle,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { TAB_ITEMS } from "../utils/Helper";
+import { TAB_ITEMS } from "../utils/helpers/ui";
 import { TabItem } from "./Context.d";
 import { PropertyResponse } from "./Api.d";
 import { PropertyClass } from "./Navigator.d";
@@ -362,11 +362,11 @@ export interface CameraCellProps {
   snapshotTimestamp?: number;
   onPress: (cam: any, idx: number) => void;
   onDoubleTap: (cam: any, idx: number) => void;
-  webviewRefRegister?: React.MutableRefObject<Record<string, any>>;
-  pongTimeoutRef?: React.MutableRefObject<
+  webviewRefRegister?: React.RefObject<Record<string, any>>;
+  pongTimeoutRef?: React.RefObject<
     Record<string, ReturnType<typeof setTimeout>>
   >;
-  webviewRestartRef?: React.MutableRefObject<
+  webviewRestartRef?: React.RefObject<
     (cameraId: string | number) => void
   >;
   onTokenExpired?: () => void;

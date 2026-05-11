@@ -10,6 +10,10 @@ import { error } from "../../utils/Logger";
 import { useAutoReload } from "../../hooks/useAutoReload";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { isAuthExpiredError } from "../../services/data/CallApi";
+import AssetListEmptyState from "./shared/AssetListEmptyState";
+import AssetListSummaryCard from "./shared/AssetListSummaryCard";
+import { sharedAssetListStyles } from "./shared/listStyles";
+import { BG, BRAND_RED, CARD_SHADOW } from "./shared/listTheme";
 
 export default function AssetListAttachFile() {
   const [file, setFile] = useState<FileItem[]>([]);
@@ -109,7 +113,7 @@ export default function AssetListAttachFile() {
 
   const categories = Object.keys(groupedData);
 
-  if (isLoading) return <IsLoading size="large" color="#E31E24" />;
+  if (isLoading) return <IsLoading size="large" color={BRAND_RED} />;
 
   return (
     <View style={styles.container}>
@@ -132,16 +136,24 @@ export default function AssetListAttachFile() {
             </View>
           );
         }}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        contentContainerStyle={styles.listContent}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
         ListFooterComponent={isLoadingMore ? <IsLoading /> : null}
+        ListEmptyComponent={
+          <AssetListEmptyState
+            fullHeight
+            iconName="document-outline"
+            title="Chưa có tệp đính kèm"
+            subtitle="Danh sách tệp sẽ hiển thị tại đây khi có dữ liệu."
+          />
+        }
         ListHeaderComponent={
-          <View style={styles.stickyHeader}>
-            <Text style={styles.header}>
-              Tổng số tệp: {total} (Đã tải: {file.length})
-            </Text>
-          </View>
+          <AssetListSummaryCard
+            iconName="attach-outline"
+            title="Danh sách tệp"
+            subtitle={`${total} tệp • hiển thị ${file.length}`}
+          />
         }
         stickyHeaderIndices={[0]}
       />
@@ -150,28 +162,19 @@ export default function AssetListAttachFile() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F3F4F6" },
-
-  header: {
-    textAlign: "center",
-    fontSize: 14,
-    color: "#333",
-    fontWeight: "600",
+  ...sharedAssetListStyles,
+  container: { ...sharedAssetListStyles.container, backgroundColor: BG },
+  listContent: {
+    ...sharedAssetListStyles.listContent,
+    paddingBottom: 20,
   },
-
-  stickyHeader: { backgroundColor: "#F3F4F6", paddingVertical: 10, zIndex: 10 },
-
   groupContainer: {
     marginHorizontal: 12,
-    marginTop: 12,
+    marginTop: 4,
     marginBottom: 16,
     backgroundColor: "#fff",
     borderRadius: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 2,
+    ...CARD_SHADOW,
     paddingBottom: 8,
   },
 

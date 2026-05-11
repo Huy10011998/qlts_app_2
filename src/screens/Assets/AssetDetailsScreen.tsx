@@ -1,26 +1,13 @@
-import { StyleSheet, View } from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
-import { useCallback } from "react";
-
 import AssetDetails from "../../components/assets/AssetDetails";
-import TabContent from "../../components/tabs/TabContent";
-import BottomBarDetails from "../../components/bottom/BottomDetails";
-
-import { useAppDispatch } from "../../store/Hooks";
-import { reloadPermissions } from "../../store/PermissionActions";
+import ScreenContainer from "../shared/ScreenContainer";
+import { useReloadPermissionsOnFocus } from "../../hooks/useReloadPermissionsOnFocus";
+import AssetDetailsContent from "./shared/AssetDetailsContent";
 
 export default function AssetDetailsScreen() {
-  const dispatch = useAppDispatch();
-
-  // reload permission mỗi lần quay lại màn
-  useFocusEffect(
-    useCallback(() => {
-      dispatch(reloadPermissions());
-    }, [dispatch])
-  );
+  useReloadPermissionsOnFocus();
 
   return (
-    <View style={styles.container}>
+    <ScreenContainer>
       <AssetDetails>
         {({
           activeTab,
@@ -34,33 +21,21 @@ export default function AssetDetailsScreen() {
           nameClass,
           fieldActive,
         }) => (
-          <>
-            <View style={styles.content}>
-              <TabContent
-                activeTab={activeTab}
-                groupedFields={groupedFields}
-                collapsedGroups={collapsedGroups}
-                toggleGroup={toggleGroup}
-                getFieldValue={getFieldValue}
-                item={item}
-                nameClass={nameClass || ""}
-                fieldActive={fieldActive}
-              />
-            </View>
-
-            <BottomBarDetails
-              activeTab={activeTab}
-              onTabPress={setActiveTab}
-              tabs={TAB_ITEMS ?? []}
-            />
-          </>
+          <AssetDetailsContent
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            groupedFields={groupedFields}
+            collapsedGroups={collapsedGroups}
+            toggleGroup={toggleGroup}
+            getFieldValue={getFieldValue}
+            item={item}
+            nameClass={nameClass}
+            fieldActive={fieldActive}
+            tabs={TAB_ITEMS ?? []}
+            contentPaddingBottom={94}
+          />
         )}
       </AssetDetails>
-    </View>
+    </ScreenContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F0F2F8" },
-  content: { flex: 1, paddingBottom: 94 },
-});

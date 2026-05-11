@@ -1,9 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
-  Modal,
   RefreshControl,
   ScrollView,
   StatusBar,
@@ -14,694 +12,71 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useIsFocused, useNavigation } from "@react-navigation/native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
-import { usePermission } from "../../hooks/usePermission";
-import { useDebounce } from "../../hooks/useDebounce";
-import {
-  diemDanhDhcd,
-  getActiveDhcd,
-  getCodongDhcd,
-  getList,
-  huyDiemDanhDhcd,
-} from "../../services/data/CallApi";
 import IsLoading from "../../components/ui/IconLoading";
-import { C, getMatchedKey, removeVietnameseTones } from "../../utils/Helper";
-import {
-  ActiveMeetingResponse,
-  AttendanceFilter,
-  AttendanceStatus,
-  Shareholder,
-  ShareholderApiItem,
-  ShareholderListResponse,
-  ShareholderRowProps,
-} from "../../types/Index";
-
-type VotingChoice = "agree" | "disagree" | "noOpinion";
-
-type MeetingOpinionApiItem = Record<string, any> & { id?: number | string };
-
-type MeetingOpinion = {
-  id: string;
-  code: string;
-  title: string;
-  description: string;
-};
-
-type GetListResponse<T> = {
-  message?: string;
-  data?: {
-    items?: T[] | null;
-    totalCount?: number;
-  } | null;
-};
-
-const mapShareholderItem = (item: ShareholderApiItem): Shareholder => ({
-  id: String(item.id),
-  name: item.tenCoDong || "Không rõ tên",
-  shareholderId: item.maCoDong || "--",
-  shares: Number(item.tongCoPhan || 0),
-  status: item.isDiemDanh ? "present" : "pending",
-});
-
-const getCandidateValue = (
-  item: MeetingOpinionApiItem,
-  candidates: string[],
-): string => {
-  for (const candidate of candidates) {
-    const key = getMatchedKey(item, candidate);
-    const value = key ? item[key] : undefined;
-    if (value !== null && value !== undefined && String(value).trim() !== "") {
-      return String(value).trim();
-    }
-  }
-
-  return "";
-};
-
-const mapOpinionItem = (item: MeetingOpinionApiItem): MeetingOpinion => {
-  const title =
-    getCandidateValue(item, [
-      "ten",
-      "tenYKien",
-      "noiDung",
-      "tieuDe",
-      "title",
-      "tenNghiQuyet",
-    ]) || "Ý kiến chưa đặt tên";
-
-  return {
-    id: String(item.id ?? ""),
-    code: getCandidateValue(item, [
-      "ma",
-      "maYKien",
-      "code",
-      "soHieu",
-      "maNghiQuyet",
-    ]),
-    title,
-    description: getCandidateValue(item, [
-      "moTa",
-      "dienGiai",
-      "description",
-      "ghiChu",
-      "noiDungChiTiet",
-    ]),
-  };
-};
-
-const statusConfig: Record<
-  AttendanceStatus,
-  { label: string; color: string; bg: string; border: string }
-> = {
-  present: {
-    label: "Đã điểm danh",
-    color: C.green,
-    bg: C.greenLight,
-    border: C.greenBorder,
-  },
-  pending: {
-    label: "Chưa điểm danh",
-    color: C.slate,
-    bg: C.slateLight,
-    border: C.slateBorder,
-  },
-};
-
-const ShareholderRow: React.FC<ShareholderRowProps> = ({
-  item,
-  onCheckIn,
-  onUndoCheckIn,
-  isSubmitting = false,
-}) => {
-  const cfg = statusConfig[item.status];
-
-  return (
-    <View style={attStyles.row}>
-      <View style={attStyles.rowAvatar}>
-        <Text style={attStyles.rowAvatarText}>{item.name.charAt(0)}</Text>
-      </View>
-      <View style={attStyles.rowInfo}>
-        <Text style={attStyles.rowName}>{item.name}</Text>
-        <Text style={attStyles.rowMeta}>
-          {item.shareholderId} · {item.shares} CP
-        </Text>
-      </View>
-      <View style={attStyles.rowRight}>
-        <View
-          style={[
-            attStyles.badge,
-            { backgroundColor: cfg.bg, borderColor: cfg.border },
-          ]}
-        >
-          <Text style={[attStyles.badgeText, { color: cfg.color }]}>
-            {cfg.label}
-          </Text>
-        </View>
-        {item.status === "pending" ? (
-          <TouchableOpacity
-            style={[
-              attStyles.checkInBtn,
-              isSubmitting && attStyles.actionBtnDisabled,
-            ]}
-            onPress={() => onCheckIn(item.id, item.shareholderId)}
-            disabled={isSubmitting}
-          >
-            <Text style={attStyles.checkInBtnText}>
-              {isSubmitting ? "Đang xử lý..." : "Điểm danh"}
-            </Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={[
-              attStyles.undoCheckInBtn,
-              isSubmitting && attStyles.actionBtnDisabled,
-            ]}
-            onPress={() => onUndoCheckIn(item.id, item.shareholderId)}
-            disabled={isSubmitting}
-          >
-            <Text style={attStyles.undoCheckInBtnText}>
-              {isSubmitting ? "Đang xử lý..." : "Huỷ điểm danh"}
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
-  );
-};
-
-const VOTING_OPTIONS: Array<{
-  key: VotingChoice;
-  label: string;
-  description: string;
-  color: string;
-  bg: string;
-  border: string;
-  icon: string;
-}> = [
-  {
-    key: "agree",
-    label: "Tán thành",
-    description: "Ghi nhận cổ đông đồng ý với ý kiến đã chọn.",
-    color: C.green,
-    bg: C.greenLight,
-    border: C.greenBorder,
-    icon: "check-circle-outline",
-  },
-  {
-    key: "disagree",
-    label: "Không tán thành",
-    description: "Ghi nhận cổ đông không đồng ý với ý kiến đã chọn.",
-    color: C.red,
-    bg: "#FFF1F2",
-    border: C.redBorder,
-    icon: "close-circle-outline",
-  },
-  {
-    key: "noOpinion",
-    label: "Không có ý kiến",
-    description: "Ghi nhận cổ đông không đưa ra ý kiến.",
-    color: C.slate,
-    bg: C.slateLight,
-    border: C.slateBorder,
-    icon: "minus-circle-outline",
-  },
-];
+import { C } from "../../utils/helpers/colors";
+import ShareholderAttendanceRow from "./shared/ShareholderAttendanceRow";
+import OpinionPickerModal from "./shared/OpinionPickerModal";
+import { VOTING_OPTIONS } from "./shared/shareholdersMeetingHelpers";
+import { useShareholdersMeetingController } from "./shared/useShareholdersMeetingController";
 
 const ShareholdersMeetingScreen: React.FC = () => {
-  const navigation = useNavigation<any>();
-  const isFocused = useIsFocused();
-  const { can, loaded } = usePermission();
-
-  const [activeTab, setActiveTab] = useState<"attendance" | "voting">(
-    "attendance",
-  );
-  const [shareholders, setShareholders] = useState<Shareholder[]>([]);
-  const [opinions, setOpinions] = useState<MeetingOpinion[]>([]);
-  const [selectedOpinionId, setSelectedOpinionId] = useState<string>("");
-  const [selectedVotingChoice, setSelectedVotingChoice] =
-    useState<VotingChoice | null>(null);
-  const [isOpinionModalVisible, setIsOpinionModalVisible] = useState(false);
-  const [opinionSearchQuery, setOpinionSearchQuery] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const debouncedSearchQuery = useDebounce(searchQuery, 400);
-  const [isSearching, setIsSearching] = useState(false);
-  const [attendanceFilter, setAttendanceFilter] =
-    useState<AttendanceFilter>("all");
-  const [isMeetingLoading, setIsMeetingLoading] = useState(true);
-  const [isVotingLoading, setIsVotingLoading] = useState(false);
-  const [meetingError, setMeetingError] = useState<string | null>(null);
-  const [votingError, setVotingError] = useState<string | null>(null);
-  const [activeMeeting, setActiveMeeting] =
-    useState<ActiveMeetingResponse["data"]>(null);
-  const [submittingAttendanceId, setSubmittingAttendanceId] = useState<
-    string | null
-  >(null);
-  const [isRefreshingAttendance, setIsRefreshingAttendance] = useState(false);
-
-  const selectedOpinion = useMemo(
-    () => opinions.find((item) => item.id === selectedOpinionId) ?? null,
-    [opinions, selectedOpinionId],
-  );
-  const filteredOpinions = useMemo(() => {
-    const keyword = removeVietnameseTones(opinionSearchQuery.trim());
-
-    if (!keyword) return opinions;
-
-    return opinions.filter((item) => {
-      const title = removeVietnameseTones(item.title);
-      const code = removeVietnameseTones(item.code);
-      const description = removeVietnameseTones(item.description);
-
-      return (
-        title.includes(keyword) ||
-        code.includes(keyword) ||
-        description.includes(keyword)
-      );
-    });
-  }, [opinionSearchQuery, opinions]);
-
-  const applyAttendanceStatus = useCallback(
-    (shareholderId: string, status: AttendanceStatus) => {
-      setShareholders((prev) =>
-        prev.map((shareholder) =>
-          shareholder.id === shareholderId
-            ? { ...shareholder, status }
-            : shareholder,
-        ),
-      );
-    },
-    [],
-  );
-
-  const fetchShareholders = useCallback(async (meetingId: number) => {
-    const shareholderRes = await getCodongDhcd<ShareholderListResponse>(
-      String(meetingId),
-    );
-
-    return Array.isArray(shareholderRes?.data)
-      ? shareholderRes.data.map(mapShareholderItem)
-      : [];
-  }, []);
-
-  const fetchOpinions = useCallback(async (meetingId: number) => {
-    const response = await getList<GetListResponse<MeetingOpinionApiItem>>(
-      "DaiHoiCoDong_YKien",
-      "",
-      200,
-      0,
-      "",
-      [
-        {
-          property: "ID_DaiHoiCoDong",
-          operator: 0,
-          value: meetingId,
-          type: 2,
-        },
-      ],
-      [],
-    );
-
-    const items = response?.data?.items ?? [];
-
-    return Array.isArray(items)
-      ? items
-          .map(mapOpinionItem)
-          .filter((item) => Boolean(item.id) && Boolean(item.title))
-      : [];
-  }, []);
-
-  const reloadShareholders = useCallback(async () => {
-    if (!activeMeeting?.id) return;
-
-    const shareholderList = await fetchShareholders(activeMeeting.id);
-    setShareholders(shareholderList);
-  }, [activeMeeting?.id, fetchShareholders]);
-
-  const reloadOpinions = useCallback(async () => {
-    if (!activeMeeting?.id) return;
-
-    try {
-      setIsVotingLoading(true);
-      setVotingError(null);
-      const opinionList = await fetchOpinions(activeMeeting.id);
-      setOpinions(opinionList);
-      setSelectedOpinionId((prev) =>
-        prev && opinionList.some((item) => item.id === prev)
-          ? prev
-          : opinionList[0]?.id ?? "",
-      );
-    } catch (error) {
-      setOpinions([]);
-      setSelectedOpinionId("");
-      setVotingError("Không tải được danh sách ý kiến.");
-    } finally {
-      setIsVotingLoading(false);
-    }
-  }, [activeMeeting?.id, fetchOpinions]);
-
-  const syncShareholderAttendance = useCallback(
-    (shareholderId: string, status: AttendanceStatus) => {
-      applyAttendanceStatus(shareholderId, status);
-      void reloadShareholders();
-    },
-    [applyAttendanceStatus, reloadShareholders],
-  );
-
-  const canViewAttendance = useMemo(
-    () => can("DaiHoiCoDong_CoDong_DiemDanh", "Read"),
-    [can, loaded],
-  );
-  const canViewVoting = useMemo(
-    () => can("DaiHoiCoDong_CoDong_YKien", "Read"),
-    [can, loaded],
-  );
-
-  useEffect(() => {
-    if (!loaded) return;
-
-    if (!canViewAttendance && canViewVoting && activeTab !== "voting") {
-      setActiveTab("voting");
-      return;
-    }
-
-    if (!canViewVoting && canViewAttendance && activeTab !== "attendance") {
-      setActiveTab("attendance");
-    }
-  }, [activeTab, canViewAttendance, canViewVoting, loaded]);
-
-  const openScanner = useCallback(() => {
-    if (!activeMeeting?.id) {
-      Alert.alert("Thông báo", "Chưa có đại hội cổ đông đang hoạt động.");
-      return;
-    }
-
-    if (activeTab === "voting") {
-      if (!selectedOpinion) {
-        Alert.alert("Thông báo", "Vui lòng chọn ý kiến trước khi quét QR.");
-        return;
-      }
-
-      if (!selectedVotingChoice) {
-        Alert.alert(
-          "Thông báo",
-          "Vui lòng chọn phân loại ý kiến trước khi quét QR.",
-        );
-        return;
-      }
-    }
-
-    navigation.navigate("ShareholdersMeetingScanner", {
-      meetingId: activeMeeting.id,
-      scanMode: activeTab,
-      votingOpinionId: selectedOpinion ? Number(selectedOpinion.id) : undefined,
-      votingOpinionTitle: selectedOpinion?.title,
-      votingChoice: selectedVotingChoice ?? undefined,
-    });
-  }, [
-    activeMeeting?.id,
+  const {
+    activeMeeting,
     activeTab,
-    navigation,
-    selectedOpinion,
-    selectedVotingChoice,
-  ]);
-
-  useEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <TouchableOpacity
-          onPress={openScanner}
-          style={{ paddingHorizontal: 5 }}
-        >
-          <MaterialCommunityIcons name="qrcode-scan" size={24} color="#fff" />
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, openScanner]);
-
-  const refreshAttendanceList = useCallback(async () => {
-    if (!activeMeeting?.id) return;
-
-    try {
-      setIsRefreshingAttendance(true);
-      await reloadShareholders();
-    } finally {
-      setIsRefreshingAttendance(false);
-    }
-  }, [activeMeeting?.id, reloadShareholders]);
-
-  useEffect(() => {
-    if (
-      !isFocused ||
-      activeTab !== "attendance" ||
-      !canViewAttendance ||
-      !activeMeeting?.id ||
-      submittingAttendanceId
-    ) {
-      return;
-    }
-
-    const intervalId = setInterval(() => {
-      void reloadShareholders();
-    }, 5000);
-
-    return () => clearInterval(intervalId);
-  }, [
-    activeMeeting?.id,
-    activeTab,
-    canViewAttendance,
-    isFocused,
-    reloadShareholders,
-    submittingAttendanceId,
-  ]);
-
-  useEffect(() => {
-    if (!isFocused || !activeMeeting?.id) return;
-
-    if (activeTab === "attendance") {
-      void reloadShareholders();
-      return;
-    }
-
-    if (activeTab === "voting" && canViewVoting) {
-      void reloadOpinions();
-    }
-  }, [
-    activeMeeting?.id,
-    activeTab,
-    canViewVoting,
-    isFocused,
-    reloadOpinions,
-    reloadShareholders,
-  ]);
-
-  useEffect(() => {
-    if (!loaded) return;
-    if (!canViewAttendance && !canViewVoting) return;
-
-    let cancelled = false;
-
-    const fetchMeetingData = async () => {
-      try {
-        setIsMeetingLoading(true);
-        setMeetingError(null);
-        setVotingError(null);
-
-        const activeRes = await getActiveDhcd<ActiveMeetingResponse>();
-        const meeting = activeRes?.data ?? null;
-
-        if (cancelled) return;
-
-        if (!meeting || !meeting.id) {
-          setActiveMeeting(null);
-          setShareholders([]);
-          setOpinions([]);
-          setSelectedOpinionId("");
-          return;
-        }
-
-        setActiveMeeting(meeting);
-
-        const tasks: Promise<any>[] = [];
-
-        if (canViewAttendance) {
-          tasks.push(
-            fetchShareholders(meeting.id).then((data) => {
-              if (!cancelled) setShareholders(data);
-            }),
-          );
-        }
-
-        if (canViewVoting) {
-          tasks.push(
-            fetchOpinions(meeting.id)
-              .then((data) => {
-                if (cancelled) return;
-                setOpinions(data);
-                setSelectedOpinionId(data[0]?.id ?? "");
-              })
-              .catch(() => {
-                if (cancelled) return;
-                setOpinions([]);
-                setSelectedOpinionId("");
-                setVotingError("Không tải được danh sách ý kiến.");
-              }),
-          );
-        }
-
-        await Promise.all(tasks);
-      } catch (error) {
-        if (cancelled) return;
-
-        setActiveMeeting(null);
-        setShareholders([]);
-        setOpinions([]);
-        setSelectedOpinionId("");
-        setMeetingError("Không tải được dữ liệu đại hội cổ đông.");
-      } finally {
-        if (!cancelled) {
-          setIsMeetingLoading(false);
-        }
-      }
-    };
-
-    void fetchMeetingData();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
+    attendanceFilter,
+    attendanceRate,
     canViewAttendance,
     canViewVoting,
-    fetchOpinions,
-    fetchShareholders,
+    filteredOpinions,
+    filteredShareholders,
+    handleCheckIn,
+    handleUndoCheckIn,
+    hasAnyViewPermission,
+    isMeetingLoading,
+    isOpinionModalVisible,
+    isRefreshingAttendance,
+    isSearching,
+    isVotingLoading,
     loaded,
-  ]);
+    meetingError,
+    opinionSearchQuery,
+    opinions,
+    pendingCount,
+    presentCount,
+    refreshAttendanceList,
+    searchQuery,
+    selectedOpinion,
+    selectedOpinionId,
+    selectedVotingChoice,
+    setActiveTab,
+    setAttendanceFilter,
+    setIsOpinionModalVisible,
+    setOpinionSearchQuery,
+    setSearchQuery,
+    setSelectedOpinionId,
+    setSelectedVotingChoice,
+    shareholders,
+    submittingAttendanceId,
+    votingError,
+  } = useShareholdersMeetingController();
 
-  const handleCheckIn = useCallback(
-    (
-      id: string,
-      shareholderId: string,
-      options?: {
-        onComplete?: () => void;
-        onSuccess?: () => void;
-      },
-    ) => {
-      Alert.alert(
-        "Xác nhận điểm danh",
-        `Xác nhận điểm danh cổ đông ${shareholderId}?`,
-        [
-          {
-            text: "Huỷ",
-            style: "cancel",
-            onPress: options?.onComplete,
-          },
-          {
-            text: "Xác nhận",
-            onPress: async () => {
-              let handledSuccess = false;
-
-              try {
-                setSubmittingAttendanceId(id);
-                await diemDanhDhcd(Number(id));
-                syncShareholderAttendance(id, "present");
-                handledSuccess = true;
-                options?.onSuccess?.();
-              } catch (error) {
-                Alert.alert("Lỗi", "Không thể điểm danh cổ đông này.");
-              } finally {
-                setSubmittingAttendanceId(null);
-                if (!handledSuccess) {
-                  options?.onComplete?.();
-                }
-              }
-            },
-          },
-        ],
-      );
-    },
-    [syncShareholderAttendance],
-  );
-
-  const handleUndoCheckIn = useCallback(
-    (id: string, shareholderId: string) => {
-      Alert.alert(
-        "Huỷ điểm danh",
-        `Bạn có chắc muốn huỷ điểm danh cổ đông ${shareholderId}?`,
-        [
-          { text: "Không", style: "cancel" },
-          {
-            text: "Huỷ điểm danh",
-            style: "destructive",
-            onPress: async () => {
-              try {
-                setSubmittingAttendanceId(id);
-                await huyDiemDanhDhcd(Number(id));
-                syncShareholderAttendance(id, "pending");
-              } catch (error) {
-                Alert.alert("Lỗi", "Không thể huỷ điểm danh cổ đông này.");
-              } finally {
-                setSubmittingAttendanceId(null);
-              }
-            },
-          },
-        ],
-      );
-    },
-    [syncShareholderAttendance],
-  );
-
-  const presentCount = shareholders.filter(
-    (item) => item.status === "present",
-  ).length;
-  const pendingCount = shareholders.filter(
-    (item) => item.status === "pending",
-  ).length;
-  const attendanceRate = shareholders.length
-    ? Math.round((presentCount / shareholders.length) * 100)
-    : 0;
-  const filteredShareholders = shareholders.filter((item) => {
-    const keyword = removeVietnameseTones(debouncedSearchQuery.trim());
-    const normalizedName = removeVietnameseTones(item.name);
-    const normalizedCode = removeVietnameseTones(item.shareholderId);
-    const matchesSearch =
-      !keyword ||
-      normalizedName.includes(keyword) ||
-      normalizedCode.includes(keyword);
-
-    if (!matchesSearch) return false;
-
-    switch (attendanceFilter) {
-      case "presentOrProxy":
-        return item.status === "present";
-      case "pending":
-        return item.status === "pending";
-      case "all":
-      default:
-        return true;
-    }
-  });
-
-  useEffect(() => {
-    setIsSearching(searchQuery !== debouncedSearchQuery);
-  }, [searchQuery, debouncedSearchQuery]);
-
-  if (!loaded || isMeetingLoading) {
+  if (!loaded) {
     return (
       <SafeAreaView
         style={styles.centerState}
-        edges={["left", "right", "bottom"]}
+        edges={["left", "right"]}
       >
         <ActivityIndicator size="small" color={C.accent} />
       </SafeAreaView>
     );
   }
 
-  if (!canViewAttendance && !canViewVoting) {
+  if (!hasAnyViewPermission) {
     return (
       <SafeAreaView
         style={styles.centerState}
-        edges={["left", "right", "bottom"]}
+        edges={["left", "right"]}
       >
         <Text style={styles.emptyTitle}>Bạn không có quyền truy cập</Text>
         <Text style={styles.emptyText}>
@@ -712,11 +87,22 @@ const ShareholdersMeetingScreen: React.FC = () => {
     );
   }
 
+  if (isMeetingLoading) {
+    return (
+      <SafeAreaView
+        style={styles.centerState}
+        edges={["left", "right"]}
+      >
+        <ActivityIndicator size="small" color={C.accent} />
+      </SafeAreaView>
+    );
+  }
+
   if (meetingError) {
     return (
       <SafeAreaView
         style={styles.centerState}
-        edges={["left", "right", "bottom"]}
+        edges={["left", "right"]}
       >
         <Text style={styles.emptyTitle}>Không tải được dữ liệu</Text>
         <Text style={styles.emptyText}>{meetingError}</Text>
@@ -728,7 +114,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
     return (
       <SafeAreaView
         style={styles.centerState}
-        edges={["left", "right", "bottom"]}
+        edges={["left", "right"]}
       >
         <Text style={styles.emptyTitle}>Chưa có đợt đại hội cổ đông</Text>
         <Text style={styles.emptyText}>
@@ -739,7 +125,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={["left", "right", "bottom"]}>
+    <SafeAreaView style={styles.safe} edges={["left", "right"]}>
       <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
 
       <View style={styles.heroCard}>
@@ -901,10 +287,11 @@ const ShareholdersMeetingScreen: React.FC = () => {
           </View>
 
           <FlatList
+            style={attStyles.flatList}
             data={filteredShareholders}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
-              <ShareholderRow
+              <ShareholderAttendanceRow
                 item={item}
                 onCheckIn={handleCheckIn}
                 onUndoCheckIn={handleUndoCheckIn}
@@ -920,7 +307,10 @@ const ShareholdersMeetingScreen: React.FC = () => {
               />
             }
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={attStyles.list}
+            contentContainerStyle={[
+              attStyles.list,
+              filteredShareholders.length === 0 && attStyles.listEmpty,
+            ]}
             ItemSeparatorComponent={() => <View style={attStyles.separator} />}
             ListEmptyComponent={
               <View style={attStyles.emptyList}>
@@ -945,10 +335,6 @@ const ShareholdersMeetingScreen: React.FC = () => {
               <Text style={voteStyles.summaryLabel}>Đã chọn</Text>
             </View>
           </View>
-
-          <Text style={voteStyles.helperText}>
-            Chọn ý kiến và phân loại trước, sau đó quét QR cổ đông để ghi nhận.
-          </Text>
 
           <View style={voteStyles.card}>
             <Text style={voteStyles.sectionLabel}>Ý kiến cần lấy</Text>
@@ -1061,7 +447,11 @@ const ShareholdersMeetingScreen: React.FC = () => {
                   >
                     <View style={voteStyles.choiceLeft}>
                       <MaterialCommunityIcons
-                        name={isSelected ? "checkbox-marked" : "checkbox-blank-outline"}
+                        name={
+                          isSelected
+                            ? "checkbox-marked"
+                            : "checkbox-blank-outline"
+                        }
                         size={22}
                         color={isSelected ? option.color : C.textMuted}
                       />
@@ -1088,128 +478,24 @@ const ShareholdersMeetingScreen: React.FC = () => {
                 );
               })}
             </View>
-
-            {selectedOpinion && selectedVotingChoice && (
-              <View style={voteStyles.readyHint}>
-                <MaterialCommunityIcons
-                  name="qrcode-scan"
-                  size={18}
-                  color={C.accent}
-                />
-                <Text style={voteStyles.readyHintText}>
-                  Đã sẵn sàng. Dùng nút quét trên header để scan cổ đông.
-                </Text>
-              </View>
-            )}
           </View>
 
           <View style={{ height: 28 }} />
         </ScrollView>
       )}
 
-      <Modal
+      <OpinionPickerModal
         visible={isOpinionModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setIsOpinionModalVisible(false)}
-      >
-        <View style={modalStyles.overlay}>
-          <TouchableOpacity
-            style={modalStyles.backdrop}
-            activeOpacity={1}
-            onPress={() => setIsOpinionModalVisible(false)}
-          />
-          <View style={modalStyles.sheet}>
-            <View style={modalStyles.header}>
-              <Text style={modalStyles.title}>Chọn ý kiến</Text>
-              <TouchableOpacity
-                style={modalStyles.closeBtn}
-                onPress={() => setIsOpinionModalVisible(false)}
-              >
-                <MaterialCommunityIcons
-                  name="close"
-                  size={20}
-                  color={C.textSecondary}
-                />
-              </TouchableOpacity>
-            </View>
-
-            <View style={modalStyles.searchBox}>
-              <MaterialCommunityIcons
-                name="magnify"
-                size={18}
-                color={C.textMuted}
-              />
-              <TextInput
-                style={modalStyles.searchInput}
-                placeholder="Tìm theo mã hoặc tên ý kiến..."
-                placeholderTextColor={C.textMuted}
-                value={opinionSearchQuery}
-                onChangeText={setOpinionSearchQuery}
-              />
-            </View>
-
-            <FlatList
-              data={filteredOpinions}
-              keyExtractor={(item) => item.id}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={modalStyles.list}
-              renderItem={({ item }) => {
-                const isSelected = item.id === selectedOpinionId;
-                const title = item.code
-                  ? `${item.code} - ${item.title}`
-                  : item.title;
-
-                return (
-                  <TouchableOpacity
-                    style={[
-                      modalStyles.item,
-                      isSelected && modalStyles.itemActive,
-                    ]}
-                    activeOpacity={0.9}
-                    onPress={() => {
-                      setSelectedOpinionId(item.id);
-                      setIsOpinionModalVisible(false);
-                    }}
-                  >
-                    <View style={modalStyles.itemTextWrap}>
-                      <Text
-                        style={[
-                          modalStyles.itemTitle,
-                          isSelected && modalStyles.itemTitleActive,
-                        ]}
-                      >
-                        {title}
-                      </Text>
-                      {!!item.description && (
-                        <Text style={modalStyles.itemDesc} numberOfLines={2}>
-                          {item.description}
-                        </Text>
-                      )}
-                    </View>
-                    <MaterialCommunityIcons
-                      name={
-                        isSelected
-                          ? "radiobox-marked"
-                          : "radiobox-blank"
-                      }
-                      size={22}
-                      color={isSelected ? C.accent : C.textMuted}
-                    />
-                  </TouchableOpacity>
-                );
-              }}
-              ItemSeparatorComponent={() => <View style={modalStyles.separator} />}
-              ListEmptyComponent={
-                <Text style={modalStyles.emptyText}>
-                  Không tìm thấy ý kiến phù hợp.
-                </Text>
-              }
-            />
-          </View>
-        </View>
-      </Modal>
+        opinions={filteredOpinions}
+        selectedOpinionId={selectedOpinionId}
+        searchQuery={opinionSearchQuery}
+        onChangeSearchQuery={setOpinionSearchQuery}
+        onClose={() => setIsOpinionModalVisible(false)}
+        onSelect={(id) => {
+          setSelectedOpinionId(id);
+          setIsOpinionModalVisible(false);
+        }}
+      />
     </SafeAreaView>
   );
 };
@@ -1226,7 +512,7 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     color: "#FFFFFF",
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "800",
     lineHeight: 24,
     textAlign: "center",
@@ -1251,6 +537,8 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 20,
     paddingHorizontal: 12,
+    maxWidth: 340,
+    alignSelf: "center",
   },
   tabBar: {
     flexDirection: "row",
@@ -1292,7 +580,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   tabBadgeText: { fontSize: 11, fontWeight: "600" },
-  content: { flex: 1, paddingTop: 12 },
+  content: { flex: 1, paddingTop: 12, backgroundColor: C.bg },
 });
 
 const attStyles = StyleSheet.create({
@@ -1363,7 +651,9 @@ const attStyles = StyleSheet.create({
     alignItems: "flex-end",
     justifyContent: "center",
   },
-  list: { paddingHorizontal: 16, paddingBottom: 20 },
+  flatList: { flex: 1, backgroundColor: C.bg },
+  list: { flexGrow: 1, paddingHorizontal: 16, paddingBottom: 20 },
+  listEmpty: { justifyContent: "center" },
   separator: { height: 1, backgroundColor: C.border, marginVertical: 2 },
   emptyList: {
     backgroundColor: C.surface,
@@ -1372,69 +662,14 @@ const attStyles = StyleSheet.create({
     borderColor: C.border,
     padding: 16,
     alignItems: "center",
+    alignSelf: "center",
+    maxWidth: 360,
   },
   emptyListText: {
     color: C.textSecondary,
     fontSize: 13,
     textAlign: "center",
   },
-  row: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    paddingVertical: 12,
-    backgroundColor: C.surface,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    marginBottom: 6,
-    borderWidth: 1,
-    borderColor: C.border,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  rowAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: C.accentLight,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-    borderWidth: 1.5,
-    borderColor: C.accent,
-    flexShrink: 0,
-  },
-  rowAvatarText: { color: C.accent, fontWeight: "700", fontSize: 15 },
-  rowInfo: { flex: 1 },
-  rowName: { color: C.textPrimary, fontSize: 14, fontWeight: "600" },
-  rowMeta: { color: C.textMuted, fontSize: 12, marginTop: 2 },
-  rowRight: { alignItems: "flex-end", gap: 6, marginLeft: 8 },
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  badgeText: { fontSize: 11, fontWeight: "600" },
-  checkInBtn: {
-    backgroundColor: C.accent,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  checkInBtnText: { color: "#FFFFFF", fontSize: 11, fontWeight: "700" },
-  actionBtnDisabled: { opacity: 0.6 },
-  undoCheckInBtn: {
-    backgroundColor: C.red,
-    borderWidth: 1,
-    borderColor: C.redBorder,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  undoCheckInBtnText: { color: "#FFFFFF", fontSize: 11, fontWeight: "700" },
 });
 
 const voteStyles = StyleSheet.create({
@@ -1572,6 +807,8 @@ const voteStyles = StyleSheet.create({
     fontSize: 13,
     textAlign: "center",
     padding: 18,
+    lineHeight: 20,
+    alignSelf: "center",
   },
   selectedInfoBox: {
     marginTop: 12,
@@ -1661,108 +898,6 @@ const voteStyles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     fontWeight: "600",
-  },
-});
-
-const modalStyles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(15, 25, 35, 0.32)",
-    justifyContent: "flex-end",
-  },
-  backdrop: {
-    flex: 1,
-  },
-  sheet: {
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 24,
-    maxHeight: "78%",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  title: {
-    color: C.textPrimary,
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  closeBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: C.surfaceAlt,
-  },
-  searchBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: C.border,
-    borderRadius: 12,
-    backgroundColor: C.surfaceAlt,
-    paddingHorizontal: 12,
-    marginBottom: 12,
-  },
-  searchInput: {
-    flex: 1,
-    color: C.textPrimary,
-    fontSize: 14,
-    paddingVertical: 12,
-    marginLeft: 8,
-  },
-  list: {
-    paddingBottom: 12,
-  },
-  item: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    backgroundColor: C.surface,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  itemActive: {
-    borderColor: C.accent,
-    backgroundColor: C.accentLight,
-  },
-  itemTextWrap: {
-    flex: 1,
-    paddingRight: 12,
-  },
-  itemTitle: {
-    color: C.textPrimary,
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: "700",
-  },
-  itemTitleActive: {
-    color: C.accent,
-  },
-  itemDesc: {
-    color: C.textSecondary,
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 4,
-  },
-  separator: {
-    height: 8,
-  },
-  emptyText: {
-    color: C.textSecondary,
-    fontSize: 13,
-    textAlign: "center",
-    paddingVertical: 24,
   },
 });
 

@@ -1,4 +1,3 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, {
   createContext,
   ReactNode,
@@ -7,7 +6,6 @@ import React, {
   useEffect,
   useState,
 } from "react";
-import * as Keychain from "react-native-keychain";
 import { error, log } from "../utils/Logger";
 import {
   hardResetApi,
@@ -18,10 +16,13 @@ import {
 } from "../services/data/CallApi";
 import { AuthContextType, LogoutReason } from "../types/Context.d";
 import {
-  AUTH_LOGIN_SERVICE,
-  FACE_ID_ENABLED_KEY,
-  FACE_ID_LOGIN_SERVICE,
-} from "../constants/AuthStorage";
+  AUTH_REFRESH_TOKEN_KEY,
+  AUTH_TOKEN_KEY,
+  clearStoredAuthTokens,
+  clearStoredFaceIdData,
+  readStoredAuthTokens,
+  writeStoredAuthValue,
+} from "./authStorage";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -45,14 +46,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     hardResetApi();
 
     try {
-      await AsyncStorage.multiRemove(["token", "refreshToken"]);
+      await clearStoredAuthTokens();
 
       if (reason !== "EXPIRED") {
-        await AsyncStorage.removeItem(FACE_ID_ENABLED_KEY);
-        await Promise.all([
-          Keychain.resetGenericPassword({ service: AUTH_LOGIN_SERVICE }),
-          Keychain.resetGenericPassword({ service: FACE_ID_LOGIN_SERVICE }),
-        ]);
+        await clearStoredFaceIdData();
       }
     } catch (e) {
       error("[Auth] Logout cleanup failed", e);
@@ -65,13 +62,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   // TOKEN HANDLERS
   const setToken = async (value: string | null) => {
     try {
+      await writeStoredAuthValue(AUTH_TOKEN_KEY, value);
+
       if (value) {
-        await AsyncStorage.setItem("token", value);
         setTokenInApi(value);
         setLogoutReason(undefined);
         log("[Auth] Save access token");
       } else {
-        await AsyncStorage.removeItem("token");
         setTokenInApi(null);
         log("[Auth] Clear access token");
       }
@@ -83,12 +80,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
   const setRefreshToken = async (value: string | null) => {
     try {
+      await writeStoredAuthValue(AUTH_REFRESH_TOKEN_KEY, value);
+
       if (value) {
-        await AsyncStorage.setItem("refreshToken", value);
         setRefreshInApi(value);
         log("[Auth] Save refresh token");
       } else {
-        await AsyncStorage.removeItem("refreshToken");
         setRefreshInApi(null);
         log("[Auth] Clear refresh token");
       }
@@ -105,11 +102,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   useEffect(() => {
     const bootstrapAuth = async () => {
       try {
-        // FIX: load cả 2 token song song
-        const [storedToken, storedRefresh] = await Promise.all([
-          AsyncStorage.getItem("token"),
-          AsyncStorage.getItem("refreshToken"),
-        ]);
+        const { token: storedToken, refreshToken: storedRefresh } =
+          await readStoredAuthTokens();
 
         setTokenState(storedToken);
         setTokenInApi(storedToken);

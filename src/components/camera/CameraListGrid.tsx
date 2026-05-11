@@ -10,11 +10,9 @@ import {
   Image,
   ActivityIndicator,
   Platform,
-  AppState,
   Alert,
   PermissionsAndroid,
 } from "react-native";
-import { Buffer } from "buffer";
 import {
   useRoute,
   useNavigation,
@@ -31,393 +29,34 @@ import {
 import Orientation from "react-native-orientation-locker";
 import Video from "react-native-video";
 import WebView from "react-native-webview";
-import { getTokenViewCamera } from "../../services/data/CallApi";
-import { subscribeAppRefetch } from "../../utils/AppRefetchBus";
 import { CameraCellProps } from "../../types/Components.d";
 import { useIsFocused } from "@react-navigation/native";
-
-const GO2RTC_HOST = "https://api.cholimexfood.com.vn/camera-stream";
-const ANDROID_LIVE_CELL_LIMIT = 4;
-const TOKEN_REFRESH_THRESHOLD_MS = 2 * 60 * 1000;
-
-const LAYOUT_OPTIONS: Record<number, [number, number]> = {
-  1: [1, 1],
-  4: [2, 2],
-  9: [3, 3],
-  12: [3, 4],
-  16: [4, 4],
-};
-
-// FIX: Bỏ visibilitychange trong buildStreamHTML — grid cell không tự stop
-// khi kéo tác vụ. Chỉ nhận lệnh stop/start từ RN AppState
-const buildStreamHTML = (src: string) => `<!DOCTYPE html>
-<html><head>
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;background:#000;overflow:hidden;position:relative}
-video{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
-#overlay{
-  display:none;position:absolute;inset:0;
-  align-items:center;justify-content:center;
-  flex-direction:column;gap:6px;background:rgba(0,0,0,0.55);
-}
-#overlay.show{display:flex}
-.spin{
-  width:18px;height:18px;border:2px solid rgba(255,255,255,0.3);
-  border-top-color:#fff;border-radius:50%;
-  animation:spin 0.8s linear infinite;
-}
-@keyframes spin{to{transform:rotate(360deg)}}
-#msg{color:#fff;font-size:9px;font-family:sans-serif;opacity:0.85}
-#offline-icon{color:#f66;font-size:18px;display:none}
-</style></head><body>
-<video id="v" autoplay muted playsinline></video>
-<div id="overlay">
-  <div class="spin" id="spinner"></div>
-  <span id="offline-icon">&#x2715;</span>
-  <span id="msg">Đang kết nối...</span>
-</div>
-<script>
-const HOST='${GO2RTC_HOST}';
-const SRC='${src}_sub';
-let TOKEN='';
-const v=document.getElementById('v');
-const overlay=document.getElementById('overlay');
-const spinner=document.getElementById('spinner');
-const offlineIcon=document.getElementById('offline-icon');
-const msg=document.getElementById('msg');
-
-let pc=null,reconnectTimer=null,frozenTimer=null;
-let backoffMs=1000;
-const MAX_BACKOFF=10000;
-let lastTime=-1,connecting=false,stopped=false,pcId=0;
-
-function showOverlay(text,isOffline){
-  overlay.classList.add('show');
-  msg.textContent=text;
-  spinner.style.display=isOffline?'none':'block';
-  offlineIcon.style.display=isOffline?'block':'none';
-}
-function hideOverlay(){overlay.classList.remove('show');}
-function clearTimers(){
-  if(reconnectTimer){clearTimeout(reconnectTimer);reconnectTimer=null;}
-  if(frozenTimer){clearTimeout(frozenTimer);frozenTimer=null;}
-}
-function scheduleReconnect(){
-  if(stopped)return;
-  clearTimers();
-  showOverlay('Kết nối lại sau '+Math.round(backoffMs/1000)+'s...',false);
-  reconnectTimer=setTimeout(()=>{connect();},backoffMs);
-  backoffMs=Math.min(backoffMs*2,MAX_BACKOFF);
-}
-function resetFrozenWatchdog(){
-  if(frozenTimer)clearTimeout(frozenTimer);
-  frozenTimer=setTimeout(()=>{if(!stopped)scheduleReconnect();},10000);
-}
-function stopAll(){
-  stopped=true;connecting=false;clearTimers();pcId++;
-  if(pc){try{pc.close();}catch(e){}pc=null;}
-  v.srcObject=null;
-}
-async function connect(){
-  if(connecting||stopped||!TOKEN)return;
-  connecting=true;clearTimers();
-  showOverlay('Đang kết nối...',false);
-  if(pc){try{pc.close();}catch(e){}pc=null;}
-  v.srcObject=null;
-  const myId=++pcId;
-  try{
-    const p=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
-    pc=p;
-    p.ontrack=e=>{if(pcId!==myId)return;v.srcObject=e.streams[0];v.play().catch(()=>{});};
-    p.oniceconnectionstatechange=()=>{
-      if(pcId!==myId)return;
-      const s=p.iceConnectionState;
-      if(s==='connected'||s==='completed')resetFrozenWatchdog();
-      else if(s==='failed')scheduleReconnect();
-    };
-    p.onconnectionstatechange=()=>{
-      if(pcId!==myId)return;
-      const s=p.connectionState;
-      if(s==='connected'){backoffMs=1000;hideOverlay();resetFrozenWatchdog();}
-      else if(s==='failed'||s==='closed')scheduleReconnect();
-    };
-    p.addTransceiver('video',{direction:'recvonly'});
-    const offer=await p.createOffer();
-    if(pcId!==myId){p.close();return;}
-    await p.setLocalDescription(offer);
-    const r=await fetch(HOST+'/api/webrtc?src='+SRC,{
-      method:'POST',
-      headers:{'Content-Type':'application/sdp','Authorization':'Bearer '+TOKEN},
-      body:offer.sdp,
-      signal:AbortSignal.timeout(8000)
-    });
-    if(pcId!==myId){p.close();return;}
-    if(!r.ok){
-      if(r.status===401){
-        window.ReactNativeWebView&&window.ReactNativeWebView.postMessage('token_expired');
-      }
-      throw new Error('HTTP '+r.status);
-    }
-    const sdp=await r.text();
-    if(pcId!==myId){p.close();return;}
-    await p.setRemoteDescription({type:'answer',sdp});
-    if(pcId!==myId){p.close();return;}
-    connecting=false;
-    resetFrozenWatchdog();
-  }catch(e){
-    connecting=false;
-    if(!stopped)scheduleReconnect();
-  }
-}
-let rafPending=false;
-v.addEventListener('timeupdate',()=>{
-  if(rafPending)return;rafPending=true;
-  requestAnimationFrame(()=>{
-    rafPending=false;
-    if(v.currentTime!==lastTime){
-      lastTime=v.currentTime;
-      if(v.currentTime>0){hideOverlay();backoffMs=1000;}
-      resetFrozenWatchdog();
-    }
-  });
-});
-// FIX: Bỏ visibilitychange — không tự stop khi kéo tác vụ
-window.addEventListener('offline',()=>{stopAll();showOverlay('Mất kết nối mạng',true);});
-window.addEventListener('online',()=>{stopped=false;backoffMs=1000;connect();});
-function handleMsg(d){
-  try{
-    const m=typeof d==='string'?JSON.parse(d):d;
-    if(m.type==='token'){TOKEN=m.value;stopped=false;backoffMs=1000;connect();return;}
-  }catch(e){}
-  if(d==='stop'){stopAll();showOverlay('Đang tạm dừng...',false);}
-  else if(d==='start'){
-    const wasStopped=stopped;
-    stopped=false;backoffMs=1000;
-    if(TOKEN&&wasStopped){connect();}
-  }
-  else if(d==='ping'){window.ReactNativeWebView&&window.ReactNativeWebView.postMessage('pong');}
-  else if(d==='mute'){v.muted=true;}
-  else if(d==='unmute'){v.muted=false;}
-}
-window.addEventListener('message',function(e){handleMsg(e.data);});
-document.addEventListener('message',function(e){handleMsg(e.data);});
-showOverlay('Đang kết nối...',false);
-</script></body></html>`;
-
-// FIX: Bỏ visibilitychange trong buildFullscreenHTML
-const buildFullscreenHTML = (src: string) => `<!DOCTYPE html>
-<html><head>
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;background:#000;overflow:hidden;position:relative}
-#container{width:100%;height:100%;overflow:hidden;position:relative;touch-action:none}
-video{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none;
-  transform-origin:0 0;will-change:transform}
-</style></head><body>
-<div id="container"><video id="v" autoplay muted playsinline></video></div>
-<script>
-const HOST='${GO2RTC_HOST}';
-const SRC='${src}_main';
-let TOKEN='';
-const v=document.getElementById('v');
-const container=document.getElementById('container');
-
-let scale=1,minScale=1,maxScale=5;
-let tx=0,ty=0,lastTx=0,lastTy=0;
-function clamp(val,min,max){return Math.min(Math.max(val,min),max);}
-function clampTrans(s,x,y){
-  const W=container.clientWidth,H=container.clientHeight;
-  return [clamp(x,-(W*(s-1)),0),clamp(y,-(H*(s-1)),0)];
-}
-function applyTransform(s,x,y){
-  v.style.transform='scale('+s+') translate('+(x/s)+'px,'+(y/s)+'px)';
-}
-function resetZoom(){scale=1;tx=0;ty=0;applyTransform(1,0,0);}
-
-let touches=[],pinchStartDist=0,pinchStartScale=1;
-let panStartX=0,panStartY=0,lastTapTime=0;
-let swipeStartX=0,swipeStartY=0,swipeLastX=0,swipeLastY=0,swipeTracking=false,didPinch=false;
-function dist(a,b){return Math.hypot(b.clientX-a.clientX,b.clientY-a.clientY);}
-function mid(a,b){return{x:(a.clientX+b.clientX)/2,y:(a.clientY+b.clientY)/2};}
-
-container.addEventListener('touchstart',e=>{
-  e.preventDefault();touches=[...e.touches];
-  if(touches.length===1){
-    const now=Date.now();
-    if(now-lastTapTime<300)resetZoom();
-    lastTapTime=now;
-    swipeStartX=touches[0].clientX;swipeStartY=touches[0].clientY;
-    swipeLastX=swipeStartX;swipeLastY=swipeStartY;swipeTracking=true;didPinch=false;
-    panStartX=touches[0].clientX-tx;panStartY=touches[0].clientY-ty;
-  }
-  if(touches.length===2){
-    swipeTracking=false;didPinch=true;
-    pinchStartDist=dist(touches[0],touches[1]);pinchStartScale=scale;lastTx=tx;lastTy=ty;
-  }
-},{passive:false});
-
-container.addEventListener('touchmove',e=>{
-  e.preventDefault();touches=[...e.touches];
-  if(touches.length===1){
-    swipeLastX=touches[0].clientX;swipeLastY=touches[0].clientY;
-  }
-  if(touches.length===1&&scale>1){
-    tx=touches[0].clientX-panStartX;ty=touches[0].clientY-panStartY;
-    [tx,ty]=clampTrans(scale,tx,ty);applyTransform(scale,tx,ty);
-  }
-  if(touches.length===2){
-    const d=dist(touches[0],touches[1]);
-    let ns=clamp(pinchStartScale*(d/pinchStartDist),minScale,maxScale);
-    const m=mid(touches[0],touches[1]);
-    const dr=ns/scale;
-    tx=m.x-(m.x-lastTx)*dr;ty=m.y-(m.y-lastTy)*dr;
-    [tx,ty]=clampTrans(ns,tx,ty);
-    scale=ns;lastTx=tx;lastTy=ty;applyTransform(scale,tx,ty);
-  }
-},{passive:false});
-
-container.addEventListener('touchend',e=>{
-  if(e.changedTouches&&e.changedTouches.length){
-    swipeLastX=e.changedTouches[0].clientX;swipeLastY=e.changedTouches[0].clientY;
-  }
-  touches=[...e.touches];
-  if(touches.length===1){panStartX=touches[0].clientX-tx;panStartY=touches[0].clientY-ty;lastTx=tx;lastTy=ty;}
-  if(touches.length===0){
-    if(swipeTracking&&!didPinch&&scale<=1.05){
-      const dx=swipeLastX-swipeStartX,dy=swipeLastY-swipeStartY;
-      if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.35){
-        window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(dx<0?'swipe_next':'swipe_prev');
-      }
-    }
-    swipeTracking=false;
-    if(scale<1.05)resetZoom();
-  }
-},{passive:false});
-
-let pc=null,reconnectTimer=null,frozenTimer=null;
-let backoffMs=1000;const MAX_BACKOFF=10000;
-let lastTime=-1,connecting=false,stopped=false,notified=false,pcId=0;
-
-function notifyReady(){if(notified)return;notified=true;window.ReactNativeWebView.postMessage('ready');}
-function clearTimers(){
-  if(reconnectTimer){clearTimeout(reconnectTimer);reconnectTimer=null;}
-  if(frozenTimer){clearTimeout(frozenTimer);frozenTimer=null;}
-}
-function scheduleReconnect(){
-  if(stopped)return;clearTimers();
-  reconnectTimer=setTimeout(()=>{connect();},backoffMs);
-  backoffMs=Math.min(backoffMs*2,MAX_BACKOFF);
-}
-function resetFrozenWatchdog(){
-  if(frozenTimer)clearTimeout(frozenTimer);
-  frozenTimer=setTimeout(()=>{if(!stopped)scheduleReconnect();},15000);
-}
-function stopAll(){
-  stopped=true;connecting=false;clearTimers();pcId++;
-  if(pc){try{pc.close();}catch(e){}pc=null;}
-  v.srcObject=null;
-}
-async function connect(){
-  if(connecting||stopped||!TOKEN)return;
-  connecting=true;clearTimers();
-  if(pc){try{pc.close();}catch(e){}pc=null;}
-  v.srcObject=null;
-  const myId=++pcId;
-  try{
-    const p=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
-    pc=p;
-    p.ontrack=e=>{if(pcId!==myId)return;v.srcObject=e.streams[0];v.play().catch(()=>{});};
-    p.oniceconnectionstatechange=()=>{
-      if(pcId!==myId)return;
-      const s=p.iceConnectionState;
-      if(s==='connected'||s==='completed')resetFrozenWatchdog();
-      else if(s==='failed')scheduleReconnect();
-    };
-    p.onconnectionstatechange=()=>{
-      if(pcId!==myId)return;
-      const s=p.connectionState;
-      if(s==='connected'){backoffMs=1000;resetFrozenWatchdog();}
-      else if(s==='failed'||s==='closed')scheduleReconnect();
-    };
-    p.addTransceiver('video',{direction:'recvonly'});
-    p.addTransceiver('audio',{direction:'recvonly'});
-    const offer=await p.createOffer();
-    if(pcId!==myId){p.close();return;}
-    await p.setLocalDescription(offer);
-    const r=await fetch(HOST+'/api/webrtc?src='+SRC,{
-      method:'POST',
-      headers:{'Content-Type':'application/sdp','Authorization':'Bearer '+TOKEN},
-      body:offer.sdp,
-      signal:AbortSignal.timeout(8000)
-    });
-    if(pcId!==myId){p.close();return;}
-    if(!r.ok){
-      if(r.status===401){
-        window.ReactNativeWebView&&window.ReactNativeWebView.postMessage('token_expired');
-      }
-      throw new Error('HTTP '+r.status);
-    }
-    const sdp=await r.text();
-    if(pcId!==myId){p.close();return;}
-    await p.setRemoteDescription({type:'answer',sdp});
-    if(pcId!==myId){p.close();return;}
-    connecting=false;resetFrozenWatchdog();
-  }catch(e){connecting=false;if(!stopped)scheduleReconnect();}
-}
-let rafPending=false;
-v.addEventListener('timeupdate',()=>{
-  if(rafPending)return;rafPending=true;
-  requestAnimationFrame(()=>{
-    rafPending=false;
-    if(v.currentTime!==lastTime){
-      lastTime=v.currentTime;
-      if(v.currentTime>0){notifyReady();backoffMs=1000;}
-      resetFrozenWatchdog();
-    }
-  });
-});
-setTimeout(notifyReady,6000);
-// FIX: Bỏ visibilitychange — không tự stop khi kéo tác vụ
-window.addEventListener('offline',()=>{stopAll();});
-window.addEventListener('online',()=>{stopped=false;backoffMs=1000;connect();});
-function handleMsg(d){
-  try{
-    const m=typeof d==='string'?JSON.parse(d):d;
-    if(m.type==='token'){TOKEN=m.value;stopped=false;backoffMs=1000;connect();return;}
-  }catch(e){}
-  if(d==='stop'){stopAll();}
-  else if(d==='start'){
-    const wasStopped=stopped;
-    stopped=false;backoffMs=1000;
-    if(TOKEN&&wasStopped){connect();}
-  }
-  else if(d==='ping'){window.ReactNativeWebView&&window.ReactNativeWebView.postMessage('pong');}
-  else if(d==='mute'){v.muted=true;}
-  else if(d==='unmute'){v.muted=false;}
-}
-window.addEventListener('message',function(e){handleMsg(e.data);});
-document.addEventListener('message',function(e){handleMsg(e.data);});
-</script></body></html>`;
-
-const decodeTokenExpiry = (token: string): number | null => {
-  try {
-    const base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
-    const payload = JSON.parse(Buffer.from(base64, "base64").toString("utf8"));
-    return payload.exp ? payload.exp * 1000 : null;
-  } catch {
-    return null;
-  }
-};
-
-const isTokenStillValid = (token: string): boolean => {
-  if (!token) return false;
-  const exp = decodeTokenExpiry(token);
-  if (!exp) return false;
-  return exp - Date.now() > TOKEN_REFRESH_THRESHOLD_MS;
-};
+import {
+  buildCameraFullscreenHTML,
+  buildCameraGridStreamHTML,
+} from "./shared/cameraStreamHtml";
+import {
+  broadcastCameraWebViewMessage,
+  broadcastCameraWebViewToken,
+  postCameraWebViewMessage,
+  postCameraWebViewToken,
+  setCameraWebViewTokenAndStart,
+  startCameraWebView,
+  stopCameraWebView,
+} from "./shared/cameraWebViewMessaging";
+import {
+  ANDROID_LIVE_CELL_LIMIT,
+  CAMERA_LAYOUT_CHOICES,
+  GO2RTC_HOST,
+  LAYOUT_OPTIONS,
+} from "./shared/cameraStreamConfig";
+import {
+  getCameraHlsUrl,
+  getCameraLayoutLabel,
+  getCameraSnapshotUrl,
+  getVisiblePageIndexes,
+} from "./shared/cameraStreamUtils";
+import { useCameraViewToken } from "./shared/useCameraViewToken";
 
 const CameraCell = React.memo(
   ({
@@ -474,7 +113,7 @@ const CameraCell = React.memo(
       !isPaused && !shouldRenderWebView && !!isSnapshotActive;
     const snapshotUrl =
       token && snapshotTimestamp
-        ? `${GO2RTC_HOST}/api/frame.jpeg?src=${cam.iD_Camera_Ma}_snap&t=${snapshotTimestamp}`
+        ? getCameraSnapshotUrl(cam.iD_Camera_Ma, snapshotTimestamp)
         : null;
     const [displayedSnapshotUrl, setDisplayedSnapshotUrl] = React.useState<
       string | null
@@ -509,8 +148,7 @@ const CameraCell = React.memo(
         return;
       const timer = setTimeout(() => {
         const ref = webviewRefRegister.current[cam.iD_Camera];
-        if (!ref?.postMessage) return;
-        ref.postMessage(JSON.stringify({ type: "token", value: token }));
+        postCameraWebViewToken(ref, token);
       }, 150);
       return () => clearTimeout(timer);
     }, [cam.iD_Camera, shouldRenderWebView, token, webviewRefRegister]);
@@ -523,7 +161,7 @@ const CameraCell = React.memo(
               key={`webview-${cam.iD_Camera}-${pageKey}-${token}`}
               ref={webviewRefCb}
               source={{
-                html: buildStreamHTML(cam.iD_Camera_Ma),
+                html: buildCameraGridStreamHTML(cam.iD_Camera_Ma),
                 baseUrl: GO2RTC_HOST,
               }}
               style={StyleSheet.absoluteFill}
@@ -542,12 +180,7 @@ const CameraCell = React.memo(
               scrollEnabled={false}
               onLoad={() => {
                 const ref = webviewRefRegister?.current[cam.iD_Camera];
-                if (token && ref?.postMessage) {
-                  ref.postMessage(
-                    JSON.stringify({ type: "token", value: token })
-                  );
-                  ref.postMessage("start");
-                }
+                setCameraWebViewTokenAndStart(ref, token);
               }}
               onMessage={(e) => {
                 const data = e.nativeEvent.data;
@@ -671,8 +304,6 @@ const CameraListGrid: React.FC = () => {
   const [isFullMuted, setIsFullMuted] = React.useState(false);
   const [videoReady, setVideoReady] = React.useState(false);
   const [isLandscape, setIsLandscape] = React.useState(false);
-  const [cameraToken, setCameraToken] = React.useState<string>("");
-  const [thumbTimestamp, setThumbTimestamp] = React.useState<number>(0);
   const [gridSnapshotTimestamps, setGridSnapshotTimestamps] = React.useState<{
     groupA: number;
     groupB: number;
@@ -689,9 +320,6 @@ const CameraListGrid: React.FC = () => {
   const webviewRefs = React.useRef<Record<string, any>>({});
   const fullscreenWebViewRef = React.useRef<any>(null);
   const isFocusedRef = React.useRef(false);
-  const tokenRefreshTimerRef = React.useRef<ReturnType<
-    typeof setTimeout
-  > | null>(null);
   const snapshotRefreshTimerRef = React.useRef<ReturnType<
     typeof setInterval
   > | null>(null);
@@ -716,11 +344,6 @@ const CameraListGrid: React.FC = () => {
     typeof setInterval
   > | null>(null);
 
-  const cameraTokenRef = React.useRef<string>("");
-  React.useEffect(() => {
-    cameraTokenRef.current = cameraToken;
-  }, [cameraToken]);
-
   const pagedCamerasRef = React.useRef<any[]>([]);
   const [screenDims, setScreenDims] = React.useState(Dimensions.get("window"));
   const translateX = React.useRef(new Animated.Value(0)).current;
@@ -730,6 +353,31 @@ const CameraListGrid: React.FC = () => {
   const totalPagesRef = React.useRef(0);
   const [gridRenderKey, setGridRenderKey] = React.useState(0);
   const fullscreenCamRef = React.useRef<any>(null);
+  const {
+    cameraToken,
+    cameraTokenRef,
+    clearTokenRefreshTimer,
+    fetchCameraTokenRef,
+    thumbTimestamp,
+  } = useCameraViewToken({
+    isFocused,
+    onActive: () => {
+      broadcastCameraWebViewMessage(webviewRefs.current, "start");
+      startCameraWebView(fullscreenWebViewRef.current);
+    },
+    onBackground: () => {
+      broadcastCameraWebViewMessage(webviewRefs.current, "stop");
+      stopCameraWebView(fullscreenWebViewRef.current);
+    },
+    onTokenReceived: (newToken, timestamp) => {
+      setGridSnapshotTimestamps({
+        groupA: timestamp,
+        groupB: timestamp + 1,
+      });
+      broadcastCameraWebViewToken(webviewRefs.current, newToken);
+      postCameraWebViewToken(fullscreenWebViewRef.current, newToken);
+    },
+  });
 
   const SW = screenDims.width;
   const [cols, rows] = LAYOUT_OPTIONS[layoutCount] ?? [4, 4];
@@ -748,25 +396,12 @@ const CameraListGrid: React.FC = () => {
   const displayThumbUrl =
     pendingThumbUrl ??
     (fullscreenCam && thumbTimestamp
-      ? `${GO2RTC_HOST}/api/frame.jpeg?src=${fullscreenCam.iD_Camera_Ma}_snap&t=${thumbTimestamp}`
+      ? getCameraSnapshotUrl(fullscreenCam.iD_Camera_Ma, thumbTimestamp)
       : null);
-  const visiblePageIndexes = React.useMemo(() => {
-    if (totalPages <= 7) {
-      return Array.from({ length: totalPages }, (_, index) => index);
-    }
-
-    const maxVisibleDots = 7;
-    const half = Math.floor(maxVisibleDots / 2);
-    let start = Math.max(0, page - half);
-    let end = start + maxVisibleDots - 1;
-
-    if (end >= totalPages) {
-      end = totalPages - 1;
-      start = Math.max(0, end - maxVisibleDots + 1);
-    }
-
-    return Array.from({ length: end - start + 1 }, (_, index) => start + index);
-  }, [page, totalPages]);
+  const visiblePageIndexes = React.useMemo(
+    () => getVisiblePageIndexes(page, totalPages),
+    [page, totalPages],
+  );
 
   React.useEffect(() => {
     pageRef.current = page;
@@ -818,42 +453,24 @@ const CameraListGrid: React.FC = () => {
     };
   }, [navigation]);
 
-  const scheduleProactiveRefresh = React.useCallback((token: string) => {
-    if (tokenRefreshTimerRef.current)
-      clearTimeout(tokenRefreshTimerRef.current);
-    const exp = decodeTokenExpiry(token);
-    if (exp) {
-      const delay = exp - Date.now() - 60000;
-      if (delay > 0) {
-        tokenRefreshTimerRef.current = setTimeout(() => {
-          fetchCameraTokenRef.current?.(false);
-        }, delay);
-      }
-    }
-  }, []);
-
   const stopAllStreams = React.useCallback(() => {
     if (startStreamsTimeoutRef.current) {
       clearTimeout(startStreamsTimeoutRef.current);
       startStreamsTimeoutRef.current = null;
     }
-    Object.values(webviewRefs.current).forEach((ref) =>
-      ref?.postMessage?.("stop")
-    );
-    fullscreenWebViewRef.current?.postMessage?.("stop");
+    broadcastCameraWebViewMessage(webviewRefs.current, "stop");
+    stopCameraWebView(fullscreenWebViewRef.current);
   }, []);
 
   const restartGridWebView = React.useCallback((cameraId: string | number) => {
     const key = String(cameraId);
     const ref = webviewRefs.current[key];
     const token = cameraTokenRef.current;
-    if (!ref?.postMessage || !token) return;
-    ref.postMessage("stop");
+    if (!token) return;
+    stopCameraWebView(ref);
     setTimeout(() => {
       const nextRef = webviewRefs.current[key];
-      if (!nextRef?.postMessage) return;
-      nextRef.postMessage(JSON.stringify({ type: "token", value: token }));
-      nextRef.postMessage("start");
+      setCameraWebViewTokenAndStart(nextRef, token);
     }, 150);
   }, []);
 
@@ -867,56 +484,11 @@ const CameraListGrid: React.FC = () => {
       clearTimeout(startStreamsTimeoutRef.current);
     startStreamsTimeoutRef.current = setTimeout(() => {
       if (!isFocusedRef.current) return;
-      Object.values(webviewRefs.current).forEach((ref) =>
-        ref?.postMessage?.("start")
-      );
-      fullscreenWebViewRef.current?.postMessage?.("start");
+      broadcastCameraWebViewMessage(webviewRefs.current, "start");
+      startCameraWebView(fullscreenWebViewRef.current);
       startStreamsTimeoutRef.current = null;
     }, 300);
   }, []);
-
-  const fetchCameraToken = React.useCallback(
-    async (force = false) => {
-      if (!isFocusedRef.current) return;
-      if (!force && isTokenStillValid(cameraTokenRef.current)) {
-        scheduleProactiveRefresh(cameraTokenRef.current);
-        return;
-      }
-      try {
-        const res: any = await getTokenViewCamera();
-        if (res?.data && isFocusedRef.current) {
-          const newToken = res.data;
-          const snapshotNow = Date.now();
-          setCameraToken(newToken);
-          setThumbTimestamp(snapshotNow);
-          setGridSnapshotTimestamps({
-            groupA: snapshotNow,
-            groupB: snapshotNow + 1,
-          });
-          scheduleProactiveRefresh(newToken);
-          Object.values(webviewRefs.current).forEach((ref) => {
-            if (ref?.postMessage)
-              ref.postMessage(
-                JSON.stringify({ type: "token", value: newToken })
-              );
-          });
-          if (fullscreenWebViewRef.current?.postMessage) {
-            fullscreenWebViewRef.current.postMessage(
-              JSON.stringify({ type: "token", value: newToken })
-            );
-          }
-        }
-      } catch (err) {
-        console.warn("getTokenViewCamera error:", err);
-      }
-    },
-    [scheduleProactiveRefresh]
-  );
-
-  const fetchCameraTokenRef = React.useRef(fetchCameraToken);
-  React.useEffect(() => {
-    fetchCameraTokenRef.current = fetchCameraToken;
-  }, [fetchCameraToken]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -924,17 +496,14 @@ const CameraListGrid: React.FC = () => {
       fetchCameraTokenRef.current?.(false);
       startAllStreams();
       return () => {
-        if (tokenRefreshTimerRef.current) {
-          clearTimeout(tokenRefreshTimerRef.current);
-          tokenRefreshTimerRef.current = null;
-        }
+        clearTokenRefreshTimer();
         if (syncTokenTimeoutRef.current) {
           clearTimeout(syncTokenTimeoutRef.current);
           syncTokenTimeoutRef.current = null;
         }
         stopAllStreams();
       };
-    }, [startAllStreams, stopAllStreams])
+    }, [clearTokenRefreshTimer, startAllStreams, stopAllStreams])
   );
 
   React.useEffect(() => {
@@ -946,14 +515,8 @@ const CameraListGrid: React.FC = () => {
     if (syncTokenTimeoutRef.current) clearTimeout(syncTokenTimeoutRef.current);
     syncTokenTimeoutRef.current = setTimeout(() => {
       if (!isFocusedRef.current) return;
-      Object.entries(webviewRefs.current).forEach(([_id, ref]) => {
-        ref?.postMessage?.(
-          JSON.stringify({ type: "token", value: cameraToken })
-        );
-      });
-      fullscreenWebViewRef.current?.postMessage?.(
-        JSON.stringify({ type: "token", value: cameraToken })
-      );
+      broadcastCameraWebViewToken(webviewRefs.current, cameraToken);
+      postCameraWebViewToken(fullscreenWebViewRef.current, cameraToken);
       syncTokenTimeoutRef.current = null;
     }, 300);
     return () => {
@@ -974,11 +537,9 @@ const CameraListGrid: React.FC = () => {
 
     const timer = setTimeout(() => {
       if (!isFocusedRef.current) return;
-      Object.values(webviewRefs.current).forEach((ref) => {
-        if (!ref?.postMessage) return;
-        ref.postMessage(JSON.stringify({ type: "token", value: cameraToken }));
-        ref.postMessage("start");
-      });
+      Object.values(webviewRefs.current).forEach((ref) =>
+        setCameraWebViewTokenAndStart(ref, cameraToken),
+      );
     }, 500);
     return () => clearTimeout(timer);
   }, [
@@ -1057,54 +618,15 @@ const CameraListGrid: React.FC = () => {
   }, [cameraToken, isFocused, isPaused, perPage, liveCellLimit]);
 
   React.useEffect(() => {
-    const unsub = subscribeAppRefetch(() => {
-      if (!isFocusedRef.current) return;
-      fetchCameraTokenRef.current?.(true);
-    });
-    return () => unsub();
-  }, []);
-
-  // FIX: AppState — chỉ stop khi background, bỏ qua inactive
-  // inactive = kéo tác vụ, notification → giữ stream sống
-  // background = chuyển app thật sự → stop
-  React.useEffect(() => {
-    const sub = AppState.addEventListener("change", (state) => {
-      if (state === "active") {
-        if (isFocusedRef.current) {
-          fetchCameraTokenRef.current?.(false);
-          // Chỉ start nếu screen đang focused
-          Object.values(webviewRefs.current).forEach((ref) =>
-            ref?.postMessage?.("start")
-          );
-          if (fullscreenWebViewRef.current?.postMessage) {
-            fullscreenWebViewRef.current.postMessage("start");
-          }
-        }
-      } else if (state === "background") {
-        // Chỉ stop khi vào background thật sự
-        Object.values(webviewRefs.current).forEach((ref) =>
-          ref?.postMessage?.("stop")
-        );
-        if (fullscreenWebViewRef.current?.postMessage) {
-          fullscreenWebViewRef.current.postMessage("stop");
-        }
-      }
-      // "inactive" → bỏ qua hoàn toàn, giữ stream sống khi kéo tác vụ
-    });
-    return () => sub.remove();
-  }, []);
-
-  React.useEffect(() => {
     const msg = isMuted ? "mute" : "unmute";
-    Object.values(webviewRefs.current).forEach((ref) => {
-      if (ref?.postMessage) ref.postMessage(msg);
-    });
+    broadcastCameraWebViewMessage(webviewRefs.current, msg);
   }, [isMuted]);
 
   React.useEffect(() => {
-    if (fullscreenWebViewRef.current?.postMessage) {
-      fullscreenWebViewRef.current.postMessage(isFullMuted ? "mute" : "unmute");
-    }
+    postCameraWebViewMessage(
+      fullscreenWebViewRef.current,
+      isFullMuted ? "mute" : "unmute",
+    );
   }, [isFullMuted]);
 
   React.useEffect(() => {
@@ -1136,10 +658,9 @@ const CameraListGrid: React.FC = () => {
     webviewPingIntervalRef.current = setInterval(() => {
       if (!isFocusedRef.current) return;
       Object.entries(webviewRefs.current).forEach(([id, ref]) => {
-        if (!ref?.postMessage) return;
         const pendingTimeout = pongTimeoutRef.current[id];
         if (pendingTimeout) clearTimeout(pendingTimeout);
-        ref.postMessage("ping");
+        postCameraWebViewMessage(ref, "ping");
         pongTimeoutRef.current[id] = setTimeout(() => {
           const missCount = (webviewMissCountRef.current[id] ?? 0) + 1;
           webviewMissCountRef.current[id] = missCount;
@@ -1204,8 +725,6 @@ const CameraListGrid: React.FC = () => {
   React.useEffect(() => {
     return () => {
       stopAllStreams();
-      if (tokenRefreshTimerRef.current)
-        clearTimeout(tokenRefreshTimerRef.current);
       if (snapshotRefreshTimerRef.current)
         clearInterval(snapshotRefreshTimerRef.current);
       if (startStreamsTimeoutRef.current)
@@ -1297,9 +816,7 @@ const CameraListGrid: React.FC = () => {
 
   const handleCamDoubleTap = React.useCallback(
     (cam: any, idx: number) => {
-      setPendingThumbUrl(
-        `${GO2RTC_HOST}/api/frame.jpeg?src=${cam.iD_Camera_Ma}_snap&t=${thumbTimestamp}`
-      );
+      setPendingThumbUrl(getCameraSnapshotUrl(cam.iD_Camera_Ma, thumbTimestamp));
       setActiveIndex(idx);
       setVideoReady(false);
       setFsVideoKey(0);
@@ -1318,7 +835,7 @@ const CameraListGrid: React.FC = () => {
       if (!nextCam) return;
 
       // Chỉ stop fullscreen WebView, KHÔNG stop grid
-      fullscreenWebViewRef.current?.postMessage?.("stop");
+      stopCameraWebView(fullscreenWebViewRef.current);
       if (androidFallbackRef.current) clearTimeout(androidFallbackRef.current);
       if (androidWatchdogRef.current) clearInterval(androidWatchdogRef.current);
 
@@ -1326,7 +843,7 @@ const CameraListGrid: React.FC = () => {
       const nextLocalIndex = nextIndex % perPage;
 
       setPendingThumbUrl(
-        `${GO2RTC_HOST}/api/frame.jpeg?src=${nextCam.iD_Camera_Ma}_snap&t=${thumbTimestamp}`
+        getCameraSnapshotUrl(nextCam.iD_Camera_Ma, thumbTimestamp),
       );
       setVideoReady(false);
       setFsVideoKey(0);
@@ -1446,7 +963,6 @@ const CameraListGrid: React.FC = () => {
         }),
     [SW, cameras.length, fsTranslateX, fullscreenIndex, handleFullscreenSwipe]
   );
-
   const handleSnapshot = React.useCallback(async () => {
     const activeCam = pagedCamerasRef.current[activeIndex];
     const token = cameraTokenRef.current;
@@ -1483,7 +999,6 @@ const CameraListGrid: React.FC = () => {
     } else {
       Orientation.lockToPortrait();
     }
-    setVideoReady(false);
     setFsVideoKey(0);
     fsTranslateX.setValue(0);
     fsSwitchOpacity.setValue(0);
@@ -1500,6 +1015,19 @@ const CameraListGrid: React.FC = () => {
       );
     }, 400);
   };
+  const fullscreenDoubleTapGesture = React.useMemo(
+    () =>
+      Gesture.Tap()
+        .runOnJS(true)
+        .numberOfTaps(2)
+        .onEnd(closeFullscreen),
+    [closeFullscreen]
+  );
+  const fullscreenGesture = React.useMemo(
+    () =>
+      Gesture.Simultaneous(fullscreenSwipeGesture, fullscreenDoubleTapGesture),
+    [fullscreenDoubleTapGesture, fullscreenSwipeGesture]
+  );
 
   const toggleFullscreenOrientation = () => {
     if (isLandscape) {
@@ -1643,7 +1171,7 @@ const CameraListGrid: React.FC = () => {
 
       {showLayoutPicker && (
         <View style={styles.layoutPicker}>
-          {[1, 4, 9, 12, 16].map((n) => (
+          {CAMERA_LAYOUT_CHOICES.map((n) => (
             <TouchableOpacity
               key={n}
               style={[
@@ -1658,15 +1186,7 @@ const CameraListGrid: React.FC = () => {
                   layoutCount === n && styles.layoutOptionTextActive,
                 ]}
               >
-                {n === 1
-                  ? "1×1"
-                  : n === 4
-                  ? "2×2"
-                  : n === 9
-                  ? "3×3"
-                  : n === 12
-                  ? "3×4"
-                  : "4×4"}
+                {getCameraLayoutLabel(n)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -1732,7 +1252,7 @@ const CameraListGrid: React.FC = () => {
             </TouchableOpacity>
           </View>
 
-          <GestureDetector gesture={fullscreenSwipeGesture}>
+          <GestureDetector gesture={fullscreenGesture}>
             <Animated.View
               style={[
                 styles.fsVideoArea,
@@ -1742,12 +1262,12 @@ const CameraListGrid: React.FC = () => {
               {fullscreenCam && cameraToken ? (
                 <>
                   {Platform.OS === "android" && (
-                    <Video
-                      key={`${fullscreenCam.iD_Camera}-${fsVideoKey}`}
-                      source={{
-                        uri: `${GO2RTC_HOST}/api/stream.m3u8?src=${fullscreenCam.iD_Camera_Ma}_main&mp4=flac`,
-                        headers: { Authorization: `Bearer ${cameraToken}` },
-                      }}
+                      <Video
+                        key={`${fullscreenCam.iD_Camera}-${fsVideoKey}`}
+                        source={{
+                          uri: getCameraHlsUrl(fullscreenCam.iD_Camera_Ma),
+                          headers: { Authorization: `Bearer ${cameraToken}` },
+                        }}
                       style={[
                         StyleSheet.absoluteFill,
                         { opacity: videoReady ? 1 : 0 },
@@ -1788,7 +1308,7 @@ const CameraListGrid: React.FC = () => {
                       key={`fs-${fullscreenCam.iD_Camera}`}
                       ref={fullscreenWebViewRef}
                       source={{
-                        html: buildFullscreenHTML(fullscreenCam.iD_Camera_Ma),
+                        html: buildCameraFullscreenHTML(fullscreenCam.iD_Camera_Ma),
                         baseUrl: GO2RTC_HOST,
                       }}
                       style={[
@@ -1807,23 +1327,18 @@ const CameraListGrid: React.FC = () => {
                       scrollEnabled={false}
                       scalesPageToFit={false}
                       onLoad={() => {
-                        if (
-                          fullscreenWebViewRef.current?.postMessage &&
-                          cameraToken
-                        ) {
-                          fullscreenWebViewRef.current.postMessage(
-                            JSON.stringify({
-                              type: "token",
-                              value: cameraToken,
-                            })
-                          );
-                        }
+                        postCameraWebViewToken(
+                          fullscreenWebViewRef.current,
+                          cameraToken,
+                        );
                       }}
                       onMessage={(e) => {
                         const data = e.nativeEvent.data;
                         if (data === "ready") setVideoReady(true);
                         else if (data === "token_expired")
                           fetchCameraTokenRef.current?.(true);
+                        else if (data === "close_fullscreen")
+                          closeFullscreen();
                         else if (data === "swipe_next")
                           handleFullscreenSwipe("next");
                         else if (data === "swipe_prev")
@@ -1859,7 +1374,7 @@ const CameraListGrid: React.FC = () => {
                     </View>
                   )}
                   {Platform.OS === "android" && (
-                    <GestureDetector gesture={fullscreenSwipeGesture}>
+                    <GestureDetector gesture={fullscreenGesture}>
                       <View style={styles.fsSwipeOverlay} />
                     </GestureDetector>
                   )}
@@ -1883,13 +1398,13 @@ const CameraListGrid: React.FC = () => {
                     </Animated.View>
                   )}
                 </>
-              ) : (
+              ) : fullscreenCam ? (
                 <ActivityIndicator
                   size="large"
                   color="#fff"
                   style={styles.spinner}
                 />
-              )}
+              ) : null}
             </Animated.View>
           </GestureDetector>
 
@@ -1901,10 +1416,11 @@ const CameraListGrid: React.FC = () => {
                 : { paddingBottom: 48 },
             ]}
           >
-            <View style={styles.fsLiveBadge}>
-              <View style={styles.fsLiveDot} />
-              <Text style={styles.fsLiveText}>Trực tiếp</Text>
-            </View>
+            {fullscreenIndex >= 0 && cameras.length > 0 && (
+              <Text style={styles.fsPagerText}>
+                {fullscreenIndex + 1} / {cameras.length}
+              </Text>
+            )}
           </View>
         </View>
       </Modal>
@@ -2110,12 +1626,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 20,
-    paddingTop: 14,
+    paddingTop: 8,
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
   },
+  fsPagerText: { color: "#fff", fontSize: 14, fontWeight: "700" },
   fsLiveBadge: {
     flexDirection: "row",
     alignItems: "center",

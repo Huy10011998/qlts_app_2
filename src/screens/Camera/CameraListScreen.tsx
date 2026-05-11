@@ -1,15 +1,11 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
 import CameraList from "../../components/camera/CameraList";
+import ScreenContainer from "../shared/ScreenContainer";
 
 export default function CameraListScreen() {
   return (
-    <View style={styles.container}>
+    <ScreenContainer backgroundColor="#F3F4F6">
       <CameraList />
-    </View>
+    </ScreenContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F3F4F6" },
-});

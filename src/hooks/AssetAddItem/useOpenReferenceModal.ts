@@ -1,8 +1,11 @@
 import { useCallback } from "react";
 import { Alert } from "react-native";
 import { Field } from "../../types/Model.d";
-import { fetchReferenceByField } from "../../utils/fetchField/FetchReferenceField";
-import { fetchReferenceByFieldWithParent } from "../../utils/cascade/FetchReferenceByFieldWithParent";
+import {
+  buildReferenceFetchParams,
+  getCurrentReferenceIds,
+  loadReferenceItemsForField,
+} from "./referenceLoaderHelpers";
 
 type Props = {
   formData: Record<string, any>;
@@ -44,53 +47,27 @@ export const useOpenReferenceModal = ({
     ) => {
       if (!f.referenceName) return false;
 
-      const fallbackCurrentIds =
-        formData[f.name] != null && formData[f.name] !== ""
-          ? [formData[f.name]]
-          : [];
-
-      const params = {
-        textSearch,
-        pageSize,
-        skipSize: page * pageSize,
-        append,
-        currentIds: currentIds ?? fallbackCurrentIds,
-      };
-
-      if (f.parentsFields) {
-        const parents = f.parentsFields.split(",");
-
-        const parentValues = parents
-          .map((p) => formData[p])
-          .filter((v) => v != null && v !== "");
-
-        if (parentValues.length !== parents.length) {
+      const didLoad = await loadReferenceItemsForField({
+        field: f,
+        formData,
+        setReferenceData,
+        params: buildReferenceFetchParams({
+          textSearch,
+          pageSize,
+          page,
+          append,
+          currentIds: currentIds ?? getCurrentReferenceIds(formData, f.name),
+        }),
+        requireAllParents: true,
+        onMissingParents: () => {
           Alert.alert(
             "Thông báo",
             "Vui lòng chọn đầy đủ thông tin cấp trên trước!",
           );
-          return false;
-        }
+        },
+      });
 
-        await fetchReferenceByFieldWithParent(
-          f.referenceName,
-          f.name,
-          parentValues.join(","),
-          setReferenceData,
-          params,
-        );
-
-        return true;
-      }
-
-      await fetchReferenceByField(
-        f.referenceName,
-        f.name,
-        setReferenceData,
-        params,
-      );
-
-      return true;
+      return didLoad !== false;
     },
     [formData, pageSize, setReferenceData],
   );

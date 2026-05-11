@@ -1,10 +1,10 @@
-import { StyleSheet, View } from "react-native";
-import TabContent from "../../components/tabs/TabContent";
 import QrDetails from "../../components/qrcode/QrDetails";
+import ScreenContainer from "../shared/ScreenContainer";
+import AssetDetailsContent from "../Assets/shared/AssetDetailsContent";
 
 export default function QrDetailsScreen() {
   return (
-    <View style={styles.container}>
+    <ScreenContainer backgroundColor="#F9F9F9">
       <QrDetails>
         {({
           activeTab,
@@ -16,27 +16,18 @@ export default function QrDetailsScreen() {
           nameClass,
           fieldActive,
         }) => (
-          <>
-            <View style={styles.content}>
-              <TabContent
-                activeTab={activeTab}
-                groupedFields={groupedFields}
-                collapsedGroups={collapsedGroups}
-                toggleGroup={toggleGroup}
-                getFieldValue={getFieldValue}
-                item={item}
-                nameClass={nameClass || ""}
-                fieldActive={fieldActive}
-              />
-            </View>
-          </>
+          <AssetDetailsContent
+            activeTab={activeTab}
+            groupedFields={groupedFields}
+            collapsedGroups={collapsedGroups}
+            toggleGroup={toggleGroup}
+            getFieldValue={getFieldValue}
+            item={item}
+            nameClass={nameClass || ""}
+            fieldActive={fieldActive}
+          />
         )}
       </QrDetails>
-    </View>
+    </ScreenContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9F9F9" },
-  content: { flex: 1 },
-});

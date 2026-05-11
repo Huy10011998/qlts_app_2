@@ -1,30 +1,26 @@
-import { useSelector } from "react-redux";
-import { RootState } from "../store";
-import { normalizeClassName } from "../utils/Helper";
 import { log } from "../utils/Logger";
+import {
+  buildClassPermissionKey,
+  hasFullPermission,
+  hasPermissionKey,
+  usePermissionState,
+} from "./shared/permissionHelpers";
 
 export function usePermission() {
-  const { permissions, loaded } = useSelector(
-    (state: RootState) => state.permission,
-  );
+  const { permissions, loaded } = usePermissionState();
 
-  const isFullPermission = () => permissions?.includes("Group.1");
+  const isFullAccess = () => hasFullPermission(permissions);
 
   const can = (module: string, action: string) => {
     if (!loaded) return false;
-    if (isFullPermission()) return true;
+    if (isFullAccess()) return true;
     if (!permissions || permissions.length === 0) return false;
 
-    const normalized = normalizeClassName(module);
-
-    // so sánh KHÔNG phân biệt hoa thường
-    const key = `Class.${normalized}.${action}`.toLowerCase();
-
-    const hasPermission = permissions.some((p) => p.toLowerCase() === key);
+    const key = buildClassPermissionKey(module, action);
+    const hasPermission = hasPermissionKey(permissions, key);
 
     log("CHECK PERMISSION:", {
       module,
-      normalized,
       action,
       key,
       has: hasPermission,
@@ -33,5 +29,5 @@ export function usePermission() {
     return hasPermission;
   };
 
-  return { can, isFullPermission, loaded, permissions };
+  return { can, isFullPermission: isFullAccess, loaded, permissions };
 }

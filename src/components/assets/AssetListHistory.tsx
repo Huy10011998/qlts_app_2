@@ -1,5 +1,12 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { View, Text, StyleSheet, FlatList, Alert } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  Alert,
+  RefreshControl,
+} from "react-native";
 import { Field, PropertyResponse, StackNavigation } from "../../types";
 import { useParams } from "../../hooks/useParams";
 import {
@@ -15,6 +22,10 @@ import { error } from "../../utils/Logger";
 import { useAutoReload } from "../../hooks/useAutoReload";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { isAuthExpiredError } from "../../services/data/CallApi";
+import AssetListEmptyState from "./shared/AssetListEmptyState";
+import AssetListSummaryCard from "./shared/AssetListSummaryCard";
+import { sharedAssetListStyles } from "./shared/listStyles";
+import { BG, BRAND_RED } from "./shared/listTheme";
 
 export default function AssetListHistory() {
   const [lichsu, setLichsu] = useState<Record<string, any>[]>([]);
@@ -23,6 +34,7 @@ export default function AssetListHistory() {
   const [propertyClass, setPropertyClass] = useState<PropertyResponse>();
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isRefreshingTop, setIsRefreshingTop] = useState(false);
   const [skipSize, setSkipSize] = useState(0);
   const [total, setTotal] = useState(0);
 
@@ -56,14 +68,20 @@ export default function AssetListHistory() {
   };
 
   const fetchData = useCallback(
-    async (isLoadMore = false) => {
+    async (isLoadMore = false, options?: { isRefresh?: boolean }) => {
       if (!nameClass || !id) return;
 
+      const isRefresh = options?.isRefresh;
+      const shouldReloadFieldConfig =
+        !isLoadMore && (isRefresh || fieldActive.length === 0);
+      const shouldReloadPropertyClass =
+        !isLoadMore && (isRefresh || !propertyClass);
+
       if (isLoadMore) setIsLoadingMore(true);
-      else setIsLoading(true);
+      else if (!isRefresh) setIsLoading(true);
 
       try {
-        if (!isLoadMore && fieldActive.length === 0) {
+        if (shouldReloadFieldConfig) {
           const responseFieldActive = await getFieldActive(nameClass);
           const activeFields = responseFieldActive?.data || [];
           setFieldActive(activeFields);
@@ -72,7 +90,7 @@ export default function AssetListHistory() {
           );
         }
 
-        if (!isLoadMore && !propertyClass) {
+        if (shouldReloadPropertyClass) {
           const responsePropertyClass = await getPropertyClass(nameClass);
           setPropertyClass(responsePropertyClass?.data);
         }
@@ -100,6 +118,7 @@ export default function AssetListHistory() {
         if (isMounted()) {
           setIsLoading(false);
           setIsLoadingMore(false);
+          setIsRefreshingTop(false);
         }
       }
     },
@@ -113,11 +132,22 @@ export default function AssetListHistory() {
 
   useAutoReload(fetchData);
 
+  const refreshTop = async () => {
+    if (isRefreshingTop) return;
+
+    setIsRefreshingTop(true);
+    setSkipSize(0);
+
+    await fetchData(false, { isRefresh: true });
+  };
+
   const handleLoadMore = () => {
     if (lichsu.length < total && !isLoadingMore) fetchData(true);
   };
 
-  if (isLoading) return <IsLoading size="large" color="#E31E24" />;
+  if (isLoading && !isRefreshingTop) {
+    return <IsLoading size="large" color={BRAND_RED} />;
+  }
 
   return (
     <View style={styles.container}>
@@ -133,16 +163,33 @@ export default function AssetListHistory() {
           />
         )}
         contentContainerStyle={{ paddingBottom: 20 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshingTop}
+            onRefresh={refreshTop}
+            colors={[BRAND_RED]}
+            tintColor={BRAND_RED}
+            progressViewOffset={50}
+          />
+        }
         scrollEventThrottle={16}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
         ListFooterComponent={isLoadingMore ? <IsLoading /> : null}
+        ListEmptyComponent={
+          <AssetListEmptyState
+            fullHeight
+            iconName="time-outline"
+            title="Chưa có lịch sử"
+            subtitle="Dữ liệu thay đổi sẽ được hiển thị tại đây khi có phát sinh."
+          />
+        }
         ListHeaderComponent={
-          <View style={styles.stickyHeader}>
-            <Text style={styles.header}>
-              Tổng số lịch sử: {total} (Đã tải: {lichsu.length})
-            </Text>
-          </View>
+          <AssetListSummaryCard
+            iconName="time-outline"
+            title="Lịch sử thay đổi"
+            subtitle={`Tổng số lịch sử: ${total} • Đã tải: ${lichsu.length}`}
+          />
         }
         stickyHeaderIndices={[0]}
       />
@@ -151,17 +198,8 @@ export default function AssetListHistory() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F3F4F6" },
-
-  header: {
-    textAlign: "center",
-    fontSize: 14,
-    color: "#333",
-    fontWeight: "600",
-  },
-
-  stickyHeader: { backgroundColor: "#F3F4F6", paddingVertical: 10, zIndex: 10 },
-
+  ...sharedAssetListStyles,
+  container: { flex: 1, backgroundColor: BG },
   searchBox: {
     borderWidth: 1,
     borderColor: "#ccc",

@@ -1,0 +1,194 @@
+import { StyleSheet } from "react-native";
+
+type AssetFormStyleParams = {
+  backgroundColor: string;
+  brandColor: string;
+  cardShadow: Record<string, any>;
+};
+
+export const createAssetFormBaseStyles = ({
+  backgroundColor,
+  brandColor,
+  cardShadow,
+}: AssetFormStyleParams) => ({
+  container: {
+    flex: 1,
+    backgroundColor,
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  loadingOverlay: {
+    position: "absolute" as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(15,25,35,0.2)",
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+    zIndex: 999,
+  },
+  heroCard: {
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#EDF0F5",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    ...cardShadow,
+  },
+  heroIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    marginRight: 12,
+  },
+  heroContent: {
+    flex: 1,
+  },
+  heroTitle: {
+    fontSize: 15,
+    fontWeight: "700" as const,
+    color: "#0F1923",
+    marginBottom: 2,
+  },
+  heroSub: {
+    fontSize: 12,
+    color: "#8A95A3",
+    lineHeight: 18,
+  },
+  groupCard: {
+    backgroundColor: "#fff",
+    padding: 14,
+    borderRadius: 16,
+    marginBottom: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#EDF0F5",
+    ...cardShadow,
+  },
+  groupHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    marginBottom: 12,
+  },
+  groupTitleWrap: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    flex: 1,
+  },
+  groupIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    backgroundColor: "#FFF3F3",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    marginRight: 10,
+  },
+  groupTitle: {
+    fontSize: 15,
+    fontWeight: "700" as const,
+    color: "#0F1923",
+    flex: 1,
+  },
+  chevronWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 9,
+    backgroundColor: "#FFF5F5",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  fieldBlock: {
+    marginBottom: 14,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: "600" as const,
+    marginBottom: 7,
+    color: "#374151",
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#E3E8F0",
+    padding: 12,
+    borderRadius: 12,
+    paddingVertical: 12,
+    color: "#0F1923",
+    backgroundColor: "#FBFCFE",
+  },
+  switchRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+  },
+  textArea: {
+    borderWidth: 1,
+    borderColor: "#E3E8F0",
+    borderRadius: 12,
+    padding: 12,
+    minHeight: 100,
+    fontSize: 14,
+    color: "#0F1923",
+    backgroundColor: "#FBFCFE",
+    textAlignVertical: "top" as const,
+  },
+  uploadButton: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "#FFD6D6",
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    marginTop: 6,
+  },
+  previewImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 10,
+    backgroundColor: "#f2f2f2",
+  },
+  removeImageButton: {
+    position: "absolute" as const,
+    top: 4,
+    right: 4,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    padding: 4,
+    borderRadius: 20,
+  },
+  boolRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    paddingVertical: 6,
+  },
+  boolLabel: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  tooltipRow: {
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
+    alignItems: "flex-start" as const,
+  },
+  tooltipLabel: {
+    color: brandColor,
+    fontWeight: "600" as const,
+    fontSize: 14,
+  },
+  tooltipText: {
+    color: "#333",
+    fontSize: 14,
+    flexShrink: 1,
+  },
+});

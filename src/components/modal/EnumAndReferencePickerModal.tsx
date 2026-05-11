@@ -1,11 +1,9 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Modal,
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  TouchableWithoutFeedback,
   TextInput,
   FlatList,
 } from "react-native";
@@ -14,6 +12,7 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { PropsEnum } from "../../types/Components.d";
 import { useDebounce } from "../../hooks/useDebounce";
 import IsLoading from "../ui/IconLoading";
+import BottomSheetModalShell from "../shared/BottomSheetModalShell";
 
 type ExtraProps = {
   isSearching?: boolean;
@@ -42,6 +41,22 @@ export default function EnumAndReferencePickerModal({
   const lastSearchRef = useRef("");
   const loaded =
     loadedCount ?? items?.filter((i) => i.value !== "").length ?? 0;
+  const orderedItems = useMemo(() => {
+    if (!Array.isArray(items)) return [];
+    if (selectedValue === null || selectedValue === undefined) return items;
+
+    const selectedItems = items.filter(
+      (item) => String(item.value) === String(selectedValue),
+    );
+
+    if (!selectedItems.length) return items;
+
+    const remainingItems = items.filter(
+      (item) => String(item.value) !== String(selectedValue),
+    );
+
+    return [...selectedItems, ...remainingItems];
+  }, [items, selectedValue]);
 
   /* ===== SEARCH ===== */
   useEffect(() => {
@@ -95,111 +110,85 @@ export default function EnumAndReferencePickerModal({
   };
 
   return (
-    <Modal
-      animationType="slide"
-      transparent
+    <BottomSheetModalShell
       visible={visible}
+      animationType="slide"
+      closeOnBackdropPress
+      onClose={onClose}
       statusBarTranslucent
       presentationStyle="overFullScreen"
+      sheetStyle={[
+        styles.modalContainer,
+        { paddingBottom: insets.bottom || 16 },
+      ]}
+      showHandle
     >
-      {/* Overlay */}
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.modalOverlay} />
-      </TouchableWithoutFeedback>
+      <Text style={styles.modalTitle}>{title}</Text>
 
-      {/* Bottom Sheet */}
-      <View
-        style={[styles.modalContainer, { paddingBottom: insets.bottom || 16 }]}
-      >
-        {/* Drag handle */}
-        <View style={styles.dragHandle} />
-
-        {/* Title */}
-        <Text style={styles.modalTitle}>{title}</Text>
-
-        {/* Search */}
-        <View style={styles.searchWrapper}>
-          <TextInput
-            placeholder="Tìm kiếm..."
-            placeholderTextColor="#999"
-            value={searchText}
-            onChangeText={setSearchText}
-            style={styles.searchInput}
-          />
-
-          {isSearching && (
-            <IsLoading
-              size="small"
-              color="#E31E24"
-              style={styles.searchSpinner}
-            />
-          )}
-        </View>
-
-        {/* List */}
-        <FlatList
-          data={items}
-          keyExtractor={(item, index) => String(item.value ?? index)}
-          renderItem={renderItem}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          onEndReached={onLoadMore}
-          onEndReachedThreshold={0.4}
-          ListFooterComponent={
-            loadingMore ? (
-              <View style={{ paddingVertical: 16 }}>
-                <IsLoading size="small" />
-              </View>
-            ) : null
-          }
-          ListHeaderComponent={
-            <View style={styles.stickyHeader}>
-              <Text style={styles.header}>
-                Tổng: {total} (Đã tải: {loaded})
-              </Text>
-            </View>
-          }
-          stickyHeaderIndices={[0]}
+      <View style={styles.searchWrapper}>
+        <TextInput
+          placeholder="Tìm kiếm..."
+          placeholderTextColor="#999"
+          value={searchText}
+          onChangeText={setSearchText}
+          style={styles.searchInput}
         />
 
-        {/* Close */}
-        <TouchableOpacity
-          onPress={onClose}
-          style={styles.modalCancel}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.modalCancelText}>Đóng</Text>
-        </TouchableOpacity>
+        {isSearching && (
+          <IsLoading
+            size="small"
+            color="#E31E24"
+            style={styles.searchSpinner}
+          />
+        )}
       </View>
-    </Modal>
+
+      <FlatList
+        data={orderedItems}
+        keyExtractor={(item, index) => String(item.value ?? index)}
+        renderItem={renderItem}
+        style={styles.list}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        onEndReached={onLoadMore}
+        onEndReachedThreshold={0.4}
+        ListFooterComponent={
+          loadingMore ? (
+            <View style={{ paddingVertical: 16 }}>
+              <IsLoading size="small" />
+            </View>
+          ) : null
+        }
+        ListHeaderComponent={
+          <View style={styles.stickyHeader}>
+            <Text style={styles.header}>
+              Tổng: {total} (Đã tải: {loaded})
+            </Text>
+          </View>
+        }
+        stickyHeaderIndices={[0]}
+      />
+
+      <TouchableOpacity
+        onPress={onClose}
+        style={styles.modalCancel}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.modalCancelText}>Đóng</Text>
+      </TouchableOpacity>
+    </BottomSheetModalShell>
   );
 }
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.25)",
-  },
-
   modalContainer: {
-    position: "absolute",
-    bottom: 0,
-    width: "100%",
-    maxHeight: "85%",
+    height: "75%",
     backgroundColor: "#fff",
-    paddingTop: 8,
     paddingHorizontal: 16,
+    paddingTop: 8,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
-  },
-
-  dragHandle: {
-    width: 45,
-    height: 5,
-    backgroundColor: "#ccc",
-    borderRadius: 3,
-    alignSelf: "center",
-    marginBottom: 12,
   },
 
   modalTitle: {
@@ -228,6 +217,15 @@ const styles = StyleSheet.create({
     right: 20,
     top: "50%",
     marginTop: -10,
+  },
+
+  list: {
+    flex: 1,
+    minHeight: 0,
+  },
+
+  listContent: {
+    flexGrow: 1,
   },
 
   modalItem: {

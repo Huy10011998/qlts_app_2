@@ -13,6 +13,23 @@ const Tab = createBottomTabNavigator();
 
 const TAB_HEIGHT = 56;
 
+function getDeepFocusedRouteName(route: any): string | undefined {
+  const directFocusedRouteName = getFocusedRouteNameFromRoute(route);
+  const nestedState = route.state;
+
+  if (!nestedState || !("routes" in nestedState)) {
+    return directFocusedRouteName ?? route.name;
+  }
+
+  const nestedRoute = nestedState.routes[nestedState.index ?? 0];
+
+  if (!nestedRoute) {
+    return directFocusedRouteName ?? route.name;
+  }
+
+  return getDeepFocusedRouteName(nestedRoute) ?? directFocusedRouteName ?? route.name;
+}
+
 export default function Tabs() {
   const insets = useSafeAreaInsets();
 
@@ -37,11 +54,15 @@ export default function Tabs() {
         name="HomeTab"
         component={HomeStack}
         options={({ route }) => {
-          const routeName = getFocusedRouteNameFromRoute(route) ?? "Home";
+          const routeName = getDeepFocusedRouteName(route) ?? "Home";
           const isMeetingScanner = routeName === "ShareholdersMeetingScanner";
 
           return {
             title: "Trang chủ",
+            tabBarActiveTintColor: isMeetingScanner ? "#fff" : "#E31E24", // ← thêm dòng này
+            tabBarInactiveTintColor: isMeetingScanner
+              ? "rgba(255,255,255,0.68)"
+              : undefined, // ← thêm dòng này
             tabBarIcon: ({ color }) => (
               <Ionicons name="home" size={24} color={color} />
             ),

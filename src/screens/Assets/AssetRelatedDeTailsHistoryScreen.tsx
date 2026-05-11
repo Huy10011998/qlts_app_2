@@ -1,11 +1,11 @@
 import React from "react";
-import { StyleSheet, View } from "react-native";
 import TabContent from "../../components/tabs/TabContent";
 import AssetHistoryDetails from "../../components/assets/AssetHistoryDetails";
+import ScreenContainer from "../shared/ScreenContainer";
 
 export default function AssetRelatedDeTailsHistoryScreen() {
   return (
-    <View style={styles.container}>
+    <ScreenContainer>
       <AssetHistoryDetails>
         {({
           activeTab,
@@ -30,10 +30,6 @@ export default function AssetRelatedDeTailsHistoryScreen() {
           />
         )}
       </AssetHistoryDetails>
-    </View>
+    </ScreenContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F0F2F8" },
-});

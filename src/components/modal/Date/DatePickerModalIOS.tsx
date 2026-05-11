@@ -1,15 +1,9 @@
 import { useEffect, useState } from "react";
-import {
-  Modal,
-  Platform,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Platform, View } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import Ionicons from "react-native-vector-icons/Ionicons";
 import { formatDMY, parseDate } from "../../../utils/Date";
+import IosSpinnerPickerSheet from "../../dataPicker/shared/IosSpinnerPickerSheet";
+import PickerFieldTrigger from "../../dataPicker/shared/PickerFieldTrigger";
 
 export const DatePickerModalIOS = ({
   value,
@@ -47,101 +41,30 @@ export const DatePickerModalIOS = ({
 
   return (
     <View style={{ position: "relative" }}>
-      <TouchableOpacity
-        style={styles.input}
+      <PickerFieldTrigger
+        iconName="calendar-outline"
+        placeholder="Chọn Ngày (dd-MM-yyyy)"
+        value={value}
         onPress={() => {
           setTempDate(parseDate(value));
           setShowPicker(true);
         }}
-        activeOpacity={0.8}
-      >
-        <Text style={{ color: value ? "#000" : "#999", flex: 1 }}>
-          {value || "Chọn Ngày (dd-MM-yyyy)"}
-        </Text>
+      />
 
-        <Ionicons name="time-outline" size={24} color="#E31E24" />
-      </TouchableOpacity>
-
-      <Modal
+      <IosSpinnerPickerSheet
         visible={showPicker}
-        transparent
-        animationType="slide"
-        onRequestClose={handleCancelDate}
+        onCancel={handleCancelDate}
+        onConfirm={handleConfirmDate}
       >
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1}>
-          <View style={styles.pickerContainer}>
-            <View style={styles.toolbar}>
-              <TouchableOpacity onPress={handleCancelDate}>
-                <Text style={styles.toolbarText}>Hủy</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleConfirmDate}>
-                <Text style={[styles.toolbarText, { fontWeight: "bold" }]}>
-                  Chọn
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.datePickerBox}>
-              <DateTimePicker
-                value={tempDate}
-                mode="date"
-                display="spinner"
-                onChange={handleDateChange}
-                textColor="#000"
-                {...(Platform.OS === "ios" ? { themeVariant: "light" } : {})}
-              />
-            </View>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+        <DateTimePicker
+          value={tempDate}
+          mode="date"
+          display="spinner"
+          onChange={handleDateChange}
+          textColor="#000"
+          {...(Platform.OS === "ios" ? { themeVariant: "light" } : {})}
+        />
+      </IosSpinnerPickerSheet>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  input: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: "#fff",
-  },
-
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "flex-end",
-  },
-
-  pickerContainer: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    overflow: "hidden",
-  },
-
-  toolbar: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderColor: "#eee",
-  },
-
-  toolbarText: {
-    fontSize: 18,
-    color: "#E31E24",
-  },
-
-  datePickerBox: {
-    backgroundColor: "#fff",
-    height: 250,
-    width: "100%",
-    alignItems: "center",
-  },
-});

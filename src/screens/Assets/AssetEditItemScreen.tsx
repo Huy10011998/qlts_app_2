@@ -1,15 +1,11 @@
 import React from "react";
-import { StyleSheet, View } from "react-native";
 import AssetEditItem from "../../components/assets/AssetEditItem";
+import ScreenContainer from "../shared/ScreenContainer";
 
 export default function AssetEditItemScreen() {
   return (
-    <View style={styles.container}>
+    <ScreenContainer>
       <AssetEditItem />
-    </View>
+    </ScreenContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F0F2F8" },
-});

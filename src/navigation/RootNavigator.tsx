@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { Alert, Platform } from "react-native";
+import { Alert } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import AppNavigator from "./AppNavigator.tsx";
 import AuthNavigator from "./AuthNavigator.tsx";
@@ -9,6 +9,10 @@ import { RootState } from "../store/index.ts";
 import { useSelector } from "react-redux";
 import { getPermission } from "../services/Index.tsx";
 import { useAppDispatch } from "../store/Hooks.ts";
+import {
+  canAccessAppNavigator,
+  canLoadRootPermissions,
+} from "./shared/rootNavigationHelpers";
 
 export default function RootNavigator() {
   const {
@@ -50,8 +54,10 @@ export default function RootNavigator() {
 
   // ===== LOAD PERMISSIONS =====
   useEffect(() => {
-    const canLoadPermissions =
-      isAuthenticated && (Platform.OS !== "ios" || iosAuthenticated);
+    const canLoadPermissions = canLoadRootPermissions({
+      iosAuthenticated,
+      isAuthenticated,
+    });
 
     // ❌ không đủ điều kiện → clear
     if (!canLoadPermissions) {
@@ -92,17 +98,9 @@ export default function RootNavigator() {
     return <IsLoading />;
   }
 
-  // ===== ANDROID =====
-  if (Platform.OS === "android") {
-    return isAuthenticated ? <AppNavigator /> : <AuthNavigator />;
-  }
-
-  // ===== IOS =====
-  if (Platform.OS === "ios") {
-    if (!isAuthenticated) return <AuthNavigator />;
-    if (!iosAuthenticated) return <AuthNavigator />;
-    return <AppNavigator />;
-  }
-
-  return null;
+  return canAccessAppNavigator({ iosAuthenticated, isAuthenticated }) ? (
+    <AppNavigator />
+  ) : (
+    <AuthNavigator />
+  );
 }

@@ -50,7 +50,10 @@ function HeaderQrScannerButton({ onPress }: { onPress?: () => void }) {
       return;
     }
 
-    navigation.navigate("ScanTab", { screen: "Scan" });
+    navigation.navigate("ScanTab", {
+      screen: "Scan",
+      initial: false,
+    });
   };
 
   return (

@@ -1,7 +1,7 @@
 import axios from "axios";
 import { API_ENDPOINTS, BASE_URL } from "../../config/Index";
 import { ChangePasswordResponse, LoginResponse } from "../../types/Api.d";
-import { md5Hash } from "../../utils/Helper";
+import { md5Hash } from "../../utils/helpers/hash";
 import { error } from "../../utils/Logger";
 import { callApi } from "../data/CallApi";
 

@@ -1,10 +1,7 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect } from "react";
 import {
-  Animated,
-  AppState,
   Linking,
   Modal,
-  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -14,15 +11,15 @@ import {
   Camera,
   Code,
   CodeScanner,
-  useCameraDevice,
-  useCameraFormat,
   useCodeScanner,
 } from "react-native-vision-camera";
-import { request, PERMISSIONS, RESULTS } from "react-native-permissions";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import ReactNativeHapticFeedback from "react-native-haptic-feedback";
 import { QrScannerModalProps } from "../../types";
+import QrScannerGateView from "./shared/QrScannerGateView";
+import QrScannerViewportOverlay from "./shared/QrScannerViewportOverlay";
+import useQrScannerController from "./shared/useQrScannerController";
 
 export default function QrScannerModal({
   visible,
@@ -33,103 +30,50 @@ export default function QrScannerModal({
   onScan,
 }: QrScannerModalProps) {
   const insets = useSafeAreaInsets();
-  const [appState, setAppState] = useState(AppState.currentState);
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [initTimeout, setInitTimeout] = useState(false);
-  const [isTorchOn, setIsTorchOn] = useState(false);
-  const [isScannerPaused, setIsScannerPaused] = useState(false);
-  const scannedRef = useRef(false);
-  const initTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const scanLineAnim = useRef(new Animated.Value(0)).current;
-  const scanLoopRef = useRef<Animated.CompositeAnimation | null>(null);
-  const device = useCameraDevice("back");
-  const format =
-    useCameraFormat(device, [
-      { videoResolution: { width: 1280, height: 720 } },
-      { fps: 30 },
-    ]) ?? device?.formats[0];
-
-  const cameraActive = visible && appState === "active" && !isScannerPaused;
-
-  useEffect(() => {
-    const sub = AppState.addEventListener("change", setAppState);
-    return () => sub.remove();
-  }, []);
-
-  const startScanLine = useCallback(() => {
-    scanLineAnim.setValue(0);
-    scanLoopRef.current = Animated.loop(
-      Animated.timing(scanLineAnim, {
-        toValue: 1,
-        duration: 2200,
-        useNativeDriver: true,
-      }),
-    );
-    scanLoopRef.current.start();
-  }, [scanLineAnim]);
-
-  const stopScanLine = useCallback(() => {
-    scanLoopRef.current?.stop();
-  }, []);
-
-  const pauseScanner = useCallback(() => {
-    scannedRef.current = true;
-    setIsScannerPaused(true);
-    stopScanLine();
-  }, [stopScanLine]);
-
-  const resumeScanner = useCallback(() => {
-    scannedRef.current = false;
-    setIsScannerPaused(false);
-    startScanLine();
-  }, [startScanLine]);
+  const {
+    activateScanner,
+    cameraActive,
+    clearInitTimeoutTimer,
+    device,
+    format,
+    hasPermission,
+    initTimeout,
+    isTorchOn,
+    pauseScanner,
+    resetScannerSession,
+    resumeScanner,
+    scanLineAnim,
+    scannedRef,
+    setIsTorchOn,
+    startInitTimeoutTimer,
+  } = useQrScannerController({ enabled: visible });
 
   const closeScanner = useCallback(() => {
     pauseScanner();
-    setIsTorchOn(false);
-    setInitTimeout(false);
-    if (initTimerRef.current) {
-      clearTimeout(initTimerRef.current);
-      initTimerRef.current = null;
-    }
+    resetScannerSession();
+    clearInitTimeoutTimer();
     onClose();
-  }, [onClose, pauseScanner]);
-
-  const checkPermission = useCallback(async () => {
-    const result =
-      Platform.OS === "ios"
-        ? await request(PERMISSIONS.IOS.CAMERA)
-        : await request(PERMISSIONS.ANDROID.CAMERA);
-    setHasPermission(result === RESULTS.GRANTED);
-  }, []);
+  }, [clearInitTimeoutTimer, onClose, pauseScanner, resetScannerSession]);
 
   useEffect(() => {
     if (!visible) return;
 
-    scannedRef.current = false;
-    setIsScannerPaused(false);
-    setInitTimeout(false);
-    setIsTorchOn(false);
-    void checkPermission();
-    startScanLine();
-
-    initTimerRef.current = setTimeout(() => {
-      setInitTimeout(true);
-    }, 5000);
+    resetScannerSession();
+    activateScanner();
+    startInitTimeoutTimer();
 
     return () => {
-      if (initTimerRef.current) {
-        clearTimeout(initTimerRef.current);
-        initTimerRef.current = null;
-      }
-      stopScanLine();
+      clearInitTimeoutTimer();
+      pauseScanner();
     };
-  }, [checkPermission, startScanLine, stopScanLine, visible]);
-
-  useEffect(() => {
-    if (appState !== "active" || hasPermission === true || !visible) return;
-    void checkPermission();
-  }, [appState, checkPermission, hasPermission, visible]);
+  }, [
+    activateScanner,
+    clearInitTimeoutTimer,
+    pauseScanner,
+    resetScannerSession,
+    startInitTimeoutTimer,
+    visible,
+  ]);
 
   const codeScanner: CodeScanner = useCodeScanner({
     codeTypes: ["qr"],
@@ -159,56 +103,22 @@ export default function QrScannerModal({
     >
       <SafeAreaView style={styles.root}>
         {hasPermission === null ? null : !hasPermission ? (
-          <View style={styles.gateContent}>
-            <TouchableOpacity
-              style={styles.backBtn}
-              hitSlop={10}
-              onPress={closeScanner}
-            >
-              <Ionicons name={closeIconName} size={24} color="#333" />
-            </TouchableOpacity>
-
-            <Ionicons name="camera-off-outline" size={56} color="#999" />
-            <Text style={styles.gateTitle}>Không có quyền camera</Text>
-            <Text style={styles.gateDesc}>
-              Ứng dụng cần quyền camera để quét mã QR.
-            </Text>
-            <TouchableOpacity
-              style={styles.settingsBtn}
-              onPress={() => Linking.openSettings()}
-            >
-              <Text style={styles.settingsBtnText}>Mở Cài đặt</Text>
-            </TouchableOpacity>
-          </View>
+          <QrScannerGateView
+            iconName="camera-off-outline"
+            title="Không có quyền camera"
+            description="Ứng dụng cần quyền camera để quét mã QR."
+            actionLabel="Mở Cài đặt"
+            onAction={Linking.openSettings}
+            onBack={closeScanner}
+          />
         ) : !device || !format ? (
-          <View style={styles.gateContent}>
-            <TouchableOpacity
-              style={styles.backBtn}
-              hitSlop={10}
-              onPress={closeScanner}
-            >
-              <Ionicons name={closeIconName} size={24} color="#333" />
-            </TouchableOpacity>
-
-            {initTimeout ? (
-              <>
-                <Ionicons
-                  name="alert-circle-outline"
-                  size={56}
-                  color="#FF3B30"
-                />
-                <Text style={styles.gateTitle}>Không thể mở camera</Text>
-                <Text style={styles.gateDesc}>
-                  Camera không phản hồi. Vui lòng thử lại.
-                </Text>
-              </>
-            ) : (
-              <>
-                <Ionicons name="camera-outline" size={56} color="#999" />
-                <Text style={styles.gateTitle}>Đang khởi tạo camera...</Text>
-              </>
-            )}
-          </View>
+          <QrScannerGateView
+            iconName={initTimeout ? "alert-circle-outline" : "camera-outline"}
+            iconColor={initTimeout ? "#FF3B30" : "#999"}
+            title={initTimeout ? "Không thể mở camera" : "Đang khởi tạo camera..."}
+            description={initTimeout ? "Camera không phản hồi. Vui lòng thử lại." : undefined}
+            onBack={closeScanner}
+          />
         ) : (
           <>
             <View style={StyleSheet.absoluteFill} pointerEvents="none">
@@ -250,31 +160,7 @@ export default function QrScannerModal({
               </TouchableOpacity>
             </View>
 
-            <View style={styles.overlay} pointerEvents="none">
-              <View style={styles.mask} />
-              <View style={styles.centerRow}>
-                <View style={styles.mask} />
-                <View style={styles.scanBox}>
-                  <Animated.View
-                    style={[
-                      styles.scanLine,
-                      {
-                        transform: [
-                          {
-                            translateY: scanLineAnim.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [0, 238],
-                            }),
-                          },
-                        ],
-                      },
-                    ]}
-                  />
-                </View>
-                <View style={styles.mask} />
-              </View>
-              <View style={styles.mask} />
-            </View>
+            <QrScannerViewportOverlay scanLineAnim={scanLineAnim} />
           </>
         )}
       </SafeAreaView>
@@ -284,44 +170,6 @@ export default function QrScannerModal({
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#000" },
-  gateContent: {
-    flex: 1,
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 32,
-  },
-  backBtn: {
-    position: "absolute",
-    top: 16,
-    left: 16,
-    zIndex: 1,
-  },
-  gateTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#222",
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  gateDesc: {
-    fontSize: 14,
-    color: "#666",
-    textAlign: "center",
-    lineHeight: 22,
-  },
-  settingsBtn: {
-    marginTop: 24,
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    backgroundColor: "#007AFF",
-    borderRadius: 10,
-  },
-  settingsBtnText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "600",
-  },
   header: {
     position: "absolute",
     left: 0,
@@ -347,18 +195,5 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.82)",
     fontSize: 12,
     marginTop: 2,
-  },
-  overlay: { ...StyleSheet.absoluteFillObject, zIndex: 1 },
-  mask: { flex: 1, backgroundColor: "rgba(0,0,0,0.55)" },
-  centerRow: { flexDirection: "row" },
-  scanBox: {
-    width: 240,
-    height: 240,
-    overflow: "hidden",
-    borderRadius: 16,
-  },
-  scanLine: {
-    height: 2,
-    backgroundColor: "#00FF88",
   },
 });

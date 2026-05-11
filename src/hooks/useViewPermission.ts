@@ -1,22 +1,24 @@
-import { useSelector } from "react-redux";
-import { RootState } from "../store";
+import {
+  buildViewPermissionKey,
+  hasFullPermission,
+  hasPermissionKey,
+  usePermissionState,
+} from "./shared/permissionHelpers";
 
 export function useViewPermission() {
-  const { permissions, loaded } = useSelector(
-    (state: RootState) => state.permission,
-  );
+  const { permissions, loaded } = usePermissionState();
 
-  const isFullPermission = () => permissions?.includes("Group.1");
+  const isFullAccess = () => hasFullPermission(permissions);
 
   const canView = (viewName: string) => {
     if (!loaded) return false;
-    if (isFullPermission()) return true;
+    if (isFullAccess()) return true;
     if (!permissions || permissions.length === 0) return false;
 
-    const key = `View.${viewName}`.toLowerCase();
+    const key = buildViewPermissionKey(viewName);
 
-    return permissions.some((permission) => permission.toLowerCase() === key);
+    return hasPermissionKey(permissions, key);
   };
 
-  return { canView, isFullPermission, loaded, permissions };
+  return { canView, isFullPermission: isFullAccess, loaded, permissions };
 }
