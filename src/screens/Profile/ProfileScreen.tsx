@@ -1,26 +1,15 @@
-import React, { useState, useEffect, useRef } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  ScrollView,
-  Dimensions,
-} from "react-native";
+import React, { useCallback, useState, useEffect, useRef } from "react";
+import { View, Text, StyleSheet, ScrollView } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import Svg, { Path } from "react-native-svg";
 import IsLoading from "../../components/ui/IconLoading";
+import EmptyState from "../../components/ui/EmptyState";
 import { API_ENDPOINTS } from "../../config/Index";
 import { User } from "../../types/Index";
 import { callApi } from "../../services/data/CallApi";
 import { error } from "../../utils/Logger";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
+import { C } from "../../utils/helpers/colors";
 
-const BRAND_RED = "#E31E24";
-const BG = "#F0F2F8";
-const { width: W } = Dimensions.get("window");
-
-// ─── Info row ─────────────────────────────────────────────────────────────────
 const InfoRow: React.FC<{
   iconName: string;
   iconBg: string;
@@ -72,7 +61,6 @@ const rowS = StyleSheet.create({
   value: { fontSize: 13.5, color: "#0F1923", fontWeight: "500" },
 });
 
-// ─── Section card ─────────────────────────────────────────────────────────────
 const Section: React.FC<{ title: string; children: React.ReactNode }> = ({
   title,
   children,
@@ -93,7 +81,7 @@ const secS = StyleSheet.create({
     width: 4,
     height: 14,
     borderRadius: 2,
-    backgroundColor: BRAND_RED,
+    backgroundColor: C.red,
     marginRight: 8,
   },
   title: {
@@ -114,14 +102,14 @@ const secS = StyleSheet.create({
   },
 });
 
-// ─── Screen ───────────────────────────────────────────────────────────────────
 const ProfileScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const { isMounted, showAlertIfActive } = useSafeAlert();
   const loadingRef = useRef(false);
 
-  const fetchUserInfo = async () => {
+  const fetchUserInfo = useCallback(async () => {
     if (loadingRef.current) return;
     loadingRef.current = true;
     if (isMounted()) setIsLoading(true);
@@ -131,30 +119,41 @@ const ProfileScreen: React.FC = () => {
         API_ENDPOINTS.GET_INFO,
         {},
       );
-      if (isMounted()) setUser(res.data);
+      if (isMounted()) {
+        setUser(res.data);
+        setHasLoadedOnce(true);
+      }
     } catch (e) {
       error("API error:", e);
+      if (isMounted()) {
+        setHasLoadedOnce(true);
+      }
       showAlertIfActive("Lỗi", "Không thể tải hồ sơ cá nhân.");
     } finally {
       loadingRef.current = false;
       if (isMounted()) setIsLoading(false);
     }
-  };
+  }, [isMounted, showAlertIfActive]);
 
   useEffect(() => {
     fetchUserInfo();
-  }, []);
+  }, [fetchUserInfo]);
 
-  if (isLoading || !user) return <IsLoading size="large" color={BRAND_RED} />;
+  if (isLoading || (!user && !hasLoadedOnce)) {
+    return <IsLoading size="large" color={C.red} />;
+  }
 
-  const initials = user.moTa
-    ? user.moTa
-        .split(" ")
-        .slice(-2)
-        .map((w: string) => w[0])
-        .join("")
-        .toUpperCase()
-    : "?";
+  if (!user) {
+    return (
+      <View style={s.emptyStateRoot}>
+        <EmptyState
+          iconName="person-circle-outline"
+          title="Không có hồ sơ cá nhân"
+          subtitle="Không thể tải dữ liệu hồ sơ của tài khoản hiện tại."
+        />
+      </View>
+    );
+  }
 
   return (
     <ScrollView
@@ -162,29 +161,6 @@ const ProfileScreen: React.FC = () => {
       contentContainerStyle={s.content}
       showsVerticalScrollIndicator={false}
     >
-      {/* ── Hero: nền đỏ liền với navigation header, có avatar + tên + wave ── */}
-      <View style={s.hero}>
-        <View style={s.blob1} />
-        <View style={s.blob2} />
-
-        {/* Wave chuyển tiếp đỏ → xám, paddingBottom = 0 để wave sát đáy */}
-        <Svg
-          width={W}
-          height={32}
-          viewBox={`0 0 ${W} 32`}
-          style={{ marginTop: 16 }}
-        >
-          <Path
-            d={`M0,6 C${W * 0.25},28 ${W * 0.5},0 ${W * 0.75},20 C${
-              W * 0.88
-            },30 ${W},8 ${W},32 L${W},32 L0,32 Z`}
-            fill={BG}
-          />
-        </Svg>
-      </View>
-
-      <View style={{ height: 12 }} />
-
       <Section title="THÔNG TIN CƠ BẢN">
         <InfoRow
           iconName="person-outline"
@@ -207,7 +183,7 @@ const ProfileScreen: React.FC = () => {
         <InfoRow
           iconName="business-outline"
           iconBg="#FFF5F5"
-          iconColor={BRAND_RED}
+          iconColor={C.red}
           label="Đơn vị"
           value={user.donVi}
         />
@@ -256,36 +232,13 @@ const ProfileScreen: React.FC = () => {
   );
 };
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: BG },
+  root: { flex: 1, backgroundColor: C.bg, paddingTop: 16 },
+  emptyStateRoot: {
+    flex: 1,
+    backgroundColor: C.bg,
+  },
   content: { paddingBottom: 40 },
-
-  hero: {
-    backgroundColor: BRAND_RED,
-    alignItems: "center",
-    paddingTop: 20,
-    paddingBottom: 0, // wave tự fill, không cần padding dưới
-    overflow: "hidden",
-  },
-  blob1: {
-    position: "absolute",
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: "rgba(255,255,255,0.07)",
-    top: -50,
-    right: -40,
-  },
-  blob2: {
-    position: "absolute",
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    backgroundColor: "rgba(0,0,0,0.06)",
-    bottom: 10,
-    left: -20,
-  },
 });
 
 export default ProfileScreen;

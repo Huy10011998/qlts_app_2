@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { tuDongTang } from "../../services/data/CallApi";
 
 interface Props {
@@ -13,37 +13,72 @@ interface Props {
 export function useAutoIncrementCode({
   nameClass,
   propertyClass,
+  formData,
   rawTreeValues,
   parentValue,
   setFormData,
 }: Props) {
   const requestIdRef = useRef(0); // chống race
+  const lastAutoValueRef = useRef<string | null>(null);
+  const manualOverrideRef = useRef(false);
 
   const fieldName = propertyClass?.propertyTuDongTang;
+  const currentFieldValue =
+    fieldName && formData ? formData[fieldName] : undefined;
 
-  const fetchAutoCode = async (parent?: any) => {
-    if (!propertyClass?.isTuDongTang || !nameClass || !fieldName) return;
+  useEffect(() => {
+    if (!fieldName) return;
 
-    const requestId = ++requestIdRef.current;
+    const normalizedCurrentValue =
+      currentFieldValue == null ? "" : String(currentFieldValue);
+    const lastAutoValue = lastAutoValueRef.current;
 
-    const res = await tuDongTang(nameClass, {
-      propertyTuDongTang: fieldName,
-      formatTuDongTang: propertyClass.formatTuDongTang,
-      prentTuDongTang: propertyClass.prentTuDongTang,
-      prentTuDongTang_Value: parent === undefined ? "" : String(parent),
-      prefix: propertyClass.prefix,
-    });
+    if (lastAutoValue == null) return;
 
-    // nếu không phải request mới nhất → bỏ
-    if (requestId !== requestIdRef.current) return;
+    if (normalizedCurrentValue === lastAutoValue) {
+      manualOverrideRef.current = false;
+      return;
+    }
 
-    if (!res?.data) return;
+    // Người dùng đã tự sửa/xóa mã sau khi hệ thống sinh ra
+    manualOverrideRef.current = true;
+  }, [currentFieldValue, fieldName]);
 
-    setFormData((prev: any) => ({
-      ...prev,
-      [fieldName]: res.data,
-    }));
-  };
+  const fetchAutoCode = useCallback(
+    async (parent?: any) => {
+      if (!propertyClass?.isTuDongTang || !nameClass || !fieldName) return;
+      if (manualOverrideRef.current) return;
+
+      const requestId = ++requestIdRef.current;
+
+      const res = await tuDongTang(nameClass, {
+        propertyTuDongTang: fieldName,
+        formatTuDongTang: propertyClass.formatTuDongTang,
+        prentTuDongTang: propertyClass.prentTuDongTang,
+        prentTuDongTang_Value: parent === undefined ? "" : String(parent),
+        prefix: propertyClass.prefix,
+      });
+
+      if (requestId !== requestIdRef.current) return;
+      if (!res?.data) return;
+
+      lastAutoValueRef.current = String(res.data);
+
+      setFormData((prev: any) => ({
+        ...prev,
+        [fieldName]: res.data,
+      }));
+    },
+    [
+      fieldName,
+      nameClass,
+      propertyClass?.formatTuDongTang,
+      propertyClass?.isTuDongTang,
+      propertyClass?.prentTuDongTang,
+      propertyClass?.prefix,
+      setFormData,
+    ],
+  );
 
   /* INIT */
   useEffect(() => {
@@ -55,12 +90,12 @@ export function useAutoIncrementCode({
       .join(",");
 
     fetchAutoCode(validParentValues);
-  }, [rawTreeValues]);
+  }, [fetchAutoCode, propertyClass?.prentTuDongTang, rawTreeValues]);
 
   /* PARENT CHANGE */
   useEffect(() => {
     if (parentValue === undefined) return;
 
     fetchAutoCode(parentValue);
-  }, [parentValue]);
+  }, [fetchAutoCode, parentValue]);
 }

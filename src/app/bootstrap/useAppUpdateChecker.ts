@@ -68,13 +68,13 @@ export function useAppUpdateChecker({
             text: "Để sau",
             style: "cancel",
             onPress: () => {
-              void markUpdateReminderDismissed(versionInfo.latestVersion);
+              markUpdateReminderDismissed(versionInfo.latestVersion);
             },
           },
           {
             text: "Cập nhật",
             onPress: () => {
-              void openStoreForUpdate(versionInfo.storeUrl);
+              openStoreForUpdate(versionInfo.storeUrl);
             },
           },
         ],
@@ -94,7 +94,7 @@ export function useAppUpdateChecker({
     if (!canCheckUpdate || hasCheckedUpdateRef.current) return;
 
     hasCheckedUpdateRef.current = true;
-    void checkAppUpdateRef.current();
+    checkAppUpdateRef.current();
   }, [authReady, iosAuthenticated, isAuthenticated]);
 
   return {

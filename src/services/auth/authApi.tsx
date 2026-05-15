@@ -2,7 +2,7 @@ import axios from "axios";
 import { API_ENDPOINTS, BASE_URL } from "../../config/Index";
 import { ChangePasswordResponse, LoginResponse } from "../../types/Api.d";
 import { md5Hash } from "../../utils/helpers/hash";
-import { error } from "../../utils/Logger";
+import { error, log } from "../../utils/Logger";
 import { callApi } from "../data/CallApi";
 
 export const authApi = axios.create({
@@ -15,7 +15,7 @@ export const authApi = axios.create({
 
 export const loginApi = async (
   userName: string,
-  userPassword: string
+  userPassword: string,
 ): Promise<LoginResponse> => {
   try {
     const hashedPassword = await md5Hash(userPassword);
@@ -34,20 +34,23 @@ export const loginApi = async (
 
 export const changePasswordApi = async (
   oldPassword: string,
-  newPassword: string
+  newPassword: string,
 ): Promise<ChangePasswordResponse> => {
   try {
     const hashedOldPassword = await md5Hash(oldPassword);
     const hashedNewPassword = await md5Hash(newPassword);
 
-    return await callApi<ChangePasswordResponse>(
+    const response = await callApi<ChangePasswordResponse>(
       "POST",
       API_ENDPOINTS.CHANGE_PASSWORD,
       {
         oldPassword: hashedOldPassword,
         newPassword: hashedNewPassword,
-      }
+      },
     );
+
+    log("[Auth] ChangePassword API response:", response);
+    return response;
   } catch (e) {
     error("[Auth] ChangePassword API error:", e);
     throw e;

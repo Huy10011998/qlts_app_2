@@ -4,8 +4,8 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 // =====================================================
 // COMMON TYPES
 // =====================================================
-export type AssetField = unknown;
-export type AssetItem = Record<string, unknown>;
+export type AssetField = string;
+export type AssetItem = Record<string, any>;
 
 export type PropertyClass = {
   isTuDongTang?: boolean;
@@ -21,17 +21,18 @@ export type OptionalParams = {
   nameClass?: string;
   nameClassRoot?: string;
   id?: string;
-  field?: any;
+  field?: AssetField;
   name?: string;
   idRoot?: string;
   logID?: number;
   id_previous?: string;
-  item?: Record<string, any>;
+  item?: AssetItem;
   mode?: string;
   activeTab?: string;
   titleHeader?: string;
   propertyClass?: PropertyClass;
-  itemData?: Record<string, any>;
+  itemData?: AssetItem;
+  returnTo?: "assetList" | "assetRelatedList";
 };
 
 // =====================================================
@@ -46,7 +47,7 @@ export type ScanTabParamList = {
     nameClass?: string;
     field?: AssetField;
     propertyClass?: PropertyClass;
-    itemData?: Record<string, any>;
+    itemData?: AssetItem;
   };
 };
 
@@ -170,6 +171,9 @@ export type RootStackParamList = {
     titleHeader?: string;
     field?: AssetField;
     propertyClass?: PropertyClass;
+    idRoot?: string;
+    propertyReference?: string;
+    nameClassRoot?: string;
   };
 
   AssetAddRelatedItem: {
@@ -210,6 +214,11 @@ export type RootStackParamList = {
     field: string;
     nameClass?: string;
     propertyClass?: PropertyClass;
+    returnTo?: "assetList" | "assetRelatedList";
+    idRoot?: string;
+    propertyReference?: string;
+    nameClassRoot?: string;
+    titleHeader?: string;
   };
 
   /** ================= SHAREHOLDERS MEETING ================= */

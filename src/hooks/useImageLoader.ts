@@ -36,5 +36,5 @@ export const useImageLoader = ({
         }
       },
     );
-  }, [formData]);
+  }, [fetchImage, fieldActive, formData, setImages, setLoadingImages]);
 };

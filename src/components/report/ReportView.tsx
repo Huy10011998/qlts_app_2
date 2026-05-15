@@ -16,6 +16,7 @@ import { error } from "../../utils/Logger";
 import { formatToSlash, validateDates } from "../../utils/Date";
 import { DatePicker } from "../dataPicker/DataPicker";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
+import { C } from "../../utils/helpers/colors";
 
 const ReportView: React.FC<ReportViewProps> = ({ title, onClose }) => {
   const [fromDate, setFromDate] = useState<string>("");
@@ -90,32 +91,23 @@ const ReportView: React.FC<ReportViewProps> = ({ title, onClose }) => {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#fff" }}>
-      {/* Header */}
+    <View style={styles.container}>
       <View
-        style={{
-          paddingTop: Platform.OS === "ios" ? 50 : 20,
-          paddingHorizontal: 16,
-          paddingBottom: 10,
-          backgroundColor: "#E31E24",
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
+        style={[
+          styles.header,
+          Platform.OS === "ios" ? styles.headerIos : styles.headerAndroid,
+        ]}
       >
-        <Text style={{ fontSize: 18, fontWeight: "bold", color: "#fff" }}>
-          {title}
-        </Text>
+        <Text style={styles.title}>{title}</Text>
 
         <TouchableOpacity onPress={onClose}>
           <Ionicons name="close" size={30} color="#fff" />
         </TouchableOpacity>
       </View>
 
-      {/* Bộ lọc ngày */}
-      <View style={{ padding: 16, gap: 12 }}>
+      <View style={styles.form}>
         <DatePicker
-          value={fromDate.replace(/\//g, "-")} // convert dd/MM/yyyy → dd-MM-yyyy
+          value={fromDate.replace(/\//g, "-")}
           onChange={(val) => setFromDate(formatToSlash(val))}
         />
 
@@ -125,33 +117,27 @@ const ReportView: React.FC<ReportViewProps> = ({ title, onClose }) => {
         />
 
         <TouchableOpacity
-          style={{
-            backgroundColor: "#E31E24",
-            paddingVertical: 14,
-            borderRadius: 8,
-            alignItems: "center",
-            opacity: loading ? 0.7 : 1,
-          }}
+          style={[
+            styles.submitButton,
+            loading && styles.submitButtonLoading,
+          ]}
           onPress={handleSubmit}
           disabled={loading}
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={{ color: "#fff", fontSize: 16, fontWeight: "bold" }}>
-              Thực hiện
-            </Text>
+            <Text style={styles.submitButtonText}>Thực hiện</Text>
           )}
         </TouchableOpacity>
       </View>
 
-      {/* Hiển thị PDF */}
-      <View style={{ flex: 1 }}>
+      <View style={styles.reportContainer}>
         {reportHtml && (
           <WebView
             originWhitelist={["*"]}
             source={{ html: reportHtml }}
-            style={{ flex: 1 }}
+            style={styles.reportWebView}
             javaScriptEnabled
             domStorageEnabled
             nestedScrollEnabled
@@ -164,3 +150,53 @@ const ReportView: React.FC<ReportViewProps> = ({ title, onClose }) => {
 };
 
 export default ReportView;
+
+const styles = {
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  header: {
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+    backgroundColor: C.red,
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const,
+  },
+  headerIos: {
+    paddingTop: 50,
+  },
+  headerAndroid: {
+    paddingTop: 20,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: "bold" as const,
+    color: "#fff",
+  },
+  form: {
+    padding: 16,
+    gap: 12,
+  },
+  submitButton: {
+    backgroundColor: C.red,
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: "center" as const,
+  },
+  submitButtonLoading: {
+    opacity: 0.7,
+  },
+  submitButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold" as const,
+  },
+  reportContainer: {
+    flex: 1,
+  },
+  reportWebView: {
+    flex: 1,
+  },
+};

@@ -36,7 +36,7 @@ export default function AssetListSearchBar({
           value={value}
           onChangeText={onChangeText}
           style={styles.searchInput}
-          clearButtonMode="while-editing"
+          clearButtonMode="never"
           returnKeyType="search"
         />
         {isSearching && (

@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import EmptyState from "../../../components/ui/EmptyState";
 import { C } from "../../../utils/helpers/colors";
 import BottomSheetModalShell from "../../../components/shared/BottomSheetModalShell";
 import { MeetingOpinion } from "./shareholdersMeetingHelpers";
@@ -22,6 +23,10 @@ type OpinionPickerModalProps = {
   onSelect: (id: string) => void;
 };
 
+function OpinionSeparator() {
+  return <View style={styles.separator} />;
+}
+
 export default function OpinionPickerModal({
   visible,
   opinions,
@@ -31,6 +36,43 @@ export default function OpinionPickerModal({
   onClose,
   onSelect,
 }: OpinionPickerModalProps) {
+  const renderOpinionItem = React.useCallback(
+    ({ item }: { item: MeetingOpinion }) => {
+      const isSelected = item.id === selectedOpinionId;
+      const title = item.code ? `${item.code} - ${item.title}` : item.title;
+
+      return (
+        <TouchableOpacity
+          style={[styles.item, isSelected && styles.itemActive]}
+          activeOpacity={0.9}
+          onPress={() => onSelect(item.id)}
+        >
+          <View style={styles.itemTextWrap}>
+            <Text
+              style={[
+                styles.itemTitle,
+                isSelected && styles.itemTitleActive,
+              ]}
+            >
+              {title}
+            </Text>
+            {!!item.description && (
+              <Text style={styles.itemDesc} numberOfLines={2}>
+                {item.description}
+              </Text>
+            )}
+          </View>
+          <MaterialCommunityIcons
+            name={isSelected ? "radiobox-marked" : "radiobox-blank"}
+            size={22}
+            color={isSelected ? C.accent : C.textMuted}
+          />
+        </TouchableOpacity>
+      );
+    },
+    [onSelect, selectedOpinionId],
+  );
+
   return (
     <BottomSheetModalShell
       visible={visible}
@@ -71,42 +113,14 @@ export default function OpinionPickerModal({
           styles.list,
           opinions.length === 0 && styles.listEmpty,
         ]}
-        renderItem={({ item }) => {
-          const isSelected = item.id === selectedOpinionId;
-          const title = item.code ? `${item.code} - ${item.title}` : item.title;
-
-          return (
-            <TouchableOpacity
-              style={[styles.item, isSelected && styles.itemActive]}
-              activeOpacity={0.9}
-              onPress={() => onSelect(item.id)}
-            >
-              <View style={styles.itemTextWrap}>
-                <Text
-                  style={[
-                    styles.itemTitle,
-                    isSelected && styles.itemTitleActive,
-                  ]}
-                >
-                  {title}
-                </Text>
-                {!!item.description && (
-                  <Text style={styles.itemDesc} numberOfLines={2}>
-                    {item.description}
-                  </Text>
-                )}
-              </View>
-              <MaterialCommunityIcons
-                name={isSelected ? "radiobox-marked" : "radiobox-blank"}
-                size={22}
-                color={isSelected ? C.accent : C.textMuted}
-              />
-            </TouchableOpacity>
-          );
-        }}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        renderItem={renderOpinionItem}
+        ItemSeparatorComponent={OpinionSeparator}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>Không tìm thấy ý kiến phù hợp.</Text>
+          <EmptyState
+            iconName="search-outline"
+            title="Không tìm thấy ý kiến"
+            subtitle="Thử tìm kiếm với từ khóa khác"
+          />
         }
       />
     </BottomSheetModalShell>
@@ -161,7 +175,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   list: { flexGrow: 1, paddingBottom: 12 },
-  listEmpty: { justifyContent: "center" },
+  listEmpty: { paddingBottom: 0 },
   item: {
     flexDirection: "row",
     alignItems: "center",
@@ -192,12 +206,4 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   separator: { height: 8 },
-  emptyText: {
-    color: C.textSecondary,
-    fontSize: 13,
-    textAlign: "center",
-    paddingVertical: 24,
-    lineHeight: 20,
-    alignSelf: "center",
-  },
 });

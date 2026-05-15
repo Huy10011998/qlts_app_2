@@ -1,5 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, FlatList, Alert } from "react-native";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { View, Text, StyleSheet, FlatList } from "react-native";
 import { useParams } from "../../hooks/useParams";
 import { Conditions, FileItem } from "../../types";
 import { SqlOperator, TypeProperty, CategoryFiles } from "../../utils/Enum";
@@ -19,8 +25,8 @@ export default function AssetListAttachFile() {
   const [file, setFile] = useState<FileItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [skipSize, setSkipSize] = useState(0);
   const [total, setTotal] = useState(0);
+  const skipSizeRef = useRef(0);
 
   const { id, nameClass: paramNameClass } = useParams();
   const nameClass = paramNameClass;
@@ -53,7 +59,7 @@ export default function AssetListAttachFile() {
       else setIsLoading(true);
 
       try {
-        const currentSkip = isLoadMore ? skipSize : 0;
+        const currentSkip = isLoadMore ? skipSizeRef.current : 0;
         const response = await getListAttachFile(
           nameClass,
           "",
@@ -68,10 +74,11 @@ export default function AssetListAttachFile() {
 
         if (isLoadMore) {
           setFile((prev) => [...prev, ...newItems]);
-          setSkipSize(currentSkip + pageSize);
+          const nextSkipSize = currentSkip + pageSize;
+          skipSizeRef.current = nextSkipSize;
         } else {
           setFile(newItems);
-          setSkipSize(pageSize);
+          skipSizeRef.current = pageSize;
         }
 
         setTotal(totalItems);
@@ -88,13 +95,13 @@ export default function AssetListAttachFile() {
         }
       }
     },
-    [nameClass, skipSize, conditions],
+    [conditions, isMounted, nameClass, showAlertIfActive],
   );
 
   useEffect(() => {
     if (!nameClass) return;
     fetchData();
-  }, [nameClass]);
+  }, [fetchData, nameClass]);
 
   useAutoReload(fetchData);
 
@@ -114,6 +121,8 @@ export default function AssetListAttachFile() {
   const categories = Object.keys(groupedData);
 
   if (isLoading) return <IsLoading size="large" color={BRAND_RED} />;
+
+  const isEmpty = categories.length === 0;
 
   return (
     <View style={styles.container}>
@@ -136,26 +145,30 @@ export default function AssetListAttachFile() {
             </View>
           );
         }}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          isEmpty && styles.listContentEmpty,
+        ]}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
         ListFooterComponent={isLoadingMore ? <IsLoading /> : null}
         ListEmptyComponent={
           <AssetListEmptyState
-            fullHeight
             iconName="document-outline"
             title="Chưa có tệp đính kèm"
             subtitle="Danh sách tệp sẽ hiển thị tại đây khi có dữ liệu."
           />
         }
         ListHeaderComponent={
-          <AssetListSummaryCard
-            iconName="attach-outline"
-            title="Danh sách tệp"
-            subtitle={`${total} tệp • hiển thị ${file.length}`}
-          />
+          isEmpty ? null : (
+            <AssetListSummaryCard
+              iconName="attach-outline"
+              title="Danh sách tệp"
+              subtitle={`${total} tệp • hiển thị ${file.length}`}
+            />
+          )
         }
-        stickyHeaderIndices={[0]}
+        stickyHeaderIndices={isEmpty ? [] : [0]}
       />
     </View>
   );
@@ -166,7 +179,12 @@ const styles = StyleSheet.create({
   container: { ...sharedAssetListStyles.container, backgroundColor: BG },
   listContent: {
     ...sharedAssetListStyles.listContent,
+    paddingTop: 14,
     paddingBottom: 20,
+  },
+  listContentEmpty: {
+    paddingTop: 0,
+    paddingBottom: 0,
   },
   groupContainer: {
     marginHorizontal: 12,

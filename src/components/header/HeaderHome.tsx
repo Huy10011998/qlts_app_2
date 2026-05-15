@@ -14,11 +14,10 @@ import Svg, { Path } from "react-native-svg";
 import { StackNavigation } from "../../types/Navigator.d";
 import { HeaderHomeProps } from "../../types/Components.d";
 import { useNavigation } from "@react-navigation/native";
+import { C } from "../../utils/helpers/colors";
 
-const BRAND_RED = "#E31E24";
 const { width: W } = Dimensions.get("window");
 
-// ─── helpers ──────────────────────────────────────────────────────────────────
 const getGreeting = () => {
   const h = new Date().getHours();
   if (h < 12) return { text: "Chào buổi sáng", icon: "sunny-outline" };
@@ -37,15 +36,13 @@ const formatDate = (d: Date) =>
     year: "numeric",
   });
 
-// ─── Decorative wave at bottom of header ─────────────────────────────────────
 const HeaderWave: React.FC = () => (
   <Svg
     width={W}
     height={36}
     viewBox={`0 0 ${W} 36`}
-    style={{ position: "absolute", bottom: 0 }}
+    style={styles.headerWave}
   >
-    {/* two-layer wave for depth */}
     <Path
       d={`M0,8 C${W * 0.2},32 ${W * 0.4},0 ${W * 0.6},18 C${W * 0.8},36 ${
         W * 0.9
@@ -61,8 +58,7 @@ const HeaderWave: React.FC = () => (
   </Svg>
 );
 
-// ─── HeaderHome ───────────────────────────────────────────────────────────────
-export default function HeaderHome({}: HeaderHomeProps) {
+export default function HeaderHome(_props: HeaderHomeProps) {
   const navigation = useNavigation<StackNavigation<"Tabs">>();
   const insets = useSafeAreaInsets();
   const greeting = getGreeting();
@@ -74,14 +70,11 @@ export default function HeaderHome({}: HeaderHomeProps) {
   }, []);
 
   return (
-    // Outer container: red background so wave blends seamlessly
     <View style={[styles.outer, { paddingTop: insets.top }]}>
-      {/* Decorative circles for depth */}
       <View style={styles.deco1} />
       <View style={styles.deco2} />
       <View style={styles.deco3} />
 
-      {/* ── Top bar: logo + notification bell ── */}
       <View style={styles.topBar}>
         <TouchableOpacity
           onPress={() => Linking.openURL("https://cholimexfood.com.vn")}
@@ -99,7 +92,6 @@ export default function HeaderHome({}: HeaderHomeProps) {
         <View style={styles.topActions}>
           <TouchableOpacity style={styles.iconBtn} activeOpacity={0.75}>
             <Ionicons name="notifications-outline" size={20} color="#fff" />
-            {/* red dot badge */}
             <View style={styles.notifDot} />
           </TouchableOpacity>
           <TouchableOpacity
@@ -112,7 +104,6 @@ export default function HeaderHome({}: HeaderHomeProps) {
         </View>
       </View>
 
-      {/* ── Greeting block ── */}
       <View style={styles.greetRow}>
         <View style={styles.greetLeft}>
           <View style={styles.greetIconWrap}>
@@ -129,30 +120,36 @@ export default function HeaderHome({}: HeaderHomeProps) {
             name="time-outline"
             size={11}
             color="rgba(255,255,255,0.7)"
-            style={{ marginRight: 4 }}
+            style={styles.timeIcon}
           />
           <Text style={styles.timeText}>{formatTime(now)}</Text>
         </View>
       </View>
 
-      {/* ── Date chip ── */}
       <Text style={styles.dateText}>{formatDate(now)}</Text>
 
-      {/* spacer before wave */}
-      <View style={{ height: 36 }}>
+      <View style={styles.waveContainer}>
         <HeaderWave />
       </View>
     </View>
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   outer: {
-    backgroundColor: BRAND_RED,
+    backgroundColor: C.red,
     overflow: "hidden",
   },
-  // decorative blobs
+  headerWave: {
+    position: "absolute",
+    bottom: 0,
+  },
+  timeIcon: {
+    marginRight: 4,
+  },
+  waveContainer: {
+    height: 36,
+  },
   deco1: {
     position: "absolute",
     width: 160,
@@ -191,7 +188,7 @@ const styles = StyleSheet.create({
   },
   logoWrap: {
     backgroundColor: "#fff",
-    borderRadius: 50, // oval — follows the rounded logo shape
+    borderRadius: 50,
     paddingHorizontal: 10,
     paddingVertical: 5,
     shadowColor: "#000",
@@ -226,7 +223,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: "#FFD60A",
     borderWidth: 1.5,
-    borderColor: BRAND_RED,
+    borderColor: C.red,
   },
 
   greetRow: {

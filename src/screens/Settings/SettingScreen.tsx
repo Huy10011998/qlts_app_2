@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -36,6 +36,8 @@ import {
   FACE_ID_MARKER_USERNAME,
 } from "../../constants/AuthStorage";
 import { C } from "../../utils/helpers/colors";
+import EmptyState from "../../components/ui/EmptyState";
+import { warn } from "../../utils/Logger";
 import SettingWaveDivider from "./shared/SettingWaveDivider";
 import SettingProfileHeader from "./shared/SettingProfileHeader";
 import SettingSectionGroup from "./shared/SettingSectionGroup";
@@ -88,25 +90,31 @@ const SettingScreen = () => {
     isFocusedRef.current = isFocused;
   }, [isFocused]);
 
-  const canUpdateScreen = () =>
-    isMountedRef.current &&
-    isScreenActiveRef.current &&
-    isFocusedRef.current &&
-    !isLoggingOutRef.current &&
-    logoutReason !== "EXPIRED";
+  const canUpdateScreen = useCallback(
+    () =>
+      isMountedRef.current &&
+      isScreenActiveRef.current &&
+      isFocusedRef.current &&
+      !isLoggingOutRef.current &&
+      logoutReason !== "EXPIRED",
+    [logoutReason],
+  );
 
-  const showAlertIfActive = (title: string, message: string) => {
+  const showAlertIfActive = useCallback((title: string, message: string) => {
     if (!canUpdateScreen()) return;
     const now = Date.now();
     if (now - lastErrorAlertAtRef.current < 1500) return;
     lastErrorAlertAtRef.current = now;
     Alert.alert(title, message);
-  };
+  }, [canUpdateScreen]);
 
-  const isAuthExpiredError = (error: any) =>
-    error?.NEED_LOGIN ||
-    error?.response?.status === 401 ||
-    error?.response?.status === 403;
+  const isAuthExpiredError = useCallback(
+    (error: any) =>
+      error?.NEED_LOGIN ||
+      error?.response?.status === 401 ||
+      error?.response?.status === 403,
+    [],
+  );
 
   const fetchData = React.useCallback(async () => {
     if (loadingRef.current || !canUpdateScreen()) return;
@@ -155,7 +163,7 @@ const SettingScreen = () => {
         blockingLoaderActiveRef.current = false;
       }
     }
-  }, []);
+  }, [canUpdateScreen, isAuthExpiredError, showAlertIfActive]);
 
   useEffect(() => {
     if (!isFocused) {
@@ -242,10 +250,6 @@ const SettingScreen = () => {
       Alert.alert("Lỗi", "Vui lòng điền đầy đủ thông tin.");
       return;
     }
-    if (newPassword.length < 4) {
-      Alert.alert("Lỗi", "Mật khẩu mới phải có ít nhất 4 ký tự.");
-      return;
-    }
     if (newPassword !== confirmPassword) {
       Alert.alert("Lỗi", "Mật khẩu xác nhận không khớp.");
       return;
@@ -257,20 +261,37 @@ const SettingScreen = () => {
     setIsLoading(true);
     try {
       const response = await changePasswordApi(oldPassword, newPassword);
-      if (response?.success) {
-        const saved = await Keychain.getGenericPassword({
-          service: AUTH_LOGIN_SERVICE,
-        });
-        if (saved) {
-          await Keychain.setGenericPassword(saved.username, newPassword, {
+      const isChangePasswordSuccess =
+        response?.success === true ||
+        response?.data === 1 ||
+        (typeof response?.data === "object" &&
+          response?.data?.success === true);
+      const responseMessage =
+        response?.message ||
+        (typeof response?.data === "object"
+          ? response?.data?.message
+          : undefined) ||
+        "Đổi mật khẩu thất bại!";
+
+      if (isChangePasswordSuccess) {
+        try {
+          const saved = await Keychain.getGenericPassword({
             service: AUTH_LOGIN_SERVICE,
-            accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
           });
+          if (saved) {
+            await Keychain.setGenericPassword(saved.username, newPassword, {
+              service: AUTH_LOGIN_SERVICE,
+              accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+            });
+          }
+        } catch (storageError) {
+          warn("[Settings] Update saved password failed:", storageError);
         }
+
         Alert.alert("Thành công", "Đổi mật khẩu thành công!");
         closeModal();
       } else {
-        Alert.alert("Lỗi", response?.message || "Đổi mật khẩu thất bại!");
+        Alert.alert("Lỗi", responseMessage);
       }
     } catch (error: any) {
       if (isAuthExpiredError(error) || logoutReason === "EXPIRED") return;
@@ -288,6 +309,19 @@ const SettingScreen = () => {
     return <IsLoading size="large" color={C.red} />;
   }
 
+  if (!user) {
+    return (
+      <View style={styles.emptyStateRoot}>
+        <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
+        <EmptyState
+          iconName="person-circle-outline"
+          title="Không có thông tin người dùng"
+          subtitle="Không thể tải dữ liệu tài khoản hiện tại."
+        />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.root}>
       <StatusBar barStyle="light-content" backgroundColor={C.red} />
@@ -296,7 +330,6 @@ const SettingScreen = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Red gradient header zone ── */}
         <LinearGradient
           colors={[C.redLight, C.red, C.redDeep]}
           start={{ x: 0, y: 0 }}
@@ -311,7 +344,6 @@ const SettingScreen = () => {
           <SettingWaveDivider />
         </LinearGradient>
 
-        {/* ── Grey content zone ── */}
         <View style={styles.greyZone}>
           <SettingSectionGroup title="TÀI KHOẢN">
             <SettingRowItem
@@ -362,14 +394,12 @@ const SettingScreen = () => {
             />
           </SettingSectionGroup>
 
-          {/* Version tag */}
           <View style={styles.versionWrap}>
             <Text style={styles.versionText}>{appVersionLabel}</Text>
           </View>
         </View>
       </ScrollView>
 
-      {/* ── Change Password Modal ── */}
       <ChangePasswordModal
         visible={isModalVisible}
         isLoading={isLoading}
@@ -389,6 +419,10 @@ const SettingScreen = () => {
 // ─── Global Styles ────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
+  emptyStateRoot: {
+    flex: 1,
+    backgroundColor: C.bg,
+  },
   scroll: { flex: 1 },
   scrollContent: { flexGrow: 1 },
   redZone: {

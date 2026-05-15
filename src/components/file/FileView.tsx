@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useCallback, useEffect, useState, useRef } from "react";
 import {
   View,
   Modal,
@@ -8,7 +8,6 @@ import {
   Image,
   ScrollView,
   Dimensions,
-  Alert,
   Platform,
   Animated,
 } from "react-native";
@@ -18,6 +17,7 @@ import { getPreviewAttachFile } from "../../services/Index";
 import IsLoading from "../ui/IconLoading";
 import { error } from "../../utils/Logger";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
+import { C } from "../../utils/helpers/colors";
 
 export default function FileView({ visible, onClose, params }: ViewerProps) {
   const [fileData, setFileData] = useState<string | null>(null);
@@ -27,23 +27,31 @@ export default function FileView({ visible, onClose, params }: ViewerProps) {
 
   const windowHeight = Dimensions.get("window").height;
   const { isMounted, showAlertIfActive } = useSafeAlert();
-
-  // animation opacity
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
-    if (visible && params) {
-      fetchFile();
-    } else {
-      setFileData(null);
-      setFileType(null);
-      setUseUrlFallback(false);
-      setLoading(false);
-      fadeAnim.setValue(0);
-    }
-  }, [visible, params]);
+  const fadeIn = useCallback(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  }, [fadeAnim]);
 
-  const fetchFile = async () => {
+  const fadeOut = useCallback(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      if (isMounted()) {
+        setLoading(false);
+      }
+    });
+  }, [fadeAnim, isMounted]);
+
+  const fetchFile = useCallback(async () => {
+    if (!params) return;
+
     try {
       setLoading(true);
       fadeIn();
@@ -65,27 +73,19 @@ export default function FileView({ visible, onClose, params }: ViewerProps) {
     } finally {
       fadeOut();
     }
-  };
+  }, [fadeIn, fadeOut, isMounted, params, showAlertIfActive]);
 
-  const fadeIn = () => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 200,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const fadeOut = () => {
-    Animated.timing(fadeAnim, {
-      toValue: 0,
-      duration: 300,
-      useNativeDriver: true,
-    }).start(() => {
-      if (isMounted()) {
-        setLoading(false);
-      }
-    });
-  };
+  useEffect(() => {
+    if (visible && params) {
+      fetchFile();
+    } else {
+      setFileData(null);
+      setFileType(null);
+      setUseUrlFallback(false);
+      setLoading(false);
+      fadeAnim.setValue(0);
+    }
+  }, [fadeAnim, fetchFile, params, visible]);
 
   const renderFile = () => {
     if (!fileType || (!fileData && !useUrlFallback)) return null;
@@ -98,20 +98,12 @@ export default function FileView({ visible, onClose, params }: ViewerProps) {
         <ScrollView
           maximumZoomScale={5}
           minimumZoomScale={1}
-          contentContainerStyle={{
-            flex: 1,
-            justifyContent: "center",
-            alignItems: "center",
-          }}
+          contentContainerStyle={styles.imageScrollContent}
         >
           {uri ? (
             <Image
               source={{ uri }}
-              style={{
-                width: "100%",
-                height: windowHeight,
-                resizeMode: "contain",
-              }}
+              style={[styles.imagePreview, { height: windowHeight }]}
             />
           ) : (
             <Text>❌ Không tải được ảnh</Text>
@@ -127,7 +119,7 @@ export default function FileView({ visible, onClose, params }: ViewerProps) {
           <WebView
             originWhitelist={["*"]}
             source={{ uri: pdfUrl }}
-            style={{ flex: 1, height: windowHeight }}
+            style={[styles.webView, { height: windowHeight }]}
           />
         );
       }
@@ -170,7 +162,7 @@ export default function FileView({ visible, onClose, params }: ViewerProps) {
         <WebView
           originWhitelist={["*"]}
           source={{ html }}
-          style={{ flex: 1, height: windowHeight }}
+          style={[styles.webView, { height: windowHeight }]}
           javaScriptEnabled
           domStorageEnabled
         />
@@ -178,7 +170,7 @@ export default function FileView({ visible, onClose, params }: ViewerProps) {
     }
 
     return (
-      <ScrollView contentContainerStyle={{ padding: 16 }}>
+      <ScrollView contentContainerStyle={styles.unsupportedContent}>
         <Text>❌ Không hỗ trợ hiển thị file này</Text>
       </ScrollView>
     );
@@ -187,9 +179,8 @@ export default function FileView({ visible, onClose, params }: ViewerProps) {
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={styles.container}>
-        {/* Header */}
         <View style={styles.header}>
-          <View style={{ flex: 1, paddingRight: 10 }}>
+          <View style={styles.titleWrap}>
             <Text style={styles.title} numberOfLines={2} ellipsizeMode="middle">
               {params?.name || "File đính kèm"}
             </Text>
@@ -201,13 +192,12 @@ export default function FileView({ visible, onClose, params }: ViewerProps) {
 
         {renderFile()}
 
-        {/* overlay loading */}
         {loading && (
           <Animated.View
             style={[styles.loadingOverlay, { opacity: fadeAnim }]}
             pointerEvents="none"
           >
-            <IsLoading size="large" color="#E31E24" />
+            <IsLoading size="large" color={C.red} />
           </Animated.View>
         )}
       </View>
@@ -222,7 +212,7 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === "ios" ? 50 : 20,
     paddingHorizontal: 16,
     paddingBottom: 10,
-    backgroundColor: "#E31E24",
+    backgroundColor: C.red,
     flexDirection: "row",
     alignItems: "center",
   },
@@ -242,5 +232,24 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "rgba(255,255,255,0.6)",
+  },
+  imageScrollContent: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  imagePreview: {
+    width: "100%",
+    resizeMode: "contain",
+  },
+  webView: {
+    flex: 1,
+  },
+  unsupportedContent: {
+    padding: 16,
+  },
+  titleWrap: {
+    flex: 1,
+    paddingRight: 10,
   },
 });

@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { C } from "../../../utils/helpers/colors";
 
 const FAB_SIZE = 64;
 const FAB_OFFSET = 16;
@@ -58,7 +59,7 @@ const styles = StyleSheet.create({
     right: FAB_OFFSET,
     height: FAB_SIZE,
     borderRadius: FAB_SIZE / 2,
-    backgroundColor: "#E31E24",
+    backgroundColor: C.red,
     alignItems: "center",
     justifyContent: "center",
     ...(Platform.OS === "ios"

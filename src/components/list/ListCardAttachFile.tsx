@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { ListCardAttachFileProps } from "../../types";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import Viewer from "../file/FileView";
+import { C } from "../../utils/helpers/colors";
 
 export default function ListCardAttachFile({ item }: ListCardAttachFileProps) {
   const [openPdf, setOpenPdf] = useState(false);
@@ -11,7 +12,7 @@ export default function ListCardAttachFile({ item }: ListCardAttachFileProps) {
     <View>
       <View style={styles.card}>
         <View style={styles.avatar}>
-          <Ionicons name="document-text-outline" size={26} color="#E31E24" />
+          <Ionicons name="document-text-outline" size={26} color={C.red} />
         </View>
 
         <View style={styles.info}>
@@ -73,7 +74,7 @@ const styles = StyleSheet.create({
   viewButton: {
     paddingVertical: 6,
     paddingHorizontal: 12,
-    backgroundColor: "#E31E24",
+    backgroundColor: C.red,
     borderRadius: 8,
   },
 

@@ -35,7 +35,7 @@ export default function CameraMenuSearchBar({
           onChangeText={onChangeText}
           placeholderTextColor="#B0B8C4"
           style={styles.searchInput}
-          clearButtonMode="while-editing"
+          clearButtonMode="never"
           returnKeyType="search"
         />
         {isSearching ? (

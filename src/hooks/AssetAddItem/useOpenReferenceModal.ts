@@ -1,6 +1,8 @@
 import { useCallback } from "react";
 import { Alert } from "react-native";
 import { Field } from "../../types/Model.d";
+import { TypeProperty } from "../../utils/Enum";
+import { log } from "../../utils/Logger";
 import {
   buildReferenceFetchParams,
   getCurrentReferenceIds,
@@ -45,6 +47,28 @@ export const useOpenReferenceModal = ({
         currentIds,
       }: LoadReferenceModalOptions = {},
     ) => {
+      log("[useOpenReferenceModal] loadReferenceModalData", {
+        fieldName: f.name,
+        fieldMoTa: f.moTa,
+        typeProperty: f.typeProperty,
+        isEnum: f.typeProperty === TypeProperty.Enum,
+        isReference: f.typeProperty === TypeProperty.Reference,
+        enumTypeValue: TypeProperty.Enum,
+        referenceTypeValue: TypeProperty.Reference,
+        enumName: f.enumName,
+        referenceName: f.referenceName,
+        parentsFields: f.parentsFields,
+        currentValue: formData[f.name],
+      });
+
+      if (f.typeProperty === TypeProperty.Enum) {
+        log("[useOpenReferenceModal] bypass parent validation for enum field", {
+          fieldName: f.name,
+          typeProperty: f.typeProperty,
+        });
+        return true;
+      }
+
       if (!f.referenceName) return false;
 
       const didLoad = await loadReferenceItemsForField({
@@ -60,6 +84,14 @@ export const useOpenReferenceModal = ({
         }),
         requireAllParents: true,
         onMissingParents: () => {
+          log("[useOpenReferenceModal] missing parent fields", {
+            fieldName: f.name,
+            typeProperty: f.typeProperty,
+            enumName: f.enumName,
+            referenceName: f.referenceName,
+            parentsFields: f.parentsFields,
+            currentValue: formData[f.name],
+          });
           Alert.alert(
             "Thông báo",
             "Vui lòng chọn đầy đủ thông tin cấp trên trước!",
@@ -74,9 +106,25 @@ export const useOpenReferenceModal = ({
 
   const openReferenceModal = useCallback(
     async (f: Field) => {
-      if (!f.referenceName) return;
-      const didLoad = await loadReferenceModalData(f);
-      if (!didLoad) return;
+      log("[useOpenReferenceModal] openReferenceModal", {
+        fieldName: f.name,
+        fieldMoTa: f.moTa,
+        typeProperty: f.typeProperty,
+        isEnum: f.typeProperty === TypeProperty.Enum,
+        isReference: f.typeProperty === TypeProperty.Reference,
+        enumTypeValue: TypeProperty.Enum,
+        referenceTypeValue: TypeProperty.Reference,
+        enumName: f.enumName,
+        referenceName: f.referenceName,
+        parentsFields: f.parentsFields,
+        currentValue: formData[f.name],
+      });
+
+      if (f.typeProperty === TypeProperty.Reference) {
+        if (!f.referenceName) return;
+        const didLoad = await loadReferenceModalData(f);
+        if (!didLoad) return;
+      }
 
       // RESET STATE SAU KHI PASS VALIDATION
       setActiveEnumField(f);

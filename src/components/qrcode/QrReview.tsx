@@ -1,14 +1,9 @@
-import React, {
-  useCallback,
-  useMemo,
-  useState,
-} from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   FlatList,
   Alert,
   StyleSheet,
-  LayoutAnimation,
   Platform,
   UIManager,
   RefreshControl,
@@ -25,10 +20,10 @@ import {
 } from "../../types/Index";
 import ListCardAsset from "../list/ListCardAsset";
 import IsLoading from "../ui/IconLoading";
+import { AddItem } from "../add/AddItem";
 import { SqlOperator, TypeProperty } from "../../utils/Enum";
 import { useDebounce } from "../../hooks/useDebounce";
 import { usePermission } from "../../hooks/usePermission";
-import { RelatedAddItem } from "../add/RelatedAddItem";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store";
 import { useAppDispatch } from "../../store/Hooks";
@@ -51,15 +46,14 @@ if (
 export default function QrReview() {
   const route = useRoute<StackRoute<"QrReview">>();
   const navigation = useNavigation<QrReviewNavigationProp>();
+  const {
+    nameClass,
+    idRoot,
+    propertyReference,
+    nameClassRoot,
+  } = route.params ?? {};
+  const hasRequiredParams = !!nameClass && !!idRoot && !!propertyReference;
 
-  const { nameClass, idRoot, propertyReference, nameClassRoot } = route.params;
-
-  if (!nameClass || !idRoot || !propertyReference) {
-    Alert.alert("Lỗi", "Thiếu param bắt buộc");
-    return null;
-  }
-
-  // ===== CONDITIONS CỐ ĐỊNH =====
   const conditions = useMemo(
     () => [
       {
@@ -72,7 +66,6 @@ export default function QrReview() {
     [propertyReference, idRoot],
   );
 
-  // ===== STATE =====
   const [searchText, setSearchText] = useState("");
   const debouncedSearch = useDebounce(searchText, 600);
   const { can, loaded } = usePermission();
@@ -95,6 +88,7 @@ export default function QrReview() {
   } = useRelatedAssetListData({
     conditions,
     debouncedSearch,
+    enabled: hasRequiredParams,
     nameClass,
     isMounted,
     showAlertIfActive,
@@ -112,7 +106,6 @@ export default function QrReview() {
     (state: RootState) => state.asset.shouldRefreshList,
   );
 
-  // Redux
   useFocusEffect(
     React.useCallback(() => {
       if (shouldRefresh) {
@@ -122,6 +115,11 @@ export default function QrReview() {
     }, [dispatch, fetchData, shouldRefresh]),
   );
 
+  if (!hasRequiredParams) {
+    Alert.alert("Lỗi", "Thiếu param bắt buộc");
+    return null;
+  }
+
   if (
     isLoading &&
     !isRefreshingTop &&
@@ -130,6 +128,9 @@ export default function QrReview() {
   ) {
     return <IsLoading size="large" color={BRAND_RED} />;
   }
+
+  const isEmpty = data.length === 0;
+
   return (
     <View style={styles.container}>
       <AssetListSearchBar
@@ -165,29 +166,30 @@ export default function QrReview() {
         onEndReachedThreshold={0.5}
         ListFooterComponent={isLoadingMore ? <IsLoading /> : null}
         ListHeaderComponent={
-          <AssetListSummaryCard
-            iconName="qr-code-outline"
-            title="Danh sách sau quét"
-            subtitle={`${total} kết quả • hiển thị ${data.length}`}
-          />
+          isEmpty ? null : (
+            <AssetListSummaryCard
+              iconName="qr-code-outline"
+              title="Danh sách sau quét"
+              subtitle={`${total} kết quả • hiển thị ${data.length}`}
+            />
+          )
         }
-        stickyHeaderIndices={[0]}
+        stickyHeaderIndices={isEmpty ? [] : [0]}
         contentContainerStyle={[
           styles.listContent,
-          data.length === 0 && styles.listContentEmpty,
+          isEmpty && styles.listContentEmpty,
         ]}
         ListEmptyComponent={
           <AssetListEmptyState
             iconName="albums-outline"
             title="Không có dữ liệu"
             subtitle="Chưa có bản ghi phù hợp với bộ lọc hiện tại"
-            fullHeight={data.length === 0}
           />
         }
       />
 
       {loaded && can(nameClass, "Insert") && (
-        <RelatedAddItem
+        <AddItem
           onPress={() =>
             navigation.navigate("AssetAddRelatedItem", {
               field: JSON.stringify(fieldActive),
@@ -205,7 +207,8 @@ export default function QrReview() {
 
 const styles = StyleSheet.create({
   listContentEmpty: {
-    flexGrow: 1,
+    paddingTop: 0,
+    paddingBottom: 0,
   },
   ...sharedAssetListStyles,
 });

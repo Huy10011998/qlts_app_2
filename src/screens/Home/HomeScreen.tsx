@@ -14,7 +14,6 @@ import { HOME_BG, HOME_BRAND_RED } from "./shared/homeTheme";
 import { HOME_MEETING_INFO, HOME_RECENT_ACTIVITIES } from "./shared/homeData";
 import { useHomeMenuItems } from "./shared/useHomeMenuItems";
 
-// ─── HOME SCREEN ──────────────────────────────────────────────────────────────
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeNavigationProp>();
   const tabsNavigation = navigation.getParent() as any;
@@ -46,7 +45,6 @@ const HomeScreen: React.FC = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Event Banner ── */}
         <HomeSectionTitle label="SỰ KIỆN" action="Xem tất cả" />
         <HomeEventBanner
           title={HOME_MEETING_INFO.meetingTitle}
@@ -57,7 +55,6 @@ const HomeScreen: React.FC = () => {
           onPress={openMeetingScreen}
         />
 
-        {/* ── Menu Grid ── */}
         <HomeSectionTitle label="CHỨC NĂNG" />
         <View style={styles.grid}>
           {visibleMenuItems.map((item, index) => (
@@ -65,7 +62,6 @@ const HomeScreen: React.FC = () => {
           ))}
         </View>
 
-        {/* ── Quick Actions ── */}
         <HomeSectionTitle label="THAO TÁC NHANH" />
         <View style={styles.qaCard}>
           <HomeQuickAction
@@ -99,7 +95,6 @@ const HomeScreen: React.FC = () => {
           />
         </View>
 
-        {/* ── Stats ── */}
         <HomeSectionTitle label="TỔNG QUAN" />
         <View style={styles.statsRow}>
           <HomeStatCard
@@ -124,7 +119,6 @@ const HomeScreen: React.FC = () => {
           />
         </View>
 
-        {/* ── Activity ── */}
         <HomeSectionTitle label="HOẠT ĐỘNG GẦN ĐÂY" action="Tất cả" />
         <HomeRecentActivities items={HOME_RECENT_ACTIVITIES} />
       </ScrollView>
@@ -132,7 +126,6 @@ const HomeScreen: React.FC = () => {
   );
 };
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: HOME_BG },
   loadingWrap: {
@@ -146,14 +139,12 @@ const styles = StyleSheet.create({
 
   grid: {
     flexDirection: "row",
-    flexWrap: "nowrap", // always 1 row
+    flexWrap: "nowrap",
     gap: 10,
     marginBottom: 14,
   },
 
   statsRow: { flexDirection: "row", gap: 10, marginBottom: 14 },
-
-  // Quick actions card
   qaCard: {
     backgroundColor: "#fff",
     borderRadius: 18,

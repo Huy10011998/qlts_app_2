@@ -1,14 +1,9 @@
-import React, {
-  useCallback,
-  useMemo,
-  useState,
-} from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   FlatList,
   Alert,
   StyleSheet,
-  LayoutAnimation,
   Platform,
   UIManager,
   RefreshControl,
@@ -25,10 +20,10 @@ import {
 } from "../../types/Index";
 import ListCardAsset from "../../components/list/ListCardAsset";
 import IsLoading from "../../components/ui/IconLoading";
+import { AddItem } from "../add/AddItem";
 import { SqlOperator, TypeProperty } from "../../utils/Enum";
 import { useDebounce } from "../../hooks/useDebounce";
 import { usePermission } from "../../hooks/usePermission";
-import { RelatedAddItem } from "../add/RelatedAddItem";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store";
 import { useAppDispatch } from "../../store/Hooks";
@@ -51,15 +46,14 @@ if (
 export default function AssetRelatedList() {
   const route = useRoute<StackRoute<"AssetRelatedList">>();
   const navigation = useNavigation<AssetDetailsNavigationProp>();
+  const {
+    nameClass,
+    idRoot,
+    propertyReference,
+    nameClassRoot,
+  } = route.params ?? {};
+  const hasRequiredParams = !!nameClass && !!idRoot && !!propertyReference;
 
-  const { nameClass, idRoot, propertyReference, nameClassRoot } = route.params;
-
-  if (!nameClass || !idRoot || !propertyReference) {
-    Alert.alert("Lỗi", "Thiếu param bắt buộc");
-    return null;
-  }
-
-  // ===== CONDITIONS CỐ ĐỊNH =====
   const conditions = useMemo(
     () => [
       {
@@ -72,7 +66,6 @@ export default function AssetRelatedList() {
     [propertyReference, idRoot],
   );
 
-  // ===== STATE =====
   const [searchText, setSearchText] = useState("");
   const debouncedSearch = useDebounce(searchText, 600);
   const { can, loaded } = usePermission();
@@ -95,6 +88,7 @@ export default function AssetRelatedList() {
   } = useRelatedAssetListData({
     conditions,
     debouncedSearch,
+    enabled: hasRequiredParams,
     nameClass,
     isMounted,
     showAlertIfActive,
@@ -106,6 +100,10 @@ export default function AssetRelatedList() {
       field: JSON.stringify(fieldActive),
       nameClass,
       propertyClass,
+      idRoot,
+      propertyReference,
+      nameClassRoot,
+      titleHeader: route.params?.titleHeader,
     });
   };
 
@@ -113,7 +111,6 @@ export default function AssetRelatedList() {
     (state: RootState) => state.asset.shouldRefreshList,
   );
 
-  // Redux
   useFocusEffect(
     React.useCallback(() => {
       if (shouldRefresh) {
@@ -123,14 +120,22 @@ export default function AssetRelatedList() {
     }, [dispatch, fetchData, shouldRefresh]),
   );
 
+  if (!hasRequiredParams) {
+    Alert.alert("Lỗi", "Thiếu param bắt buộc");
+    return null;
+  }
+
   if (
     isLoading &&
     !isRefreshingTop &&
     !isLoadingMore &&
-    !isSearching // thêm điều kiện này
+    !isSearching
   ) {
     return <IsLoading size="large" color={BRAND_RED} />;
   }
+
+  const isEmpty = data.length === 0;
+
   return (
     <View style={styles.container}>
       <AssetListSearchBar
@@ -167,29 +172,30 @@ export default function AssetRelatedList() {
         onEndReachedThreshold={0.5}
         ListFooterComponent={isLoadingMore ? <IsLoading /> : null}
         ListHeaderComponent={
-          <AssetListSummaryCard
-            iconName="link-outline"
-            title="Danh sách liên quan"
-            subtitle={`${total} kết quả • hiển thị ${data.length}`}
-          />
+          isEmpty ? null : (
+            <AssetListSummaryCard
+              iconName="link-outline"
+              title="Danh sách liên quan"
+              subtitle={`${total} kết quả • hiển thị ${data.length}`}
+            />
+          )
         }
-        stickyHeaderIndices={[0]}
+        stickyHeaderIndices={isEmpty ? [] : [0]}
         contentContainerStyle={[
           styles.listContent,
-          data.length === 0 && styles.listContentEmpty,
+          isEmpty && styles.listContentEmpty,
         ]}
         ListEmptyComponent={
           <AssetListEmptyState
             iconName="albums-outline"
             title="Không có dữ liệu liên quan"
             subtitle="Thử tìm kiếm bằng từ khóa khác hoặc thêm mới dữ liệu liên kết"
-            fullHeight={data.length === 0}
           />
         }
       />
 
       {loaded && can(nameClass, "Insert") && (
-        <RelatedAddItem
+        <AddItem
           onPress={() =>
             navigation.navigate("AssetAddRelatedItem", {
               field: JSON.stringify(fieldActive),
@@ -207,7 +213,8 @@ export default function AssetRelatedList() {
 
 const styles = StyleSheet.create({
   listContentEmpty: {
-    flexGrow: 1,
+    paddingTop: 0,
+    paddingBottom: 0,
   },
   ...sharedAssetListStyles,
 });

@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { CardItemProps } from "../../types";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { formatDate } from "../../utils/Date";
+import { C } from "../../utils/helpers/colors";
 
 export default function ListCardHistory({ item, onPress }: CardItemProps) {
   const ngayTaoCapNhat = item?.log_StartDate;
@@ -10,7 +11,7 @@ export default function ListCardHistory({ item, onPress }: CardItemProps) {
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>
       <View style={styles.avatar}>
-        <Ionicons name="time-outline" size={26} color="#E31E24" />
+        <Ionicons name="time-outline" size={26} color={C.red} />
       </View>
 
       <View style={styles.info}>

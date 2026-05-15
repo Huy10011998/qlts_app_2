@@ -9,6 +9,16 @@ import {
 } from "./assetMenuTheme";
 import { getAssetMenuItemTheme } from "./assetMenuHelpers";
 
+const localStyles = StyleSheet.create({
+  rootWrap: {
+    marginBottom: 6,
+  },
+  childWrap: {
+    paddingLeft: 16,
+    marginBottom: 6,
+  },
+});
+
 type AssetMenuDropdownItemProps = DropdownProps & {
   onShowReport: (item: Item) => void;
   isSearching: boolean;
@@ -50,7 +60,7 @@ function AssetMenuDropdownItem({
   };
 
   return (
-    <View style={{ paddingLeft: level > 0 ? 16 : 0, marginBottom: 6 }}>
+    <View style={level > 0 ? localStyles.childWrap : localStyles.rootWrap}>
       <Pressable
         style={({ pressed }) => [
           styles.card,

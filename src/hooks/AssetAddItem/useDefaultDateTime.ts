@@ -31,5 +31,5 @@ export function useDefaultDateTime(fieldActive: Field[], setFormData: any) {
 
       return next;
     });
-  }, [fieldActive]);
+  }, [fieldActive, setFormData]);
 }

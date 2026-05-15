@@ -208,7 +208,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -e\n\nif [ \"${CONFIGURATION}\" != \"Release\" ]; then\n  exit 0\nfi\n\nif [ \"${ACTION}\" != \"install\" ] && [ \"${ACTION}\" != \"archive\" ]; then\n  exit 0\nfi\n\nHERMES_BINARY=\"${PODS_ROOT}/hermes-engine/build/iphoneos/API/hermes/hermes.framework/hermes\"\nHERMES_DSYM=\"${PODS_ROOT}/hermes-engine/build/iphoneos/API/hermes/hermes.framework.dSYM\"\nHERMES_PLIST=\"${PODS_ROOT}/hermes-engine/build/iphoneos/API/hermes/hermes.framework/Info.plist\"\nEMBEDDED_HERMES_PLIST=\"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework/Info.plist\"\n\nif [ ! -f \"${HERMES_BINARY}\" ]; then\n  echo \"Hermes binary not found at ${HERMES_BINARY}\"\n  exit 0\nfi\n\necho \"Regenerating Hermes dSYM...\"\nrm -rf \"${HERMES_DSYM}\"\nxcrun dsymutil \"${HERMES_BINARY}\" -o \"${HERMES_DSYM}\"\n\nif [ -f \"${HERMES_PLIST}\" ]; then\n  /usr/libexec/PlistBuddy -c \"Delete :MinimumOSVersion\" \"${HERMES_PLIST}\" >/dev/null 2>&1 || true\n  /usr/libexec/PlistBuddy -c \"Add :MinimumOSVersion string ${IPHONEOS_DEPLOYMENT_TARGET}\" \"${HERMES_PLIST}\"\nfi\n\nif [ -f \"${EMBEDDED_HERMES_PLIST}\" ]; then\n  /usr/libexec/PlistBuddy -c \"Delete :MinimumOSVersion\" \"${EMBEDDED_HERMES_PLIST}\" >/dev/null 2>&1 || true\n  /usr/libexec/PlistBuddy -c \"Add :MinimumOSVersion string ${IPHONEOS_DEPLOYMENT_TARGET}\" \"${EMBEDDED_HERMES_PLIST}\"\nfi\n\nif [ -d \"${HERMES_DSYM}\" ] && [ -n \"${DWARF_DSYM_FOLDER_PATH}\" ]; then\n  mkdir -p \"${DWARF_DSYM_FOLDER_PATH}\"\n  rm -rf \"${DWARF_DSYM_FOLDER_PATH}/hermes.framework.dSYM\"\n  cp -R \"${HERMES_DSYM}\" \"${DWARF_DSYM_FOLDER_PATH}/\"\n  echo \"Copied Hermes dSYM to ${DWARF_DSYM_FOLDER_PATH}\"\nfi\n";
+			shellScript = "set -e\n\nif [ \"${CONFIGURATION}\" != \"Release\" ]; then\n  exit 0\nfi\n\nif [ \"${ACTION}\" != \"install\" ] && [ \"${ACTION}\" != \"archive\" ]; then\n  exit 0\nfi\n\nHERMES_BINARY=\"${PODS_ROOT}/hermes-engine/destroot/Library/Frameworks/ios/hermes.framework/hermes\"\nif [ ! -f \"${HERMES_BINARY}\" ]; then\n  HERMES_BINARY=\"${PODS_ROOT}/hermes-engine/build/iphoneos/API/hermes/hermes.framework/hermes\"\nfi\nHERMES_DSYM=\"${PODS_ROOT}/hermes-engine/build/iphoneos/API/hermes/hermes.framework.dSYM\"\nHERMES_PLIST=\"$(dirname \"${HERMES_BINARY}\")/Info.plist\"\nEMBEDDED_HERMES_PLIST=\"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework/Info.plist\"\n\nif [ ! -f \"${HERMES_BINARY}\" ]; then\n  echo \"Hermes binary not found at ${HERMES_BINARY}\"\n  exit 0\nfi\n\necho \"Regenerating Hermes dSYM...\"\nrm -rf \"${HERMES_DSYM}\"\nxcrun dsymutil \"${HERMES_BINARY}\" -o \"${HERMES_DSYM}\"\n\nif [ -f \"${HERMES_PLIST}\" ]; then\n  /usr/libexec/PlistBuddy -c \"Delete :MinimumOSVersion\" \"${HERMES_PLIST}\" >/dev/null 2>&1 || true\n  /usr/libexec/PlistBuddy -c \"Add :MinimumOSVersion string ${IPHONEOS_DEPLOYMENT_TARGET}\" \"${HERMES_PLIST}\"\nfi\n\nif [ -f \"${EMBEDDED_HERMES_PLIST}\" ]; then\n  /usr/libexec/PlistBuddy -c \"Delete :MinimumOSVersion\" \"${EMBEDDED_HERMES_PLIST}\" >/dev/null 2>&1 || true\n  /usr/libexec/PlistBuddy -c \"Add :MinimumOSVersion string ${IPHONEOS_DEPLOYMENT_TARGET}\" \"${EMBEDDED_HERMES_PLIST}\"\nfi\n\nif [ -d \"${HERMES_DSYM}\" ] && [ -n \"${DWARF_DSYM_FOLDER_PATH}\" ]; then\n  mkdir -p \"${DWARF_DSYM_FOLDER_PATH}\"\n  rm -rf \"${DWARF_DSYM_FOLDER_PATH}/hermes.framework.dSYM\"\n  cp -R \"${HERMES_DSYM}\" \"${DWARF_DSYM_FOLDER_PATH}/\"\n  echo \"Copied Hermes dSYM to ${DWARF_DSYM_FOLDER_PATH}\"\nfi\n";
 			showEnvVarsInLog = 0;
 		};
 		14DFA27C1006BE39B4E4ED97 /* [CP] Check Pods Manifest.lock */ = {
@@ -312,7 +312,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = qlts_app_2/qlts_app_2.entitlements;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = 59N25792JT;
 				ENABLE_BITCODE = NO;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -324,7 +324,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.1;
+				MARKETING_VERSION = 2.3;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -347,7 +347,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = qlts_app_2/qlts_app_2.entitlements;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = 59N25792JT;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = qlts_app_2/Info.plist;
@@ -358,7 +358,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.1;
+				MARKETING_VERSION = 2.3;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",

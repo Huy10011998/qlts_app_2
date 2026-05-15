@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import {
   View,
   TextInput,
@@ -16,12 +16,146 @@ import IsLoading from "../ui/IconLoading";
 import { parseLinkHtml } from "../../utils/Link";
 import { DatePicker, TimePicker } from "../dataPicker/DataPicker";
 import { log } from "../../utils/Logger";
+import { C } from "../../utils/helpers/colors";
+
+const localStyles = {
+  inputRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+  },
+  inputRowInvalid: {
+    borderColor: C.red,
+    backgroundColor: "#FFF5F5",
+  },
+  textInput: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: "#333",
+  },
+  prefix: {
+    marginLeft: 8,
+    color: "#333",
+    fontSize: 14,
+  },
+  textArea: {
+    textAlignVertical: "top" as const,
+    color: "#333",
+  },
+  imageButtonText: {
+    marginLeft: 8,
+    color: C.red,
+  },
+  imageWrap: {
+    marginTop: 10,
+  },
+  linkWrap: {
+    gap: 10,
+  },
+  inputText: {
+    color: "#333",
+  },
+  linkText: {
+    color: "blue",
+  },
+  selectText: {
+    padding: 12,
+    paddingRight: 20,
+    fontSize: 14,
+  },
+  selectedValueText: {
+    color: "#000",
+  },
+  placeholderValueText: {
+    color: "#999",
+  },
+  chevron: {
+    position: "absolute" as const,
+    right: 8,
+    top: 12,
+  },
+  selectInputInvalid: {
+    borderColor: C.red,
+    backgroundColor: "#FFF5F5",
+  },
+  textAreaInvalid: {
+    borderColor: C.red,
+    backgroundColor: "#FFF5F5",
+  },
+  fieldWrapInvalid: {
+    borderWidth: 1,
+    borderColor: C.red,
+    borderRadius: 12,
+    overflow: "hidden" as const,
+    backgroundColor: "#FFF5F5",
+  },
+};
+
+function LinkInputField({
+  value,
+  onChange,
+  styles,
+}: {
+  value: unknown;
+  onChange: (nextValue: string) => void;
+  styles: RenderInputByTypeProps["styles"];
+}) {
+  const parsed = useMemo(() => parseLinkHtml(String(value ?? "")), [value]);
+  const [url, setUrl] = React.useState(parsed.url);
+  const [label, setLabel] = React.useState(parsed.text);
+
+  useEffect(() => {
+    setUrl(parsed.url);
+    setLabel(parsed.text);
+  }, [parsed.text, parsed.url]);
+
+  const buildHtml = (nextUrl: string, nextLabel: string) =>
+    `<a href="${nextUrl}" target="_blank" rel="noopener noreferrer">${
+      nextLabel || nextUrl
+    }</a>`;
+
+  return (
+    <View style={localStyles.linkWrap}>
+      <TextInput
+        style={[styles.input, localStyles.inputText]}
+        placeholder="Nhập đường link"
+        placeholderTextColor="#888"
+        value={url}
+        onChangeText={(nextUrl) => {
+          setUrl(nextUrl);
+          onChange(buildHtml(nextUrl, label));
+        }}
+      />
+      <TextInput
+        style={[styles.input, localStyles.inputText]}
+        placeholder="Nhập label"
+        placeholderTextColor="#888"
+        value={label}
+        onChangeText={(nextLabel) => {
+          setLabel(nextLabel);
+          onChange(buildHtml(url, nextLabel));
+        }}
+      />
+
+      {url ? (
+        <TouchableOpacity onPress={() => Linking.openURL(url)}>
+          <Text style={localStyles.linkText}>{label || url}</Text>
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  );
+}
 
 export const RenderInputByType = ({
   f,
   formData,
   enumData,
   referenceData,
+  validationErrors = {},
   images = {},
   loadingImages = {},
   handleChange,
@@ -32,26 +166,27 @@ export const RenderInputByType = ({
   mode,
   openEnumReferanceModal,
 }: RenderInputByTypeProps) => {
-  // INITIAL VALUE
   const value = formData[f.name];
-
-  // Skip read-only fields entirely
-  if (f.isReadOnly === true) {
-    return null;
-  }
-
-  // LIST ITEMS (ENUM / REFERENCE)
-  const items =
-    f.typeProperty === TypeProperty.Reference
-      ? referenceData[f.name]?.items || []
-      : enumData[f.name] || [];
+  const hasValidationError = Boolean(validationErrors?.[f.name]);
+  const items = useMemo(
+    () =>
+      f.typeProperty === TypeProperty.Reference
+        ? referenceData[f.name]?.items || []
+        : enumData[f.name] || [],
+    [enumData, f.name, f.typeProperty, referenceData],
+  );
 
   const hasValue =
     value !== null && value !== undefined && value !== "" && value !== 0;
 
-  const selectedItem = Array.isArray(items)
-    ? items.find((x: any) => x.value == value)
-    : undefined;
+  const normalizedValue = value == null ? "" : String(value);
+  const selectedItem = useMemo(
+    () =>
+      Array.isArray(items)
+        ? items.find((x: any) => String(x.value ?? "") === normalizedValue)
+        : undefined,
+    [items, normalizedValue],
+  );
 
   const displayText = hasValue
     ? selectedItem?.text ?? formData?.[`${f.name}_MoTa`] ?? String(value)
@@ -71,26 +206,21 @@ export const RenderInputByType = ({
     });
   }, [displayText, f, formData, items, selectedItem, value]);
 
+  if (f.isReadOnly === true) {
+    return null;
+  }
+
   const renderBasicInput = ({
     keyboardType = "default",
   }: { keyboardType?: "default" | "numeric" } = {}) => (
     <View
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        borderWidth: 1,
-        borderColor: "#ccc",
-        borderRadius: 8,
-        paddingHorizontal: 12,
-      }}
+      style={[
+        localStyles.inputRow,
+        hasValidationError && localStyles.inputRowInvalid,
+      ]}
     >
       <TextInput
-        style={{
-          flex: 1,
-          paddingVertical: 12,
-          fontSize: 14,
-          color: "#333",
-        }}
+        style={localStyles.textInput}
         keyboardType={keyboardType}
         value={String(value ?? "")}
         placeholder={`Nhập ${f.moTa ?? f.name}`}
@@ -98,39 +228,24 @@ export const RenderInputByType = ({
         onChangeText={(t) => handleChange(f.name, t)}
       />
 
-      {f.prefix ? (
-        <Text style={{ marginLeft: 8, color: "#333", fontSize: 14 }}>
-          {f.prefix}
-        </Text>
-      ) : null}
+      {f.prefix ? <Text style={localStyles.prefix}>{f.prefix}</Text> : null}
     </View>
   );
 
-  // SWITCH CASE
   switch (f.typeProperty) {
-    // NUMBER
     case TypeProperty.Int:
     case TypeProperty.Decimal: {
       const formattedValue = formatVND(value);
 
       return (
         <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            borderWidth: 1,
-            borderColor: "#ccc",
-            borderRadius: 8,
-            paddingHorizontal: 12,
-          }}
+          style={[
+            localStyles.inputRow,
+            hasValidationError && localStyles.inputRowInvalid,
+          ]}
         >
           <TextInput
-            style={{
-              flex: 1,
-              paddingVertical: 12,
-              fontSize: 14,
-              color: "#333",
-            }}
+            style={localStyles.textInput}
             keyboardType="numeric"
             value={formattedValue}
             placeholder={`Nhập ${f.moTa ?? f.name}`}
@@ -141,16 +256,11 @@ export const RenderInputByType = ({
             }}
           />
 
-          {f.prefix ? (
-            <Text style={{ marginLeft: 8, color: "#333", fontSize: 14 }}>
-              {f.prefix}
-            </Text>
-          ) : null}
+          {f.prefix ? <Text style={localStyles.prefix}>{f.prefix}</Text> : null}
         </View>
       );
     }
 
-    // BOOL
     case TypeProperty.Bool:
       return (
         <View style={styles.boolRow}>
@@ -166,33 +276,37 @@ export const RenderInputByType = ({
           <Switch
             value={!!value}
             onValueChange={(v) => handleChange(f.name, v)}
-            trackColor={{ false: "#888", true: "#E31E24" }}
+            trackColor={{ false: "#888", true: C.red }}
             thumbColor={value ? "#ffffff" : "#f4f3f4"}
           />
         </View>
       );
 
-    // DATE
     case TypeProperty.Date:
       return (
-        <DatePicker value={value} onChange={(d) => handleChange(f.name, d)} />
+        <View style={hasValidationError ? localStyles.fieldWrapInvalid : undefined}>
+          <DatePicker value={value} onChange={(d) => handleChange(f.name, d)} />
+        </View>
       );
 
-    // TIME
     case TypeProperty.Time:
       return (
-        <TimePicker value={value} onChange={(d) => handleChange(f.name, d)} />
+        <View style={hasValidationError ? localStyles.fieldWrapInvalid : undefined}>
+          <TimePicker value={value} onChange={(d) => handleChange(f.name, d)} />
+        </View>
       );
 
-    // STRING
     case TypeProperty.String:
       return renderBasicInput();
 
-    // TEXTAREA
     case TypeProperty.Text:
       return (
         <TextInput
-          style={[styles.textArea, { textAlignVertical: "top", color: "#333" }]}
+          style={[
+            styles.textArea,
+            localStyles.textArea,
+            hasValidationError && localStyles.textAreaInvalid,
+          ]}
           multiline
           value={String(value ?? "")}
           placeholder={`Nhập ${f.moTa ?? f.name}`}
@@ -201,7 +315,6 @@ export const RenderInputByType = ({
         />
       );
 
-    // IMAGE
     case TypeProperty.Image: {
       const imgUrl = images[f.name];
       const loading = loadingImages[f.name];
@@ -220,27 +333,23 @@ export const RenderInputByType = ({
               );
             }}
           >
-            <Ionicons name="image-outline" size={22} color="#E31E24" />
-            <Text style={{ marginLeft: 8, color: "#E31E24" }}>Chọn hình</Text>
+            <Ionicons name="image-outline" size={22} color={C.red} />
+            <Text style={localStyles.imageButtonText}>Chọn hình</Text>
           </TouchableOpacity>
 
           {loading ? (
             <IsLoading size="small" />
           ) : imgUrl ? (
-            <View style={{ marginTop: 10 }}>
+            <View style={localStyles.imageWrap}>
               <Image
                 source={{ uri: imgUrl }}
                 style={styles.previewImage}
                 resizeMode="cover"
               />
 
-              {/* nút X dùng chung */}
               <TouchableOpacity
                 onPress={() => {
-                  // Xóa preview hình
                   setImages((p: any) => ({ ...p, [f.name]: "" }));
-
-                  // Gửi tín hiệu '---' để BE xóa ảnh
                   handleChange(f.name, "---");
                 }}
                 style={styles.removeImageButton}
@@ -253,59 +362,16 @@ export const RenderInputByType = ({
       );
     }
 
-    // LINK (ADD + EDIT)
     case TypeProperty.Link: {
-      const parsed =
-        (mode === "edit" || mode === "clone") && value
-          ? parseLinkHtml(String(value))
-          : { url: "", text: "" };
-
-      const [url, setUrl] = useState(parsed.url);
-      const [label, setLabel] = useState(parsed.text);
-
-      useEffect(() => {
-        setUrl(parsed.url);
-        setLabel(parsed.text);
-      }, [parsed.url, parsed.text]);
-
-      const buildHtml = (u: string, l: string) =>
-        `<a href="${u}" target="_blank" rel="noopener noreferrer">${
-          l || u
-        }</a>`;
-
       return (
-        <View style={{ gap: 10 }}>
-          <TextInput
-            style={[styles.input, { color: "#333" }]}
-            placeholder="Nhập đường link"
-            placeholderTextColor="#888"
-            value={url}
-            onChangeText={(t) => {
-              setUrl(t);
-              handleChange(f.name, buildHtml(t, label));
-            }}
-          />
-          <TextInput
-            style={[styles.input, { color: "#333" }]}
-            placeholder="Nhập label"
-            placeholderTextColor="#888"
-            value={label}
-            onChangeText={(t) => {
-              setLabel(t);
-              handleChange(f.name, buildHtml(url, t));
-            }}
-          />
-
-          {url ? (
-            <TouchableOpacity onPress={() => Linking.openURL(url)}>
-              <Text style={{ color: "blue" }}>{label || url}</Text>
-            </TouchableOpacity>
-          ) : null}
-        </View>
+        <LinkInputField
+          value={(mode === "edit" || mode === "clone") && value ? value : ""}
+          onChange={(nextValue) => handleChange(f.name, nextValue)}
+          styles={styles}
+        />
       );
     }
 
-    // ENUM / REFERENCE — HANDLE ADD + EDIT
     case TypeProperty.Enum:
     case TypeProperty.Reference:
       return (
@@ -317,12 +383,11 @@ export const RenderInputByType = ({
           <Text
             style={[
               styles.input,
-              {
-                padding: 12,
-                paddingRight: 20,
-                fontSize: 14,
-                color: hasValue ? "#000" : "#999",
-              },
+              hasValidationError && localStyles.selectInputInvalid,
+              localStyles.selectText,
+              hasValue
+                ? localStyles.selectedValueText
+                : localStyles.placeholderValueText,
             ]}
           >
             {displayText}
@@ -332,12 +397,11 @@ export const RenderInputByType = ({
             name="chevron-down"
             size={20}
             color="#444"
-            style={{ position: "absolute", right: 8, top: 12 }}
+            style={localStyles.chevron}
           />
         </TouchableOpacity>
       );
 
-    // DEFAULT
     default:
       return renderBasicInput({ keyboardType: "numeric" });
   }

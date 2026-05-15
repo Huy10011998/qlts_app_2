@@ -2,6 +2,7 @@ import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { RenderInputByType } from "../../form/RenderInputByType";
+import { BRAND_RED } from "./listTheme";
 
 type AssetFormGroupedFieldsProps = {
   collapsedGroups: Record<string, boolean>;
@@ -22,6 +23,7 @@ type AssetFormGroupedFieldsProps = {
   >;
   styles: any;
   toggleGroup: (groupName: string) => void;
+  validationErrors?: Record<string, string>;
 };
 
 export default function AssetFormGroupedFields({
@@ -41,6 +43,7 @@ export default function AssetFormGroupedFields({
   setLoadingImages,
   styles,
   toggleGroup,
+  validationErrors = {},
 }: AssetFormGroupedFieldsProps) {
   return (
     <>
@@ -55,7 +58,7 @@ export default function AssetFormGroupedFields({
             >
               <View style={styles.groupTitleWrap}>
                 <View style={styles.groupIconWrap}>
-                  <Ionicons name="albums-outline" size={16} color="#E31E24" />
+                  <Ionicons name="albums-outline" size={16} color={BRAND_RED} />
                 </View>
                 <Text style={styles.groupTitle}>{groupName}</Text>
               </View>
@@ -63,7 +66,7 @@ export default function AssetFormGroupedFields({
                 <Ionicons
                   name={collapsed ? "chevron-down" : "chevron-up"}
                   size={14}
-                  color="#E31E24"
+                  color={BRAND_RED}
                 />
               </View>
             </TouchableOpacity>
@@ -74,13 +77,19 @@ export default function AssetFormGroupedFields({
 
                 return (
                   <View key={field.id ?? field.name} style={styles.fieldBlock}>
-                    <Text style={styles.label}>{field.moTa ?? field.name}</Text>
+                    <Text style={styles.label}>
+                      {field.moTa ?? field.name}
+                      {field.isRequired ? (
+                        <Text style={{ color: BRAND_RED }}> *</Text>
+                      ) : null}
+                    </Text>
                     <RenderInputByType
                       openEnumReferanceModal={openReferenceModal}
                       f={field}
                       formData={formData}
                       enumData={enumData}
                       referenceData={referenceData}
+                      validationErrors={validationErrors}
                       images={images}
                       setLoadingImages={setLoadingImages}
                       loadingImages={loadingImages}

@@ -12,13 +12,15 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { PropsEnum } from "../../types/Components.d";
 import { useDebounce } from "../../hooks/useDebounce";
 import IsLoading from "../ui/IconLoading";
+import EmptyState from "../ui/EmptyState";
 import BottomSheetModalShell from "../shared/BottomSheetModalShell";
+import { C } from "../../utils/helpers/colors";
 
 type ExtraProps = {
   isSearching?: boolean;
   loadingMore?: boolean;
-  total?: number; // tổng record backend trả về
-  loadedCount?: number; // số item đã load
+  total?: number;
+  loadedCount?: number;
 };
 
 export default function EnumAndReferencePickerModal({
@@ -57,8 +59,12 @@ export default function EnumAndReferencePickerModal({
 
     return [...selectedItems, ...remainingItems];
   }, [items, selectedValue]);
+  const hasRealItems = orderedItems.some((item) => item.value !== "");
+  const isSearchEmpty =
+    searchText.trim().length > 0 && total === 0 && !isSearching;
+  const isEmpty = isSearchEmpty || !hasRealItems;
+  const listItems = isEmpty ? [] : orderedItems;
 
-  /* ===== SEARCH ===== */
   useEffect(() => {
     if (!visible) return;
 
@@ -76,7 +82,6 @@ export default function EnumAndReferencePickerModal({
     }
   }, [visible]);
 
-  /* ===== RENDER ITEM ===== */
   const renderItem = ({ item }: any) => {
     const isEmptyValue = item.value === "";
     const isSelected =
@@ -137,37 +142,49 @@ export default function EnumAndReferencePickerModal({
         {isSearching && (
           <IsLoading
             size="small"
-            color="#E31E24"
+            color={C.red}
             style={styles.searchSpinner}
           />
         )}
       </View>
 
       <FlatList
-        data={orderedItems}
+        data={listItems}
         keyExtractor={(item, index) => String(item.value ?? index)}
         renderItem={renderItem}
         style={styles.list}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          isEmpty && styles.listContentEmpty,
+        ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         onEndReached={onLoadMore}
         onEndReachedThreshold={0.4}
         ListFooterComponent={
           loadingMore ? (
-            <View style={{ paddingVertical: 16 }}>
+            <View style={styles.footerLoading}>
               <IsLoading size="small" />
             </View>
           ) : null
         }
         ListHeaderComponent={
-          <View style={styles.stickyHeader}>
-            <Text style={styles.header}>
-              Tổng: {total} (Đã tải: {loaded})
-            </Text>
-          </View>
+          isEmpty ? null : (
+            <View style={styles.stickyHeader}>
+              <Text style={styles.header}>
+                Tổng: {total} (Đã tải: {loaded})
+              </Text>
+            </View>
+          )
         }
-        stickyHeaderIndices={[0]}
+        ListEmptyComponent={
+          <EmptyState
+            iconName="search-outline"
+            title="Không tìm thấy dữ liệu"
+            subtitle="Thử tìm kiếm với từ khóa khác"
+          />
+        }
+        stickyHeaderIndices={isEmpty ? [] : [0]}
       />
 
       <TouchableOpacity
@@ -223,9 +240,16 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 0,
   },
+  footerLoading: {
+    paddingVertical: 16,
+  },
 
   listContent: {
     flexGrow: 1,
+  },
+  listContentEmpty: {
+    paddingTop: 0,
+    paddingBottom: 0,
   },
 
   modalItem: {

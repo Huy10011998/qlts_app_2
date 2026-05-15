@@ -68,7 +68,9 @@ export default function AssetFormReferencePickerModal({
       onClose={() => setModalVisible(false)}
       onSelect={(value) => {
         if (activeEnumField) {
-          const selectedItem = modalItems.find((item) => item.value == value);
+          const selectedItem = modalItems.find(
+            (item) => String(item.value) === String(value),
+          );
           let finalValue = value;
 
           if (value !== "" && !isNaN(value)) {

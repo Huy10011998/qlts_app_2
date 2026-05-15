@@ -5,7 +5,12 @@ import { AssetCloneItemNavigationProp, Field } from "../../types/Index";
 import { TypeProperty } from "../../utils/Enum";
 import { getMatchedKey } from "../../utils/Helper";
 import { useParams } from "../../hooks/useParams";
+import {
+  getApiErrorMessage,
+  getApiValidationFieldErrors,
+} from "../../utils/helpers/api";
 import { fetchImage, pickImage } from "../../utils/Image";
+import { isEffectivelyEmptyCodeValue } from "../../utils/helpers/string";
 import { fetchReferenceByFieldWithParent } from "../../utils/cascade/FetchReferenceByFieldWithParent";
 import { handleCascadeChange } from "../../utils/cascade/Index";
 import { useImageLoader } from "../../hooks/useImageLoader";
@@ -18,7 +23,7 @@ import {
   normalizeDateFromBE,
 } from "../../utils/Date";
 
-import { insert } from "../../services/data/CallApi";
+import { checkValidation, insert } from "../../services/data/CallApi";
 import { useAppDispatch } from "../../store/Hooks";
 import { RootState } from "../../store";
 import { useSelector } from "react-redux";
@@ -45,15 +50,22 @@ const BG = ASSET_FORM_BG;
 const CARD_SHADOW = ASSET_FORM_CARD_SHADOW;
 
 export default function AssetCloneItem() {
-  /* ===== PARAMS ===== */
-  const { item, field, propertyClass, nameClass } = useParams();
+  const {
+    item,
+    field,
+    propertyClass,
+    nameClass,
+    returnTo,
+    idRoot,
+    propertyReference,
+    nameClassRoot,
+    titleHeader,
+  } = useParams();
   const navigation = useNavigation<AssetCloneItemNavigationProp>();
   const dispatch = useAppDispatch();
 
-  // State
   const [formData, setFormData] = useState<Record<string, any>>({});
 
-  // Enum & Reference Data State
   const [enumData, setEnumData] = useState<Record<string, any[]>>({});
   const [referenceData, setReferenceData] = useState<
     Record<string, { items: any[]; totalCount: number }>
@@ -63,8 +75,10 @@ export default function AssetCloneItem() {
   const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>(
     {},
   );
+  const [validationErrors, setValidationErrors] = useState<
+    Record<string, string>
+  >({});
 
-  /* ===== REFERENCE LOAD MORE ===== */
   const PAGE_SIZE = 20;
   const [refPage, setRefPage] = useState(0);
   const [refKeyword, setRefKeyword] = useState("");
@@ -72,24 +86,19 @@ export default function AssetCloneItem() {
   const [refHasMore, setRefHasMore] = useState(true);
   const [refSearching, setRefSearching] = useState(false);
 
-  // Image State
   const [images, setImages] = useState<Record<string, string>>({});
 
-  /* ===== REDUX ===== */
   const { selectedTreeValue } = useSelector((state: RootState) => state.asset);
 
-  //  ===== RAW TREE VALUES ===== //
   const rawTreeValues = useMemo(() => {
     if (!selectedTreeValue) return [];
     return selectedTreeValue.split(",").map((v) => v.trim());
   }, [selectedTreeValue]);
 
-  /* ===== GROUP + FIELD ===== */
   const { fieldActive, groupedFields, collapsedGroups, toggleGroup } =
     useGroupedFields(field);
 
   const didInitRef = useRef(false);
-  // Init formData từ item gốc (nhưng xoá ID)
   useEffect(() => {
     const initial: Record<string, any> = {};
 
@@ -101,9 +110,7 @@ export default function AssetCloneItem() {
     fieldActive.forEach((f) => {
       const name = f.name;
 
-      //  CLONE → KHÔNG COPY AUTO CODE
       if (name === autoField) {
-        // KHÔNG set gì hết -> backend auto
         return;
       }
 
@@ -158,9 +165,8 @@ export default function AssetCloneItem() {
     });
 
     setFormData(initial);
-  }, []);
+  }, [fieldActive, item, propertyClass?.propertyTuDongTang]);
 
-  /* ===== ENUM / REFERENCE ===== */
   useEnumAndReferenceLoader(
     fieldActive,
     setEnumData,
@@ -168,7 +174,6 @@ export default function AssetCloneItem() {
     referenceData,
   );
 
-  /* ===== AUTO INCREMENT ===== */
   const parentField = propertyClass?.prentTuDongTang;
   const parentValue = parentField ? formData[parentField] : undefined;
 
@@ -181,26 +186,24 @@ export default function AssetCloneItem() {
     setFormData,
   });
 
-  // fetch Reference có cha (Cascade)
   useEffect(() => {
     fieldActive.forEach((f) => {
       if (f.typeProperty === TypeProperty.Reference && f.parentsFields) {
         const parents = f.parentsFields.split(",");
         const haveAll = parents.every((p) => formData[p]);
         if (haveAll) {
-          const parentValue = parents.map((p) => formData[p]).join(",");
+          const parentValues = parents.map((p) => formData[p]).join(",");
           fetchReferenceByFieldWithParent(
             f.referenceName!,
             f.name,
-            parentValue,
+            parentValues,
             setReferenceData,
           );
         }
       }
     });
-  }, [formData]);
+  }, [fieldActive, formData]);
 
-  /* ===== IMAGE LOADER ===== */
   useImageLoader({
     fieldActive,
     formData,
@@ -209,8 +212,15 @@ export default function AssetCloneItem() {
     setLoadingImages,
   });
 
-  // change & cascade
   const handleChange = (name: string, value: any) => {
+    if (validationErrors[name]) {
+      setValidationErrors((prev) => {
+        const next = { ...prev };
+        delete next[name];
+        return next;
+      });
+    }
+
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -224,7 +234,6 @@ export default function AssetCloneItem() {
     });
   };
 
-  /* ===== OPEN ENUM & REFERANCE MODAL ===== */
   const { openReferenceModal, loadReferenceModalData } = useOpenReferenceModal({
     formData,
     setActiveEnumField,
@@ -236,7 +245,6 @@ export default function AssetCloneItem() {
     pageSize: PAGE_SIZE,
   });
 
-  // ===== MODAL ITEMS ===== //
   const modalItems = useModalItems(
     activeEnumField,
     referenceData,
@@ -245,7 +253,6 @@ export default function AssetCloneItem() {
   );
   const { showAlertIfActive } = useSafeAlert();
 
-  // SUBMIT - CLONE
   const handleClone = async () => {
     if (!Object.keys(formData).length) {
       Alert.alert("Thông báo", "Không có dữ liệu để clone!");
@@ -258,34 +265,26 @@ export default function AssetCloneItem() {
     }
 
     try {
-      // copy object
       const payloadData: Record<string, any> = { ...formData };
-
-      // Xoá ID / đặt lại ID = 0
       ["id", "ID", "Id"].forEach(
         (k) => payloadData[k] && delete payloadData[k],
       );
-      payloadData["id"] = 0;
-
-      // Chuẩn hoá value trước khi gửi
+      payloadData.id = 0;
       fieldActive.forEach((f) => {
         const key = f.name;
         const value = payloadData[key];
 
         switch (f.typeProperty) {
-          // FORMAT DATE
           case TypeProperty.Date:
             payloadData[key] = value ? formatDateForBE(value) : null;
             break;
 
-          // FORMAT NUMBER
           case TypeProperty.Int:
           case TypeProperty.Decimal:
             payloadData[key] =
               value !== "" && value !== null ? Number(value) : null;
             break;
 
-          // FORMAT IMAGE
           case TypeProperty.Image:
             payloadData[key] = value === "" || value === "---" ? null : value;
             break;
@@ -294,17 +293,27 @@ export default function AssetCloneItem() {
             payloadData[key] = value === "" ? null : value;
         }
       });
-
-      // Xoá tất cả trường _MoTa liên quan reference
       Object.keys(payloadData).forEach(
         (k) => k.endsWith("_MoTa") && delete payloadData[k],
       );
 
-      // Final payload giống Create
+      const autoCodeField = propertyClass?.propertyTuDongTang;
+      if (
+        autoCodeField &&
+        isEffectivelyEmptyCodeValue(payloadData[autoCodeField])
+      ) {
+        payloadData[autoCodeField] = null;
+      }
+
       const payload = {
         entities: [payloadData],
         saveHistory: true,
       };
+
+      await checkValidation(nameClass, {
+        data: payloadData,
+        id: 0,
+      });
 
       await insert(nameClass, payload);
 
@@ -319,6 +328,32 @@ export default function AssetCloneItem() {
               setImages({});
 
               dispatch(setShouldRefreshList(true));
+              if (
+                returnTo === "assetRelatedList" &&
+                nameClass &&
+                idRoot &&
+                propertyReference
+              ) {
+                navigation.reset({
+                  index: 2,
+                  routes: [
+                    { name: "Home" },
+                    { name: "Asset" },
+                    {
+                      name: "AssetRelatedList",
+                      params: {
+                        nameClass,
+                        idRoot,
+                        propertyReference,
+                        nameClassRoot,
+                        titleHeader,
+                      },
+                    },
+                  ],
+                });
+                return;
+              }
+
               navigation.reset({
                 index: 2,
                 routes: [
@@ -326,7 +361,7 @@ export default function AssetCloneItem() {
                   { name: "Asset" },
                   {
                     name: "AssetList",
-                    params: { nameClass },
+                    params: { nameClass, titleHeader },
                   },
                 ],
               });
@@ -335,8 +370,12 @@ export default function AssetCloneItem() {
         ],
         { cancelable: false },
       );
-    } catch (err) {
-      showAlertIfActive("Lỗi", "Không thể tạo bản sao!");
+    } catch (err: any) {
+      setValidationErrors(getApiValidationFieldErrors(err));
+      showAlertIfActive(
+        "Lỗi",
+        getApiErrorMessage(err, "Không thể tạo bản sao!"),
+      );
     }
   };
 
@@ -392,6 +431,7 @@ export default function AssetCloneItem() {
         openReferenceModal={openReferenceModal}
         pickImage={pickImage}
         referenceData={referenceData}
+        validationErrors={validationErrors}
         setImages={setImages}
         setLoadingImages={setLoadingImages}
         styles={styles}
@@ -409,7 +449,6 @@ export default function AssetCloneItem() {
   );
 }
 
-// UI
 const styles = StyleSheet.create({
   ...createAssetFormBaseStyles({
     backgroundColor: BG,

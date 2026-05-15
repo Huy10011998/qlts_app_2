@@ -34,3 +34,11 @@ export const normalizeClassName = (name?: string) => {
 
   return clean.trim();
 };
+
+export const isEffectivelyEmptyCodeValue = (value: unknown) => {
+  if (value == null) return true;
+  if (typeof value !== "string") return false;
+
+  const normalized = value.trim();
+  return normalized === "" || normalized === ":";
+};

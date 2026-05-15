@@ -30,6 +30,25 @@ import {
   VotingChoice,
 } from "./shareholdersMeetingHelpers";
 
+function ShareholdersMeetingScannerButton({
+  onPress,
+}: {
+  onPress: () => void;
+}) {
+  return React.createElement(
+    TouchableOpacity,
+    {
+      onPress,
+      style: { paddingHorizontal: 5 },
+    },
+    React.createElement(MaterialCommunityIcons, {
+      name: "qrcode-scan",
+      size: 24,
+      color: "#fff",
+    }),
+  );
+}
+
 export function useShareholdersMeetingController() {
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused();
@@ -153,18 +172,18 @@ export function useShareholdersMeetingController() {
   const syncShareholderAttendance = useCallback(
     (shareholderId: string, status: AttendanceStatus) => {
       applyAttendanceStatus(shareholderId, status);
-      void reloadShareholders();
+      reloadShareholders();
     },
     [applyAttendanceStatus, reloadShareholders],
   );
 
   const canViewAttendance = useMemo(
     () => can("DaiHoiCoDong_CoDong_DiemDanh", "Read"),
-    [can, loaded],
+    [can],
   );
   const canViewVoting = useMemo(
     () => can("DaiHoiCoDong_CoDong_YKien", "Read"),
-    [can, loaded],
+    [can],
   );
   const hasAnyViewPermission = canViewAttendance || canViewVoting;
 
@@ -217,24 +236,16 @@ export function useShareholdersMeetingController() {
     selectedVotingChoice,
   ]);
 
+  const renderHeaderRight = useCallback(
+    () => ShareholdersMeetingScannerButton({ onPress: openScanner }),
+    [openScanner],
+  );
+
   useEffect(() => {
     navigation.setOptions({
-      headerRight: () => (
-        React.createElement(
-          TouchableOpacity,
-          {
-            onPress: openScanner,
-            style: { paddingHorizontal: 5 },
-          },
-          React.createElement(MaterialCommunityIcons, {
-            name: "qrcode-scan",
-            size: 24,
-            color: "#fff",
-          }),
-        )
-      ),
+      headerRight: renderHeaderRight,
     });
-  }, [navigation, openScanner]);
+  }, [navigation, renderHeaderRight]);
 
   const refreshAttendanceList = useCallback(async () => {
     if (!activeMeeting?.id) return;
@@ -259,7 +270,7 @@ export function useShareholdersMeetingController() {
     }
 
     const intervalId = setInterval(() => {
-      void reloadShareholders();
+      reloadShareholders();
     }, 5000);
 
     return () => clearInterval(intervalId);
@@ -276,12 +287,12 @@ export function useShareholdersMeetingController() {
     if (!isFocused || !activeMeeting?.id) return;
 
     if (activeTab === "attendance") {
-      void reloadShareholders();
+      reloadShareholders();
       return;
     }
 
     if (activeTab === "voting" && canViewVoting) {
-      void reloadOpinions();
+      reloadOpinions();
     }
   }, [
     activeMeeting?.id,
@@ -365,7 +376,7 @@ export function useShareholdersMeetingController() {
       }
     };
 
-    void fetchMeetingData();
+    fetchMeetingData();
 
     return () => {
       cancelled = true;

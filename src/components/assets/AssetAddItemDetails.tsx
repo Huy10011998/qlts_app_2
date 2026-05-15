@@ -14,10 +14,14 @@ import { setShouldRefreshList } from "../../store/AssetSlice";
 import { AssetAddItemNavigationProp, Field } from "../../types/Index";
 import { TypeProperty } from "../../utils/Enum";
 import { formatDateForBE, getDefaultValueForField } from "../../utils/Date";
+import {
+  getApiErrorMessage,
+  getApiValidationFieldErrors,
+} from "../../utils/helpers/api";
 import { fetchImage, pickImage } from "../../utils/Image";
-import { insert } from "../../services/data/CallApi";
+import { isEffectivelyEmptyCodeValue } from "../../utils/helpers/string";
+import { checkValidation, insert } from "../../services/data/CallApi";
 
-/* ======================= HOOKS ======================= */
 import { useGroupedFields } from "../../hooks/AssetAddItem/useGroupedFields";
 import { useCascadeForm } from "../../hooks/AssetAddItem/useCascadeForm";
 import { useTreeToForm } from "../../hooks/AssetAddItem/useTreeToForm";
@@ -38,49 +42,44 @@ import {
   ASSET_FORM_BRAND_RED,
   ASSET_FORM_CARD_SHADOW,
 } from "./shared/assetFormTheme";
-/* ===================================================== */
 
 const BRAND_RED = ASSET_FORM_BRAND_RED;
 const BG = ASSET_FORM_BG;
 const CARD_SHADOW = ASSET_FORM_CARD_SHADOW;
 
 export default function AssetAddItemDetails() {
-  /* ===== PARAMS ===== */
   const { field, nameClass, propertyClass } = useParams();
   const navigation = useNavigation<AssetAddItemNavigationProp>();
   const { can } = usePermission();
   const dispatch = useAppDispatch();
 
-  /* ===== REDUX ===== */
   const { selectedTreeValue, selectedTreeProperty } = useSelector(
     (state: RootState) => state.asset,
   );
 
-  // ===== RAW TREE VALUES ===== //
   const rawTreeValues = useMemo(() => {
     if (!selectedTreeValue) return [];
     return selectedTreeValue.split(",").map((v) => v.trim());
   }, [selectedTreeValue]);
 
-  /* ===== FORM CORE ===== */
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [enumData, setEnumData] = useState<Record<string, any[]>>({});
   const [referenceData, setReferenceData] = useState<
     Record<string, { items: any[]; totalCount: number }>
   >({});
 
-  /* ===== UI STATE ===== */
   const [modalVisible, setModalVisible] = useState(false);
   const [activeEnumField, setActiveEnumField] = useState<Field | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<
+    Record<string, string>
+  >({});
 
-  /* ===== IMAGE ===== */
   const [images, setImages] = useState<Record<string, string>>({});
   const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>(
     {},
   );
 
-  /* ===== REFERENCE LOAD MORE ===== */
   const PAGE_SIZE = 20;
   const [refPage, setRefPage] = useState(0);
   const [refKeyword, setRefKeyword] = useState("");
@@ -88,27 +87,39 @@ export default function AssetAddItemDetails() {
   const [refHasMore, setRefHasMore] = useState(true);
   const [refSearching, setRefSearching] = useState(false);
 
-  /* ===== GROUP + FIELD ===== */
   const { fieldActive, groupedFields, collapsedGroups, toggleGroup } =
     useGroupedFields(field);
 
-  /* ===== CASCADE ===== */
-  const { handleChange } = useCascadeForm(
+  const { handleChange: baseHandleChange } = useCascadeForm(
     fieldActive,
     setFormData,
     setReferenceData,
   );
 
-  /* ===== TREE → FORM ===== */
+  const handleChange = React.useCallback(
+    (name: string, value: any) => {
+      if (validationErrors[name]) {
+        setValidationErrors((prev) => {
+          const next = { ...prev };
+          delete next[name];
+          return next;
+        });
+      }
+
+      baseHandleChange(name, value);
+    },
+    [baseHandleChange, validationErrors],
+  );
+
   useTreeToForm({
     selectedTreeProperty,
     selectedTreeValue,
     fieldActive,
     handleChange,
+    setFormData,
     setReferenceData,
   });
 
-  /* ===== ENUM / REFERENCE ===== */
   useEnumAndReferenceLoader(
     fieldActive,
     setEnumData,
@@ -116,10 +127,8 @@ export default function AssetAddItemDetails() {
     referenceData,
   );
 
-  /* ===== DEFAULT DATE / TIME ===== */
   useDefaultDateTime(fieldActive, setFormData);
 
-  /* ===== AUTO INCREMENT ===== */
   const parentField = propertyClass?.prentTuDongTang;
   const parentValue = parentField ? formData[parentField] : undefined;
   useAutoIncrementCode({
@@ -131,7 +140,6 @@ export default function AssetAddItemDetails() {
     setFormData,
   });
 
-  /* ===== IMAGE LOADER ===== */
   useImageLoader({
     fieldActive,
     formData,
@@ -140,7 +148,6 @@ export default function AssetAddItemDetails() {
     setLoadingImages,
   });
 
-  /* ===== OPEN ENUM & REFERANCE MODAL ===== */
   const { openReferenceModal, loadReferenceModalData } = useOpenReferenceModal({
     formData,
     setActiveEnumField,
@@ -152,7 +159,6 @@ export default function AssetAddItemDetails() {
     pageSize: PAGE_SIZE,
   });
 
-  // ===== MODAL ITEMS ===== //
   const modalItems = useModalItems(
     activeEnumField,
     referenceData,
@@ -161,7 +167,6 @@ export default function AssetAddItemDetails() {
   );
   const { isMounted, showAlertIfActive } = useSafeAlert();
 
-  /* ===== SUBMIT ===== */
   const handleCreate = async () => {
     if (nameClass && !can(nameClass, "Insert")) {
       Alert.alert("Không có quyền", "Bạn không có quyền tạo mới dữ liệu!");
@@ -194,6 +199,19 @@ export default function AssetAddItemDetails() {
         }
       });
 
+      const autoCodeField = propertyClass?.propertyTuDongTang;
+      if (
+        autoCodeField &&
+        isEffectivelyEmptyCodeValue(payloadData[autoCodeField])
+      ) {
+        payloadData[autoCodeField] = null;
+      }
+
+      await checkValidation(nameClass, {
+        data: payloadData,
+        id: 0,
+      });
+
       await insert(nameClass, {
         entities: [payloadData],
         saveHistory: true,
@@ -210,8 +228,12 @@ export default function AssetAddItemDetails() {
           },
         },
       ]);
-    } catch {
-      showAlertIfActive("Lỗi", "Không thể tạo mới!");
+    } catch (error: any) {
+      setValidationErrors(getApiValidationFieldErrors(error));
+      showAlertIfActive(
+        "Lỗi",
+        getApiErrorMessage(error, "Không thể tạo mới!"),
+      );
     } finally {
       if (isMounted()) {
         setIsSubmitting(false);
@@ -219,7 +241,6 @@ export default function AssetAddItemDetails() {
     }
   };
 
-  /* ======================= UI ======================= */
   return (
     <AssetFormScreenShell
       brandColor={BRAND_RED}
@@ -274,6 +295,7 @@ export default function AssetAddItemDetails() {
         openReferenceModal={openReferenceModal}
         pickImage={pickImage}
         referenceData={referenceData}
+        validationErrors={validationErrors}
         setImages={setImages}
         setLoadingImages={setLoadingImages}
         styles={styles}
@@ -292,7 +314,6 @@ export default function AssetAddItemDetails() {
   );
 }
 
-/* ======================= STYLE ======================= */
 const styles = StyleSheet.create({
   ...createAssetFormBaseStyles({
     backgroundColor: BG,

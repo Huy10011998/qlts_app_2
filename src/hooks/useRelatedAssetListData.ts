@@ -12,8 +12,9 @@ import { isAuthExpiredError } from "../services/data/CallApi";
 type RelatedAssetListDataParams = {
   conditions: any[];
   debouncedSearch: string;
-  nameClass: string;
+  nameClass?: string;
   pageSize?: number;
+  enabled?: boolean;
   showAlertIfActive: (
     title: string,
     message?: string,
@@ -28,6 +29,7 @@ export function useRelatedAssetListData({
   debouncedSearch,
   nameClass,
   pageSize = 20,
+  enabled = true,
   showAlertIfActive,
   isMounted,
 }: RelatedAssetListDataParams) {
@@ -39,23 +41,26 @@ export function useRelatedAssetListData({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [isRefreshingTop, setIsRefreshingTop] = useState(false);
-  const [isFirstLoad, setIsFirstLoad] = useState(true);
   const [total, setTotal] = useState(0);
 
   const skipRef = useRef(0);
   const isFetchingRef = useRef(false);
+  const fieldActiveRef = useRef<Field[]>([]);
+  const propertyClassRef = useRef<PropertyResponse | undefined>(undefined);
+  const isFirstLoadRef = useRef(true);
 
   const fetchData = useCallback(
     async (isLoadMore = false, options?: { isRefresh?: boolean }) => {
+      if (!enabled || !nameClass) return;
       if (isFetchingRef.current) return;
 
       const isRefresh = options?.isRefresh;
       const shouldReloadFieldConfig =
-        !isLoadMore && (isRefresh || fieldActive.length === 0);
+        !isLoadMore && (isRefresh || fieldActiveRef.current.length === 0);
       const shouldReloadPropertyClass =
-        !isLoadMore && (isRefresh || !propertyClass);
+        !isLoadMore && (isRefresh || !propertyClassRef.current);
 
-      if (!isLoadMore && !isRefresh && isFirstLoad) {
+      if (!isLoadMore && !isRefresh && isFirstLoadRef.current) {
         setIsLoading(true);
       }
 
@@ -65,19 +70,22 @@ export function useRelatedAssetListData({
         if (shouldReloadFieldConfig) {
           const resField = await getFieldActive(nameClass);
           const fields = resField?.data || [];
+          fieldActiveRef.current = fields;
           setFieldActive(fields);
           setFieldShowMobile(fields.filter((field: Field) => field.isShowMobile));
         }
 
         if (shouldReloadPropertyClass) {
           const resProp = await getPropertyClass(nameClass);
-          setPropertyClass(resProp?.data);
+          const nextPropertyClass = resProp?.data;
+          propertyClassRef.current = nextPropertyClass;
+          setPropertyClass(nextPropertyClass);
         }
 
         const currentSkip = isLoadMore ? skipRef.current : 0;
         const res = await getList(
           nameClass,
-          "",
+          "id desc",
           pageSize,
           currentSkip,
           debouncedSearch,
@@ -110,47 +118,61 @@ export function useRelatedAssetListData({
       } finally {
         isFetchingRef.current = false;
         if (isMounted()) {
+          isFirstLoadRef.current = false;
           setIsLoading(false);
           setIsLoadingMore(false);
           setIsSearching(false);
           setIsRefreshingTop(false);
-          setIsFirstLoad(false);
         }
       }
     },
     [
       conditions,
       debouncedSearch,
-      fieldActive.length,
-      isFirstLoad,
       isMounted,
       nameClass,
+      enabled,
       pageSize,
-      propertyClass,
       showAlertIfActive,
     ],
   );
 
-  useAutoReload(fetchData);
+  useAutoReload(fetchData, { enabled });
 
   useEffect(() => {
+    if (!enabled || !nameClass) {
+      setData([]);
+      setFieldActive([]);
+      setFieldShowMobile([]);
+      setPropertyClass(undefined);
+      setIsLoading(false);
+      setIsLoadingMore(false);
+      setIsSearching(false);
+      setIsRefreshingTop(false);
+      setTotal(0);
+      fieldActiveRef.current = [];
+      propertyClassRef.current = undefined;
+      isFirstLoadRef.current = true;
+      skipRef.current = 0;
+      isFetchingRef.current = false;
+      return;
+    }
+
     const isSearch = debouncedSearch.trim().length > 0;
 
     if (isSearch) setIsSearching(true);
 
     skipRef.current = 0;
-    setData([]);
-    setIsLoading(true);
 
     fetchData(false).finally(() => {
       if (isSearch && isMounted()) {
         setIsSearching(false);
       }
     });
-  }, [debouncedSearch, fetchData, isMounted]);
+  }, [debouncedSearch, enabled, fetchData, isMounted, nameClass]);
 
   const refreshTop = async () => {
-    if (isRefreshingTop) return;
+    if (!enabled || !nameClass || isRefreshingTop) return;
 
     setIsRefreshingTop(true);
     skipRef.current = 0;
@@ -159,6 +181,7 @@ export function useRelatedAssetListData({
   };
 
   const handleLoadMore = () => {
+    if (!enabled || !nameClass) return;
     if (isLoading || isLoadingMore || isSearching || data.length >= total) {
       return;
     }

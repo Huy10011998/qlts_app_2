@@ -35,7 +35,7 @@ export default function AssetMenuSearchBar({
           value={value}
           onChangeText={onChangeText}
           style={styles.searchInput}
-          clearButtonMode="while-editing"
+          clearButtonMode="never"
           returnKeyType="search"
         />
         {isSearching ? (

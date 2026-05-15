@@ -30,16 +30,23 @@ import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { useDetailViewState } from "../../hooks/useDetailViewState";
 import { useSlideInPanel } from "../../hooks/useSlideInPanel";
 import SlideInSidePanel from "../shared/SlideInSidePanel";
+import { C } from "../../utils/helpers/colors";
 
 const { width } = Dimensions.get("window");
 const MENU_WIDTH = width * 0.6;
+
+function QrDetailsMenuButton({ onPress }: { onPress: () => void }) {
+  return (
+    <TouchableOpacity onPress={onPress} style={styles.headerButton}>
+      <Ionicons name="menu" size={26} color="#fff" />
+    </TouchableOpacity>
+  );
+}
 
 export default function QrDetails({ children }: QrDetailsProps) {
   const { id, nameClass, field, itemData } = useParams();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-
-  //  STATE
   const [isLoading, setIsLoading] = useState(true);
   const [item, setItem] = useState<any>(null);
 
@@ -61,23 +68,22 @@ export default function QrDetails({ children }: QrDetailsProps) {
     initialOffset: MENU_WIDTH,
   });
 
-  // Redux
   const dispatch = useAppDispatch();
   const shouldRefreshDetails = useSelector(
     (state: RootState) => state.asset.shouldRefreshDetails,
   );
   const { isMounted, showAlertIfActive } = useSafeAlert();
 
-  //  HEADER
+  const renderHeaderRight = useCallback(
+    () => <QrDetailsMenuButton onPress={toggleMenu} />,
+    [toggleMenu],
+  );
+
   useEffect(() => {
     navigation.setOptions({
-      headerRight: () => (
-        <TouchableOpacity onPress={toggleMenu} style={{ paddingHorizontal: 8 }}>
-          <Ionicons name="menu" size={26} color="#fff" />
-        </TouchableOpacity>
-      ),
+      headerRight: renderHeaderRight,
     });
-  }, [navigation, toggleMenu]);
+  }, [navigation, renderHeaderRight]);
 
   const handlePress = async () => {
     if (!nameClass || !id) {
@@ -105,7 +111,6 @@ export default function QrDetails({ children }: QrDetailsProps) {
   };
 
   const fetchDetails = useCallback(async () => {
-    // Guard đầu — sau dòng này TypeScript biết id và nameClass là string
     if (!id || !nameClass) {
       setIsLoading(false);
       return;
@@ -119,7 +124,7 @@ export default function QrDetails({ children }: QrDetailsProps) {
 
     setIsLoading(true);
     try {
-      const response = await getDetails(nameClass, id); // ✅ không lỗi
+      const response = await getDetails(nameClass, id);
       setItem(response.data);
     } catch (e) {
       error(e);
@@ -127,7 +132,7 @@ export default function QrDetails({ children }: QrDetailsProps) {
     } finally {
       if (isMounted()) setIsLoading(false);
     }
-  }, [id, nameClass, itemData]);
+  }, [id, isMounted, itemData, nameClass, showAlertIfActive]);
 
   useFocusEffect(
     useCallback(() => {
@@ -135,20 +140,18 @@ export default function QrDetails({ children }: QrDetailsProps) {
         fetchDetails();
         dispatch(resetShouldRefreshDetails());
       }
-    }, [shouldRefreshDetails, fetchDetails]),
+    }, [dispatch, fetchDetails, shouldRefreshDetails]),
   );
 
   useAutoReload(fetchDetails);
 
-  // fetch lần đầu khi mount
   useEffect(() => {
     if (id && nameClass) fetchDetails();
     else setIsLoading(false);
   }, [id, nameClass, fetchDetails]);
 
-  if (isLoading) return <IsLoading size="large" color="#E31E24" />;
+  if (isLoading) return <IsLoading size="large" color={C.red} />;
 
-  //  RENDER
   return (
     <View style={styles.container}>
       {children({
@@ -214,19 +217,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F9F9F9",
   },
-
   menuContent: {
     padding: 16,
     paddingBottom: 24,
   },
-
-  menuTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 16,
-    color: "#333",
-  },
-
   menuItem: {
     paddingVertical: 14,
     paddingHorizontal: 12,
@@ -238,5 +232,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#333",
     fontWeight: "500",
+  },
+  headerButton: {
+    paddingHorizontal: 8,
   },
 });

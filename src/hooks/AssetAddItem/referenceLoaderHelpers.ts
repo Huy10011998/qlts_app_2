@@ -39,12 +39,19 @@ export const getReferenceParentContext = (
   formData: Record<string, any>,
   parentsFields?: string,
 ) => {
-  const parentFields = parentsFields?.split(",").map((field) => field.trim()) ?? [];
+  const hasParentsFields =
+    typeof parentsFields === "string" && parentsFields.trim().length > 0;
+  const parentFields =
+    (hasParentsFields ? parentsFields : "")
+      ?.split(",")
+      .map((field) => field.trim())
+      .filter((field) => field.length > 0) ?? [];
   const parentValues = parentFields
     .map((field) => formData[field])
     .filter((value) => value != null && value !== "");
 
   return {
+    hasParentsFields,
     parentFields,
     parentValues,
     hasAllParents:
@@ -82,12 +89,17 @@ export const loadReferenceItemsForField = async ({
 }: LoadReferenceItemsArgs) => {
   if (!field.referenceName) return null;
 
-  const { parentFields, parentValues, hasAllParents } = getReferenceParentContext(
+  const {
+    hasParentsFields,
+    parentFields,
+    parentValues,
+    hasAllParents,
+  } = getReferenceParentContext(
     formData,
     field.parentsFields,
   );
 
-  if (requireAllParents && parentFields.length > 0 && !hasAllParents) {
+  if (requireAllParents && hasParentsFields && !hasAllParents) {
     onMissingParents?.();
     return false;
   }

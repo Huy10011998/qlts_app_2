@@ -38,7 +38,12 @@ export default function AssetFormActionButton({
       style={[
         styles.button,
         isPrimary
-          ? { backgroundColor: disabled ? "#ccc" : brandColor }
+          ? [
+              styles.primaryButton,
+              disabled
+                ? styles.primaryButtonDisabled
+                : { backgroundColor: brandColor },
+            ]
           : styles.secondaryButton,
         style,
       ]}
@@ -49,7 +54,9 @@ export default function AssetFormActionButton({
       <Text
         style={[
           styles.label,
-          isPrimary ? styles.primaryLabel : { color: brandColor },
+          isPrimary
+            ? styles.primaryLabel
+            : [styles.secondaryLabel, { color: brandColor }],
           textStyle,
         ]}
       >
@@ -74,6 +81,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#FFD6D6",
   },
+  primaryButton: {},
+  primaryButtonDisabled: {
+    backgroundColor: "#ccc",
+  },
   label: {
     fontSize: 16,
     fontWeight: "700",
@@ -81,4 +92,5 @@ const styles = StyleSheet.create({
   primaryLabel: {
     color: "#fff",
   },
+  secondaryLabel: {},
 });

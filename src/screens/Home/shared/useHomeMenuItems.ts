@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { HomeNavigationProp, MenuItemComponent } from "../../../types";
 import { HOME_MEETING_INFO } from "./homeData";
 
@@ -17,15 +17,25 @@ export function useHomeMenuItems(
   navigation: HomeNavigationProp,
   tabsNavigation?: ParentNavigation | null,
 ) {
-  const openMeetingScreen = () =>
-    navigation.navigate("ShareholdersMeeting", HOME_MEETING_INFO);
+  const openMeetingScreen = useCallback(
+    () => navigation.navigate("ShareholdersMeeting", HOME_MEETING_INFO),
+    [navigation],
+  );
 
-  const openCameraScreen = () => navigation.navigate("Camera");
+  const openCameraScreen = useCallback(
+    () => navigation.navigate("Camera"),
+    [navigation],
+  );
 
-  const openScanScreen = () =>
-    tabsNavigation?.navigate("ScanTab", { screen: "Scan" });
+  const openScanScreen = useCallback(
+    () => tabsNavigation?.navigate("ScanTab", { screen: "Scan" }),
+    [tabsNavigation],
+  );
 
-  const openSettingScreen = () => tabsNavigation?.navigate("SettingTab");
+  const openSettingScreen = useCallback(
+    () => tabsNavigation?.navigate("SettingTab"),
+    [tabsNavigation],
+  );
 
   const menuItems = useMemo<HomeMenuItem[]>(
     () => [
@@ -54,7 +64,7 @@ export function useHomeMenuItems(
         onPress: openMeetingScreen,
       },
     ],
-    [navigation, tabsNavigation],
+    [navigation, openCameraScreen, openMeetingScreen],
   );
 
   return {

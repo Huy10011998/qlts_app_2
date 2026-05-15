@@ -1,6 +1,16 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import { C } from "../../../utils/helpers/colors";
+
+const trendStyles = StyleSheet.create({
+  up: {
+    backgroundColor: "#E8FBF3",
+  },
+  down: {
+    backgroundColor: "#FFF0F0",
+  },
+});
 
 type HomeStatCardProps = {
   value: string;
@@ -30,13 +40,13 @@ export default function HomeStatCard({
           <Ionicons name={iconName} color={iconColor} size={16} />
         </View>
         {trend === "up" ? (
-          <View style={[styles.trendBadge, { backgroundColor: "#E8FBF3" }]}>
+          <View style={[styles.trendBadge, trendStyles.up]}>
             <Ionicons name="trending-up" size={10} color="#10B981" />
           </View>
         ) : null}
         {trend === "down" ? (
-          <View style={[styles.trendBadge, { backgroundColor: "#FFF0F0" }]}>
-            <Ionicons name="trending-down" size={10} color="#E31E24" />
+          <View style={[styles.trendBadge, trendStyles.down]}>
+            <Ionicons name="trending-down" size={10} color={C.red} />
           </View>
         ) : null}
       </View>

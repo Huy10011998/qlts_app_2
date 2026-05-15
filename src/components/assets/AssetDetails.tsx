@@ -15,9 +15,7 @@ import { useAppDispatch } from "../../store/Hooks";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { useDetailViewState } from "../../hooks/useDetailViewState";
-
-const BG = "#F0F2F8";
-const BRAND_RED = "#E31E24";
+import { BG, BRAND_RED } from "./shared/listTheme";
 
 export default function AssetDetails({ children }: DetailsProps) {
   const { id, nameClass, field, activeTab: tabFromParams } = useParams();
@@ -34,7 +32,6 @@ export default function AssetDetails({ children }: DetailsProps) {
     toggleGroup,
   } = useDetailViewState(field, tabFromParams ?? "list");
 
-  // Redux
   const dispatch = useAppDispatch();
   const { isMounted, showAlertIfActive } = useSafeAlert();
   const shouldRefreshDetails = useSelector(
@@ -55,7 +52,7 @@ export default function AssetDetails({ children }: DetailsProps) {
         setIsLoading(false);
       }
     }
-  }, [id, nameClass]);
+  }, [id, isMounted, nameClass, showAlertIfActive]);
 
   useFocusEffect(
     useCallback(() => {
@@ -63,12 +60,11 @@ export default function AssetDetails({ children }: DetailsProps) {
         fetchDetails();
         dispatch(resetShouldRefreshDetails());
       }
-    }, [shouldRefreshDetails, fetchDetails]),
+    }, [dispatch, fetchDetails, shouldRefreshDetails]),
   );
 
   useAutoReload(fetchDetails);
 
-  // fetch lần đầu khi mount
   useEffect(() => {
     if (id && nameClass) fetchDetails();
     else setIsLoading(false);

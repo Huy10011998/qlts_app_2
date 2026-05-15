@@ -75,7 +75,7 @@ const CameraCell = React.memo(
     onDoubleTap,
     webviewRefRegister,
     pongTimeoutRef,
-    webviewRestartRef,
+    webviewRestartRef: _webviewRestartRef,
     onTokenExpired,
   }: CameraCellProps) => {
     const singleTap = React.useMemo(
@@ -83,7 +83,7 @@ const CameraCell = React.memo(
         Gesture.Tap()
           .runOnJS(true)
           .onEnd(() => onPress(cam, idx)),
-      [cam.iD_Camera, idx, onPress]
+      [cam, idx, onPress]
     );
     const doubleTap = React.useMemo(
       () =>
@@ -91,7 +91,7 @@ const CameraCell = React.memo(
           .runOnJS(true)
           .numberOfTaps(2)
           .onEnd(() => onDoubleTap(cam, idx)),
-      [cam.iD_Camera, idx, onDoubleTap]
+      [cam, idx, onDoubleTap]
     );
     const composed = React.useMemo(
       () => Gesture.Exclusive(doubleTap, singleTap),
@@ -289,7 +289,7 @@ const CameraCell = React.memo(
 const CameraListGrid: React.FC = () => {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
-  const { cameras = [], zoneName = "Camera" } = route.params ?? {};
+  const { cameras = [] } = route.params ?? {};
   const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();
 
@@ -472,7 +472,7 @@ const CameraListGrid: React.FC = () => {
       const nextRef = webviewRefs.current[key];
       setCameraWebViewTokenAndStart(nextRef, token);
     }, 150);
-  }, []);
+  }, [cameraTokenRef]);
 
   const webviewRestartRef = React.useRef(restartGridWebView);
   React.useEffect(() => {
@@ -503,7 +503,12 @@ const CameraListGrid: React.FC = () => {
         }
         stopAllStreams();
       };
-    }, [clearTokenRefreshTimer, startAllStreams, stopAllStreams])
+    }, [
+      clearTokenRefreshTimer,
+      fetchCameraTokenRef,
+      startAllStreams,
+      stopAllStreams,
+    ])
   );
 
   React.useEffect(() => {
@@ -531,8 +536,6 @@ const CameraListGrid: React.FC = () => {
     if (Platform.OS !== "android" || !isFocused || isPaused || !cameraToken)
       return;
     if (fullscreenCamRef.current) return;
-
-    // THÊM: Không restart grid khi đang fullscreen
     if (fullscreenCam) return;
 
     const timer = setTimeout(() => {
@@ -562,8 +565,6 @@ const CameraListGrid: React.FC = () => {
     }
     if (!cameraToken) return;
     if (fullscreenCamRef.current) return; // ← dùng ref thay state
-
-    // THÊM: Không restart grid khi đang xem fullscreen
     if (fullscreenCam) return;
 
     const timer = setTimeout(() => {
@@ -575,7 +576,7 @@ const CameraListGrid: React.FC = () => {
   }, [
     cameraToken,
     focusKey,
-    fullscreenCam, // thêm dependency
+    fullscreenCam,
     isFocused,
     isPaused,
     layoutCount,
@@ -645,13 +646,10 @@ const CameraListGrid: React.FC = () => {
   }, [fsSwitchOpacity, isSwitchingFullscreen, videoReady]);
 
   React.useEffect(() => {
-    // THÊM: Bỏ qua khi đang fullscreen vì Modal có thể làm isFocused flicker
     if (fullscreenCamRef.current) return;
     if (!isFocused) stopAllStreams();
   }, [isFocused, stopAllStreams]);
 
-  // FIX: Ping watchdog — tăng timeout lên 10s và miss count ≥ 2 mới restart
-  // tránh restart oan khi mạng chậm thoáng qua
   React.useEffect(() => {
     if (webviewPingIntervalRef.current)
       clearInterval(webviewPingIntervalRef.current);
@@ -665,26 +663,26 @@ const CameraListGrid: React.FC = () => {
           const missCount = (webviewMissCountRef.current[id] ?? 0) + 1;
           webviewMissCountRef.current[id] = missCount;
           if (missCount >= 2) {
-            // Miss 2 lần liên tiếp (~60s) mới restart
             console.warn(
               `[Camera] WebView ${id} miss ${missCount} pings, restarting`
             );
             webviewMissCountRef.current[id] = 0;
             webviewRestartRef.current?.(id);
           }
-        }, 10000); // FIX: tăng từ 5s → 10s
+        }, 10000);
       });
     }, 30000);
+    const pongTimeouts = pongTimeoutRef.current;
     return () => {
       if (webviewPingIntervalRef.current)
         clearInterval(webviewPingIntervalRef.current);
-      Object.values(pongTimeoutRef.current).forEach(clearTimeout);
+      Object.values(pongTimeouts).forEach(clearTimeout);
     };
   }, []);
 
   const handleTokenExpired = React.useCallback(() => {
     fetchCameraTokenRef.current?.(true);
-  }, []);
+  }, [fetchCameraTokenRef]);
 
   const startAndroidWatchdog = React.useCallback(() => {
     if (Platform.OS !== "android") return;
@@ -745,7 +743,7 @@ const CameraListGrid: React.FC = () => {
       stopAllStreams();
       setPage(newPage);
       setActiveIndex(0);
-      setGridRenderKey((k) => k + 1); // ← dùng gridRenderKey thay pageChangeKey
+      setGridRenderKey((k) => k + 1);
       setPageChangeKey((k) => k + 1);
     },
     [stopAllStreams]
@@ -805,14 +803,13 @@ const CameraListGrid: React.FC = () => {
     setPage(0);
     setActiveIndex(0);
     setShowLayoutPicker(false);
-    setGridRenderKey((k) => k + 1); // reset WebView
+    setGridRenderKey((k) => k + 1);
     setPageChangeKey((k) => k + 1);
   };
 
-  const handleCamPress = React.useCallback(
-    (cam: any, idx: number) => setActiveIndex(idx),
-    []
-  );
+  const handleCamPress = React.useCallback((_: any, idx: number) => {
+    setActiveIndex(idx);
+  }, []);
 
   const handleCamDoubleTap = React.useCallback(
     (cam: any, idx: number) => {
@@ -850,11 +847,9 @@ const CameraListGrid: React.FC = () => {
       setFullscreenCam(nextCam);
       setActiveIndex(nextLocalIndex);
 
-      // Chỉ update page nếu thực sự đổi page, và KHÔNG tăng pageChangeKey
       if (nextPage !== pageRef.current) {
         setPage(nextPage);
       }
-      // REMOVED: setPageChangeKey — không cần restart grid khi đang ở fullscreen
 
       fsTranslateX.setValue(direction === "next" ? SW : -SW);
       Animated.timing(fsTranslateX, {
@@ -988,9 +983,9 @@ const CameraListGrid: React.FC = () => {
     } catch (e) {
       Alert.alert("Lỗi", "Không thể chụp ảnh camera.");
     }
-  }, [activeIndex]);
+  }, [activeIndex, cameraTokenRef]);
 
-  const closeFullscreen = () => {
+  const closeFullscreen = React.useCallback(() => {
     if (androidFallbackRef.current) clearTimeout(androidFallbackRef.current);
     if (androidWatchdogRef.current) clearInterval(androidWatchdogRef.current);
     if (Platform.OS === "ios") {
@@ -1006,15 +1001,13 @@ const CameraListGrid: React.FC = () => {
     setFullscreenCam(null);
     setPendingThumbUrl(null);
     setIsLandscape(false);
-
-    // THÊM: Delay start grid sau khi Modal đóng hoàn toàn
     setTimeout(() => {
       if (!isFocusedRef.current) return;
       Object.values(webviewRefs.current).forEach((ref) =>
         ref?.postMessage?.("start")
       );
     }, 400);
-  };
+  }, [fsSwitchOpacity, fsTranslateX]);
   const fullscreenDoubleTapGesture = React.useMemo(
     () =>
       Gesture.Tap()
@@ -1145,7 +1138,7 @@ const CameraListGrid: React.FC = () => {
             disabled
           >
             <Ionicons name="play" size={16} color="#bbb" />
-            <Text style={[styles.playbackText, { color: "#bbb" }]}>
+            <Text style={[styles.playbackText, styles.playbackTextDisabled]}>
               Phát lại
             </Text>
           </TouchableOpacity>
@@ -1211,8 +1204,8 @@ const CameraListGrid: React.FC = () => {
             style={[
               styles.fsHeader,
               isLandscape
-                ? { paddingTop: 48, paddingLeft: insets.left || 16 }
-                : { paddingTop: 48 },
+                ? [styles.fsHeaderLandscape, { paddingLeft: insets.left || 16 }]
+                : styles.fsHeaderPortrait,
             ]}
           >
             <TouchableOpacity
@@ -1270,7 +1263,7 @@ const CameraListGrid: React.FC = () => {
                         }}
                       style={[
                         StyleSheet.absoluteFill,
-                        { opacity: videoReady ? 1 : 0 },
+                        videoReady ? styles.visibleVideo : styles.hiddenVideo,
                       ]}
                       resizeMode="contain"
                       muted={isFullMuted}
@@ -1313,7 +1306,7 @@ const CameraListGrid: React.FC = () => {
                       }}
                       style={[
                         StyleSheet.absoluteFill,
-                        { opacity: videoReady ? 1 : 0 },
+                        videoReady ? styles.visibleVideo : styles.hiddenVideo,
                       ]}
                       javaScriptEnabled
                       domStorageEnabled
@@ -1344,8 +1337,8 @@ const CameraListGrid: React.FC = () => {
                         else if (data === "swipe_prev")
                           handleFullscreenSwipe("prev");
                         else if (data === "pong") {
-                          if (pongTimeoutRef.current["fullscreen"]) {
-                            clearTimeout(pongTimeoutRef.current["fullscreen"]);
+                          if (pongTimeoutRef.current.fullscreen) {
+                            clearTimeout(pongTimeoutRef.current.fullscreen);
                           }
                         }
                       }}
@@ -1412,8 +1405,8 @@ const CameraListGrid: React.FC = () => {
             style={[
               styles.fsFooter,
               isLandscape
-                ? { paddingBottom: 48, paddingRight: insets.right || 16 }
-                : { paddingBottom: 48 },
+                ? [styles.fsFooterLandscape, { paddingRight: insets.right || 16 }]
+                : styles.fsFooterPortrait,
             ]}
           >
             {fullscreenIndex >= 0 && cameras.length > 0 && (
@@ -1538,6 +1531,9 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#333",
   },
+  playbackTextDisabled: {
+    color: "#bbb",
+  },
   iconGroup: { flex: 1, flexDirection: "row", justifyContent: "space-between" },
   iconBtn: {
     width: 44,
@@ -1613,6 +1609,8 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   fsHeaderBtn: { padding: 6 },
+  fsHeaderLandscape: { paddingTop: 48 },
+  fsHeaderPortrait: { paddingTop: 48 },
   fsTitle: {
     flex: 1,
     color: "#fff",
@@ -1632,7 +1630,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
   },
+  fsFooterLandscape: { paddingBottom: 48 },
+  fsFooterPortrait: { paddingBottom: 48 },
   fsPagerText: { color: "#fff", fontSize: 14, fontWeight: "700" },
+  visibleVideo: { opacity: 1 },
+  hiddenVideo: { opacity: 0 },
   fsLiveBadge: {
     flexDirection: "row",
     alignItems: "center",

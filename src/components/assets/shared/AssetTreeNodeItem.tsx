@@ -10,6 +10,18 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { TreeNode } from "../../../types/Index";
 import { CARD_SHADOW } from "./listTheme";
 
+const localStyles = {
+  levelIndent: {
+    paddingLeft: 16,
+  },
+  folderIconWrap: {
+    backgroundColor: "#FFF8F0",
+  },
+  leafIconWrap: {
+    backgroundColor: "#EEF2FF",
+  },
+};
+
 type AssetTreeNodeItemProps = {
   node: TreeNode;
   level?: number;
@@ -43,7 +55,7 @@ export default function AssetTreeNodeItem({
   };
 
   return (
-    <View style={[styles.nodeWrap, { paddingLeft: level > 0 ? 16 : 0 }]}>
+    <View style={[styles.nodeWrap, level > 0 && localStyles.levelIndent]}>
       <View
         style={[
           styles.nodeRow,
@@ -66,7 +78,7 @@ export default function AssetTreeNodeItem({
           <View
             style={[
               styles.nodeIconWrap,
-              { backgroundColor: hasChildren ? "#FFF8F0" : "#EEF2FF" },
+              hasChildren ? localStyles.folderIconWrap : localStyles.leafIconWrap,
             ]}
           >
             <Ionicons

@@ -82,12 +82,12 @@ export default function useQrScannerController({
 
   useEffect(() => {
     if (!enabled) return;
-    void checkPermission();
+    checkPermission();
   }, [checkPermission, enabled]);
 
   useEffect(() => {
     if (!enabled || appState !== "active" || hasPermission === true) return;
-    void checkPermission();
+    checkPermission();
   }, [appState, checkPermission, enabled, hasPermission]);
 
   useEffect(() => {

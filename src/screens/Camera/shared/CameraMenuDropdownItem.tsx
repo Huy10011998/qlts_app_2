@@ -10,6 +10,12 @@ import {
 } from "./cameraMenuHelpers";
 import { CAMERA_MENU_CARD_SHADOW } from "./cameraMenuTheme";
 
+const localStyles = StyleSheet.create({
+  childWrap: {
+    paddingLeft: 16,
+  },
+});
+
 type CameraMenuDropdownItemProps = {
   item: CameraItem;
   level?: number;
@@ -55,7 +61,7 @@ function CameraMenuDropdownItem({
   };
 
   return (
-    <View style={[styles.itemWrap, { paddingLeft: level > 0 ? 16 : 0 }]}>
+    <View style={[styles.itemWrap, level > 0 && localStyles.childWrap]}>
       <View style={[styles.itemCard, level > 0 && styles.itemCardChild]}>
         <View style={[styles.accent, { backgroundColor: theme.color }]} />
 

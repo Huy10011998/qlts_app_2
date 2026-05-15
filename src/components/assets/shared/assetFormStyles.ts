@@ -51,6 +51,7 @@ export const createAssetFormBaseStyles = ({
   },
   heroContent: {
     flex: 1,
+    marginLeft: 8,
   },
   heroTitle: {
     fontSize: 15,

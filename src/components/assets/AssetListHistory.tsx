@@ -1,12 +1,5 @@
-import React, { useCallback, useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  Alert,
-  RefreshControl,
-} from "react-native";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { View, StyleSheet, FlatList, RefreshControl } from "react-native";
 import { Field, PropertyResponse, StackNavigation } from "../../types";
 import { useParams } from "../../hooks/useParams";
 import {
@@ -28,44 +21,57 @@ import { sharedAssetListStyles } from "./shared/listStyles";
 import { BG, BRAND_RED } from "./shared/listTheme";
 
 export default function AssetListHistory() {
-  const [lichsu, setLichsu] = useState<Record<string, any>[]>([]);
+  const [historyItems, setHistoryItems] = useState<Record<string, any>[]>([]);
   const [fieldActive, setFieldActive] = useState<Field[]>([]);
   const [fieldShowMobile, setFieldShowMobile] = useState<Field[]>([]);
   const [propertyClass, setPropertyClass] = useState<PropertyResponse>();
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isRefreshingTop, setIsRefreshingTop] = useState(false);
-  const [skipSize, setSkipSize] = useState(0);
   const [total, setTotal] = useState(0);
+  const fieldActiveRef = useRef<Field[]>([]);
+  const propertyClassRef = useRef<PropertyResponse | undefined>(undefined);
+  const skipSizeRef = useRef(0);
 
-  const { id, nameClass: paramNameClass } = useParams();
-  const nameClass = paramNameClass;
+  const { id, nameClass } = useParams();
   const pageSize = 20;
 
   const navigation = useNavigation<StackNavigation<"AssetListHistory">>();
   const { isMounted, showAlertIfActive } = useSafeAlert();
 
-  const handlePress = async (item: Record<string, any>, index: number) => {
-    const currentIndex = lichsu.findIndex((x) => x.id === item.id);
-    const id_previous =
-      currentIndex < lichsu.length - 1 ? lichsu[currentIndex + 1].id : null;
+  const handlePress = useCallback(
+    async (item: Record<string, any>) => {
+      const currentIndex = historyItems.findIndex((x) => x.id === item.id);
+      const previousId =
+        currentIndex < historyItems.length - 1
+          ? historyItems[currentIndex + 1].id
+          : null;
 
-    try {
-      navigation.navigate("AssetHistoryDetail", {
-        id: item.id,
-        id_previous: id_previous,
-        field: JSON.stringify(fieldActive),
-        nameClass: nameClass!,
-      });
-    } catch (e) {
-      error(e);
-      showAlertIfActive("Lỗi", `Không thể tải chi tiết ${nameClass}`);
-    } finally {
-      if (isMounted()) {
-        setIsLoading(false);
+      try {
+        navigation.navigate("AssetHistoryDetail", {
+          id: item.id,
+          id_previous: previousId,
+          field: JSON.stringify(fieldActive),
+          nameClass: nameClass!,
+        });
+      } catch (e) {
+        error(e);
+        showAlertIfActive("Lỗi", `Không thể tải chi tiết ${nameClass}`);
+      } finally {
+        if (isMounted()) {
+          setIsLoading(false);
+        }
       }
-    }
-  };
+    },
+    [
+      fieldActive,
+      historyItems,
+      isMounted,
+      nameClass,
+      navigation,
+      showAlertIfActive,
+    ],
+  );
 
   const fetchData = useCallback(
     async (isLoadMore = false, options?: { isRefresh?: boolean }) => {
@@ -73,9 +79,9 @@ export default function AssetListHistory() {
 
       const isRefresh = options?.isRefresh;
       const shouldReloadFieldConfig =
-        !isLoadMore && (isRefresh || fieldActive.length === 0);
+        !isLoadMore && (isRefresh || fieldActiveRef.current.length === 0);
       const shouldReloadPropertyClass =
-        !isLoadMore && (isRefresh || !propertyClass);
+        !isLoadMore && (isRefresh || !propertyClassRef.current);
 
       if (isLoadMore) setIsLoadingMore(true);
       else if (!isRefresh) setIsLoading(true);
@@ -84,6 +90,7 @@ export default function AssetListHistory() {
         if (shouldReloadFieldConfig) {
           const responseFieldActive = await getFieldActive(nameClass);
           const activeFields = responseFieldActive?.data || [];
+          fieldActiveRef.current = activeFields;
           setFieldActive(activeFields);
           setFieldShowMobile(
             activeFields.filter((f: { isShowMobile: any }) => f.isShowMobile),
@@ -92,7 +99,9 @@ export default function AssetListHistory() {
 
         if (shouldReloadPropertyClass) {
           const responsePropertyClass = await getPropertyClass(nameClass);
-          setPropertyClass(responsePropertyClass?.data);
+          const nextPropertyClass = responsePropertyClass?.data;
+          propertyClassRef.current = nextPropertyClass;
+          setPropertyClass(nextPropertyClass);
         }
 
         const response = await getListHistory(id, nameClass);
@@ -101,11 +110,12 @@ export default function AssetListHistory() {
         const totalItems = newItems.length;
 
         if (isLoadMore) {
-          setLichsu((prev) => [...prev, ...newItems]);
-          setSkipSize(skipSize + pageSize);
+          setHistoryItems((prev) => [...prev, ...newItems]);
+          const nextSkipSize = skipSizeRef.current + pageSize;
+          skipSizeRef.current = nextSkipSize;
         } else {
-          setLichsu(newItems);
-          setSkipSize(pageSize);
+          setHistoryItems(newItems);
+          skipSizeRef.current = pageSize;
         }
         setTotal(totalItems);
       } catch (e) {
@@ -113,7 +123,7 @@ export default function AssetListHistory() {
         if (!isAuthExpiredError(e)) {
           showAlertIfActive("Lỗi", "Không thể tải dữ liệu.");
         }
-        if (!isLoadMore) setLichsu([]);
+        if (!isLoadMore) setHistoryItems([]);
       } finally {
         if (isMounted()) {
           setIsLoading(false);
@@ -122,7 +132,7 @@ export default function AssetListHistory() {
         }
       }
     },
-    [nameClass, fieldActive.length, propertyClass, skipSize, id],
+    [id, isMounted, nameClass, showAlertIfActive],
   );
 
   useEffect(() => {
@@ -136,33 +146,38 @@ export default function AssetListHistory() {
     if (isRefreshingTop) return;
 
     setIsRefreshingTop(true);
-    setSkipSize(0);
+    skipSizeRef.current = 0;
 
     await fetchData(false, { isRefresh: true });
   };
 
   const handleLoadMore = () => {
-    if (lichsu.length < total && !isLoadingMore) fetchData(true);
+    if (historyItems.length < total && !isLoadingMore) fetchData(true);
   };
 
   if (isLoading && !isRefreshingTop) {
     return <IsLoading size="large" color={BRAND_RED} />;
   }
 
+  const isEmpty = historyItems.length === 0;
+
   return (
     <View style={styles.container}>
       <FlatList
-        data={lichsu}
+        data={historyItems}
         keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item, index }) => (
+        renderItem={({ item }) => (
           <ListCardHistory
             item={item}
             fields={fieldShowMobile}
             icon={propertyClass?.iconMobile || ""}
-            onPress={() => handlePress(item, index)}
+            onPress={() => handlePress(item)}
           />
         )}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        contentContainerStyle={[
+          styles.listContent,
+          isEmpty && styles.listContentEmpty,
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshingTop}
@@ -178,20 +193,21 @@ export default function AssetListHistory() {
         ListFooterComponent={isLoadingMore ? <IsLoading /> : null}
         ListEmptyComponent={
           <AssetListEmptyState
-            fullHeight
             iconName="time-outline"
             title="Chưa có lịch sử"
             subtitle="Dữ liệu thay đổi sẽ được hiển thị tại đây khi có phát sinh."
           />
         }
         ListHeaderComponent={
-          <AssetListSummaryCard
-            iconName="time-outline"
-            title="Lịch sử thay đổi"
-            subtitle={`Tổng số lịch sử: ${total} • Đã tải: ${lichsu.length}`}
-          />
+          isEmpty ? null : (
+            <AssetListSummaryCard
+              iconName="time-outline"
+              title="Lịch sử thay đổi"
+              subtitle={`Tổng số lịch sử: ${total} • Đã tải: ${historyItems.length}`}
+            />
+          )
         }
-        stickyHeaderIndices={[0]}
+        stickyHeaderIndices={isEmpty ? [] : [0]}
       />
     </View>
   );
@@ -200,13 +216,13 @@ export default function AssetListHistory() {
 const styles = StyleSheet.create({
   ...sharedAssetListStyles,
   container: { flex: 1, backgroundColor: BG },
-  searchBox: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    margin: 12,
-    backgroundColor: "#fff",
+  listContent: {
+    flexGrow: 1,
+    paddingTop: 14,
+    paddingBottom: 20,
+  },
+  listContentEmpty: {
+    paddingTop: 0,
+    paddingBottom: 0,
   },
 });

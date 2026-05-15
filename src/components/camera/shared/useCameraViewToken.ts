@@ -60,7 +60,7 @@ export function useCameraViewToken({
       if (delay <= 0) return;
 
       tokenRefreshTimerRef.current = setTimeout(() => {
-        void fetchCameraTokenRef.current(false);
+        fetchCameraTokenRef.current(false);
       }, delay);
     },
     [clearTokenRefreshTimer],
@@ -112,7 +112,7 @@ export function useCameraViewToken({
 
   useEffect(() => {
     const unsub = subscribeAppRefetch(() => {
-      void fetchCameraTokenRef.current(true);
+      fetchCameraTokenRef.current(true);
     });
 
     return () => unsub();
@@ -122,7 +122,7 @@ export function useCameraViewToken({
     const sub = AppState.addEventListener("change", (state) => {
       if (state === "active") {
         if (isFocusedRef.current) {
-          void fetchCameraTokenRef.current(true);
+          fetchCameraTokenRef.current(true);
           onActive?.();
         }
         return;

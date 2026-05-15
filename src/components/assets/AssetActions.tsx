@@ -4,8 +4,13 @@ import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
 import { usePermission } from "../../hooks/usePermission";
 import { AssetActionProps } from "../../types";
+import { BRAND_RED } from "./shared/listTheme";
 
-const BRAND_RED = "#E31E24";
+const localStyles = StyleSheet.create({
+  iconBadgeBackground: {
+    backgroundColor: "#fff",
+  },
+});
 
 export default function AssetActions({
   onEdit,
@@ -87,7 +92,8 @@ export default function AssetActions({
           <View
             style={[
               styles.iconBadge,
-              { backgroundColor: "#fff", borderColor: action.border },
+              localStyles.iconBadgeBackground,
+              { borderColor: action.border },
             ]}
           >
             {action.icon}

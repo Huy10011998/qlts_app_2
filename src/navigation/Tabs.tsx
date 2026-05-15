@@ -1,6 +1,5 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { StyleSheet } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getFocusedRouteNameFromRoute } from "@react-navigation/native";
@@ -8,10 +7,27 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import HomeStack from "./HomeStack";
 import SettingStack from "./SettingStack";
 import ScanStack from "./ScanStack";
+import {
+  TAB_ACTIVE_COLOR,
+  TAB_INVERTED_BG,
+  TAB_INVERTED_INACTIVE_COLOR,
+  createTabBarStyle,
+  tabBarStyles,
+} from "./shared/tabBarTheme";
 
 const Tab = createBottomTabNavigator();
 
-const TAB_HEIGHT = 56;
+function HomeTabIcon({ color }: { color: string }) {
+  return <Ionicons name="home" size={24} color={color} />;
+}
+
+function ScanTabIcon({ color }: { color: string }) {
+  return <MaterialCommunityIcons name="qrcode-scan" size={24} color={color} />;
+}
+
+function SettingTabIcon({ color }: { color: string }) {
+  return <Ionicons name="settings" size={24} color={color} />;
+}
 
 function getDeepFocusedRouteName(route: any): string | undefined {
   const directFocusedRouteName = getFocusedRouteNameFromRoute(route);
@@ -39,17 +55,11 @@ export default function Tabs() {
         headerShown: false,
         tabBarHideOnKeyboard: true,
         lazy: false,
-        tabBarLabelStyle: styles.label,
-        tabBarActiveTintColor: "#E31E24",
-        tabBarStyle: {
-          backgroundColor: "#fff",
-          borderTopWidth: StyleSheet.hairlineWidth,
-          height: TAB_HEIGHT + insets.bottom,
-          paddingBottom: insets.bottom,
-        },
+        tabBarLabelStyle: tabBarStyles.label,
+        tabBarActiveTintColor: TAB_ACTIVE_COLOR,
+        tabBarStyle: createTabBarStyle({ bottomInset: insets.bottom }),
       }}
     >
-      {/* HOME */}
       <Tab.Screen
         name="HomeTab"
         component={HomeStack}
@@ -59,28 +69,23 @@ export default function Tabs() {
 
           return {
             title: "Trang chủ",
-            tabBarActiveTintColor: isMeetingScanner ? "#fff" : "#E31E24", // ← thêm dòng này
+            tabBarActiveTintColor: isMeetingScanner ? "#fff" : TAB_ACTIVE_COLOR,
             tabBarInactiveTintColor: isMeetingScanner
-              ? "rgba(255,255,255,0.68)"
-              : undefined, // ← thêm dòng này
-            tabBarIcon: ({ color }) => (
-              <Ionicons name="home" size={24} color={color} />
-            ),
+              ? TAB_INVERTED_INACTIVE_COLOR
+              : undefined,
+            tabBarIcon: HomeTabIcon,
             freezeOnBlur: true,
             tabBarStyle: [
-              {
-                backgroundColor: isMeetingScanner ? "#3A3A3A" : "#fff",
-                borderTopWidth: StyleSheet.hairlineWidth,
+              createTabBarStyle({
+                bottomInset: insets.bottom,
+                backgroundColor: isMeetingScanner ? TAB_INVERTED_BG : "#fff",
                 borderTopColor: isMeetingScanner ? "#000" : undefined,
-                height: TAB_HEIGHT + insets.bottom,
-                paddingBottom: insets.bottom,
-              },
+              }),
             ],
           };
         }}
       />
 
-      {/* SCAN */}
       <Tab.Screen
         name="ScanTab"
         component={ScanStack}
@@ -90,49 +95,30 @@ export default function Tabs() {
 
           return {
             title: "Quét QR",
-            tabBarActiveTintColor: isScanScreen ? "#fff" : "#E31E24",
+            tabBarActiveTintColor: isScanScreen ? "#fff" : TAB_ACTIVE_COLOR,
             tabBarInactiveTintColor: isScanScreen
-              ? "rgba(255,255,255,0.68)"
+              ? TAB_INVERTED_INACTIVE_COLOR
               : undefined,
-            tabBarIcon: ({ color }) => (
-              <MaterialCommunityIcons
-                name="qrcode-scan"
-                size={24}
-                color={color}
-              />
-            ),
+            tabBarIcon: ScanTabIcon,
             tabBarStyle: [
-              {
-                backgroundColor: isScanScreen ? "#3A3A3A" : "#fff",
-                borderTopWidth: StyleSheet.hairlineWidth,
+              createTabBarStyle({
+                bottomInset: insets.bottom,
+                backgroundColor: isScanScreen ? TAB_INVERTED_BG : "#fff",
                 borderTopColor: "#000",
-                height: TAB_HEIGHT + insets.bottom,
-                paddingBottom: insets.bottom,
-              },
+              }),
             ],
           };
         }}
       />
 
-      {/* SETTING */}
       <Tab.Screen
         name="SettingTab"
         component={SettingStack}
         options={{
           title: "Cài đặt",
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="settings" size={24} color={color} />
-          ),
+          tabBarIcon: SettingTabIcon,
         }}
       />
     </Tab.Navigator>
   );
 }
-
-const styles = StyleSheet.create({
-  label: {
-    fontSize: 11,
-    fontWeight: "600",
-    marginTop: 2,
-  },
-});

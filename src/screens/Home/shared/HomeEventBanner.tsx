@@ -3,6 +3,12 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { HOME_BRAND_RED } from "./homeTheme";
 
+const localStyles = StyleSheet.create({
+  tagIcon: {
+    marginRight: 3,
+  },
+});
+
 type HomeEventBannerProps = {
   title: string;
   date: string;
@@ -37,7 +43,7 @@ export default function HomeEventBanner({
                 name="calendar"
                 size={9}
                 color={HOME_BRAND_RED}
-                style={{ marginRight: 3 }}
+                style={localStyles.tagIcon}
               />
               <Text style={styles.tagText}>SỰ KIỆN SẮP TỚI</Text>
             </View>

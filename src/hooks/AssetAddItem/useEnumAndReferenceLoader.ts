@@ -28,5 +28,5 @@ export function useEnumAndReferenceLoader(
         });
       }
     });
-  }, [fieldActive]);
+  }, [fieldActive, referenceData, setEnumData, setReferenceData]);
 }

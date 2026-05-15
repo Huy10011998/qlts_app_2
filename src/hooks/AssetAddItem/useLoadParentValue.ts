@@ -16,7 +16,6 @@ interface UseLoadParentValueParams {
   getParentValue: (nameClassRoot: string, payload: any) => Promise<any>;
   setReferenceData: any;
   setFormData: React.Dispatch<React.SetStateAction<Record<string, any>>>;
-  handleChange: (fieldName: string, value: number) => void;
 }
 
 export const useLoadParentValue = ({
@@ -27,7 +26,6 @@ export const useLoadParentValue = ({
   getParentValue,
   setReferenceData,
   setFormData,
-  handleChange,
 }: UseLoadParentValueParams) => {
   useEffect(() => {
     if (!idRoot || !nameClassRoot || !nameClass) return;
@@ -111,5 +109,13 @@ export const useLoadParentValue = ({
     return () => {
       isMounted = false;
     };
-  }, [idRoot, nameClassRoot, nameClass, fieldActive]);
+  }, [
+    fieldActive,
+    getParentValue,
+    idRoot,
+    nameClass,
+    nameClassRoot,
+    setFormData,
+    setReferenceData,
+  ]);
 };

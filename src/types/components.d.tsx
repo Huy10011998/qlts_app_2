@@ -17,13 +17,13 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { TAB_ITEMS } from "../utils/helpers/ui";
 import { TabItem } from "./Context.d";
 import { PropertyResponse } from "./Api.d";
-import { PropertyClass } from "./Navigator.d";
+import { AssetItem, PropertyClass } from "./Navigator.d";
 
 export interface CardItemProps {
-  item: Record<string, any>;
+  item: AssetItem;
   fields?: Field[];
   icon?: string;
-  onPress?: (item: Record<string, any>) => void;
+  onPress?: (...args: any[]) => void;
 }
 
 export interface SearchInputProps {
@@ -95,15 +95,15 @@ export interface TabContentProps {
   groupedFields: Record<string, Field[]>;
   collapsedGroups: Record<string, boolean>;
   toggleGroup: (groupName: string) => void;
-  getFieldValue: (item: Record<string, any>, field: Field) => string;
-  item: any;
-  previousItem?: any;
+  getFieldValue: (item: AssetItem, field: Field) => React.ReactNode;
+  item: AssetItem;
+  previousItem?: AssetItem;
   nameClass?: string;
   fieldActive: Field[];
   isFieldChanged?: (
     field: Field,
-    currentItem: any,
-    previousItem: any,
+    currentItem: AssetItem,
+    previousItem: AssetItem,
   ) => boolean;
 }
 
@@ -115,15 +115,15 @@ export interface GroupListProps {
   groupedFields: Record<string, Field[]>;
   collapsedGroups: Record<string, boolean>;
   toggleGroup: (groupName: string) => void;
-  getFieldValue: (item: Record<string, any>, field: Field) => string;
-  item: any;
-  previousItem?: any;
+  getFieldValue: (item: AssetItem, field: Field) => React.ReactNode;
+  item: AssetItem;
+  previousItem?: AssetItem;
   nameClass?: string;
   fieldActive?: Field[];
   isFieldChanged?: (
     field: Field,
-    currentItem: any,
-    previousItem: any,
+    currentItem: AssetItem,
+    previousItem: AssetItem,
   ) => boolean;
 }
 
@@ -156,8 +156,8 @@ export interface DetailsProps {
     groupedFields: Record<string, Field[]>;
     collapsedGroups: Record<string, boolean>;
     toggleGroup: (groupName: string) => void;
-    item: any;
-    getFieldValue: any;
+    item: AssetItem;
+    getFieldValue: (item: AssetItem, field: Field) => React.ReactNode;
     fieldActive: Field[];
     nameClass: string;
     TAB_ITEMS?: typeof TAB_ITEMS;
@@ -171,8 +171,8 @@ export interface QrDetailsProps {
     groupedFields: Record<string, Field[]>;
     collapsedGroups: Record<string, boolean>;
     toggleGroup: (groupName: string) => void;
-    item: any;
-    getFieldValue: any;
+    item: AssetItem;
+    getFieldValue: (item: AssetItem, field: Field) => React.ReactNode;
     fieldActive: Field[];
     nameClass: string;
   }) => React.ReactNode;
@@ -185,14 +185,14 @@ export interface DetailsHistoryProps {
     groupedFields: Record<string, Field[]>;
     collapsedGroups: Record<string, boolean>;
     toggleGroup: (groupName: string) => void;
-    item: any;
-    getFieldValue: any;
+    item: AssetItem;
+    getFieldValue: (item: AssetItem, field: Field) => React.ReactNode;
     TAB_ITEMS?: typeof TAB_ITEMS;
-    previousItem: any;
+    previousItem: AssetItem;
     isFieldChanged: (
       field: Field,
-      currentItem: any,
-      previousItem: any,
+      currentItem: AssetItem,
+      previousItem: AssetItem,
     ) => boolean;
   }) => React.ReactNode;
 }
@@ -211,7 +211,7 @@ export interface MenuItemComponent {
 }
 
 export type ListCardAttachFileProps = CardItemProps & {
-  onView?: (item: any) => void;
+  onView?: (item: AssetItem) => void;
 };
 
 export type TabScreen = {
@@ -276,15 +276,6 @@ export type AddItemAssetProps = {
   idRoot?: string;
 };
 
-export type RelatedAddItemAssetProps = {
-  onPress?: (() => void) | string;
-  field?: any;
-  nameClass: string;
-  propertyClass?: {};
-  idRoot?: string;
-  nameClassRoot?: string;
-};
-
 export interface HandleCascadeChangeProps {
   name: string;
   value: any;
@@ -310,6 +301,7 @@ export interface RenderInputByTypeProps {
   formData: any;
   enumData: any;
   referenceData: any;
+  validationErrors?: Record<string, string>;
   images?: any;
   loadingImages?: any;
   handleChange: (name: string, value: any) => void;

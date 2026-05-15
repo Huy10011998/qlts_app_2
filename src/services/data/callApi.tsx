@@ -265,7 +265,7 @@ export const refreshTokenFlow = async (): Promise<string> => {
       syncAccessToken(data.accessToken);
       syncRefreshToken(nextRefreshToken);
 
-      void AsyncStorage.multiSet([
+      AsyncStorage.multiSet([
         [AUTH_STORAGE_KEYS.accessToken, data.accessToken],
         [AUTH_STORAGE_KEYS.refreshToken, nextRefreshToken],
       ]).catch((storageErr) => {
@@ -459,8 +459,25 @@ export const getPreviewAttachFile = async (
 export const getPropertyClass = async <T = any,>(nameClass: string) =>
   callApi<T>("POST", API_ENDPOINTS.GET_CLASS_BY_NAME, { nameClass });
 
-export const getFieldActive = async <T = any,>(iD_Class_MoTa: string) =>
-  callApi<T>("POST", API_ENDPOINTS.GET_FIELD_ACTIVE, { iD_Class_MoTa });
+export const getFieldActive = async <T = any,>(iD_Class_MoTa: string) => {
+  log("[API] getFieldActive request", { iD_Class_MoTa });
+  const response = await callApi<T>("POST", API_ENDPOINTS.GET_FIELD_ACTIVE, {
+    iD_Class_MoTa,
+  });
+
+  const responseData =
+    response && typeof response === "object" && "data" in (response as any)
+      ? (response as any).data
+      : undefined;
+
+  log("[API] getFieldActive response", {
+    iD_Class_MoTa,
+    totalFields: Array.isArray(responseData) ? responseData.length : undefined,
+    data: responseData,
+  });
+
+  return response;
+};
 
 export const getPreviewAttachProperty = async (path: string) => {
   const res = await api.post(API_ENDPOINTS.PREVIEW_ATTACH_PROPERTY, path, {
@@ -546,9 +563,7 @@ export const getCodongDhcd = async <T = any,>(dhcdId: string) =>
     `${API_ENDPOINTS.GET_CODONG_DHCD}?dhcdId=${encodeURIComponent(dhcdId)}`,
   );
 
-export const diemDanhDhcd = async <T = any,>(
-  iD_DaiHoiCoDong_CoDong: number,
-) =>
+export const diemDanhDhcd = async <T = any,>(iD_DaiHoiCoDong_CoDong: number) =>
   callApi<T>("POST", API_ENDPOINTS.DIEM_DANH_DHCD, {
     iD_DaiHoiCoDong_CoDong,
   });
@@ -565,5 +580,30 @@ export const luuYKienCoDongDhcd = async <T = any,>(payload: {
   iD_DaiHoiCoDong_CoDongs: string;
   trangThais: string;
   nguoiNhap: number;
-}) =>
-  callApi<T>("POST", API_ENDPOINTS.LUU_Y_KIEN_CO_DONG_DHCD, payload);
+}) => callApi<T>("POST", API_ENDPOINTS.LUU_Y_KIEN_CO_DONG_DHCD, payload);
+
+export const checkValidation = async <T = any,>(
+  nameClass: string,
+  payload: {
+    data: Record<string, any>;
+    id: number;
+  },
+) => {
+  const response = await callApi<T>("POST", `/${nameClass}/check-validation`, payload);
+
+  const validationItems =
+    response &&
+    typeof response === "object" &&
+    "data" in (response as any) &&
+    Array.isArray((response as any).data)
+      ? (response as any).data
+      : [];
+
+  if (validationItems.length > 0) {
+    const validationError: any = new Error("VALIDATION_ERROR");
+    validationError.response = { data: response };
+    throw validationError;
+  }
+
+  return response;
+};

@@ -46,6 +46,7 @@ import {
   getVisiblePageIndexes,
 } from "./shared/cameraStreamUtils";
 import { useCameraViewToken } from "./shared/useCameraViewToken";
+import EmptyState from "../ui/EmptyState";
 
 const CameraList: React.FC = () => {
   const route = useRoute<any>();
@@ -151,7 +152,13 @@ const CameraList: React.FC = () => {
       return () => {
         clearTokenRefreshTimer();
       };
-    }, [clearTokenRefreshTimer, setCameraToken, setThumbTimestamp]),
+    }, [
+      cameraTokenRef,
+      clearTokenRefreshTimer,
+      fetchCameraTokenRef,
+      setCameraToken,
+      setThumbTimestamp,
+    ]),
   );
 
   React.useEffect(() => {
@@ -181,7 +188,7 @@ const CameraList: React.FC = () => {
     return () => sub.remove();
   }, []);
 
-  const closeFullscreen = () => {
+  const closeFullscreen = React.useCallback(() => {
     if (Platform.OS === "ios") {
       Orientation.unlockAllOrientations();
       setTimeout(() => Orientation.lockToPortrait(), 0);
@@ -193,7 +200,7 @@ const CameraList: React.FC = () => {
     setFullscreenCamera(null);
     setPendingThumbUrl(null);
     setIsLandscape(false);
-  };
+  }, [clearAndroidTimers, fsTranslateX]);
 
   const toggleOrientation = React.useCallback(() => {
     if (isLandscape) {
@@ -316,7 +323,7 @@ const CameraList: React.FC = () => {
                 focusKey={focusKey}
               />
             ) : (
-              <View style={[styles.preview, { backgroundColor: "#111" }]}>
+              <View style={[styles.preview, styles.previewLoadingBackground]}>
                 <ActivityIndicator size="small" color="#555" />
               </View>
             )}
@@ -536,6 +543,7 @@ const CameraList: React.FC = () => {
       Gesture.Simultaneous(fullscreenSwipeGesture, fullscreenDoubleTapGesture),
     [fullscreenDoubleTapGesture, fullscreenSwipeGesture],
   );
+  const isEmpty = pagedCameras.length === 0;
 
   return (
     <GestureHandlerRootView style={styles.container}>
@@ -566,8 +574,18 @@ const CameraList: React.FC = () => {
               renderItem={renderItem}
               showsVerticalScrollIndicator={false}
               removeClippedSubviews
-              contentContainerStyle={styles.listContent}
+              contentContainerStyle={[
+                styles.listContent,
+                isEmpty && styles.listContentEmpty,
+              ]}
               extraData={`${cameraToken}-${thumbTimestamp}-${focusKey}`}
+              ListEmptyComponent={
+                <EmptyState
+                  iconName="videocam-outline"
+                  title="Không có camera"
+                  subtitle="Khu vực này chưa có camera để hiển thị"
+                />
+              }
             />
           </Animated.View>
 
@@ -653,7 +671,7 @@ const CameraList: React.FC = () => {
             style={[
               styles.fsHeader,
               isLandscape
-                ? { paddingTop: 48, paddingLeft: insets.left || 16 }
+                ? [styles.fsHeaderLandscape, { paddingLeft: insets.left || 16 }]
                 : { paddingTop: insets.top || 48 },
             ]}
           >
@@ -713,7 +731,7 @@ const CameraList: React.FC = () => {
                         }}
                         style={[
                           StyleSheet.absoluteFill,
-                          { opacity: videoReady ? 1 : 0 },
+                          videoReady ? styles.visibleVideo : styles.hiddenVideo,
                         ]}
                         resizeMode="contain"
                         muted={isFullMuted}
@@ -754,7 +772,7 @@ const CameraList: React.FC = () => {
                         }}
                         style={[
                           StyleSheet.absoluteFill,
-                          { opacity: videoReady ? 1 : 0 },
+                          videoReady ? styles.visibleVideo : styles.hiddenVideo,
                         ]}
                         javaScriptEnabled
                         domStorageEnabled
@@ -847,6 +865,10 @@ const styles = StyleSheet.create({
   listArea: { flex: 1, overflow: "hidden" },
   listAnimated: { flex: 1 },
   listContent: { paddingBottom: 8 },
+  listContentEmpty: {
+    flexGrow: 1,
+    paddingBottom: 0,
+  },
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -885,6 +907,9 @@ const styles = StyleSheet.create({
     height: "100%",
     borderRadius: 8,
     backgroundColor: "#000",
+  },
+  previewLoadingBackground: {
+    backgroundColor: "#111",
   },
   previewLoading: {
     ...StyleSheet.absoluteFillObject,
@@ -961,6 +986,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   fsHeaderBtn: { padding: 6 },
+  fsHeaderLandscape: { paddingTop: 48 },
   fsTitle: {
     flex: 1,
     color: "#fff",
@@ -977,6 +1003,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   fsPagerText: { color: "#fff", fontSize: 14, fontWeight: "700" },
+  visibleVideo: { opacity: 1 },
+  hiddenVideo: { opacity: 0 },
   thumbOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.35)",

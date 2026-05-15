@@ -4,6 +4,12 @@ import LinearGradient from "react-native-linear-gradient";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { C } from "../../../utils/helpers/colors";
 
+const localStyles = StyleSheet.create({
+  badgeIcon: {
+    marginRight: 4,
+  },
+});
+
 type SettingProfileHeaderProps = {
   name?: string;
   avatarUrl?: string;
@@ -57,7 +63,7 @@ export default function SettingProfileHeader({
             name="shield-checkmark"
             size={10}
             color="rgba(255,255,255,0.85)"
-            style={{ marginRight: 4 }}
+            style={localStyles.badgeIcon}
           />
           <Text style={styles.badgeText}>Thành viên</Text>
         </View>

@@ -12,8 +12,8 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { BottomBarProps } from "../../types/Index";
 import { usePermission } from "../../hooks/usePermission";
 import { useParams } from "../../hooks/useParams";
+import { C } from "../../utils/helpers/colors";
 
-const BRAND_RED = "#E31E24";
 const SHELL_INSET = 12;
 
 export default function BottomBarDetails({
@@ -23,18 +23,13 @@ export default function BottomBarDetails({
 }: BottomBarProps) {
   const SCREEN_WIDTH = Dimensions.get("window").width;
   const BAR_WIDTH = SCREEN_WIDTH - SHELL_INSET * 2;
-
-  // PERMISSION
   const { nameClass } = useParams();
-
-  const { can, loaded, permissions } = usePermission();
+  const { can, loaded } = usePermission();
 
   const hasAttachPermission = useMemo(() => {
     if (!loaded || !nameClass) return false;
     return can(nameClass, "AttachFile");
-  }, [loaded, nameClass, permissions]); // QUAN TRỌNG
-
-  // FILTER TAB
+  }, [can, loaded, nameClass]);
   const visibleTabs = useMemo(() => {
     return tabs.filter((tab) => {
       if (tab.key === "attach") return hasAttachPermission;
@@ -42,7 +37,6 @@ export default function BottomBarDetails({
     });
   }, [tabs, hasAttachPermission]);
 
-  // RESET activeTab nếu tab bị ẩn
   useEffect(() => {
     if (visibleTabs.length === 0) return;
 
@@ -51,36 +45,31 @@ export default function BottomBarDetails({
     }
   }, [visibleTabs, activeTab, onTabPress]);
 
-  // SIZE
-  if (visibleTabs.length === 0) {
-    return null; // hoặc View rỗng
-  }
-  const TAB_WIDTH = BAR_WIDTH / visibleTabs.length;
-
+  const tabCount = visibleTabs.length || 1;
+  const TAB_WIDTH = BAR_WIDTH / tabCount;
   const UNDERLINE_WIDTH = TAB_WIDTH * 0.6;
-
-  // UNDERLINE
   const activeIndex = visibleTabs.findIndex((t) => t.key === activeTab);
   const index = activeIndex >= 0 ? activeIndex : 0;
 
   const startX = index * TAB_WIDTH + (TAB_WIDTH - UNDERLINE_WIDTH) / 2;
   const underlineX = useRef(new Animated.Value(startX)).current;
 
-  const moveUnderlineTo = (i: number) =>
-    i * TAB_WIDTH + (TAB_WIDTH - UNDERLINE_WIDTH) / 2;
+  const moveUnderlineTo = React.useCallback(
+    (i: number) => i * TAB_WIDTH + (TAB_WIDTH - UNDERLINE_WIDTH) / 2,
+    [TAB_WIDTH, UNDERLINE_WIDTH],
+  );
 
   useEffect(() => {
     underlineX.setValue(startX);
-  }, [startX]);
+  }, [startX, underlineX]);
 
   useEffect(() => {
     Animated.spring(underlineX, {
       toValue: moveUnderlineTo(index),
       useNativeDriver: true,
     }).start();
-  }, [index]);
+  }, [index, moveUnderlineTo, underlineX]);
 
-  // HANDLER
   const handlePress = (tabKey: string, label: string, i: number) => {
     onTabPress(tabKey, label);
     Animated.spring(underlineX, {
@@ -89,43 +78,49 @@ export default function BottomBarDetails({
     }).start();
   };
 
-  // RENDER
+  if (visibleTabs.length === 0) {
+    return null;
+  }
+
   return (
     <View style={styles.shell}>
       <View style={styles.bottomBar}>
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.underline,
-          { width: UNDERLINE_WIDTH, transform: [{ translateX: underlineX }] },
-        ]}
-      />
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.underline,
+            { width: UNDERLINE_WIDTH, transform: [{ translateX: underlineX }] },
+          ]}
+        />
 
-      {visibleTabs.map((tab, i) => {
-        const isActive = activeTab === tab.key;
+        {visibleTabs.map((tab, i) => {
+          const isActive = activeTab === tab.key;
 
-        return (
-          <TouchableOpacity
-            key={tab.key}
-            style={[styles.bottomItem, { width: TAB_WIDTH }]}
-            onPress={() => handlePress(tab.key, tab.label, i)}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.iconWrap, isActive && styles.iconWrapActive]}>
-              <Ionicons
-                name={tab.icon}
-                size={20}
-                color={isActive ? BRAND_RED : "#8A95A3"}
-              />
-            </View>
-            <Text
-              style={[styles.bottomLabel, isActive && styles.bottomLabelActive]}
+          return (
+            <TouchableOpacity
+              key={tab.key}
+              style={[styles.bottomItem, { width: TAB_WIDTH }]}
+              onPress={() => handlePress(tab.key, tab.label, i)}
+              activeOpacity={0.8}
             >
-              {tab.label}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
+              <View style={[styles.iconWrap, isActive && styles.iconWrapActive]}>
+                <Ionicons
+                  name={tab.icon}
+                  size={20}
+                  color={isActive ? C.red : "#8A95A3"}
+                />
+              </View>
+              <Text
+                style={[
+                  styles.bottomLabel,
+                  isActive && styles.bottomLabelActive,
+                ]}
+              >
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
     </View>
   );
@@ -176,12 +171,12 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#8A95A3",
   },
-  bottomLabelActive: { fontWeight: "700", color: BRAND_RED },
+  bottomLabelActive: { fontWeight: "700", color: C.red },
   underline: {
     position: "absolute",
     top: 0,
     height: 3,
-    backgroundColor: BRAND_RED,
+    backgroundColor: C.red,
     borderBottomLeftRadius: 3,
     borderBottomRightRadius: 3,
   },

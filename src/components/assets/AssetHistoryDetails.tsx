@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { View, StyleSheet } from "react-native";
 import { useRoute } from "@react-navigation/native";
 import IsLoading from "../../components/ui/IconLoading";
@@ -9,6 +9,7 @@ import { getFieldValue } from "../../utils/fields/GetFieldValue";
 import { useAutoReload } from "../../hooks/useAutoReload";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { useDetailViewState } from "../../hooks/useDetailViewState";
+import { C } from "../../utils/helpers/colors";
 
 export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
   const route = useRoute<StackRoute<"AssetHistoryDetail">>();
@@ -28,8 +29,7 @@ export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
     toggleGroup,
   } = useDetailViewState(field as string | undefined);
 
-  const fetchDetails = async () => {
-    // 👉 RESET để UI render "--"
+  const fetchDetails = useCallback(async () => {
     setItem(null);
     setPreviousItem(null);
     setIsLoading(true);
@@ -37,11 +37,9 @@ export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
     try {
       if (!id || !nameClass) throw new Error("Thiếu ID hoặc nameClass");
 
-      // bản ghi hiện tại
       const response = await getDetailsHistory(nameClass, id);
       setItem(response.data);
 
-      // bản ghi trước đó
       if (id_previous) {
         const prevResponse = await getDetailsHistory(nameClass, id_previous);
         setPreviousItem(prevResponse.data);
@@ -54,35 +52,34 @@ export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
         setIsLoading(false);
       }
     }
-  };
+  }, [id, id_previous, isMounted, nameClass, showAlertIfActive]);
 
   useEffect(() => {
     setActiveTab("list");
     fetchDetails();
-  }, [id, id_previous, nameClass]);
+  }, [fetchDetails, setActiveTab]);
 
   useAutoReload(fetchDetails);
 
   // so sánh field
   const isFieldChanged = (
-    field: Field,
+    compareField: Field,
     currentItem: any,
-    previousItem: any,
+    previousHistoryItem: any,
   ): boolean => {
-    if (!previousItem) return false;
+    if (!previousHistoryItem) return false;
 
-    const currentValue = getFieldValue(currentItem, field);
-    const prevValue = getFieldValue(previousItem, field);
+    const currentValue = getFieldValue(currentItem, compareField);
+    const prevValue = getFieldValue(previousHistoryItem, compareField);
 
     return String(currentValue ?? "") !== String(prevValue ?? "");
   };
 
   return (
     <View style={styles.container}>
-      {/* Loading dạng overlay – KHÔNG che UI */}
       {isLoading && (
         <View style={styles.loadingOverlay}>
-          <IsLoading size="small" color="#E31E24" />
+          <IsLoading size="small" color={C.red} />
         </View>
       )}
 

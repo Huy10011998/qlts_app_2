@@ -1,21 +1,14 @@
 import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  Pressable,
-  StyleSheet,
-} from "react-native";
+import { View, Text, FlatList, Pressable, StyleSheet } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { MenuItemResponse, StackNavigation, StackRoute } from "../../types";
 import { getClassReference } from "../../services/Index";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import IsLoading from "../ui/IconLoading";
+import EmptyState from "../ui/EmptyState";
 import { error } from "../../utils/Logger";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
-
-const BRAND_RED = "#E31E24";
-const BG = "#F0F2F8";
+import { BG, BRAND_RED } from "./shared/listTheme";
 
 export default function AssetDeTailsTab({
   nameClassRoot,
@@ -66,7 +59,7 @@ export default function AssetDeTailsTab({
     };
 
     fetchDetails();
-  }, [nameClass, id]);
+  }, [id, isMounted, nameClass, showAlertIfActive]);
 
   const handlePress = (item: MenuItemResponse) => {
     navigation.navigate("AssetRelatedList", {
@@ -96,6 +89,8 @@ export default function AssetDeTailsTab({
     return <IsLoading size="large" color={BRAND_RED} />;
   }
 
+  const isEmpty = items.length === 0;
+
   return (
     <View style={styles.container}>
       <FlatList
@@ -104,20 +99,14 @@ export default function AssetDeTailsTab({
         renderItem={renderItem}
         contentContainerStyle={[
           styles.listContent,
-          items.length === 0 && styles.listContentEmpty,
+          isEmpty && styles.listContentEmpty,
         ]}
         ListEmptyComponent={
-          <View
-            style={[styles.emptyWrap, items.length === 0 && styles.emptyWrapFull]}
-          >
-            <View style={styles.emptyIconWrap}>
-              <Ionicons name="albums-outline" size={32} color="#C7C7CC" />
-            </View>
-            <Text style={styles.emptyTitle}>Không có dữ liệu liên quan</Text>
-            <Text style={styles.emptySub}>
-              Danh mục liên kết sẽ hiển thị tại đây khi có dữ liệu
-            </Text>
-          </View>
+          <EmptyState
+            iconName="albums-outline"
+            title="Không có dữ liệu liên quan"
+            subtitle="Danh mục liên kết sẽ hiển thị tại đây khi có dữ liệu"
+          />
         }
       />
     </View>
@@ -137,6 +126,8 @@ const styles = StyleSheet.create({
   },
   listContentEmpty: {
     flexGrow: 1,
+    paddingTop: 0,
+    paddingBottom: 0,
   },
   item: {
     flexDirection: "row",
@@ -169,41 +160,6 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     color: "#0F1923",
     fontWeight: "600",
-    lineHeight: 18,
-  },
-  emptyWrap: {
-    alignItems: "center",
-    paddingHorizontal: 32,
-  },
-  emptyWrapFull: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  emptyIconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 22,
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-    shadowColor: "#1A2340",
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  emptyTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#374151",
-    marginBottom: 6,
-    textAlign: "center",
-  },
-  emptySub: {
-    fontSize: 12,
-    color: "#8A95A3",
-    textAlign: "center",
     lineHeight: 18,
   },
 });

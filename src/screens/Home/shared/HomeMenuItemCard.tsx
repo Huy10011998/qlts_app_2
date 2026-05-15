@@ -5,6 +5,11 @@ import { MenuItemCardProps } from "../../../types";
 import { HOME_BRAND_RED, HOME_CARD_THEME } from "./homeTheme";
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+const localStyles = StyleSheet.create({
+  animatedTouchable: {
+    flex: 1,
+  },
+});
 
 type HomeMenuItemCardProps = MenuItemCardProps & {
   viewPermission?: string;
@@ -35,7 +40,7 @@ export default function HomeMenuItemCard({
 
   return (
     <AnimatedTouchable
-      style={{ flex: 1, transform: [{ scale: scaleAnim }] }}
+      style={[localStyles.animatedTouchable, { transform: [{ scale: scaleAnim }] }]}
       onPress={onPress}
       activeOpacity={0.72}
     >

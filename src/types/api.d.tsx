@@ -7,8 +7,15 @@ export interface GetMenuActiveResponse {
 }
 
 export interface ChangePasswordResponse {
-  success: boolean;
-  message: string;
+  success?: boolean;
+  message?: string;
+  data?:
+    | number
+    | {
+        success?: boolean;
+        message?: string;
+      }
+    | null;
 }
 
 export interface LoginResponse {

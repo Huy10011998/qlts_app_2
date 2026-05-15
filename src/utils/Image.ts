@@ -141,7 +141,7 @@ export const pickImage = async (
 
     // Update formData
     handleChange(fieldName, url);
-  } catch (error: any) {
+  } catch (uploadError: any) {
     Alert.alert("Lỗi", "Không thể tải ảnh!");
   }
 };

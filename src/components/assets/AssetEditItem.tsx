@@ -4,12 +4,17 @@ import { View, StyleSheet, Alert } from "react-native";
 import { AssetEditItemNavigationProp, Field } from "../../types/Index";
 import { TypeProperty } from "../../utils/Enum";
 import { getMatchedKey } from "../../utils/Helper";
+import {
+  getApiErrorMessage,
+  getApiValidationFieldErrors,
+} from "../../utils/helpers/api";
+import { isEffectivelyEmptyCodeValue } from "../../utils/helpers/string";
 import { useParams } from "../../hooks/useParams";
 import { fetchImage, pickImage } from "../../utils/Image";
 import { fetchReferenceByFieldWithParent } from "../../utils/cascade/FetchReferenceByFieldWithParent";
 import { handleCascadeChange } from "../../utils/cascade/Index";
 import { useImageLoader } from "../../hooks/useImageLoader";
-import { update } from "../../services/data/CallApi";
+import { checkValidation, update } from "../../services/data/CallApi";
 import { useNavigation } from "@react-navigation/native";
 import { setShouldRefreshDetails } from "../../store/AssetSlice";
 
@@ -42,18 +47,14 @@ const BG = ASSET_FORM_BG;
 const CARD_SHADOW = ASSET_FORM_CARD_SHADOW;
 
 export default function AssetEditItem() {
-  /* ===== PARAMS ===== */
   const { item, field, nameClass } = useParams();
   const navigation = useNavigation<AssetEditItemNavigationProp>();
   const dispatch = useAppDispatch();
-
-  // Form Data State
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [originalItem, setOriginalItem] = useState<Record<string, any>>(
     item ? { ...item } : {},
   );
 
-  // Enum & Reference Data State
   const [enumData, setEnumData] = useState<Record<string, any[]>>({});
   const [referenceData, setReferenceData] = useState<
     Record<string, { items: any[]; totalCount: number }>
@@ -63,8 +64,10 @@ export default function AssetEditItem() {
   const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>(
     {},
   );
+  const [validationErrors, setValidationErrors] = useState<
+    Record<string, string>
+  >({});
 
-  /* ===== REFERENCE LOAD MORE ===== */
   const PAGE_SIZE = 20;
   const [refPage, setRefPage] = useState(0);
   const [refKeyword, setRefKeyword] = useState("");
@@ -72,14 +75,11 @@ export default function AssetEditItem() {
   const [refHasMore, setRefHasMore] = useState(true);
   const [refSearching, setRefSearching] = useState(false);
 
-  // Image State
   const [images, setImages] = useState<Record<string, string>>({});
 
-  /* ===== GROUP + FIELD ===== */
   const { fieldActive, groupedFields, collapsedGroups, toggleGroup } =
     useGroupedFields(field);
 
-  // SET FORM DATA WHEN ITEM OR FIELD ACTIVE CHANGED
   useEffect(() => {
     const initial: Record<string, any> = {};
 
@@ -94,7 +94,6 @@ export default function AssetEditItem() {
       const matchedKey = getMatchedKey(item || {}, name);
       const raw = matchedKey ? item?.[matchedKey] : undefined;
 
-      // map based on property type
       switch (f.typeProperty) {
         case TypeProperty.Date:
           initial[name] = raw ? normalizeDateFromBE(raw) : "";
@@ -121,10 +120,7 @@ export default function AssetEditItem() {
             item?.[`${f.name}_MoTa`] ??
             "";
 
-          // set ID
           initial[name] = raw ?? "";
-
-          // set MoTa (bắt buộc)
           initial[`${name}_MoTa`] = rawText ?? "";
 
           break;
@@ -132,10 +128,10 @@ export default function AssetEditItem() {
 
         case TypeProperty.Image:
           if (raw && raw !== "---") {
-            initial[name] = raw; // ⚡ LƯU GIÁ TRỊ THẬT
+            initial[name] = raw;
             fetchImage(name, raw, setLoadingImages, setImages);
           } else {
-            initial[name] = ""; // không có ảnh
+            initial[name] = "";
           }
           break;
 
@@ -148,7 +144,6 @@ export default function AssetEditItem() {
     setOriginalItem(item ? { ...item } : {});
   }, [fieldActive, item]);
 
-  /* ===== ENUM / REFERENCE ===== */
   useEnumAndReferenceLoader(
     fieldActive,
     setEnumData,
@@ -156,12 +151,11 @@ export default function AssetEditItem() {
     referenceData,
   );
 
-  // Auto load reference có parent khi mở màn hình EDIT
   useEffect(() => {
     fieldActive.forEach((f) => {
       if (f.typeProperty === TypeProperty.Reference && f.parentsFields) {
-        const parents = f.parentsFields.split(","); // ["ID_Complex", "ID_Building"]
-        const haveAllParents = parents.every((p) => formData[p]); // check từng field có value
+        const parents = f.parentsFields.split(",");
+        const haveAllParents = parents.every((p) => formData[p]);
 
         if (haveAllParents) {
           const parentValues = parents.map((p) => formData[p]).join(",");
@@ -174,9 +168,7 @@ export default function AssetEditItem() {
         }
       }
     });
-  }, [formData]); // chạy khi formData được set từ item lúc mở màn hình
-
-  /* ===== IMAGE LOADER ===== */
+  }, [fieldActive, formData]);
   useImageLoader({
     fieldActive,
     formData,
@@ -185,8 +177,15 @@ export default function AssetEditItem() {
     setLoadingImages,
   });
 
-  // handle change & cascade
   const handleChange = (name: string, value: any) => {
+    if (validationErrors[name]) {
+      setValidationErrors((prev) => {
+        const next = { ...prev };
+        delete next[name];
+        return next;
+      });
+    }
+
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -201,7 +200,6 @@ export default function AssetEditItem() {
     });
   };
 
-  /* ===== OPEN ENUM & REFERANCE MODAL ===== */
   const { openReferenceModal, loadReferenceModalData } = useOpenReferenceModal({
     formData,
     setActiveEnumField,
@@ -213,7 +211,6 @@ export default function AssetEditItem() {
     pageSize: PAGE_SIZE,
   });
 
-  // ===== MODAL ITEMS ===== //
   const modalItems = useModalItems(
     activeEnumField,
     referenceData,
@@ -222,7 +219,6 @@ export default function AssetEditItem() {
   );
   const { showAlertIfActive } = useSafeAlert();
 
-  // SUBMIT - UPDATE
   const handleUpdate = async () => {
     try {
       if (!originalItem?.id) {
@@ -237,12 +233,10 @@ export default function AssetEditItem() {
         const value = formData[key];
 
         switch (f.typeProperty) {
-          // DATE
           case TypeProperty.Date:
             entity[key] = value ? formatDateForBE(value) : null;
             break;
 
-          // NUMBER (INT / DECIMAL)
           case TypeProperty.Int:
           case TypeProperty.Decimal:
             entity[key] =
@@ -251,7 +245,6 @@ export default function AssetEditItem() {
                 : Number(value);
             break;
 
-          // TEXT / STRING
           case TypeProperty.Text:
           case TypeProperty.String:
             entity[key] =
@@ -260,7 +253,6 @@ export default function AssetEditItem() {
                 : value;
             break;
 
-          // ENUM / REFERENCE
           case TypeProperty.Enum:
           case TypeProperty.Reference:
             entity[key] =
@@ -269,10 +261,8 @@ export default function AssetEditItem() {
                 : value;
             break;
 
-          // IMAGE
           case TypeProperty.Image:
             if (value === "---") {
-              // người dùng bấm nút X xoá ảnh
               entity[key] = "";
             } else {
               entity[key] =
@@ -282,7 +272,6 @@ export default function AssetEditItem() {
             }
             break;
 
-          // DEFAULT
           default:
             entity[key] =
               value === "" || value === null || value === undefined
@@ -291,10 +280,17 @@ export default function AssetEditItem() {
         }
       });
 
-      // XOÁ field _MoTa khỏi payload (Reference)
       Object.keys(entity).forEach((k) => {
         if (k.endsWith("_MoTa")) delete entity[k];
       });
+
+      const autoCodeField = item?.propertyClass?.propertyTuDongTang;
+      if (
+        autoCodeField &&
+        isEffectivelyEmptyCodeValue(entity[autoCodeField])
+      ) {
+        entity[autoCodeField] = null;
+      }
 
       const body = {
         entity,
@@ -309,6 +305,11 @@ export default function AssetEditItem() {
         return;
       }
 
+      await checkValidation(nameClass, {
+        data: entity,
+        id: Number(originalItem.id ?? 0),
+      });
+
       await update(nameClass, body);
 
       showAlertIfActive("Thành công", "Cập nhật thành công!", [
@@ -317,19 +318,20 @@ export default function AssetEditItem() {
           onPress: () => {
             setFormData({});
             setImages({});
-
-            // báo detail reload lại
             dispatch(setShouldRefreshDetails(true));
             navigation.goBack();
           },
         },
       ]);
-    } catch (err) {
-      showAlertIfActive("Lỗi", "Không thể cập nhật dữ liệu!");
+    } catch (err: any) {
+      setValidationErrors(getApiValidationFieldErrors(err));
+      showAlertIfActive(
+        "Lỗi",
+        getApiErrorMessage(err, "Không thể cập nhật dữ liệu!"),
+      );
     }
   };
 
-  // reset
   const handleReset = () => {
     if (!originalItem) return;
 
@@ -364,10 +366,7 @@ export default function AssetEditItem() {
       }
     });
 
-    // Update formData trước
     setFormData(reset);
-
-    // xử lý image preview sau
     fieldActive.forEach((f) => {
       const matchedKey = getMatchedKey(originalItem || {}, f.name);
       const raw = matchedKey ? originalItem[matchedKey] : undefined;
@@ -375,7 +374,7 @@ export default function AssetEditItem() {
       if (f.typeProperty === TypeProperty.Image) {
         if (!raw || raw === "---") {
           setImages((p) => ({ ...p, [f.name]: "" }));
-          return; // stop
+          return;
         }
 
         fetchImage(f.name, raw, setLoadingImages, setImages);
@@ -435,6 +434,7 @@ export default function AssetEditItem() {
         openReferenceModal={openReferenceModal}
         pickImage={pickImage}
         referenceData={referenceData}
+        validationErrors={validationErrors}
         setImages={setImages}
         setLoadingImages={setLoadingImages}
         styles={styles}
@@ -447,7 +447,7 @@ export default function AssetEditItem() {
           iconName="save-outline"
           label="Cập nhật"
           onPress={handleUpdate}
-          style={[styles.updateButton, { flex: 1 }]}
+          style={[styles.updateButton, styles.actionButton]}
         />
 
         <AssetFormActionButton
@@ -464,7 +464,7 @@ export default function AssetEditItem() {
               ],
             )
           }
-          style={[styles.resetButton, { flex: 1 }]}
+          style={[styles.resetButton, styles.actionButton]}
           variant="secondary"
         />
       </View>
@@ -484,6 +484,9 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: "row",
     gap: 12,
+  },
+  actionButton: {
+    flex: 1,
   },
 
   updateButton: {

@@ -52,7 +52,7 @@ export function useSlideInPanel({
       return;
     }
 
-    void openPanel();
+    openPanel();
   }, [closePanel, openPanel, visible]);
 
   return {

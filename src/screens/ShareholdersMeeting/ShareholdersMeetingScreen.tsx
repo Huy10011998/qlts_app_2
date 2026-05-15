@@ -13,12 +13,17 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import EmptyState from "../../components/ui/EmptyState";
 import IsLoading from "../../components/ui/IconLoading";
 import { C } from "../../utils/helpers/colors";
 import ShareholderAttendanceRow from "./shared/ShareholderAttendanceRow";
 import OpinionPickerModal from "./shared/OpinionPickerModal";
 import { VOTING_OPTIONS } from "./shared/shareholdersMeetingHelpers";
 import { useShareholdersMeetingController } from "./shared/useShareholdersMeetingController";
+
+function AttendanceSeparator() {
+  return <View style={attStyles.separator} />;
+}
 
 const ShareholdersMeetingScreen: React.FC = () => {
   const {
@@ -78,11 +83,11 @@ const ShareholdersMeetingScreen: React.FC = () => {
         style={styles.centerState}
         edges={["left", "right"]}
       >
-        <Text style={styles.emptyTitle}>Bạn không có quyền truy cập</Text>
-        <Text style={styles.emptyText}>
-          Tài khoản hiện tại không có quyền xem điểm danh hoặc lấy ý kiến cổ
-          đông.
-        </Text>
+        <EmptyState
+          iconName="shield-outline"
+          title="Bạn không có quyền truy cập"
+          subtitle="Tài khoản hiện tại không có quyền xem điểm danh hoặc lấy ý kiến cổ đông."
+        />
       </SafeAreaView>
     );
   }
@@ -104,8 +109,11 @@ const ShareholdersMeetingScreen: React.FC = () => {
         style={styles.centerState}
         edges={["left", "right"]}
       >
-        <Text style={styles.emptyTitle}>Không tải được dữ liệu</Text>
-        <Text style={styles.emptyText}>{meetingError}</Text>
+        <EmptyState
+          iconName="alert-circle-outline"
+          title="Không tải được dữ liệu"
+          subtitle={meetingError}
+        />
       </SafeAreaView>
     );
   }
@@ -116,10 +124,11 @@ const ShareholdersMeetingScreen: React.FC = () => {
         style={styles.centerState}
         edges={["left", "right"]}
       >
-        <Text style={styles.emptyTitle}>Chưa có đợt đại hội cổ đông</Text>
-        <Text style={styles.emptyText}>
-          Hiện tại chưa có dữ liệu đại hội cổ đông đang hoạt động.
-        </Text>
+        <EmptyState
+          iconName="people-outline"
+          title="Chưa có đợt đại hội cổ đông"
+          subtitle="Hiện tại chưa có dữ liệu đại hội cổ đông đang hoạt động."
+        />
       </SafeAreaView>
     );
   }
@@ -161,9 +170,9 @@ const ShareholdersMeetingScreen: React.FC = () => {
               <Text
                 style={[
                   styles.tabBadgeText,
-                  {
-                    color: activeTab === "attendance" ? "#FFFFFF" : C.textMuted,
-                  },
+                  activeTab === "attendance"
+                    ? styles.tabBadgeTextActive
+                    : styles.tabBadgeTextInactive,
                 ]}
               >
                 {presentCount}/{shareholders.length}
@@ -198,7 +207,9 @@ const ShareholdersMeetingScreen: React.FC = () => {
               <Text
                 style={[
                   styles.tabBadgeText,
-                  { color: activeTab === "voting" ? "#FFFFFF" : C.textMuted },
+                  activeTab === "voting"
+                    ? styles.tabBadgeTextActive
+                    : styles.tabBadgeTextInactive,
                 ]}
               >
                 {opinions.length}
@@ -282,7 +293,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
               onChangeText={setSearchQuery}
             />
             <View style={attStyles.spinnerWrapper}>
-              {isSearching && <IsLoading size="small" color="#E31E24" />}
+              {isSearching && <IsLoading size="small" color={C.red} />}
             </View>
           </View>
 
@@ -302,8 +313,8 @@ const ShareholdersMeetingScreen: React.FC = () => {
               <RefreshControl
                 refreshing={isRefreshingAttendance}
                 onRefresh={refreshAttendanceList}
-                colors={["#E31E24"]}
-                tintColor="#E31E24"
+                colors={[C.red]}
+                tintColor={C.red}
               />
             }
             showsVerticalScrollIndicator={false}
@@ -311,15 +322,19 @@ const ShareholdersMeetingScreen: React.FC = () => {
               attStyles.list,
               filteredShareholders.length === 0 && attStyles.listEmpty,
             ]}
-            ItemSeparatorComponent={() => <View style={attStyles.separator} />}
+            ItemSeparatorComponent={AttendanceSeparator}
             ListEmptyComponent={
-              <View style={attStyles.emptyList}>
-                <Text style={attStyles.emptyListText}>
-                  Không có cổ đông phù hợp với bộ lọc hiện tại.
-                </Text>
-              </View>
+              <EmptyState
+                iconName="people-outline"
+                title="Không có cổ đông phù hợp"
+                subtitle="Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc hiện tại."
+              />
             }
           />
+        </View>
+      ) : isVotingLoading && opinions.length === 0 ? (
+        <View style={styles.contentCenter}>
+          <ActivityIndicator size="small" color={C.accent} />
         </View>
       ) : (
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -392,9 +407,18 @@ const ShareholdersMeetingScreen: React.FC = () => {
                   </TouchableOpacity>
                 </>
               ) : (
-                <Text style={voteStyles.emptyText}>
-                  {votingError || "Chưa có ý kiến nào cho đợt đại hội này."}
-                </Text>
+                <EmptyState
+                  iconName={votingError ? "alert-circle-outline" : "chatbox-ellipses-outline"}
+                  title={
+                    votingError
+                      ? "Không tải được danh sách ý kiến"
+                      : "Chưa có ý kiến biểu quyết"
+                  }
+                  subtitle={
+                    votingError ||
+                    "Chưa có ý kiến nào cho đợt đại hội này."
+                  }
+                />
               )}
             </View>
 
@@ -480,7 +504,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
             </View>
           </View>
 
-          <View style={{ height: 28 }} />
+          <View style={voteStyles.bottomSpacer} />
         </ScrollView>
       )}
 
@@ -522,23 +546,6 @@ const styles = StyleSheet.create({
     backgroundColor: C.bg,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 24,
-  },
-  emptyTitle: {
-    color: C.textPrimary,
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  emptyText: {
-    color: C.textSecondary,
-    fontSize: 14,
-    textAlign: "center",
-    lineHeight: 20,
-    paddingHorizontal: 12,
-    maxWidth: 340,
-    alignSelf: "center",
   },
   tabBar: {
     flexDirection: "row",
@@ -580,7 +587,15 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   tabBadgeText: { fontSize: 11, fontWeight: "600" },
+  tabBadgeTextActive: { color: "#FFFFFF" },
+  tabBadgeTextInactive: { color: C.textMuted },
   content: { flex: 1, paddingTop: 12, backgroundColor: C.bg },
+  contentCenter: {
+    flex: 1,
+    backgroundColor: C.bg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });
 
 const attStyles = StyleSheet.create({
@@ -653,23 +668,8 @@ const attStyles = StyleSheet.create({
   },
   flatList: { flex: 1, backgroundColor: C.bg },
   list: { flexGrow: 1, paddingHorizontal: 16, paddingBottom: 20 },
-  listEmpty: { justifyContent: "center" },
+  listEmpty: { paddingTop: 0, paddingBottom: 0 },
   separator: { height: 1, backgroundColor: C.border, marginVertical: 2 },
-  emptyList: {
-    backgroundColor: C.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-    padding: 16,
-    alignItems: "center",
-    alignSelf: "center",
-    maxWidth: 360,
-  },
-  emptyListText: {
-    color: C.textSecondary,
-    fontSize: 13,
-    textAlign: "center",
-  },
 });
 
 const voteStyles = StyleSheet.create({
@@ -802,14 +802,6 @@ const voteStyles = StyleSheet.create({
     color: C.textSecondary,
     fontSize: 13,
   },
-  emptyText: {
-    color: C.textSecondary,
-    fontSize: 13,
-    textAlign: "center",
-    padding: 18,
-    lineHeight: 20,
-    alignSelf: "center",
-  },
   selectedInfoBox: {
     marginTop: 12,
     backgroundColor: C.accentLight,
@@ -898,6 +890,9 @@ const voteStyles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     fontWeight: "600",
+  },
+  bottomSpacer: {
+    height: 28,
   },
 });
 

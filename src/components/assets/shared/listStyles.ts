@@ -117,31 +117,4 @@ export const sharedAssetListStyles = StyleSheet.create({
     fontSize: 11.5,
     color: "#8A95A3",
   },
-  emptyWrap: {
-    alignItems: "center",
-    paddingHorizontal: 32,
-  },
-  emptyIconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 22,
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-    ...CARD_SHADOW,
-  },
-  emptyTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#374151",
-    marginBottom: 6,
-    textAlign: "center",
-  },
-  emptySub: {
-    fontSize: 12,
-    color: "#8A95A3",
-    textAlign: "center",
-    lineHeight: 18,
-  },
 });

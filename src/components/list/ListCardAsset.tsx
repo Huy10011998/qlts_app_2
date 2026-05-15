@@ -13,6 +13,7 @@ import { TypeProperty } from "../../utils/Enum";
 import { convertToResizePath, fetchImage } from "../../utils/Image";
 import { getFieldValue } from "../../utils/fields/GetFieldValue";
 import { parseLink } from "../../utils/Link";
+import { C } from "../../utils/helpers/colors";
 
 function ListCardAsset({
   item,
@@ -20,7 +21,6 @@ function ListCardAsset({
   icon,
   onPress = () => {},
 }: CardItemProps) {
-  // chỉ lấy các field Image
   const imageFields = useMemo(
     () => fields.filter((f) => f.typeProperty === TypeProperty.Image),
     [fields],
@@ -29,7 +29,6 @@ function ListCardAsset({
   const [images, setImages] = useState<Record<string, string>>({});
   const [, setLoadingImages] = useState<Record<string, boolean>>({});
 
-  // Fetch ảnh 1 lần khi item thay đổi
   useEffect(() => {
     imageFields.forEach((field) => {
       const raw = getFieldValue(item, field);
@@ -41,20 +40,18 @@ function ListCardAsset({
 
       fetchImage(field.name, resizePath, setLoadingImages, setImages);
     });
-  }, [item, imageFields]);
+  }, [imageFields, images, item]);
 
   return (
     <TouchableOpacity style={styles.card} onPress={() => onPress(item)}>
-      {/* AVATAR */}
       <View style={styles.avatar}>
         <Ionicons
           name={icon || "document-text-outline"}
           size={26}
-          color="#E31E24"
+          color={C.red}
         />
       </View>
 
-      {/* INFO */}
       <View style={styles.info}>
         {fields.map((field) => {
           const rawValue = getFieldValue(item, field);
@@ -63,7 +60,6 @@ function ListCardAsset({
               ? "---"
               : String(rawValue);
 
-          // IMAGE (giống code ban đầu)
           if (field.typeProperty === TypeProperty.Image) {
             const uri = images[field.name];
             return (
@@ -78,7 +74,6 @@ function ListCardAsset({
             );
           }
 
-          /** 🔗 LINK */
           if (field.typeProperty === TypeProperty.Link) {
             const parsed = parseLink(value);
             return (
@@ -98,7 +93,6 @@ function ListCardAsset({
             );
           }
 
-          /** 🔤 TEXT */
           return (
             <Text key={field.name} style={styles.text}>
               <Text style={styles.label}>{field.moTa}: </Text>

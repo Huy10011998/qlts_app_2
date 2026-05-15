@@ -49,7 +49,7 @@ export function usePermissionReloader({
         retryAttempt.current += 1;
         retryTimer.current = setTimeout(() => {
           retryTimer.current = null;
-          void safeReloadRef.current?.();
+          safeReloadRef.current?.();
         }, delay);
       }
     } finally {

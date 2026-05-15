@@ -31,7 +31,7 @@ function AddItemComponent({
     });
   }, [onPress, navigation, field, nameClass, propertyClass]);
 
-  return <AddActionFab onPress={handlePress} variant="icon" />;
+  return <AddActionFab label="Thêm mới" onPress={handlePress} variant="extended" />;
 }
 
 export const AddItem = memo(AddItemComponent);

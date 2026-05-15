@@ -75,6 +75,32 @@ target 'qlts_app_2' do
     )
 
     installer.pods_project.targets.each do |target|
+      if target.name == 'hermes-engine'
+        hermes_error_header = File.join(
+          installer.sandbox.root.to_s,
+          'hermes-engine',
+          'external',
+          'llvh',
+          'include',
+          'llvh',
+          'Support',
+          'Error.h'
+        )
+        patched_hermes_error_header = File.join(
+          __dir__,
+          'patches',
+          'hermes',
+          'llvh',
+          'Support',
+          'Error.h'
+        )
+
+        if File.exist?(patched_hermes_error_header) && !File.exist?(hermes_error_header)
+          FileUtils.mkdir_p(File.dirname(hermes_error_header))
+          FileUtils.cp(patched_hermes_error_header, hermes_error_header)
+        end
+      end
+
       target.build_configurations.each do |build_config|
         if build_config.name == 'Release'
           build_config.build_settings['DEBUG_INFORMATION_FORMAT'] = 'dwarf-with-dsym'
@@ -154,9 +180,12 @@ if [ "${ACTION}" != "install" ] && [ "${ACTION}" != "archive" ]; then
   exit 0
 fi
 
-HERMES_BINARY="${PODS_ROOT}/hermes-engine/build/iphoneos/API/hermes/hermes.framework/hermes"
+HERMES_BINARY="${PODS_ROOT}/hermes-engine/destroot/Library/Frameworks/ios/hermes.framework/hermes"
+if [ ! -f "${HERMES_BINARY}" ]; then
+  HERMES_BINARY="${PODS_ROOT}/hermes-engine/build/iphoneos/API/hermes/hermes.framework/hermes"
+fi
 HERMES_DSYM="${PODS_ROOT}/hermes-engine/build/iphoneos/API/hermes/hermes.framework.dSYM"
-HERMES_PLIST="${PODS_ROOT}/hermes-engine/build/iphoneos/API/hermes/hermes.framework/Info.plist"
+HERMES_PLIST="$(dirname "${HERMES_BINARY}")/Info.plist"
 EMBEDDED_HERMES_PLIST="${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework/Info.plist"
 
 if [ ! -f "${HERMES_BINARY}" ]; then

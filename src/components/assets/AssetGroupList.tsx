@@ -15,6 +15,7 @@ import { TypeProperty } from "../../utils/Enum";
 import IsLoading from "../ui/IconLoading";
 import { fetchImage } from "../../utils/Image";
 import { parseLink } from "../../utils/Link";
+import { C } from "../../utils/helpers/colors";
 
 export default function AssetGroupList({
   groupedFields,
@@ -39,14 +40,14 @@ export default function AssetGroupList({
         const value = getFieldValue(item, field);
         if (
           field.typeProperty === TypeProperty.Image &&
-          value &&
+          typeof value === "string" &&
           value !== "---"
         ) {
           fetchImage(field.name, value, setLoadingImages, setImages);
         }
       });
     });
-  }, [item]);
+  }, [getFieldValue, groupedFields, item]);
 
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
@@ -65,7 +66,6 @@ export default function AssetGroupList({
 
         return (
           <View key={groupName} style={styles.groupCard}>
-            {/* Group Header */}
             <TouchableOpacity
               style={styles.groupHeader}
               onPress={() => toggleGroup(groupName)}
@@ -74,11 +74,10 @@ export default function AssetGroupList({
               <Ionicons
                 name={isCollapsed ? "chevron-down" : "chevron-up"}
                 size={26}
-                color="#E31E24"
+                color={C.red}
               />
             </TouchableOpacity>
 
-            {/* Group Fields */}
             {!isCollapsed &&
               fields.map((field) => {
                 const currentValue = getFieldValue(item, field) || "---";
@@ -94,7 +93,6 @@ export default function AssetGroupList({
                   <View key={field.name} style={styles.fieldRow}>
                     <Text style={styles.label}>{field.moTa}: </Text>
 
-                    {/* IMAGE */}
                     {field.typeProperty === TypeProperty.Image ? (
                       currentValue !== "---" ? (
                         loadingImages[field.name] ? (
@@ -120,22 +118,24 @@ export default function AssetGroupList({
                       )
                     ) : field.typeProperty === TypeProperty.Link ? (
                       (() => {
-                        const prevParsed = parseLink(prevValue);
+                        const prevValueText = String(prevValue);
+                        const currentValueText = String(currentValue);
+                        const prevParsed = parseLink(prevValueText);
                         const currentParsed =
-                          currentValue !== "---"
-                            ? parseLink(currentValue)
+                          currentValueText !== "---"
+                            ? parseLink(currentValueText)
                             : null;
 
                         return (
                           <Text
                             style={[
                               styles.value,
-                              changed && { color: "red", fontWeight: "600" },
+                              changed && styles.changedValue,
                             ]}
                           >
                             {changed && (
                               <Text>
-                                {prevParsed?.text || prevValue || "---"}{" "}
+                                {prevParsed?.text || prevValueText || "---"}{" "}
                                 {" -> "}
                               </Text>
                             )}
@@ -159,7 +159,7 @@ export default function AssetGroupList({
                       <Text
                         style={[
                           styles.value,
-                          changed && { color: "red", fontWeight: "600" },
+                          changed && styles.changedValue,
                         ]}
                       >
                         {changed
@@ -174,7 +174,6 @@ export default function AssetGroupList({
         );
       })}
 
-      {/* Modal xem ảnh full */}
       <Modal
         visible={modalVisible}
         transparent
@@ -243,6 +242,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#000",
     flexShrink: 1,
+  },
+  changedValue: {
+    color: "red",
+    fontWeight: "600",
   },
 
   link: {

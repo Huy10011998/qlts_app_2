@@ -42,7 +42,6 @@ import {
   mapShareholderItem,
   VOTING_CHOICE_LABEL_MAP,
   VOTING_CHOICE_VALUE_MAP,
-  VotingChoice,
 } from "./shared/shareholdersMeetingHelpers";
 
 type AttendanceActionResponse = {
@@ -84,7 +83,6 @@ export default function ShareholdersMeetingScannerScreen() {
     hasPermission,
     initTimeout,
     isTorchOn,
-    pauseScanner,
     resetScannerSession,
     resumeScanner,
     scanLineAnim,
@@ -109,7 +107,7 @@ export default function ShareholdersMeetingScannerScreen() {
   }, [meetingId]);
 
   useEffect(() => {
-    void reloadShareholders();
+    reloadShareholders();
   }, [reloadShareholders]);
 
   useFocusEffect(
@@ -254,7 +252,7 @@ export default function ShareholdersMeetingScannerScreen() {
                     backendMessage.toLowerCase().includes("điểm danh trước đó")
                   ) {
                     applyAttendanceStatus(shareholder.id);
-                    void reloadShareholders();
+                    reloadShareholders();
                   }
 
                   Alert.alert("Thông báo", backendMessage, [
@@ -267,7 +265,7 @@ export default function ShareholdersMeetingScannerScreen() {
                 }
 
                 applyAttendanceStatus(shareholder.id);
-                void reloadShareholders();
+                reloadShareholders();
                 Alert.alert(
                   "Điểm danh thành công",
                   `Cổ đông ${shareholder.shareholderId} đã được điểm danh.`,

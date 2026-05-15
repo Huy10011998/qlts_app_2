@@ -26,7 +26,7 @@ export function useAppLifecycle({
       if (lastConnected.current === false && isConnected) {
         log("[APP] Network reconnected");
         emitAppRefetch("network");
-        void safeReloadRef.current?.();
+        safeReloadRef.current?.();
       }
 
       lastConnected.current = isConnected;
@@ -49,8 +49,8 @@ export function useAppLifecycle({
 
           log("[APP] App returned to foreground");
           emitAppRefetch("foreground");
-          void safeReloadRef.current?.();
-          void checkAppUpdateRef.current?.();
+          safeReloadRef.current?.();
+          checkAppUpdateRef.current?.();
         }
 
         appState.current = nextState;

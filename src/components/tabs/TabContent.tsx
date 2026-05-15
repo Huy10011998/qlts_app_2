@@ -16,6 +16,20 @@ import AssetNoteDetails from "../assets/AssetNoteDetails";
 import { useParams } from "../../hooks/useParams";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 
+const styles = {
+  container: {
+    flex: 1,
+  },
+  actionsWrap: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 20,
+  },
+};
+
 export default function TabContent({
   activeTab,
   groupedFields,
@@ -39,18 +53,13 @@ export default function TabContent({
   const nameClassRoot = nameClass;
   const { showAlertIfActive } = useSafeAlert();
 
-  /* ACTION HANDLERS */
   const handleDelete = async () => {
     if (!item?.id) return;
 
     try {
       const body = { iDs: [item.id] };
-
-      // Check Reference trước
       const res = await checkReferenceUsage(nameClass || "", body.iDs);
       const refList = res?.data;
-
-      // Nếu bị tham chiếu → báo lỗi, KHÔNG hỏi confirm delete
       if (Array.isArray(refList) && refList.length > 0) {
         const refMessage = refList.map((e) => `• ${e.message}`).join("\n");
 
@@ -60,8 +69,6 @@ export default function TabContent({
         );
         return;
       }
-
-      //  Nếu KHÔNG bị tham chiếu → hỏi lại người dùng có muốn xóa không
       Alert.alert(
         "Xác nhận xoá",
         "Bạn có chắc chắn muốn xoá tài sản này?",
@@ -106,10 +113,10 @@ export default function TabContent({
     }
   };
 
-  const onPressNavigateToEdit = (item: Record<string, any>) => {
+  const onPressNavigateToEdit = (selectedItem: Record<string, any>) => {
     try {
       navigation.navigate("AssetEditItem", {
-        item,
+        item: selectedItem,
         nameClass,
         field: JSON.stringify(fieldActive ?? []),
       });
@@ -119,13 +126,31 @@ export default function TabContent({
     }
   };
 
-  const onPressNavigateToClone = (item: Record<string, any>) => {
+  const onPressNavigateToClone = (selectedItem: Record<string, any>) => {
     try {
+      const relatedRouteParams =
+        route.name === "AssetRelatedDetails"
+          ? (route.params as {
+              idRoot?: string;
+              propertyReference?: string;
+              nameClassRoot?: string;
+              titleHeader?: string;
+            } | undefined)
+          : undefined;
+
       navigation.navigate("AssetCloneItem", {
-        item,
+        item: selectedItem,
         nameClass,
         propertyClass,
         field: JSON.stringify(fieldActive ?? []),
+        returnTo:
+          route.name === "AssetRelatedDetails"
+            ? "assetRelatedList"
+            : "assetList",
+        idRoot: relatedRouteParams?.idRoot,
+        propertyReference: relatedRouteParams?.propertyReference,
+        nameClassRoot: relatedRouteParams?.nameClassRoot,
+        titleHeader: relatedRouteParams?.titleHeader,
       });
     } catch (err) {
       error(err);
@@ -133,12 +158,11 @@ export default function TabContent({
     }
   };
 
-  /* TAB CONTENT */
   const tabContentMap: Record<string, JSX.Element> = {
     list: (
-      <View style={{ flex: 1 }}>
+      <View style={styles.container}>
         {isDetailsScreen && (
-          <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
+          <View style={styles.actionsWrap}>
             <AssetActions
               onEdit={() => onPressNavigateToEdit(item)}
               onDelete={handleDelete}
@@ -148,7 +172,7 @@ export default function TabContent({
           </View>
         )}
 
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 20 }}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
           <AssetGroupList
             groupedFields={groupedFields}
             collapsedGroups={collapsedGroups}

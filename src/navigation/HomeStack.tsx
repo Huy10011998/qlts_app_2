@@ -16,13 +16,17 @@ import ShareholdersMeetingScannerScreen from "../screens/ShareholdersMeeting/Sha
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+function renderHomeHeader() {
+  return <HeaderHome />;
+}
+
 export default function HomeStack() {
   return (
     <Stack.Navigator>
       <Stack.Screen
         name="Home"
         component={HOME_SCREEN_COMPONENT}
-        options={{ header: () => <HeaderHome /> }}
+        options={{ header: renderHomeHeader }}
       />
 
       {HOME_STACK_STATIC_SCREENS.map((screen) => (

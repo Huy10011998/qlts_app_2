@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Platform, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { formatDMY, parseDate } from "../../../utils/Date";
 import IosSpinnerPickerSheet from "../../dataPicker/shared/IosSpinnerPickerSheet";
@@ -40,7 +40,7 @@ export const DatePickerModalIOS = ({
   };
 
   return (
-    <View style={{ position: "relative" }}>
+    <View style={styles.container}>
       <PickerFieldTrigger
         iconName="calendar-outline"
         placeholder="Chọn Ngày (dd-MM-yyyy)"
@@ -68,3 +68,9 @@ export const DatePickerModalIOS = ({
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    position: "relative",
+  },
+});

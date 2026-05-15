@@ -1,6 +1,7 @@
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import { C } from "../../../utils/helpers/colors";
 
 type PickerFieldTriggerProps = {
   iconName: string;
@@ -20,7 +21,7 @@ export default function PickerFieldTrigger({
       <Text style={[styles.text, !value && styles.placeholder]}>
         {value || placeholder}
       </Text>
-      <Ionicons name={iconName as any} size={24} color="#E31E24" />
+      <Ionicons name={iconName as any} size={24} color={C.red} />
     </TouchableOpacity>
   );
 }

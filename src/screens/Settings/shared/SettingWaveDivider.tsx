@@ -1,5 +1,5 @@
 import React from "react";
-import { Dimensions, View } from "react-native";
+import { Dimensions, StyleSheet, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { C } from "../../../utils/helpers/colors";
 
@@ -7,12 +7,12 @@ const { width: W } = Dimensions.get("window");
 
 export default function SettingWaveDivider() {
   return (
-    <View style={{ height: 56, backgroundColor: C.red }}>
+    <View style={styles.container}>
       <Svg
         width={W}
         height={56}
         viewBox={`0 0 ${W} 56`}
-        style={{ position: "absolute", bottom: 0 }}
+        style={styles.wave}
       >
         <Path
           d={`M0,14 C${W * 0.15},42 ${W * 0.35},0 ${W * 0.5},22 C${W * 0.65},44 ${
@@ -24,3 +24,14 @@ export default function SettingWaveDivider() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    height: 56,
+    backgroundColor: C.red,
+  },
+  wave: {
+    position: "absolute",
+    bottom: 0,
+  },
+});

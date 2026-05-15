@@ -11,6 +11,16 @@ export const useSafeAlert = () => {
   const isFocused = useIsFocused();
   const isMountedRef = useRef(true);
   const { logoutReason } = useAuth();
+  const isFocusedRef = useRef(isFocused);
+  const logoutReasonRef = useRef(logoutReason);
+
+  useEffect(() => {
+    isFocusedRef.current = isFocused;
+  }, [isFocused]);
+
+  useEffect(() => {
+    logoutReasonRef.current = logoutReason;
+  }, [logoutReason]);
 
   useEffect(() => {
     return () => {
@@ -23,9 +33,9 @@ export const useSafeAlert = () => {
   const isActive = useCallback(
     () =>
       isMountedRef.current &&
-      isFocused &&
-      logoutReason !== "EXPIRED",
-    [isFocused, logoutReason],
+      isFocusedRef.current &&
+      logoutReasonRef.current !== "EXPIRED",
+    [],
   );
 
   const showAlertIfActive = useCallback(
@@ -37,14 +47,14 @@ export const useSafeAlert = () => {
     ) => {
       if (
         !isMountedRef.current ||
-        !isFocused ||
-        logoutReason === "EXPIRED"
+        !isFocusedRef.current ||
+        logoutReasonRef.current === "EXPIRED"
       ) {
         return;
       }
       Alert.alert(title, message, buttons, options);
     },
-    [isFocused, logoutReason],
+    [],
   );
 
   return {

@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
-  Text,
   FlatList,
   StyleSheet,
   LayoutAnimation,
@@ -55,7 +54,7 @@ import {
   buildTree,
   getConditionsFromNode,
 } from "./shared/treeHelpers";
-import { BG, BRAND_RED, CARD_SHADOW } from "./shared/listTheme";
+import { BRAND_RED } from "./shared/listTheme";
 import { sharedAssetListStyles } from "./shared/listStyles";
 
 if (
@@ -68,19 +67,28 @@ if (
 const { width } = Dimensions.get("window");
 const MENU_WIDTH = width * 0.6;
 
+function AssetListMenuButton({
+  onPress,
+}: {
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity onPress={onPress} style={styles.headerButton}>
+      <Ionicons name="menu" size={26} color="#fff" />
+    </TouchableOpacity>
+  );
+}
+
 export default function AssetList() {
   const navigation = useNavigation<StackNavigation<"AssetList">>();
-
   const { nameClass, titleHeader } = useParams();
-
-  const [taisan, setTaiSan] = useState<Record<string, any>[]>([]);
+  const [assetItems, setAssetItems] = useState<Record<string, any>[]>([]);
   const [fieldActive, setFieldActive] = useState<Field[]>([]);
   const [fieldShowMobile, setFieldShowMobile] = useState<Field[]>([]);
   const [propertyClass, setPropertyClass] = useState<PropertyResponse>();
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  const [skipSize, setSkipSize] = useState(0);
   const [total, setTotal] = useState(0);
   const [searchText, setSearchText] = useState("");
 
@@ -88,41 +96,33 @@ export default function AssetList() {
 
   const debouncedSearch = useDebounce(searchText, 600);
   const pageSize = 20;
-
-  // Tree state
   const [treeData, setTreeData] = useState<TreeNode[]>([]);
   const [loadingTree, setLoadingTree] = useState(false);
-
-  // Filter conditions
   const [conditions, setConditions] = useState<AssetFilterCondition[]>([]);
-
   const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
-
-  const [isFirstLoad, setIsFirstLoad] = useState(true);
   const { isMounted, showAlertIfActive } = useSafeAlert();
-
-  // Redux
   const dispatch = useAppDispatch();
+  const fieldActiveRef = useRef<Field[]>([]);
+  const propertyClassRef = useRef<PropertyResponse | undefined>(undefined);
+  const skipSizeRef = useRef(0);
+  const isFirstLoadRef = useRef(true);
 
   useEffect(() => {
-    // Khi vào AssetList thì reset node cũ
     dispatch(resetSelectedTreeNode());
-  }, []);
+  }, [dispatch]);
 
   useReloadPermissionsOnFocus();
 
   const shouldRefresh = useSelector(
     (state: RootState) => state.asset.shouldRefreshList,
   );
-
-  // Check Permission
   const { can, loaded } = usePermission();
 
   const refreshTop = async () => {
     if (isRefreshingTop) return;
 
     setIsRefreshingTop(true);
-    setSkipSize(0);
+    skipSizeRef.current = 0;
 
     await fetchData(false, { isRefresh: true });
 
@@ -157,45 +157,34 @@ export default function AssetList() {
 
   const toggleMenu = useCallback(() => {
     if (!propertyClass?.isBuildTree) return;
-    void togglePanel();
+    togglePanel();
   }, [propertyClass?.isBuildTree, togglePanel]);
+
+  const renderHeaderRight = useCallback(
+    () =>
+      propertyClass?.isBuildTree ? (
+        <AssetListMenuButton onPress={toggleMenu} />
+      ) : null,
+    [propertyClass?.isBuildTree, toggleMenu],
+  );
 
   useEffect(() => {
     navigation.setOptions({
-      headerRight: () =>
-        propertyClass?.isBuildTree ? (
-          <TouchableOpacity
-            onPress={toggleMenu}
-            style={{ paddingHorizontal: 5 }}
-          >
-            <Ionicons name="menu" size={26} color="#fff" />
-          </TouchableOpacity>
-        ) : null,
+      headerRight: renderHeaderRight,
     });
-  }, [toggleMenu, propertyClass?.isBuildTree]);
+  }, [navigation, renderHeaderRight]);
 
-  // Redux
-  useFocusEffect(
-    React.useCallback(() => {
-      if (shouldRefresh) {
-        fetchData(false);
-        dispatch(resetShouldRefreshList());
-      }
-    }, [shouldRefresh]),
-  );
-
-  //  Fetch data
   const fetchData = useCallback(
     async (isLoadMore = false, options?: { isRefresh?: boolean }) => {
       if (!nameClass) return;
 
       const isRefresh = options?.isRefresh;
       const shouldReloadFieldConfig =
-        !isLoadMore && (isRefresh || fieldActive.length === 0);
+        !isLoadMore && (isRefresh || fieldActiveRef.current.length === 0);
       const shouldReloadPropertyClass =
-        !isLoadMore && (isRefresh || !propertyClass);
+        !isLoadMore && (isRefresh || !propertyClassRef.current);
 
-      if (!isLoadMore && !isRefresh && isFirstLoad) {
+      if (!isLoadMore && !isRefresh && isFirstLoadRef.current) {
         setIsLoading(true);
       }
 
@@ -204,6 +193,7 @@ export default function AssetList() {
           const responseFieldActive = await getFieldActive(nameClass);
           const activeFields = responseFieldActive?.data || [];
 
+          fieldActiveRef.current = activeFields;
           setFieldActive(activeFields);
 
           setFieldShowMobile(
@@ -213,14 +203,17 @@ export default function AssetList() {
 
         if (shouldReloadPropertyClass && nameClass) {
           const responsePropertyClass = await getPropertyClass(nameClass);
-          setPropertyClass(responsePropertyClass?.data);
+          const nextPropertyClass = responsePropertyClass?.data;
+
+          propertyClassRef.current = nextPropertyClass;
+          setPropertyClass(nextPropertyClass);
         }
 
-        const currentSkip = isLoadMore ? skipSize : 0;
+        const currentSkip = isLoadMore ? skipSizeRef.current : 0;
 
         const response = await getList(
           nameClass,
-          "",
+          "id desc",
           pageSize,
           currentSkip,
           debouncedSearch,
@@ -234,11 +227,13 @@ export default function AssetList() {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
 
         if (isLoadMore) {
-          setTaiSan((prev) => [...prev, ...newItems]);
-          setSkipSize(currentSkip + pageSize);
+          const nextSkip = currentSkip + pageSize;
+
+          setAssetItems((prev) => [...prev, ...newItems]);
+          skipSizeRef.current = nextSkip;
         } else {
-          setTaiSan(newItems);
-          setSkipSize(pageSize);
+          skipSizeRef.current = pageSize;
+          setAssetItems(newItems);
         }
 
         setTotal(totalItems);
@@ -247,42 +242,43 @@ export default function AssetList() {
         if (!isAuthExpiredError(e)) {
           showAlertIfActive("Lỗi", "Không thể tải dữ liệu.");
         }
-        if (!isLoadMore) setTaiSan([]);
+        if (!isLoadMore) setAssetItems([]);
       } finally {
         if (isMounted()) {
+          isFirstLoadRef.current = false;
           setIsLoading(false);
           setIsLoadingMore(false);
-          setIsFirstLoad(false);
         }
       }
     },
     [
-      nameClass,
-      fieldActive.length,
-      propertyClass,
-      skipSize,
-      debouncedSearch,
       conditions,
-      isFirstLoad,
+      debouncedSearch,
+      isMounted,
+      nameClass,
+      showAlertIfActive,
     ],
   );
 
-  // Tự động reload khi có sự kiện từ add/edit item
+  useFocusEffect(
+    React.useCallback(() => {
+      if (shouldRefresh) {
+        fetchData(false);
+        dispatch(resetShouldRefreshList());
+      }
+    }, [dispatch, fetchData, shouldRefresh]),
+  );
+
   useAutoReload(fetchData);
 
-  useEffect(() => {
-    if (!nameClass) return;
-    fetchData(false);
-  }, [nameClass]);
-
   const handleLoadMore = () => {
-    if (taisan.length < total && !isLoadingMore && !isLoading) {
+    if (assetItems.length < total && !isLoadingMore && !isLoading) {
       setIsLoadingMore(true);
       fetchData(true);
     }
   };
 
-  const handlePress = async (item: Record<string, any>) => {
+  const handlePress = useCallback(async (item: Record<string, any>) => {
     try {
       navigation.navigate("AssetDetails", {
         id: String(item.id),
@@ -295,13 +291,10 @@ export default function AssetList() {
       error(e);
       showAlertIfActive("Lỗi", `Không thể tải chi tiết ${nameClass}`);
     }
-  };
+  }, [fieldActive, nameClass, navigation, propertyClass, showAlertIfActive, titleHeader]);
 
-  //  Select node
   const handleSelectNode = (node: TreeNode) => {
     setSelectedNode(node);
-
-    // Lưu vào redux
     dispatch(
       setSelectedTreeNode({
         value: node.value ?? null,
@@ -309,10 +302,7 @@ export default function AssetList() {
         text: node.text ?? null,
       }),
     );
-
-    // Build điều kiện từ node → root
     const newConditions = getConditionsFromNode(node);
-
     setConditions(newConditions);
     closeMenu();
   };
@@ -323,19 +313,17 @@ export default function AssetList() {
     const isSearch = debouncedSearch.trim().length > 0;
 
     if (isSearch) {
-      setIsSearching(true); // bật spinner search
+      setIsSearching(true);
     }
 
-    setIsLoading(true);
-    setSkipSize(0);
-    setTaiSan([]);
+    skipSizeRef.current = 0;
 
     fetchData(false).finally(() => {
       if (isSearch) {
-        setIsSearching(false); // tắt spinner SAU KHI SEARCH XONG
+        setIsSearching(false);
       }
     });
-  }, [debouncedSearch, conditions]);
+  }, [conditions, debouncedSearch, fetchData, nameClass]);
 
   const renderItem = useCallback(
     ({ item }: { item: Record<string, any> }) => (
@@ -346,17 +334,19 @@ export default function AssetList() {
         onPress={() => handlePress(item)}
       />
     ),
-    [fieldShowMobile, fieldActive, propertyClass],
+    [fieldActive, fieldShowMobile, handlePress, propertyClass],
   );
 
   if (
     isLoading &&
     !isRefreshingTop &&
     !isLoadingMore &&
-    !isSearching // thêm điều kiện này
+    !isSearching
   ) {
-    return <IsLoading size="large" color="#E31E24" />;
+    return <IsLoading size="large" color={BRAND_RED} />;
   }
+
+  const isEmpty = assetItems.length === 0;
 
   return (
     <View style={styles.container}>
@@ -367,20 +357,19 @@ export default function AssetList() {
         isSearching={isSearching}
         onClear={() => setSearchText("")}
         badgeText={selectedNode ? selectedNode.text : "Tất cả"}
-        summaryText={`Tổng ${total} • Đã tải ${taisan.length}`}
+        summaryText={`Tổng ${total} • Đã tải ${assetItems.length}`}
       />
 
-      {/* List */}
       <FlatList
-        data={taisan}
+        data={assetItems}
         keyExtractor={(item, index) => String(item.id ?? index)}
         renderItem={renderItem}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshingTop}
             onRefresh={refreshTop}
-            colors={["#E31E24"]} // Android
-            tintColor="#E31E24" // iOS
+            colors={[BRAND_RED]}
+            tintColor={BRAND_RED}
             progressViewOffset={50}
           />
         }
@@ -394,16 +383,18 @@ export default function AssetList() {
         onEndReachedThreshold={0.5}
         ListFooterComponent={isLoadingMore ? <IsLoading /> : null}
         ListHeaderComponent={
-          <AssetListSummaryCard
-            iconName="funnel-outline"
-            title={selectedNode ? selectedNode.text : "Toàn bộ tài sản"}
-            subtitle={`${total} kết quả • hiển thị ${taisan.length}`}
-          />
+          isEmpty ? null : (
+            <AssetListSummaryCard
+              iconName="funnel-outline"
+              title={selectedNode ? selectedNode.text : "Toàn bộ tài sản"}
+              subtitle={`${total} kết quả • hiển thị ${assetItems.length}`}
+            />
+          )
         }
-        stickyHeaderIndices={[0]}
+        stickyHeaderIndices={isEmpty ? [] : [0]}
         contentContainerStyle={[
           styles.listContent,
-          taisan.length === 0 && styles.listContentEmpty,
+          isEmpty && styles.listContentEmpty,
         ]}
         ListEmptyComponent={
           <AssetListEmptyState
@@ -440,7 +431,7 @@ export default function AssetList() {
       {loaded && nameClass && can(nameClass, "Insert") && (
         <AddItem
           nameClass={nameClass}
-          field={fieldActive} // object
+          field={fieldActive}
           propertyClass={propertyClass}
         />
       )}
@@ -450,10 +441,14 @@ export default function AssetList() {
 
 const styles = StyleSheet.create({
   listContentEmpty: {
-    justifyContent: "flex-start",
+    paddingTop: 0,
+    paddingBottom: 0,
   },
   menuScrollContent: {
     paddingBottom: 12,
+  },
+  headerButton: {
+    paddingHorizontal: 5,
   },
   ...sharedAssetListStyles,
 });

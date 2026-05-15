@@ -1,7 +1,6 @@
-import React, { useEffect, useState, useMemo, useRef } from "react";
+import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import {
   View,
-  Text,
   FlatList,
   RefreshControl,
   LayoutAnimation,
@@ -11,11 +10,10 @@ import {
   KeyboardAvoidingView,
 } from "react-native";
 
-import Ionicons from "react-native-vector-icons/Ionicons";
-
 import { useDebounce } from "../../hooks/useDebounce";
 import { useViewPermission } from "../../hooks/useViewPermission";
 import IsLoading from "../../components/ui/IconLoading";
+import EmptyState from "../../components/ui/EmptyState";
 import { getVungCamera } from "../../services/data/CallApi";
 import { error } from "../../utils/Logger";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
@@ -54,7 +52,7 @@ export default function CameraScreen() {
   const fetchingRef = useRef(false);
   const { isMounted, showAlertIfActive } = useSafeAlert();
 
-  const fetchData = async (options?: { isRefresh?: boolean }) => {
+  const fetchData = useCallback(async (options?: { isRefresh?: boolean }) => {
     if (fetchingRef.current) return;
 
     const isRefresh = options?.isRefresh;
@@ -78,7 +76,7 @@ export default function CameraScreen() {
         setIsRefreshingTop(false);
       }
     }
-  };
+  }, [isMounted, showAlertIfActive]);
 
   const refreshTop = async () => {
     if (isRefreshingTop) return;
@@ -93,7 +91,7 @@ export default function CameraScreen() {
       return;
     }
     fetchData();
-  }, [loaded, hasViewPermission]);
+  }, [fetchData, hasViewPermission, loaded]);
 
   const { filteredTree, autoExpand } = useMemo(
     () => filterCameraTree(data, debouncedSearch),
@@ -131,16 +129,18 @@ export default function CameraScreen() {
         style={[styles.container, styles.centerState]}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <Text style={styles.emptyTitle}>Bạn không có quyền truy cập</Text>
-        <Text style={styles.emptySub}>
-          Tài khoản hiện tại không có quyền xem danh sách camera.
-        </Text>
+        <EmptyState
+          title="Bạn không có quyền truy cập"
+          subtitle="Tài khoản hiện tại không có quyền xem danh sách camera."
+        />
       </KeyboardAvoidingView>
     );
   }
 
   if (isFetching && !isRefreshingTop && !debouncedSearch)
     return <IsLoading size="large" color={CAMERA_MENU_BRAND_RED} />;
+
+  const isEmpty = filteredTree.length === 0;
 
   return (
     <KeyboardAvoidingView
@@ -169,7 +169,7 @@ export default function CameraScreen() {
           )}
           contentContainerStyle={[
             styles.listContent,
-            filteredTree.length === 0 && styles.listContentEmpty,
+            isEmpty && styles.listContentEmpty,
           ]}
           removeClippedSubviews
           initialNumToRender={20}
@@ -186,15 +186,11 @@ export default function CameraScreen() {
             />
           }
           ListEmptyComponent={
-            <View style={styles.emptyWrap}>
-              <View style={styles.emptyIconWrap}>
-                <Ionicons name="videocam-outline" size={32} color="#C7C7CC" />
-              </View>
-              <Text style={styles.emptyTitle}>Không tìm thấy camera</Text>
-              <Text style={styles.emptySub}>
-                Thử tìm kiếm với tên khu vực hoặc camera khác
-              </Text>
-            </View>
+            <EmptyState
+              iconName="videocam-outline"
+              title="Không tìm thấy camera"
+              subtitle="Thử tìm kiếm với tên khu vực hoặc camera khác"
+            />
           }
         />
       </View>
@@ -214,42 +210,12 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   listContentEmpty: {
-    justifyContent: "center",
-  },
-  emptyWrap: {
-    alignItems: "center",
-    paddingHorizontal: 32,
+    paddingTop: 0,
+    paddingBottom: 0,
   },
   centerState: {
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 32,
-  },
-  emptyIconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 22,
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-    shadowColor: "#1A2340",
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  emptyTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#374151",
-    marginBottom: 6,
-    textAlign: "center",
-  },
-  emptySub: {
-    fontSize: 12,
-    color: "#8A95A3",
-    textAlign: "center",
-    lineHeight: 18,
   },
 });
