@@ -116,6 +116,7 @@ export default function EnumAndReferencePickerModal({
 
   return (
     <BottomSheetModalShell
+      avoidKeyboard
       visible={visible}
       animationType="slide"
       closeOnBackdropPress

@@ -1,16 +1,6 @@
 import React, { useCallback } from "react";
-import {
-  Linking,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
-import Ionicons from "react-native-vector-icons/Ionicons";
+import { Linking, StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import ReactNativeHapticFeedback from "react-native-haptic-feedback";
 import {
   Camera,
@@ -32,7 +22,6 @@ import useQrScannerController from "../../components/qrcode/shared/useQrScannerC
 
 export default function QrScannerScreen() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
   const { showAlertIfActive } = useSafeAlert();
   const {
     activateScanner,
@@ -43,12 +32,10 @@ export default function QrScannerScreen() {
     format,
     hasPermission,
     initTimeout,
-    isTorchOn,
     resetScannerSession,
     resumeScanner,
     scanLineAnim,
     scannedRef,
-    setIsTorchOn,
     startInitTimeoutTimer,
   } = useQrScannerController({ enabled: true });
 
@@ -189,41 +176,11 @@ export default function QrScannerScreen() {
         device={device}
         format={format}
         isActive={cameraActive}
-        torch={isTorchOn ? "on" : "off"}
+        torch="off"
         codeScanner={codeScanner}
         resizeMode="cover"
         enableZoomGesture
       />
-
-      <View
-        pointerEvents="box-none"
-        style={[styles.header, { paddingTop: insets.top + 8 }]}
-      >
-        <TouchableOpacity
-          hitSlop={10}
-          onPress={() => {
-            deactivateScanner();
-            navigation.goBack();
-          }}
-        >
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-
-        <Text style={styles.headerTitle}>Quét mã QR</Text>
-
-        <View style={styles.headerRight}>
-          <TouchableOpacity
-            hitSlop={10}
-            onPress={() => setIsTorchOn((prev) => !prev)}
-          >
-            <Ionicons
-              name={isTorchOn ? "flash" : "flash-off"}
-              size={22}
-              color="#fff"
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
 
       <QrScannerViewportOverlay scanLineAnim={scanLineAnim} />
     </SafeAreaView>
@@ -232,24 +189,4 @@ export default function QrScannerScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#000" },
-  header: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    backgroundColor: "rgba(0,0,0,0.45)",
-  },
-  headerTitle: {
-    flex: 1,
-    marginLeft: 16,
-    color: "#fff",
-    fontSize: 17,
-    fontWeight: "bold",
-  },
-  headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
 });

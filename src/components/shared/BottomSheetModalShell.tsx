@@ -1,7 +1,9 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
+  Keyboard,
   Modal,
   ModalProps,
+  Platform,
   StyleProp,
   StyleSheet,
   TouchableOpacity,
@@ -10,6 +12,7 @@ import {
 } from "react-native";
 
 type BottomSheetModalShellProps = {
+  avoidKeyboard?: boolean;
   children: React.ReactNode;
   closeOnBackdropPress?: boolean;
   onClose: () => void;
@@ -23,6 +26,7 @@ type BottomSheetModalShellProps = {
 >;
 
 export default function BottomSheetModalShell({
+  avoidKeyboard = false,
   children,
   closeOnBackdropPress = false,
   onClose,
@@ -34,6 +38,32 @@ export default function BottomSheetModalShell({
   presentationStyle,
   statusBarTranslucent,
 }: BottomSheetModalShellProps) {
+  const [keyboardBottom, setKeyboardBottom] = useState(0);
+
+  useEffect(() => {
+    if (!avoidKeyboard || !visible) {
+      setKeyboardBottom(0);
+      return;
+    }
+
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, (event) => {
+      setKeyboardBottom(event.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardBottom(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [avoidKeyboard, visible]);
+
   return (
     <Modal
       transparent
@@ -43,7 +73,13 @@ export default function BottomSheetModalShell({
       presentationStyle={presentationStyle}
       statusBarTranslucent={statusBarTranslucent}
     >
-      <View style={[styles.overlay, overlayStyle]}>
+      <View
+        style={[
+          styles.overlay,
+          keyboardBottom ? { paddingBottom: keyboardBottom } : null,
+          overlayStyle,
+        ]}
+      >
         {closeOnBackdropPress ? (
           <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
         ) : (

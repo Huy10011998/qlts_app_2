@@ -20,8 +20,6 @@ export default function ScanStack() {
         component={QrScannerScreen}
         options={{
           headerShown: false,
-          title: "",
-          ...headerWithBack,
         }}
       />
 

@@ -254,6 +254,7 @@ export const refreshTokenFlow = async (): Promise<string> => {
       const res = await withTimeout(
         refreshApi.post(API_ENDPOINTS.REFRESH_TOKEN, {
           value: refreshToken,
+          isMobile: true,
         }),
         8000,
       );
@@ -589,7 +590,11 @@ export const checkValidation = async <T = any,>(
     id: number;
   },
 ) => {
-  const response = await callApi<T>("POST", `/${nameClass}/check-validation`, payload);
+  const response = await callApi<T>(
+    "POST",
+    `/${nameClass}/check-validation`,
+    payload,
+  );
 
   const validationItems =
     response &&

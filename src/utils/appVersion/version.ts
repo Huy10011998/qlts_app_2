@@ -24,3 +24,45 @@ export const isNewerVersion = (
 
   return false;
 };
+
+export const selectLatestVersionInfo = <
+  VersionInfo extends { latestVersion: string },
+>(
+  versions: VersionInfo[],
+): VersionInfo | null => {
+  if (!versions.length) return null;
+
+  return versions.reduce((latest, versionInfo) =>
+    isNewerVersion(latest.latestVersion, versionInfo.latestVersion)
+      ? versionInfo
+      : latest,
+  );
+};
+
+export const formatVersionWithBuild = (
+  version: string,
+  buildNumber?: string | null,
+) => {
+  if (!buildNumber) return version;
+  return `${version} (${buildNumber})`;
+};
+
+export const isNewerAppVersion = ({
+  currentBuildNumber,
+  currentVersion,
+  latestBuildNumber,
+  latestVersion,
+}: {
+  currentBuildNumber?: string | null;
+  currentVersion: string;
+  latestBuildNumber?: string | null;
+  latestVersion: string;
+}) => {
+  if (isNewerVersion(currentVersion, latestVersion)) return true;
+
+  if (currentVersion !== latestVersion || !latestBuildNumber) {
+    return false;
+  }
+
+  return isNewerVersion(currentBuildNumber ?? "0", latestBuildNumber);
+};

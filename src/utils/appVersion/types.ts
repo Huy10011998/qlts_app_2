@@ -1,5 +1,7 @@
 export type StoreVersionInfo = {
+  currentBuildNumber: string;
   currentVersion: string;
+  latestBuildNumber?: string;
   latestVersion: string;
   storeUrl: string;
 };

@@ -32,10 +32,14 @@ export default function AssetFormScreenShell({
 }: AssetFormScreenShellProps) {
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={style}
     >
-      <ScrollView contentContainerStyle={contentContainerStyle}>
+      <ScrollView
+        contentContainerStyle={contentContainerStyle}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
+      >
         {children}
       </ScrollView>
 

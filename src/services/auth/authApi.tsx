@@ -23,6 +23,7 @@ export const loginApi = async (
     const res = await authApi.post<LoginResponse>(API_ENDPOINTS.LOGIN, {
       userName,
       userPassword: hashedPassword,
+      isMobile: true,
     });
 
     return res.data;

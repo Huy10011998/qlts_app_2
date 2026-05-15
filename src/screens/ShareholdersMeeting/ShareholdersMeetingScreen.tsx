@@ -300,6 +300,8 @@ const ShareholdersMeetingScreen: React.FC = () => {
           <FlatList
             style={attStyles.flatList}
             data={filteredShareholders}
+            keyboardDismissMode="on-drag"
+            keyboardShouldPersistTaps="handled"
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <ShareholderAttendanceRow
@@ -337,7 +339,12 @@ const ShareholdersMeetingScreen: React.FC = () => {
           <ActivityIndicator size="small" color={C.accent} />
         </View>
       ) : (
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardDismissMode="on-drag"
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={voteStyles.summaryRow}>
             <View style={voteStyles.summaryCard}>
               <Text style={voteStyles.summaryNum}>{opinions.length}</Text>

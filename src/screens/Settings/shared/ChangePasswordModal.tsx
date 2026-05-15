@@ -33,6 +33,7 @@ export default function ChangePasswordModal({
 }: ChangePasswordModalProps) {
   return (
     <BottomSheetModalShell
+      avoidKeyboard
       visible={visible}
       animationType="slide"
       onClose={onClose}

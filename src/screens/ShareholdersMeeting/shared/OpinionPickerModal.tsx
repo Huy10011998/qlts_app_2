@@ -75,6 +75,7 @@ export default function OpinionPickerModal({
 
   return (
     <BottomSheetModalShell
+      avoidKeyboard
       visible={visible}
       animationType="fade"
       closeOnBackdropPress

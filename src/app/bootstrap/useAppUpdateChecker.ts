@@ -1,8 +1,9 @@
 import { RefObject, useEffect, useRef } from "react";
 import { Alert, Platform } from "react-native";
 import {
+  formatVersionWithBuild,
   getStoreVersionInfo,
-  isNewerVersion,
+  isNewerAppVersion,
   markUpdateReminderDismissed,
   openStoreForUpdate,
   shouldShowUpdateReminder,
@@ -49,9 +50,7 @@ export function useAppUpdateChecker({
       const versionInfo = await getStoreVersionInfo();
       if (!versionInfo) return;
 
-      if (
-        !isNewerVersion(versionInfo.currentVersion, versionInfo.latestVersion)
-      ) {
+      if (!isNewerAppVersion(versionInfo)) {
         return;
       }
 
@@ -62,7 +61,13 @@ export function useAppUpdateChecker({
 
       Alert.alert(
         "Có phiên bản mới",
-        `Bạn đang dùng phiên bản ${versionInfo.currentVersion}. Phiên bản mới nhất là ${versionInfo.latestVersion}. Bạn có muốn cập nhật ngay không?`,
+        `Bạn đang dùng phiên bản ${formatVersionWithBuild(
+          versionInfo.currentVersion,
+          versionInfo.currentBuildNumber,
+        )}. Phiên bản mới nhất là ${formatVersionWithBuild(
+          versionInfo.latestVersion,
+          versionInfo.latestBuildNumber,
+        )}. Bạn có muốn cập nhật ngay không?`,
         [
           {
             text: "Để sau",
