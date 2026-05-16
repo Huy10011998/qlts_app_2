@@ -75,23 +75,18 @@ export default function OpinionPickerModal({
 
   return (
     <BottomSheetModalShell
-      avoidKeyboard
       visible={visible}
       animationType="fade"
       closeOnBackdropPress
       onClose={onClose}
       overlayStyle={styles.overlay}
       sheetStyle={styles.sheet}
+      closeButtonStyle={styles.closeButton}
+      showCloseButton
+      showHandle
     >
       <View style={styles.header}>
         <Text style={styles.title}>Chọn ý kiến</Text>
-        <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-          <MaterialCommunityIcons
-            name="close"
-            size={20}
-            color={C.textSecondary}
-          />
-        </TouchableOpacity>
       </View>
 
       <View style={styles.searchBox}>
@@ -139,24 +134,26 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 10,
     paddingBottom: 24,
     height: "75%",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 12,
+    minHeight: 36,
+    marginBottom: 16,
   },
-  title: { color: C.textPrimary, fontSize: 16, fontWeight: "700" },
-  closeBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: C.surfaceAlt,
+  title: {
+    color: C.textPrimary,
+    fontSize: 16,
+    fontWeight: "700",
+    flex: 1,
+    textAlign: "center",
+    paddingHorizontal: 52,
+  },
+  closeButton: {
+    top: 10,
   },
   searchBox: {
     flexDirection: "row",

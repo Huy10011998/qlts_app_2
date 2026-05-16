@@ -17,6 +17,7 @@ import { parseLinkHtml } from "../../utils/Link";
 import { DatePicker, TimePicker } from "../dataPicker/DataPicker";
 import { log } from "../../utils/Logger";
 import { C } from "../../utils/helpers/colors";
+import { useAssetFormKeyboard } from "../assets/shared/AssetFormScreenShell";
 
 const localStyles = {
   inputRow: {
@@ -104,6 +105,9 @@ function LinkInputField({
   onChange: (nextValue: string) => void;
   styles: RenderInputByTypeProps["styles"];
 }) {
+  const keyboardContext = useAssetFormKeyboard();
+  const urlInputRef = React.useRef<TextInput>(null);
+  const labelInputRef = React.useRef<TextInput>(null);
   const parsed = useMemo(() => parseLinkHtml(String(value ?? "")), [value]);
   const [url, setUrl] = React.useState(parsed.url);
   const [label, setLabel] = React.useState(parsed.text);
@@ -121,20 +125,28 @@ function LinkInputField({
   return (
     <View style={localStyles.linkWrap}>
       <TextInput
+        ref={urlInputRef}
         style={[styles.input, localStyles.inputText]}
         placeholder="Nhập đường link"
         placeholderTextColor="#888"
         value={url}
+        onFocus={() => {
+          keyboardContext?.handleInputFocus(urlInputRef.current);
+        }}
         onChangeText={(nextUrl) => {
           setUrl(nextUrl);
           onChange(buildHtml(nextUrl, label));
         }}
       />
       <TextInput
+        ref={labelInputRef}
         style={[styles.input, localStyles.inputText]}
         placeholder="Nhập label"
         placeholderTextColor="#888"
         value={label}
+        onFocus={() => {
+          keyboardContext?.handleInputFocus(labelInputRef.current);
+        }}
         onChangeText={(nextLabel) => {
           setLabel(nextLabel);
           onChange(buildHtml(url, nextLabel));
@@ -166,6 +178,10 @@ export const RenderInputByType = ({
   mode,
   openEnumReferanceModal,
 }: RenderInputByTypeProps) => {
+  const keyboardContext = useAssetFormKeyboard();
+  const basicInputRef = React.useRef<TextInput>(null);
+  const numberInputRef = React.useRef<TextInput>(null);
+  const textAreaRef = React.useRef<TextInput>(null);
   const value = formData[f.name];
   const hasValidationError = Boolean(validationErrors?.[f.name]);
   const items = useMemo(
@@ -210,6 +226,10 @@ export const RenderInputByType = ({
     return null;
   }
 
+  const handleInputFocus = (target: TextInput | null) => {
+    keyboardContext?.handleInputFocus(target);
+  };
+
   const renderBasicInput = ({
     keyboardType = "default",
   }: { keyboardType?: "default" | "numeric" } = {}) => (
@@ -220,11 +240,13 @@ export const RenderInputByType = ({
       ]}
     >
       <TextInput
+        ref={basicInputRef}
         style={localStyles.textInput}
         keyboardType={keyboardType}
         value={String(value ?? "")}
         placeholder={`Nhập ${f.moTa ?? f.name}`}
         placeholderTextColor="#888"
+        onFocus={() => handleInputFocus(basicInputRef.current)}
         onChangeText={(t) => handleChange(f.name, t)}
       />
 
@@ -245,11 +267,13 @@ export const RenderInputByType = ({
           ]}
         >
           <TextInput
+            ref={numberInputRef}
             style={localStyles.textInput}
             keyboardType="numeric"
             value={formattedValue}
             placeholder={`Nhập ${f.moTa ?? f.name}`}
             placeholderTextColor="#888"
+            onFocus={() => handleInputFocus(numberInputRef.current)}
             onChangeText={(text) => {
               const raw = unFormatVND(text);
               handleChange(f.name, raw);
@@ -302,6 +326,7 @@ export const RenderInputByType = ({
     case TypeProperty.Text:
       return (
         <TextInput
+          ref={textAreaRef}
           style={[
             styles.textArea,
             localStyles.textArea,
@@ -311,6 +336,7 @@ export const RenderInputByType = ({
           value={String(value ?? "")}
           placeholder={`Nhập ${f.moTa ?? f.name}`}
           placeholderTextColor="#888"
+          onFocus={() => handleInputFocus(textAreaRef.current)}
           onChangeText={(t) => handleChange(f.name, t)}
         />
       );

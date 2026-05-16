@@ -162,7 +162,7 @@ export default function ShareholdersMeetingScannerScreen() {
 
   const handleInvalidQr = useCallback(
     (message?: string) => {
-      Alert.alert("QR không hợp lệ", message, [
+      Alert.alert("Mã QR không hợp lệ", message, [
         {
           text: "OK",
           onPress: resumeScanner,
@@ -197,7 +197,9 @@ export default function ShareholdersMeetingScannerScreen() {
         return;
       }
 
-      const shareholder = shareholders.find((item) => item.id === shareholderId);
+      const shareholder = shareholders.find(
+        (item) => item.id === shareholderId,
+      );
 
       if (!shareholder) {
         handleInvalidQr("Không tìm thấy cổ đông tương ứng trong danh sách.");
@@ -219,13 +221,17 @@ export default function ShareholdersMeetingScannerScreen() {
       }
 
       const confirmTitle =
-        scanMode === "attendance" ? "Xác nhận điểm danh" : "Xác nhận lấy ý kiến";
+        scanMode === "attendance"
+          ? "Xác nhận điểm danh"
+          : "Xác nhận lấy ý kiến";
       const confirmMessage =
         scanMode === "attendance"
           ? `Xác nhận điểm danh cổ đông ${shareholder.shareholderId}?`
           : `Ghi nhận "${votingOpinionTitle || "ý kiến đã chọn"}" cho cổ đông ${
               shareholder.shareholderId
-            } với phân loại "${votingChoice ? VOTING_CHOICE_LABEL_MAP[votingChoice] : ""}"?`;
+            } với phân loại "${
+              votingChoice ? VOTING_CHOICE_LABEL_MAP[votingChoice] : ""
+            }"?`;
 
       Alert.alert(confirmTitle, confirmMessage, [
         {
@@ -354,7 +360,9 @@ export default function ShareholdersMeetingScannerScreen() {
         iconName={initTimeout ? "alert-circle-outline" : "camera-outline"}
         iconColor={initTimeout ? "#FF3B30" : "#999"}
         title={initTimeout ? "Không thể mở camera" : "Đang khởi tạo camera..."}
-        description={initTimeout ? "Camera không phản hồi. Vui lòng thử lại." : undefined}
+        description={
+          initTimeout ? "Camera không phản hồi. Vui lòng thử lại." : undefined
+        }
         actionLabel={initTimeout ? "Quay lại" : undefined}
         onAction={initTimeout ? () => navigation.goBack() : undefined}
         onBack={() => navigation.goBack()}

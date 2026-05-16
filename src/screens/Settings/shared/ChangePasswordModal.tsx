@@ -34,6 +34,7 @@ export default function ChangePasswordModal({
   return (
     <BottomSheetModalShell
       avoidKeyboard
+      keyboardOffset={20}
       visible={visible}
       animationType="slide"
       onClose={onClose}
@@ -41,6 +42,7 @@ export default function ChangePasswordModal({
       presentationStyle="overFullScreen"
       overlayStyle={styles.overlay}
       sheetStyle={styles.sheet}
+      showCloseButton
       showHandle
     >
       <LinearGradient colors={[C.red, C.redDeep]} style={styles.iconGradient}>
@@ -81,10 +83,6 @@ export default function ChangePasswordModal({
         >
           <Text style={styles.confirmText}>Xác nhận đổi mật khẩu</Text>
         </LinearGradient>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
-        <Text style={styles.cancelText}>Hủy</Text>
       </TouchableOpacity>
     </BottomSheetModalShell>
   );
@@ -150,15 +148,5 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     letterSpacing: 0.3,
     includeFontPadding: false,
-  },
-  cancelBtn: {
-    marginTop: 12,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  cancelText: {
-    color: C.textSub,
-    fontSize: 14,
-    fontWeight: "600",
   },
 });

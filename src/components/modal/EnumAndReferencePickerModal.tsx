@@ -116,7 +116,6 @@ export default function EnumAndReferencePickerModal({
 
   return (
     <BottomSheetModalShell
-      avoidKeyboard
       visible={visible}
       animationType="slide"
       closeOnBackdropPress
@@ -127,6 +126,8 @@ export default function EnumAndReferencePickerModal({
         styles.modalContainer,
         { paddingBottom: insets.bottom || 16 },
       ]}
+      closeButtonStyle={styles.closeButton}
+      showCloseButton
       showHandle
     >
       <Text style={styles.modalTitle}>{title}</Text>
@@ -187,14 +188,6 @@ export default function EnumAndReferencePickerModal({
         }
         stickyHeaderIndices={isEmpty ? [] : [0]}
       />
-
-      <TouchableOpacity
-        onPress={onClose}
-        style={styles.modalCancel}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.modalCancelText}>Đóng</Text>
-      </TouchableOpacity>
     </BottomSheetModalShell>
   );
 }
@@ -212,8 +205,13 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: "700",
-    marginBottom: 12,
+    marginBottom: 16,
     textAlign: "center",
+    paddingHorizontal: 52,
+  },
+
+  closeButton: {
+    top: 10,
   },
 
   searchWrapper: {
@@ -277,20 +275,6 @@ const styles = StyleSheet.create({
   modalItemTextSelected: {
     fontWeight: "700",
     color: "#15803D",
-  },
-
-  modalCancel: {
-    marginTop: 8,
-    paddingVertical: 14,
-    borderRadius: 10,
-    backgroundColor: "#f2f2f2",
-  },
-
-  modalCancelText: {
-    textAlign: "center",
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
   },
 
   header: {

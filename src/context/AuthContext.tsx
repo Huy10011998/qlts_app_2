@@ -98,6 +98,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     setLogoutReason(undefined);
   };
 
+  const syncSession = useCallback(
+    (accessToken: string | null, refreshToken?: string | null) => {
+      setTokenState(accessToken);
+      setTokenInApi(accessToken);
+
+      if (accessToken) {
+        setLogoutReason(undefined);
+      }
+
+      if (refreshToken !== undefined) {
+        setRefreshInApi(refreshToken);
+      }
+    },
+    [],
+  );
+
   // BOOTSTRAP APP
   useEffect(() => {
     const bootstrapAuth = async () => {
@@ -143,6 +159,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         setIosAuthenticated,
         setToken,
         setRefreshToken,
+        syncSession,
         logout,
         logoutReason,
         clearLogoutReason,

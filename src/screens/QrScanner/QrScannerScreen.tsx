@@ -1,7 +1,17 @@
 import React, { useCallback } from "react";
-import { Linking, StyleSheet } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  Linking,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import ReactNativeHapticFeedback from "react-native-haptic-feedback";
+import Ionicons from "react-native-vector-icons/Ionicons";
 import {
   Camera,
   Code,
@@ -22,6 +32,7 @@ import useQrScannerController from "../../components/qrcode/shared/useQrScannerC
 
 export default function QrScannerScreen() {
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const { showAlertIfActive } = useSafeAlert();
   const {
     activateScanner,
@@ -32,10 +43,12 @@ export default function QrScannerScreen() {
     format,
     hasPermission,
     initTimeout,
+    isTorchOn,
     resetScannerSession,
     resumeScanner,
     scanLineAnim,
     scannedRef,
+    setIsTorchOn,
     startInitTimeoutTimer,
   } = useQrScannerController({ enabled: true });
 
@@ -76,7 +89,7 @@ export default function QrScannerScreen() {
       const normalizedRaw = raw.trim();
 
       if (!normalizedRaw) {
-        showAlertIfActive("Mã QR không hợp lệ", "Thông báo", [
+        showAlertIfActive("Mã QR không hợp lệ", "", [
           {
             text: "OK",
             onPress: resumeScanner,
@@ -88,7 +101,15 @@ export default function QrScannerScreen() {
       const parts = normalizedRaw.replace(/^\//, "").split("/").filter(Boolean);
 
       try {
-        if (parts.length !== 2) throw new Error("INVALID_QR");
+        if (parts.length !== 2) {
+          showAlertIfActive("Mã QR không hợp lệ", "", [
+            {
+              text: "OK",
+              onPress: resumeScanner,
+            },
+          ]);
+          return;
+        }
 
         const [nameClass, id] = parts;
         const detailRes = await getDetails(nameClass, id);
@@ -100,7 +121,7 @@ export default function QrScannerScreen() {
             !Array.isArray(itemData) &&
             Object.keys(itemData).length === 0)
         ) {
-          showAlertIfActive("Mã QR không hợp lệ", "Thông báo", [
+          showAlertIfActive("Mã QR không hợp lệ", "", [
             {
               text: "OK",
               onPress: resumeScanner,
@@ -124,7 +145,7 @@ export default function QrScannerScreen() {
         });
       } catch (e) {
         error(e);
-        showAlertIfActive("QR không hợp lệ", "Thông báo", [
+        showAlertIfActive("Mã QR không hợp lệ", "", [
           {
             text: "OK",
             onPress: resumeScanner,
@@ -176,11 +197,45 @@ export default function QrScannerScreen() {
         device={device}
         format={format}
         isActive={cameraActive}
-        torch="off"
+        torch={isTorchOn ? "on" : "off"}
         codeScanner={codeScanner}
         resizeMode="cover"
         enableZoomGesture
       />
+
+      <View
+        pointerEvents="box-none"
+        style={[styles.header, { paddingTop: insets.top + 8 }]}
+      >
+        <TouchableOpacity
+          style={styles.headerIconButton}
+          hitSlop={10}
+          onPress={() => {
+            deactivateScanner();
+            navigation.goBack();
+          }}
+        >
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
+
+        <View style={styles.headerTitleWrap}>
+          <Text style={styles.headerTitle}>Quét mã QR</Text>
+        </View>
+
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={styles.headerIconButton}
+            hitSlop={10}
+            onPress={() => setIsTorchOn((prev) => !prev)}
+          >
+            <Ionicons
+              name={isTorchOn ? "flash" : "flash-off"}
+              size={22}
+              color="#fff"
+            />
+          </TouchableOpacity>
+        </View>
+      </View>
 
       <QrScannerViewportOverlay scanLineAnim={scanLineAnim} />
     </SafeAreaView>
@@ -189,4 +244,35 @@ export default function QrScannerScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#000" },
+  header: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    backgroundColor: "rgba(0,0,0,0.28)",
+  },
+  headerIconButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.42)",
+  },
+  headerTitleWrap: {
+    flex: 1,
+    marginLeft: 16,
+    marginRight: 16,
+  },
+  headerTitle: {
+    color: "#fff",
+    fontSize: 17,
+    fontWeight: "bold",
+  },
+  headerRight: {
+    width: 38,
+    alignItems: "flex-end",
+  },
 });

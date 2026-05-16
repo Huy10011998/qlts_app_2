@@ -10,6 +10,10 @@ export type AuthContextType = {
   setIosAuthenticated: (value: boolean) => void;
   setToken: (token: string | null) => Promise<void>;
   setRefreshToken: (token: string | null) => Promise<void>;
+  syncSession: (
+    accessToken: string | null,
+    refreshToken?: string | null,
+  ) => void;
   logout: (reason?: LogoutReason) => Promise<void>;
 
   logoutReason?: LogoutReason;

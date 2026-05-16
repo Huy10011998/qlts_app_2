@@ -23,6 +23,11 @@ type ApiError = AxiosError & {
   code?: string;
 };
 
+export type RefreshedSession = {
+  accessToken: string;
+  refreshToken: string;
+};
+
 const AUTH_STORAGE_KEYS = {
   accessToken: "token",
   refreshToken: "refreshToken",
@@ -240,10 +245,10 @@ const triggerLogoutOnce = async (reason: LogoutReason = "EXPIRED") => {
 };
 
 // REFRESH FLOW
-let refreshPromise: Promise<string> | null = null;
+let refreshPromise: Promise<RefreshedSession> | null = null;
 let logoutPromise: Promise<void> | null = null;
 
-export const refreshTokenFlow = async (): Promise<string> => {
+export const refreshTokenFlow = async (): Promise<RefreshedSession> => {
   if (refreshPromise) return refreshPromise;
 
   refreshPromise = (async () => {
@@ -274,7 +279,10 @@ export const refreshTokenFlow = async (): Promise<string> => {
       });
 
       log("[API] Refresh token success");
-      return data.accessToken;
+      return {
+        accessToken: data.accessToken,
+        refreshToken: nextRefreshToken,
+      };
     } catch (err: any) {
       if (isNeedLoginError(err) || isAuthFailureStatus(err?.response?.status)) {
         await clearTokenStorage();
@@ -303,7 +311,8 @@ const ensureValidAccessToken = async () => {
   if (!shouldRefreshAccessToken(token)) return token;
 
   warn("[API] Access token near expiry → refresh before request");
-  return refreshTokenFlow();
+  const refreshedSession = await refreshTokenFlow();
+  return refreshedSession.accessToken;
 };
 
 // REQUEST
@@ -343,11 +352,11 @@ api.interceptors.response.use(
     warn("[API] 401 → try refresh");
 
     try {
-      const newToken = await refreshTokenFlow();
+      const { accessToken } = await refreshTokenFlow();
 
       return api({
         ...originalRequest,
-        headers: withAuthHeader(originalRequest.headers, newToken),
+        headers: withAuthHeader(originalRequest.headers, accessToken),
       });
     } catch (refreshErr: any) {
       if (isNeedLoginError(refreshErr)) {

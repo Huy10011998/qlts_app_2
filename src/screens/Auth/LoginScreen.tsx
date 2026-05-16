@@ -3,17 +3,21 @@ import {
   Alert,
   Image,
   Keyboard,
+  KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
-  Animated,
   Dimensions,
 } from "react-native";
-import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import * as Keychain from "react-native-keychain";
 import DeviceInfo from "react-native-device-info";
 import { useAuth } from "../../context/AuthContext";
@@ -23,7 +27,6 @@ import {
   hardResetApi,
   refreshTokenFlow,
   setRefreshInApi,
-  setTokenInApi,
   shouldRefreshAccessToken,
 } from "../../services/data/CallApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -38,14 +41,23 @@ import { log } from "../../utils/Logger";
 import { readStoredAuthTokens } from "../../context/authStorage";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
-const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get("window");
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const RED = "#E31E24";
 const COMPANY_FOUNDED_YEAR = 1983;
 
 export default function LoginScreen() {
+  const insets = useSafeAreaInsets();
+  const passwordRef = useRef<TextInput>(null);
   const appVersionLabel = `v${DeviceInfo.getVersion()}`;
   const companyAge = new Date().getFullYear() - COMPANY_FOUNDED_YEAR;
-  const { setToken, setRefreshToken, setIosAuthenticated, token, logout } =
+  const {
+    setToken,
+    setRefreshToken,
+    setIosAuthenticated,
+    syncSession,
+    token,
+    logout,
+  } =
     useAuth();
 
   const [userName, setUserName] = useState("");
@@ -55,37 +67,10 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isUsernameFocused, setIsUsernameFocused] = useState(false);
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
-
   const [isTokenReady, setIsTokenReady] = useState(false);
   const [isFaceIdEnabled, setIsFaceIdEnabled] = useState(false);
 
   const isFaceIdRunning = useRef(false);
-
-  const logoAnim = useRef(new Animated.Value(0)).current;
-  const cardAnim = useRef(new Animated.Value(60)).current;
-  const cardOpacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.sequence([
-      Animated.timing(logoAnim, {
-        toValue: 1,
-        duration: 500,
-        useNativeDriver: true,
-      }),
-      Animated.parallel([
-        Animated.timing(cardAnim, {
-          toValue: 0,
-          duration: 450,
-          useNativeDriver: true,
-        }),
-        Animated.timing(cardOpacity, {
-          toValue: 1,
-          duration: 450,
-          useNativeDriver: true,
-        }),
-      ]),
-    ]).start();
-  }, []);
 
   useEffect(() => {
     log("LoginScreen mounted, token:", token);
@@ -152,8 +137,6 @@ export default function LoginScreen() {
     ) => {
       await setToken(accessToken);
       await setRefreshToken(refreshToken ?? null);
-      setTokenInApi(accessToken);
-      setRefreshInApi(refreshToken ?? null);
       await Keychain.setGenericPassword(nextUserName, nextPassword, {
         service: AUTH_LOGIN_SERVICE,
         accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
@@ -166,23 +149,16 @@ export default function LoginScreen() {
 
   const restoreStoredSession = useCallback(
     async (accessToken: string, refreshToken: string | null) => {
-      await setToken(accessToken);
-      await setRefreshToken(refreshToken);
-      setTokenInApi(accessToken);
-      setRefreshInApi(refreshToken);
+      syncSession(accessToken, refreshToken);
       setIosAuthenticated(true);
     },
-    [setIosAuthenticated, setRefreshToken, setToken],
+    [setIosAuthenticated, syncSession],
   );
 
   const refreshSessionInBackground = useCallback(async () => {
     try {
-      const nextAccessToken = await refreshTokenFlow();
-      const { refreshToken: latestRefreshToken } = await readStoredAuthTokens();
-      await setToken(nextAccessToken);
-      await setRefreshToken(latestRefreshToken ?? null);
-      setTokenInApi(nextAccessToken);
-      setRefreshInApi(latestRefreshToken ?? null);
+      const nextSession = await refreshTokenFlow();
+      syncSession(nextSession.accessToken, nextSession.refreshToken);
     } catch (err: any) {
       const status = err?.response?.status;
       const needsLogin = err?.NEED_LOGIN === true;
@@ -190,7 +166,7 @@ export default function LoginScreen() {
         await logout("EXPIRED");
       }
     }
-  }, [logout, setRefreshToken, setToken]);
+  }, [logout, syncSession]);
 
   const handlePressLogin = async () => {
     if (isLoading) return;
@@ -281,13 +257,11 @@ export default function LoginScreen() {
         Alert.alert("Phiên đăng nhập đã hết", "Vui lòng đăng nhập lại.");
         return;
       }
-      await setRefreshToken(storedRefreshToken);
       setRefreshInApi(storedRefreshToken);
-      const nextAccessToken = await refreshTokenFlow();
-      const { refreshToken: latestRefreshToken } = await readStoredAuthTokens();
+      const nextSession = await refreshTokenFlow();
       await restoreStoredSession(
-        nextAccessToken,
-        latestRefreshToken ?? storedRefreshToken,
+        nextSession.accessToken,
+        nextSession.refreshToken ?? storedRefreshToken,
       );
     } catch (err: any) {
       const code = err?.code;
@@ -311,348 +285,346 @@ export default function LoginScreen() {
   };
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View style={styles.root}>
-        {/* ── RED HERO (48%) ── */}
-        <View style={styles.heroBg}>
-          <View style={styles.circle1} />
-          <View style={styles.circle2} />
-          <View style={styles.circle3} />
-
-          <Animated.View style={[styles.logoBlock, { opacity: logoAnim }]}>
-            <View style={styles.brandPill}>
-              <Ionicons
-                name="sparkles-outline"
-                size={12}
-                color="rgba(255,255,255,0.86)"
-              />
-              <Text style={styles.brandPillText}>Cholimex Platform</Text>
-            </View>
-            <View style={styles.logoShadowWrap}>
-              <Image
-                source={require("../../assets/images/logo-cholimex.jpg")}
-                style={styles.logo}
-              />
-            </View>
-            <Text style={styles.heroTagline}>Nền tảng quản lý và vận hành</Text>
-            <View style={styles.heroInfoRow}>
-              <View style={styles.heroInfoChip}>
-                <Text style={styles.heroInfoLabel}>Thành lập</Text>
-                <Text style={styles.heroInfoValue}>1983</Text>
-              </View>
-              <View style={styles.heroInfoChip}>
-                <Text style={styles.heroInfoLabel}>Phát triển</Text>
-                <Text style={styles.heroInfoValue}>{companyAge} năm</Text>
-              </View>
-              <View style={styles.heroInfoChipWide}>
-                <Text style={styles.heroInfoLabel}>Danh mục</Text>
-                <Text style={styles.heroInfoValue}>Gia vị • Thực phẩm</Text>
-              </View>
-            </View>
-          </Animated.View>
-
-        </View>
-
-        {/* ── FORM CARD ── */}
-        <KeyboardAwareScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          scrollEnabled={false}
-        >
-          <Animated.View
-            style={[
-              styles.card,
-              { opacity: cardOpacity, transform: [{ translateY: cardAnim }] },
-            ]}
+    // KeyboardAvoidingView bao ngoài cùng — đây là key fix
+    <KeyboardAvoidingView
+      style={styles.kvRoot}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={0}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        {/*
+          SafeAreaView chỉ handle top (hero đỏ),
+          bottom được handle bởi ScrollView contentInset
+        */}
+        <SafeAreaView style={styles.root} edges={["top"]}>
+          {/* ── RED HERO (compact ~26%) ── */}
+          <View
+            style={[styles.heroBg, { paddingTop: Math.max(insets.top, 8) + 4 }]}
           >
-            <Text style={styles.cardTitle}>Đăng nhập</Text>
-            <Text style={styles.cardSubtitle}>
-              Đăng nhập để tiếp tục sử dụng hệ thống
-            </Text>
+            <View style={styles.circle1} />
+            <View style={styles.circle2} />
+            <View style={styles.circle3} />
 
-            {/* Username */}
-            <View
-              style={[
-                styles.inputWrapper,
-                isUsernameFocused && styles.inputWrapperFocused,
-              ]}
-            >
-              <Ionicons
-                name="person-outline"
-                size={18}
-                color={isUsernameFocused ? RED : "#C0C0C0"}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.textInput}
-                placeholder="Tài khoản"
-                placeholderTextColor="#C8C8C8"
-                value={userName}
-                onChangeText={setUserName}
-                onFocus={() => setIsUsernameFocused(true)}
-                onBlur={() => setIsUsernameFocused(false)}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-            </View>
-
-            {/* Password */}
-            <View
-              style={[
-                styles.inputWrapper,
-                isPasswordFocused && styles.inputWrapperFocused,
-              ]}
-            >
-              <Ionicons
-                name="lock-closed-outline"
-                size={18}
-                color={isPasswordFocused ? RED : "#C0C0C0"}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.textInput}
-                secureTextEntry={!isPasswordVisible}
-                placeholder="Mật khẩu"
-                placeholderTextColor="#C8C8C8"
-                value={userPassword}
-                onChangeText={setUserPassword}
-                onFocus={() => setIsPasswordFocused(true)}
-                onBlur={() => setIsPasswordFocused(false)}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              <TouchableOpacity
-                onPress={() => setIsPasswordVisible(!isPasswordVisible)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
+            <View style={styles.logoBlock}>
+              <View style={styles.brandPill}>
                 <Ionicons
-                  name={isPasswordVisible ? "eye-outline" : "eye-off-outline"}
-                  size={20}
-                  color="#C0C0C0"
+                  name="sparkles-outline"
+                  size={11}
+                  color="rgba(255,255,255,0.86)"
                 />
-              </TouchableOpacity>
-            </View>
-
-            {/* Buttons */}
-            <View style={styles.actionsRow}>
-              <TouchableOpacity
-                style={[
-                  styles.loginBtn,
-                  isLoginDisabled && styles.loginBtnDisabled,
-                ]}
-                disabled={isLoginDisabled || isLoading}
-                onPress={handlePressLogin}
-                activeOpacity={0.88}
-              >
-                {isLoading ? (
-                  <IsLoading size="small" color="#fff" />
-                ) : (
-                  <Text style={styles.loginBtnText}>Đăng nhập</Text>
-                )}
-              </TouchableOpacity>
-
-              {Platform.OS === "ios" && (
-                <TouchableOpacity
-                  style={[
-                    styles.faceIdBtn,
-                    (!isTokenReady || !isFaceIdEnabled) &&
-                      styles.faceIdBtnDimmed,
-                  ]}
-                  onPress={handleFaceIDPress}
-                  activeOpacity={0.8}
-                >
-                  <Image
-                    source={require("../../assets/images/faceid-icon2.png")}
-                    style={styles.faceIDIcon}
-                  />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* ── FOOTER ── */}
-            <View style={styles.footer}>
-              <View style={styles.secureRow}>
-                <Ionicons
-                  name="shield-checkmark-outline"
-                  size={13}
-                  color="#C8C8C8"
-                />
-                <Text style={styles.secureText}>Kết nối bảo mật SSL</Text>
+                <Text style={styles.brandPillText}>Cholimex Platform</Text>
               </View>
+              <View style={styles.logoShadowWrap}>
+                <Image
+                  source={require("../../assets/images/logo-cholimex.jpg")}
+                  style={styles.logo}
+                />
+              </View>
+              <Text style={styles.heroTagline}>
+                Nền tảng quản lý và vận hành
+              </Text>
+            </View>
+          </View>
 
-              <View style={styles.footerDot} />
-
-              <View style={styles.versionPill}>
-                <Text style={styles.versionText}>
-                  {appVersionLabel} · Cholimex Food
+          {/* ── FORM CARD (scroll để không bị che) ── */}
+          <View style={styles.card}>
+            <ScrollView
+              style={styles.scrollView}
+              contentContainerStyle={[
+                styles.scrollContent,
+                { paddingBottom: Math.max(insets.bottom, 16) + 24 },
+              ]}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              bounces={false}
+            >
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardTitle}>Đăng nhập</Text>
+                <Text style={styles.cardSubtitle}>
+                  Đăng nhập để tiếp tục sử dụng hệ thống
                 </Text>
               </View>
-            </View>
-          </Animated.View>
-        </KeyboardAwareScrollView>
-      </View>
-    </TouchableWithoutFeedback>
+
+              {/* Username */}
+              <View
+                style={[
+                  styles.inputWrapper,
+                  isUsernameFocused && styles.inputWrapperFocused,
+                ]}
+              >
+                <Ionicons
+                  name="person-outline"
+                  size={18}
+                  color={isUsernameFocused ? RED : "#C0C0C0"}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Tài khoản"
+                  placeholderTextColor="#C8C8C8"
+                  value={userName}
+                  onChangeText={setUserName}
+                  onFocus={() => setIsUsernameFocused(true)}
+                  onBlur={() => setIsUsernameFocused(false)}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="next"
+                  // Nhảy xuống ô mật khẩu khi bấm Next
+                  onSubmitEditing={() => passwordRef.current?.focus()}
+                  blurOnSubmit={false}
+                />
+              </View>
+
+              {/* Password */}
+              <View
+                style={[
+                  styles.inputWrapper,
+                  isPasswordFocused && styles.inputWrapperFocused,
+                ]}
+              >
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={18}
+                  color={isPasswordFocused ? RED : "#C0C0C0"}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  ref={passwordRef}
+                  style={styles.textInput}
+                  secureTextEntry={!isPasswordVisible}
+                  placeholder="Mật khẩu"
+                  placeholderTextColor="#C8C8C8"
+                  value={userPassword}
+                  onChangeText={setUserPassword}
+                  onFocus={() => setIsPasswordFocused(true)}
+                  onBlur={() => setIsPasswordFocused(false)}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="done"
+                  onSubmitEditing={handlePressLogin}
+                />
+                <TouchableOpacity
+                  onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                >
+                  <Ionicons
+                    name={isPasswordVisible ? "eye-outline" : "eye-off-outline"}
+                    size={20}
+                    color="#C0C0C0"
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Buttons */}
+              <View style={styles.actionsRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.loginBtn,
+                    isLoginDisabled && styles.loginBtnDisabled,
+                  ]}
+                  disabled={isLoginDisabled || isLoading}
+                  onPress={handlePressLogin}
+                  activeOpacity={0.88}
+                >
+                  {isLoading ? (
+                    <IsLoading size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.loginBtnText}>Đăng nhập</Text>
+                  )}
+                </TouchableOpacity>
+
+                {Platform.OS === "ios" && (
+                  <TouchableOpacity
+                    style={[
+                      styles.faceIdBtn,
+                      (!isTokenReady || !isFaceIdEnabled) &&
+                        styles.faceIdBtnDimmed,
+                    ]}
+                    onPress={handleFaceIDPress}
+                    activeOpacity={0.8}
+                  >
+                    <Image
+                      source={require("../../assets/images/faceid-icon2.png")}
+                      style={styles.faceIDIcon}
+                    />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Info chips — chuyển xuống form cho gọn hero */}
+              <View style={styles.infoRow}>
+                <View style={styles.infoChip}>
+                  <Text style={styles.infoLabel}>Thành lập</Text>
+                  <Text style={styles.infoValue}>1983</Text>
+                </View>
+                <View style={styles.infoChip}>
+                  <Text style={styles.infoLabel}>Phát triển</Text>
+                  <Text style={styles.infoValue}>{companyAge} năm</Text>
+                </View>
+                <View style={[styles.infoChip, styles.infoChipWide]}>
+                  <Text style={styles.infoLabel}>Danh mục</Text>
+                  <Text style={styles.infoValue}>Gia vị · Thực phẩm</Text>
+                </View>
+              </View>
+
+              {/* Footer */}
+              <View style={styles.footer}>
+                <View style={styles.secureRow}>
+                  <Ionicons
+                    name="shield-checkmark-outline"
+                    size={13}
+                    color="#C8C8C8"
+                  />
+                  <Text style={styles.secureText}>Kết nối bảo mật SSL</Text>
+                </View>
+                <View style={styles.footerDot} />
+                <View style={styles.versionPill}>
+                  <Text style={styles.versionText}>
+                    {appVersionLabel} · Cholimex Food
+                  </Text>
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        </SafeAreaView>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  // ── Root ──
+  kvRoot: {
+    flex: 1,
+    backgroundColor: "#fff", // phải là trắng — màu lộ ra phía sau bàn phím
+  },
   root: {
     flex: 1,
-    backgroundColor: RED,
+    backgroundColor: RED, // hero đỏ, card trắng che phần còn lại
   },
 
-  // Hero — tăng lên 48%
+  // ── Hero — compact 24% ──
   heroBg: {
-    height: SCREEN_HEIGHT * 0.48,
+    height: SCREEN_HEIGHT * 0.24,
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-end",
     overflow: "hidden",
+    paddingBottom: 16,
   },
   circle1: {
     position: "absolute",
-    width: 320,
-    height: 320,
-    borderRadius: 160,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
     backgroundColor: "rgba(255,255,255,0.07)",
-    top: -90,
-    right: -70,
+    top: -80,
+    right: -60,
   },
   circle2: {
     position: "absolute",
-    width: 220,
-    height: 220,
-    borderRadius: 110,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
     backgroundColor: "rgba(255,255,255,0.05)",
-    bottom: -50,
-    left: -50,
+    bottom: -60,
+    left: -40,
   },
   circle3: {
     position: "absolute",
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
     backgroundColor: "rgba(255,255,255,0.09)",
-    top: 110,
-    right: 34,
+    top: 60,
+    right: 30,
   },
   logoBlock: {
     alignItems: "center",
+    width: "100%",
+    paddingHorizontal: 20,
   },
   brandPill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 999,
     backgroundColor: "rgba(255,255,255,0.16)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.18)",
-    marginBottom: 14,
+    marginBottom: 10,
   },
   brandPillText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "700",
     color: "rgba(255,255,255,0.88)",
     letterSpacing: 0.4,
     textTransform: "uppercase",
   },
   logoShadowWrap: {
-    borderRadius: 18,
+    borderRadius: 16,
     overflow: "hidden",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 12,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 10,
   },
   logo: {
-    width: 216,
-    height: 108,
+    width: 176,
+    height: 88,
     resizeMode: "contain",
     backgroundColor: "#fff",
-    borderRadius: 18,
+    borderRadius: 16,
   },
   heroTagline: {
-    marginTop: 16,
-    fontSize: 13,
+    marginTop: 10,
+    fontSize: 11,
     color: "rgba(255,255,255,0.72)",
-    letterSpacing: 0.6,
+    letterSpacing: 0.5,
     fontWeight: "500",
   },
-  heroInfoRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 8,
-    marginTop: 26,
-    paddingHorizontal: 24,
-  },
-  heroInfoChip: {
-    minWidth: 88,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.12)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)",
-    alignItems: "center",
-  },
-  heroInfoChipWide: {
-    minWidth: 154,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.12)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)",
-    alignItems: "center",
-  },
-  heroInfoLabel: {
-    fontSize: 10,
-    color: "rgba(255,255,255,0.68)",
-    fontWeight: "600",
-    marginBottom: 2,
-  },
-  heroInfoValue: {
-    fontSize: 12,
-    color: "#FFFFFF",
-    fontWeight: "700",
-  },
-  // Card
-  scrollContent: {
-    flexGrow: 1,
-  },
+
+  // ── Card ──
   card: {
     flex: 1,
     backgroundColor: "#fff",
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    paddingHorizontal: 28,
-    paddingTop: 30,
-    paddingBottom: 32,
-    marginTop: -22,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: -6 },
+    shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.08,
-    shadowRadius: 16,
+    shadowRadius: 12,
     elevation: 16,
+    overflow: "hidden",
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 28,
+    paddingTop: 20,
+    flexGrow: 1,
+  },
+
+  // Card header
+  cardHeader: {
+    marginBottom: 20,
   },
   cardTitle: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: "800",
     color: "#111827",
-    marginBottom: 6,
+    marginBottom: 4,
   },
   cardSubtitle: {
     fontSize: 14,
     color: "#9AA3AF",
     lineHeight: 20,
-    marginBottom: 24,
   },
 
-  // Inputs
+  // ── Inputs ──
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
@@ -677,11 +649,11 @@ const styles = StyleSheet.create({
     color: "#111",
   },
 
-  // Actions
+  // ── Buttons ──
   actionsRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 8,
+    marginTop: 4,
     gap: 12,
   },
   loginBtn: {
@@ -693,13 +665,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     shadowColor: RED,
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.35,
     shadowRadius: 12,
     elevation: 8,
   },
   loginBtnDisabled: {
     backgroundColor: "#E58B8B",
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.1,
     elevation: 2,
   },
   loginBtnText: {
@@ -726,14 +698,46 @@ const styles = StyleSheet.create({
     height: 28,
   },
 
-  // Footer
+  // ── Info chips (moved to form) ──
+  infoRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 20,
+    alignItems: "stretch",
+  },
+  infoChip: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    backgroundColor: "#FFF5F5",
+    borderWidth: 1,
+    borderColor: "#FDDEDE",
+    alignItems: "center",
+  },
+  infoChipWide: {
+    flex: 1.4,
+  },
+  infoLabel: {
+    fontSize: 10,
+    color: "#B05050",
+    fontWeight: "600",
+    marginBottom: 2,
+  },
+  infoValue: {
+    fontSize: 11,
+    color: RED,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+
+  // ── Footer ──
   footer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: "auto",
+    marginTop: 24,
     gap: 8,
-    paddingTop: 28,
   },
   secureRow: {
     flexDirection: "row",

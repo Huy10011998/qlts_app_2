@@ -12,6 +12,7 @@ import { C } from "../../../utils/helpers/colors";
 
 const FAB_SIZE = 64;
 const FAB_OFFSET = 16;
+let cachedBottomInset = 0;
 
 type AddActionFabProps = {
   label?: string;
@@ -25,7 +26,23 @@ function AddActionFabComponent({
   variant = "icon",
 }: AddActionFabProps) {
   const insets = useSafeAreaInsets();
-  const bottom = insets.bottom + FAB_OFFSET;
+  const stableBottomInsetRef = React.useRef(
+    Math.max(cachedBottomInset, insets.bottom),
+  );
+  const bottomInset = Math.max(
+    stableBottomInsetRef.current,
+    cachedBottomInset,
+    insets.bottom,
+  );
+
+  if (bottomInset !== stableBottomInsetRef.current) {
+    stableBottomInsetRef.current = bottomInset;
+  }
+  if (bottomInset !== cachedBottomInset) {
+    cachedBottomInset = bottomInset;
+  }
+
+  const bottom = stableBottomInsetRef.current + FAB_OFFSET;
   const isExtended = variant === "extended";
 
   return (
