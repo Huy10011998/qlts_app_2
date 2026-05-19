@@ -38,7 +38,7 @@ const getIosStoreVersionByCountry = async (
   country: string,
 ): Promise<StoreLookupResult> => {
   const response = await fetchWithTimeout(
-    `https://itunes.apple.com/lookup?id=${IOS_APP_ID}&country=${country}`,
+    `https://itunes.apple.com/lookup?id=${IOS_APP_ID}&country=${country}&t=${Date.now()}`,
   );
   const data = await response.json();
   const latestVersion = data?.results?.[0]?.version;
@@ -136,25 +136,26 @@ const getAndroidStoreVersion = async () => {
   return latestVersion;
 };
 
-export const getStoreVersionInfo = async (): Promise<StoreVersionInfo | null> => {
-  const currentVersion = DeviceInfo.getVersion();
-  const currentBuildNumber = DeviceInfo.getBuildNumber();
+export const getStoreVersionInfo =
+  async (): Promise<StoreVersionInfo | null> => {
+    const currentVersion = DeviceInfo.getVersion();
+    const currentBuildNumber = DeviceInfo.getBuildNumber();
 
-  try {
-    const storeInfo =
-      Platform.OS === "ios"
-        ? await getIosStoreVersion()
-        : await getAndroidStoreVersion();
+    try {
+      const storeInfo =
+        Platform.OS === "ios"
+          ? await getIosStoreVersion()
+          : await getAndroidStoreVersion();
 
-    return {
-      currentBuildNumber,
-      currentVersion,
-      latestVersion: storeInfo.latestVersion,
-      storeUrl: storeInfo.storeUrl,
-    };
-  } catch (err) {
-    log("[Version] Skip update check", Platform.OS);
-    warn("[Version] Update check failed", err);
-    return null;
-  }
-};
+      return {
+        currentBuildNumber,
+        currentVersion,
+        latestVersion: storeInfo.latestVersion,
+        storeUrl: storeInfo.storeUrl,
+      };
+    } catch (err) {
+      log("[Version] Skip update check", Platform.OS);
+      warn("[Version] Update check failed", err);
+      return null;
+    }
+  };
