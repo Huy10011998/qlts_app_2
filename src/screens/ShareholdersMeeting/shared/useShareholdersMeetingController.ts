@@ -10,14 +10,14 @@ import {
   getCodongDhcd,
   getList,
   huyDiemDanhDhcd,
-} from "../../../services/data/CallApi";
+} from "../../../services/data/callApi";
 import {
   ActiveMeetingResponse,
   AttendanceFilter,
   AttendanceStatus,
   Shareholder,
   ShareholderListResponse,
-} from "../../../types/Index";
+} from "../../../types/index";
 import {
   filterMeetingOpinions,
   filterShareholders,

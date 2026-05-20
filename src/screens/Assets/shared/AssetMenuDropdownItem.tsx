@@ -3,7 +3,7 @@ import { LayoutAnimation, Pressable, StyleSheet, Text, View } from "react-native
 import { useNavigation } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
-import { DropdownProps, Item, StackNavigation } from "../../../types/Index";
+import { DropdownProps, Item, StackNavigation } from "../../../types/index";
 import {
   ASSET_MENU_CARD_SHADOW,
 } from "./assetMenuTheme";

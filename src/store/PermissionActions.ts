@@ -1,5 +1,5 @@
 import { AppDispatch } from "./index";
-import { getPermission } from "../services/Index";
+import { getPermission } from "../services";
 import { setPermissions, clearPermissions } from "./PermissionSlice";
 
 export const reloadPermissions = () => {

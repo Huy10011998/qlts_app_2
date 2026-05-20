@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from "react";
-import { Alert } from "react-native";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import NetInfo from "@react-native-community/netinfo";
+import { Alert, Linking, Platform } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import AppNavigator from "./AppNavigator.tsx";
 import AuthNavigator from "./AuthNavigator.tsx";
@@ -7,12 +8,16 @@ import IsLoading from "../components/ui/IconLoading.tsx";
 import { clearPermissions, setPermissions } from "../store/PermissionSlice.ts";
 import { RootState } from "../store/index.ts";
 import { useSelector } from "react-redux";
-import { getPermission } from "../services/Index.tsx";
-import { useAppDispatch } from "../store/Hooks.ts";
+import { getPermission } from "../services/index.tsx";
+import { useAppDispatch } from "../store/hooks";
 import {
   canAccessAppNavigator,
   canLoadRootPermissions,
 } from "./shared/rootNavigationHelpers";
+import {
+  checkServerReachability,
+  SERVER_UNAVAILABLE_MESSAGE,
+} from "../services/network/reachability";
 
 export default function RootNavigator() {
   const {
@@ -29,6 +34,59 @@ export default function RootNavigator() {
 
   // 🚫 chống spam alert
   const hasShownExpiredRef = useRef(false);
+  const hasShownAndroidOfflineRef = useRef(false);
+  const [isAndroidOfflineBlocked, setIsAndroidOfflineBlocked] = useState(false);
+
+  const openNetworkDetails = useCallback(async () => {
+    try {
+      if (Platform.OS === "android") {
+        await Linking.sendIntent("android.settings.WIFI_SETTINGS");
+        return;
+      }
+      await Linking.openSettings();
+    } catch {
+      await Linking.openSettings();
+    }
+  }, []);
+
+  const checkAndroidBootstrapConnectivity = useCallback(async () => {
+    const reachability = await checkServerReachability();
+
+    if (reachability.canReachServer) {
+      setIsAndroidOfflineBlocked(false);
+      hasShownAndroidOfflineRef.current = false;
+      return true;
+    }
+
+    setIsAndroidOfflineBlocked(true);
+    return false;
+  }, []);
+
+  const showAndroidOfflineAlert = useCallback(() => {
+    if (hasShownAndroidOfflineRef.current) return;
+    hasShownAndroidOfflineRef.current = true;
+
+    Alert.alert("Lỗi", SERVER_UNAVAILABLE_MESSAGE, [
+      { text: "Chấp nhận", style: "cancel" },
+      {
+        text: "Chi tiết",
+        onPress: () => {
+          openNetworkDetails();
+        },
+      },
+      {
+        text: "Thử lại",
+        onPress: () => {
+          hasShownAndroidOfflineRef.current = false;
+          checkAndroidBootstrapConnectivity().then((isReachable) => {
+            if (!isReachable) {
+              showAndroidOfflineAlert();
+            }
+          });
+        },
+      },
+    ]);
+  }, [checkAndroidBootstrapConnectivity, openNetworkDetails]);
 
   // ===== HANDLE TOKEN EXPIRED =====
   useEffect(() => {
@@ -51,6 +109,52 @@ export default function RootNavigator() {
       );
     }
   }, [logoutReason, clearLogoutReason]);
+
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+
+    let isMounted = true;
+
+    const syncAndroidOfflineState = async () => {
+      if (!authReady || !isAuthenticated) {
+        if (isMounted) {
+          setIsAndroidOfflineBlocked(false);
+          hasShownAndroidOfflineRef.current = false;
+        }
+        return;
+      }
+
+      const isReachable = await checkAndroidBootstrapConnectivity();
+      if (!isMounted) return;
+      if (isReachable) {
+        return;
+      }
+
+      showAndroidOfflineAlert();
+    };
+
+    syncAndroidOfflineState();
+
+    const unsubscribeNetInfo = NetInfo.addEventListener(async () => {
+      if (!isMounted) return;
+      if (!authReady || !isAuthenticated) return;
+      const isReachable = await checkAndroidBootstrapConnectivity();
+      if (isReachable) {
+        return;
+      }
+      showAndroidOfflineAlert();
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribeNetInfo();
+    };
+  }, [
+    authReady,
+    checkAndroidBootstrapConnectivity,
+    isAuthenticated,
+    showAndroidOfflineAlert,
+  ]);
 
   // ===== LOAD PERMISSIONS =====
   useEffect(() => {
@@ -94,7 +198,7 @@ export default function RootNavigator() {
   }, [dispatch, iosAuthenticated, isAuthenticated, loaded]);
 
   // ===== LOADING STATE =====
-  if (!authReady || isLoading) {
+  if (!authReady || isLoading || isAndroidOfflineBlocked) {
     return <IsLoading />;
   }
 

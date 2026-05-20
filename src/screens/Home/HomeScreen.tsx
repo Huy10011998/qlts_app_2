@@ -1,9 +1,14 @@
-import React, { useMemo } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import React, { useCallback, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { HomeNavigationProp } from "../../types";
 import { useViewPermission } from "../../hooks/useViewPermission";
-import { useReloadPermissionsOnFocus } from "../../hooks/useReloadPermissionsOnFocus";
 import HomeMenuItemCard from "./shared/HomeMenuItemCard";
 import HomeEventBanner from "./shared/HomeEventBanner";
 import HomeStatCard from "./shared/HomeStatCard";
@@ -13,15 +18,56 @@ import HomeRecentActivities from "./shared/HomeRecentActivities";
 import { HOME_BG, HOME_BRAND_RED } from "./shared/homeTheme";
 import { HOME_MEETING_INFO, HOME_RECENT_ACTIVITIES } from "./shared/homeData";
 import { useHomeMenuItems } from "./shared/useHomeMenuItems";
+import EmptyState from "../../components/ui/EmptyState";
+import { useAppDispatch } from "../../store/hooks";
+import { reloadPermissions } from "../../store/PermissionActions";
 
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeNavigationProp>();
   const tabsNavigation = navigation.getParent() as any;
   const { canView, loaded } = useViewPermission();
+  const dispatch = useAppDispatch();
   const { menuItems, openMeetingScreen, openScanScreen, openSettingScreen } =
     useHomeMenuItems(navigation, tabsNavigation);
+  const [hasLoadError, setHasLoadError] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useReloadPermissionsOnFocus();
+  const loadPermissions = useCallback(
+    async (options?: { isRefresh?: boolean }) => {
+      const isRefresh = options?.isRefresh === true;
+
+      if (isRefresh) {
+        setIsRefreshing(true);
+      }
+
+      try {
+        const success = await dispatch(reloadPermissions());
+        setHasLoadError(!success);
+      } finally {
+        if (isRefresh) {
+          setIsRefreshing(false);
+        }
+      }
+    },
+    [dispatch],
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+
+      const ensurePermissions = async () => {
+        if (!isActive) return;
+        await loadPermissions();
+      };
+
+      ensurePermissions();
+
+      return () => {
+        isActive = false;
+      };
+    }, [loadPermissions]),
+  );
 
   const visibleMenuItems = useMemo(() => {
     if (!loaded) return [];
@@ -31,6 +77,28 @@ const HomeScreen: React.FC = () => {
   }, [canView, loaded, menuItems]);
 
   if (!loaded) {
+    if (hasLoadError) {
+      return (
+        <ScrollView
+          contentContainerStyle={styles.centerState}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={() => loadPermissions({ isRefresh: true })}
+              colors={[HOME_BRAND_RED]}
+              tintColor={HOME_BRAND_RED}
+            />
+          }
+        >
+          <EmptyState
+            iconName="cloud-offline-outline"
+            title="Không thể tải dữ liệu Trang chủ"
+            subtitle="Vui lòng kiểm tra kết nối hoặc kéo xuống để thử lại."
+          />
+        </ScrollView>
+      );
+    }
+
     return (
       <View style={styles.loadingWrap}>
         <ActivityIndicator size="small" color={HOME_BRAND_RED} />
@@ -44,7 +112,27 @@ const HomeScreen: React.FC = () => {
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={() => loadPermissions({ isRefresh: true })}
+            colors={[HOME_BRAND_RED]}
+            tintColor={HOME_BRAND_RED}
+          />
+        }
       >
+        {hasLoadError && (
+          <View style={styles.errorCard}>
+            <EmptyState
+              iconName="cloud-offline-outline"
+              title="Không thể tải dữ liệu mới"
+              subtitle="Dữ liệu hiện tại có thể chưa được cập nhật. Vui lòng kiểm tra kết nối hoặc kéo xuống để thử lại."
+              fullHeight={false}
+              style={styles.errorState}
+            />
+          </View>
+        )}
+
         <HomeSectionTitle label="SỰ KIỆN" action="Xem tất cả" />
         <HomeEventBanner
           title={HOME_MEETING_INFO.meetingTitle}
@@ -133,6 +221,27 @@ const styles = StyleSheet.create({
     backgroundColor: HOME_BG,
     alignItems: "center",
     justifyContent: "center",
+  },
+  centerState: {
+    flex: 1,
+    backgroundColor: HOME_BG,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  errorCard: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    marginBottom: 16,
+    paddingVertical: 20,
+    paddingHorizontal: 12,
+    shadowColor: "#1A2340",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  errorState: {
+    paddingHorizontal: 20,
   },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 32 },

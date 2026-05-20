@@ -1,4 +1,4 @@
-import { HandleCascadeChangeProps } from "../../types/Components.d";
+import { HandleCascadeChangeProps } from "../../types/components.d";
 import { TypeProperty } from "../Enum";
 import { fetchReferenceByFieldWithParent } from "./FetchReferenceByFieldWithParent";
 

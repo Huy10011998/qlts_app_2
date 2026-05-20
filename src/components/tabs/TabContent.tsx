@@ -6,7 +6,7 @@ import { useDispatch } from "react-redux";
 import { TabContentProps, AssetDetailsNavigationProp } from "../../types";
 import AssetActions from "../assets/AssetActions";
 import AssetGroupList from "../assets/AssetGroupList";
-import { checkReferenceUsage, deleteItems } from "../../services/data/CallApi";
+import { checkReferenceUsage, deleteItems } from "../../services/data/callApi";
 import { setShouldRefreshList } from "../../store/AssetSlice";
 import { error } from "../../utils/Logger";
 import AssetListAttachFile from "../assets/AssetAttachFile";

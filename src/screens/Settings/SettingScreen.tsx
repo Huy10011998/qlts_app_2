@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  AppState,
   Platform,
   StatusBar,
 } from "react-native";
@@ -14,20 +15,20 @@ import { useIsFocused, useNavigation } from "@react-navigation/native";
 import LinearGradient from "react-native-linear-gradient";
 import { useAuth } from "../../context/AuthContext";
 import IsLoading from "../../components/ui/IconLoading";
-import { changePasswordApi } from "../../services/Index";
-import { API_ENDPOINTS } from "../../config/Index";
+import { changePasswordApi } from "../../services";
+import { API_ENDPOINTS } from "../../config/index";
 import { StackNavigation, UserInfo } from "../../types";
 import {
   callApi,
   clearTokenStorage,
   hardResetApi,
   resetAuthState,
-} from "../../services/data/CallApi";
+} from "../../services/data/callApi";
 import ReactNativeBiometrics from "react-native-biometrics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { clearPermissions } from "../../store/PermissionSlice";
-import { useAppDispatch } from "../../store/Hooks";
+import { useAppDispatch } from "../../store/hooks";
 import {
   AUTH_LOGIN_SERVICE,
   FACE_ID_ENABLED_KEY,
@@ -44,6 +45,25 @@ import SettingSectionGroup from "./shared/SettingSectionGroup";
 import { SettingRowItem, SettingSwitchRow } from "./shared/SettingRowItem";
 import ChangePasswordModal from "./shared/ChangePasswordModal";
 import { readStoredAuthTokens } from "../../context/authStorage";
+import {
+  getLocalNetworkPermissionLabel,
+  requestLocalNetworkPermission,
+  refreshStoredLocalNetworkPermission,
+  StoredLocalNetworkPermissionState,
+} from "../../services/localNetworkPermission";
+import {
+  AppCameraPermissionStatus,
+  checkCameraPermission,
+  getCameraPermissionLabel,
+  openAppPermissionSettings,
+  requestCameraPermission,
+} from "../../services/cameraPermission";
+
+const IOS_LOCAL_NETWORK_FALLBACK_STATE: StoredLocalNetworkPermissionState = {
+  hasShownNotice: false,
+  hasRequestedPermission: false,
+  status: "unknown",
+};
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 const SettingScreen = () => {
@@ -58,6 +78,18 @@ const SettingScreen = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isFaceIdEnabled, setIsFaceIdEnabled] = useState(false);
+  const [localNetworkState, setLocalNetworkState] =
+    useState<StoredLocalNetworkPermissionState>({
+      hasShownNotice: false,
+      hasRequestedPermission: false,
+      status: "unknown",
+    });
+  const [cameraPermissionStatus, setCameraPermissionStatus] =
+    useState<AppCameraPermissionStatus>("unknown");
+  const [isUpdatingLocalNetworkPermission, setIsUpdatingLocalNetworkPermission] =
+    useState(false);
+  const [isUpdatingCameraPermission, setIsUpdatingCameraPermission] =
+    useState(false);
 
   const navigation = useNavigation<StackNavigation<"Profile">>();
   const { logout, logoutReason } = useAuth();
@@ -100,13 +132,16 @@ const SettingScreen = () => {
     [logoutReason],
   );
 
-  const showAlertIfActive = useCallback((title: string, message: string) => {
-    if (!canUpdateScreen()) return;
-    const now = Date.now();
-    if (now - lastErrorAlertAtRef.current < 1500) return;
-    lastErrorAlertAtRef.current = now;
-    Alert.alert(title, message);
-  }, [canUpdateScreen]);
+  const showAlertIfActive = useCallback(
+    (title: string, message: string) => {
+      if (!canUpdateScreen()) return;
+      const now = Date.now();
+      if (now - lastErrorAlertAtRef.current < 1500) return;
+      lastErrorAlertAtRef.current = now;
+      Alert.alert(title, message);
+    },
+    [canUpdateScreen],
+  );
 
   const isAuthExpiredError = useCallback(
     (error: any) =>
@@ -124,20 +159,33 @@ const SettingScreen = () => {
     blockingLoaderActiveRef.current = shouldShowBlockingLoader;
     if (isMountedRef.current && shouldShowBlockingLoader) setIsLoading(true);
     try {
-      const [response, flag] = await Promise.all([
+      const [
+        nextCameraPermissionStatus,
+        userResponse,
+        faceIdFlag,
+        nextLocalNetworkState,
+      ] = await Promise.all([
+        checkCameraPermission().catch(() => "unknown" as const),
         callApi<{ success: boolean; data: UserInfo }>(
           "POST",
           API_ENDPOINTS.GET_INFO,
           {},
         ),
         AsyncStorage.getItem(FACE_ID_ENABLED_KEY),
+        Platform.OS === "ios"
+          ? refreshStoredLocalNetworkPermission().catch(
+              () => IOS_LOCAL_NETWORK_FALLBACK_STATE,
+            )
+          : Promise.resolve(IOS_LOCAL_NETWORK_FALLBACK_STATE),
       ]);
       if (!canUpdateScreen()) return;
-      userRef.current = response.data;
+      userRef.current = userResponse.data;
       hasLoadedOnceRef.current = true;
-      setUser(response.data);
+      setUser(userResponse.data);
       setHasLoadedOnce(true);
-      setIsFaceIdEnabled(flag === "1");
+      setIsFaceIdEnabled(faceIdFlag === "1");
+      setCameraPermissionStatus(nextCameraPermissionStatus);
+      setLocalNetworkState(nextLocalNetworkState);
     } catch (error: any) {
       if (canUpdateScreen()) {
         hasLoadedOnceRef.current = true;
@@ -164,6 +212,18 @@ const SettingScreen = () => {
       }
     }
   }, [canUpdateScreen, isAuthExpiredError, showAlertIfActive]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "active" && isFocusedRef.current) {
+        fetchData();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [fetchData]);
 
   useEffect(() => {
     if (!isFocused) {
@@ -237,6 +297,133 @@ const SettingScreen = () => {
       if (isMountedRef.current) setIsLoading(false);
     }
   };
+
+  const localNetworkStatusLabel = getLocalNetworkPermissionLabel(
+    localNetworkState.status,
+  );
+  const cameraStatusLabel = getCameraPermissionLabel(cameraPermissionStatus);
+  const localNetworkStatusTone =
+    localNetworkState.status === "granted"
+      ? styles.localNetworkStatusGranted
+      : localNetworkState.status === "denied"
+      ? styles.localNetworkStatusDenied
+      : styles.localNetworkStatusUnknown;
+
+  const handleToggleLocalNetworkPermission = useCallback(
+    async (value: boolean) => {
+      if (Platform.OS !== "ios" || isUpdatingLocalNetworkPermission) return;
+
+      if (!value) {
+        Alert.alert(
+          "Quyền mạng nội bộ",
+          "iPhone không cho tắt trực tiếp quyền này trong app. Bạn có thể mở Cài đặt để thu hồi quyền thủ công.",
+          [
+            { text: "Để sau", style: "cancel" },
+            {
+              text: "Mở Cài đặt",
+              onPress: () => {
+                openAppPermissionSettings();
+              },
+            },
+          ],
+        );
+        return;
+      }
+
+      setIsUpdatingLocalNetworkPermission(true);
+      try {
+        const nextStatus = await requestLocalNetworkPermission();
+        const refreshedState = await refreshStoredLocalNetworkPermission();
+        setLocalNetworkState({
+          ...refreshedState,
+          hasRequestedPermission: true,
+          status: nextStatus,
+        });
+
+        if (nextStatus !== "granted") {
+          Alert.alert(
+            "Quyền mạng nội bộ",
+            "Không thể bật trực tiếp quyền này. Vui lòng mở Cài đặt nếu bạn đã từ chối trước đó.",
+            [
+              { text: "Đóng", style: "cancel" },
+              {
+                text: "Mở Cài đặt",
+                onPress: () => {
+                  openAppPermissionSettings();
+                },
+              },
+            ],
+          );
+        }
+      } catch {
+        Alert.alert(
+          "Lỗi",
+          "Chưa thể cập nhật quyền mạng nội bộ lúc này. Vui lòng thử lại.",
+        );
+      } finally {
+        if (isMountedRef.current) setIsUpdatingLocalNetworkPermission(false);
+      }
+    },
+    [isUpdatingLocalNetworkPermission],
+  );
+
+  const handleToggleCameraPermission = useCallback(
+    async (value: boolean) => {
+      if (isUpdatingCameraPermission) return;
+
+      if (!value) {
+        Alert.alert(
+          "Quyền camera",
+          "Hệ điều hành không cho tắt trực tiếp quyền camera trong app. Bạn có thể mở Cài đặt để thay đổi quyền này.",
+          [
+            { text: "Để sau", style: "cancel" },
+            {
+              text: "Mở Cài đặt",
+              onPress: () => {
+                openAppPermissionSettings();
+              },
+            },
+          ],
+        );
+        return;
+      }
+
+      setIsUpdatingCameraPermission(true);
+      try {
+        const nextStatus = await requestCameraPermission();
+        setCameraPermissionStatus(nextStatus);
+
+        if (nextStatus === "blocked") {
+          Alert.alert(
+            "Quyền camera",
+            "Camera đang bị chặn. Vui lòng mở Cài đặt để cấp lại quyền.",
+            [
+              { text: "Đóng", style: "cancel" },
+              {
+                text: "Mở Cài đặt",
+                onPress: () => {
+                  openAppPermissionSettings();
+                },
+              },
+            ],
+          );
+          return;
+        }
+
+        if (nextStatus === "denied" || nextStatus === "unavailable") {
+          Alert.alert(
+            "Quyền camera",
+            "Chưa thể bật quyền camera trên thiết bị này.",
+          );
+        }
+      } catch {
+        Alert.alert("Lỗi", "Chưa thể cập nhật quyền camera lúc này.");
+      } finally {
+        if (isMountedRef.current) setIsUpdatingCameraPermission(false);
+      }
+    },
+    [isUpdatingCameraPermission],
+  );
 
   const closeModal = () => {
     setIsModalVisible(false);
@@ -375,6 +562,24 @@ const SettingScreen = () => {
           </SettingSectionGroup>
 
           <SettingSectionGroup title="KHÁC">
+            {Platform.OS === "ios" && (
+              <SettingSwitchRow
+                iconName="wifi-outline"
+                iconBg={C.sky}
+                label="Quyền mạng nội bộ"
+                sublabel={`Kết nối server nội bộ • ${localNetworkStatusLabel}${isUpdatingLocalNetworkPermission ? " • Đang cập nhật..." : ""}`}
+                value={localNetworkState.status === "granted"}
+                onValueChange={handleToggleLocalNetworkPermission}
+              />
+            )}
+            <SettingSwitchRow
+              iconName="camera-outline"
+              iconBg={C.emerald}
+              label="Quyền camera"
+              sublabel={`Quét QR và chụp hình • ${cameraStatusLabel}${isUpdatingCameraPermission ? " • Đang cập nhật..." : ""}`}
+              value={cameraPermissionStatus === "granted"}
+              onValueChange={handleToggleCameraPermission}
+            />
             <SettingRowItem
               iconName="log-out-outline"
               label="Đăng xuất"
@@ -393,6 +598,28 @@ const SettingScreen = () => {
               }
             />
           </SettingSectionGroup>
+
+          {Platform.OS === "ios" && (
+            <View style={styles.localNetworkSummary}>
+              <View
+                style={[styles.localNetworkStatusBadge, localNetworkStatusTone]}
+              >
+                <Text style={styles.localNetworkStatusBadgeText}>
+                  {localNetworkStatusLabel}
+                </Text>
+              </View>
+              <Text style={styles.localNetworkSummaryText}>
+                {localNetworkState.hasRequestedPermission
+                  ? "Ứng dụng đã lưu trạng thái quyền mạng nội bộ để hỗ trợ kết nối server nội bộ."
+                  : "Quyền mạng nội bộ sẽ được hỏi ở màn hình đăng nhập trước khi app kết nối server nội bộ."}
+              </Text>
+              <Text style={styles.localNetworkSummaryHint}>
+                {localNetworkState.hasShownNotice
+                  ? "Bạn có thể đổi quyền mạng nội bộ và camera trong Cài đặt hệ thống bất kỳ lúc nào."
+                  : "Thông báo hướng dẫn quyền sẽ xuất hiện ở màn hình đăng nhập khi người dùng mở app."}
+              </Text>
+            </View>
+          )}
 
           <View style={styles.versionWrap}>
             <Text style={styles.versionText}>{appVersionLabel}</Text>
@@ -429,6 +656,51 @@ const styles = StyleSheet.create({
     /* gradient applied inline */
   },
   greyZone: { backgroundColor: C.bg, flexGrow: 1, paddingBottom: 48 },
+  localNetworkSummary: {
+    marginHorizontal: 16,
+    marginTop: 14,
+    backgroundColor: C.card,
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    shadowColor: "#1A2340",
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  localNetworkStatusBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    marginBottom: 10,
+  },
+  localNetworkStatusGranted: {
+    backgroundColor: C.greenLight,
+  },
+  localNetworkStatusDenied: {
+    backgroundColor: "#FFF1F2",
+  },
+  localNetworkStatusUnknown: {
+    backgroundColor: C.amberLight,
+  },
+  localNetworkStatusBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: C.textPrimary,
+  },
+  localNetworkSummaryText: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: C.textPrimary,
+  },
+  localNetworkSummaryHint: {
+    marginTop: 6,
+    fontSize: 12,
+    lineHeight: 18,
+    color: C.textSub,
+  },
   versionWrap: {
     alignItems: "center",
     marginTop: 32,

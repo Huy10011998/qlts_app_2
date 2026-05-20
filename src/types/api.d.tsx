@@ -1,4 +1,4 @@
-import { Field, Item } from "./Model.d";
+import { Field, Item } from "./model.d";
 
 export interface GetMenuActiveResponse {
   data: Item[];

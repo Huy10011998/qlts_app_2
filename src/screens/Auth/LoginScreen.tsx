@@ -1,9 +1,12 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import {
   Alert,
+  AppState,
+  AppStateStatus,
   Image,
   Keyboard,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -21,14 +24,14 @@ import {
 import * as Keychain from "react-native-keychain";
 import DeviceInfo from "react-native-device-info";
 import { useAuth } from "../../context/AuthContext";
-import { loginApi } from "../../services/auth/AuthApi";
+import { loginApi } from "../../services/auth/authApi";
 import IsLoading from "../../components/ui/IconLoading";
 import {
   hardResetApi,
   refreshTokenFlow,
   setRefreshInApi,
   shouldRefreshAccessToken,
-} from "../../services/data/CallApi";
+} from "../../services/data/callApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   AUTH_LOGIN_SERVICE,
@@ -40,6 +43,17 @@ import {
 import { log } from "../../utils/Logger";
 import { readStoredAuthTokens } from "../../context/authStorage";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import {
+  LocalNetworkPermissionStatus,
+  getLocalNetworkPermissionLabel,
+  readStoredLocalNetworkPermission,
+  refreshStoredLocalNetworkPermission,
+  requestLocalNetworkPermission,
+} from "../../services/localNetworkPermission";
+import {
+  checkServerReachability,
+  SERVER_UNAVAILABLE_MESSAGE,
+} from "../../services/network/reachability";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const RED = "#E31E24";
@@ -57,8 +71,7 @@ export default function LoginScreen() {
     syncSession,
     token,
     logout,
-  } =
-    useAuth();
+  } = useAuth();
 
   const [userName, setUserName] = useState("");
   const [userPassword, setUserPassword] = useState("");
@@ -69,8 +82,11 @@ export default function LoginScreen() {
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
   const [isTokenReady, setIsTokenReady] = useState(false);
   const [isFaceIdEnabled, setIsFaceIdEnabled] = useState(false);
+  const [localNetworkStatus, setLocalNetworkStatus] =
+    useState<LocalNetworkPermissionStatus>("unknown");
 
   const isFaceIdRunning = useRef(false);
+  const isLocalNetworkRequestRunning = useRef(false);
 
   useEffect(() => {
     log("LoginScreen mounted, token:", token);
@@ -82,6 +98,17 @@ export default function LoginScreen() {
   useEffect(() => {
     setIsLoginDisabled(!(userName.trim() && userPassword.trim()));
   }, [userName, userPassword]);
+
+  const openLocalNetworkSettings = useCallback(() => {
+    Linking.openSettings();
+  }, []);
+
+  const applyLocalNetworkStatus = useCallback(
+    (status: LocalNetworkPermissionStatus) => {
+      setLocalNetworkStatus(status);
+    },
+    [],
+  );
 
   const prepareTokenForFaceID = useCallback(async () => {
     try {
@@ -107,6 +134,60 @@ export default function LoginScreen() {
       setIsTokenReady(true);
     }
   }, [prepareTokenForFaceID]);
+
+  const handleLocalNetworkPermission = useCallback(async () => {
+    if (Platform.OS !== "ios" || isLocalNetworkRequestRunning.current) return;
+
+    isLocalNetworkRequestRunning.current = true;
+    try {
+      const status = await requestLocalNetworkPermission();
+      applyLocalNetworkStatus(status);
+    } catch {
+      Alert.alert(
+        "Không thể yêu cầu quyền",
+        "Ứng dụng chưa thể kiểm tra quyền mạng nội bộ lúc này.",
+      );
+    } finally {
+      isLocalNetworkRequestRunning.current = false;
+    }
+  }, [applyLocalNetworkStatus]);
+
+  const syncLocalNetworkState = useCallback(async () => {
+    if (Platform.OS !== "ios") return;
+
+    const currentState = await readStoredLocalNetworkPermission();
+
+    if (!currentState.hasRequestedPermission) {
+      await handleLocalNetworkPermission();
+      return;
+    }
+
+    const refreshedState = await refreshStoredLocalNetworkPermission();
+    applyLocalNetworkStatus(refreshedState.status);
+  }, [applyLocalNetworkStatus, handleLocalNetworkPermission]);
+
+  useEffect(() => {
+    if (Platform.OS !== "ios") return;
+
+    syncLocalNetworkState();
+  }, [syncLocalNetworkState]);
+
+  useEffect(() => {
+    if (Platform.OS !== "ios") return;
+
+    const subscription = AppState.addEventListener(
+      "change",
+      (nextState: AppStateStatus) => {
+        if (nextState === "active") {
+          syncLocalNetworkState();
+        }
+      },
+    );
+
+    return () => {
+      subscription.remove();
+    };
+  }, [syncLocalNetworkState]);
 
   const syncFaceIdMarker = useCallback(async () => {
     if (Platform.OS !== "ios") return;
@@ -185,7 +266,10 @@ export default function LoginScreen() {
       }
     } catch (err: any) {
       const status = err.response?.status;
-      const message = err.response?.data?.message;
+      const responseData = err.response?.data;
+      const message =
+        (typeof responseData === "string" ? responseData : undefined) ||
+        responseData?.message;
       if (status === 401) {
         Alert.alert(
           "Đăng nhập thất bại",
@@ -194,7 +278,13 @@ export default function LoginScreen() {
       } else if (!err.response) {
         Alert.alert("Lỗi kết nối", "Không thể kết nối đến máy chủ.");
       } else {
-        Alert.alert("Lỗi", "Có lỗi xảy ra.");
+        Alert.alert(
+          "Lỗi đăng nhập",
+          message ||
+            `Không thể đăng nhập lúc này${
+              status ? ` (mã lỗi ${status})` : ""
+            }. Vui lòng thử lại.`,
+        );
       }
     } finally {
       setIsLoading(false);
@@ -218,6 +308,14 @@ export default function LoginScreen() {
       );
       return;
     }
+
+    const reachability = await checkServerReachability();
+
+    if (!reachability.canReachServer) {
+      Alert.alert("Lỗi", SERVER_UNAVAILABLE_MESSAGE);
+      return;
+    }
+
     handleFaceIDLogin();
   };
 
@@ -451,6 +549,27 @@ export default function LoginScreen() {
                 )}
               </View>
 
+              {Platform.OS === "ios" && (
+                <View style={styles.localNetworkNotice}>
+                  <Text style={styles.localNetworkStatusText}>
+                    Quyền mạng nội bộ:{" "}
+                    {getLocalNetworkPermissionLabel(localNetworkStatus)}
+                  </Text>
+                  <Text style={styles.localNetworkNoticeText}>
+                    Ứng dụng cần quyền mạng nội bộ để kết nối server. Vui lòng
+                    chọn chấp nhận khi iPhone hỏi quyền này.
+                  </Text>
+                  <TouchableOpacity
+                    onPress={openLocalNetworkSettings}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.localNetworkSettingsLink}>
+                      Mở Cài đặt để bật thủ công nếu đã "từ chối"
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
               {/* Info chips — chuyển xuống form cho gọn hero */}
               <View style={styles.infoRow}>
                 <View style={styles.infoChip}>
@@ -610,7 +729,7 @@ const styles = StyleSheet.create({
 
   // Card header
   cardHeader: {
-    marginBottom: 20,
+    marginBottom: 10,
   },
   cardTitle: {
     fontSize: 26,
@@ -623,7 +742,6 @@ const styles = StyleSheet.create({
     color: "#9AA3AF",
     lineHeight: 20,
   },
-
   // ── Inputs ──
   inputWrapper: {
     flexDirection: "row",
@@ -631,8 +749,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#F6F6F6",
     borderRadius: 14,
     paddingHorizontal: 14,
-    height: 54,
-    marginBottom: 14,
+    height: 45,
+    marginBottom: 12,
     borderWidth: 1.5,
     borderColor: "transparent",
   },
@@ -645,7 +763,7 @@ const styles = StyleSheet.create({
   },
   textInput: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 14,
     color: "#111",
   },
 
@@ -658,7 +776,7 @@ const styles = StyleSheet.create({
   },
   loginBtn: {
     flex: 1,
-    height: 54,
+    height: 45,
     borderRadius: 14,
     backgroundColor: RED,
     justifyContent: "center",
@@ -676,13 +794,13 @@ const styles = StyleSheet.create({
   },
   loginBtnText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "700",
     letterSpacing: 0.5,
   },
   faceIdBtn: {
-    width: 54,
-    height: 54,
+    width: 45,
+    height: 45,
     borderRadius: 14,
     backgroundColor: "#F6F6F6",
     justifyContent: "center",
@@ -729,6 +847,33 @@ const styles = StyleSheet.create({
     color: RED,
     fontWeight: "700",
     textAlign: "center",
+  },
+  localNetworkNotice: {
+    marginTop: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderRadius: 16,
+    backgroundColor: "#FFF8EF",
+    borderWidth: 1,
+    borderColor: "#F5DEC2",
+  },
+  localNetworkStatusText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#9A3412",
+  },
+  localNetworkNoticeText: {
+    marginTop: 6,
+    fontSize: 12.5,
+    lineHeight: 19,
+    color: "#7C2D12",
+  },
+  localNetworkSettingsLink: {
+    marginTop: 10,
+    fontSize: 12.5,
+    fontWeight: "700",
+    color: RED,
+    textDecorationLine: "underline",
   },
 
   // ── Footer ──

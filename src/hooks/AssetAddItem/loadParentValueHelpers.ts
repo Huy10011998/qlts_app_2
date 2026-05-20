@@ -1,6 +1,6 @@
-import { Field } from "../../types/Model.d";
+import { Field } from "../../types/model.d";
 import { TypeProperty } from "../../utils/Enum";
-import { getDetails, getFieldActive } from "../../services/Index";
+import { getDetails, getFieldActive } from "../../services";
 import { getMatchedKey } from "../../utils/Helper";
 import { log } from "../../utils/Logger";
 import {
@@ -24,7 +24,10 @@ export const buildParentValuePayload = (
   nameReference: nameClass,
 });
 
-const getDetailFieldValue = (detail: Record<string, any>, fieldName: string) => {
+const getDetailFieldValue = (
+  detail: Record<string, any>,
+  fieldName: string,
+) => {
   const matchedMoTaKey = getMatchedKey(detail, `${fieldName}_MoTa`);
   const matchedValueKey = getMatchedKey(detail, fieldName);
 

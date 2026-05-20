@@ -5,7 +5,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import RootNavigator from "./src/navigation/RootNavigator";
 import { AuthProvider } from "./src/context/AuthContext";
 import { Provider } from "react-redux";
-import { store } from "./src/store/Index";
+import { store } from "./src/store/index";
 import AppBootstrap from "./src/app/AppBootstrap";
 
 export default function App() {

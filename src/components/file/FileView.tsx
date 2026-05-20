@@ -12,8 +12,8 @@ import {
   Animated,
 } from "react-native";
 import { WebView } from "react-native-webview";
-import { ViewerProps } from "../../types/Index";
-import { getPreviewAttachFile } from "../../services/Index";
+import { ViewerProps } from "../../types/index";
+import { getPreviewAttachFile } from "../../services";
 import IsLoading from "../ui/IconLoading";
 import { error } from "../../utils/Logger";
 import { useSafeAlert } from "../../hooks/useSafeAlert";

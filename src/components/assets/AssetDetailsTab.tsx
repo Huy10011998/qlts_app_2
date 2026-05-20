@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { View, Text, FlatList, Pressable, StyleSheet } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { MenuItemResponse, StackNavigation, StackRoute } from "../../types";
-import { getClassReference } from "../../services/Index";
+import { getClassReference } from "../../services";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import IsLoading from "../ui/IconLoading";
 import EmptyState from "../ui/EmptyState";

@@ -29,7 +29,7 @@ import {
 import Orientation from "react-native-orientation-locker";
 import Video from "react-native-video";
 import WebView from "react-native-webview";
-import { CameraCellProps } from "../../types/Components.d";
+import { CameraCellProps } from "../../types/components.d";
 import { useIsFocused } from "@react-navigation/native";
 import {
   buildCameraFullscreenHTML,

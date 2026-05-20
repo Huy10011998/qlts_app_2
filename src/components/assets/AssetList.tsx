@@ -16,13 +16,13 @@ import {
   PropertyResponse,
   StackNavigation,
   TreeNode,
-} from "../../types/Index";
+} from "../../types/index";
 import {
   getFieldActive,
   getList,
   getPropertyClass,
   getBuildTree,
-} from "../../services/Index";
+} from "../../services";
 import ListCardAsset from "../../components/list/ListCardAsset";
 import IsLoading from "../../components/ui/IconLoading";
 import { useDebounce } from "../../hooks/useDebounce";
@@ -39,9 +39,9 @@ import {
 import { error } from "../../utils/Logger";
 import { usePermission } from "../../hooks/usePermission";
 import { useAutoReload } from "../../hooks/useAutoReload";
-import { useAppDispatch } from "../../store/Hooks";
+import { useAppDispatch } from "../../store/hooks";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
-import { isAuthExpiredError } from "../../services/data/CallApi";
+import { isAuthExpiredError } from "../../services/data/callApi";
 import { useReloadPermissionsOnFocus } from "../../hooks/useReloadPermissionsOnFocus";
 import { useSlideInPanel } from "../../hooks/useSlideInPanel";
 import SlideInSidePanel from "../shared/SlideInSidePanel";
@@ -67,11 +67,7 @@ if (
 const { width } = Dimensions.get("window");
 const MENU_WIDTH = width * 0.6;
 
-function AssetListMenuButton({
-  onPress,
-}: {
-  onPress: () => void;
-}) {
+function AssetListMenuButton({ onPress }: { onPress: () => void }) {
   return (
     <TouchableOpacity onPress={onPress} style={styles.headerButton}>
       <Ionicons name="menu" size={26} color="#fff" />
@@ -251,13 +247,7 @@ export default function AssetList() {
         }
       }
     },
-    [
-      conditions,
-      debouncedSearch,
-      isMounted,
-      nameClass,
-      showAlertIfActive,
-    ],
+    [conditions, debouncedSearch, isMounted, nameClass, showAlertIfActive],
   );
 
   useFocusEffect(
@@ -278,20 +268,30 @@ export default function AssetList() {
     }
   };
 
-  const handlePress = useCallback(async (item: Record<string, any>) => {
-    try {
-      navigation.navigate("AssetDetails", {
-        id: String(item.id),
-        field: JSON.stringify(fieldActive),
-        nameClass,
-        titleHeader,
-        propertyClass,
-      });
-    } catch (e) {
-      error(e);
-      showAlertIfActive("Lỗi", `Không thể tải chi tiết ${nameClass}`);
-    }
-  }, [fieldActive, nameClass, navigation, propertyClass, showAlertIfActive, titleHeader]);
+  const handlePress = useCallback(
+    async (item: Record<string, any>) => {
+      try {
+        navigation.navigate("AssetDetails", {
+          id: String(item.id),
+          field: JSON.stringify(fieldActive),
+          nameClass,
+          titleHeader,
+          propertyClass,
+        });
+      } catch (e) {
+        error(e);
+        showAlertIfActive("Lỗi", `Không thể tải chi tiết ${nameClass}`);
+      }
+    },
+    [
+      fieldActive,
+      nameClass,
+      navigation,
+      propertyClass,
+      showAlertIfActive,
+      titleHeader,
+    ],
+  );
 
   const handleSelectNode = (node: TreeNode) => {
     setSelectedNode(node);
@@ -337,12 +337,7 @@ export default function AssetList() {
     [fieldActive, fieldShowMobile, handlePress, propertyClass],
   );
 
-  if (
-    isLoading &&
-    !isRefreshingTop &&
-    !isLoadingMore &&
-    !isSearching
-  ) {
+  if (isLoading && !isRefreshingTop && !isLoadingMore && !isSearching) {
     return <IsLoading size="large" color={BRAND_RED} />;
   }
 

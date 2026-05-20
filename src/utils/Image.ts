@@ -2,7 +2,7 @@ import { launchImageLibrary } from "react-native-image-picker";
 import {
   getPreviewAttachProperty,
   uploadAttachProperty,
-} from "../services/data/CallApi";
+} from "../services/data/callApi";
 import { error } from "./Logger";
 import { Alert } from "react-native";
 

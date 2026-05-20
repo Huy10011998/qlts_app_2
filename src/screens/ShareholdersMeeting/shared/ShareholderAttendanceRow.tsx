@@ -1,7 +1,7 @@
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { C } from "../../../utils/helpers/colors";
-import { ShareholderRowProps } from "../../../types/Index";
+import { ShareholderRowProps } from "../../../types/index";
 import { statusConfig } from "./shareholdersMeetingHelpers";
 
 export default function ShareholderAttendanceRow({

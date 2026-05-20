@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
-import { ParseFieldActive } from "../utils/parser/ParseFieldActive";
-import { GroupFields } from "../utils/parser/GroupFields";
+import { ParseFieldActive } from "../utils/parser/parseFieldActive";
+import { GroupFields } from "../utils/parser/groupFields";
 import { ToggleGroupUtil } from "../utils/parser/ToggleGroup";
 
 export function useDetailViewState(

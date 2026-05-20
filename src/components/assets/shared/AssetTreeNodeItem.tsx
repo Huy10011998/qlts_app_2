@@ -7,7 +7,7 @@ import {
   View,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { TreeNode } from "../../../types/Index";
+import { TreeNode } from "../../../types/index";
 import { CARD_SHADOW } from "./listTheme";
 
 const localStyles = {

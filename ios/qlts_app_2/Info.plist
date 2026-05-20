@@ -56,6 +56,12 @@
 	<string>Ứng dụng cần dùng camera để quét QR code</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Ứng dụng cần sử dụng Face ID để đăng nhập nhanh.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>App cần truy cập server nội bộ</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_http._tcp</string>
+	</array>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Ứng dụng cần truy cập thư viện ảnh để chọn và tải ảnh lên khi làm việc.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, Alert } from "react-native";
 
-import { AssetCloneItemNavigationProp, Field } from "../../types/Index";
+import { AssetCloneItemNavigationProp, Field } from "../../types/index";
 import { TypeProperty } from "../../utils/Enum";
 import { getMatchedKey } from "../../utils/Helper";
 import { useParams } from "../../hooks/useParams";
@@ -12,7 +12,7 @@ import {
 import { fetchImage, pickImage } from "../../utils/Image";
 import { isEffectivelyEmptyCodeValue } from "../../utils/helpers/string";
 import { fetchReferenceByFieldWithParent } from "../../utils/cascade/FetchReferenceByFieldWithParent";
-import { handleCascadeChange } from "../../utils/cascade/Index";
+import { handleCascadeChange } from "../../utils/cascade/index";
 import { useImageLoader } from "../../hooks/useImageLoader";
 import { useNavigation } from "@react-navigation/native";
 import { setShouldRefreshList } from "../../store/AssetSlice";
@@ -23,8 +23,8 @@ import {
   normalizeDateFromBE,
 } from "../../utils/Date";
 
-import { checkValidation, insert } from "../../services/data/CallApi";
-import { useAppDispatch } from "../../store/Hooks";
+import { checkValidation, insert } from "../../services/data/callApi";
+import { useAppDispatch } from "../../store/hooks";
 import { RootState } from "../../store";
 import { useSelector } from "react-redux";
 import { useGroupedFields } from "../../hooks/AssetAddItem/useGroupedFields";

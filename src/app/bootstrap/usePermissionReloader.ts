@@ -1,6 +1,6 @@
 import { RefObject, useRef } from "react";
 import { Platform } from "react-native";
-import { useAppDispatch } from "../../store/Hooks";
+import { useAppDispatch } from "../../store/hooks";
 import { reloadPermissions } from "../../store/PermissionActions";
 import { BASE_RETRY_MS, MAX_RETRY_ATTEMPTS } from "./constants";
 

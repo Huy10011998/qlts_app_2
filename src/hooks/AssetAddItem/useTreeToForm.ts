@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Field } from "../../types/Index";
+import { Field } from "../../types/index";
 import { TypeProperty } from "../../utils/Enum";
 import {
   loadReferenceItemsForField,

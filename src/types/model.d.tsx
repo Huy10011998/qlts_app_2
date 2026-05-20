@@ -1,4 +1,4 @@
-import { ShareholderApiItem } from "./Index";
+import { ShareholderApiItem } from "./index";
 
 // Loại dữ liệu điều kiện
 export type Conditions = {

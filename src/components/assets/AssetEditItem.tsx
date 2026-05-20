@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { View, StyleSheet, Alert } from "react-native";
 
-import { AssetEditItemNavigationProp, Field } from "../../types/Index";
+import { AssetEditItemNavigationProp, Field } from "../../types/index";
 import { TypeProperty } from "../../utils/Enum";
 import { getMatchedKey } from "../../utils/Helper";
 import {
@@ -12,9 +12,9 @@ import { isEffectivelyEmptyCodeValue } from "../../utils/helpers/string";
 import { useParams } from "../../hooks/useParams";
 import { fetchImage, pickImage } from "../../utils/Image";
 import { fetchReferenceByFieldWithParent } from "../../utils/cascade/FetchReferenceByFieldWithParent";
-import { handleCascadeChange } from "../../utils/cascade/Index";
+import { handleCascadeChange } from "../../utils/cascade/index";
 import { useImageLoader } from "../../hooks/useImageLoader";
-import { checkValidation, update } from "../../services/data/CallApi";
+import { checkValidation, update } from "../../services/data/callApi";
 import { useNavigation } from "@react-navigation/native";
 import { setShouldRefreshDetails } from "../../store/AssetSlice";
 
@@ -24,7 +24,7 @@ import {
   normalizeDateFromBE,
 } from "../../utils/Date";
 
-import { useAppDispatch } from "../../store/Hooks";
+import { useAppDispatch } from "../../store/hooks";
 import { useEnumAndReferenceLoader } from "../../hooks/AssetAddItem/useEnumAndReferenceLoader";
 import { useGroupedFields } from "../../hooks/AssetAddItem/useGroupedFields";
 import { useOpenReferenceModal } from "../../hooks/AssetAddItem/useOpenReferenceModal";

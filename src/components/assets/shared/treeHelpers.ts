@@ -1,4 +1,4 @@
-import { TreeNode } from "../../../types/Index";
+import { TreeNode } from "../../../types/index";
 import { SqlOperator, TypeProperty } from "../../../utils/Enum";
 
 export type AssetFilterCondition = {

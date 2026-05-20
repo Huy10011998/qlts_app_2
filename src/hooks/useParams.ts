@@ -1,5 +1,5 @@
 import { useRoute, RouteProp } from "@react-navigation/native";
-import { OptionalParams, RootStackParamList } from "../types/Index";
+import { OptionalParams, RootStackParamList } from "../types/index";
 
 export function useParams<RouteName extends keyof RootStackParamList>() {
   const route = useRoute<RouteProp<RootStackParamList, RouteName>>();

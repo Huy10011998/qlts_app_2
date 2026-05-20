@@ -1,12 +1,12 @@
-import { API_ENDPOINTS } from "../../config/API";
-import { callApi } from "../../services/data/CallApi";
-import { FetchEnumResponse, SetEnumDataFn } from "../../types/Model.d";
+import { API_ENDPOINTS } from "../../config/api";
+import { callApi } from "../../services/data/callApi";
+import { FetchEnumResponse, SetEnumDataFn } from "../../types/model.d";
 import { log } from "../Logger";
 
 export const fetchEnumByField = async (
   enumName: string,
   fieldName: string,
-  setEnumData: (fn: SetEnumDataFn) => void
+  setEnumData: (fn: SetEnumDataFn) => void,
 ): Promise<void> => {
   try {
     const res: FetchEnumResponse = await callApi(
@@ -14,7 +14,7 @@ export const fetchEnumByField = async (
       API_ENDPOINTS.GET_CATEGORY_ENUM,
       {
         enumName,
-      }
+      },
     );
     setEnumData((p: Record<string, any>) => ({
       ...p,

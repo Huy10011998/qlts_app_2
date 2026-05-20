@@ -1,9 +1,9 @@
 import axios from "axios";
-import { API_ENDPOINTS, BASE_URL } from "../../config/Index";
-import { ChangePasswordResponse, LoginResponse } from "../../types/Api.d";
+import { API_ENDPOINTS, BASE_URL } from "../../config/index";
+import { ChangePasswordResponse, LoginResponse } from "../../types/api.d";
 import { md5Hash } from "../../utils/helpers/hash";
 import { error, log } from "../../utils/Logger";
-import { callApi } from "../data/CallApi";
+import { callApi } from "../data/callApi";
 
 export const authApi = axios.create({
   baseURL: BASE_URL,

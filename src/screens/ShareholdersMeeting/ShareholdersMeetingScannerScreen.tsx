@@ -29,12 +29,12 @@ import {
   diemDanhDhcd,
   getCodongDhcd,
   luuYKienCoDongDhcd,
-} from "../../services/data/CallApi";
+} from "../../services/data/callApi";
 import {
   RootStackParamList,
   Shareholder,
   ShareholderListResponse,
-} from "../../types/Index";
+} from "../../types/index";
 import QrScannerGateView from "../../components/qrcode/shared/QrScannerGateView";
 import QrScannerViewportOverlay from "../../components/qrcode/shared/QrScannerViewportOverlay";
 import useQrScannerController from "../../components/qrcode/shared/useQrScannerController";

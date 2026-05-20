@@ -1,5 +1,5 @@
-import { API_ENDPOINTS } from "../../config/API";
-import { callApi } from "../../services/Index";
+import { API_ENDPOINTS } from "../../config/api";
+import { callApi } from "../../services";
 import { log } from "../Logger";
 import { cascadeRequestTracker } from "./CascadeRequestTracker";
 

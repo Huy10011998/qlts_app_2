@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { AssetState } from "../types/Redux.d";
+import { AssetState } from "../types/redux.d";
 
 const initialState: AssetState = {
   shouldRefreshList: false,

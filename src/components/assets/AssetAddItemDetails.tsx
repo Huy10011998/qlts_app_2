@@ -7,11 +7,11 @@ import { useParams } from "../../hooks/useParams";
 import { usePermission } from "../../hooks/usePermission";
 import { useImageLoader } from "../../hooks/useImageLoader";
 
-import { RootState } from "../../store/Index";
-import { useAppDispatch } from "../../store/Hooks";
+import { RootState } from "../../store/index";
+import { useAppDispatch } from "../../store/hooks";
 import { setShouldRefreshList } from "../../store/AssetSlice";
 
-import { AssetAddItemNavigationProp, Field } from "../../types/Index";
+import { AssetAddItemNavigationProp, Field } from "../../types/index";
 import { TypeProperty } from "../../utils/Enum";
 import { formatDateForBE, getDefaultValueForField } from "../../utils/Date";
 import {
@@ -20,7 +20,7 @@ import {
 } from "../../utils/helpers/api";
 import { fetchImage, pickImage } from "../../utils/Image";
 import { isEffectivelyEmptyCodeValue } from "../../utils/helpers/string";
-import { checkValidation, insert } from "../../services/data/CallApi";
+import { checkValidation, insert } from "../../services/data/callApi";
 
 import { useGroupedFields } from "../../hooks/AssetAddItem/useGroupedFields";
 import { useCascadeForm } from "../../hooks/AssetAddItem/useCascadeForm";

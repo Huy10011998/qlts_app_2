@@ -5,7 +5,7 @@ import React, {
   ReactElement,
   SetStateAction,
 } from "react";
-import { Field, Item } from "./Model.d";
+import { Field, Item } from "./model.d";
 import {
   StyleProp,
   TextInputProps,
@@ -15,9 +15,9 @@ import {
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { TAB_ITEMS } from "../utils/helpers/ui";
-import { TabItem } from "./Context.d";
-import { PropertyResponse } from "./Api.d";
-import { AssetItem, PropertyClass } from "./Navigator.d";
+import { TabItem } from "./context.d";
+import { PropertyResponse } from "./api.d";
+import { AssetItem, PropertyClass } from "./navigator.d";
 
 export interface CardItemProps {
   item: AssetItem;

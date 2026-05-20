@@ -1,4 +1,4 @@
-import { Item } from "../../../types/Index";
+import { Item } from "../../../types/index";
 import { removeVietnameseTones } from "../../../utils/Helper";
 import { ASSET_MENU_BRAND_RED } from "./assetMenuTheme";
 

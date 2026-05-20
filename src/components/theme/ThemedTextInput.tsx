@@ -1,7 +1,7 @@
 import React from "react";
 import { StyleSheet, TextInput } from "react-native";
 import { useThemeColor } from "../../hooks/useThemeColor";
-import { ThemedTextInputProps } from "../../types/Index";
+import { ThemedTextInputProps } from "../../types/index";
 
 export function ThemedTextInput({
   style,

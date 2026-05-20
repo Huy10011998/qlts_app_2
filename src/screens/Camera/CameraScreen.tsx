@@ -14,7 +14,7 @@ import { useDebounce } from "../../hooks/useDebounce";
 import { useViewPermission } from "../../hooks/useViewPermission";
 import IsLoading from "../../components/ui/IconLoading";
 import EmptyState from "../../components/ui/EmptyState";
-import { getVungCamera } from "../../services/data/CallApi";
+import { getVungCamera } from "../../services/data/callApi";
 import { error } from "../../utils/Logger";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import CameraMenuDropdownItem from "./shared/CameraMenuDropdownItem";

@@ -1,6 +1,6 @@
 import { useCallback } from "react";
-import { handleCascadeChange } from "../../utils/cascade/Index";
-import { Field } from "../../types/Index";
+import { handleCascadeChange } from "../../utils/cascade/index";
+import { Field } from "../../types/index";
 
 export function useCascadeForm(
   fieldActive: Field[],

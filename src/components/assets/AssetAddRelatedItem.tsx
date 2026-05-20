@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { StyleSheet, Alert } from "react-native";
 import { useParams } from "../../hooks/useParams";
-import { AssetAddRelatedItemNavigationProp, Field } from "../../types/Index";
+import { AssetAddRelatedItemNavigationProp, Field } from "../../types/index";
 import { TypeProperty } from "../../utils/Enum";
 import { useNavigation } from "@react-navigation/native";
 import {
@@ -11,16 +11,16 @@ import {
 import { fetchImage, pickImage } from "../../utils/Image";
 import { isEffectivelyEmptyCodeValue } from "../../utils/helpers/string";
 import { useImageLoader } from "../../hooks/useImageLoader";
-import { checkValidation, getParentValue, insert } from "../../services/data/CallApi";
+import { checkValidation, getParentValue, insert } from "../../services/data/callApi";
 
 import { useSelector } from "react-redux";
-import { RootState } from "../../store/Index";
+import { RootState } from "../../store/index";
 import { setShouldRefreshList } from "../../store/AssetSlice";
 import { usePermission } from "../../hooks/usePermission";
 
 import { formatDateForBE, getDefaultValueForField } from "../../utils/Date";
 
-import { useAppDispatch } from "../../store/Hooks";
+import { useAppDispatch } from "../../store/hooks";
 import { useCascadeForm } from "../../hooks/AssetAddItem/useCascadeForm";
 import { useDefaultDateTime } from "../../hooks/AssetAddItem/useDefaultDateTime";
 import { useAutoIncrementCode } from "../../hooks/AssetAddItem/useAutoIncrementCode";

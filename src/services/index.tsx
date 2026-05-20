@@ -1,4 +1,4 @@
-export * from "./auth/AuthApi";
+export * from "./auth/authApi";
 export {
   getList,
   getFieldActive,
@@ -22,4 +22,4 @@ export {
   getPermission,
   tuDongTang,
   luuYKienCoDongDhcd,
-} from "./data/CallApi";
+} from "./data/callApi";

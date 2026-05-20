@@ -19,11 +19,7 @@ import {
   useCodeScanner,
 } from "react-native-vision-camera";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
-import {
-  getDetails,
-  getFieldActive,
-  getPropertyClass,
-} from "../../services/Index";
+import { getDetails, getFieldActive, getPropertyClass } from "../../services";
 import { error } from "../../utils/Logger";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import QrScannerGateView from "../../components/qrcode/shared/QrScannerGateView";

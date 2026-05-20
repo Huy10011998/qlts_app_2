@@ -2,8 +2,8 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 import BottomBarDetails from "../../../components/bottom/BottomDetails";
 import TabContent from "../../../components/tabs/TabContent";
-import { Field, TabItem } from "../../../types/Index";
-import { AssetItem } from "../../../types/Navigator.d";
+import { Field, TabItem } from "../../../types/index";
+import { AssetItem } from "../../../types/navigator.d";
 
 type AssetDetailsContentProps = {
   activeTab: string;

@@ -10,8 +10,8 @@ import {
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { WebView } from "react-native-webview";
 import { ReportViewProps } from "../../types";
-import { getPreviewBC } from "../../services/data/CallApi";
-import { API_ENDPOINTS } from "../../config/Index";
+import { getPreviewBC } from "../../services/data/callApi";
+import { API_ENDPOINTS } from "../../config/index";
 import { error } from "../../utils/Logger";
 import { formatToSlash, validateDates } from "../../utils/Date";
 import { DatePicker } from "../dataPicker/DataPicker";

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState } from "react-native";
-import { getTokenViewCamera } from "../../../services/data/CallApi";
+import { getTokenViewCamera } from "../../../services/data/callApi";
 import { subscribeAppRefetch } from "../../../utils/AppRefetchBus";
 import {
   decodeTokenExpiry,

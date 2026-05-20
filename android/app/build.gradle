@@ -73,6 +73,38 @@ def enableProguardInReleaseBuilds = false
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+def reactAndroidPrefabFixTask = tasks.register("prepareReactNativePrefabLibs") {
+    doLast {
+        def transformsDir = new File(gradle.gradleUserHomeDir, "caches/${gradle.gradleVersion}/transforms")
+        if (!transformsDir.exists()) {
+            return
+        }
+
+        def copiedCount = 0
+        fileTree(transformsDir) {
+            include("**/transformed/react-android-*-release/jni/*/libreactnative.so")
+        }.files.each { libFile ->
+            def abi = libFile.parentFile.name
+            def transformedReactAndroidDir = libFile.parentFile.parentFile.parentFile
+            def prefabAbiDir = new File(transformedReactAndroidDir, "prefab/modules/reactnative/libs/android.${abi}")
+            def prefabLib = new File(prefabAbiDir, "libreactnative.so")
+
+            if (!prefabLib.exists()) {
+                prefabAbiDir.mkdirs()
+                copy {
+                    from(libFile)
+                    into(prefabAbiDir)
+                }
+                copiedCount++
+            }
+        }
+
+        if (copiedCount > 0) {
+            logger.lifecycle("Prepared ${copiedCount} React Native prefab native libraries for CMake consumers.")
+        }
+    }
+}
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -83,8 +115,8 @@ android {
         applicationId "com.qlts_app_2"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 71
-        versionName "2.8"
+        versionCode 72
+        versionName "2.9"
     }
     signingConfigs {
         release {
@@ -101,6 +133,12 @@ android {
             minifyEnabled false
             shrinkResources false
         }
+    }
+}
+
+tasks.configureEach { task ->
+    if (task.name == "preBuild" || task.name.startsWith("configureCMake") || task.name.startsWith("buildCMake")) {
+        task.dependsOn(reactAndroidPrefabFixTask)
     }
 }
 

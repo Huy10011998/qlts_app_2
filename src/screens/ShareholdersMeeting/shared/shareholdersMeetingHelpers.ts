@@ -5,7 +5,7 @@ import {
   AttendanceStatus,
   Shareholder,
   ShareholderApiItem,
-} from "../../../types/Index";
+} from "../../../types/index";
 import { removeVietnameseTones } from "../../../utils/helpers/string";
 
 export type VotingChoice = "agree" | "disagree" | "noOpinion";

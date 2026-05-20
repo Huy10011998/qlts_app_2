@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { TypeProperty } from "../../utils/Enum";
 import { fetchEnumByField } from "../../utils/fetchField/FetchEnumField";
 import { fetchReferenceByField } from "../../utils/fetchField/FetchReferenceField";
-import { Field } from "../../types/Index";
+import { Field } from "../../types/index";
 
 export function useEnumAndReferenceLoader(
   fieldActive: Field[],

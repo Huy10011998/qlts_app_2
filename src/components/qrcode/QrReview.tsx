@@ -17,7 +17,7 @@ import {
   mapPropertyResponseToPropertyClass,
   QrReviewNavigationProp,
   StackRoute,
-} from "../../types/Index";
+} from "../../types/index";
 import ListCardAsset from "../list/ListCardAsset";
 import IsLoading from "../ui/IconLoading";
 import { AddItem } from "../add/AddItem";
@@ -26,7 +26,7 @@ import { useDebounce } from "../../hooks/useDebounce";
 import { usePermission } from "../../hooks/usePermission";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store";
-import { useAppDispatch } from "../../store/Hooks";
+import { useAppDispatch } from "../../store/hooks";
 import { resetShouldRefreshList } from "../../store/AssetSlice";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { useRelatedAssetListData } from "../../hooks/useRelatedAssetListData";

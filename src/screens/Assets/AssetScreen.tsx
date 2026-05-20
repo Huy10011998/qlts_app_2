@@ -15,14 +15,14 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
 } from "react-native";
-import { GetMenuActiveResponse, Item } from "../../types/Index";
-import { API_ENDPOINTS } from "../../config/Index";
+import { GetMenuActiveResponse, Item } from "../../types/index";
+import { API_ENDPOINTS } from "../../config/index";
 import { useDebounce } from "../../hooks/useDebounce";
 import { useViewPermission } from "../../hooks/useViewPermission";
 import IsLoading from "../../components/ui/IconLoading";
 import EmptyState from "../../components/ui/EmptyState";
 import ReportView from "../../components/report/ReportView";
-import { callApi } from "../../services/data/CallApi";
+import { callApi } from "../../services/data/callApi";
 import { error } from "../../utils/Logger";
 import { useAutoReload } from "../../hooks/useAutoReload";
 import { useSafeAlert } from "../../hooks/useSafeAlert";

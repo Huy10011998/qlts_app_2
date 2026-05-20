@@ -1,13 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  getFieldActive,
-  getList,
-  getPropertyClass,
-} from "../services/Index";
-import { Field, PropertyResponse } from "../types/Index";
+import { getFieldActive, getList, getPropertyClass } from "../services";
+import { Field, PropertyResponse } from "../types/index";
 import { error } from "../utils/Logger";
 import { useAutoReload } from "./useAutoReload";
-import { isAuthExpiredError } from "../services/data/CallApi";
+import { isAuthExpiredError } from "../services/data/callApi";
 
 type RelatedAssetListDataParams = {
   conditions: any[];
@@ -72,7 +68,9 @@ export function useRelatedAssetListData({
           const fields = resField?.data || [];
           fieldActiveRef.current = fields;
           setFieldActive(fields);
-          setFieldShowMobile(fields.filter((field: Field) => field.isShowMobile));
+          setFieldShowMobile(
+            fields.filter((field: Field) => field.isShowMobile),
+          );
         }
 
         if (shouldReloadPropertyClass) {
@@ -99,7 +97,9 @@ export function useRelatedAssetListData({
         if (isLoadMore) {
           setData((prev) => {
             const map = new Map<string, any>();
-            [...prev, ...items].forEach((item) => map.set(String(item.id), item));
+            [...prev, ...items].forEach((item) =>
+              map.set(String(item.id), item),
+            );
             return Array.from(map.values());
           });
           skipRef.current = currentSkip + pageSize;

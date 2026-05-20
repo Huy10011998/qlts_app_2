@@ -11,8 +11,8 @@ import {
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
-import { StackNavigation } from "../../types/Navigator.d";
-import { HeaderHomeProps } from "../../types/Components.d";
+import { StackNavigation } from "../../types/navigator.d";
+import { HeaderHomeProps } from "../../types/components.d";
 import { useNavigation } from "@react-navigation/native";
 import { C } from "../../utils/helpers/colors";
 

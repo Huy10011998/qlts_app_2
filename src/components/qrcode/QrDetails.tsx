@@ -1,8 +1,4 @@
-import React, {
-  useEffect,
-  useState,
-  useCallback,
-} from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   StyleSheet,
@@ -15,13 +11,13 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
-import { QrDetailsProps, RootStackParamList } from "../../types/Index";
+import { QrDetailsProps, RootStackParamList } from "../../types/index";
 import { useParams } from "../../hooks/useParams";
-import { getClassReference, getDetails } from "../../services/Index";
+import { getClassReference, getDetails } from "../../services";
 import IsLoading from "../ui/IconLoading";
 import { error, log } from "../../utils/Logger";
 import { getFieldValue } from "../../utils/fields/GetFieldValue";
-import { useAppDispatch } from "../../store/Hooks";
+import { useAppDispatch } from "../../store/hooks";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store";
 import { resetShouldRefreshDetails } from "../../store/AssetSlice";

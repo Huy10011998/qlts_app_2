@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { TypeProperty } from "../../utils/Enum";
-import { RenderInputByTypeProps } from "../../types/Components.d";
+import { RenderInputByTypeProps } from "../../types/components.d";
 import { formatVND, unFormatVND } from "../../utils/helpers/number";
 import IsLoading from "../ui/IconLoading";
 import { parseLinkHtml } from "../../utils/Link";
