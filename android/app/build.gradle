@@ -105,6 +105,28 @@ def reactAndroidPrefabFixTask = tasks.register("prepareReactNativePrefabLibs") {
     }
 }
 
+def reactAndroidPrefabCleanupTask = tasks.register("cleanupReactNativePrefabLibs") {
+    doLast {
+        def transformsDir = new File(gradle.gradleUserHomeDir, "caches/${gradle.gradleVersion}/transforms")
+        if (!transformsDir.exists()) {
+            return
+        }
+
+        def deletedCount = 0
+        fileTree(transformsDir) {
+            include("**/transformed/react-android-*-release/prefab/modules/reactnative/libs/android.*/libreactnative.so")
+        }.files.each { prefabLib ->
+            if (prefabLib.exists() && prefabLib.delete()) {
+                deletedCount++
+            }
+        }
+
+        if (deletedCount > 0) {
+            logger.lifecycle("Cleaned up ${deletedCount} temporary React Native prefab native libraries.")
+        }
+    }
+}
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -115,8 +137,8 @@ android {
         applicationId "com.qlts_app_2"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 72
-        versionName "2.9"
+        versionCode 73
+        versionName "2.10"
     }
     signingConfigs {
         release {
@@ -139,6 +161,9 @@ android {
 tasks.configureEach { task ->
     if (task.name == "preBuild" || task.name.startsWith("configureCMake") || task.name.startsWith("buildCMake")) {
         task.dependsOn(reactAndroidPrefabFixTask)
+    }
+    if (task.name == "bundleRelease" || task.name == "assembleRelease") {
+        task.finalizedBy(reactAndroidPrefabCleanupTask)
     }
 }
 

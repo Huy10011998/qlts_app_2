@@ -24,7 +24,6 @@ import {
   hardResetApi,
   resetAuthState,
 } from "../../services/data/callApi";
-import ReactNativeBiometrics from "react-native-biometrics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { clearPermissions } from "../../store/PermissionSlice";
@@ -70,8 +69,6 @@ const SettingScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [user, setUser] = useState<UserInfo>();
   const appVersionLabel = `v${DeviceInfo.getVersion()}`;
-
-  const rnBiometrics = useRef(new ReactNativeBiometrics()).current;
 
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
@@ -250,10 +247,13 @@ const SettingScreen = () => {
     try {
       const { token, refreshToken } = await readStoredAuthTokens();
       if (!isMountedRef.current) return;
-      const { available } = await rnBiometrics.isSensorAvailable();
+      const biometryType = await Keychain.getSupportedBiometryType();
       if (!isMountedRef.current) return;
-      if (!available) {
-        Alert.alert("FaceID", "Thiết bị không hỗ trợ FaceID.");
+      if (biometryType !== Keychain.BIOMETRY_TYPE.FACE_ID) {
+        Alert.alert(
+          "FaceID chưa sẵn sàng",
+          "Thiết bị chưa hỗ trợ FaceID hoặc chưa thiết lập FaceID.",
+        );
         setIsFaceIdEnabled(false);
         return;
       }
@@ -272,14 +272,40 @@ const SettingScreen = () => {
           accessible: Keychain.ACCESSIBLE.WHEN_PASSCODE_SET_THIS_DEVICE_ONLY,
         },
       );
+      const confirmation = await Keychain.getGenericPassword({
+        service: FACE_ID_LOGIN_SERVICE,
+        authenticationPrompt: {
+          title: "Xác thực FaceID",
+          subtitle: "Xác nhận để bật đăng nhập bằng FaceID",
+          description: "Bật đăng nhập nhanh bằng FaceID",
+          cancel: "Huỷ",
+        },
+      });
+      if (!confirmation) {
+        await Keychain.resetGenericPassword({ service: FACE_ID_LOGIN_SERVICE });
+        setIsFaceIdEnabled(false);
+        return;
+      }
       await AsyncStorage.setItem(FACE_ID_ENABLED_KEY, "1");
       if (!isMountedRef.current) return;
       setIsFaceIdEnabled(true);
       Alert.alert("FaceID", "Đã bật đăng nhập bằng FaceID!");
-    } catch {
+    } catch (err: any) {
+      await Keychain.resetGenericPassword({ service: FACE_ID_LOGIN_SERVICE });
       if (!isMountedRef.current) return;
-      Alert.alert("Lỗi", "Không thể bật FaceID.");
       setIsFaceIdEnabled(false);
+      const code = err?.code;
+      const message = String(err?.message ?? "");
+      const normalizedMessage = message.toLowerCase();
+      const isCancelled =
+        code === -128 ||
+        code === "-128" ||
+        normalizedMessage.includes("cancel") ||
+        message.includes("UserCancel") ||
+        err?.name === "LAErrorUserCancel";
+      if (!isCancelled) {
+        Alert.alert("Lỗi", "Không thể bật FaceID.");
+      }
     }
   };
 

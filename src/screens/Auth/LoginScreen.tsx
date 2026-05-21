@@ -309,13 +309,6 @@ export default function LoginScreen() {
       return;
     }
 
-    const reachability = await checkServerReachability();
-
-    if (!reachability.canReachServer) {
-      Alert.alert("Lỗi", SERVER_UNAVAILABLE_MESSAGE);
-      return;
-    }
-
     handleFaceIDLogin();
   };
 
@@ -363,7 +356,14 @@ export default function LoginScreen() {
       );
     } catch (err: any) {
       const code = err?.code;
-      const isCancelled = code === -128 || code === "-128";
+      const message = String(err?.message ?? "");
+      const normalizedMessage = message.toLowerCase();
+      const isCancelled =
+        code === -128 ||
+        code === "-128" ||
+        normalizedMessage.includes("cancel") ||
+        message.includes("UserCancel") ||
+        err?.name === "LAErrorUserCancel";
       const status = err?.response?.status;
       const needsLogin = err?.NEED_LOGIN === true;
       if (isCancelled) return;
@@ -372,7 +372,17 @@ export default function LoginScreen() {
         return;
       }
       if (!err?.response) {
-        Alert.alert("Lỗi kết nối", "Không thể kết nối đến máy chủ.");
+        const reachability = await checkServerReachability();
+        if (!reachability.canReachServer) {
+          Alert.alert("Lỗi", SERVER_UNAVAILABLE_MESSAGE);
+          return;
+        }
+      }
+      if (!err?.response) {
+        Alert.alert(
+          "Không thể dùng FaceID",
+          "Thiết bị chưa sẵn sàng cho FaceID hoặc ứng dụng chưa được phép sử dụng FaceID trong Cài đặt. Vui lòng đăng nhập bằng mật khẩu và kiểm tra lại quyền FaceID.",
+        );
         return;
       }
       Alert.alert("Lỗi", "Không thể đăng nhập bằng FaceID.");

@@ -28,11 +28,13 @@ export function useAppUpdateChecker({
 }: UseAppUpdateCheckerParams) {
   const hasCheckedUpdateRef = useRef(false);
   const isCheckingUpdateRef = useRef(false);
+  const shownUpdateVersionRef = useRef<string | null>(null);
   const checkAppUpdateRef = useRef<() => Promise<void>>(async () => {});
 
   useEffect(() => {
     if (!isAuthenticated) {
       hasCheckedUpdateRef.current = false;
+      shownUpdateVersionRef.current = null;
     }
   }, [isAuthenticated]);
 
@@ -58,6 +60,11 @@ export function useAppUpdateChecker({
         versionInfo.latestVersion,
       );
       if (!shouldShow) return;
+      if (shownUpdateVersionRef.current === versionInfo.latestVersion) {
+        return;
+      }
+
+      shownUpdateVersionRef.current = versionInfo.latestVersion;
 
       Alert.alert(
         "Có phiên bản mới",
