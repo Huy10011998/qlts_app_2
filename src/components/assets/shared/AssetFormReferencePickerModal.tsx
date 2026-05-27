@@ -1,4 +1,5 @@
 import React from "react";
+import { useNetworkAwareReload } from "../../../hooks/useNetworkAwareReload";
 import EnumAndReferencePickerModal from "../../modal/EnumAndReferencePickerModal";
 
 type AssetFormReferencePickerModalProps = {
@@ -10,6 +11,7 @@ type AssetFormReferencePickerModalProps = {
   ) => Promise<any>;
   modalItems: Array<{ value: any; text: string }>;
   modalVisible: boolean;
+  referenceErrorMessage?: string | null;
   refHasMore: boolean;
   refKeyword: string;
   refLoadingMore: boolean;
@@ -18,6 +20,7 @@ type AssetFormReferencePickerModalProps = {
   referenceData: Record<string, { items: any[]; totalCount: number }>;
   setFormData: React.Dispatch<React.SetStateAction<Record<string, any>>>;
   setModalVisible: (visible: boolean) => void;
+  setReferenceErrorMessage: (value: string | null) => void;
   setRefHasMore: (value: boolean) => void;
   setRefKeyword: (value: string) => void;
   setRefLoadingMore: (value: boolean) => void;
@@ -33,6 +36,7 @@ export default function AssetFormReferencePickerModal({
   loadReferenceModalData,
   modalItems,
   modalVisible,
+  referenceErrorMessage,
   refHasMore,
   refKeyword,
   refLoadingMore,
@@ -41,15 +45,67 @@ export default function AssetFormReferencePickerModal({
   referenceData,
   setFormData,
   setModalVisible,
+  setReferenceErrorMessage,
   setRefHasMore,
   setRefKeyword,
   setRefLoadingMore,
   setRefPage,
   setRefSearching,
 }: AssetFormReferencePickerModalProps) {
+  const [showSearchingIndicator, setShowSearchingIndicator] =
+    React.useState(false);
+
+  React.useEffect(() => {
+    if (refSearching) {
+      setShowSearchingIndicator(true);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setShowSearchingIndicator(false);
+    }, 220);
+
+    return () => clearTimeout(timer);
+  }, [refSearching]);
+
+  const retryReferenceLoad = React.useCallback(() => {
+    if (!activeEnumField || refSearching) return;
+
+    setRefSearching(true);
+    setRefPage(0);
+    setRefHasMore(true);
+
+    loadReferenceModalData(activeEnumField, {
+      textSearch: refKeyword,
+      page: 0,
+      append: false,
+    }).finally(() => setRefSearching(false));
+  }, [
+    activeEnumField,
+    loadReferenceModalData,
+    refKeyword,
+    refSearching,
+    setRefHasMore,
+    setRefPage,
+    setRefSearching,
+  ]);
+
+  useNetworkAwareReload(retryReferenceLoad, {
+    enabled: modalVisible && Boolean(activeEnumField),
+    hasError: Boolean(referenceErrorMessage),
+    onOffline: () => {
+      setRefSearching(false);
+      setRefLoadingMore(false);
+      setReferenceErrorMessage(
+        "Vui lòng kiểm tra kết nối mạng rồi thử lại.",
+      );
+    },
+  });
+
   return (
     <EnumAndReferencePickerModal
-      isSearching={refSearching}
+      isSearching={showSearchingIndicator}
+      errorMessage={referenceErrorMessage}
       loadingMore={refLoadingMore}
       visible={modalVisible}
       title={`${activeEnumField?.moTa || activeEnumField?.name}`}
@@ -121,8 +177,11 @@ export default function AssetFormReferencePickerModal({
           textSearch: refKeyword,
           page: refPage + 1,
           append: true,
+        }).then((result) => {
+          if (result !== "error") {
+            setRefPage((prev) => prev + 1);
+          }
         }).finally(() => {
-          setRefPage((prev) => prev + 1);
           setRefLoadingMore(false);
         });
       }}

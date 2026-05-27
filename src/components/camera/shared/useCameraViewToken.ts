@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState } from "react-native";
 import { getTokenViewCamera } from "../../../services/data/callApi";
-import { subscribeAppRefetch } from "../../../utils/AppRefetchBus";
 import {
   decodeTokenExpiry,
   isTokenStillValid,
 } from "./cameraStreamUtils";
+import { useNetworkAwareReload } from "../../../hooks/useNetworkAwareReload";
 
 type UseCameraViewTokenParams = {
   isFocused: boolean;
@@ -22,6 +22,9 @@ export function useCameraViewToken({
 }: UseCameraViewTokenParams) {
   const [cameraToken, setCameraToken] = useState("");
   const [thumbTimestamp, setThumbTimestamp] = useState(0);
+  const [tokenErrorMessage, setTokenErrorMessage] = useState<string | null>(
+    null,
+  );
 
   const cameraTokenRef = useRef("");
   const isFocusedRef = useRef(false);
@@ -89,6 +92,7 @@ export function useCameraViewToken({
             const timestamp = Date.now();
             setCameraToken(nextToken);
             setThumbTimestamp(timestamp);
+            setTokenErrorMessage(null);
             scheduleProactiveRefresh(nextToken);
             onTokenReceived?.(nextToken, timestamp);
           }
@@ -99,6 +103,11 @@ export function useCameraViewToken({
         await tokenRequestRef.current;
       } catch (err) {
         console.warn("getTokenViewCamera error:", err);
+        if (isFocusedRef.current) {
+          setTokenErrorMessage(
+            "Vui lòng kiểm tra kết nối mạng hoặc quay lại để thử lại.",
+          );
+        }
       } finally {
         tokenRequestRef.current = null;
       }
@@ -110,13 +119,19 @@ export function useCameraViewToken({
     fetchCameraTokenRef.current = fetchCameraToken;
   }, [fetchCameraToken]);
 
-  useEffect(() => {
-    const unsub = subscribeAppRefetch(() => {
-      fetchCameraTokenRef.current(true);
-    });
-
-    return () => unsub();
-  }, []);
+  useNetworkAwareReload(() => {
+    fetchCameraTokenRef.current(true);
+  }, {
+    enabled: isFocused,
+    hasError: Boolean(tokenErrorMessage),
+    onOffline: () => {
+      setCameraToken("");
+      cameraTokenRef.current = "";
+      setTokenErrorMessage(
+        "Vui lòng kiểm tra kết nối mạng hoặc quay lại để thử lại.",
+      );
+    },
+  });
 
   useEffect(() => {
     const sub = AppState.addEventListener("change", (state) => {
@@ -146,5 +161,6 @@ export function useCameraViewToken({
     setCameraToken,
     setThumbTimestamp,
     thumbTimestamp,
+    tokenErrorMessage,
   };
 }

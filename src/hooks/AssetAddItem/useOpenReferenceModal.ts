@@ -16,6 +16,7 @@ type Props = {
   setRefPage: (v: number) => void;
   setRefHasMore: (v: boolean) => void;
   setModalVisible: (v: boolean) => void;
+  setReferenceErrorMessage?: (v: string | null) => void;
   setReferenceData: React.Dispatch<React.SetStateAction<any>>;
   pageSize: number;
 };
@@ -34,6 +35,7 @@ export const useOpenReferenceModal = ({
   setRefPage,
   setRefHasMore,
   setModalVisible,
+  setReferenceErrorMessage,
   setReferenceData,
   pageSize,
 }: Props) => {
@@ -71,6 +73,8 @@ export const useOpenReferenceModal = ({
 
       if (!f.referenceName) return false;
 
+      setReferenceErrorMessage?.(null);
+
       const didLoad = await loadReferenceItemsForField({
         field: f,
         formData,
@@ -99,9 +103,27 @@ export const useOpenReferenceModal = ({
         },
       });
 
+      if (
+        didLoad &&
+        typeof didLoad === "object" &&
+        "errorMessage" in didLoad
+      ) {
+        setReferenceData((prev: any) => ({
+          ...prev,
+          [f.name]: {
+            items: [],
+            totalCount: 0,
+          },
+        }));
+        setReferenceErrorMessage?.(
+          String(didLoad.errorMessage || "Không thể tải dữ liệu."),
+        );
+        return "error";
+      }
+
       return didLoad !== false;
     },
-    [formData, pageSize, setReferenceData],
+    [formData, pageSize, setReferenceData, setReferenceErrorMessage],
   );
 
   const openReferenceModal = useCallback(
@@ -120,6 +142,8 @@ export const useOpenReferenceModal = ({
         currentValue: formData[f.name],
       });
 
+      setReferenceErrorMessage?.(null);
+
       if (f.typeProperty === TypeProperty.Reference) {
         if (!f.referenceName) return;
         const didLoad = await loadReferenceModalData(f);
@@ -137,11 +161,13 @@ export const useOpenReferenceModal = ({
     },
     [
       loadReferenceModalData,
+      formData,
       setActiveEnumField,
       setRefKeyword,
       setRefPage,
       setRefHasMore,
       setModalVisible,
+      setReferenceErrorMessage,
     ],
   );
 

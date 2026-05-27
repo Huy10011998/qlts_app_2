@@ -18,6 +18,7 @@ export default function AssetDetailsScreen() {
           getFieldValue,
           nameClass,
           fieldActive,
+          loadErrorMessage,
         }) => (
           <AssetDetailsContent
             activeTab={activeTab}
@@ -28,6 +29,7 @@ export default function AssetDetailsScreen() {
             item={item}
             nameClass={nameClass}
             fieldActive={fieldActive}
+            loadErrorMessage={loadErrorMessage}
           />
         )}
       </AssetDetails>

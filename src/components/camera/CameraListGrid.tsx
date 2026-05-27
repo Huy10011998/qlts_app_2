@@ -57,6 +57,7 @@ import {
   getVisiblePageIndexes,
 } from "./shared/cameraStreamUtils";
 import { useCameraViewToken } from "./shared/useCameraViewToken";
+import EmptyState from "../ui/EmptyState";
 
 const CameraCell = React.memo(
   ({
@@ -359,6 +360,7 @@ const CameraListGrid: React.FC = () => {
     clearTokenRefreshTimer,
     fetchCameraTokenRef,
     thumbTimestamp,
+    tokenErrorMessage,
   } = useCameraViewToken({
     isFocused,
     onActive: () => {
@@ -380,7 +382,9 @@ const CameraListGrid: React.FC = () => {
   });
 
   const SW = screenDims.width;
-  const [cols, rows] = LAYOUT_OPTIONS[layoutCount] ?? [4, 4];
+  const isGridLandscape = !fullscreenCam && screenDims.width > screenDims.height;
+  const effectiveLayoutCount = layoutCount;
+  const [cols, rows] = LAYOUT_OPTIONS[effectiveLayoutCount] ?? [4, 4];
   const perPage = cols * rows;
   const liveCellLimit =
     Platform.OS === "android"
@@ -409,9 +413,20 @@ const CameraListGrid: React.FC = () => {
   React.useEffect(() => {
     totalPagesRef.current = totalPages;
   }, [totalPages]);
+
+  React.useEffect(() => {
+    if (page < totalPages) return;
+    setPage(Math.max(totalPages - 1, 0));
+  }, [page, totalPages]);
+
   React.useEffect(() => {
     isFocusedRef.current = isFocused;
   }, [isFocused]);
+
+  React.useEffect(() => {
+    if (!isGridLandscape) return;
+    setShowLayoutPicker(false);
+  }, [isGridLandscape]);
 
   React.useEffect(() => {
     fullscreenCamRef.current = fullscreenCam;
@@ -436,16 +451,6 @@ const CameraListGrid: React.FC = () => {
   }, []);
 
   React.useEffect(() => {
-    if (fullscreenCam) {
-      Orientation.unlockAllOrientations();
-    } else {
-      Orientation.lockToPortrait();
-      setIsLandscape(false);
-    }
-  }, [fullscreenCam]);
-
-  React.useEffect(() => {
-    Orientation.lockToPortrait();
     navigation.setOptions({ gestureEnabled: false });
     return () => {
       Orientation.unlockAllOrientations();
@@ -813,6 +818,9 @@ const CameraListGrid: React.FC = () => {
 
   const handleCamDoubleTap = React.useCallback(
     (cam: any, idx: number) => {
+      const { width, height } = Dimensions.get("window");
+      setIsLandscape(width > height);
+      Orientation.unlockAllOrientations();
       setPendingThumbUrl(getCameraSnapshotUrl(cam.iD_Camera_Ma, thumbTimestamp));
       setActiveIndex(idx);
       setVideoReady(false);
@@ -988,12 +996,7 @@ const CameraListGrid: React.FC = () => {
   const closeFullscreen = React.useCallback(() => {
     if (androidFallbackRef.current) clearTimeout(androidFallbackRef.current);
     if (androidWatchdogRef.current) clearInterval(androidWatchdogRef.current);
-    if (Platform.OS === "ios") {
-      Orientation.unlockAllOrientations();
-      setTimeout(() => Orientation.lockToPortrait(), 0);
-    } else {
-      Orientation.lockToPortrait();
-    }
+    Orientation.unlockAllOrientations();
     setFsVideoKey(0);
     fsTranslateX.setValue(0);
     fsSwitchOpacity.setValue(0);
@@ -1025,12 +1028,7 @@ const CameraListGrid: React.FC = () => {
   const toggleFullscreenOrientation = () => {
     if (isLandscape) {
       setIsLandscape(false);
-      if (Platform.OS === "ios") {
-        Orientation.unlockAllOrientations();
-        setTimeout(() => Orientation.lockToPortrait(), 0);
-      } else {
-        Orientation.lockToPortrait();
-      }
+      Orientation.lockToPortrait();
       return;
     }
 
@@ -1038,10 +1036,24 @@ const CameraListGrid: React.FC = () => {
     Orientation.lockToLandscapeLeft();
   };
 
+  if (tokenErrorMessage) {
+    return (
+      <GestureHandlerRootView style={styles.root}>
+        <View style={styles.offlineState}>
+          <EmptyState
+            iconName="cloud-offline-outline"
+            title="Không thể tải dữ liệu Camera"
+            subtitle={tokenErrorMessage}
+          />
+        </View>
+      </GestureHandlerRootView>
+    );
+  }
+
   return (
     <GestureHandlerRootView style={styles.root}>
       <GestureDetector gesture={swipeGesture}>
-        <View style={styles.topHalf}>
+        <View style={[styles.topHalf, isGridLandscape && styles.topHalfFullscreen]}>
           <Animated.View
             style={[styles.grid, { transform: [{ translateX }] }]}
             onLayout={(e) => setGridContainerH(e.nativeEvent.layout.height)}
@@ -1090,79 +1102,81 @@ const CameraListGrid: React.FC = () => {
         </View>
       </GestureDetector>
 
-      <View style={[styles.bottomHalf, { paddingBottom: insets.bottom }]}>
-        <View style={styles.toolbar}>
-          <TouchableOpacity
-            style={styles.toolBtn}
-            onPress={() => setIsPaused((v) => !v)}
-          >
-            <Ionicons
-              name={isPaused ? "play-outline" : "pause-outline"}
-              size={26}
-              color="#444"
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.toolBtn}
-            onPress={() => setIsMuted((v) => !v)}
-          >
-            <Ionicons
-              name={isMuted ? "volume-mute-outline" : "volume-medium-outline"}
-              size={26}
-              color={isMuted ? "#e53935" : "#444"}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.toolBtn}>
-            <View style={styles.sdBadge}>
-              <Text style={styles.sdText}>SD</Text>
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.toolBtn}
-            onPress={() => setShowLayoutPicker((v) => !v)}
-          >
-            <MaterialCommunityIcons
-              name="view-grid-outline"
-              size={26}
-              color="#444"
-            />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.toolBtn}>
-            <MaterialCommunityIcons name="overscan" size={26} color="#444" />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.divider} />
-        <View style={styles.actionContainer}>
-          <TouchableOpacity
-            style={[styles.playbackBtn, styles.playbackBtnDisabled]}
-            disabled
-          >
-            <Ionicons name="play" size={16} color="#bbb" />
-            <Text style={[styles.playbackText, styles.playbackTextDisabled]}>
-              Phát lại
-            </Text>
-          </TouchableOpacity>
-          <View style={styles.iconGroup}>
-            <TouchableOpacity style={styles.iconBtn} onPress={handleSnapshot}>
-              <Ionicons name="camera-outline" size={24} color="#666" />
+      {!isGridLandscape && (
+        <View style={[styles.bottomHalf, { paddingBottom: insets.bottom }]}>
+          <View style={styles.toolbar}>
+            <TouchableOpacity
+              style={styles.toolBtn}
+              onPress={() => setIsPaused((v) => !v)}
+            >
+              <Ionicons
+                name={isPaused ? "play-outline" : "pause-outline"}
+                size={26}
+                color="#444"
+              />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.iconBtn}>
-              <Ionicons name="radio-button-on-outline" size={24} color="#666" />
+            <TouchableOpacity
+              style={styles.toolBtn}
+              onPress={() => setIsMuted((v) => !v)}
+            >
+              <Ionicons
+                name={isMuted ? "volume-mute-outline" : "volume-medium-outline"}
+                size={26}
+                color={isMuted ? "#e53935" : "#444"}
+              />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.iconBtn}>
-              <Ionicons name="mic-outline" size={24} color="#666" />
+            <TouchableOpacity style={styles.toolBtn}>
+              <View style={styles.sdBadge}>
+                <Text style={styles.sdText}>SD</Text>
+              </View>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.iconBtn}>
-              <Ionicons name="person-circle-outline" size={24} color="#666" />
+            <TouchableOpacity
+              style={styles.toolBtn}
+              onPress={() => setShowLayoutPicker((v) => !v)}
+            >
+              <MaterialCommunityIcons
+                name="view-grid-outline"
+                size={26}
+                color="#444"
+              />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.toolBtn}>
+              <MaterialCommunityIcons name="overscan" size={26} color="#444" />
             </TouchableOpacity>
           </View>
+          <View style={styles.divider} />
+          <View style={styles.actionContainer}>
+            <TouchableOpacity
+              style={[styles.playbackBtn, styles.playbackBtnDisabled]}
+              disabled
+            >
+              <Ionicons name="play" size={16} color="#bbb" />
+              <Text style={[styles.playbackText, styles.playbackTextDisabled]}>
+                Phát lại
+              </Text>
+            </TouchableOpacity>
+            <View style={styles.iconGroup}>
+              <TouchableOpacity style={styles.iconBtn} onPress={handleSnapshot}>
+                <Ionicons name="camera-outline" size={24} color="#666" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.iconBtn}>
+                <Ionicons name="radio-button-on-outline" size={24} color="#666" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.iconBtn}>
+                <Ionicons name="mic-outline" size={24} color="#666" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.iconBtn}>
+                <Ionicons name="person-circle-outline" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+          </View>
+          <View style={styles.chevronWrapper}>
+            <Ionicons name="chevron-down" size={20} color="#aaa" />
+          </View>
         </View>
-        <View style={styles.chevronWrapper}>
-          <Ionicons name="chevron-down" size={20} color="#aaa" />
-        </View>
-      </View>
+      )}
 
-      {showLayoutPicker && (
+      {showLayoutPicker && !isGridLandscape && (
         <View style={styles.layoutPicker}>
           {CAMERA_LAYOUT_CHOICES.map((n) => (
             <TouchableOpacity
@@ -1425,7 +1439,14 @@ export default CameraListGrid;
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  offlineState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+  },
   topHalf: { flex: 5, backgroundColor: "#000", overflow: "hidden" },
+  topHalfFullscreen: { flex: 1 },
   grid: { flex: 1, flexDirection: "row", flexWrap: "wrap" },
   cell: {
     backgroundColor: "#111",

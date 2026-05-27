@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { View, Text, FlatList, Pressable, StyleSheet } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { MenuItemResponse, StackNavigation, StackRoute } from "../../types";
@@ -9,6 +9,8 @@ import EmptyState from "../ui/EmptyState";
 import { error } from "../../utils/Logger";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { BG, BRAND_RED } from "./shared/listTheme";
+import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
+import { isNetworkRequestError } from "../../utils/helpers/api";
 
 export default function AssetDeTailsTab({
   nameClassRoot,
@@ -19,47 +21,62 @@ export default function AssetDeTailsTab({
   const route = useRoute<StackRoute<"AssetDetails">>();
 
   const { id, nameClass } = route.params;
-  const { isMounted, showAlertIfActive } = useSafeAlert();
+  const { isMounted } = useSafeAlert();
 
   const [isLoading, setIsLoading] = useState(true);
   const [items, setItems] = useState<MenuItemResponse[]>([]);
+  const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
+
+  const fetchDetails = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      if (!id || !nameClass) throw new Error("Thiếu ID hoặc nameClass");
+
+      const response = await getClassReference(nameClass);
+      const data = response?.data;
+
+      if (!Array.isArray(data)) {
+        throw new Error("Dữ liệu trả về không hợp lệ");
+      }
+
+      setItems(
+        data.map((item: any): MenuItemResponse => {
+          const iconName = item.iconMobile as string;
+
+          return {
+            ...item,
+            label: item.moTa ?? "Không có mô tả",
+            icon: iconName ? iconName : "document-text-outline",
+          };
+        }),
+      );
+      setLoadErrorMessage(null);
+    } catch (e) {
+      if (!isNetworkRequestError(e)) error(e);
+      setItems([]);
+      setLoadErrorMessage(
+        "Vui lòng kiểm tra kết nối mạng hoặc quay lại để thử lại.",
+      );
+    } finally {
+      if (isMounted()) {
+        setIsLoading(false);
+      }
+    }
+  }, [id, isMounted, nameClass]);
 
   useEffect(() => {
-    const fetchDetails = async () => {
-      setIsLoading(true);
-      try {
-        if (!id || !nameClass) throw new Error("Thiếu ID hoặc nameClass");
-
-        const response = await getClassReference(nameClass);
-        const data = response?.data;
-
-        if (!Array.isArray(data)) {
-          throw new Error("Dữ liệu trả về không hợp lệ");
-        }
-
-        setItems(
-          data.map((item: any): MenuItemResponse => {
-            const iconName = item.iconMobile as string;
-
-            return {
-              ...item,
-              label: item.moTa ?? "Không có mô tả",
-              icon: iconName ? iconName : "document-text-outline",
-            };
-          }),
-        );
-      } catch (e) {
-        error(e);
-        showAlertIfActive("Lỗi", `Không thể tải chi tiết ${nameClass}`);
-      } finally {
-        if (isMounted()) {
-          setIsLoading(false);
-        }
-      }
-    };
-
     fetchDetails();
-  }, [id, isMounted, nameClass, showAlertIfActive]);
+  }, [fetchDetails]);
+
+  useNetworkAwareReload(fetchDetails, {
+    hasError: Boolean(loadErrorMessage),
+    onOffline: () => {
+      setItems([]);
+      setLoadErrorMessage(
+        "Vui lòng kiểm tra kết nối mạng hoặc quay lại để thử lại.",
+      );
+    },
+  });
 
   const handlePress = (item: MenuItemResponse) => {
     navigation.navigate("AssetRelatedList", {
@@ -103,9 +120,18 @@ export default function AssetDeTailsTab({
         ]}
         ListEmptyComponent={
           <EmptyState
-            iconName="albums-outline"
-            title="Không có dữ liệu liên quan"
-            subtitle="Danh mục liên kết sẽ hiển thị tại đây khi có dữ liệu"
+            iconName={
+              loadErrorMessage ? "cloud-offline-outline" : "albums-outline"
+            }
+            title={
+              loadErrorMessage
+                ? "Không thể tải dữ liệu liên quan"
+                : "Không có dữ liệu liên quan"
+            }
+            subtitle={
+              loadErrorMessage ||
+              "Danh mục liên kết sẽ hiển thị tại đây khi có dữ liệu"
+            }
           />
         }
       />

@@ -284,17 +284,40 @@ const ShareholdersMeetingScreen: React.FC = () => {
           </View>
 
           <View style={attStyles.searchContainer}>
-            <Text style={attStyles.searchIcon}>🔍</Text>
+            <View style={attStyles.searchIconWrap}>
+              <MaterialCommunityIcons
+                name="magnify"
+                size={16}
+                color="#8A95A3"
+              />
+            </View>
             <TextInput
               style={attStyles.searchInput}
               placeholder="Tìm theo tên hoặc mã cổ đông..."
-              placeholderTextColor={C.textMuted}
+              placeholderTextColor="#B0B8C4"
               value={searchQuery}
               onChangeText={setSearchQuery}
+              clearButtonMode="never"
+              returnKeyType="search"
             />
-            <View style={attStyles.spinnerWrapper}>
-              {isSearching && <IsLoading size="small" color={C.red} />}
-            </View>
+            {isSearching ? (
+              <View style={attStyles.spinnerWrapper}>
+                <IsLoading size="small" color={C.red} />
+              </View>
+            ) : null}
+            {!isSearching && searchQuery.length > 0 ? (
+              <TouchableOpacity
+                onPress={() => setSearchQuery("")}
+                style={attStyles.clearButton}
+                hitSlop={8}
+              >
+                <MaterialCommunityIcons
+                  name="close-circle"
+                  size={16}
+                  color="#B0B8C4"
+                />
+              </TouchableOpacity>
+            ) : null}
           </View>
 
           <FlatList
@@ -650,28 +673,41 @@ const attStyles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: C.surface,
     marginHorizontal: 16,
-    borderRadius: 10,
+    borderRadius: 14,
     paddingHorizontal: 12,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    elevation: 1,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#EDF0F5",
+    shadowColor: "#1A2340",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  searchIcon: { fontSize: 14, marginRight: 8 },
+  searchIconWrap: {
+    marginRight: 8,
+    width: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   searchInput: {
     flex: 1,
     color: C.textPrimary,
-    paddingVertical: 11,
+    paddingVertical: 13,
     fontSize: 14,
+    fontWeight: "400",
   },
   spinnerWrapper: {
-    width: 22,
-    alignItems: "flex-end",
+    width: 24,
+    height: 24,
+    alignItems: "center",
     justifyContent: "center",
+    marginLeft: 6,
+  },
+  clearButton: {
+    padding: 4,
+    marginLeft: 4,
   },
   flatList: { flex: 1, backgroundColor: C.bg },
   list: { flexGrow: 1, paddingHorizontal: 16, paddingBottom: 20 },

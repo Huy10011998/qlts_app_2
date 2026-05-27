@@ -1,7 +1,14 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Alert, TouchableOpacity } from "react-native";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import { useNetworkAwareReload } from "../../../hooks/useNetworkAwareReload";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDebounce } from "../../../hooks/useDebounce";
 import {
@@ -79,6 +86,14 @@ export function useShareholdersMeetingController() {
     string | null
   >(null);
   const [isRefreshingAttendance, setIsRefreshingAttendance] = useState(false);
+  const isMountedRef = useRef(true);
+  const loadRequestIdRef = useRef(0);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const selectedOpinion = useMemo(
     () => opinions.find((item) => item.id === selectedOpinionId) ?? null,
@@ -258,6 +273,90 @@ export function useShareholdersMeetingController() {
     }
   }, [activeMeeting?.id, reloadShareholders]);
 
+  const loadMeetingData = useCallback(async (options?: { silent?: boolean }) => {
+    if (!loaded) return;
+    if (!hasAnyViewPermission) {
+      setIsMeetingLoading(false);
+      return;
+    }
+
+    const requestId = loadRequestIdRef.current + 1;
+    loadRequestIdRef.current = requestId;
+    const canCommit = () =>
+      isMountedRef.current && loadRequestIdRef.current === requestId;
+
+    try {
+      if (!options?.silent) {
+        setIsMeetingLoading(true);
+      }
+      setMeetingError(null);
+      setVotingError(null);
+
+      const activeRes = await getActiveDhcd<ActiveMeetingResponse>();
+      const meeting = activeRes?.data ?? null;
+
+      if (!canCommit()) return;
+
+      if (!meeting || !meeting.id) {
+        setActiveMeeting(null);
+        setShareholders([]);
+        setOpinions([]);
+        setSelectedOpinionId("");
+        return;
+      }
+
+      setActiveMeeting(meeting);
+
+      const tasks: Promise<any>[] = [];
+
+      if (canViewAttendance) {
+        tasks.push(
+          fetchShareholders(meeting.id).then((data) => {
+            if (!canCommit()) return;
+            setShareholders(data);
+          }),
+        );
+      }
+
+      if (canViewVoting) {
+        tasks.push(
+          fetchOpinions(meeting.id)
+            .then((data) => {
+              if (!canCommit()) return;
+              setOpinions(data);
+              setSelectedOpinionId(data[0]?.id ?? "");
+            })
+            .catch(() => {
+              if (!canCommit()) return;
+              setOpinions([]);
+              setSelectedOpinionId("");
+              setVotingError("Không tải được danh sách ý kiến.");
+            }),
+        );
+      }
+
+      await Promise.all(tasks);
+    } catch (error) {
+      if (!canCommit()) return;
+      setActiveMeeting(null);
+      setShareholders([]);
+      setOpinions([]);
+      setSelectedOpinionId("");
+      setMeetingError("Không tải được dữ liệu đại hội cổ đông.");
+    } finally {
+      if (canCommit()) {
+        setIsMeetingLoading(false);
+      }
+    }
+  }, [
+    canViewAttendance,
+    canViewVoting,
+    fetchOpinions,
+    fetchShareholders,
+    hasAnyViewPermission,
+    loaded,
+  ]);
+
   useEffect(() => {
     if (
       !isFocused ||
@@ -304,91 +403,19 @@ export function useShareholdersMeetingController() {
   ]);
 
   useEffect(() => {
-    if (!loaded) return;
-    if (!hasAnyViewPermission) {
-      setIsMeetingLoading(false);
-      return;
-    }
+    loadMeetingData();
+  }, [loadMeetingData]);
 
-    let cancelled = false;
-
-    const fetchMeetingData = async () => {
-      try {
-        setIsMeetingLoading(true);
-        setMeetingError(null);
-        setVotingError(null);
-
-        const activeRes = await getActiveDhcd<ActiveMeetingResponse>();
-        const meeting = activeRes?.data ?? null;
-
-        if (cancelled) return;
-
-        if (!meeting || !meeting.id) {
-          setActiveMeeting(null);
-          setShareholders([]);
-          setOpinions([]);
-          setSelectedOpinionId("");
-          return;
-        }
-
-        setActiveMeeting(meeting);
-
-        const tasks: Promise<any>[] = [];
-
-        if (canViewAttendance) {
-          tasks.push(
-            fetchShareholders(meeting.id).then((data) => {
-              if (!cancelled) setShareholders(data);
-            }),
-          );
-        }
-
-        if (canViewVoting) {
-          tasks.push(
-            fetchOpinions(meeting.id)
-              .then((data) => {
-                if (cancelled) return;
-                setOpinions(data);
-                setSelectedOpinionId(data[0]?.id ?? "");
-              })
-              .catch(() => {
-                if (cancelled) return;
-                setOpinions([]);
-                setSelectedOpinionId("");
-                setVotingError("Không tải được danh sách ý kiến.");
-              }),
-          );
-        }
-
-        await Promise.all(tasks);
-      } catch (error) {
-        if (cancelled) return;
-
-        setActiveMeeting(null);
-        setShareholders([]);
-        setOpinions([]);
-        setSelectedOpinionId("");
-        setMeetingError("Không tải được dữ liệu đại hội cổ đông.");
-      } finally {
-        if (!cancelled) {
-          setIsMeetingLoading(false);
-        }
-      }
-    };
-
-    fetchMeetingData();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    canViewAttendance,
-    canViewVoting,
-    fetchOpinions,
-    fetchShareholders,
-    hasAnyViewPermission,
-    loaded,
-  ]);
+  useNetworkAwareReload(() => {
+    loadMeetingData({ silent: true });
+  }, {
+    enabled: isFocused && loaded && hasAnyViewPermission,
+    hasError: Boolean(meetingError || votingError),
+    onOffline: () => {
+      setMeetingError("Không tải được dữ liệu đại hội cổ đông.");
+      setVotingError("Không tải được danh sách ý kiến.");
+    },
+  });
 
   const handleCheckIn = useCallback(
     (

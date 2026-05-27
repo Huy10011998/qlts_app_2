@@ -25,6 +25,42 @@ import { useSafeAlert } from "../../hooks/useSafeAlert";
 import QrScannerGateView from "../../components/qrcode/shared/QrScannerGateView";
 import QrScannerViewportOverlay from "../../components/qrcode/shared/QrScannerViewportOverlay";
 import useQrScannerController from "../../components/qrcode/shared/useQrScannerController";
+import { getDetailsQr } from "../../services/data/callApi";
+import { getMatchedKey } from "../../utils/Helper";
+import { isNetworkRequestError } from "../../utils/helpers/api";
+
+const QR_BASE_URL_PREFIX = "https://os.cholimexfood.com.vn/taisan";
+const QR_BASE_URL_PREFIX_REGEX = new RegExp(
+  `^${QR_BASE_URL_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=/|$)`,
+  "i",
+);
+
+const normalizeQrScanValue = (value: string) => {
+  const trimmedValue = value.trim();
+  const isExternalQrUrl = QR_BASE_URL_PREFIX_REGEX.test(trimmedValue);
+
+  return {
+    isExternalQrUrl,
+    scanPath: isExternalQrUrl
+      ? trimmedValue.replace(QR_BASE_URL_PREFIX_REGEX, "")
+      : trimmedValue,
+  };
+};
+
+const getDetailIdFromItemData = (itemData: any, fallbackId: string) => {
+  const detailItem = Array.isArray(itemData) ? itemData[0] : itemData;
+
+  if (detailItem && typeof detailItem === "object") {
+    const matchedIdKey = getMatchedKey(detailItem, "id");
+    const detailId = matchedIdKey ? detailItem[matchedIdKey] : undefined;
+
+    if (detailId !== null && detailId !== undefined && String(detailId).trim()) {
+      return String(detailId);
+    }
+  }
+
+  return fallbackId;
+};
 
 export default function QrScannerScreen() {
   const navigation = useNavigation<any>();
@@ -82,9 +118,9 @@ export default function QrScannerScreen() {
       ReactNativeHapticFeedback.trigger("impactLight");
 
       const raw = codes[0]?.value ?? "";
-      const normalizedRaw = raw.trim();
+      const { isExternalQrUrl, scanPath } = normalizeQrScanValue(raw);
 
-      if (!normalizedRaw) {
+      if (!scanPath) {
         showAlertIfActive("Mã QR không hợp lệ", "", [
           {
             text: "OK",
@@ -94,7 +130,7 @@ export default function QrScannerScreen() {
         return;
       }
 
-      const parts = normalizedRaw.replace(/^\//, "").split("/").filter(Boolean);
+      const parts = scanPath.replace(/^\//, "").split("/").filter(Boolean);
 
       try {
         if (parts.length !== 2) {
@@ -107,8 +143,10 @@ export default function QrScannerScreen() {
           return;
         }
 
-        const [nameClass, id] = parts;
-        const detailRes = await getDetails(nameClass, id);
+        const [nameClass, idOrQr] = parts;
+        const detailRes = isExternalQrUrl
+          ? await getDetailsQr(nameClass, "QR:" + idOrQr)
+          : await getDetails(nameClass, idOrQr);
         const itemData = detailRes?.data;
 
         if (
@@ -131,8 +169,12 @@ export default function QrScannerScreen() {
           getPropertyClass(nameClass),
         ]);
 
+        const detailId = isExternalQrUrl
+          ? getDetailIdFromItemData(itemData, idOrQr)
+          : idOrQr;
+
         navigation.navigate("QrDetails", {
-          id,
+          id: detailId,
           titleHeader: nameClass,
           nameClass,
           field: res?.data || [],
@@ -140,13 +182,24 @@ export default function QrScannerScreen() {
           itemData,
         });
       } catch (e) {
-        error(e);
-        showAlertIfActive("Mã QR không hợp lệ", "", [
-          {
-            text: "OK",
-            onPress: resumeScanner,
-          },
-        ]);
+        const isNetworkError = isNetworkRequestError(e);
+
+        if (!isNetworkError) {
+          error(e);
+        }
+
+        showAlertIfActive(
+          isNetworkError ? "Lỗi kết nối" : "Mã QR không hợp lệ",
+          isNetworkError
+            ? "Không thể tải thông tin mã QR. Vui lòng kiểm tra kết nối mạng rồi thử lại."
+            : "",
+          [
+            {
+              text: "OK",
+              onPress: resumeScanner,
+            },
+          ],
+        );
       }
     },
   });

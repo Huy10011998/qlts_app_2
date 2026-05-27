@@ -6,10 +6,11 @@ import { DetailsHistoryProps, Field, StackRoute } from "../../types/index";
 import { getDetailsHistory } from "../../services/data/callApi";
 import { error } from "../../utils/Logger";
 import { getFieldValue } from "../../utils/fields/GetFieldValue";
-import { useAutoReload } from "../../hooks/useAutoReload";
+import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { useDetailViewState } from "../../hooks/useDetailViewState";
 import { C } from "../../utils/helpers/colors";
+import EmptyState from "../ui/EmptyState";
 
 export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
   const route = useRoute<StackRoute<"AssetHistoryDetail">>();
@@ -18,7 +19,8 @@ export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [item, setItem] = useState<any>(null);
   const [previousItem, setPreviousItem] = useState<any>(null);
-  const { isMounted, showAlertIfActive } = useSafeAlert();
+  const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
+  const { isMounted } = useSafeAlert();
 
   const {
     activeTab,
@@ -44,22 +46,36 @@ export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
         const prevResponse = await getDetailsHistory(nameClass, id_previous);
         setPreviousItem(prevResponse.data);
       }
+      setLoadErrorMessage(null);
     } catch (e) {
       error(e);
-      showAlertIfActive("Lỗi", `Không thể tải chi tiết lịch sử ${nameClass}`);
+      setItem(null);
+      setPreviousItem(null);
+      setLoadErrorMessage(
+        "Vui lòng kiểm tra kết nối mạng hoặc quay lại để thử lại.",
+      );
     } finally {
       if (isMounted()) {
         setIsLoading(false);
       }
     }
-  }, [id, id_previous, isMounted, nameClass, showAlertIfActive]);
+  }, [id, id_previous, isMounted, nameClass]);
 
   useEffect(() => {
     setActiveTab("list");
     fetchDetails();
   }, [fetchDetails, setActiveTab]);
 
-  useAutoReload(fetchDetails);
+  useNetworkAwareReload(fetchDetails, {
+    hasError: Boolean(loadErrorMessage),
+    onOffline: () => {
+      setItem(null);
+      setPreviousItem(null);
+      setLoadErrorMessage(
+        "Vui lòng kiểm tra kết nối mạng hoặc quay lại để thử lại.",
+      );
+    },
+  });
 
   // so sánh field
   const isFieldChanged = (
@@ -83,17 +99,27 @@ export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
         </View>
       )}
 
-      {children({
-        activeTab,
-        setActiveTab: handleChangeTab,
-        groupedFields,
-        collapsedGroups,
-        toggleGroup,
-        item,
-        previousItem,
-        getFieldValue,
-        isFieldChanged,
-      })}
+      {loadErrorMessage ? (
+        <View style={styles.emptyStateRoot}>
+          <EmptyState
+            iconName="cloud-offline-outline"
+            title="Không thể tải chi tiết lịch sử"
+            subtitle={loadErrorMessage}
+          />
+        </View>
+      ) : (
+        children({
+          activeTab,
+          setActiveTab: handleChangeTab,
+          groupedFields,
+          collapsedGroups,
+          toggleGroup,
+          item,
+          previousItem,
+          getFieldValue,
+          isFieldChanged,
+        })
+      )}
     </View>
   );
 }
@@ -108,5 +134,11 @@ const styles = StyleSheet.create({
     top: 8,
     right: 8,
     zIndex: 10,
+  },
+  emptyStateRoot: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
   },
 });

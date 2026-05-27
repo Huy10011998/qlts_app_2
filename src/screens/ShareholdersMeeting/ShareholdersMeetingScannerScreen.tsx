@@ -14,6 +14,7 @@ import {
 import {
   RouteProp,
   useFocusEffect,
+  useIsFocused,
   useNavigation,
   useRoute,
 } from "@react-navigation/native";
@@ -43,6 +44,8 @@ import {
   VOTING_CHOICE_LABEL_MAP,
   VOTING_CHOICE_VALUE_MAP,
 } from "./shared/shareholdersMeetingHelpers";
+import { useAutoReload } from "../../hooks/useAutoReload";
+import { isNetworkRequestError } from "../../utils/helpers/api";
 
 type AttendanceActionResponse = {
   message?: string;
@@ -63,6 +66,7 @@ type VotingActionResponse = {
 
 export default function ShareholdersMeetingScannerScreen() {
   const navigation = useNavigation<any>();
+  const isFocused = useIsFocused();
   const route =
     useRoute<RouteProp<RootStackParamList, "ShareholdersMeetingScanner">>();
   const insets = useSafeAreaInsets();
@@ -109,6 +113,10 @@ export default function ShareholdersMeetingScannerScreen() {
   useEffect(() => {
     reloadShareholders();
   }, [reloadShareholders]);
+
+  useAutoReload(() => {
+    reloadShareholders();
+  }, { enabled: isFocused });
 
   useFocusEffect(
     useCallback(() => {
@@ -317,11 +325,15 @@ export default function ShareholdersMeetingScannerScreen() {
                 ],
               );
             } catch (error) {
+              const isNetworkError = isNetworkRequestError(error);
+
               Alert.alert(
-                "Lỗi",
-                scanMode === "attendance"
-                  ? "Không thể điểm danh cổ đông này."
-                  : "Không thể ghi nhận ý kiến cổ đông này.",
+                isNetworkError ? "Lỗi kết nối" : "Lỗi",
+                isNetworkError
+                  ? "Không thể gửi thông tin mã QR. Vui lòng kiểm tra kết nối mạng rồi thử lại."
+                  : scanMode === "attendance"
+                    ? "Không thể điểm danh cổ đông này."
+                    : "Không thể ghi nhận ý kiến cổ đông này.",
                 [
                   {
                     text: "OK",

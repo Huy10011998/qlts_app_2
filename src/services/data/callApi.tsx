@@ -33,7 +33,9 @@ const AUTH_STORAGE_KEYS = {
   refreshToken: "refreshToken",
 } as const;
 
-const ACCESS_TOKEN_REFRESH_LEEWAY_MS = 60_000;
+const ACCESS_TOKEN_SOFT_REFRESH_LEEWAY_MS = 5 * 60_000;
+const ACCESS_TOKEN_HARD_REFRESH_LEEWAY_MS = 15_000;
+const BACKGROUND_REFRESH_RETRY_COOLDOWN_MS = 30_000;
 
 // GLOBAL LOGOUT HANDLER
 let onAuthLogout: ((reason?: LogoutReason) => Promise<void>) | null = null;
@@ -181,12 +183,15 @@ export const getAccessTokenExpiry = (token: string): number | null => {
 
 export const shouldRefreshAccessToken = (
   token: string,
-  leewayMs = ACCESS_TOKEN_REFRESH_LEEWAY_MS,
+  leewayMs = ACCESS_TOKEN_SOFT_REFRESH_LEEWAY_MS,
 ) => {
   const expiry = getAccessTokenExpiry(token);
   if (!expiry) return false;
   return expiry - Date.now() <= leewayMs;
 };
+
+const shouldBlockRequestForTokenRefresh = (token: string) =>
+  shouldRefreshAccessToken(token, ACCESS_TOKEN_HARD_REFRESH_LEEWAY_MS);
 
 const withAuthHeader = (
   headers: InternalAxiosRequestConfig["headers"] | undefined,
@@ -247,6 +252,7 @@ const triggerLogoutOnce = async (reason: LogoutReason = "EXPIRED") => {
 // REFRESH FLOW
 let refreshPromise: Promise<RefreshedSession> | null = null;
 let logoutPromise: Promise<void> | null = null;
+let lastBackgroundRefreshAttemptAt = 0;
 
 export const refreshTokenFlow = async (): Promise<RefreshedSession> => {
   if (refreshPromise) return refreshPromise;
@@ -305,14 +311,51 @@ export const refreshTokenFlow = async (): Promise<RefreshedSession> => {
   return refreshPromise;
 };
 
+export const refreshAccessTokenInBackground = async (source = "background") => {
+  const now = Date.now();
+  if (
+    !refreshPromise &&
+    now - lastBackgroundRefreshAttemptAt < BACKGROUND_REFRESH_RETRY_COOLDOWN_MS
+  ) {
+    return;
+  }
+
+  lastBackgroundRefreshAttemptAt = now;
+
+  try {
+    const token = await getToken();
+    if (!token || !shouldRefreshAccessToken(token)) return;
+
+    log("[API] Soft refresh access token", { source });
+    await refreshTokenFlow();
+  } catch (err: any) {
+    if (isNeedLoginError(err)) {
+      warn("[API] Background refresh expired → logout");
+      await triggerLogoutOnce("EXPIRED");
+      return;
+    }
+
+    warn("[API] Background refresh failed", {
+      source,
+      code: err?.code,
+      message: err?.message,
+    });
+  }
+};
+
 const ensureValidAccessToken = async () => {
   const token = await getToken();
   if (!token) return null;
   if (!shouldRefreshAccessToken(token)) return token;
 
-  warn("[API] Access token near expiry → refresh before request");
-  const refreshedSession = await refreshTokenFlow();
-  return refreshedSession.accessToken;
+  if (shouldBlockRequestForTokenRefresh(token)) {
+    warn("[API] Access token expired/critical → refresh before request");
+    const refreshedSession = await refreshTokenFlow();
+    return refreshedSession.accessToken;
+  }
+
+  refreshAccessTokenInBackground("request");
+  return token;
 };
 
 // REQUEST
@@ -420,6 +463,9 @@ export const getBuildTree = async <T = any,>(nameClass: string) =>
 
 export const getDetails = async <T = any,>(nameClass: string, id: string) =>
   callApi<T>("POST", `/${nameClass}/get-details`, { id });
+
+export const getDetailsQr = async <T = any,>(nameClass: string, qr: string) =>
+  callApi<T>("POST", `/${nameClass}/get-details`, { id: 0, qr });
 
 export const getDetailsHistory = async <T = any,>(
   nameClass: string,

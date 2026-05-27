@@ -1,4 +1,11 @@
-import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
+import React, {
+  useEffect,
+  useState,
+  useMemo,
+  useRef,
+  useCallback,
+} from "react";
+import { useIsFocused } from "@react-navigation/native";
 import {
   View,
   FlatList,
@@ -17,6 +24,7 @@ import EmptyState from "../../components/ui/EmptyState";
 import { getVungCamera } from "../../services/data/callApi";
 import { error } from "../../utils/Logger";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
+import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import CameraMenuDropdownItem from "./shared/CameraMenuDropdownItem";
 import CameraMenuSearchBar from "./shared/CameraMenuSearchBar";
 import {
@@ -37,6 +45,7 @@ if (
 }
 
 export default function CameraScreen() {
+  const isFocused = useIsFocused();
   const { canView, loaded } = useViewPermission();
   const hasViewPermission = loaded && canView("Camera");
   const [data, setData] = useState<CameraItem[]>([]);
@@ -44,13 +53,14 @@ export default function CameraScreen() {
   const [isRefreshingTop, setIsRefreshingTop] = useState(false);
   const [search, setSearch] = useState("");
   const [isSearching, setIsSearching] = useState(false);
+  const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
 
   const debouncedSearch = useDebounce(search, 400);
   const [expandedIds, setExpandedIds] = useState<string[]>([]);
   const [rawData, setRawData] = useState<any[]>([]);
 
   const fetchingRef = useRef(false);
-  const { isMounted, showAlertIfActive } = useSafeAlert();
+  const { isMounted } = useSafeAlert();
 
   const fetchData = useCallback(async (options?: { isRefresh?: boolean }) => {
     if (fetchingRef.current) return;
@@ -66,9 +76,12 @@ export default function CameraScreen() {
 
       setRawData(response.data);
       setData(buildCameraTree(response.data));
+      setLoadErrorMessage(null);
     } catch (e) {
       error("API error:", e);
-      showAlertIfActive("Lỗi", "Không tải được dữ liệu camera.");
+      setLoadErrorMessage(
+        "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại.",
+      );
     } finally {
       fetchingRef.current = false;
       if (isMounted()) {
@@ -76,7 +89,7 @@ export default function CameraScreen() {
         setIsRefreshingTop(false);
       }
     }
-  }, [isMounted, showAlertIfActive]);
+  }, [isMounted]);
 
   const refreshTop = async () => {
     if (isRefreshingTop) return;
@@ -92,6 +105,18 @@ export default function CameraScreen() {
     }
     fetchData();
   }, [fetchData, hasViewPermission, loaded]);
+
+  useNetworkAwareReload(() => {
+    fetchData();
+  }, {
+    enabled: isFocused && loaded && hasViewPermission,
+    hasError: Boolean(loadErrorMessage),
+    onOffline: () => {
+      setLoadErrorMessage(
+        "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại.",
+      );
+    },
+  });
 
   const { filteredTree, autoExpand } = useMemo(
     () => filterCameraTree(data, debouncedSearch),
@@ -140,7 +165,23 @@ export default function CameraScreen() {
   if (isFetching && !isRefreshingTop && !debouncedSearch)
     return <IsLoading size="large" color={CAMERA_MENU_BRAND_RED} />;
 
+  if (loadErrorMessage) {
+    return (
+      <KeyboardAvoidingView
+        style={[styles.container, styles.centerState]}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <EmptyState
+          iconName="cloud-offline-outline"
+          title="Không thể tải dữ liệu Camera"
+          subtitle={loadErrorMessage}
+        />
+      </KeyboardAvoidingView>
+    );
+  }
+
   const isEmpty = filteredTree.length === 0;
+  const hasSearch = Boolean(debouncedSearch.trim());
 
   return (
     <KeyboardAvoidingView
@@ -188,8 +229,16 @@ export default function CameraScreen() {
           ListEmptyComponent={
             <EmptyState
               iconName="videocam-outline"
-              title="Không tìm thấy camera"
-              subtitle="Thử tìm kiếm với tên khu vực hoặc camera khác"
+              title={
+                hasSearch
+                  ? "Không tìm thấy camera"
+                  : "Chưa có dữ liệu camera"
+              }
+              subtitle={
+                hasSearch
+                  ? "Thử tìm kiếm với tên khu vực hoặc camera khác"
+                  : "Danh sách camera sẽ hiển thị tại đây khi có dữ liệu."
+              }
             />
           }
         />

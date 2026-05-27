@@ -2,10 +2,14 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
+  LayoutAnimation,
+  Platform,
+  Pressable,
   TouchableOpacity,
   StyleSheet,
   TextInput,
   FlatList,
+  UIManager,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Ionicons from "react-native-vector-icons/Ionicons";
@@ -16,7 +20,15 @@ import EmptyState from "../ui/EmptyState";
 import BottomSheetModalShell from "../shared/BottomSheetModalShell";
 import { C } from "../../utils/helpers/colors";
 
+if (
+  Platform.OS === "android" &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 type ExtraProps = {
+  errorMessage?: string | null;
   isSearching?: boolean;
   loadingMore?: boolean;
   total?: number;
@@ -32,6 +44,7 @@ export default function EnumAndReferencePickerModal({
   onSelect,
   onLoadMore,
   onSearch,
+  errorMessage,
   isSearching,
   loadingMore,
   total = 0,
@@ -62,8 +75,9 @@ export default function EnumAndReferencePickerModal({
   const hasRealItems = orderedItems.some((item) => item.value !== "");
   const isSearchEmpty =
     searchText.trim().length > 0 && total === 0 && !isSearching;
-  const isEmpty = isSearchEmpty || !hasRealItems;
+  const isEmpty = Boolean(errorMessage) || isSearchEmpty || !hasRealItems;
   const listItems = isEmpty ? [] : orderedItems;
+  const listAnimationKey = `${listItems.length}-${total}-${Boolean(errorMessage)}`;
 
   useEffect(() => {
     if (!visible) return;
@@ -81,6 +95,12 @@ export default function EnumAndReferencePickerModal({
       lastSearchRef.current = "";
     }
   }, [visible]);
+
+  useEffect(() => {
+    if (!visible) return;
+
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+  }, [listAnimationKey, visible]);
 
   const renderItem = ({ item }: any) => {
     const isEmptyValue = item.value === "";
@@ -133,21 +153,33 @@ export default function EnumAndReferencePickerModal({
       <Text style={styles.modalTitle}>{title}</Text>
 
       <View style={styles.searchWrapper}>
+        <View style={styles.searchIconWrap}>
+          <Ionicons name="search-outline" size={16} color="#8A95A3" />
+        </View>
         <TextInput
           placeholder="Tìm kiếm..."
-          placeholderTextColor="#999"
+          placeholderTextColor="#B0B8C4"
           value={searchText}
           onChangeText={setSearchText}
           style={styles.searchInput}
+          clearButtonMode="never"
+          returnKeyType="search"
         />
 
         {isSearching && (
-          <IsLoading
-            size="small"
-            color={C.red}
-            style={styles.searchSpinner}
-          />
+          <View style={styles.spinnerWrap}>
+            <IsLoading size="small" color={C.red} />
+          </View>
         )}
+        {!isSearching && searchText.length > 0 ? (
+          <Pressable
+            onPress={() => setSearchText("")}
+            style={styles.clearButton}
+            hitSlop={8}
+          >
+            <Ionicons name="close-circle" size={16} color="#B0B8C4" />
+          </Pressable>
+        ) : null}
       </View>
 
       <FlatList
@@ -181,9 +213,9 @@ export default function EnumAndReferencePickerModal({
         }
         ListEmptyComponent={
           <EmptyState
-            iconName="search-outline"
-            title="Không tìm thấy dữ liệu"
-            subtitle="Thử tìm kiếm với từ khóa khác"
+            iconName={errorMessage ? "cloud-offline-outline" : "search-outline"}
+            title={errorMessage ? "Không thể tải dữ liệu" : "Không tìm thấy dữ liệu"}
+            subtitle={errorMessage || "Thử tìm kiếm với từ khóa khác"}
           />
         }
         stickyHeaderIndices={isEmpty ? [] : [0]}
@@ -215,24 +247,48 @@ const styles = StyleSheet.create({
   },
 
   searchWrapper: {
-    position: "relative",
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#EDF0F5",
     marginBottom: 8,
+    shadowColor: "#1A2340",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+
+  searchIconWrap: {
+    marginRight: 8,
+    width: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   searchInput: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    paddingRight: 36,
+    flex: 1,
+    paddingVertical: 13,
+    fontSize: 14,
+    color: "#0F1923",
+    fontWeight: "400",
   },
 
-  searchSpinner: {
-    position: "absolute",
-    right: 20,
-    top: "50%",
-    marginTop: -10,
+  spinnerWrap: {
+    width: 24,
+    height: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 6,
+  },
+
+  clearButton: {
+    padding: 4,
+    marginLeft: 4,
   },
 
   list: {

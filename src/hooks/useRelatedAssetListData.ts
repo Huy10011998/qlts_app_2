@@ -2,8 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getFieldActive, getList, getPropertyClass } from "../services";
 import { Field, PropertyResponse } from "../types/index";
 import { error } from "../utils/Logger";
-import { useAutoReload } from "./useAutoReload";
+import { useNetworkAwareReload } from "./useNetworkAwareReload";
 import { isAuthExpiredError } from "../services/data/callApi";
+import { isNetworkRequestError } from "../utils/helpers/api";
 
 type RelatedAssetListDataParams = {
   conditions: any[];
@@ -38,6 +39,7 @@ export function useRelatedAssetListData({
   const [isSearching, setIsSearching] = useState(false);
   const [isRefreshingTop, setIsRefreshingTop] = useState(false);
   const [total, setTotal] = useState(0);
+  const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
 
   const skipRef = useRef(0);
   const isFetchingRef = useRef(false);
@@ -109,12 +111,18 @@ export function useRelatedAssetListData({
         }
 
         setTotal(totalCount);
+        setLoadErrorMessage(null);
       } catch (e) {
-        error(e);
-        if (!isAuthExpiredError(e)) {
-          showAlertIfActive("Lỗi", "Không thể tải dữ liệu");
+        if (!isNetworkRequestError(e)) error(e);
+        if (isLoadMore && !isAuthExpiredError(e)) {
+          showAlertIfActive("Lỗi", "Không thể tải thêm dữ liệu.");
         }
-        if (!isLoadMore) setData([]);
+        if (!isLoadMore) {
+          setData([]);
+          setLoadErrorMessage(
+            "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại.",
+          );
+        }
       } finally {
         isFetchingRef.current = false;
         if (isMounted()) {
@@ -137,7 +145,16 @@ export function useRelatedAssetListData({
     ],
   );
 
-  useAutoReload(fetchData, { enabled });
+  useNetworkAwareReload(fetchData, {
+    enabled,
+    hasError: Boolean(loadErrorMessage),
+    onOffline: () => {
+      setData([]);
+      setLoadErrorMessage(
+        "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại.",
+      );
+    },
+  });
 
   useEffect(() => {
     if (!enabled || !nameClass) {
@@ -150,6 +167,7 @@ export function useRelatedAssetListData({
       setIsSearching(false);
       setIsRefreshingTop(false);
       setTotal(0);
+      setLoadErrorMessage(null);
       fieldActiveRef.current = [];
       propertyClassRef.current = undefined;
       isFirstLoadRef.current = true;
@@ -199,6 +217,7 @@ export function useRelatedAssetListData({
     isLoadingMore,
     isSearching,
     isRefreshingTop,
+    loadErrorMessage,
     total,
     fetchData,
     refreshTop,

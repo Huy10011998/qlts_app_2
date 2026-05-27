@@ -20,6 +20,7 @@ export default function AssetDetailsScreen() {
           TAB_ITEMS,
           nameClass,
           fieldActive,
+          loadErrorMessage,
         }) => (
           <AssetDetailsContent
             activeTab={activeTab}
@@ -33,6 +34,7 @@ export default function AssetDetailsScreen() {
             fieldActive={fieldActive}
             tabs={TAB_ITEMS ?? []}
             contentPaddingBottom={94}
+            loadErrorMessage={loadErrorMessage}
           />
         )}
       </AssetDetails>

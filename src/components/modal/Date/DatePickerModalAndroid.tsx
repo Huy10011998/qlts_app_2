@@ -9,9 +9,11 @@ import PickerFieldTrigger from "../../dataPicker/shared/PickerFieldTrigger";
 
 export const DatePickerModalAndroid = ({
   value,
+  placeholder = "Chọn Ngày (dd-MM-yyyy)",
   onChange,
 }: {
   value?: string;
+  placeholder?: string;
   onChange: (val: string) => void;
 }) => {
   const [showPicker, setShowPicker] = useState(false);
@@ -42,7 +44,7 @@ export const DatePickerModalAndroid = ({
     <View>
       <PickerFieldTrigger
         iconName="calendar-outline"
-        placeholder="Chọn Ngày (dd-MM-yyyy)"
+        placeholder={placeholder}
         value={value}
         onPress={() => {
           setTempDate(parseDate(value));

@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import {
   View,
+  Text,
   FlatList,
   RefreshControl,
   Platform,
@@ -14,7 +15,9 @@ import {
   Modal,
   StyleSheet,
   KeyboardAvoidingView,
+  TouchableOpacity,
 } from "react-native";
+import Ionicons from "react-native-vector-icons/Ionicons";
 import { GetMenuActiveResponse, Item } from "../../types/index";
 import { API_ENDPOINTS } from "../../config/index";
 import { useDebounce } from "../../hooks/useDebounce";
@@ -24,8 +27,9 @@ import EmptyState from "../../components/ui/EmptyState";
 import ReportView from "../../components/report/ReportView";
 import { callApi } from "../../services/data/callApi";
 import { error } from "../../utils/Logger";
-import { useAutoReload } from "../../hooks/useAutoReload";
+import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
+import { removeVietnameseTones } from "../../utils/Helper";
 import AssetMenuDropdownItem from "./shared/AssetMenuDropdownItem";
 import AssetMenuSearchBar from "./shared/AssetMenuSearchBar";
 import {
@@ -54,12 +58,65 @@ export default function AssetScreen() {
   const [search, setSearch] = useState("");
   const [expandedIds, setExpandedIds] = useState<(string | number)[]>([]);
   const [reportItem, setReportItem] = useState<Item | null>(null);
+  const [comingSoonReportItem, setComingSoonReportItem] = useState<Item | null>(
+    null,
+  );
+  const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
 
   const fetchingRef = useRef(false);
-  const firstLoadRef = useRef(true);
   const debouncedSearch = useDebounce(search, 400);
   const [isSearching, setIsSearching] = useState(false);
-  const { isMounted, showAlertIfActive } = useSafeAlert();
+  const { isMounted } = useSafeAlert();
+
+  const assetMenuMap = useMemo(() => {
+    const map: Record<string | number, Item> = {};
+
+    const walk = (items: Item[]) => {
+      items.forEach((item) => {
+        map[item.id] = item;
+        if (item.children?.length) {
+          walk(item.children);
+        }
+      });
+    };
+
+    walk(data);
+    return map;
+  }, [data]);
+
+  const isCnttReport = useCallback(
+    (item: Item) => {
+      let current: Item | undefined = item;
+
+      while (current) {
+        const normalizedLabel = removeVietnameseTones(current.label)
+          .trim()
+          .toUpperCase();
+
+        if (normalizedLabel === "CNTT") {
+          return true;
+        }
+
+        current =
+          current.parent === null ? undefined : assetMenuMap[current.parent];
+      }
+
+      return false;
+    },
+    [assetMenuMap],
+  );
+
+  const handleShowReport = useCallback(
+    (item: Item) => {
+      if (!isCnttReport(item)) {
+        setComingSoonReportItem(item);
+        return;
+      }
+
+      setReportItem(item);
+    },
+    [isCnttReport],
+  );
 
   // ── Fetch ──
   const fetchData = useCallback(async (options?: { isRefresh?: boolean }) => {
@@ -81,9 +138,12 @@ export default function AssetScreen() {
         .filter((item) => item.iD_GroupMenu === 2)
         .sort((a, b) => Number(a.stt) - Number(b.stt));
       setData(buildAssetMenuTree(menuAccount));
+      setLoadErrorMessage(null);
     } catch (e) {
       error("API error:", e);
-      showAlertIfActive("Lỗi", "Không thể tải dữ liệu menu.");
+      setLoadErrorMessage(
+        "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại.",
+      );
     } finally {
       fetchingRef.current = false;
       if (isMounted()) {
@@ -91,7 +151,7 @@ export default function AssetScreen() {
         setIsRefreshingTop(false);
       }
     }
-  }, [isMounted, showAlertIfActive]);
+  }, [isMounted]);
 
   const refreshTop = async () => {
     if (isRefreshingTop) return;
@@ -107,13 +167,17 @@ export default function AssetScreen() {
     }
     fetchData();
   }, [loaded, hasViewPermission, fetchData]);
-  useAutoReload(() => {
+  useNetworkAwareReload(() => {
     if (!loaded || !hasViewPermission) return;
-    if (firstLoadRef.current) {
-      firstLoadRef.current = false;
-      return;
-    }
     fetchData();
+  }, {
+    enabled: loaded && hasViewPermission,
+    hasError: Boolean(loadErrorMessage),
+    onOffline: () => {
+      setLoadErrorMessage(
+        "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại.",
+      );
+    },
   });
 
   // ── Search + auto expand ──
@@ -157,7 +221,23 @@ export default function AssetScreen() {
     return <IsLoading size="large" color={ASSET_MENU_BRAND_RED} />;
   }
 
+  if (loadErrorMessage) {
+    return (
+      <KeyboardAvoidingView
+        style={s.centerState}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <EmptyState
+          iconName="cloud-offline-outline"
+          title="Không thể tải dữ liệu Tài sản"
+          subtitle={loadErrorMessage}
+        />
+      </KeyboardAvoidingView>
+    );
+  }
+
   const isEmpty = filteredData.length === 0;
+  const hasSearch = Boolean(debouncedSearch.trim());
 
   return (
     <KeyboardAvoidingView
@@ -180,7 +260,7 @@ export default function AssetScreen() {
             item={item}
             expandedIds={expandedIds}
             onToggle={handleToggle}
-            onShowReport={setReportItem}
+            onShowReport={handleShowReport}
             isSearching={!!debouncedSearch}
           />
         )}
@@ -205,8 +285,16 @@ export default function AssetScreen() {
         ListEmptyComponent={
           <EmptyState
             iconName="search-outline"
-            title="Không tìm thấy kết quả"
-            subtitle="Thử tìm kiếm với từ khóa khác"
+            title={
+              hasSearch
+                ? "Không tìm thấy kết quả"
+                : "Chưa có dữ liệu tài sản"
+            }
+            subtitle={
+              hasSearch
+                ? "Thử tìm kiếm với từ khóa khác"
+                : "Danh sách tài sản sẽ hiển thị tại đây khi có dữ liệu."
+            }
           />
         }
       />
@@ -219,9 +307,41 @@ export default function AssetScreen() {
         {reportItem && (
           <ReportView
             title={reportItem.label}
+            previewEndpoint={API_ENDPOINTS.PREVIEW_MAYTINH_THONGKE_CNTT}
             onClose={() => setReportItem(null)}
           />
         )}
+      </Modal>
+
+      <Modal
+        visible={!!comingSoonReportItem}
+        animationType="slide"
+        onRequestClose={() => setComingSoonReportItem(null)}
+      >
+        <View style={s.comingSoonContainer}>
+          <View
+            style={[
+              s.comingSoonHeader,
+              Platform.OS === "ios"
+                ? s.comingSoonHeaderIos
+                : s.comingSoonHeaderAndroid,
+            ]}
+          >
+            <Text style={s.comingSoonTitle}>
+              {comingSoonReportItem?.label || "Thông báo"}
+            </Text>
+
+            <TouchableOpacity onPress={() => setComingSoonReportItem(null)}>
+              <Ionicons name="close" size={30} color="#fff" />
+            </TouchableOpacity>
+          </View>
+
+          <EmptyState
+            iconName="notifications-outline"
+            title="Tính năng sắp được triển khai"
+            subtitle="Báo cáo này chưa khả dụng trên ứng dụng."
+          />
+        </View>
       </Modal>
     </KeyboardAvoidingView>
   );
@@ -249,5 +369,30 @@ const s = StyleSheet.create({
   listContentEmpty: {
     paddingTop: 0,
     paddingBottom: 0,
+  },
+  comingSoonContainer: {
+    flex: 1,
+    backgroundColor: ASSET_MENU_BG,
+  },
+  comingSoonHeader: {
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+    backgroundColor: ASSET_MENU_BRAND_RED,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  comingSoonHeaderIos: {
+    paddingTop: 50,
+  },
+  comingSoonHeaderAndroid: {
+    paddingTop: 20,
+  },
+  comingSoonTitle: {
+    flex: 1,
+    paddingRight: 12,
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#fff",
   },
 });

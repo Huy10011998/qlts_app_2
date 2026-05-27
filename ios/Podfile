@@ -99,6 +99,86 @@ target 'qlts_app_2' do
           FileUtils.mkdir_p(File.dirname(hermes_error_header))
           FileUtils.cp(patched_hermes_error_header, hermes_error_header)
         end
+
+        hermes_build_ios_framework = File.join(
+          installer.sandbox.root.to_s,
+          'hermes-engine',
+          'utils',
+          'build-ios-framework.sh'
+        )
+
+        if File.exist?(hermes_build_ios_framework)
+          hermes_build_script = File.read(hermes_build_ios_framework)
+          original_iphonesimulator = 'build_apple_framework "iphonesimulator" "x86_64;arm64" "$ios_deployment_target"'
+          patched_iphonesimulator = <<~'SCRIPT'.strip
+            if [[ "$(uname -m)" == "arm64" ]]; then
+                build_apple_framework "iphonesimulator" "arm64" "$ios_deployment_target"
+            else
+                build_apple_framework "iphonesimulator" "x86_64;arm64" "$ios_deployment_target"
+            fi
+          SCRIPT
+          original_catalyst = 'build_apple_framework "catalyst" "x86_64;arm64" "$ios_deployment_target"'
+          patched_catalyst = <<~'SCRIPT'.strip
+            if [[ "$(uname -m)" == "arm64" ]]; then
+                build_apple_framework "catalyst" "arm64" "$ios_deployment_target"
+            else
+                build_apple_framework "catalyst" "x86_64;arm64" "$ios_deployment_target"
+            fi
+          SCRIPT
+          original_appletvsimulator = 'build_apple_framework "appletvsimulator" "x86_64;arm64" "$tvos_deployment_target"'
+          patched_appletvsimulator = <<~'SCRIPT'.strip
+            if [[ "$(uname -m)" == "arm64" ]]; then
+                build_apple_framework "appletvsimulator" "arm64" "$tvos_deployment_target"
+            else
+                build_apple_framework "appletvsimulator" "x86_64;arm64" "$tvos_deployment_target"
+            fi
+          SCRIPT
+
+          hermes_build_script.sub!(original_iphonesimulator, patched_iphonesimulator)
+          hermes_build_script.sub!(original_catalyst, patched_catalyst)
+          hermes_build_script.sub!(original_appletvsimulator, patched_appletvsimulator)
+
+          FileUtils.chmod('u+w', hermes_build_ios_framework)
+          File.write(hermes_build_ios_framework, hermes_build_script)
+        end
+
+        hermes_xcode_build_script = File.join(
+          config[:reactNativePath],
+          'sdks',
+          'hermes-engine',
+          'utils',
+          'build-hermes-xcode.sh'
+        )
+
+        if File.exist?(hermes_xcode_build_script)
+          hermes_xcode_script = File.read(hermes_xcode_build_script)
+          original_architectures = 'architectures=$( echo "$ARCHS" | tr  " " ";" )'
+          patched_architectures = <<~'SCRIPT'.strip
+            if [[ "$(uname -m)" == "arm64" && ( "$PLATFORM_NAME" == "iphonesimulator" || "$PLATFORM_NAME" == "catalyst" || "$PLATFORM_NAME" == "appletvsimulator" ) ]]; then
+              architectures="arm64"
+            else
+              architectures=$( echo "$ARCHS" | tr  " " ";" )
+            fi
+          SCRIPT
+          original_configure = <<~'SCRIPT'.strip
+            echo "Configure Apple framework"
+
+            "$CMAKE_BINARY" \
+          SCRIPT
+          patched_configure = <<~'SCRIPT'.strip
+            echo "Configure Apple framework"
+
+            rm -rf "${PODS_ROOT}/hermes-engine/build/${PLATFORM_NAME}"
+
+            "$CMAKE_BINARY" \
+          SCRIPT
+
+          hermes_xcode_script.sub!(original_architectures, patched_architectures)
+          hermes_xcode_script.sub!(original_configure, patched_configure)
+
+          FileUtils.chmod('u+w', hermes_xcode_build_script)
+          File.write(hermes_xcode_build_script, hermes_xcode_script)
+        end
       end
 
       target.build_configurations.each do |build_config|
@@ -106,6 +186,7 @@ target 'qlts_app_2' do
           build_config.build_settings['DEBUG_INFORMATION_FORMAT'] = 'dwarf-with-dsym'
         end
 
+        build_config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'x86_64'
         build_config.build_settings['ENABLE_MODULE_VERIFIER'] = 'NO'
 
         defs = build_config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] || ['$(inherited)']
@@ -163,6 +244,7 @@ target 'qlts_app_2' do
 
       app_target.build_configurations.each do |build_config|
         build_config.build_settings['ENABLE_USER_SCRIPT_SANDBOXING'] = 'NO'
+        build_config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'x86_64'
       end
 
       phase_name = '[Hermes] Generate dSYM'

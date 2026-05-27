@@ -100,6 +100,7 @@ export interface TabContentProps {
   previousItem?: AssetItem;
   nameClass?: string;
   fieldActive: Field[];
+  loadErrorMessage?: string | null;
   isFieldChanged?: (
     field: Field,
     currentItem: AssetItem,
@@ -161,6 +162,7 @@ export interface DetailsProps {
     fieldActive: Field[];
     nameClass: string;
     TAB_ITEMS?: typeof TAB_ITEMS;
+    loadErrorMessage?: string | null;
   }) => React.ReactNode;
 }
 
@@ -248,6 +250,7 @@ export type IsLoadingProps = {
 
 export interface ReportViewProps {
   title: string;
+  previewEndpoint: string;
   onClose: () => void;
 }
 

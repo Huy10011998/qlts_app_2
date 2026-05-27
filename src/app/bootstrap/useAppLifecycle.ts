@@ -3,6 +3,7 @@ import { AppState, AppStateStatus } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
 import { emitAppRefetch } from "../../utils/AppRefetchBus";
 import { log } from "../../utils/Logger";
+import { refreshAccessTokenInBackground } from "../../services/data/callApi";
 
 type UseAppLifecycleParams = {
   safeReloadRef: RefObject<(() => Promise<void> | undefined) | undefined>;
@@ -25,6 +26,7 @@ export function useAppLifecycle({
 
       if (lastConnected.current === false && isConnected) {
         log("[APP] Network reconnected");
+        refreshAccessTokenInBackground("network");
         emitAppRefetch("network");
         safeReloadRef.current?.();
       }
@@ -48,6 +50,7 @@ export function useAppLifecycle({
           }
 
           log("[APP] App returned to foreground");
+          refreshAccessTokenInBackground("foreground");
           emitAppRefetch("foreground");
           safeReloadRef.current?.();
           checkAppUpdateRef.current?.();

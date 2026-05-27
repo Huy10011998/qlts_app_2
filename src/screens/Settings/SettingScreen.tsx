@@ -57,6 +57,7 @@ import {
   openAppPermissionSettings,
   requestCameraPermission,
 } from "../../services/cameraPermission";
+import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 
 const IOS_LOCAL_NETWORK_FALLBACK_STATE: StoredLocalNetworkPermissionState = {
   hasShownNotice: false,
@@ -94,6 +95,7 @@ const SettingScreen = () => {
   const dispatch = useAppDispatch();
   const insets = useSafeAreaInsets();
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
 
   const userRef = useRef<UserInfo | undefined>(undefined);
   const hasLoadedOnceRef = useRef(false);
@@ -102,7 +104,6 @@ const SettingScreen = () => {
   const isMountedRef = useRef(true);
   const isScreenActiveRef = useRef(false);
   const isFocusedRef = useRef(false);
-  const lastErrorAlertAtRef = useRef(0);
   const blockingLoaderActiveRef = useRef(false);
 
   useEffect(() => {
@@ -129,17 +130,6 @@ const SettingScreen = () => {
     [logoutReason],
   );
 
-  const showAlertIfActive = useCallback(
-    (title: string, message: string) => {
-      if (!canUpdateScreen()) return;
-      const now = Date.now();
-      if (now - lastErrorAlertAtRef.current < 1500) return;
-      lastErrorAlertAtRef.current = now;
-      Alert.alert(title, message);
-    },
-    [canUpdateScreen],
-  );
-
   const isAuthExpiredError = useCallback(
     (error: any) =>
       error?.NEED_LOGIN ||
@@ -147,6 +137,26 @@ const SettingScreen = () => {
       error?.response?.status === 403,
     [],
   );
+
+  const refreshPermissionState = useCallback(async () => {
+    try {
+      const [nextCameraPermissionStatus, nextLocalNetworkState] =
+        await Promise.all([
+          checkCameraPermission().catch(() => "unknown" as const),
+          Platform.OS === "ios"
+            ? refreshStoredLocalNetworkPermission().catch(
+                () => IOS_LOCAL_NETWORK_FALLBACK_STATE,
+              )
+            : Promise.resolve(IOS_LOCAL_NETWORK_FALLBACK_STATE),
+        ]);
+
+      if (!canUpdateScreen()) return;
+      setCameraPermissionStatus(nextCameraPermissionStatus);
+      setLocalNetworkState(nextLocalNetworkState);
+    } catch {
+      // Permission status is auxiliary; keep the previous values if refresh fails.
+    }
+  }, [canUpdateScreen]);
 
   const fetchData = React.useCallback(async () => {
     if (loadingRef.current || !canUpdateScreen()) return;
@@ -156,33 +166,22 @@ const SettingScreen = () => {
     blockingLoaderActiveRef.current = shouldShowBlockingLoader;
     if (isMountedRef.current && shouldShowBlockingLoader) setIsLoading(true);
     try {
-      const [
-        nextCameraPermissionStatus,
-        userResponse,
-        faceIdFlag,
-        nextLocalNetworkState,
-      ] = await Promise.all([
-        checkCameraPermission().catch(() => "unknown" as const),
+      const [userResponse, faceIdFlag] = await Promise.all([
         callApi<{ success: boolean; data: UserInfo }>(
           "POST",
           API_ENDPOINTS.GET_INFO,
           {},
         ),
         AsyncStorage.getItem(FACE_ID_ENABLED_KEY),
-        Platform.OS === "ios"
-          ? refreshStoredLocalNetworkPermission().catch(
-              () => IOS_LOCAL_NETWORK_FALLBACK_STATE,
-            )
-          : Promise.resolve(IOS_LOCAL_NETWORK_FALLBACK_STATE),
       ]);
       if (!canUpdateScreen()) return;
       userRef.current = userResponse.data;
       hasLoadedOnceRef.current = true;
       setUser(userResponse.data);
       setHasLoadedOnce(true);
+      setLoadErrorMessage(null);
       setIsFaceIdEnabled(faceIdFlag === "1");
-      setCameraPermissionStatus(nextCameraPermissionStatus);
-      setLocalNetworkState(nextLocalNetworkState);
+      refreshPermissionState();
     } catch (error: any) {
       if (canUpdateScreen()) {
         hasLoadedOnceRef.current = true;
@@ -194,9 +193,18 @@ const SettingScreen = () => {
         error?.OFFLINE ||
         isAuthExpiredError(error) ||
         !canUpdateScreen()
-      )
+      ) {
+        if (canUpdateScreen() && !isAuthExpiredError(error)) {
+          setLoadErrorMessage(
+            "Vui lòng kiểm tra kết nối mạng và thử mở lại màn hình này.",
+          );
+        }
         return;
-      showAlertIfActive("Lỗi", "Không thể tải thông tin người dùng.");
+      }
+
+      if (canUpdateScreen()) {
+        setLoadErrorMessage("Không thể tải dữ liệu tài khoản hiện tại.");
+      }
     } finally {
       loadingRef.current = false;
       if (
@@ -208,19 +216,23 @@ const SettingScreen = () => {
         blockingLoaderActiveRef.current = false;
       }
     }
-  }, [canUpdateScreen, isAuthExpiredError, showAlertIfActive]);
+  }, [
+    canUpdateScreen,
+    isAuthExpiredError,
+    refreshPermissionState,
+  ]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextState) => {
       if (nextState === "active" && isFocusedRef.current) {
-        fetchData();
+        refreshPermissionState();
       }
     });
 
     return () => {
       subscription.remove();
     };
-  }, [fetchData]);
+  }, [refreshPermissionState]);
 
   useEffect(() => {
     if (!isFocused) {
@@ -233,6 +245,18 @@ const SettingScreen = () => {
       isScreenActiveRef.current = false;
     };
   }, [fetchData, isFocused]);
+
+  useNetworkAwareReload(() => {
+    fetchData();
+  }, {
+    enabled: isFocused,
+    hasError: Boolean(loadErrorMessage),
+    onOffline: () => {
+      setLoadErrorMessage(
+        "Vui lòng kiểm tra kết nối mạng và thử mở lại màn hình này.",
+      );
+    },
+  });
 
   const handleToggleFaceID = async (value: boolean) => {
     if (!isMountedRef.current) return;
@@ -520,6 +544,19 @@ const SettingScreen = () => {
 
   if (isLoading || (!user && !hasLoadedOnce)) {
     return <IsLoading size="large" color={C.red} />;
+  }
+
+  if (loadErrorMessage) {
+    return (
+      <View style={styles.emptyStateRoot}>
+        <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
+        <EmptyState
+          iconName="cloud-offline-outline"
+          title="Không thể tải dữ liệu Cài đặt"
+          subtitle={loadErrorMessage}
+        />
+      </View>
+    );
   }
 
   if (!user) {

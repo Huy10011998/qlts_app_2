@@ -15,6 +15,8 @@ import AssetListHistory from "../assets/AssetListHistory";
 import AssetNoteDetails from "../assets/AssetNoteDetails";
 import { useParams } from "../../hooks/useParams";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
+import AssetListEmptyState from "../assets/shared/AssetListEmptyState";
+import { BG } from "../assets/shared/listTheme";
 
 const styles = {
   container: {
@@ -27,6 +29,13 @@ const styles = {
   scrollContent: {
     padding: 16,
     paddingBottom: 20,
+  },
+  emptyStateRoot: {
+    flex: 1,
+    backgroundColor: BG,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    paddingHorizontal: 32,
   },
 };
 
@@ -41,6 +50,7 @@ export default function TabContent({
   isFieldChanged,
   nameClass,
   fieldActive,
+  loadErrorMessage,
 }: TabContentProps) {
   const route = useRoute();
   const navigation = useNavigation<AssetDetailsNavigationProp>();
@@ -52,6 +62,8 @@ export default function TabContent({
   const { propertyClass } = useParams();
   const nameClassRoot = nameClass;
   const { showAlertIfActive } = useSafeAlert();
+  const hasLoadedItem = Boolean(item?.id);
+  const shouldShowDetailsError = Boolean(loadErrorMessage);
 
   const handleDelete = async () => {
     if (!item?.id) return;
@@ -161,30 +173,45 @@ export default function TabContent({
   const tabContentMap: Record<string, JSX.Element> = {
     list: (
       <View style={styles.container}>
-        {isDetailsScreen && (
-          <View style={styles.actionsWrap}>
-            <AssetActions
-              onEdit={() => onPressNavigateToEdit(item)}
-              onDelete={handleDelete}
-              onClone={() => onPressNavigateToClone(item)}
-              nameClass={nameClass}
+        {shouldShowDetailsError ? (
+          <View style={styles.emptyStateRoot}>
+            <AssetListEmptyState
+              iconName="cloud-offline-outline"
+              title="Không thể tải chi tiết tài sản"
+              subtitle={
+                loadErrorMessage ||
+                "Vui lòng kiểm tra kết nối mạng hoặc quay lại để thử lại."
+              }
             />
           </View>
-        )}
+        ) : (
+          <>
+            {isDetailsScreen && hasLoadedItem && (
+              <View style={styles.actionsWrap}>
+                <AssetActions
+                  onEdit={() => onPressNavigateToEdit(item)}
+                  onDelete={handleDelete}
+                  onClone={() => onPressNavigateToClone(item)}
+                  nameClass={nameClass}
+                />
+              </View>
+            )}
 
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <AssetGroupList
-            groupedFields={groupedFields}
-            collapsedGroups={collapsedGroups}
-            toggleGroup={toggleGroup}
-            getFieldValue={getFieldValue}
-            item={item}
-            previousItem={previousItem}
-            fieldActive={fieldActive}
-            isFieldChanged={isFieldChanged}
-            nameClass={nameClass}
-          />
-        </ScrollView>
+            <ScrollView contentContainerStyle={styles.scrollContent}>
+              <AssetGroupList
+                groupedFields={groupedFields}
+                collapsedGroups={collapsedGroups}
+                toggleGroup={toggleGroup}
+                getFieldValue={getFieldValue}
+                item={item}
+                previousItem={previousItem}
+                fieldActive={fieldActive}
+                isFieldChanged={isFieldChanged}
+                nameClass={nameClass}
+              />
+            </ScrollView>
+          </>
+        )}
       </View>
     ),
 

@@ -6,7 +6,11 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import {
+  useFocusEffect,
+  useIsFocused,
+  useNavigation,
+} from "@react-navigation/native";
 import { HomeNavigationProp } from "../../types";
 import { useViewPermission } from "../../hooks/useViewPermission";
 import HomeMenuItemCard from "./shared/HomeMenuItemCard";
@@ -21,10 +25,12 @@ import { useHomeMenuItems } from "./shared/useHomeMenuItems";
 import EmptyState from "../../components/ui/EmptyState";
 import { useAppDispatch } from "../../store/hooks";
 import { reloadPermissions } from "../../store/PermissionActions";
+import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeNavigationProp>();
   const tabsNavigation = navigation.getParent() as any;
+  const isFocused = useIsFocused();
   const { canView, loaded } = useViewPermission();
   const dispatch = useAppDispatch();
   const { menuItems, openMeetingScreen, openScanScreen, openSettingScreen } =
@@ -69,6 +75,16 @@ const HomeScreen: React.FC = () => {
     }, [loadPermissions]),
   );
 
+  useNetworkAwareReload(() => {
+    loadPermissions();
+  }, {
+    enabled: isFocused,
+    hasError: hasLoadError,
+    onOffline: () => {
+      setHasLoadError(true);
+    },
+  });
+
   const visibleMenuItems = useMemo(() => {
     if (!loaded) return [];
     return menuItems.filter((item) =>
@@ -76,29 +92,29 @@ const HomeScreen: React.FC = () => {
     );
   }, [canView, loaded, menuItems]);
 
-  if (!loaded) {
-    if (hasLoadError) {
-      return (
-        <ScrollView
-          contentContainerStyle={styles.centerState}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={() => loadPermissions({ isRefresh: true })}
-              colors={[HOME_BRAND_RED]}
-              tintColor={HOME_BRAND_RED}
-            />
-          }
-        >
-          <EmptyState
-            iconName="cloud-offline-outline"
-            title="Không thể tải dữ liệu Trang chủ"
-            subtitle="Vui lòng kiểm tra kết nối hoặc kéo xuống để thử lại."
+  if (hasLoadError) {
+    return (
+      <ScrollView
+        contentContainerStyle={styles.centerState}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={() => loadPermissions({ isRefresh: true })}
+            colors={[HOME_BRAND_RED]}
+            tintColor={HOME_BRAND_RED}
           />
-        </ScrollView>
-      );
-    }
+        }
+      >
+        <EmptyState
+          iconName="cloud-offline-outline"
+          title="Không thể tải dữ liệu Trang chủ"
+          subtitle="Vui lòng kiểm tra kết nối hoặc kéo xuống để thử lại."
+        />
+      </ScrollView>
+    );
+  }
 
+  if (!loaded) {
     return (
       <View style={styles.loadingWrap}>
         <ActivityIndicator size="small" color={HOME_BRAND_RED} />
@@ -121,18 +137,6 @@ const HomeScreen: React.FC = () => {
           />
         }
       >
-        {hasLoadError && (
-          <View style={styles.errorCard}>
-            <EmptyState
-              iconName="cloud-offline-outline"
-              title="Không thể tải dữ liệu mới"
-              subtitle="Dữ liệu hiện tại có thể chưa được cập nhật. Vui lòng kiểm tra kết nối hoặc kéo xuống để thử lại."
-              fullHeight={false}
-              style={styles.errorState}
-            />
-          </View>
-        )}
-
         <HomeSectionTitle label="SỰ KIỆN" action="Xem tất cả" />
         <HomeEventBanner
           title={HOME_MEETING_INFO.meetingTitle}
@@ -227,21 +231,6 @@ const styles = StyleSheet.create({
     backgroundColor: HOME_BG,
     alignItems: "center",
     justifyContent: "center",
-  },
-  errorCard: {
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    marginBottom: 16,
-    paddingVertical: 20,
-    paddingHorizontal: 12,
-    shadowColor: "#1A2340",
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  errorState: {
-    paddingHorizontal: 20,
   },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 32 },

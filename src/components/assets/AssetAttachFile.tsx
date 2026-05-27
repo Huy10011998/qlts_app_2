@@ -13,9 +13,10 @@ import { getListAttachFile } from "../../services";
 import IsLoading from "../ui/IconLoading";
 import ListCardAttachFile from "../list/ListCardAttachFile";
 import { error } from "../../utils/Logger";
-import { useAutoReload } from "../../hooks/useAutoReload";
+import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { isAuthExpiredError } from "../../services/data/callApi";
+import { isNetworkRequestError } from "../../utils/helpers/api";
 import AssetListEmptyState from "./shared/AssetListEmptyState";
 import AssetListSummaryCard from "./shared/AssetListSummaryCard";
 import { sharedAssetListStyles } from "./shared/listStyles";
@@ -26,6 +27,7 @@ export default function AssetListAttachFile() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [total, setTotal] = useState(0);
+  const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
   const skipSizeRef = useRef(0);
 
   const { id, nameClass: paramNameClass } = useParams();
@@ -82,12 +84,18 @@ export default function AssetListAttachFile() {
         }
 
         setTotal(totalItems);
+        setLoadErrorMessage(null);
       } catch (e) {
-        error("API error:", e);
-        if (!isAuthExpiredError(e)) {
-          showAlertIfActive("Lỗi", "Không thể tải dữ liệu.");
+        if (!isNetworkRequestError(e)) error("API error:", e);
+        if (isLoadMore && !isAuthExpiredError(e)) {
+          showAlertIfActive("Lỗi", "Không thể tải thêm dữ liệu.");
         }
-        if (!isLoadMore) setFile([]);
+        if (!isLoadMore) {
+          setFile([]);
+          setLoadErrorMessage(
+            "Vui lòng kiểm tra kết nối mạng hoặc quay lại để thử lại.",
+          );
+        }
       } finally {
         if (isMounted()) {
           setIsLoading(false);
@@ -103,7 +111,14 @@ export default function AssetListAttachFile() {
     fetchData();
   }, [fetchData, nameClass]);
 
-  useAutoReload(fetchData);
+  useNetworkAwareReload(fetchData, {
+    hasError: Boolean(loadErrorMessage),
+    onOffline: () => {
+      setLoadErrorMessage(
+        "Vui lòng kiểm tra kết nối mạng hoặc quay lại để thử lại.",
+      );
+    },
+  });
 
   const handleLoadMore = () => {
     if (file.length < total && !isLoadingMore) fetchData(true);
@@ -121,6 +136,18 @@ export default function AssetListAttachFile() {
   const categories = Object.keys(groupedData);
 
   if (isLoading) return <IsLoading size="large" color={BRAND_RED} />;
+
+  if (loadErrorMessage) {
+    return (
+      <View style={styles.emptyStateRoot}>
+        <AssetListEmptyState
+          iconName="cloud-offline-outline"
+          title="Không thể tải tệp đính kèm"
+          subtitle={loadErrorMessage}
+        />
+      </View>
+    );
+  }
 
   const isEmpty = categories.length === 0;
 
@@ -185,6 +212,13 @@ const styles = StyleSheet.create({
   listContentEmpty: {
     paddingTop: 0,
     paddingBottom: 0,
+  },
+  emptyStateRoot: {
+    flex: 1,
+    backgroundColor: BG,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
   },
   groupContainer: {
     marginHorizontal: 12,

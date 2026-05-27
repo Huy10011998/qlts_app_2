@@ -70,7 +70,6 @@ export default function LoginScreen() {
     setIosAuthenticated,
     syncSession,
     token,
-    logout,
   } = useAuth();
 
   const [userName, setUserName] = useState("");
@@ -236,19 +235,6 @@ export default function LoginScreen() {
     [setIosAuthenticated, syncSession],
   );
 
-  const refreshSessionInBackground = useCallback(async () => {
-    try {
-      const nextSession = await refreshTokenFlow();
-      syncSession(nextSession.accessToken, nextSession.refreshToken);
-    } catch (err: any) {
-      const status = err?.response?.status;
-      const needsLogin = err?.NEED_LOGIN === true;
-      if (needsLogin || status === 401 || status === 403) {
-        await logout("EXPIRED");
-      }
-    }
-  }, [logout, syncSession]);
-
   const handlePressLogin = async () => {
     if (isLoading) return;
     Keyboard.dismiss();
@@ -318,6 +304,12 @@ export default function LoginScreen() {
     isFaceIdRunning.current = true;
     setIsLoading(true);
     try {
+      const reachability = await checkServerReachability();
+      if (!reachability.canReachServer) {
+        Alert.alert("Lỗi", SERVER_UNAVAILABLE_MESSAGE);
+        return;
+      }
+
       const credentials = await Keychain.getGenericPassword({
         service: FACE_ID_LOGIN_SERVICE,
         authenticationPrompt: {
@@ -337,11 +329,8 @@ export default function LoginScreen() {
         Alert.alert("Phiên đăng nhập đã hết", "Vui lòng đăng nhập lại.");
         return;
       }
-      if (storedToken) {
+      if (storedToken && !shouldRefreshAccessToken(storedToken)) {
         await restoreStoredSession(storedToken, storedRefreshToken ?? null);
-        if (storedRefreshToken && shouldRefreshAccessToken(storedToken)) {
-          refreshSessionInBackground();
-        }
         return;
       }
       if (!storedRefreshToken) {

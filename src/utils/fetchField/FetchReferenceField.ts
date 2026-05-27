@@ -75,6 +75,10 @@ export const fetchReferenceByField = async (
     };
   } catch (e) {
     log("Fetch reference error:", e);
-    return { items: [], totalCount: 0 };
+    return {
+      items: [],
+      totalCount: 0,
+      errorMessage: "Vui lòng kiểm tra kết nối mạng rồi thử lại.",
+    };
   }
 };

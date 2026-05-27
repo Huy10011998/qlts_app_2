@@ -17,6 +17,7 @@ type AssetDetailsContentProps = {
   setActiveTab?: (tabKey: string, label: string) => void;
   tabs?: readonly TabItem[];
   contentPaddingBottom?: number;
+  loadErrorMessage?: string | null;
 };
 
 export default function AssetDetailsContent({
@@ -31,6 +32,7 @@ export default function AssetDetailsContent({
   setActiveTab,
   tabs,
   contentPaddingBottom = 0,
+  loadErrorMessage,
 }: AssetDetailsContentProps) {
   return (
     <>
@@ -44,6 +46,7 @@ export default function AssetDetailsContent({
           item={item}
           nameClass={nameClass || ""}
           fieldActive={fieldActive}
+          loadErrorMessage={loadErrorMessage}
         />
       </View>
 

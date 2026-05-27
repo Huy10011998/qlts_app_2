@@ -81,6 +81,7 @@ export default function QrReview() {
     isLoadingMore,
     isSearching,
     isRefreshingTop,
+    loadErrorMessage,
     total,
     fetchData,
     refreshTop,
@@ -127,6 +128,18 @@ export default function QrReview() {
     !isSearching
   ) {
     return <IsLoading size="large" color={BRAND_RED} />;
+  }
+
+  if (loadErrorMessage) {
+    return (
+      <View style={styles.emptyStateRoot}>
+        <AssetListEmptyState
+          iconName="cloud-offline-outline"
+          title="Không thể tải dữ liệu QR"
+          subtitle={loadErrorMessage}
+        />
+      </View>
+    );
   }
 
   const isEmpty = data.length === 0;
@@ -209,6 +222,12 @@ const styles = StyleSheet.create({
   listContentEmpty: {
     paddingTop: 0,
     paddingBottom: 0,
+  },
+  emptyStateRoot: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
   },
   ...sharedAssetListStyles,
 });

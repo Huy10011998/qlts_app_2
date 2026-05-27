@@ -1,4 +1,5 @@
 import React, { useCallback, useState, useEffect, useRef } from "react";
+import { useIsFocused } from "@react-navigation/native";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import IsLoading from "../../components/ui/IconLoading";
@@ -8,6 +9,7 @@ import { User } from "../../types/index";
 import { callApi } from "../../services/data/callApi";
 import { error } from "../../utils/Logger";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
+import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { C } from "../../utils/helpers/colors";
 
 const InfoRow: React.FC<{
@@ -103,10 +105,12 @@ const secS = StyleSheet.create({
 });
 
 const ProfileScreen: React.FC = () => {
+  const isFocused = useIsFocused();
   const [isLoading, setIsLoading] = useState(false);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [user, setUser] = useState<User | null>(null);
-  const { isMounted, showAlertIfActive } = useSafeAlert();
+  const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
+  const { isMounted } = useSafeAlert();
   const loadingRef = useRef(false);
 
   const fetchUserInfo = useCallback(async () => {
@@ -122,34 +126,59 @@ const ProfileScreen: React.FC = () => {
       if (isMounted()) {
         setUser(res.data);
         setHasLoadedOnce(true);
+        setLoadErrorMessage(null);
       }
     } catch (e) {
       error("API error:", e);
       if (isMounted()) {
+        setUser(null);
         setHasLoadedOnce(true);
+        setLoadErrorMessage(
+          "Vui lòng kiểm tra kết nối mạng hoặc mở lại màn hình này.",
+        );
       }
-      showAlertIfActive("Lỗi", "Không thể tải hồ sơ cá nhân.");
     } finally {
       loadingRef.current = false;
       if (isMounted()) setIsLoading(false);
     }
-  }, [isMounted, showAlertIfActive]);
+  }, [isMounted]);
 
   useEffect(() => {
     fetchUserInfo();
   }, [fetchUserInfo]);
 
+  useNetworkAwareReload(() => {
+    fetchUserInfo();
+  }, {
+    enabled: isFocused,
+    hasError: Boolean(loadErrorMessage),
+    onOffline: () => {
+      setUser(null);
+      setHasLoadedOnce(true);
+      setLoadErrorMessage(
+        "Vui lòng kiểm tra kết nối mạng hoặc mở lại màn hình này.",
+      );
+    },
+  });
+
   if (isLoading || (!user && !hasLoadedOnce)) {
     return <IsLoading size="large" color={C.red} />;
   }
 
-  if (!user) {
+  if (!user || loadErrorMessage) {
     return (
       <View style={s.emptyStateRoot}>
         <EmptyState
-          iconName="person-circle-outline"
-          title="Không có hồ sơ cá nhân"
-          subtitle="Không thể tải dữ liệu hồ sơ của tài khoản hiện tại."
+          iconName={loadErrorMessage ? "cloud-offline-outline" : "person-circle-outline"}
+          title={
+            loadErrorMessage
+              ? "Không thể tải hồ sơ cá nhân"
+              : "Không có hồ sơ cá nhân"
+          }
+          subtitle={
+            loadErrorMessage ||
+            "Không thể tải dữ liệu hồ sơ của tài khoản hiện tại."
+          }
         />
       </View>
     );

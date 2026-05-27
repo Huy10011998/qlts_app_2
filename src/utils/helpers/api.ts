@@ -23,6 +23,21 @@ export const getApiErrorMessage = (
   return fallback;
 };
 
+export const isNetworkRequestError = (error: any) => {
+  const status = error?.response?.status;
+  const code = String(error?.code ?? "").toUpperCase();
+  const message = String(error?.message ?? "").toLowerCase();
+
+  return (
+    !status &&
+    (message.includes("network error") ||
+      message.includes("timeout") ||
+      code === "ERR_NETWORK" ||
+      code === "ECONNABORTED" ||
+      code === "ETIMEDOUT")
+  );
+};
+
 export const getApiValidationFieldErrors = (error: any) => {
   const responseData = error?.response?.data;
 

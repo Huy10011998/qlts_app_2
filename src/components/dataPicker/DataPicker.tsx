@@ -6,15 +6,28 @@ import { TimePickerModalAndroid } from "../modal/Time/TimePickerModalAndroid";
 
 type Props = {
   value?: string;
+  placeholder?: string;
   onChange: (val: string) => void;
 };
 
-export const DatePicker = ({ value, onChange }: Props) => {
+export const DatePicker = ({ value, placeholder, onChange }: Props) => {
   if (Platform.OS === "ios") {
-    return <DatePickerModalIOS value={value} onChange={onChange} />;
+    return (
+      <DatePickerModalIOS
+        value={value}
+        placeholder={placeholder}
+        onChange={onChange}
+      />
+    );
   }
 
-  return <DatePickerModalAndroid value={value} onChange={onChange} />;
+  return (
+    <DatePickerModalAndroid
+      value={value}
+      placeholder={placeholder}
+      onChange={onChange}
+    />
+  );
 };
 
 export const TimePicker = ({ value, onChange }: Props) => {

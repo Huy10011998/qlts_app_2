@@ -101,6 +101,7 @@ const CameraList: React.FC = () => {
     setCameraToken,
     setThumbTimestamp,
     thumbTimestamp,
+    tokenErrorMessage,
   } = useCameraViewToken({
     isFocused,
     onActive: () => {
@@ -176,7 +177,7 @@ const CameraList: React.FC = () => {
 
   React.useEffect(() => {
     return () => {
-      Orientation.lockToPortrait();
+      Orientation.unlockAllOrientations();
       clearAndroidTimers();
     };
   }, [clearAndroidTimers]);
@@ -189,12 +190,7 @@ const CameraList: React.FC = () => {
   }, []);
 
   const closeFullscreen = React.useCallback(() => {
-    if (Platform.OS === "ios") {
-      Orientation.unlockAllOrientations();
-      setTimeout(() => Orientation.lockToPortrait(), 0);
-    } else {
-      Orientation.lockToPortrait();
-    }
+    Orientation.unlockAllOrientations();
     clearAndroidTimers();
     fsTranslateX.setValue(0);
     setFullscreenCamera(null);
@@ -205,12 +201,7 @@ const CameraList: React.FC = () => {
   const toggleOrientation = React.useCallback(() => {
     if (isLandscape) {
       setIsLandscape(false);
-      if (Platform.OS === "ios") {
-        Orientation.unlockAllOrientations();
-        setTimeout(() => Orientation.lockToPortrait(), 0);
-      } else {
-        Orientation.lockToPortrait();
-      }
+      Orientation.lockToPortrait();
     } else {
       setIsLandscape(true);
       Orientation.lockToLandscapeLeft();
@@ -256,6 +247,8 @@ const CameraList: React.FC = () => {
 
   const openFullscreen = React.useCallback(
     (item: any) => {
+      const { width, height } = Dimensions.get("window");
+      setIsLandscape(width > height);
       setPendingThumbUrl(getCameraSnapshotUrl(item.iD_Camera_Ma, thumbTimestamp));
       setVideoReady(false);
       setAndroidVideoKey(0);
@@ -269,6 +262,8 @@ const CameraList: React.FC = () => {
   const numColumns = layoutCount === 1 ? 1 : 2;
   const itemWidth = screenWidth / numColumns - 16;
   const totalPages = Math.ceil(cameras.length / layoutCount);
+  const isScreenLandscape =
+    screenWidth > Dimensions.get("window").height;
   const pagedCameras = cameras.slice(
     page * layoutCount,
     (page + 1) * layoutCount,
@@ -545,6 +540,18 @@ const CameraList: React.FC = () => {
   );
   const isEmpty = pagedCameras.length === 0;
 
+  if (tokenErrorMessage) {
+    return (
+      <View style={styles.offlineState}>
+        <EmptyState
+          iconName="cloud-offline-outline"
+          title="Không thể tải dữ liệu Camera"
+          subtitle={tokenErrorMessage}
+        />
+      </View>
+    );
+  }
+
   return (
     <GestureHandlerRootView style={styles.container}>
       <View style={styles.headerRow}>
@@ -607,12 +614,23 @@ const CameraList: React.FC = () => {
         animationType="slide"
         transparent
         statusBarTranslucent
+        supportedOrientations={[
+          "portrait",
+          "landscape-left",
+          "landscape-right",
+        ]}
       >
         <TouchableWithoutFeedback onPress={() => setShowLayoutModal(false)}>
-          <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalOverlay,
+              isScreenLandscape && styles.modalOverlayLandscape,
+            ]}
+          >
             <View
               style={[
                 styles.sheetContainer,
+                isScreenLandscape && styles.sheetContainerLandscape,
                 { paddingBottom: insets.bottom || 16 },
               ]}
             >
@@ -862,6 +880,12 @@ export default CameraList;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  offlineState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+  },
   listArea: { flex: 1, overflow: "hidden" },
   listAnimated: { flex: 1 },
   listContent: { paddingBottom: 8 },
@@ -939,10 +963,20 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     backgroundColor: "rgba(0,0,0,0.4)",
   },
+  modalOverlayLandscape: {
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+  },
   sheetContainer: {
     backgroundColor: "#fff",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
+  },
+  sheetContainerLandscape: {
+    width: "100%",
+    maxWidth: 520,
+    borderRadius: 24,
   },
   handleWrapper: { alignItems: "center", paddingTop: 10, paddingBottom: 6 },
   handle: { width: 45, height: 5, backgroundColor: "#ccc", borderRadius: 3 },

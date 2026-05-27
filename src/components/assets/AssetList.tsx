@@ -38,7 +38,7 @@ import {
 } from "../../store/AssetSlice";
 import { error } from "../../utils/Logger";
 import { usePermission } from "../../hooks/usePermission";
-import { useAutoReload } from "../../hooks/useAutoReload";
+import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { useAppDispatch } from "../../store/hooks";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { isAuthExpiredError } from "../../services/data/callApi";
@@ -89,11 +89,13 @@ export default function AssetList() {
   const [searchText, setSearchText] = useState("");
 
   const [isRefreshingTop, setIsRefreshingTop] = useState(false);
+  const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
 
   const debouncedSearch = useDebounce(searchText, 600);
   const pageSize = 20;
   const [treeData, setTreeData] = useState<TreeNode[]>([]);
   const [loadingTree, setLoadingTree] = useState(false);
+  const [treeErrorMessage, setTreeErrorMessage] = useState<string | null>(null);
   const [conditions, setConditions] = useState<AssetFilterCondition[]>([]);
   const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
   const { isMounted, showAlertIfActive } = useSafeAlert();
@@ -127,19 +129,35 @@ export default function AssetList() {
 
   const treeLoadedRef = useRef(false);
   const loadTreeMenu = useCallback(async () => {
-    if (!nameClass || treeLoadedRef.current) return;
+    if (!nameClass) return;
+    if (loadErrorMessage) {
+      setTreeData([]);
+      treeLoadedRef.current = false;
+      setTreeErrorMessage(
+        "Vui lòng kiểm tra kết nối mạng rồi thử mở lại danh mục.",
+      );
+      return;
+    }
+    if (treeLoadedRef.current) return;
 
     try {
       setLoadingTree(true);
+      setTreeErrorMessage(null);
       const res = await getBuildTree(nameClass);
-      setTreeData(buildTree(res.data || []));
+      const nextTreeData = buildTree(res.data || []);
+      setTreeData(nextTreeData);
       treeLoadedRef.current = true;
     } catch (e) {
       error("Lỗi load tree:", e);
+      setTreeData([]);
+      treeLoadedRef.current = false;
+      setTreeErrorMessage(
+        "Không thể tải danh mục. Vui lòng kiểm tra kết nối mạng.",
+      );
     } finally {
       setLoadingTree(false);
     }
-  }, [nameClass]);
+  }, [loadErrorMessage, nameClass]);
 
   const {
     closePanel: closeMenu,
@@ -233,12 +251,25 @@ export default function AssetList() {
         }
 
         setTotal(totalItems);
+        setLoadErrorMessage(null);
       } catch (e) {
         error("API error:", e);
-        if (!isAuthExpiredError(e)) {
-          showAlertIfActive("Lỗi", "Không thể tải dữ liệu.");
+        if (isLoadMore && !isAuthExpiredError(e)) {
+          showAlertIfActive("Lỗi", "Không thể tải thêm dữ liệu.");
         }
-        if (!isLoadMore) setAssetItems([]);
+        if (!isLoadMore) {
+          setAssetItems([]);
+          setSelectedNode(null);
+          dispatch(resetSelectedTreeNode());
+          setTreeData([]);
+          treeLoadedRef.current = false;
+          setTreeErrorMessage(
+            "Vui lòng kiểm tra kết nối mạng rồi thử mở lại danh mục.",
+          );
+          setLoadErrorMessage(
+            "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại.",
+          );
+        }
       } finally {
         if (isMounted()) {
           isFirstLoadRef.current = false;
@@ -247,7 +278,14 @@ export default function AssetList() {
         }
       }
     },
-    [conditions, debouncedSearch, isMounted, nameClass, showAlertIfActive],
+    [
+      conditions,
+      debouncedSearch,
+      dispatch,
+      isMounted,
+      nameClass,
+      showAlertIfActive,
+    ],
   );
 
   useFocusEffect(
@@ -259,7 +297,22 @@ export default function AssetList() {
     }, [dispatch, fetchData, shouldRefresh]),
   );
 
-  useAutoReload(fetchData);
+  useNetworkAwareReload(fetchData, {
+    hasError: Boolean(loadErrorMessage),
+    onOffline: () => {
+      setAssetItems([]);
+      setSelectedNode(null);
+      dispatch(resetSelectedTreeNode());
+      setTreeData([]);
+      treeLoadedRef.current = false;
+      setTreeErrorMessage(
+        "Vui lòng kiểm tra kết nối mạng rồi thử mở lại danh mục.",
+      );
+      setLoadErrorMessage(
+        "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại.",
+      );
+    },
+  });
 
   const handleLoadMore = () => {
     if (assetItems.length < total && !isLoadingMore && !isLoading) {
@@ -337,11 +390,67 @@ export default function AssetList() {
     [fieldActive, fieldShowMobile, handlePress, propertyClass],
   );
 
+  const renderTreePanel = () => (
+    <SlideInSidePanel
+      bodyStyle={styles.menuScrollContent}
+      onClose={closeMenu}
+      subtitle="Chọn nhóm để lọc tài sản"
+      title="Danh mục"
+      translateX={slideAnim}
+      visible={menuVisible}
+      width={MENU_WIDTH}
+    >
+      {loadingTree && <IsLoading size="small" />}
+      {!loadingTree && treeErrorMessage ? (
+        <AssetListEmptyState
+          iconName="cloud-offline-outline"
+          title="Không thể tải danh mục"
+          subtitle={treeErrorMessage}
+        />
+      ) : null}
+      {!loadingTree && treeData.length > 0
+        ? treeData.map((node) => (
+            <AssetTreeNodeItem
+              key={node.index}
+              node={node}
+              onSelect={handleSelectNode}
+              expandAll={true}
+              selectedNode={selectedNode}
+            />
+          ))
+        : null}
+      {!loadingTree && !treeErrorMessage && treeData.length === 0 ? (
+        <AssetListEmptyState
+          iconName="folder-open-outline"
+          title="Chưa có danh mục"
+          subtitle="Danh mục cây con sẽ hiển thị tại đây khi có dữ liệu."
+        />
+      ) : null}
+    </SlideInSidePanel>
+  );
+
   if (isLoading && !isRefreshingTop && !isLoadingMore && !isSearching) {
     return <IsLoading size="large" color={BRAND_RED} />;
   }
 
+  if (loadErrorMessage) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.emptyStateRoot}>
+          <AssetListEmptyState
+            iconName="cloud-offline-outline"
+            title="Không thể tải danh sách tài sản"
+            subtitle={loadErrorMessage}
+          />
+        </View>
+        {renderTreePanel()}
+      </View>
+    );
+  }
+
   const isEmpty = assetItems.length === 0;
+  const hasSearchOrFilter =
+    Boolean(debouncedSearch.trim()) || Boolean(selectedNode);
 
   return (
     <View style={styles.container}>
@@ -394,34 +503,21 @@ export default function AssetList() {
         ListEmptyComponent={
           <AssetListEmptyState
             iconName="cube-outline"
-            title="Không tìm thấy tài sản"
-            subtitle="Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc danh mục"
+            title={
+              hasSearchOrFilter
+                ? "Không tìm thấy tài sản"
+                : "Chưa có dữ liệu tài sản"
+            }
+            subtitle={
+              hasSearchOrFilter
+                ? "Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc danh mục"
+                : "Danh sách tài sản sẽ hiển thị tại đây khi có dữ liệu."
+            }
           />
         }
       />
 
-      <SlideInSidePanel
-        bodyStyle={styles.menuScrollContent}
-        onClose={closeMenu}
-        subtitle="Chọn nhóm để lọc tài sản"
-        title="Danh mục"
-        translateX={slideAnim}
-        visible={menuVisible}
-        width={MENU_WIDTH}
-      >
-        {loadingTree && <IsLoading size="small" />}
-        {!loadingTree && treeData.length > 0
-          ? treeData.map((node) => (
-              <AssetTreeNodeItem
-                key={node.index}
-                node={node}
-                onSelect={handleSelectNode}
-                expandAll={true}
-                selectedNode={selectedNode}
-              />
-            ))
-          : null}
-      </SlideInSidePanel>
+      {renderTreePanel()}
 
       {loaded && nameClass && can(nameClass, "Insert") && (
         <AddItem
@@ -438,6 +534,12 @@ const styles = StyleSheet.create({
   listContentEmpty: {
     paddingTop: 0,
     paddingBottom: 0,
+  },
+  emptyStateRoot: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
   },
   menuScrollContent: {
     paddingBottom: 12,

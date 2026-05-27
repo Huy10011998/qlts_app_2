@@ -15,21 +15,24 @@ import { QrDetailsProps, RootStackParamList } from "../../types/index";
 import { useParams } from "../../hooks/useParams";
 import { getClassReference, getDetails } from "../../services";
 import IsLoading from "../ui/IconLoading";
+import EmptyState from "../ui/EmptyState";
 import { error, log } from "../../utils/Logger";
 import { getFieldValue } from "../../utils/fields/GetFieldValue";
 import { useAppDispatch } from "../../store/hooks";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store";
 import { resetShouldRefreshDetails } from "../../store/AssetSlice";
-import { useAutoReload } from "../../hooks/useAutoReload";
+import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { useDetailViewState } from "../../hooks/useDetailViewState";
 import { useSlideInPanel } from "../../hooks/useSlideInPanel";
 import SlideInSidePanel from "../shared/SlideInSidePanel";
 import { C } from "../../utils/helpers/colors";
+import AssetListEmptyState from "../assets/shared/AssetListEmptyState";
 
 const { width } = Dimensions.get("window");
 const MENU_WIDTH = width * 0.6;
+const REVIEW_NAME_CLASSES = ["BinhChuaChay", "HongChuaChay", "TuChuaChay"];
 
 function QrDetailsMenuButton({ onPress }: { onPress: () => void }) {
   return (
@@ -45,6 +48,7 @@ export default function QrDetails({ children }: QrDetailsProps) {
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [isLoading, setIsLoading] = useState(true);
   const [item, setItem] = useState<any>(null);
+  const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
 
   const {
     activeTab,
@@ -114,6 +118,7 @@ export default function QrDetails({ children }: QrDetailsProps) {
 
     if (itemData) {
       setItem(itemData);
+      setLoadErrorMessage(null);
       setIsLoading(false);
       return;
     }
@@ -122,13 +127,17 @@ export default function QrDetails({ children }: QrDetailsProps) {
     try {
       const response = await getDetails(nameClass, id);
       setItem(response.data);
+      setLoadErrorMessage(null);
     } catch (e) {
       error(e);
-      showAlertIfActive("Lỗi", `Không thể tải chi tiết ${nameClass}`);
+      setItem(null);
+      setLoadErrorMessage(
+        "Vui lòng kiểm tra kết nối mạng hoặc quay lại để thử lại.",
+      );
     } finally {
       if (isMounted()) setIsLoading(false);
     }
-  }, [id, isMounted, itemData, nameClass, showAlertIfActive]);
+  }, [id, isMounted, itemData, nameClass]);
 
   useFocusEffect(
     useCallback(() => {
@@ -139,14 +148,91 @@ export default function QrDetails({ children }: QrDetailsProps) {
     }, [dispatch, fetchDetails, shouldRefreshDetails]),
   );
 
-  useAutoReload(fetchDetails);
+  useNetworkAwareReload(fetchDetails, {
+    hasError: Boolean(loadErrorMessage),
+    onOffline: () => {
+      setItem(null);
+      setLoadErrorMessage(
+        "Vui lòng kiểm tra kết nối mạng hoặc quay lại để thử lại.",
+      );
+    },
+  });
 
   useEffect(() => {
     if (id && nameClass) fetchDetails();
     else setIsLoading(false);
   }, [id, nameClass, fetchDetails]);
 
+  const renderMenuPanel = () => (
+    <SlideInSidePanel
+      bodyStyle={styles.menuContent}
+      onClose={closeMenu}
+      showCloseButton={false}
+      title="Menu"
+      translateX={slideAnim}
+      visible={menuVisible}
+      width={MENU_WIDTH}
+    >
+      {loadErrorMessage ? (
+        <AssetListEmptyState
+          iconName="cloud-offline-outline"
+          title="Không thể tải menu"
+          subtitle="Vui lòng kiểm tra kết nối mạng rồi thử mở lại menu."
+        />
+      ) : (
+        <>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => log("Báo hỏng")}
+          >
+            <Text style={styles.menuItemText}>
+              Báo hỏng / Yêu cầu sửa chữa
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => log("Thanh lý")}
+          >
+            <Text style={styles.menuItemText}>Thanh lý</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => log("Trung chuyển")}
+          >
+            <Text style={styles.menuItemText}>Trung chuyển</Text>
+          </TouchableOpacity>
+
+          {REVIEW_NAME_CLASSES.includes(nameClass || "") ? (
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => handlePress()}
+            >
+              <Text style={styles.menuItemText}>Đánh giá</Text>
+            </TouchableOpacity>
+          ) : null}
+        </>
+      )}
+    </SlideInSidePanel>
+  );
+
   if (isLoading) return <IsLoading size="large" color={C.red} />;
+
+  if (loadErrorMessage) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.emptyStateRoot}>
+          <EmptyState
+            iconName="cloud-offline-outline"
+            title="Không thể tải chi tiết QR"
+            subtitle={loadErrorMessage}
+          />
+        </View>
+        {renderMenuPanel()}
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -161,49 +247,7 @@ export default function QrDetails({ children }: QrDetailsProps) {
         nameClass: nameClass || "",
         fieldActive: fieldActive || [],
       })}
-
-      <SlideInSidePanel
-        bodyStyle={styles.menuContent}
-        onClose={closeMenu}
-        showCloseButton={false}
-        title="Menu"
-        translateX={slideAnim}
-        visible={menuVisible}
-        width={MENU_WIDTH}
-      >
-        {nameClass !== "BinhChuaChay" &&
-          nameClass !== "HongChuaChay" &&
-          nameClass !== "TuChuaChay" && (
-            <>
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() => log("Báo hỏng")}
-              >
-                <Text style={styles.menuItemText}>
-                  Báo hỏng / Yêu cầu sửa chữa
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() => log("Thanh lý")}
-              >
-                <Text style={styles.menuItemText}>Thanh lý</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() => log("Trung chuyển")}
-              >
-                <Text style={styles.menuItemText}>Trung chuyển</Text>
-              </TouchableOpacity>
-            </>
-          )}
-
-        <TouchableOpacity style={styles.menuItem} onPress={() => handlePress()}>
-          <Text style={styles.menuItemText}>Đánh giá</Text>
-        </TouchableOpacity>
-      </SlideInSidePanel>
+      {renderMenuPanel()}
     </View>
   );
 }
@@ -212,6 +256,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F9F9F9",
+  },
+  emptyStateRoot: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
   },
   menuContent: {
     padding: 16,

@@ -71,6 +71,9 @@ export default function AssetEditItem() {
   const PAGE_SIZE = 20;
   const [refPage, setRefPage] = useState(0);
   const [refKeyword, setRefKeyword] = useState("");
+  const [referenceErrorMessage, setReferenceErrorMessage] = useState<
+    string | null
+  >(null);
   const [refLoadingMore, setRefLoadingMore] = useState(false);
   const [refHasMore, setRefHasMore] = useState(true);
   const [refSearching, setRefSearching] = useState(false);
@@ -207,6 +210,7 @@ export default function AssetEditItem() {
     setRefPage,
     setRefHasMore,
     setModalVisible,
+    setReferenceErrorMessage,
     setReferenceData,
     pageSize: PAGE_SIZE,
   });
@@ -396,6 +400,7 @@ export default function AssetEditItem() {
           loadReferenceModalData={loadReferenceModalData}
           modalItems={modalItems}
           modalVisible={modalVisible}
+          referenceErrorMessage={referenceErrorMessage}
           refHasMore={refHasMore}
           refKeyword={refKeyword}
           refLoadingMore={refLoadingMore}
@@ -404,6 +409,7 @@ export default function AssetEditItem() {
           referenceData={referenceData}
           setFormData={setFormData}
           setModalVisible={setModalVisible}
+          setReferenceErrorMessage={setReferenceErrorMessage}
           setRefHasMore={setRefHasMore}
           setRefKeyword={setRefKeyword}
           setRefLoadingMore={setRefLoadingMore}
