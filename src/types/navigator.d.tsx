@@ -115,6 +115,7 @@ export type RootStackParamList = {
 
   /** ================= ASSET ================= */
   Asset: undefined;
+  Report: undefined;
   Camera: undefined;
   CameraList: {
     zoneId: number;

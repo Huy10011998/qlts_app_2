@@ -70,6 +70,7 @@ export default function AssetDeTailsTab({
 
   useNetworkAwareReload(fetchDetails, {
     hasError: Boolean(loadErrorMessage),
+    refetchOnAppResume: true,
     onOffline: () => {
       setItems([]);
       setLoadErrorMessage(

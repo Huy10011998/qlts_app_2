@@ -75,7 +75,7 @@ export function filterAssetMenuTree(data: Item[], searchText: string) {
     nodes
       .map((node) => {
         const match = removeVietnameseTones(node.label.toLowerCase()).includes(
-          keyword,
+          keyword
         );
         const children = node.children?.length ? filterTree(node.children) : [];
 

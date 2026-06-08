@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { DatePicker } from "../dataPicker/DataPicker";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { C } from "../../utils/helpers/colors";
 import EmptyState from "../ui/EmptyState";
+import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 
 const parseReportDate = (dateStr: string): Date | null => {
   if (!dateStr) return null;
@@ -177,17 +178,22 @@ const ReportView: React.FC<ReportViewProps> = ({
   const webViewRef = useRef<WebView>(null);
   const { isMounted, showAlertIfActive } = useSafeAlert();
 
-  const handleSubmit = async () => {
+  const loadReport = useCallback(async (options?: { silent?: boolean }) => {
     const from = parseReportDate(fromDate);
     const to = toDate ? parseReportDate(toDate) : from ? new Date() : null;
+    const silent = options?.silent;
 
     if ((fromDate && !from) || (toDate && !to)) {
-      showAlertIfActive("Lỗi", "Ngày nhập không hợp lệ.");
+      if (!silent) {
+        showAlertIfActive("Lỗi", "Ngày nhập không hợp lệ.");
+      }
       return;
     }
 
     if (from && to && from > to) {
-      showAlertIfActive("Lỗi", "Từ ngày không được lớn hơn Đến ngày.");
+      if (!silent) {
+        showAlertIfActive("Lỗi", "Từ ngày không được lớn hơn Đến ngày.");
+      }
       return;
     }
 
@@ -213,13 +219,37 @@ const ReportView: React.FC<ReportViewProps> = ({
     } catch (err) {
       error("Lỗi khi gọi API:", err);
       setReportError("Không thể tải báo cáo.");
-      showAlertIfActive("Lỗi", "Không thể tải báo cáo.");
+      if (!silent) {
+        showAlertIfActive("Lỗi", "Không thể tải báo cáo.");
+      }
     } finally {
       if (isMounted()) {
         setLoading(false);
       }
     }
-  };
+  }, [
+    fromDate,
+    isMounted,
+    previewEndpoint,
+    showAlertIfActive,
+    toDate,
+  ]);
+
+  const handleSubmit = useCallback(() => {
+    loadReport();
+  }, [loadReport]);
+
+  useNetworkAwareReload(() => {
+    loadReport({ silent: true });
+  }, {
+    hasError: Boolean(reportError),
+    onOffline: () => {
+      setLoading(false);
+      setWebViewRendering(false);
+      setReportHtml(null);
+      setReportError("Không thể tải báo cáo.");
+    },
+  });
 
   const postToReport = (message: string) => {
     webViewRef.current?.postMessage(message);

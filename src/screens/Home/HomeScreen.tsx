@@ -12,7 +12,7 @@ import {
   useNavigation,
 } from "@react-navigation/native";
 import { HomeNavigationProp } from "../../types";
-import { useViewPermission } from "../../hooks/useViewPermission";
+import { usePermission } from "../../hooks/usePermission";
 import HomeMenuItemCard from "./shared/HomeMenuItemCard";
 import HomeEventBanner from "./shared/HomeEventBanner";
 import HomeStatCard from "./shared/HomeStatCard";
@@ -20,7 +20,11 @@ import HomeQuickAction from "./shared/HomeQuickAction";
 import HomeSectionTitle from "./shared/HomeSectionTitle";
 import HomeRecentActivities from "./shared/HomeRecentActivities";
 import { HOME_BG, HOME_BRAND_RED } from "./shared/homeTheme";
-import { HOME_MEETING_INFO, HOME_RECENT_ACTIVITIES } from "./shared/homeData";
+import {
+  HOME_ASSET_SUMMARY,
+  HOME_MEETING_INFO,
+  HOME_RECENT_ACTIVITIES,
+} from "./shared/homeData";
 import { useHomeMenuItems } from "./shared/useHomeMenuItems";
 import EmptyState from "../../components/ui/EmptyState";
 import { useAppDispatch } from "../../store/hooks";
@@ -31,10 +35,15 @@ const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeNavigationProp>();
   const tabsNavigation = navigation.getParent() as any;
   const isFocused = useIsFocused();
-  const { canView, loaded } = useViewPermission();
+  const { canView, loaded } = usePermission();
   const dispatch = useAppDispatch();
-  const { menuItems, openMeetingScreen, openScanScreen, openSettingScreen } =
-    useHomeMenuItems(navigation, tabsNavigation);
+  const {
+    menuItems,
+    openMeetingScreen,
+    openReportScreen,
+    openScanScreen,
+    openSettingScreen,
+  } = useHomeMenuItems(navigation, tabsNavigation);
   const [hasLoadError, setHasLoadError] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -55,7 +64,7 @@ const HomeScreen: React.FC = () => {
         }
       }
     },
-    [dispatch],
+    [dispatch]
   );
 
   useFocusEffect(
@@ -72,25 +81,30 @@ const HomeScreen: React.FC = () => {
       return () => {
         isActive = false;
       };
-    }, [loadPermissions]),
+    }, [loadPermissions])
   );
 
-  useNetworkAwareReload(() => {
-    loadPermissions();
-  }, {
-    enabled: isFocused,
-    hasError: hasLoadError,
-    onOffline: () => {
-      setHasLoadError(true);
+  useNetworkAwareReload(
+    () => {
+      loadPermissions();
     },
-  });
+    {
+      enabled: isFocused,
+      hasError: hasLoadError,
+      onOffline: () => {
+        setHasLoadError(true);
+      },
+    }
+  );
 
   const visibleMenuItems = useMemo(() => {
     if (!loaded) return [];
     return menuItems.filter((item) =>
-      item.viewPermission ? canView(item.viewPermission) : true,
+      item.viewPermission ? canView(item.viewPermission) : true
     );
   }, [canView, loaded, menuItems]);
+  const hasNoViewFeatures = visibleMenuItems.length === 0;
+  const canViewAssetReports = loaded && canView("TaiSan");
 
   if (hasLoadError) {
     return (
@@ -148,11 +162,22 @@ const HomeScreen: React.FC = () => {
         />
 
         <HomeSectionTitle label="CHỨC NĂNG" />
-        <View style={styles.grid}>
-          {visibleMenuItems.map((item, index) => (
-            <HomeMenuItemCard key={item.id} {...item} index={index} />
-          ))}
-        </View>
+        {hasNoViewFeatures ? (
+          <View style={styles.noPermissionCard}>
+            <EmptyState
+              iconName="lock-closed-outline"
+              title="Chưa có chức năng khả dụng"
+              subtitle="Tài khoản hiện tại chưa được cấp quyền xem chức năng nào. Vui lòng liên hệ IT nếu bạn cần thêm quyền truy cập."
+              fullHeight={false}
+            />
+          </View>
+        ) : (
+          <View style={styles.grid}>
+            {visibleMenuItems.map((item, index) => (
+              <HomeMenuItemCard key={item.id} {...item} index={index} />
+            ))}
+          </View>
+        )}
 
         <HomeSectionTitle label="THAO TÁC NHANH" />
         <View style={styles.qaCard}>
@@ -163,13 +188,18 @@ const HomeScreen: React.FC = () => {
             color="#3B5BDB"
             onPress={openScanScreen}
           />
-          <View style={styles.qaDivider} />
-          <HomeQuickAction
-            iconName="document-text-outline"
-            label="Báo cáo"
-            bg="#F3F0FF"
-            color="#7048E8"
-          />
+          {canViewAssetReports ? (
+            <>
+              <View style={styles.qaDivider} />
+              <HomeQuickAction
+                iconName="document-text-outline"
+                label="Báo cáo tài sản"
+                bg="#F3F0FF"
+                color="#7048E8"
+                onPress={openReportScreen}
+              />
+            </>
+          ) : null}
           <View style={styles.qaDivider} />
           <HomeQuickAction
             iconName="notifications-outline"
@@ -200,13 +230,25 @@ const HomeScreen: React.FC = () => {
             trend="up"
           />
           <HomeStatCard
-            value="1,284"
+            value={String(HOME_ASSET_SUMMARY.totalAssets)}
             label="Tài sản đang quản lý"
             sub="Cập nhật hôm nay"
             subColor="#8A95A3"
             iconName="cube-outline"
             iconBg="#FFF0F0"
             iconColor={HOME_BRAND_RED}
+            trend="neutral"
+          />
+        </View>
+        <View style={styles.statsRow}>
+          <HomeStatCard
+            value={HOME_ASSET_SUMMARY.totalAssetValue}
+            label="Tổng giá trị tài sản"
+            sub="Cập nhật hôm nay"
+            subColor="#3B5BDB"
+            iconName="cash-outline"
+            iconBg="#F0F4FF"
+            iconColor="#3B5BDB"
             trend="neutral"
           />
         </View>
@@ -240,6 +282,18 @@ const styles = StyleSheet.create({
     flexWrap: "nowrap",
     gap: 10,
     marginBottom: 14,
+  },
+  noPermissionCard: {
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    paddingVertical: 20,
+    paddingHorizontal: 12,
+    marginBottom: 14,
+    shadowColor: "#1A2340",
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
 
   statsRow: { flexDirection: "row", gap: 10, marginBottom: 14 },

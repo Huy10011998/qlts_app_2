@@ -18,7 +18,7 @@ import {
 } from "react-native";
 
 import { useDebounce } from "../../hooks/useDebounce";
-import { useViewPermission } from "../../hooks/useViewPermission";
+import { usePermission } from "../../hooks/usePermission";
 import IsLoading from "../../components/ui/IconLoading";
 import EmptyState from "../../components/ui/EmptyState";
 import { getVungCamera } from "../../services/data/callApi";
@@ -46,7 +46,7 @@ if (
 
 export default function CameraScreen() {
   const isFocused = useIsFocused();
-  const { canView, loaded } = useViewPermission();
+  const { canView, loaded } = usePermission();
   const hasViewPermission = loaded && canView("Camera");
   const [data, setData] = useState<CameraItem[]>([]);
   const [isFetching, setIsFetching] = useState(false);
@@ -62,38 +62,46 @@ export default function CameraScreen() {
   const fetchingRef = useRef(false);
   const { isMounted } = useSafeAlert();
 
-  const fetchData = useCallback(async (options?: { isRefresh?: boolean }) => {
-    if (fetchingRef.current) return;
+  const fetchData = useCallback(
+    async (options?: { isRefresh?: boolean }) => {
+      if (fetchingRef.current) return;
 
-    const isRefresh = options?.isRefresh;
-    fetchingRef.current = true;
-    if (!isRefresh) {
-      setIsFetching(true);
-    }
-
-    try {
-      const response: any = await getVungCamera();
-
-      setRawData(response.data);
-      setData(buildCameraTree(response.data));
-      setLoadErrorMessage(null);
-    } catch (e) {
-      error("API error:", e);
-      setLoadErrorMessage(
-        "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại.",
-      );
-    } finally {
-      fetchingRef.current = false;
-      if (isMounted()) {
-        setIsFetching(false);
-        setIsRefreshingTop(false);
+      const isRefresh = options?.isRefresh;
+      fetchingRef.current = true;
+      if (!isRefresh) {
+        setIsFetching(true);
       }
-    }
-  }, [isMounted]);
+
+      try {
+        const response: any = await getVungCamera();
+        const nextData = Array.isArray(response?.data) ? [...response.data] : [];
+
+        setRawData(nextData);
+        setData(buildCameraTree(nextData));
+        setLoadErrorMessage(null);
+      } catch (e) {
+        error("API error:", e);
+        setLoadErrorMessage(
+          "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại."
+        );
+      } finally {
+        fetchingRef.current = false;
+        if (isMounted()) {
+          setIsFetching(false);
+          setIsRefreshingTop(false);
+        }
+      }
+    },
+    [isMounted]
+  );
 
   const refreshTop = async () => {
     if (isRefreshingTop) return;
 
+    setLoadErrorMessage(null);
+    if (!debouncedSearch.trim()) {
+      setExpandedIds([]);
+    }
     setIsRefreshingTop(true);
     await fetchData({ isRefresh: true });
   };
@@ -106,21 +114,25 @@ export default function CameraScreen() {
     fetchData();
   }, [fetchData, hasViewPermission, loaded]);
 
-  useNetworkAwareReload(() => {
-    fetchData();
-  }, {
-    enabled: isFocused && loaded && hasViewPermission,
-    hasError: Boolean(loadErrorMessage),
-    onOffline: () => {
-      setLoadErrorMessage(
-        "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại.",
-      );
+  useNetworkAwareReload(
+    () => {
+      fetchData();
     },
-  });
+    {
+      enabled: isFocused && loaded && hasViewPermission,
+      hasError: Boolean(loadErrorMessage),
+      refetchOnAppResume: false,
+      onOffline: () => {
+        setLoadErrorMessage(
+          "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại."
+        );
+      },
+    }
+  );
 
   const { filteredTree, autoExpand } = useMemo(
     () => filterCameraTree(data, debouncedSearch),
-    [debouncedSearch, data],
+    [debouncedSearch, data]
   );
 
   useEffect(() => {
@@ -135,7 +147,7 @@ export default function CameraScreen() {
     }
 
     setExpandedIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   };
 
@@ -230,9 +242,7 @@ export default function CameraScreen() {
             <EmptyState
               iconName="videocam-outline"
               title={
-                hasSearch
-                  ? "Không tìm thấy camera"
-                  : "Chưa có dữ liệu camera"
+                hasSearch ? "Không tìm thấy camera" : "Chưa có dữ liệu camera"
               }
               subtitle={
                 hasSearch

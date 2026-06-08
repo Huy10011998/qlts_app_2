@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { HOME_BRAND_RED } from "./homeTheme";
 
 type HomeSectionTitleProps = {
@@ -13,12 +13,21 @@ export default function HomeSectionTitle({
   action,
   onAction,
 }: HomeSectionTitleProps) {
+  const handleActionPress =
+    onAction ??
+    (() => {
+      Alert.alert(
+        "Thông báo",
+        "Chức năng sẽ được triển khai trong thời gian sắp tới.",
+      );
+    });
+
   return (
     <View style={styles.row}>
       <View style={styles.pill} />
       <Text style={styles.label}>{label}</Text>
       {action ? (
-        <TouchableOpacity onPress={onAction}>
+        <TouchableOpacity onPress={handleActionPress}>
           <Text style={styles.action}>{action}</Text>
         </TouchableOpacity>
       ) : null}

@@ -3,6 +3,8 @@ import {
   buildClassPermissionKey,
   hasFullPermission,
   hasPermissionKey,
+  hasReportPermission,
+  hasViewPermission,
   usePermissionState,
 } from "./shared/permissionHelpers";
 
@@ -29,5 +31,22 @@ export function usePermission() {
     return hasPermission;
   };
 
-  return { can, isFullPermission: isFullAccess, loaded, permissions };
+  const canReport = (reportNames: string[]) => {
+    if (!loaded) return false;
+    return hasReportPermission(permissions, reportNames, isFullAccess());
+  };
+
+  const canView = (viewName: string) => {
+    if (!loaded) return false;
+    return hasViewPermission(permissions, viewName, isFullAccess());
+  };
+
+  return {
+    can,
+    canReport,
+    canView,
+    isFullPermission: isFullAccess,
+    loaded,
+    permissions,
+  };
 }

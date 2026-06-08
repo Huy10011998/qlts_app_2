@@ -70,6 +70,7 @@ export default function AssetDetails({ children }: DetailsProps) {
 
   useNetworkAwareReload(fetchDetails, {
     hasError: Boolean(loadErrorMessage),
+    refetchOnAppResume: true,
     onOffline: () => {
       setLoadErrorMessage(
         "Không tải được dữ liệu chi tiết. Vui lòng kiểm tra kết nối mạng rồi thử lại.",

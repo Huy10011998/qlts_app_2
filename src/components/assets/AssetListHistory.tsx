@@ -150,6 +150,7 @@ export default function AssetListHistory() {
 
   useNetworkAwareReload(fetchData, {
     hasError: Boolean(loadErrorMessage),
+    refetchOnAppResume: true,
     onOffline: () => {
       setLoadErrorMessage(
         "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại.",

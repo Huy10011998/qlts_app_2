@@ -9,6 +9,11 @@ export const HOME_MEETING_INFO = {
   totalShareholders: 220,
 };
 
+export const HOME_ASSET_SUMMARY = {
+  totalAssets: 1761,
+  totalAssetValue: "111.495.859.981 VND",
+};
+
 export const HOME_RECENT_ACTIVITIES = [
   {
     text: "Camera khu A phát hiện chuyển động",

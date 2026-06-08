@@ -21,7 +21,8 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { GetMenuActiveResponse, Item } from "../../types/index";
 import { API_ENDPOINTS } from "../../config/index";
 import { useDebounce } from "../../hooks/useDebounce";
-import { useViewPermission } from "../../hooks/useViewPermission";
+import { usePermission } from "../../hooks/usePermission";
+import { filterReportPermissionTree } from "../../hooks/shared/permissionHelpers";
 import IsLoading from "../../components/ui/IconLoading";
 import EmptyState from "../../components/ui/EmptyState";
 import ReportView from "../../components/report/ReportView";
@@ -36,10 +37,7 @@ import {
   buildAssetMenuTree,
   filterAssetMenuTree,
 } from "./shared/assetMenuHelpers";
-import {
-  ASSET_MENU_BG,
-  ASSET_MENU_BRAND_RED,
-} from "./shared/assetMenuTheme";
+import { ASSET_MENU_BG, ASSET_MENU_BRAND_RED } from "./shared/assetMenuTheme";
 
 if (
   Platform.OS === "android" &&
@@ -50,8 +48,9 @@ if (
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function AssetScreen() {
-  const { canView, loaded } = useViewPermission();
+  const { canView, isFullPermission, loaded, permissions } = usePermission();
   const hasViewPermission = loaded && canView("TaiSan");
+  const isFullAccess = isFullPermission();
   const [data, setData] = useState<Item[]>([]);
   const [isFetching, setIsFetching] = useState(false);
   const [isRefreshingTop, setIsRefreshingTop] = useState(false);
@@ -59,7 +58,7 @@ export default function AssetScreen() {
   const [expandedIds, setExpandedIds] = useState<(string | number)[]>([]);
   const [reportItem, setReportItem] = useState<Item | null>(null);
   const [comingSoonReportItem, setComingSoonReportItem] = useState<Item | null>(
-    null,
+    null
   );
   const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
 
@@ -67,6 +66,11 @@ export default function AssetScreen() {
   const debouncedSearch = useDebounce(search, 400);
   const [isSearching, setIsSearching] = useState(false);
   const { isMounted } = useSafeAlert();
+  const permissionsRef = useRef(permissions);
+  const isFullAccessRef = useRef(isFullAccess);
+
+  permissionsRef.current = permissions;
+  isFullAccessRef.current = isFullAccess;
 
   const assetMenuMap = useMemo(() => {
     const map: Record<string | number, Item> = {};
@@ -103,7 +107,7 @@ export default function AssetScreen() {
 
       return false;
     },
-    [assetMenuMap],
+    [assetMenuMap]
   );
 
   const handleShowReport = useCallback(
@@ -115,43 +119,52 @@ export default function AssetScreen() {
 
       setReportItem(item);
     },
-    [isCnttReport],
+    [isCnttReport]
   );
 
   // ── Fetch ──
-  const fetchData = useCallback(async (options?: { isRefresh?: boolean }) => {
-    if (fetchingRef.current) return;
+  const fetchData = useCallback(
+    async (options?: { isRefresh?: boolean }) => {
+      if (fetchingRef.current) return;
 
-    const isRefresh = options?.isRefresh;
-    fetchingRef.current = true;
-    try {
-      if (!isRefresh) {
-        setIsFetching(true);
+      const isRefresh = options?.isRefresh;
+      fetchingRef.current = true;
+      try {
+        if (!isRefresh) {
+          setIsFetching(true);
+        }
+        const response = (await callApi(
+          "POST",
+          API_ENDPOINTS.GET_MENU_ACTIVE,
+          {}
+        )) as GetMenuActiveResponse;
+        if (!Array.isArray(response?.data)) throw new Error("Invalid data");
+        const menuAccount = response.data
+          .filter((item) => item.iD_GroupMenu === 2)
+          .sort((a, b) => Number(a.stt) - Number(b.stt));
+        setData(
+          filterReportPermissionTree(
+            buildAssetMenuTree(menuAccount),
+            permissionsRef.current,
+            isFullAccessRef.current
+          )
+        );
+        setLoadErrorMessage(null);
+      } catch (e) {
+        error("API error:", e);
+        setLoadErrorMessage(
+          "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại."
+        );
+      } finally {
+        fetchingRef.current = false;
+        if (isMounted()) {
+          setIsFetching(false);
+          setIsRefreshingTop(false);
+        }
       }
-      const response = (await callApi(
-        "POST",
-        API_ENDPOINTS.GET_MENU_ACTIVE,
-        {},
-      )) as GetMenuActiveResponse;
-      if (!Array.isArray(response?.data)) throw new Error("Invalid data");
-      const menuAccount = response.data
-        .filter((item) => item.iD_GroupMenu === 2)
-        .sort((a, b) => Number(a.stt) - Number(b.stt));
-      setData(buildAssetMenuTree(menuAccount));
-      setLoadErrorMessage(null);
-    } catch (e) {
-      error("API error:", e);
-      setLoadErrorMessage(
-        "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại.",
-      );
-    } finally {
-      fetchingRef.current = false;
-      if (isMounted()) {
-        setIsFetching(false);
-        setIsRefreshingTop(false);
-      }
-    }
-  }, [isMounted]);
+    },
+    [isMounted]
+  );
 
   const refreshTop = async () => {
     if (isRefreshingTop) return;
@@ -167,23 +180,27 @@ export default function AssetScreen() {
     }
     fetchData();
   }, [loaded, hasViewPermission, fetchData]);
-  useNetworkAwareReload(() => {
-    if (!loaded || !hasViewPermission) return;
-    fetchData();
-  }, {
-    enabled: loaded && hasViewPermission,
-    hasError: Boolean(loadErrorMessage),
-    onOffline: () => {
-      setLoadErrorMessage(
-        "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại.",
-      );
+  useNetworkAwareReload(
+    () => {
+      if (!loaded || !hasViewPermission) return;
+      fetchData();
     },
-  });
+    {
+      enabled: loaded && hasViewPermission,
+      hasError: Boolean(loadErrorMessage),
+      refetchOnAppResume: false,
+      onOffline: () => {
+        setLoadErrorMessage(
+          "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại."
+        );
+      },
+    }
+  );
 
   // ── Search + auto expand ──
   const { filteredData, autoExpanded } = useMemo(
     () => filterAssetMenuTree(data, debouncedSearch),
-    [debouncedSearch, data],
+    [debouncedSearch, data]
   );
 
   useEffect(() => {
@@ -193,7 +210,7 @@ export default function AssetScreen() {
 
   const handleToggle = (id: string | number) => {
     setExpandedIds((prev) =>
-      prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id],
+      prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]
     );
   };
 
@@ -264,10 +281,7 @@ export default function AssetScreen() {
             isSearching={!!debouncedSearch}
           />
         )}
-        contentContainerStyle={[
-          s.listContent,
-          isEmpty && s.listContentEmpty,
-        ]}
+        contentContainerStyle={[s.listContent, isEmpty && s.listContentEmpty]}
         removeClippedSubviews
         initialNumToRender={20}
         windowSize={10}
@@ -286,9 +300,7 @@ export default function AssetScreen() {
           <EmptyState
             iconName="search-outline"
             title={
-              hasSearch
-                ? "Không tìm thấy kết quả"
-                : "Chưa có dữ liệu tài sản"
+              hasSearch ? "Không tìm thấy kết quả" : "Chưa có dữ liệu tài sản"
             }
             subtitle={
               hasSearch

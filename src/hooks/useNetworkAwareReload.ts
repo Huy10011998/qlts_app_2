@@ -7,6 +7,7 @@ type Options = {
   enabled?: boolean;
   hasError?: boolean;
   debounceMs?: number;
+  reconnectPollMs?: number;
   onOffline?: () => void;
   refetchOnAppResume?: boolean;
 };
@@ -19,8 +20,9 @@ export function useNetworkAwareReload(
     enabled = true,
     hasError = false,
     debounceMs = 800,
+    reconnectPollMs = 3000,
     onOffline,
-    refetchOnAppResume = false,
+    refetchOnAppResume = true,
   } = options || {};
   const lastRetryAtRef = useRef(0);
   const lastConnectedRef = useRef<boolean | null>(null);
@@ -42,6 +44,14 @@ export function useNetworkAwareReload(
   useEffect(() => {
     if (!enabled || (!hasError && !hasOfflineHandler)) return;
 
+    const retryIfNeeded = () => {
+      const now = Date.now();
+      if (now - lastRetryAtRef.current < debounceMs) return;
+
+      lastRetryAtRef.current = now;
+      fnRef.current();
+    };
+
     const handleNetworkState = (state: NetInfoState) => {
       const isConnected =
         state.isConnected === true && state.isInternetReachable !== false;
@@ -49,22 +59,16 @@ export function useNetworkAwareReload(
 
       lastConnectedRef.current = isConnected;
 
-      if (!isConnected && previousConnected !== false) {
+      if (!isConnected && previousConnected === true) {
         onOfflineRef.current?.();
         return;
       }
 
       const shouldRetry =
-        isConnected &&
-        (previousConnected === false ||
-          (previousConnected === null && hasErrorRef.current));
+        isConnected && (hasErrorRef.current || previousConnected === false);
 
       if (shouldRetry) {
-        const now = Date.now();
-        if (now - lastRetryAtRef.current < debounceMs) return;
-
-        lastRetryAtRef.current = now;
-        fnRef.current();
+        retryIfNeeded();
       }
     };
 
@@ -80,13 +84,24 @@ export function useNetworkAwareReload(
 
         if (nextState !== "active") return;
 
-        NetInfo.fetch().then(handleNetworkState).catch(() => {});
+        NetInfo.fetch()
+          .then(handleNetworkState)
+          .catch(() => {});
       },
     );
+
+    const pollInterval = hasError
+      ? setInterval(() => {
+          if (appStateRef.current !== "active") return;
+          retryIfNeeded();
+          if (lastConnectedRef.current) retryIfNeeded();
+        }, reconnectPollMs)
+      : null;
 
     return () => {
       unsubscribeNetInfo();
       appStateSubscription.remove();
+      if (pollInterval) clearInterval(pollInterval);
     };
-  }, [debounceMs, enabled, hasError, hasOfflineHandler]);
+  }, [debounceMs, enabled, hasError, hasOfflineHandler, reconnectPollMs]);
 }

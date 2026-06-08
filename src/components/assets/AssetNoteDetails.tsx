@@ -6,7 +6,10 @@ import IsLoading from "../ui/IconLoading";
 import { C } from "../../utils/helpers/colors";
 import AssetListEmptyState from "./shared/AssetListEmptyState";
 
-export default function AssetNoteDetails({ text }: CenterTextProps) {
+export default function AssetNoteDetails({
+  text,
+  loadErrorMessage,
+}: CenterTextProps) {
   const safeText =
     typeof text === "string" && text.trim().length > 0 ? text : "---";
   const shouldShowLoader = safeText !== "---";
@@ -47,6 +50,19 @@ export default function AssetNoteDetails({ text }: CenterTextProps) {
     setLoading(shouldShowLoader);
     opacity.setValue(shouldShowLoader ? 1 : 0);
   }, [opacity, shouldShowLoader, safeText]);
+
+  if (loadErrorMessage) {
+    return (
+      <View style={styles.emptyContainer}>
+        <AssetListEmptyState
+          fullHeight
+          iconName="cloud-offline-outline"
+          title="Không thể tải ghi chú"
+          subtitle={loadErrorMessage}
+        />
+      </View>
+    );
+  }
 
   if (!shouldShowLoader) {
     return (

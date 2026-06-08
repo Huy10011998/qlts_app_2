@@ -15,26 +15,31 @@ type ParentNavigation = {
 
 export function useHomeMenuItems(
   navigation: HomeNavigationProp,
-  tabsNavigation?: ParentNavigation | null,
+  tabsNavigation?: ParentNavigation | null
 ) {
   const openMeetingScreen = useCallback(
     () => navigation.navigate("ShareholdersMeeting", HOME_MEETING_INFO),
-    [navigation],
+    [navigation]
   );
 
   const openCameraScreen = useCallback(
     () => navigation.navigate("Camera"),
-    [navigation],
+    [navigation]
   );
 
   const openScanScreen = useCallback(
     () => tabsNavigation?.navigate("ScanTab", { screen: "Scan" }),
-    [tabsNavigation],
+    [tabsNavigation]
+  );
+
+  const openReportScreen = useCallback(
+    () => navigation.navigate("Report"),
+    [navigation]
   );
 
   const openSettingScreen = useCallback(
     () => tabsNavigation?.navigate("SettingTab"),
-    [tabsNavigation],
+    [tabsNavigation]
   );
 
   const menuItems = useMemo<HomeMenuItem[]>(
@@ -64,12 +69,13 @@ export function useHomeMenuItems(
         onPress: openMeetingScreen,
       },
     ],
-    [navigation, openCameraScreen, openMeetingScreen],
+    [navigation, openCameraScreen, openMeetingScreen]
   );
 
   return {
     menuItems,
     openMeetingScreen,
+    openReportScreen,
     openScanScreen,
     openSettingScreen,
   };

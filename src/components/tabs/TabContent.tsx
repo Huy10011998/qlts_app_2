@@ -216,7 +216,12 @@ export default function TabContent({
     ),
 
     details: <AssetDeTailsTab nameClassRoot={nameClassRoot} />,
-    notes: <AssetNoteDetails text={item?.notes ?? "---"} />,
+    notes: (
+      <AssetNoteDetails
+        text={item?.notes ?? "---"}
+        loadErrorMessage={loadErrorMessage}
+      />
+    ),
     history: <AssetListHistory />,
     attach: <AssetListAttachFile />,
   };

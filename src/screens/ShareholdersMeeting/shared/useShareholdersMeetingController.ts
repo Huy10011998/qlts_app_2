@@ -289,19 +289,20 @@ export function useShareholdersMeetingController() {
       if (!options?.silent) {
         setIsMeetingLoading(true);
       }
-      setMeetingError(null);
-      setVotingError(null);
 
       const activeRes = await getActiveDhcd<ActiveMeetingResponse>();
       const meeting = activeRes?.data ?? null;
 
       if (!canCommit()) return;
 
+      setMeetingError(null);
+
       if (!meeting || !meeting.id) {
         setActiveMeeting(null);
         setShareholders([]);
         setOpinions([]);
         setSelectedOpinionId("");
+        setVotingError(null);
         return;
       }
 
@@ -325,6 +326,7 @@ export function useShareholdersMeetingController() {
               if (!canCommit()) return;
               setOpinions(data);
               setSelectedOpinionId(data[0]?.id ?? "");
+              setVotingError(null);
             })
             .catch(() => {
               if (!canCommit()) return;
@@ -333,6 +335,8 @@ export function useShareholdersMeetingController() {
               setVotingError("Không tải được danh sách ý kiến.");
             }),
         );
+      } else {
+        setVotingError(null);
       }
 
       await Promise.all(tasks);
@@ -413,7 +417,6 @@ export function useShareholdersMeetingController() {
     hasError: Boolean(meetingError || votingError),
     onOffline: () => {
       setMeetingError("Không tải được dữ liệu đại hội cổ đông.");
-      setVotingError("Không tải được danh sách ý kiến.");
     },
   });
 

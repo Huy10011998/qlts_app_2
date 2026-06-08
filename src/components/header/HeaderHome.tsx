@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
+  AppState,
   View,
   Image,
   TouchableOpacity,
@@ -7,26 +8,29 @@ import {
   Linking,
   Text,
   Dimensions,
+  Alert,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
-import { StackNavigation } from "../../types/navigator.d";
 import { HeaderHomeProps } from "../../types/components.d";
-import { useNavigation } from "@react-navigation/native";
 import { C } from "../../utils/helpers/colors";
 
 const { width: W } = Dimensions.get("window");
 
-const getGreeting = () => {
-  const h = new Date().getHours();
+const getGreeting = (date: Date) => {
+  const h = date.getHours();
   if (h < 12) return { text: "Chào buổi sáng", icon: "sunny-outline" };
   if (h < 18) return { text: "Chào buổi chiều", icon: "partly-sunny-outline" };
   return { text: "Chào buổi tối", icon: "moon-outline" };
 };
 
 const formatTime = (d: Date) =>
-  d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+  d.toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
 
 const formatDate = (d: Date) =>
   d.toLocaleDateString("vi-VN", {
@@ -59,14 +63,35 @@ const HeaderWave: React.FC = () => (
 );
 
 export default function HeaderHome(_props: HeaderHomeProps) {
-  const navigation = useNavigation<StackNavigation<"Tabs">>();
   const insets = useSafeAreaInsets();
-  const greeting = getGreeting();
 
   const [now, setNow] = useState(new Date());
+  const greeting = getGreeting(now);
+  const showComingSoonAlert = () => {
+    Alert.alert(
+      "Thông báo",
+      "Chức năng sẽ được triển khai trong thời gian sắp tới.",
+    );
+  };
+
   useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 30_000);
-    return () => clearInterval(timer);
+    const updateNow = () => setNow(new Date());
+    const timer = setInterval(updateNow, 1_000);
+    const appStateSubscription = AppState.addEventListener(
+      "change",
+      (nextAppState) => {
+        if (nextAppState === "active") {
+          updateNow();
+        }
+      },
+    );
+
+    updateNow();
+
+    return () => {
+      clearInterval(timer);
+      appStateSubscription.remove();
+    };
   }, []);
 
   return (
@@ -90,16 +115,13 @@ export default function HeaderHome(_props: HeaderHomeProps) {
         </TouchableOpacity>
 
         <View style={styles.topActions}>
-          <TouchableOpacity style={styles.iconBtn} activeOpacity={0.75}>
-            <Ionicons name="notifications-outline" size={20} color="#fff" />
-            <View style={styles.notifDot} />
-          </TouchableOpacity>
           <TouchableOpacity
             style={styles.iconBtn}
             activeOpacity={0.75}
-            onPress={() => navigation.navigate("Tabs")}
+            onPress={showComingSoonAlert}
           >
-            <Ionicons name="search-outline" size={20} color="#fff" />
+            <Ionicons name="notifications-outline" size={20} color="#fff" />
+            <View style={styles.notifDot} />
           </TouchableOpacity>
         </View>
       </View>

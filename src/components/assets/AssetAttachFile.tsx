@@ -113,6 +113,7 @@ export default function AssetListAttachFile() {
 
   useNetworkAwareReload(fetchData, {
     hasError: Boolean(loadErrorMessage),
+    refetchOnAppResume: true,
     onOffline: () => {
       setLoadErrorMessage(
         "Vui lòng kiểm tra kết nối mạng hoặc quay lại để thử lại.",

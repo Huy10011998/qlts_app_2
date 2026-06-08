@@ -148,6 +148,7 @@ export function useRelatedAssetListData({
   useNetworkAwareReload(fetchData, {
     enabled,
     hasError: Boolean(loadErrorMessage),
+    refetchOnAppResume: true,
     onOffline: () => {
       setData([]);
       setLoadErrorMessage(

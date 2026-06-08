@@ -36,8 +36,13 @@ export default function HomeStatCard({
   return (
     <View style={styles.card}>
       <View style={styles.top}>
-        <View style={[styles.iconWrap, { backgroundColor: iconBg }]}>
-          <Ionicons name={iconName} color={iconColor} size={16} />
+        <View style={styles.titleWrap}>
+          <View style={[styles.iconWrap, { backgroundColor: iconBg }]}>
+            <Ionicons name={iconName} color={iconColor} size={16} />
+          </View>
+          <Text style={styles.label} numberOfLines={2}>
+            {label}
+          </Text>
         </View>
         {trend === "up" ? (
           <View style={[styles.trendBadge, trendStyles.up]}>
@@ -50,8 +55,14 @@ export default function HomeStatCard({
           </View>
         ) : null}
       </View>
-      <Text style={[styles.value, { color: iconColor }]}>{value}</Text>
-      <Text style={styles.label}>{label}</Text>
+      <Text
+        style={[styles.value, { color: iconColor }]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.72}
+      >
+        {value}
+      </Text>
       {sub ? <Text style={[styles.sub, { color: subColor }]}>{sub}</Text> : null}
     </View>
   );
@@ -72,8 +83,15 @@ const styles = StyleSheet.create({
   top: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
     marginBottom: 10,
+  },
+  titleWrap: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingRight: 8,
   },
   iconWrap: {
     width: 34,
@@ -97,8 +115,8 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 10.5,
     color: "#6B7280",
-    marginTop: 2,
-    fontWeight: "500",
+    fontWeight: "600",
+    flex: 1,
   },
   sub: {
     fontSize: 9.5,

@@ -12,6 +12,7 @@ import {
   Platform,
   Alert,
   PermissionsAndroid,
+  StatusBar,
 } from "react-native";
 import {
   useRoute,
@@ -58,6 +59,7 @@ import {
 } from "./shared/cameraStreamUtils";
 import { useCameraViewToken } from "./shared/useCameraViewToken";
 import EmptyState from "../ui/EmptyState";
+import { createTabBarStyle } from "../../navigation/shared/tabBarTheme";
 
 const CameraCell = React.memo(
   ({
@@ -317,6 +319,8 @@ const CameraListGrid: React.FC = () => {
   const [focusKey, setFocusKey] = React.useState(0);
   const [isSwitchingFullscreen, setIsSwitchingFullscreen] =
     React.useState(false);
+  const [isGridLandscapeFullscreen, setIsGridLandscapeFullscreen] =
+    React.useState(false);
 
   const webviewRefs = React.useRef<Record<string, any>>({});
   const fullscreenWebViewRef = React.useRef<any>(null);
@@ -382,7 +386,7 @@ const CameraListGrid: React.FC = () => {
   });
 
   const SW = screenDims.width;
-  const isGridLandscape = !fullscreenCam && screenDims.width > screenDims.height;
+  const isGridFullscreenMode = isGridLandscapeFullscreen;
   const effectiveLayoutCount = layoutCount;
   const [cols, rows] = LAYOUT_OPTIONS[effectiveLayoutCount] ?? [4, 4];
   const perPage = cols * rows;
@@ -424,9 +428,9 @@ const CameraListGrid: React.FC = () => {
   }, [isFocused]);
 
   React.useEffect(() => {
-    if (!isGridLandscape) return;
+    if (!isGridFullscreenMode) return;
     setShowLayoutPicker(false);
-  }, [isGridLandscape]);
+  }, [isGridFullscreenMode]);
 
   React.useEffect(() => {
     fullscreenCamRef.current = fullscreenCam;
@@ -454,9 +458,30 @@ const CameraListGrid: React.FC = () => {
     navigation.setOptions({ gestureEnabled: false });
     return () => {
       Orientation.unlockAllOrientations();
-      navigation.setOptions({ gestureEnabled: true });
+      navigation.setOptions({ gestureEnabled: true, headerShown: true });
     };
   }, [navigation]);
+
+  React.useEffect(() => {
+    navigation.setOptions({ headerShown: !isGridLandscapeFullscreen });
+  }, [isGridLandscapeFullscreen, navigation]);
+
+  React.useEffect(() => {
+    const tabNavigation = navigation.getParent();
+    if (!tabNavigation) return;
+
+    tabNavigation.setOptions({
+      tabBarStyle: isGridFullscreenMode
+        ? { display: "none" }
+        : [createTabBarStyle({ bottomInset: insets.bottom })],
+    });
+
+    return () => {
+      tabNavigation.setOptions({
+        tabBarStyle: [createTabBarStyle({ bottomInset: insets.bottom })],
+      });
+    };
+  }, [insets.bottom, isGridFullscreenMode, navigation]);
 
   const stopAllStreams = React.useCallback(() => {
     if (startStreamsTimeoutRef.current) {
@@ -816,11 +841,28 @@ const CameraListGrid: React.FC = () => {
     setActiveIndex(idx);
   }, []);
 
+  const openGridLandscapeFullscreen = React.useCallback(() => {
+    setShowLayoutPicker(false);
+    setIsGridLandscapeFullscreen(true);
+    Orientation.lockToLandscapeLeft();
+  }, []);
+
+  const closeGridLandscapeFullscreen = React.useCallback(() => {
+    if (!isGridLandscapeFullscreen) return;
+    setIsGridLandscapeFullscreen(false);
+    Orientation.lockToPortrait();
+  }, [isGridLandscapeFullscreen]);
+
   const handleCamDoubleTap = React.useCallback(
     (cam: any, idx: number) => {
       const { width, height } = Dimensions.get("window");
-      setIsLandscape(width > height);
-      Orientation.unlockAllOrientations();
+      const shouldKeepLandscape = isGridLandscapeFullscreen || width > height;
+      setIsLandscape(shouldKeepLandscape);
+      if (isGridLandscapeFullscreen) {
+        Orientation.lockToLandscapeLeft();
+      } else {
+        Orientation.unlockAllOrientations();
+      }
       setPendingThumbUrl(getCameraSnapshotUrl(cam.iD_Camera_Ma, thumbTimestamp));
       setActiveIndex(idx);
       setVideoReady(false);
@@ -831,7 +873,13 @@ const CameraListGrid: React.FC = () => {
       setFullscreenCam(cam);
       if (Platform.OS === "android") startAndroidFallback();
     },
-    [fsSwitchOpacity, fsTranslateX, startAndroidFallback, thumbTimestamp]
+    [
+      fsSwitchOpacity,
+      fsTranslateX,
+      isGridLandscapeFullscreen,
+      startAndroidFallback,
+      thumbTimestamp,
+    ]
   );
 
   const switchFullscreenCamera = React.useCallback(
@@ -996,21 +1044,25 @@ const CameraListGrid: React.FC = () => {
   const closeFullscreen = React.useCallback(() => {
     if (androidFallbackRef.current) clearTimeout(androidFallbackRef.current);
     if (androidWatchdogRef.current) clearInterval(androidWatchdogRef.current);
-    Orientation.unlockAllOrientations();
+    if (isGridLandscapeFullscreen) {
+      Orientation.lockToLandscapeLeft();
+    } else {
+      Orientation.unlockAllOrientations();
+      setIsLandscape(false);
+    }
     setFsVideoKey(0);
     fsTranslateX.setValue(0);
     fsSwitchOpacity.setValue(0);
     setIsSwitchingFullscreen(false);
     setFullscreenCam(null);
     setPendingThumbUrl(null);
-    setIsLandscape(false);
     setTimeout(() => {
       if (!isFocusedRef.current) return;
       Object.values(webviewRefs.current).forEach((ref) =>
         ref?.postMessage?.("start")
       );
     }, 400);
-  }, [fsSwitchOpacity, fsTranslateX]);
+  }, [fsSwitchOpacity, fsTranslateX, isGridLandscapeFullscreen]);
   const fullscreenDoubleTapGesture = React.useMemo(
     () =>
       Gesture.Tap()
@@ -1052,8 +1104,9 @@ const CameraListGrid: React.FC = () => {
 
   return (
     <GestureHandlerRootView style={styles.root}>
+      <StatusBar hidden={isGridFullscreenMode || fullscreenCam !== null} />
       <GestureDetector gesture={swipeGesture}>
-        <View style={[styles.topHalf, isGridLandscape && styles.topHalfFullscreen]}>
+        <View style={[styles.topHalf, isGridFullscreenMode && styles.topHalfFullscreen]}>
           <Animated.View
             style={[styles.grid, { transform: [{ translateX }] }]}
             onLayout={(e) => setGridContainerH(e.nativeEvent.layout.height)}
@@ -1081,8 +1134,16 @@ const CameraListGrid: React.FC = () => {
                       ? gridSnapshotTimestamps[snapshotGroup]
                       : undefined
                   }
-                  onPress={handleCamPress}
-                  onDoubleTap={handleCamDoubleTap}
+                  onPress={
+                    isGridLandscapeFullscreen
+                      ? handleCamDoubleTap
+                      : handleCamPress
+                  }
+                  onDoubleTap={
+                    isGridLandscapeFullscreen
+                      ? closeGridLandscapeFullscreen
+                      : handleCamDoubleTap
+                  }
                   webviewRefRegister={webviewRefs}
                   pongTimeoutRef={pongTimeoutRef}
                   webviewRestartRef={webviewRestartRef}
@@ -1092,17 +1153,19 @@ const CameraListGrid: React.FC = () => {
             })}
           </Animated.View>
 
-          <View style={styles.paginationRow}>
-            {visiblePageIndexes.map((i) => (
-              <TouchableOpacity key={i} onPress={() => changePage(i)}>
-                <View style={[styles.dot, i === page && styles.dotActive]} />
-              </TouchableOpacity>
-            ))}
-          </View>
+          {!isGridFullscreenMode && (
+            <View style={styles.paginationRow}>
+              {visiblePageIndexes.map((i) => (
+                <TouchableOpacity key={i} onPress={() => changePage(i)}>
+                  <View style={[styles.dot, i === page && styles.dotActive]} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
       </GestureDetector>
 
-      {!isGridLandscape && (
+      {!isGridFullscreenMode && (
         <View style={[styles.bottomHalf, { paddingBottom: insets.bottom }]}>
           <View style={styles.toolbar}>
             <TouchableOpacity
@@ -1140,7 +1203,10 @@ const CameraListGrid: React.FC = () => {
                 color="#444"
               />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.toolBtn}>
+            <TouchableOpacity
+              style={styles.toolBtn}
+              onPress={openGridLandscapeFullscreen}
+            >
               <MaterialCommunityIcons name="overscan" size={26} color="#444" />
             </TouchableOpacity>
           </View>
@@ -1176,7 +1242,7 @@ const CameraListGrid: React.FC = () => {
         </View>
       )}
 
-      {showLayoutPicker && !isGridLandscape && (
+      {showLayoutPicker && !isGridFullscreenMode && (
         <View style={styles.layoutPicker}>
           {CAMERA_LAYOUT_CHOICES.map((n) => (
             <TouchableOpacity

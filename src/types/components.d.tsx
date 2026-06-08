@@ -110,6 +110,7 @@ export interface TabContentProps {
 
 export interface CenterTextProps {
   text: string;
+  loadErrorMessage?: string | null;
 }
 
 export interface GroupListProps {

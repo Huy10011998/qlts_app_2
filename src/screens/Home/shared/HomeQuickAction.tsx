@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 type HomeQuickActionProps = {
@@ -19,10 +19,19 @@ export default function HomeQuickAction({
   onPress,
   disabled,
 }: HomeQuickActionProps) {
+  const handlePress =
+    onPress ??
+    (() => {
+      Alert.alert(
+        "Thông báo",
+        "Chức năng sẽ được triển khai trong thời gian sắp tới.",
+      );
+    });
+
   return (
     <TouchableOpacity
       style={[styles.item, disabled && styles.itemDisabled]}
-      onPress={onPress}
+      onPress={handlePress}
       activeOpacity={0.75}
       disabled={disabled}
     >

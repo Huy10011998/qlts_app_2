@@ -15,6 +15,7 @@ import CameraScreen from "../../screens/Camera/CameraScreen";
 import CameraListScreen from "../../screens/Camera/CameraListScreen";
 import CameraListGridScreen from "../../screens/Camera/CameraListGirdScreen";
 import ShareholdersMeetingScreen from "../../screens/ShareholdersMeeting/ShareholdersMeetingScreen";
+import ReportScreen from "../../screens/Home/ReportScreen";
 
 type HomeStackScreenName = keyof RootStackParamList;
 
@@ -34,6 +35,7 @@ export const HOME_SCREEN_COMPONENT = HomeScreen;
 
 export const HOME_STACK_STATIC_SCREENS: HomeStackStaticScreen[] = [
   { name: "Asset", component: AssetScreen, title: "Tài sản" },
+  { name: "Report", component: ReportScreen, title: "Báo cáo" },
   { name: "Camera", component: CameraScreen, title: "Hệ thống Camera" },
   {
     name: "CameraList",

@@ -68,6 +68,7 @@ export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
 
   useNetworkAwareReload(fetchDetails, {
     hasError: Boolean(loadErrorMessage),
+    refetchOnAppResume: true,
     onOffline: () => {
       setItem(null);
       setPreviousItem(null);
