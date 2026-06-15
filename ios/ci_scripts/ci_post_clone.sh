@@ -12,6 +12,7 @@ brew list node@22 >/dev/null 2>&1 || brew install node@22
 brew link node@22 --force >/dev/null 2>&1 || true
 brew list yarn >/dev/null 2>&1 || brew install yarn
 brew list cocoapods >/dev/null 2>&1 || brew install cocoapods
+brew list cmake >/dev/null 2>&1 || brew install cmake
 
 cd "$REPO_ROOT"
 yarn install --frozen-lockfile
