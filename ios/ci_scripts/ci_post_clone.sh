@@ -3,6 +3,7 @@ set -e
 
 export HOMEBREW_NO_INSTALL_CLEANUP=TRUE
 export HOMEBREW_NO_AUTO_UPDATE=1
+export PATH="/usr/local/bin:/usr/local/opt/node@22/bin:$PATH"
 
 SCRIPT_DIR="${0:A:h}"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
