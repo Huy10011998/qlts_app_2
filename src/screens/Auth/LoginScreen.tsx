@@ -41,7 +41,10 @@ import {
   FACE_ID_MARKER_USERNAME,
 } from "../../constants/AuthStorage";
 import { log } from "../../utils/Logger";
-import { readStoredAuthTokens } from "../../context/authStorage";
+import {
+  readStoredAuthTokens,
+  writeStoredAuthUsername,
+} from "../../context/authStorage";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import {
   LocalNetworkPermissionStatus,
@@ -217,6 +220,7 @@ export default function LoginScreen() {
     ) => {
       await setToken(accessToken);
       await setRefreshToken(refreshToken ?? null);
+      await writeStoredAuthUsername(nextUserName);
       await Keychain.setGenericPassword(nextUserName, nextPassword, {
         service: AUTH_LOGIN_SERVICE,
         accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,

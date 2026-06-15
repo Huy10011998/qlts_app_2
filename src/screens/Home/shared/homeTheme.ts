@@ -11,6 +11,18 @@ export const HOME_CARD_THEME: Record<
     color: HOME_BRAND_RED,
     accent: "#FF6B6B",
   },
+  NoiDia: {
+    bg: "#ECFDF5",
+    iconBg: "#CCFBF1",
+    color: "#0F766E",
+    accent: "#14B8A6",
+  },
+  BHLD: {
+    bg: "#FFF7ED",
+    iconBg: "#FED7AA",
+    color: "#C2410C",
+    accent: "#F97316",
+  },
   Camera: {
     bg: "#F0F4FF",
     iconBg: "#D9E4FF",
@@ -18,10 +30,10 @@ export const HOME_CARD_THEME: Record<
     accent: "#748FFC",
   },
   DHCD: {
-    bg: "#F3F0FF",
-    iconBg: "#E5DEFF",
-    color: "#7048E8",
-    accent: "#9775FA",
+    bg: "#F5F3FF",
+    iconBg: "#DDD6FE",
+    color: "#6D28D9",
+    accent: "#8B5CF6",
   },
   default: {
     bg: "#FFF8F0",

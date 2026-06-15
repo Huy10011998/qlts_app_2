@@ -33,6 +33,8 @@ export type OptionalParams = {
   propertyClass?: PropertyClass;
   itemData?: AssetItem;
   returnTo?: "assetList" | "assetRelatedList";
+  groupMenuId?: number;
+  viewPermission?: string;
 };
 
 // =====================================================
@@ -114,7 +116,13 @@ export type RootStackParamList = {
   Profile: undefined;
 
   /** ================= ASSET ================= */
-  Asset: undefined;
+  Asset:
+    | {
+        groupMenuId?: number;
+        titleHeader?: string;
+        viewPermission?: string;
+      }
+    | undefined;
   Report: undefined;
   Camera: undefined;
   CameraList: {

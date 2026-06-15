@@ -8,6 +8,7 @@ import {
 
 export const AUTH_TOKEN_KEY = "token";
 export const AUTH_REFRESH_TOKEN_KEY = "refreshToken";
+export const AUTH_USERNAME_KEY = "authUserName";
 
 export const readStoredAuthTokens = async () => {
   const [token, refreshToken] = await Promise.all([
@@ -29,6 +30,21 @@ export const writeStoredAuthValue = async (
 
   await AsyncStorage.removeItem(key);
 };
+
+export const readStoredAuthUsername = async () => {
+  const storedUserName = await AsyncStorage.getItem(AUTH_USERNAME_KEY);
+
+  if (storedUserName) return storedUserName;
+
+  const credentials = await Keychain.getGenericPassword({
+    service: AUTH_LOGIN_SERVICE,
+  });
+
+  return credentials ? credentials.username : null;
+};
+
+export const writeStoredAuthUsername = (userName: string | null) =>
+  writeStoredAuthValue(AUTH_USERNAME_KEY, userName?.trim() || null);
 
 export const clearStoredAuthTokens = () =>
   AsyncStorage.multiRemove([AUTH_TOKEN_KEY, AUTH_REFRESH_TOKEN_KEY]);

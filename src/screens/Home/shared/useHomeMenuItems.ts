@@ -15,31 +15,31 @@ type ParentNavigation = {
 
 export function useHomeMenuItems(
   navigation: HomeNavigationProp,
-  tabsNavigation?: ParentNavigation | null
+  tabsNavigation?: ParentNavigation | null,
 ) {
   const openMeetingScreen = useCallback(
     () => navigation.navigate("ShareholdersMeeting", HOME_MEETING_INFO),
-    [navigation]
+    [navigation],
   );
 
   const openCameraScreen = useCallback(
     () => navigation.navigate("Camera"),
-    [navigation]
+    [navigation],
   );
 
   const openScanScreen = useCallback(
     () => tabsNavigation?.navigate("ScanTab", { screen: "Scan" }),
-    [tabsNavigation]
+    [tabsNavigation],
   );
 
   const openReportScreen = useCallback(
     () => navigation.navigate("Report"),
-    [navigation]
+    [navigation],
   );
 
   const openSettingScreen = useCallback(
     () => tabsNavigation?.navigate("SettingTab"),
-    [tabsNavigation]
+    [tabsNavigation],
   );
 
   const menuItems = useMemo<HomeMenuItem[]>(
@@ -51,6 +51,32 @@ export function useHomeMenuItems(
         viewPermission: "TaiSan",
         description: "Quản lý tài sản",
         onPress: () => navigation.navigate("Asset"),
+      },
+      {
+        id: "2",
+        label: "Nội địa",
+        iconName: "business-outline",
+        viewPermission: "NoiDia",
+        description: "Quản lý nội địa",
+        onPress: () =>
+          navigation.navigate("Asset", {
+            groupMenuId: 5,
+            titleHeader: "Nội địa",
+            viewPermission: "NoiDia",
+          }),
+      },
+      {
+        id: "3",
+        label: "BHLĐ-PCCC",
+        iconName: "shield-checkmark-outline",
+        viewPermission: "BHLD",
+        description: "Quản lý bảo hộ lao động",
+        onPress: () =>
+          navigation.navigate("Asset", {
+            groupMenuId: 6,
+            titleHeader: "Bảo hộ lao động",
+            viewPermission: "BHLD",
+          }),
       },
       {
         id: "4",
@@ -69,7 +95,7 @@ export function useHomeMenuItems(
         onPress: openMeetingScreen,
       },
     ],
-    [navigation, openCameraScreen, openMeetingScreen]
+    [navigation, openCameraScreen, openMeetingScreen],
   );
 
   return {

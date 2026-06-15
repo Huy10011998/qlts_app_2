@@ -11,7 +11,6 @@ export const HOME_MEETING_INFO = {
 
 export const HOME_ASSET_SUMMARY = {
   totalAssets: 1761,
-  totalAssetValue: "111.495.859.981 VND",
 };
 
 export const HOME_RECENT_ACTIVITIES = [
@@ -19,15 +18,18 @@ export const HOME_RECENT_ACTIVITIES = [
     text: "Camera khu A phát hiện chuyển động",
     time: "14:22",
     dot: HOME_BRAND_RED,
+    viewPermission: "Camera",
   },
   {
     text: "Tài sản #TB-0041 được cập nhật",
     time: "11:05",
     dot: "#3B5BDB",
+    viewPermission: "TaiSan",
   },
   {
     text: "Xác nhận đăng ký cổ đông #245",
     time: "Hôm qua",
     dot: "#D1D5DB",
+    viewPermission: "DHCD",
   },
 ];

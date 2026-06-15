@@ -30,6 +30,7 @@ import { callApi } from "../../services/data/callApi";
 import { error } from "../../utils/Logger";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
+import { useParams } from "../../hooks/useParams";
 import { removeVietnameseTones } from "../../utils/Helper";
 import AssetMenuDropdownItem from "./shared/AssetMenuDropdownItem";
 import AssetMenuSearchBar from "./shared/AssetMenuSearchBar";
@@ -48,8 +49,15 @@ if (
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function AssetScreen() {
+  const {
+    groupMenuId = 2,
+    titleHeader = "Tài sản",
+    viewPermission = "TaiSan",
+  } = useParams<"Asset">();
   const { canView, isFullPermission, loaded, permissions } = usePermission();
-  const hasViewPermission = loaded && canView("TaiSan");
+  const hasViewPermission = loaded && canView(viewPermission);
+  const normalizedTitle = titleHeader || "Tài sản";
+  const normalizedTitleLower = normalizedTitle.toLowerCase();
   const isFullAccess = isFullPermission();
   const [data, setData] = useState<Item[]>([]);
   const [isFetching, setIsFetching] = useState(false);
@@ -140,7 +148,7 @@ export default function AssetScreen() {
         )) as GetMenuActiveResponse;
         if (!Array.isArray(response?.data)) throw new Error("Invalid data");
         const menuAccount = response.data
-          .filter((item) => item.iD_GroupMenu === 2)
+          .filter((item) => item.iD_GroupMenu === groupMenuId)
           .sort((a, b) => Number(a.stt) - Number(b.stt));
         setData(
           filterReportPermissionTree(
@@ -163,7 +171,7 @@ export default function AssetScreen() {
         }
       }
     },
-    [isMounted]
+    [groupMenuId, isMounted]
   );
 
   const refreshTop = async () => {
@@ -228,7 +236,7 @@ export default function AssetScreen() {
       >
         <EmptyState
           title="Bạn không có quyền truy cập"
-          subtitle="Tài khoản hiện tại không có quyền xem danh sách tài sản."
+          subtitle={`Tài khoản hiện tại không có quyền xem danh sách ${normalizedTitleLower}.`}
         />
       </KeyboardAvoidingView>
     );
@@ -246,7 +254,7 @@ export default function AssetScreen() {
       >
         <EmptyState
           iconName="cloud-offline-outline"
-          title="Không thể tải dữ liệu Tài sản"
+          title={`Không thể tải dữ liệu ${normalizedTitle}`}
           subtitle={loadErrorMessage}
         />
       </KeyboardAvoidingView>
@@ -300,12 +308,14 @@ export default function AssetScreen() {
           <EmptyState
             iconName="search-outline"
             title={
-              hasSearch ? "Không tìm thấy kết quả" : "Chưa có dữ liệu tài sản"
+              hasSearch
+                ? "Không tìm thấy kết quả"
+                : `Chưa có dữ liệu ${normalizedTitleLower}`
             }
             subtitle={
               hasSearch
                 ? "Thử tìm kiếm với từ khóa khác"
-                : "Danh sách tài sản sẽ hiển thị tại đây khi có dữ liệu."
+                : `Danh sách ${normalizedTitleLower} sẽ hiển thị tại đây khi có dữ liệu.`
             }
           />
         }

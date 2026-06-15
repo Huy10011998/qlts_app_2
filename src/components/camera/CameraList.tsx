@@ -177,7 +177,7 @@ const CameraList: React.FC = () => {
 
   React.useEffect(() => {
     return () => {
-      Orientation.unlockAllOrientations();
+      Orientation.lockToPortrait();
       clearAndroidTimers();
     };
   }, [clearAndroidTimers]);
@@ -190,7 +190,7 @@ const CameraList: React.FC = () => {
   }, []);
 
   const closeFullscreen = React.useCallback(() => {
-    Orientation.unlockAllOrientations();
+    Orientation.lockToPortrait();
     clearAndroidTimers();
     fsTranslateX.setValue(0);
     setFullscreenCamera(null);
@@ -289,6 +289,8 @@ const CameraList: React.FC = () => {
   };
 
   const handleNavigate = () => {
+    Orientation.lockToPortrait();
+    setIsLandscape(false);
     navigation.navigate("CameraListGrid", { cameras, zoneName });
   };
 

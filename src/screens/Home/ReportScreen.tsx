@@ -168,6 +168,11 @@ export default function ReportScreen() {
   const debouncedSearch = useDebounce(search, 400);
   const [isSearching, setIsSearching] = useState(false);
   const { isMounted } = useSafeAlert();
+  const permissionsRef = useRef(permissions);
+  const isFullAccessRef = useRef(isFullAccess);
+
+  permissionsRef.current = permissions;
+  isFullAccessRef.current = isFullAccess;
 
   const handleShowReport = useCallback(
     (item: Item) => {
@@ -217,8 +222,8 @@ export default function ReportScreen() {
           buildReportList(
             filterReportPermissionTree(
               buildAssetMenuTree(menuAccount),
-              permissions,
-              isFullAccess
+              permissionsRef.current,
+              isFullAccessRef.current
             )
           )
         );
@@ -236,7 +241,7 @@ export default function ReportScreen() {
         }
       }
     },
-    [isFullAccess, isMounted, permissions]
+    [isMounted]
   );
 
   const refreshTop = async () => {
@@ -262,6 +267,7 @@ export default function ReportScreen() {
     {
       enabled: loaded && hasViewPermission,
       hasError: Boolean(loadErrorMessage),
+      refetchOnAppResume: false,
       onOffline: () => {
         setLoadErrorMessage(
           "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại."

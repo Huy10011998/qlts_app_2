@@ -20,6 +20,8 @@ export function useParams<RouteName extends keyof RootStackParamList>() {
     activeTab: params?.activeTab,
     propertyClass: params?.propertyClass,
     returnTo: params?.returnTo,
+    groupMenuId: params?.groupMenuId,
+    viewPermission: params?.viewPermission,
     prefix: params?.propertyClass?.prefix,
     itemData: params?.itemData,
   };

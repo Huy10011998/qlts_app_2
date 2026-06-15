@@ -34,10 +34,14 @@ export default function HomeStack() {
           key={screen.name}
           name={screen.name}
           component={screen.component}
-          options={{
-            title: screen.title,
+          options={({ route }) => ({
+            title: getScreenTitle(
+              (route.params as { titleHeader?: string } | undefined)
+                ?.titleHeader,
+              screen.title,
+            ),
             ...headerWithBack,
-          }}
+          })}
         />
       ))}
 

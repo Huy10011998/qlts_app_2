@@ -1,5 +1,12 @@
 import React, { useEffect, useRef } from "react";
-import { Animated, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  Animated,
+  GestureResponderEvent,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { MenuItemCardProps } from "../../../types";
 import { HOME_BRAND_RED, HOME_CARD_THEME } from "./homeTheme";
@@ -14,6 +21,9 @@ const localStyles = StyleSheet.create({
 type HomeMenuItemCardProps = MenuItemCardProps & {
   viewPermission?: string;
   description?: string;
+  isPinned?: boolean;
+  onTogglePinned?: () => void;
+  showPinButton?: boolean;
 };
 
 export default function HomeMenuItemCard({
@@ -23,6 +33,9 @@ export default function HomeMenuItemCard({
   index,
   onPress,
   viewPermission,
+  isPinned = false,
+  onTogglePinned,
+  showPinButton = false,
 }: HomeMenuItemCardProps) {
   const scaleAnim = useRef(new Animated.Value(0)).current;
 
@@ -37,6 +50,10 @@ export default function HomeMenuItemCard({
   }, [index, scaleAnim]);
 
   const theme = HOME_CARD_THEME[viewPermission ?? "default"] ?? HOME_CARD_THEME.default;
+  const handleTogglePinned = (event: GestureResponderEvent) => {
+    event.stopPropagation();
+    onTogglePinned?.();
+  };
 
   return (
     <AnimatedTouchable
@@ -46,6 +63,26 @@ export default function HomeMenuItemCard({
     >
       <View style={[styles.card, { backgroundColor: theme.bg }]}>
         <View style={[styles.accentBar, { backgroundColor: theme.color }]} />
+        {showPinButton ? (
+          <TouchableOpacity
+            style={[
+              styles.pinButton,
+              {
+                backgroundColor: isPinned ? theme.color : theme.iconBg,
+                borderColor: theme.iconBg,
+              },
+            ]}
+            activeOpacity={0.76}
+            onPress={handleTogglePinned}
+            hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+          >
+            <Ionicons
+              name={isPinned ? "checkmark" : "add"}
+              size={14}
+              color={isPinned ? "#fff" : theme.color}
+            />
+          </TouchableOpacity>
+        ) : null}
 
         <View style={[styles.iconWrap, { backgroundColor: theme.iconBg }]}>
           <Ionicons name={iconName} color={theme.color} size={22} />
@@ -127,6 +164,18 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 7,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pinButton: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    zIndex: 2,
+    width: 26,
+    height: 26,
+    borderRadius: 9,
+    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
   },

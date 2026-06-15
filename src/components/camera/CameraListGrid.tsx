@@ -331,6 +331,9 @@ const CameraListGrid: React.FC = () => {
   const startStreamsTimeoutRef = React.useRef<ReturnType<
     typeof setTimeout
   > | null>(null);
+  const androidLiveStartTimeoutsRef = React.useRef<
+    ReturnType<typeof setTimeout>[]
+  >([]);
   const syncTokenTimeoutRef = React.useRef<ReturnType<
     typeof setTimeout
   > | null>(null);
@@ -457,7 +460,7 @@ const CameraListGrid: React.FC = () => {
   React.useEffect(() => {
     navigation.setOptions({ gestureEnabled: false });
     return () => {
-      Orientation.unlockAllOrientations();
+      Orientation.lockToPortrait();
       navigation.setOptions({ gestureEnabled: true, headerShown: true });
     };
   }, [navigation]);
@@ -492,6 +495,18 @@ const CameraListGrid: React.FC = () => {
     stopCameraWebView(fullscreenWebViewRef.current);
   }, []);
 
+  const clearAndroidLiveStartRetries = React.useCallback(() => {
+    androidLiveStartTimeoutsRef.current.forEach(clearTimeout);
+    androidLiveStartTimeoutsRef.current = [];
+  }, []);
+
+  const clearGridWebViewRefs = React.useCallback(() => {
+    Object.values(pongTimeoutRef.current).forEach(clearTimeout);
+    pongTimeoutRef.current = {};
+    webviewMissCountRef.current = {};
+    webviewRefs.current = {};
+  }, []);
+
   const restartGridWebView = React.useCallback((cameraId: string | number) => {
     const key = String(cameraId);
     const ref = webviewRefs.current[key];
@@ -520,8 +535,49 @@ const CameraListGrid: React.FC = () => {
     }, 300);
   }, []);
 
+  const startVisibleAndroidLiveStreams = React.useCallback(
+    (pageSnapshot = pageRef.current) => {
+      if (Platform.OS !== "android") return;
+      if (!isFocusedRef.current || isPaused) return;
+      if (fullscreenCamRef.current) return;
+      if (pageRef.current !== pageSnapshot) return;
+
+      const token = cameraTokenRef.current;
+      if (!token) return;
+
+      const liveCameras = cameras
+        .slice(pageSnapshot * perPage, (pageSnapshot + 1) * perPage)
+        .slice(0, liveCellLimit);
+
+      liveCameras.forEach((cam: any) => {
+        const ref = webviewRefs.current[cam.iD_Camera];
+        if (!ref?.postMessage) return;
+        setCameraWebViewTokenAndStart(ref, token);
+        postCameraWebViewMessage(ref, isMuted ? "mute" : "unmute");
+      });
+    },
+    [cameraTokenRef, cameras, isMuted, isPaused, liveCellLimit, perPage]
+  );
+
+  const scheduleVisibleAndroidLiveStartRetries = React.useCallback(
+    (pageSnapshot = pageRef.current) => {
+      clearAndroidLiveStartRetries();
+      if (Platform.OS !== "android") return;
+
+      androidLiveStartTimeoutsRef.current = [250, 700, 1300, 2200].map(
+        (delay) =>
+          setTimeout(() => {
+            startVisibleAndroidLiveStreams(pageSnapshot);
+          }, delay)
+      );
+    },
+    [clearAndroidLiveStartRetries, startVisibleAndroidLiveStreams]
+  );
+
   useFocusEffect(
     React.useCallback(() => {
+      Orientation.lockToPortrait();
+      setIsLandscape(false);
       setFocusKey((k) => k + 1);
       fetchCameraTokenRef.current?.(false);
       startAllStreams();
@@ -568,20 +624,17 @@ const CameraListGrid: React.FC = () => {
     if (fullscreenCamRef.current) return;
     if (fullscreenCam) return;
 
-    const timer = setTimeout(() => {
-      if (!isFocusedRef.current) return;
-      Object.values(webviewRefs.current).forEach((ref) =>
-        setCameraWebViewTokenAndStart(ref, cameraToken),
-      );
-    }, 500);
-    return () => clearTimeout(timer);
+    scheduleVisibleAndroidLiveStartRetries(pageRef.current);
+    return clearAndroidLiveStartRetries;
   }, [
     cameraToken,
+    clearAndroidLiveStartRetries,
     fullscreenCam,
     isFocused,
     isPaused,
     pageChangeKey,
     focusKey,
+    scheduleVisibleAndroidLiveStartRetries,
   ]);
 
   React.useEffect(() => {
@@ -759,10 +812,11 @@ const CameraListGrid: React.FC = () => {
         clearTimeout(startStreamsTimeoutRef.current);
       if (syncTokenTimeoutRef.current)
         clearTimeout(syncTokenTimeoutRef.current);
+      clearAndroidLiveStartRetries();
       if (androidFallbackRef.current) clearTimeout(androidFallbackRef.current);
       if (androidWatchdogRef.current) clearInterval(androidWatchdogRef.current);
     };
-  }, [stopAllStreams]);
+  }, [clearAndroidLiveStartRetries, stopAllStreams]);
 
   const cellW = SW / cols;
   const cellH =
@@ -770,13 +824,15 @@ const CameraListGrid: React.FC = () => {
 
   const changePage = React.useCallback(
     (newPage: number) => {
+      clearAndroidLiveStartRetries();
       stopAllStreams();
+      clearGridWebViewRefs();
       setPage(newPage);
       setActiveIndex(0);
       setGridRenderKey((k) => k + 1);
       setPageChangeKey((k) => k + 1);
     },
-    [stopAllStreams]
+    [clearAndroidLiveStartRetries, clearGridWebViewRefs, stopAllStreams]
   );
 
   const swipeGesture = Gesture.Pan()
@@ -855,13 +911,12 @@ const CameraListGrid: React.FC = () => {
 
   const handleCamDoubleTap = React.useCallback(
     (cam: any, idx: number) => {
-      const { width, height } = Dimensions.get("window");
-      const shouldKeepLandscape = isGridLandscapeFullscreen || width > height;
-      setIsLandscape(shouldKeepLandscape);
       if (isGridLandscapeFullscreen) {
+        setIsLandscape(true);
         Orientation.lockToLandscapeLeft();
       } else {
-        Orientation.unlockAllOrientations();
+        setIsLandscape(false);
+        Orientation.lockToPortrait();
       }
       setPendingThumbUrl(getCameraSnapshotUrl(cam.iD_Camera_Ma, thumbTimestamp));
       setActiveIndex(idx);
@@ -1047,7 +1102,7 @@ const CameraListGrid: React.FC = () => {
     if (isGridLandscapeFullscreen) {
       Orientation.lockToLandscapeLeft();
     } else {
-      Orientation.unlockAllOrientations();
+      Orientation.lockToPortrait();
       setIsLandscape(false);
     }
     setFsVideoKey(0);
