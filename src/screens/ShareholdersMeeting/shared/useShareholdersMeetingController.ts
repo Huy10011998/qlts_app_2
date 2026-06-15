@@ -18,7 +18,7 @@ import {
   getList,
   huyDiemDanhDhcd,
 } from "../../../services/data/callApi";
-import {
+import type {
   ActiveMeetingResponse,
   AttendanceFilter,
   AttendanceStatus,

@@ -1,8 +1,8 @@
 import React, { memo, useCallback } from "react";
 import { useNavigation } from "@react-navigation/native";
 
-import { AssetAddItemNavigationProp } from "../../types/navigator.d";
-import { AddItemAssetProps } from "../../types/components.d";
+import type { AssetAddItemNavigationProp } from "../../types/navigator.d";
+import type { AddItemAssetProps } from "../../types/components.d";
 import AddActionFab from "./shared/AddActionFab";
 
 function AddItemComponent({

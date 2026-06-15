@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { PermissionState } from "../types/redux.d";
+import type { PermissionState } from "../types/redux.d";
 
 const initialState: PermissionState = {
   permissions: [],

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { View, StyleSheet, FlatList, RefreshControl } from "react-native";
-import { Field, PropertyResponse, StackNavigation } from "../../types";
+import type { Field, PropertyResponse, StackNavigation } from "../../types";
 import { useParams } from "../../hooks/useParams";
 import {
   getFieldActive,

@@ -1,4 +1,4 @@
-import { Field } from "../../types/model.d";
+import type { Field } from "../../types/model.d";
 import { TypeProperty } from "../../utils/Enum";
 import { getDetails, getFieldActive } from "../../services";
 import { getMatchedKey } from "../../utils/Helper";

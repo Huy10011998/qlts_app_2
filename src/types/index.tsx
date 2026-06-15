@@ -1,7 +1,7 @@
-export * from "./model.d";
-export * from "./components.d";
-export * from "./context.d";
-export * from "./api.d";
-export * from "./common.d";
-export * from "./navigator.d";
-export * from "./redux.d";
+export type * from "./model.d";
+export type * from "./components.d";
+export type * from "./context.d";
+export type * from "./api.d";
+export type * from "./common.d";
+export type * from "./navigator.d";
+export type * from "./redux.d";

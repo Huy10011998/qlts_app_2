@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { StyleSheet, Alert } from "react-native";
 import { useParams } from "../../hooks/useParams";
-import { AssetAddRelatedItemNavigationProp, Field } from "../../types/index";
+import type { AssetAddRelatedItemNavigationProp, Field } from "../../types/index";
 import { TypeProperty } from "../../utils/Enum";
 import { useNavigation } from "@react-navigation/native";
 import {

@@ -8,7 +8,7 @@ import {
   Linking,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { CardItemProps } from "../../types";
+import type { CardItemProps } from "../../types";
 import { TypeProperty } from "../../utils/Enum";
 import { convertToResizePath, fetchImage } from "../../utils/Image";
 import { getFieldValue } from "../../utils/fields/GetFieldValue";

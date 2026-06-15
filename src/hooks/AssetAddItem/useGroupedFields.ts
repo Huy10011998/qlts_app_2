@@ -2,7 +2,7 @@ import { useMemo, useEffect, useState } from "react";
 import { ParseFieldActive } from "../../utils/parser/parseFieldActive";
 import { GroupFields } from "../../utils/parser/groupFields";
 import { ToggleGroupUtil } from "../../utils/parser/ToggleGroup";
-import { Field } from "../../types/index";
+import type { Field } from "../../types/index";
 
 export function useGroupedFields(field: any) {
   const fieldActive = useMemo<Field[]>(() => ParseFieldActive(field), [field]);

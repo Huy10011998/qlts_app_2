@@ -9,7 +9,7 @@ import { Buffer } from "buffer";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_ENDPOINTS, BASE_URL } from "../../config/index";
 import { log, warn } from "../../utils/Logger";
-import { LogoutReason } from "../../types/context.d";
+import type { LogoutReason } from "../../types/context.d";
 import { withTimeout } from "../../utils/helpers/promise";
 
 type ApiMethod = "GET" | "POST" | "PUT" | "DELETE";

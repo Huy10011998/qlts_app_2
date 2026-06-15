@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { View, StyleSheet, Alert } from "react-native";
 
-import { AssetEditItemNavigationProp, Field } from "../../types/index";
+import type { AssetEditItemNavigationProp, Field } from "../../types/index";
 import { TypeProperty } from "../../utils/Enum";
 import { getMatchedKey } from "../../utils/Helper";
 import {

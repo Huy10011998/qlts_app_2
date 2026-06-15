@@ -1,6 +1,6 @@
 import { Alert } from "react-native";
 import { TypeProperty } from "./Enum";
-import { Field } from "../types";
+import type { Field } from "../types";
 
 // Convert "dd-MM-yyyy" → "dd/MM/yyyy"
 export const formatToSlash = (str: string) => str.replace(/-/g, "/");

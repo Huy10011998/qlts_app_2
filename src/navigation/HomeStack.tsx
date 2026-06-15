@@ -1,7 +1,7 @@
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
-import { RootStackParamList } from "../types/index";
+import type { RootStackParamList } from "../types/index";
 import HeaderHome from "../components/header/HeaderHome";
 import {
   getScreenTitle,

@@ -17,7 +17,7 @@ import { useAuth } from "../../context/AuthContext";
 import IsLoading from "../../components/ui/IconLoading";
 import { changePasswordApi } from "../../services";
 import { API_ENDPOINTS } from "../../config/index";
-import { StackNavigation, UserInfo } from "../../types";
+import type { StackNavigation, UserInfo } from "../../types";
 import {
   callApi,
   clearTokenStorage,

@@ -11,7 +11,7 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
-import { QrDetailsProps, RootStackParamList } from "../../types/index";
+import type { QrDetailsProps, RootStackParamList } from "../../types/index";
 import { useParams } from "../../hooks/useParams";
 import { getClassReference, getDetails } from "../../services";
 import IsLoading from "../ui/IconLoading";

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { View, Text, FlatList, Pressable, StyleSheet } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { MenuItemResponse, StackNavigation, StackRoute } from "../../types";
+import type { MenuItemResponse, StackNavigation, StackRoute } from "../../types";
 import { getClassReference } from "../../services";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import IsLoading from "../ui/IconLoading";

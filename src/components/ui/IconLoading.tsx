@@ -1,6 +1,6 @@
 import React from "react";
 import { ActivityIndicator, View, StyleSheet } from "react-native";
-import { IsLoadingProps } from "../../types";
+import type { IsLoadingProps } from "../../types";
 
 export default function IsLoading({
   size = "large",

@@ -27,7 +27,7 @@ import ReportView from "../../components/report/ReportView";
 import IsLoading from "../../components/ui/IconLoading";
 import EmptyState from "../../components/ui/EmptyState";
 import { callApi } from "../../services/data/callApi";
-import { GetMenuActiveResponse, Item } from "../../types/index";
+import type { GetMenuActiveResponse, Item } from "../../types/index";
 import { error } from "../../utils/Logger";
 import { removeVietnameseTones } from "../../utils/Helper";
 import AssetMenuSearchBar from "../Assets/shared/AssetMenuSearchBar";

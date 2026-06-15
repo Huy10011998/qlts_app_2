@@ -1,4 +1,4 @@
-import { Field } from "../../types/index";
+import type { Field } from "../../types/index";
 
 export const GroupFields = (fields: Field[]) => {
   return fields.reduce<Record<string, Field[]>>((acc, f) => {

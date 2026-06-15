@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { Field } from "../../types/model.d";
+import type { Field } from "../../types/model.d";
 import {
   buildReferenceFetchParams,
   loadReferenceItemsForField,

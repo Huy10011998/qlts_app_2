@@ -11,7 +11,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
-import {
+import type {
   Field,
   PropertyResponse,
   StackNavigation,

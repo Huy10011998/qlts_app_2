@@ -3,7 +3,7 @@ import { ScrollView, View, Alert } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useDispatch } from "react-redux";
 
-import { TabContentProps, AssetDetailsNavigationProp } from "../../types";
+import type { TabContentProps, AssetDetailsNavigationProp } from "../../types";
 import AssetActions from "../assets/AssetActions";
 import AssetGroupList from "../assets/AssetGroupList";
 import { checkReferenceUsage, deleteItems } from "../../services/data/callApi";

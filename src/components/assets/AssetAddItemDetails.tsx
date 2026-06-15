@@ -11,7 +11,7 @@ import { RootState } from "../../store/index";
 import { useAppDispatch } from "../../store/hooks";
 import { setShouldRefreshList } from "../../store/AssetSlice";
 
-import { AssetAddItemNavigationProp, Field } from "../../types/index";
+import type { AssetAddItemNavigationProp, Field } from "../../types/index";
 import { TypeProperty } from "../../utils/Enum";
 import { formatDateForBE, getDefaultValueForField } from "../../utils/Date";
 import {

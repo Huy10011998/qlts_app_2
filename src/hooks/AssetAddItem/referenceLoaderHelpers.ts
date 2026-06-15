@@ -1,5 +1,5 @@
 import { Dispatch, SetStateAction } from "react";
-import { Field } from "../../types/model.d";
+import type { Field } from "../../types/model.d";
 import { fetchReferenceByField } from "../../utils/fetchField/FetchReferenceField";
 import { fetchReferenceByFieldWithParent } from "../../utils/cascade/FetchReferenceByFieldWithParent";
 

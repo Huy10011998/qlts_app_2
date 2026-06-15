@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { View, StyleSheet } from "react-native";
-import { DetailsProps } from "../../types/index";
+import type { DetailsProps } from "../../types/index";
 import { useParams } from "../../hooks/useParams";
 import { getDetails } from "../../services";
 import IsLoading from "../ui/IconLoading";

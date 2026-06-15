@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { View, StyleSheet } from "react-native";
 import { useRoute } from "@react-navigation/native";
 import IsLoading from "../../components/ui/IconLoading";
-import { DetailsHistoryProps, Field, StackRoute } from "../../types/index";
+import type { DetailsHistoryProps, Field, StackRoute } from "../../types/index";
 import { getDetailsHistory } from "../../services/data/callApi";
 import { error } from "../../utils/Logger";
 import { getFieldValue } from "../../utils/fields/GetFieldValue";

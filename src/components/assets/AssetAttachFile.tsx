@@ -7,7 +7,7 @@ import React, {
 } from "react";
 import { View, Text, StyleSheet, FlatList } from "react-native";
 import { useParams } from "../../hooks/useParams";
-import { Conditions, FileItem } from "../../types";
+import type { Conditions, FileItem } from "../../types";
 import { SqlOperator, TypeProperty, CategoryFiles } from "../../utils/Enum";
 import { getListAttachFile } from "../../services";
 import IsLoading from "../ui/IconLoading";

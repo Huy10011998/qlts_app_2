@@ -1,4 +1,4 @@
-import { Field } from "../../types/index";
+import type { Field } from "../../types/index";
 import { log } from "../Logger";
 
 export const ParseFieldActive = (field: any): Field[] => {

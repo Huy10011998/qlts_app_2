@@ -1,6 +1,6 @@
 import { getMatchedKey } from "../../../utils/helpers/field";
 import { C } from "../../../utils/helpers/colors";
-import {
+import type {
   AttendanceFilter,
   AttendanceStatus,
   Shareholder,

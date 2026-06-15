@@ -16,7 +16,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import ReactNativeHapticFeedback from "react-native-haptic-feedback";
-import { QrScannerModalProps } from "../../types";
+import type { QrScannerModalProps } from "../../types";
 import QrScannerGateView from "./shared/QrScannerGateView";
 import QrScannerViewportOverlay from "./shared/QrScannerViewportOverlay";
 import useQrScannerController from "./shared/useQrScannerController";

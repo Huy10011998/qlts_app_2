@@ -3,7 +3,7 @@ import { View, Text, Pressable, StyleSheet } from "react-native";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
 import { usePermission } from "../../hooks/usePermission";
-import { AssetActionProps } from "../../types";
+import type { AssetActionProps } from "../../types";
 import { BRAND_RED } from "./shared/listTheme";
 
 const localStyles = StyleSheet.create({

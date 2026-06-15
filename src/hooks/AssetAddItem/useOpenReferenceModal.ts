@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { Alert } from "react-native";
-import { Field } from "../../types/model.d";
+import type { Field } from "../../types/model.d";
 import { TypeProperty } from "../../utils/Enum";
 import { log } from "../../utils/Logger";
 import {

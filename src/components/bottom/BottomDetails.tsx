@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
-import { BottomBarProps } from "../../types/index";
+import type { BottomBarProps } from "../../types/index";
 import { usePermission } from "../../hooks/usePermission";
 import { useParams } from "../../hooks/useParams";
 import { C } from "../../utils/helpers/colors";

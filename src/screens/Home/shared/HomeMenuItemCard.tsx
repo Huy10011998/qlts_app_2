@@ -8,7 +8,7 @@ import {
   View,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { MenuItemCardProps } from "../../../types";
+import type { MenuItemCardProps } from "../../../types";
 import { HOME_BRAND_RED, HOME_CARD_THEME } from "./homeTheme";
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);

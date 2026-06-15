@@ -13,11 +13,11 @@ import {
   useNavigation,
   useFocusEffect,
 } from "@react-navigation/native";
-import {
+import type {
   AssetDetailsNavigationProp,
   StackRoute,
-  mapPropertyResponseToPropertyClass,
 } from "../../types/index";
+import { mapPropertyResponseToPropertyClass } from "../../utils/helpers/propertyClass";
 import ListCardAsset from "../../components/list/ListCardAsset";
 import IsLoading from "../../components/ui/IconLoading";
 import { AddItem } from "../add/AddItem";

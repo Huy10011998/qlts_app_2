@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getFieldActive, getList, getPropertyClass } from "../services";
-import { Field, PropertyResponse } from "../types/index";
+import type { Field, PropertyResponse } from "../types/index";
 import { error } from "../utils/Logger";
 import { useNetworkAwareReload } from "./useNetworkAwareReload";
 import { isAuthExpiredError } from "../services/data/callApi";

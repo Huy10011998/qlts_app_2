@@ -1,6 +1,6 @@
 import axios from "axios";
 import { API_ENDPOINTS, BASE_URL } from "../../config/index";
-import { ChangePasswordResponse, LoginResponse } from "../../types/api.d";
+import type { ChangePasswordResponse, LoginResponse } from "../../types/api.d";
 import { md5Hash } from "../../utils/helpers/hash";
 import { error, log } from "../../utils/Logger";
 import { callApi } from "../data/callApi";

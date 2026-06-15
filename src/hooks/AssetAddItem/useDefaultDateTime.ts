@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { TypeProperty } from "../../utils/Enum";
 import { formatDMY } from "../../utils/Date";
-import { Field } from "../../types/index";
+import type { Field } from "../../types/index";
 
 export function useDefaultDateTime(fieldActive: Field[], setFormData: any) {
   useEffect(() => {

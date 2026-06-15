@@ -1,5 +1,5 @@
 import { ComponentType } from "react";
-import { RootStackParamList } from "../../types/index";
+import type { RootStackParamList } from "../../types/index";
 import HomeScreen from "../../screens/Home/HomeScreen";
 import AssetScreen from "../../screens/Assets/AssetScreen";
 import AssetListScreen from "../../screens/Assets/AssetListScreen";

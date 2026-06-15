@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { StyleSheet, Dimensions, View, Animated } from "react-native";
 import { WebView } from "react-native-webview";
-import { CenterTextProps } from "../../types";
+import type { CenterTextProps } from "../../types";
 import IsLoading from "../ui/IconLoading";
 import { C } from "../../utils/helpers/colors";
 import AssetListEmptyState from "./shared/AssetListEmptyState";

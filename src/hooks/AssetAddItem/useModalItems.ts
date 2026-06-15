@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { TypeProperty } from "../../utils/Enum";
-import { Field } from "../../types/model.d";
+import type { Field } from "../../types/model.d";
 
 export type ModalItem = {
   value: string;

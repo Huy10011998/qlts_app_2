@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { TypeProperty } from "../utils/Enum";
-import { PreviewImgByTypeProps } from "../types/components.d";
+import type { PreviewImgByTypeProps } from "../types/components.d";
 
 export const useImageLoader = ({
   fieldActive,

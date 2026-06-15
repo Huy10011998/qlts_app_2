@@ -18,7 +18,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { GetMenuActiveResponse, Item } from "../../types/index";
+import type { GetMenuActiveResponse, Item } from "../../types/index";
 import { API_ENDPOINTS } from "../../config/index";
 import { useDebounce } from "../../hooks/useDebounce";
 import { usePermission } from "../../hooks/usePermission";

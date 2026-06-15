@@ -13,7 +13,7 @@ import {
   useIsFocused,
   useNavigation,
 } from "@react-navigation/native";
-import { HomeNavigationProp } from "../../types";
+import type { HomeNavigationProp } from "../../types";
 import { usePermission } from "../../hooks/usePermission";
 import HomeMenuItemCard from "./shared/HomeMenuItemCard";
 import HomeEventBanner from "./shared/HomeEventBanner";

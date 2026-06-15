@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, Alert } from "react-native";
 
-import { AssetCloneItemNavigationProp, Field } from "../../types/index";
+import type { AssetCloneItemNavigationProp, Field } from "../../types/index";
 import { TypeProperty } from "../../utils/Enum";
 import { getMatchedKey } from "../../utils/Helper";
 import { useParams } from "../../hooks/useParams";

@@ -31,7 +31,7 @@ import {
   getCodongDhcd,
   luuYKienCoDongDhcd,
 } from "../../services/data/callApi";
-import {
+import type {
   RootStackParamList,
   Shareholder,
   ShareholderListResponse,

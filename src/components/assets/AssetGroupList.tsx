@@ -10,7 +10,7 @@ import {
   Linking,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { GroupListProps } from "../../types";
+import type { GroupListProps } from "../../types";
 import { TypeProperty } from "../../utils/Enum";
 import IsLoading from "../ui/IconLoading";
 import { fetchImage } from "../../utils/Image";

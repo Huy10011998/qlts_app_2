@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { HomeNavigationProp, MenuItemComponent } from "../../../types";
+import type { HomeNavigationProp, MenuItemComponent } from "../../../types";
 import { HOME_MEETING_INFO } from "./homeData";
 
 export interface HomeMenuItem extends MenuItemComponent {

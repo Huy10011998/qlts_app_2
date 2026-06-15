@@ -14,7 +14,7 @@ import {
   setRefreshInApi,
   resetAuthState,
 } from "../services/data/callApi";
-import { AuthContextType, LogoutReason } from "../types/context.d";
+import type { AuthContextType, LogoutReason } from "../types/context.d";
 import {
   AUTH_REFRESH_TOKEN_KEY,
   AUTH_TOKEN_KEY,

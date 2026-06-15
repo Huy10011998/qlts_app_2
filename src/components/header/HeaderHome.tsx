@@ -13,7 +13,7 @@ import {
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
-import { HeaderHomeProps } from "../../types/components.d";
+import type { HeaderHomeProps } from "../../types/components.d";
 import { C } from "../../utils/helpers/colors";
 
 const { width: W } = Dimensions.get("window");

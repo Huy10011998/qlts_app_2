@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { WebView } from "react-native-webview";
-import { ReportViewProps } from "../../types";
+import type { ReportViewProps } from "../../types";
 import { getPreviewBC } from "../../services/data/callApi";
 import { error } from "../../utils/Logger";
 import { formatToSlash } from "../../utils/Date";

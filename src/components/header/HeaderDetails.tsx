@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import Svg, { Path } from "react-native-svg";
-import { HeaderOptionsProps } from "../../types";
+import type { HeaderOptionsProps } from "../../types";
 import { C } from "../../utils/helpers/colors";
 
 const { width: W } = Dimensions.get("window");
