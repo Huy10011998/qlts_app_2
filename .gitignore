@@ -88,6 +88,7 @@ ios/Pods/
 ios/DerivedData/
 ios/.swiftpm/
 ios/.symlinks/
+ios/.xcode.env.local
 *.hmap
 *.ipa
 *.xcarchive
