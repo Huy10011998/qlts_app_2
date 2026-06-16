@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from "react-native";
 import {
   useFocusEffect,
@@ -38,6 +39,9 @@ import { readStoredAuthUsername } from "../../context/authStorage";
 const HOME_FEATURE_PINNED_IDS_KEY = "@home:pinnedFeatureIds";
 const HOME_FEATURE_PINNED_IDS_USER_KEY = `${HOME_FEATURE_PINNED_IDS_KEY}:user`;
 const DEFAULT_HOME_FEATURE_IDS = ["1", "2", "3", "4"];
+const HOME_CONTENT_HORIZONTAL_PADDING = 16;
+const HOME_FEATURE_GRID_GAP = 10;
+const HOME_FEATURE_GRID_COLUMNS = 4;
 
 const getHomeFeaturePinnedIdsKey = (userName: string | null) => {
   const normalizedUserName = userName?.trim().toLowerCase();
@@ -53,6 +57,7 @@ const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeNavigationProp>();
   const tabsNavigation = navigation.getParent() as any;
   const isFocused = useIsFocused();
+  const { width: windowWidth } = useWindowDimensions();
   const { canView, loaded } = usePermission();
   const dispatch = useAppDispatch();
   const {
@@ -194,9 +199,20 @@ const HomeScreen: React.FC = () => {
       .map((id) => visibleMenuItemsById.get(id))
       .filter((item): item is (typeof visibleMenuItems)[number] => !!item);
   }, [pinnedFeatureIds, visibleMenuItems]);
+  const homeGridItemWidth = useMemo(() => {
+    const contentWidth = Math.max(
+      windowWidth - HOME_CONTENT_HORIZONTAL_PADDING * 2,
+      0,
+    );
+    const totalGap = HOME_FEATURE_GRID_GAP * (HOME_FEATURE_GRID_COLUMNS - 1);
+
+    return (contentWidth - totalGap) / HOME_FEATURE_GRID_COLUMNS;
+  }, [windowWidth]);
   const hasNoViewFeatures = visibleMenuItems.length === 0;
   const hasNoPinnedFeatures =
     !hasNoViewFeatures && pinnedMenuItems.length === 0;
+  const hasOverflowPinnedFeatures =
+    pinnedMenuItems.length > HOME_FEATURE_GRID_COLUMNS;
   const canViewAllFeatures = visibleMenuItems.length > 0;
   const canViewAssets = loaded && canView("TaiSan");
   const canViewShareholdersMeeting = loaded && canView("DHCD");
@@ -328,10 +344,29 @@ const HomeScreen: React.FC = () => {
               fullHeight={false}
             />
           </View>
+        ) : hasOverflowPinnedFeatures ? (
+          <ScrollView
+            horizontal
+            nestedScrollEnabled
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.grid}
+          >
+            {pinnedMenuItems.map((item, index) => (
+              <View
+                key={item.id}
+                style={[styles.homeGridItem, { width: homeGridItemWidth }]}
+              >
+                <HomeMenuItemCard {...item} index={index} />
+              </View>
+            ))}
+          </ScrollView>
         ) : (
           <View style={styles.grid}>
             {pinnedMenuItems.map((item, index) => (
-              <View key={item.id} style={styles.homeGridItem}>
+              <View
+                key={item.id}
+                style={[styles.homeGridItem, { width: homeGridItemWidth }]}
+              >
                 <HomeMenuItemCard {...item} index={index} />
               </View>
             ))}
@@ -437,18 +472,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 32 },
+  scrollContent: {
+    paddingHorizontal: HOME_CONTENT_HORIZONTAL_PADDING,
+    paddingTop: 16,
+    paddingBottom: 32,
+  },
 
   grid: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
+    gap: HOME_FEATURE_GRID_GAP,
     marginBottom: 14,
   },
-  homeGridItem: {
-    width: "23%",
-    minWidth: 74,
-  },
+  homeGridItem: {},
   featureSheet: {
     maxHeight: "82%",
     borderTopLeftRadius: 22,
