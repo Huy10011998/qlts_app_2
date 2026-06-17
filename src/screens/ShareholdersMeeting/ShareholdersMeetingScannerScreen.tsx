@@ -214,6 +214,20 @@ export default function ShareholdersMeetingScannerScreen() {
         return;
       }
 
+      if (shareholder.isLock) {
+        Alert.alert(
+          "Cổ đông đã khóa",
+          `Cổ đông ${shareholder.shareholderId} đã khóa, bạn chỉ có thể xem thông tin.`,
+          [
+            {
+              text: "OK",
+              onPress: resumeScanner,
+            },
+          ],
+        );
+        return;
+      }
+
       if (scanMode === "voting" && shareholder.status !== "present") {
         Alert.alert(
           "Chưa điểm danh",

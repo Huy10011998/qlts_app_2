@@ -6,6 +6,26 @@ export interface GetMenuActiveResponse {
   message?: string;
 }
 
+export interface ViewActiveItem {
+  id: number;
+  colorTheme_MoTa?: number | null;
+  ma: string;
+  label: string;
+  stt?: number | null;
+  href?: string | null;
+  isActive?: boolean;
+  colorTheme?: number | null;
+  icon?: string | null;
+  longLabel?: string | null;
+  iconMobile?: string | null;
+}
+
+export interface GetViewActiveResponse {
+  data: ViewActiveItem[];
+  success?: boolean;
+  message?: string;
+}
+
 export interface ChangePasswordResponse {
   success?: boolean;
   message?: string;
@@ -43,6 +63,8 @@ export interface MenuItemResponse {
   name: string;
   label: string;
   icon: string;
+  iconImageUri?: string;
+  iconMobile?: string | null;
   propertyReference: string;
   moTa: string;
 }
@@ -50,6 +72,7 @@ export interface MenuItemResponse {
 export interface ShareholderApiItem {
   id: number;
   isDiemDanh?: boolean;
+  isLock?: boolean | null;
   maCoDong?: string | null;
   tenCoDong?: string | null;
   tongCoPhan?: number | null;

@@ -24,6 +24,7 @@ type HomeMenuItemCardProps = MenuItemCardProps & {
   isPinned?: boolean;
   onTogglePinned?: () => void;
   showPinButton?: boolean;
+  fixedHeight?: boolean;
 };
 
 export default function HomeMenuItemCard({
@@ -36,6 +37,7 @@ export default function HomeMenuItemCard({
   isPinned = false,
   onTogglePinned,
   showPinButton = false,
+  fixedHeight = false,
 }: HomeMenuItemCardProps) {
   const scaleAnim = useRef(new Animated.Value(0)).current;
 
@@ -61,7 +63,13 @@ export default function HomeMenuItemCard({
       onPress={onPress}
       activeOpacity={0.72}
     >
-      <View style={[styles.card, { backgroundColor: theme.bg }]}>
+      <View
+        style={[
+          styles.card,
+          fixedHeight ? styles.fixedHeightCard : null,
+          { backgroundColor: theme.bg },
+        ]}
+      >
         <View style={[styles.accentBar, { backgroundColor: theme.color }]} />
         {showPinButton ? (
           <TouchableOpacity
@@ -93,9 +101,11 @@ export default function HomeMenuItemCard({
           ) : null}
         </View>
 
-        <Text style={[styles.label, { color: theme.color }]} numberOfLines={2}>
-          {label}
-        </Text>
+        <View style={styles.labelWrap}>
+          <Text style={[styles.label, { color: theme.color }]} numberOfLines={2}>
+            {label}
+          </Text>
+        </View>
 
         <View style={[styles.arrowChip, { backgroundColor: theme.iconBg }]}>
           <Ionicons name="arrow-forward" size={10} color={theme.color} />
@@ -118,6 +128,9 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
     elevation: 2,
+  },
+  fixedHeightCard: {
+    flex: 1,
   },
   accentBar: {
     height: 3,
@@ -158,6 +171,11 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textAlign: "center",
     lineHeight: 15,
+  },
+  labelWrap: {
+    height: 34,
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 8,
   },
   arrowChip: {

@@ -2,6 +2,8 @@ export const BASE_URL = "https://api.cholimexfood.com.vn/api";
 
 export const BASE_URL_PDF = "https://api.cholimexfood.com.vn/";
 
+export const PUBLIC_ASSET_BASE_URL = "https://os.cholimexfood.com.vn";
+
 export const API_ENDPOINTS = {
   // ASSET
   GET_MENU_ACTIVE: `${BASE_URL}/Common/get-menu-active`,
@@ -30,4 +32,6 @@ export const API_ENDPOINTS = {
   DIEM_DANH_DHCD: `${BASE_URL}/DaiHoiCoDong_CoDong/diem-danh-dhcd`,
   HUY_DIEM_DANH_DHCD: `${BASE_URL}/DaiHoiCoDong_CoDong/huy-diem-danh-dhcd`,
   LUU_Y_KIEN_CO_DONG_DHCD: `${BASE_URL}/DaiHoiCoDong_CoDong/luu-ykien-codong`,
+  // GET VIEW ACTIVE
+  GET_VIEW_ACTIVE: `${BASE_URL}/Common/get-view-active`,
 };

@@ -307,6 +307,9 @@ const CameraListGrid: React.FC = () => {
   const [isFullMuted, setIsFullMuted] = React.useState(false);
   const [videoReady, setVideoReady] = React.useState(false);
   const [isLandscape, setIsLandscape] = React.useState(false);
+  const [isClosingFullscreen, setIsClosingFullscreen] = React.useState(false);
+  const [isBackTransitionCoverVisible, setIsBackTransitionCoverVisible] =
+    React.useState(false);
   const [gridSnapshotTimestamps, setGridSnapshotTimestamps] = React.useState<{
     groupA: number;
     groupB: number;
@@ -361,6 +364,15 @@ const CameraListGrid: React.FC = () => {
   const totalPagesRef = React.useRef(0);
   const [gridRenderKey, setGridRenderKey] = React.useState(0);
   const fullscreenCamRef = React.useRef<any>(null);
+  const isClosingFullscreenRef = React.useRef(false);
+  const pendingBackToPortraitRef = React.useRef(false);
+  const pendingBackTimeoutRef = React.useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
+  const pendingBackActionRef = React.useRef<any>(null);
+  const closeFullscreenTimeoutRef = React.useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
   const {
     cameraToken,
     cameraTokenRef,
@@ -414,6 +426,73 @@ const CameraListGrid: React.FC = () => {
     [page, totalPages],
   );
 
+  const isWindowLandscape = React.useCallback(() => {
+    const { width, height } = Dimensions.get("window");
+    return width > height;
+  }, []);
+
+  const clearCloseFullscreenTimeout = React.useCallback(() => {
+    if (closeFullscreenTimeoutRef.current) {
+      clearTimeout(closeFullscreenTimeoutRef.current);
+      closeFullscreenTimeoutRef.current = null;
+    }
+  }, []);
+
+  const clearPendingBackTimeout = React.useCallback(() => {
+    if (pendingBackTimeoutRef.current) {
+      clearTimeout(pendingBackTimeoutRef.current);
+      pendingBackTimeoutRef.current = null;
+    }
+  }, []);
+
+  const clearFullscreenPlaybackTimers = React.useCallback(() => {
+    if (androidFallbackRef.current) {
+      clearTimeout(androidFallbackRef.current);
+      androidFallbackRef.current = null;
+    }
+    if (androidWatchdogRef.current) {
+      clearInterval(androidWatchdogRef.current);
+      androidWatchdogRef.current = null;
+    }
+  }, []);
+
+  const finishPendingBack = React.useCallback(() => {
+    if (!pendingBackToPortraitRef.current || !pendingBackActionRef.current) {
+      return;
+    }
+
+    const action = pendingBackActionRef.current;
+    pendingBackActionRef.current = null;
+    pendingBackToPortraitRef.current = false;
+    setIsBackTransitionCoverVisible(false);
+    clearPendingBackTimeout();
+    navigation.dispatch(action);
+  }, [clearPendingBackTimeout, navigation]);
+
+  const hideFullscreenAfterPortrait = React.useCallback(() => {
+    if (!isClosingFullscreenRef.current) return;
+
+    clearCloseFullscreenTimeout();
+
+    if (!isWindowLandscape()) {
+      setFullscreenCam(null);
+      setIsClosingFullscreen(false);
+      isClosingFullscreenRef.current = false;
+      return;
+    }
+
+    closeFullscreenTimeoutRef.current = setTimeout(() => {
+      closeFullscreenTimeoutRef.current = null;
+      setFullscreenCam(null);
+      setIsClosingFullscreen(false);
+      isClosingFullscreenRef.current = false;
+    }, 500);
+  }, [clearCloseFullscreenTimeout, isWindowLandscape]);
+
+  React.useEffect(() => {
+    isClosingFullscreenRef.current = isClosingFullscreen;
+  }, [isClosingFullscreen]);
+
   React.useEffect(() => {
     pageRef.current = page;
   }, [page]);
@@ -440,30 +519,41 @@ const CameraListGrid: React.FC = () => {
   }, [fullscreenCam]);
 
   React.useEffect(() => {
-    const sub = Dimensions.addEventListener("change", ({ window }) =>
-      setScreenDims(window)
-    );
+    const sub = Dimensions.addEventListener("change", ({ window }) => {
+      setScreenDims(window);
+      if (window.width <= window.height) {
+        hideFullscreenAfterPortrait();
+        finishPendingBack();
+      }
+    });
     return () => sub?.remove();
-  }, []);
+  }, [finishPendingBack, hideFullscreenAfterPortrait]);
 
   React.useEffect(() => {
     const handler = (orientation: string) => {
-      setIsLandscape(
-        orientation === "LANDSCAPE-LEFT" || orientation === "LANDSCAPE-RIGHT"
-      );
+      const nextIsLandscape =
+        orientation === "LANDSCAPE-LEFT" || orientation === "LANDSCAPE-RIGHT";
+      setIsLandscape(nextIsLandscape);
       setScreenDims(Dimensions.get("window"));
+
+      if (!nextIsLandscape) {
+        hideFullscreenAfterPortrait();
+        finishPendingBack();
+      }
     };
     Orientation.addOrientationListener(handler);
     return () => Orientation.removeOrientationListener(handler);
-  }, []);
+  }, [finishPendingBack, hideFullscreenAfterPortrait]);
 
   React.useEffect(() => {
     navigation.setOptions({ gestureEnabled: false });
     return () => {
+      clearCloseFullscreenTimeout();
+      clearPendingBackTimeout();
       Orientation.lockToPortrait();
       navigation.setOptions({ gestureEnabled: true, headerShown: true });
     };
-  }, [navigation]);
+  }, [clearCloseFullscreenTimeout, clearPendingBackTimeout, navigation]);
 
   React.useEffect(() => {
     navigation.setOptions({ headerShown: !isGridLandscapeFullscreen });
@@ -911,6 +1001,9 @@ const CameraListGrid: React.FC = () => {
 
   const handleCamDoubleTap = React.useCallback(
     (cam: any, idx: number) => {
+      clearCloseFullscreenTimeout();
+      isClosingFullscreenRef.current = false;
+      setIsClosingFullscreen(false);
       if (isGridLandscapeFullscreen) {
         setIsLandscape(true);
         Orientation.lockToLandscapeLeft();
@@ -929,6 +1022,7 @@ const CameraListGrid: React.FC = () => {
       if (Platform.OS === "android") startAndroidFallback();
     },
     [
+      clearCloseFullscreenTimeout,
       fsSwitchOpacity,
       fsTranslateX,
       isGridLandscapeFullscreen,
@@ -1097,10 +1191,10 @@ const CameraListGrid: React.FC = () => {
   }, [activeIndex, cameraTokenRef]);
 
   const closeFullscreen = React.useCallback(() => {
-    if (androidFallbackRef.current) clearTimeout(androidFallbackRef.current);
-    if (androidWatchdogRef.current) clearInterval(androidWatchdogRef.current);
+    clearFullscreenPlaybackTimers();
     if (isGridLandscapeFullscreen) {
       Orientation.lockToLandscapeLeft();
+      setIsLandscape(true);
     } else {
       Orientation.lockToPortrait();
       setIsLandscape(false);
@@ -1109,15 +1203,66 @@ const CameraListGrid: React.FC = () => {
     fsTranslateX.setValue(0);
     fsSwitchOpacity.setValue(0);
     setIsSwitchingFullscreen(false);
-    setFullscreenCam(null);
     setPendingThumbUrl(null);
+    if (isGridLandscapeFullscreen) {
+      setFullscreenCam(null);
+    } else {
+      isClosingFullscreenRef.current = true;
+      setIsClosingFullscreen(true);
+      hideFullscreenAfterPortrait();
+    }
     setTimeout(() => {
       if (!isFocusedRef.current) return;
       Object.values(webviewRefs.current).forEach((ref) =>
         ref?.postMessage?.("start")
       );
     }, 400);
-  }, [fsSwitchOpacity, fsTranslateX, isGridLandscapeFullscreen]);
+  }, [
+    clearFullscreenPlaybackTimers,
+    fsSwitchOpacity,
+    fsTranslateX,
+    hideFullscreenAfterPortrait,
+    isGridLandscapeFullscreen,
+  ]);
+
+  React.useEffect(() => {
+    const unsubscribe = navigation.addListener("beforeRemove", (event: any) => {
+      Orientation.lockToPortrait();
+      setIsLandscape(false);
+
+      if (pendingBackToPortraitRef.current) return;
+
+      if (fullscreenCam) {
+        event.preventDefault();
+        closeFullscreen();
+        return;
+      }
+
+      if (isGridLandscapeFullscreen || isLandscape || isWindowLandscape()) {
+        event.preventDefault();
+        setIsGridLandscapeFullscreen(false);
+        pendingBackToPortraitRef.current = true;
+        pendingBackActionRef.current = event.data.action;
+        setIsBackTransitionCoverVisible(true);
+        clearPendingBackTimeout();
+        pendingBackTimeoutRef.current = setTimeout(() => {
+          finishPendingBack();
+        }, 700);
+      }
+    });
+
+    return unsubscribe;
+  }, [
+    clearPendingBackTimeout,
+    closeFullscreen,
+    finishPendingBack,
+    fullscreenCam,
+    isGridLandscapeFullscreen,
+    isLandscape,
+    isWindowLandscape,
+    navigation,
+  ]);
+
   const fullscreenDoubleTapGesture = React.useMemo(
     () =>
       Gesture.Tap()
@@ -1159,7 +1304,9 @@ const CameraListGrid: React.FC = () => {
 
   return (
     <GestureHandlerRootView style={styles.root}>
-      <StatusBar hidden={isGridFullscreenMode || fullscreenCam !== null} />
+      <StatusBar
+        hidden={isGridFullscreenMode || fullscreenCam !== null || isClosingFullscreen}
+      />
       <GestureDetector gesture={swipeGesture}>
         <View style={[styles.topHalf, isGridFullscreenMode && styles.topHalfFullscreen]}>
           <Animated.View
@@ -1322,7 +1469,7 @@ const CameraListGrid: React.FC = () => {
       )}
 
       <Modal
-        visible={fullscreenCam !== null}
+        visible={fullscreenCam !== null || isClosingFullscreen}
         animationType="fade"
         transparent={false}
         statusBarTranslucent
@@ -1387,7 +1534,7 @@ const CameraListGrid: React.FC = () => {
                 { transform: [{ translateX: fsTranslateX }] },
               ]}
             >
-              {fullscreenCam && cameraToken ? (
+              {isClosingFullscreen ? null : fullscreenCam && cameraToken ? (
                 <>
                   {Platform.OS === "android" && (
                       <Video
@@ -1552,6 +1699,10 @@ const CameraListGrid: React.FC = () => {
           </View>
         </View>
       </Modal>
+
+      {isBackTransitionCoverVisible && (
+        <View pointerEvents="auto" style={styles.backTransitionCover} />
+      )}
     </GestureHandlerRootView>
   );
 };
@@ -1709,6 +1860,12 @@ const styles = StyleSheet.create({
   layoutOptionText: { color: "#555", fontSize: 15, textAlign: "center" },
   layoutOptionTextActive: { color: "#e53935", fontWeight: "700" },
   fsContainer: { flex: 1, backgroundColor: "#000" },
+  backTransitionCover: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#000",
+    zIndex: 9999,
+    elevation: 9999,
+  },
   fsVideoArea: { flex: 1, backgroundColor: "#000" },
   fsSwipeOverlay: {
     ...StyleSheet.absoluteFillObject,

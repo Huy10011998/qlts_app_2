@@ -7,7 +7,6 @@ import {
   StyleSheet,
   Text,
   View,
-  useWindowDimensions,
 } from "react-native";
 import {
   useFocusEffect,
@@ -28,7 +27,11 @@ import {
   HOME_MEETING_INFO,
   HOME_RECENT_ACTIVITIES,
 } from "./shared/homeData";
-import { useHomeMenuItems } from "./shared/useHomeMenuItems";
+import {
+  DEFAULT_HOME_FEATURE_IDS,
+  normalizeHomeFeatureId,
+  useHomeMenuItems,
+} from "./shared/useHomeMenuItems";
 import EmptyState from "../../components/ui/EmptyState";
 import BottomSheetModalShell from "../../components/shared/BottomSheetModalShell";
 import { useAppDispatch } from "../../store/hooks";
@@ -38,10 +41,11 @@ import { readStoredAuthUsername } from "../../context/authStorage";
 
 const HOME_FEATURE_PINNED_IDS_KEY = "@home:pinnedFeatureIds";
 const HOME_FEATURE_PINNED_IDS_USER_KEY = `${HOME_FEATURE_PINNED_IDS_KEY}:user`;
-const DEFAULT_HOME_FEATURE_IDS = ["1", "2", "3", "4"];
+const HOME_FEATURE_PINNED_IDS_MIGRATED_KEY = `${HOME_FEATURE_PINNED_IDS_KEY}:view-active-migrated`;
 const HOME_CONTENT_HORIZONTAL_PADDING = 16;
 const HOME_FEATURE_GRID_GAP = 10;
-const HOME_FEATURE_GRID_COLUMNS = 4;
+const HOME_FEATURE_CARD_HEIGHT = 142;
+const HOME_FEATURE_CARD_MIN_WIDTH = 96;
 
 const getHomeFeaturePinnedIdsKey = (userName: string | null) => {
   const normalizedUserName = userName?.trim().toLowerCase();
@@ -53,15 +57,20 @@ const getHomeFeaturePinnedIdsKey = (userName: string | null) => {
   )}`;
 };
 
+const getHomeFeaturePinnedIdsMigratedKey = (pinnedIdsKey: string) =>
+  `${HOME_FEATURE_PINNED_IDS_MIGRATED_KEY}:${pinnedIdsKey}`;
+
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeNavigationProp>();
   const tabsNavigation = navigation.getParent() as any;
   const isFocused = useIsFocused();
-  const { width: windowWidth } = useWindowDimensions();
   const { canView, loaded } = usePermission();
   const dispatch = useAppDispatch();
   const {
     menuItems,
+    fetchHomeMenuItems,
+    hasMenuLoadError,
+    isMenuLoading,
     openMeetingScreen,
     openReportScreen,
     openScanScreen,
@@ -85,16 +94,30 @@ const HomeScreen: React.FC = () => {
         const storedUserName = await readStoredAuthUsername();
         const nextPinnedFeatureIdsKey =
           getHomeFeaturePinnedIdsKey(storedUserName);
+        const migratedKey = getHomeFeaturePinnedIdsMigratedKey(
+          nextPinnedFeatureIdsKey,
+        );
+        const hasMigrated = await AsyncStorage.getItem(migratedKey);
         const rawValue = await AsyncStorage.getItem(nextPinnedFeatureIdsKey);
         const parsedValue = rawValue ? JSON.parse(rawValue) : null;
 
         if (isActive && Array.isArray(parsedValue)) {
+          const nextPinnedFeatureIds = parsedValue
+            .filter((id): id is string => typeof id === "string")
+            .map((id) => (hasMigrated ? id : normalizeHomeFeatureId(id)));
+
           setPinnedFeatureIdsKey(nextPinnedFeatureIdsKey);
-          setPinnedFeatureIds(
-            parsedValue.filter((id): id is string => typeof id === "string"),
-          );
+          setPinnedFeatureIds(nextPinnedFeatureIds);
+
+          if (!hasMigrated) {
+            await AsyncStorage.multiSet([
+              [nextPinnedFeatureIdsKey, JSON.stringify(nextPinnedFeatureIds)],
+              [migratedKey, "true"],
+            ]);
+          }
         } else if (isActive) {
           setPinnedFeatureIdsKey(nextPinnedFeatureIdsKey);
+          await AsyncStorage.setItem(migratedKey, "true");
         }
       } catch {
         if (isActive) {
@@ -174,15 +197,25 @@ const HomeScreen: React.FC = () => {
   useNetworkAwareReload(
     () => {
       loadPermissions();
+      fetchHomeMenuItems();
     },
     {
       enabled: isFocused,
-      hasError: hasLoadError,
+      hasError: hasLoadError || hasMenuLoadError,
       onOffline: () => {
         setHasLoadError(true);
       },
     },
   );
+
+  const refreshHomeData = useCallback(async () => {
+    setIsRefreshing(true);
+    await Promise.all([
+      loadPermissions({ isRefresh: true }),
+      fetchHomeMenuItems(),
+    ]);
+    setIsRefreshing(false);
+  }, [fetchHomeMenuItems, loadPermissions]);
 
   const visibleMenuItems = useMemo(() => {
     if (!loaded) return [];
@@ -199,20 +232,10 @@ const HomeScreen: React.FC = () => {
       .map((id) => visibleMenuItemsById.get(id))
       .filter((item): item is (typeof visibleMenuItems)[number] => !!item);
   }, [pinnedFeatureIds, visibleMenuItems]);
-  const homeGridItemWidth = useMemo(() => {
-    const contentWidth = Math.max(
-      windowWidth - HOME_CONTENT_HORIZONTAL_PADDING * 2,
-      0,
-    );
-    const totalGap = HOME_FEATURE_GRID_GAP * (HOME_FEATURE_GRID_COLUMNS - 1);
-
-    return (contentWidth - totalGap) / HOME_FEATURE_GRID_COLUMNS;
-  }, [windowWidth]);
   const hasNoViewFeatures = visibleMenuItems.length === 0;
   const hasNoPinnedFeatures =
     !hasNoViewFeatures && pinnedMenuItems.length === 0;
-  const hasOverflowPinnedFeatures =
-    pinnedMenuItems.length > HOME_FEATURE_GRID_COLUMNS;
+  const isInitialMenuLoading = isMenuLoading && menuItems.length === 0;
   const canViewAllFeatures = visibleMenuItems.length > 0;
   const canViewAssets = loaded && canView("TaiSan");
   const canViewShareholdersMeeting = loaded && canView("DHCD");
@@ -238,7 +261,7 @@ const HomeScreen: React.FC = () => {
         ? [
             {
               iconName: "document-text-outline",
-              label: "Báo cáo tài sản",
+              label: "Báo cáo",
               bg: "#F3F0FF",
               color: "#7048E8",
               onPress: openReportScreen,
@@ -262,14 +285,14 @@ const HomeScreen: React.FC = () => {
     [canViewAssetReports, openReportScreen, openScanScreen, openSettingScreen],
   );
 
-  if (hasLoadError) {
+  if (hasLoadError || hasMenuLoadError) {
     return (
       <ScrollView
         contentContainerStyle={styles.centerState}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
-            onRefresh={() => loadPermissions({ isRefresh: true })}
+            onRefresh={refreshHomeData}
             colors={[HOME_BRAND_RED]}
             tintColor={HOME_BRAND_RED}
           />
@@ -284,7 +307,7 @@ const HomeScreen: React.FC = () => {
     );
   }
 
-  if (!loaded) {
+  if (!loaded || isInitialMenuLoading) {
     return (
       <View style={styles.loadingWrap}>
         <ActivityIndicator size="small" color={HOME_BRAND_RED} />
@@ -301,7 +324,7 @@ const HomeScreen: React.FC = () => {
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
-            onRefresh={() => loadPermissions({ isRefresh: true })}
+            onRefresh={refreshHomeData}
             colors={[HOME_BRAND_RED]}
             tintColor={HOME_BRAND_RED}
           />
@@ -344,30 +367,11 @@ const HomeScreen: React.FC = () => {
               fullHeight={false}
             />
           </View>
-        ) : hasOverflowPinnedFeatures ? (
-          <ScrollView
-            horizontal
-            nestedScrollEnabled
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.grid}
-          >
-            {pinnedMenuItems.map((item, index) => (
-              <View
-                key={item.id}
-                style={[styles.homeGridItem, { width: homeGridItemWidth }]}
-              >
-                <HomeMenuItemCard {...item} index={index} />
-              </View>
-            ))}
-          </ScrollView>
         ) : (
           <View style={styles.grid}>
             {pinnedMenuItems.map((item, index) => (
-              <View
-                key={item.id}
-                style={[styles.homeGridItem, { width: homeGridItemWidth }]}
-              >
-                <HomeMenuItemCard {...item} index={index} />
+              <View key={item.id} style={styles.homeGridItem}>
+                <HomeMenuItemCard {...item} index={index} fixedHeight />
               </View>
             ))}
           </View>
@@ -480,10 +484,17 @@ const styles = StyleSheet.create({
 
   grid: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: HOME_FEATURE_GRID_GAP,
     marginBottom: 14,
   },
-  homeGridItem: {},
+  homeGridItem: {
+    flexBasis: HOME_FEATURE_CARD_MIN_WIDTH,
+    flexGrow: 1,
+    flexShrink: 1,
+    height: HOME_FEATURE_CARD_HEIGHT,
+    minWidth: HOME_FEATURE_CARD_MIN_WIDTH,
+  },
   featureSheet: {
     maxHeight: "82%",
     borderTopLeftRadius: 22,

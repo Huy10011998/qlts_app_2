@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { View, Text, FlatList, Pressable, StyleSheet } from "react-native";
+import { View, Text, FlatList, Pressable, StyleSheet, Image } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { MenuItemResponse, StackNavigation, StackRoute } from "../../types";
 import { getClassReference } from "../../services";
@@ -11,6 +11,7 @@ import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { BG, BRAND_RED } from "./shared/listTheme";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { isNetworkRequestError } from "../../utils/helpers/api";
+import { normalizeIconImageUri } from "../../utils/iconImage";
 
 export default function AssetDeTailsTab({
   nameClassRoot,
@@ -41,12 +42,13 @@ export default function AssetDeTailsTab({
 
       setItems(
         data.map((item: any): MenuItemResponse => {
-          const iconName = item.iconMobile as string;
+          const iconImageUri = normalizeIconImageUri(item.iconMobile);
 
           return {
             ...item,
             label: item.moTa ?? "Không có mô tả",
-            icon: iconName ? iconName : "document-text-outline",
+            icon: "document-text-outline",
+            iconImageUri,
           };
         }),
       );
@@ -96,7 +98,11 @@ export default function AssetDeTailsTab({
       onPress={() => handlePress(item)}
     >
       <View style={styles.iconWrap}>
-        <Ionicons name={item.icon as any} size={18} color={BRAND_RED} />
+        {item.iconImageUri ? (
+          <Image source={{ uri: item.iconImageUri }} style={styles.iconImage} />
+        ) : (
+          <Ionicons name={item.icon as any} size={18} color={BRAND_RED} />
+        )}
       </View>
       <Text style={styles.label}>{item.label}</Text>
       <Ionicons name="chevron-forward" size={14} color="#C7C7CC" />
@@ -181,6 +187,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF5F5",
     alignItems: "center",
     justifyContent: "center",
+  },
+  iconImage: {
+    width: 24,
+    height: 24,
+    resizeMode: "contain",
   },
   label: {
     flex: 1,

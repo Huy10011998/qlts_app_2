@@ -34,7 +34,11 @@ export default function ShareholderAttendanceRow({
             {cfg.label}
           </Text>
         </View>
-        {item.status === "pending" ? (
+        {item.isLock ? (
+          <View style={styles.lockBadge}>
+            <Text style={styles.lockBadgeText}>Đã khóa</Text>
+          </View>
+        ) : item.status === "pending" ? (
           <TouchableOpacity
             style={[
               styles.checkInBtn,
@@ -107,6 +111,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   badgeText: { fontSize: 11, fontWeight: "600" },
+  lockBadge: {
+    backgroundColor: C.slateLight,
+    borderWidth: 1,
+    borderColor: C.slateBorder,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  lockBadgeText: { color: C.slate, fontSize: 11, fontWeight: "700" },
   checkInBtn: {
     backgroundColor: C.accent,
     paddingHorizontal: 10,

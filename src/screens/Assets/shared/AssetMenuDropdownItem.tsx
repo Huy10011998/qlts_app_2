@@ -1,5 +1,12 @@
 import React from "react";
-import { LayoutAnimation, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Image,
+  LayoutAnimation,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
@@ -73,7 +80,9 @@ function AssetMenuDropdownItem({
         <View style={[styles.accent, { backgroundColor: theme.color }]} />
 
         <View style={[styles.iconWrap, { backgroundColor: theme.bg }]}>
-          {theme.lib === "material" ? (
+          {theme.iconImageUri ? (
+            <Image source={{ uri: theme.iconImageUri }} style={styles.iconImage} />
+          ) : theme.lib === "material" ? (
             <MaterialIcons name={theme.icon as any} size={16} color={theme.color} />
           ) : (
             <Ionicons name={theme.icon as any} size={16} color={theme.color} />
@@ -156,6 +165,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
+  },
+  iconImage: {
+    width: 22,
+    height: 22,
+    resizeMode: "contain",
   },
   label: {
     flex: 1,

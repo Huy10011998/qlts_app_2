@@ -395,6 +395,7 @@ export interface Shareholder {
   shareholderId: string;
   shares: number;
   status: AttendanceStatus;
+  isLock?: boolean;
 }
 
 export interface ShareholderRowProps {

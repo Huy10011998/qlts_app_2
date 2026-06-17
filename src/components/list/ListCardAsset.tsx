@@ -14,6 +14,7 @@ import { convertToResizePath, fetchImage } from "../../utils/Image";
 import { getFieldValue } from "../../utils/fields/GetFieldValue";
 import { parseLink } from "../../utils/Link";
 import { C } from "../../utils/helpers/colors";
+import { normalizeIconImageUri } from "../../utils/iconImage";
 
 function ListCardAsset({
   item,
@@ -21,6 +22,7 @@ function ListCardAsset({
   icon,
   onPress = () => {},
 }: CardItemProps) {
+  const iconImageUri = normalizeIconImageUri(icon);
   const imageFields = useMemo(
     () => fields.filter((f) => f.typeProperty === TypeProperty.Image),
     [fields],
@@ -45,11 +47,15 @@ function ListCardAsset({
   return (
     <TouchableOpacity style={styles.card} onPress={() => onPress(item)}>
       <View style={styles.avatar}>
-        <Ionicons
-          name={icon || "document-text-outline"}
-          size={26}
-          color={C.red}
-        />
+        {iconImageUri ? (
+          <Image source={{ uri: iconImageUri }} style={styles.avatarImage} />
+        ) : (
+          <Ionicons
+            name={icon || "document-text-outline"}
+            size={26}
+            color={C.red}
+          />
+        )}
       </View>
 
       <View style={styles.info}>
@@ -126,6 +132,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: 16,
+  },
+  avatarImage: {
+    width: 30,
+    height: 30,
+    resizeMode: "contain",
   },
 
   info: { flex: 1 },

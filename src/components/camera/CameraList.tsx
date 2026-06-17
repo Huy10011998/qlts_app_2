@@ -66,6 +66,9 @@ const CameraList: React.FC = () => {
   const [page, setPage] = React.useState(0);
   const [isFullMuted, setIsFullMuted] = React.useState(false);
   const [isLandscape, setIsLandscape] = React.useState(false);
+  const [isClosingFullscreen, setIsClosingFullscreen] = React.useState(false);
+  const [isBackTransitionCoverVisible, setIsBackTransitionCoverVisible] =
+    React.useState(false);
   const [videoReady, setVideoReady] = React.useState(false);
   const [focusKey, setFocusKey] = React.useState(0);
   const [pendingThumbUrl, setPendingThumbUrl] = React.useState<string | null>(
@@ -79,6 +82,15 @@ const CameraList: React.FC = () => {
   const isFocusedRef = React.useRef(false);
   const pageRef = React.useRef(0);
   const totalPagesRef = React.useRef(0);
+  const isClosingFullscreenRef = React.useRef(false);
+  const pendingBackToPortraitRef = React.useRef(false);
+  const pendingBackTimeoutRef = React.useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
+  const pendingBackActionRef = React.useRef<any>(null);
+  const closeFullscreenTimeoutRef = React.useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
 
   // Android stall detection
   const lastProgressRef = React.useRef<number>(Date.now());
@@ -125,6 +137,62 @@ const CameraList: React.FC = () => {
     androidWatchdogRef.current = null;
   }, []);
 
+  const isWindowLandscape = React.useCallback(() => {
+    const { width, height } = Dimensions.get("window");
+    return width > height;
+  }, []);
+
+  const clearCloseFullscreenTimeout = React.useCallback(() => {
+    if (closeFullscreenTimeoutRef.current) {
+      clearTimeout(closeFullscreenTimeoutRef.current);
+      closeFullscreenTimeoutRef.current = null;
+    }
+  }, []);
+
+  const clearPendingBackTimeout = React.useCallback(() => {
+    if (pendingBackTimeoutRef.current) {
+      clearTimeout(pendingBackTimeoutRef.current);
+      pendingBackTimeoutRef.current = null;
+    }
+  }, []);
+
+  const finishPendingBack = React.useCallback(() => {
+    if (!pendingBackToPortraitRef.current || !pendingBackActionRef.current) {
+      return;
+    }
+
+    const action = pendingBackActionRef.current;
+    pendingBackActionRef.current = null;
+    pendingBackToPortraitRef.current = false;
+    setIsBackTransitionCoverVisible(false);
+    clearPendingBackTimeout();
+    navigation.dispatch(action);
+  }, [clearPendingBackTimeout, navigation]);
+
+  const hideFullscreenAfterPortrait = React.useCallback(() => {
+    if (!isClosingFullscreenRef.current) return;
+
+    clearCloseFullscreenTimeout();
+
+    if (!isWindowLandscape()) {
+      setFullscreenCamera(null);
+      setIsClosingFullscreen(false);
+      isClosingFullscreenRef.current = false;
+      return;
+    }
+
+    closeFullscreenTimeoutRef.current = setTimeout(() => {
+      closeFullscreenTimeoutRef.current = null;
+      setFullscreenCamera(null);
+      setIsClosingFullscreen(false);
+      isClosingFullscreenRef.current = false;
+    }, 500);
+  }, [clearCloseFullscreenTimeout, isWindowLandscape]);
+
+  React.useEffect(() => {
+    isClosingFullscreenRef.current = isClosingFullscreen;
+  }, [isClosingFullscreen]);
+
   React.useEffect(() => {
     isFocusedRef.current = isFocused;
   }, [isFocused]);
@@ -132,13 +200,18 @@ const CameraList: React.FC = () => {
   // Orientation listener
   React.useEffect(() => {
     const handler = (orientation: string) => {
-      setIsLandscape(
-        orientation === "LANDSCAPE-LEFT" || orientation === "LANDSCAPE-RIGHT",
-      );
+      const nextIsLandscape =
+        orientation === "LANDSCAPE-LEFT" || orientation === "LANDSCAPE-RIGHT";
+      setIsLandscape(nextIsLandscape);
+
+      if (!nextIsLandscape) {
+        hideFullscreenAfterPortrait();
+        finishPendingBack();
+      }
     };
     Orientation.addOrientationListener(handler);
     return () => Orientation.removeOrientationListener(handler);
-  }, []);
+  }, [finishPendingBack, hideFullscreenAfterPortrait]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -177,26 +250,77 @@ const CameraList: React.FC = () => {
 
   React.useEffect(() => {
     return () => {
+      clearCloseFullscreenTimeout();
+      clearPendingBackTimeout();
       Orientation.lockToPortrait();
       clearAndroidTimers();
     };
-  }, [clearAndroidTimers]);
+  }, [clearAndroidTimers, clearCloseFullscreenTimeout, clearPendingBackTimeout]);
+
+  React.useEffect(() => {
+    const unsubscribe = navigation.addListener("beforeRemove", (event: any) => {
+      Orientation.lockToPortrait();
+      setIsLandscape(false);
+
+      if (pendingBackToPortraitRef.current) return;
+
+      if (fullscreenCamera) {
+        event.preventDefault();
+        clearAndroidTimers();
+        fsTranslateX.setValue(0);
+        setPendingThumbUrl(null);
+        isClosingFullscreenRef.current = true;
+        setIsClosingFullscreen(true);
+        hideFullscreenAfterPortrait();
+        return;
+      }
+
+      if (isLandscape || isWindowLandscape()) {
+        event.preventDefault();
+        pendingBackToPortraitRef.current = true;
+        pendingBackActionRef.current = event.data.action;
+        setIsBackTransitionCoverVisible(true);
+        clearPendingBackTimeout();
+        pendingBackTimeoutRef.current = setTimeout(() => {
+          finishPendingBack();
+        }, 700);
+      }
+    });
+
+    return unsubscribe;
+  }, [
+    clearAndroidTimers,
+    clearPendingBackTimeout,
+    finishPendingBack,
+    fsTranslateX,
+    fullscreenCamera,
+    hideFullscreenAfterPortrait,
+    isLandscape,
+    isWindowLandscape,
+    navigation,
+  ]);
 
   React.useEffect(() => {
     const sub = Dimensions.addEventListener("change", ({ window }) => {
       setScreenWidth(window.width);
+      if (window.width <= window.height) {
+        hideFullscreenAfterPortrait();
+        finishPendingBack();
+      }
     });
     return () => sub.remove();
-  }, []);
+  }, [finishPendingBack, hideFullscreenAfterPortrait]);
 
   const closeFullscreen = React.useCallback(() => {
     Orientation.lockToPortrait();
     clearAndroidTimers();
     fsTranslateX.setValue(0);
-    setFullscreenCamera(null);
     setPendingThumbUrl(null);
     setIsLandscape(false);
-  }, [clearAndroidTimers, fsTranslateX]);
+    isClosingFullscreenRef.current = true;
+    setIsClosingFullscreen(true);
+    hideFullscreenAfterPortrait();
+  }, [clearAndroidTimers, fsTranslateX, hideFullscreenAfterPortrait]);
 
   const toggleOrientation = React.useCallback(() => {
     if (isLandscape) {
@@ -247,16 +371,18 @@ const CameraList: React.FC = () => {
 
   const openFullscreen = React.useCallback(
     (item: any) => {
-      const { width, height } = Dimensions.get("window");
-      setIsLandscape(width > height);
+      clearCloseFullscreenTimeout();
+      isClosingFullscreenRef.current = false;
+      setIsClosingFullscreen(false);
+      Orientation.lockToPortrait();
+      setIsLandscape(false);
       setPendingThumbUrl(getCameraSnapshotUrl(item.iD_Camera_Ma, thumbTimestamp));
       setVideoReady(false);
       setAndroidVideoKey(0);
       setFullscreenCamera(item);
-      Orientation.unlockAllOrientations();
       if (Platform.OS === "android") startAndroidFallback();
     },
-    [startAndroidFallback, thumbTimestamp],
+    [clearCloseFullscreenTimeout, startAndroidFallback, thumbTimestamp],
   );
 
   const numColumns = layoutCount === 1 ? 1 : 2;
@@ -674,7 +800,7 @@ const CameraList: React.FC = () => {
 
       {/* Fullscreen Modal */}
       <Modal
-        visible={fullscreenCamera !== null}
+        visible={fullscreenCamera !== null || isClosingFullscreen}
         animationType="fade"
         transparent={false}
         statusBarTranslucent
@@ -740,7 +866,7 @@ const CameraList: React.FC = () => {
                   { transform: [{ translateX: fsTranslateX }] },
                 ]}
               >
-                {fullscreenCamera && cameraToken ? (
+                {isClosingFullscreen ? null : fullscreenCamera && cameraToken ? (
                   <>
                     {Platform.OS === "android" && (
                       <Video
@@ -874,6 +1000,10 @@ const CameraList: React.FC = () => {
           </View>
         </View>
       </Modal>
+
+      {isBackTransitionCoverVisible && (
+        <View pointerEvents="auto" style={styles.backTransitionCover} />
+      )}
     </GestureHandlerRootView>
   );
 };
@@ -1010,6 +1140,12 @@ const styles = StyleSheet.create({
   },
   closeText: { fontSize: 16, fontWeight: "600", color: "#333" },
   fullscreenContainer: { flex: 1, backgroundColor: "#000" },
+  backTransitionCover: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#000",
+    zIndex: 9999,
+    elevation: 9999,
+  },
   fsHeader: {
     flexDirection: "row",
     alignItems: "center",

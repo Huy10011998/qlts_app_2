@@ -36,17 +36,49 @@ import {
   MeetingOpinionApiItem,
   VotingChoice,
 } from "./shareholdersMeetingHelpers";
+import { error, log } from "../../../utils/Logger";
+
+const getApiErrorMessage = (err: unknown, fallback: string) => {
+  const apiError = err as
+    | {
+        code?: string;
+        config?: { url?: string; method?: string };
+        message?: string;
+        response?: { status?: number; data?: { message?: string } | string };
+      }
+    | undefined;
+  const status = apiError?.response?.status;
+  const method = apiError?.config?.method?.toUpperCase();
+  const url = apiError?.config?.url;
+  const responseMessage =
+    typeof apiError?.response?.data === "object"
+      ? apiError.response.data?.message
+      : undefined;
+  const detail = [
+    status ? `HTTP ${status}` : apiError?.code,
+    method,
+    url,
+    responseMessage || apiError?.message,
+  ]
+    .filter(Boolean)
+    .join(" - ");
+
+  return detail ? `${fallback}\n${detail}` : fallback;
+};
 
 function ShareholdersMeetingScannerButton({
+  disabled = false,
   onPress,
 }: {
+  disabled?: boolean;
   onPress: () => void;
 }) {
   return React.createElement(
     TouchableOpacity,
     {
+      disabled,
       onPress,
-      style: { paddingHorizontal: 5 },
+      style: { opacity: disabled ? 0.45 : 1, paddingHorizontal: 5 },
     },
     React.createElement(MaterialCommunityIcons, {
       name: "qrcode-scan",
@@ -201,6 +233,13 @@ export function useShareholdersMeetingController() {
     [can],
   );
   const hasAnyViewPermission = canViewAttendance || canViewVoting;
+  const isMeetingLocked = useMemo(
+    () =>
+      activeMeeting?.isLock === true ||
+      (shareholders.length > 0 &&
+        shareholders.every((shareholder) => shareholder.isLock)),
+    [activeMeeting?.isLock, shareholders],
+  );
 
   useEffect(() => {
     if (!loaded) return;
@@ -218,6 +257,14 @@ export function useShareholdersMeetingController() {
   const openScanner = useCallback(() => {
     if (!activeMeeting?.id) {
       Alert.alert("Thông báo", "Chưa có đại hội cổ đông đang hoạt động.");
+      return;
+    }
+
+    if (isMeetingLocked) {
+      Alert.alert(
+        "Đại hội đã khóa",
+        "Dữ liệu đại hội cổ đông đã khóa, bạn chỉ có thể xem thông tin.",
+      );
       return;
     }
 
@@ -246,14 +293,19 @@ export function useShareholdersMeetingController() {
   }, [
     activeMeeting?.id,
     activeTab,
+    isMeetingLocked,
     navigation,
     selectedOpinion,
     selectedVotingChoice,
   ]);
 
   const renderHeaderRight = useCallback(
-    () => ShareholdersMeetingScannerButton({ onPress: openScanner }),
-    [openScanner],
+    () =>
+      ShareholdersMeetingScannerButton({
+        disabled: isMeetingLocked,
+        onPress: openScanner,
+      }),
+    [isMeetingLocked, openScanner],
   );
 
   useEffect(() => {
@@ -291,7 +343,9 @@ export function useShareholdersMeetingController() {
       }
 
       const activeRes = await getActiveDhcd<ActiveMeetingResponse>();
+      log("[DHCD] getActiveDhcd response:", activeRes);
       const meeting = activeRes?.data ?? null;
+      log("[DHCD] active meeting data:", meeting);
 
       if (!canCommit()) return;
 
@@ -312,10 +366,27 @@ export function useShareholdersMeetingController() {
 
       if (canViewAttendance) {
         tasks.push(
-          fetchShareholders(meeting.id).then((data) => {
-            if (!canCommit()) return;
-            setShareholders(data);
-          }),
+          fetchShareholders(meeting.id)
+            .then((data) => {
+              log("[DHCD] shareholders loaded:", {
+                meetingId: meeting.id,
+                count: data.length,
+              });
+              if (!canCommit()) return;
+              setShareholders(data);
+            })
+            .catch((err) => {
+              error("[DHCD] fetchShareholders error:", err);
+              if (canCommit()) {
+                setShareholders([]);
+                setMeetingError(
+                  getApiErrorMessage(
+                    err,
+                    "Không tải được danh sách cổ đông.",
+                  ),
+                );
+              }
+            }),
         );
       }
 
@@ -323,16 +394,23 @@ export function useShareholdersMeetingController() {
         tasks.push(
           fetchOpinions(meeting.id)
             .then((data) => {
+              log("[DHCD] opinions loaded:", {
+                meetingId: meeting.id,
+                count: data.length,
+              });
               if (!canCommit()) return;
               setOpinions(data);
               setSelectedOpinionId(data[0]?.id ?? "");
               setVotingError(null);
             })
-            .catch(() => {
+            .catch((err) => {
+              error("[DHCD] fetchOpinions error:", err);
               if (!canCommit()) return;
               setOpinions([]);
               setSelectedOpinionId("");
-              setVotingError("Không tải được danh sách ý kiến.");
+              setVotingError(
+                getApiErrorMessage(err, "Không tải được danh sách ý kiến."),
+              );
             }),
         );
       } else {
@@ -340,13 +418,16 @@ export function useShareholdersMeetingController() {
       }
 
       await Promise.all(tasks);
-    } catch (error) {
+    } catch (err) {
       if (!canCommit()) return;
       setActiveMeeting(null);
       setShareholders([]);
       setOpinions([]);
       setSelectedOpinionId("");
-      setMeetingError("Không tải được dữ liệu đại hội cổ đông.");
+      error("[DHCD] loadMeetingData error:", err);
+      setMeetingError(
+        getApiErrorMessage(err, "Không tải được dữ liệu đại hội cổ đông."),
+      );
     } finally {
       if (canCommit()) {
         setIsMeetingLoading(false);
@@ -429,6 +510,17 @@ export function useShareholdersMeetingController() {
         onSuccess?: () => void;
       },
     ) => {
+      const shareholder = shareholders.find((item) => item.id === id);
+
+      if (shareholder?.isLock) {
+        Alert.alert(
+          "Cổ đông đã khóa",
+          `Cổ đông ${shareholderId} đã khóa, bạn chỉ có thể xem thông tin.`,
+        );
+        options?.onComplete?.();
+        return;
+      }
+
       Alert.alert(
         "Xác nhận điểm danh",
         `Xác nhận điểm danh cổ đông ${shareholderId}?`,
@@ -462,11 +554,21 @@ export function useShareholdersMeetingController() {
         ],
       );
     },
-    [syncShareholderAttendance],
+    [shareholders, syncShareholderAttendance],
   );
 
   const handleUndoCheckIn = useCallback(
     (id: string, shareholderId: string) => {
+      const shareholder = shareholders.find((item) => item.id === id);
+
+      if (shareholder?.isLock) {
+        Alert.alert(
+          "Cổ đông đã khóa",
+          `Cổ đông ${shareholderId} đã khóa, bạn chỉ có thể xem thông tin.`,
+        );
+        return;
+      }
+
       Alert.alert(
         "Huỷ điểm danh",
         `Bạn có chắc muốn huỷ điểm danh cổ đông ${shareholderId}?`,
@@ -490,7 +592,7 @@ export function useShareholdersMeetingController() {
         ],
       );
     },
-    [syncShareholderAttendance],
+    [shareholders, syncShareholderAttendance],
   );
 
   const { attendanceRate, pendingCount, presentCount } = useMemo(

@@ -1,17 +1,23 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
 import type { CardItemProps } from "../../types";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { formatDate } from "../../utils/Date";
 import { C } from "../../utils/helpers/colors";
+import { normalizeIconImageUri } from "../../utils/iconImage";
 
-export default function ListCardHistory({ item, onPress }: CardItemProps) {
+export default function ListCardHistory({ item, icon, onPress }: CardItemProps) {
   const ngayTaoCapNhat = item?.log_StartDate;
+  const iconImageUri = normalizeIconImageUri(icon);
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>
       <View style={styles.avatar}>
-        <Ionicons name="time-outline" size={26} color={C.red} />
+        {iconImageUri ? (
+          <Image source={{ uri: iconImageUri }} style={styles.avatarImage} />
+        ) : (
+          <Ionicons name="time-outline" size={26} color={C.red} />
+        )}
       </View>
 
       <View style={styles.info}>
@@ -52,6 +58,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: 16,
+  },
+  avatarImage: {
+    width: 30,
+    height: 30,
+    resizeMode: "contain",
   },
 
   info: { flex: 1 },

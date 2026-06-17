@@ -35,6 +35,7 @@ export const mapShareholderItem = (item: ShareholderApiItem): Shareholder => ({
   shareholderId: item.maCoDong || "--",
   shares: Number(item.tongCoPhan || 0),
   status: item.isDiemDanh ? "present" : "pending",
+  isLock: item.isLock === true,
 });
 
 export const getCandidateValue = (

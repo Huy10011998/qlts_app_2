@@ -60,6 +60,7 @@ export interface Item {
   stt: string | number;
   isReport: boolean;
   iD_GroupMenu: number;
+  iconMobile?: string | null;
 }
 
 // Dữ liệu người dùng cơ bản
@@ -123,6 +124,7 @@ export interface ActiveMeetingResponse {
     ngayDaiHoi?: string | null;
     nhiemKy?: string | null;
     isActive?: boolean;
+    isLock?: boolean | null;
     [key: string]: any;
   } | null;
 }

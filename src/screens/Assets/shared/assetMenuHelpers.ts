@@ -1,8 +1,21 @@
 import type { Item } from "../../../types/index";
 import { removeVietnameseTones } from "../../../utils/Helper";
+import { normalizeIconImageUri } from "../../../utils/iconImage";
 import { ASSET_MENU_BRAND_RED } from "./assetMenuTheme";
 
 export const getAssetMenuItemTheme = (item: Item, expanded: boolean) => {
+  const iconImageUri = normalizeIconImageUri(item.iconMobile);
+
+  if (iconImageUri) {
+    return {
+      icon: "image-outline",
+      iconImageUri,
+      lib: "ionicons" as const,
+      bg: "#EEF2FF",
+      color: "#3B5BDB",
+    };
+  }
+
   if (item.isReport) {
     return {
       icon: "bar-chart",
