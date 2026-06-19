@@ -90,6 +90,7 @@ export default function AssetTreeNodeItem({
           <Text
             style={[styles.nodeText, level > 0 && styles.nodeTextChild]}
             numberOfLines={2}
+            allowFontScaling={false}
           >
             {node.text}
           </Text>
@@ -138,6 +139,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#fff",
     borderRadius: 14,
+    minHeight: 58,
     paddingVertical: 11,
     paddingRight: 12,
     paddingLeft: 16,
@@ -147,6 +149,7 @@ const styles = StyleSheet.create({
   },
   nodeRowChild: {
     backgroundColor: "#FAFBFE",
+    minHeight: 56,
     shadowOpacity: 0.03,
     elevation: 1,
     borderWidth: StyleSheet.hairlineWidth,
@@ -185,12 +188,15 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     color: "#0F1923",
     fontWeight: "600",
-    lineHeight: 18,
+    lineHeight: 20,
+    includeFontPadding: false,
+    textAlignVertical: "center",
   },
   nodeTextChild: {
     fontSize: 12.5,
     fontWeight: "500",
     color: "#374151",
+    lineHeight: 19,
   },
   nodeChevronWrap: {
     width: 24,

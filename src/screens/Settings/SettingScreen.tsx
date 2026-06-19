@@ -59,7 +59,7 @@ import {
 } from "../../services/cameraPermission";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 
-const IOS_LOCAL_NETWORK_FALLBACK_STATE: StoredLocalNetworkPermissionState = {
+const LOCAL_NETWORK_FALLBACK_STATE: StoredLocalNetworkPermissionState = {
   hasShownNotice: false,
   hasRequestedPermission: false,
   status: "unknown",
@@ -84,8 +84,10 @@ const SettingScreen = () => {
     });
   const [cameraPermissionStatus, setCameraPermissionStatus] =
     useState<AppCameraPermissionStatus>("unknown");
-  const [isUpdatingLocalNetworkPermission, setIsUpdatingLocalNetworkPermission] =
-    useState(false);
+  const [
+    isUpdatingLocalNetworkPermission,
+    setIsUpdatingLocalNetworkPermission,
+  ] = useState(false);
   const [isUpdatingCameraPermission, setIsUpdatingCameraPermission] =
     useState(false);
 
@@ -143,11 +145,9 @@ const SettingScreen = () => {
       const [nextCameraPermissionStatus, nextLocalNetworkState] =
         await Promise.all([
           checkCameraPermission().catch(() => "unknown" as const),
-          Platform.OS === "ios"
-            ? refreshStoredLocalNetworkPermission().catch(
-                () => IOS_LOCAL_NETWORK_FALLBACK_STATE,
-              )
-            : Promise.resolve(IOS_LOCAL_NETWORK_FALLBACK_STATE),
+          refreshStoredLocalNetworkPermission().catch(
+            () => LOCAL_NETWORK_FALLBACK_STATE,
+          ),
         ]);
 
       if (!canUpdateScreen()) return;
@@ -216,11 +216,7 @@ const SettingScreen = () => {
         blockingLoaderActiveRef.current = false;
       }
     }
-  }, [
-    canUpdateScreen,
-    isAuthExpiredError,
-    refreshPermissionState,
-  ]);
+  }, [canUpdateScreen, isAuthExpiredError, refreshPermissionState]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextState) => {
@@ -246,17 +242,20 @@ const SettingScreen = () => {
     };
   }, [fetchData, isFocused]);
 
-  useNetworkAwareReload(() => {
-    fetchData();
-  }, {
-    enabled: isFocused,
-    hasError: Boolean(loadErrorMessage),
-    onOffline: () => {
-      setLoadErrorMessage(
-        "Vui lòng kiểm tra kết nối mạng và thử mở lại màn hình này.",
-      );
+  useNetworkAwareReload(
+    () => {
+      fetchData();
     },
-  });
+    {
+      enabled: isFocused,
+      hasError: Boolean(loadErrorMessage),
+      onOffline: () => {
+        setLoadErrorMessage(
+          "Vui lòng kiểm tra kết nối mạng và thử mở lại màn hình này.",
+        );
+      },
+    },
+  );
 
   const handleToggleFaceID = async (value: boolean) => {
     if (!isMountedRef.current) return;
@@ -361,12 +360,22 @@ const SettingScreen = () => {
 
   const handleToggleLocalNetworkPermission = useCallback(
     async (value: boolean) => {
-      if (Platform.OS !== "ios" || isUpdatingLocalNetworkPermission) return;
+      if (isUpdatingLocalNetworkPermission) return;
+
+      if (Platform.OS === "android") {
+        Alert.alert(
+          "Quyền mạng nội bộ",
+          "Android không có công tắc riêng cho quyền mạng nội bộ. Quyền này đã được mở mặc định để app kết nối server nội bộ.",
+        );
+        const refreshedState = await refreshStoredLocalNetworkPermission();
+        setLocalNetworkState(refreshedState);
+        return;
+      }
 
       if (!value) {
         Alert.alert(
           "Quyền mạng nội bộ",
-          "iPhone không cho tắt trực tiếp quyền này trong app. Bạn có thể mở Cài đặt để thu hồi quyền thủ công.",
+          "Hệ điều hành không cho tắt trực tiếp quyền này trong app. Bạn có thể mở Cài đặt để thay đổi quyền thủ công.",
           [
             { text: "Để sau", style: "cancel" },
             {
@@ -625,21 +634,23 @@ const SettingScreen = () => {
           </SettingSectionGroup>
 
           <SettingSectionGroup title="KHÁC">
-            {Platform.OS === "ios" && (
-              <SettingSwitchRow
-                iconName="wifi-outline"
-                iconBg={C.sky}
-                label="Quyền mạng nội bộ"
-                sublabel={`Kết nối server nội bộ • ${localNetworkStatusLabel}${isUpdatingLocalNetworkPermission ? " • Đang cập nhật..." : ""}`}
-                value={localNetworkState.status === "granted"}
-                onValueChange={handleToggleLocalNetworkPermission}
-              />
-            )}
+            <SettingSwitchRow
+              iconName="wifi-outline"
+              iconBg={C.sky}
+              label="Quyền mạng nội bộ"
+              sublabel={`Kết nối server nội bộ • ${localNetworkStatusLabel}${
+                isUpdatingLocalNetworkPermission ? " • Đang cập nhật..." : ""
+              }`}
+              value={localNetworkState.status === "granted"}
+              onValueChange={handleToggleLocalNetworkPermission}
+            />
             <SettingSwitchRow
               iconName="camera-outline"
               iconBg={C.emerald}
               label="Quyền camera"
-              sublabel={`Quét QR và chụp hình • ${cameraStatusLabel}${isUpdatingCameraPermission ? " • Đang cập nhật..." : ""}`}
+              sublabel={`Quét QR và chụp hình • ${cameraStatusLabel}${
+                isUpdatingCameraPermission ? " • Đang cập nhật..." : ""
+              }`}
               value={cameraPermissionStatus === "granted"}
               onValueChange={handleToggleCameraPermission}
             />
@@ -662,27 +673,23 @@ const SettingScreen = () => {
             />
           </SettingSectionGroup>
 
-          {Platform.OS === "ios" && (
-            <View style={styles.localNetworkSummary}>
-              <View
-                style={[styles.localNetworkStatusBadge, localNetworkStatusTone]}
-              >
-                <Text style={styles.localNetworkStatusBadgeText}>
-                  {localNetworkStatusLabel}
-                </Text>
-              </View>
-              <Text style={styles.localNetworkSummaryText}>
-                {localNetworkState.hasRequestedPermission
-                  ? "Ứng dụng đã lưu trạng thái quyền mạng nội bộ để hỗ trợ kết nối server nội bộ."
-                  : "Quyền mạng nội bộ sẽ được hỏi ở màn hình đăng nhập trước khi app kết nối server nội bộ."}
-              </Text>
-              <Text style={styles.localNetworkSummaryHint}>
-                {localNetworkState.hasShownNotice
-                  ? "Bạn có thể đổi quyền mạng nội bộ và camera trong Cài đặt hệ thống bất kỳ lúc nào."
-                  : "Thông báo hướng dẫn quyền sẽ xuất hiện ở màn hình đăng nhập khi người dùng mở app."}
+          <View style={styles.localNetworkSummary}>
+            <View
+              style={[styles.localNetworkStatusBadge, localNetworkStatusTone]}
+            >
+              <Text style={styles.localNetworkStatusBadgeText}>
+                {localNetworkStatusLabel}
               </Text>
             </View>
-          )}
+            <Text style={styles.localNetworkSummaryText}>
+              Ứng dụng đã lưu trạng thái quyền mạng nội bộ để hỗ trợ kết nối
+              server nội bộ.
+            </Text>
+            <Text style={styles.localNetworkSummaryHint}>
+              Bạn có thể đổi quyền mạng nội bộ và camera trong Cài đặt hệ thống
+              bất kỳ lúc nào.
+            </Text>
+          </View>
 
           <View style={styles.versionWrap}>
             <Text style={styles.versionText}>{appVersionLabel}</Text>

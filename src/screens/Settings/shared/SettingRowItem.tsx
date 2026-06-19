@@ -135,14 +135,18 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14.5,
+    lineHeight: 20,
     fontWeight: "600",
     color: C.text,
     letterSpacing: 0.1,
+    includeFontPadding: false,
   },
   sub: {
     fontSize: 11.5,
+    lineHeight: 16,
     color: C.textSub,
     marginTop: 2,
+    includeFontPadding: false,
   },
   chevronWrap: {
     width: 24,

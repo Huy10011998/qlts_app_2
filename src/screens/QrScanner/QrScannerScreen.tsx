@@ -30,6 +30,9 @@ import { getMatchedKey } from "../../utils/Helper";
 import { isNetworkRequestError } from "../../utils/helpers/api";
 
 const QR_BASE_URL_PREFIX = "https://os.cholimexfood.com.vn/taisan";
+const QR_BASE_URL_PREFIX_MM = "https://os.cholimexfood.com.vn/taisan/MayMoc";
+const QR_BASE_URL_PREFIX_TL =
+  "https://os.cholimexfood.com.vn/taisan/NoiDia_TuLanh";
 const QR_BASE_URL_PREFIX_REGEX = new RegExp(
   `^${QR_BASE_URL_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=/|$)`,
   "i",
@@ -42,7 +45,9 @@ const normalizeQrScanValue = (value: string) => {
   return {
     isExternalQrUrl,
     scanPath: isExternalQrUrl
-      ? trimmedValue.replace(QR_BASE_URL_PREFIX_REGEX, "")
+      ? trimmedValue
+          .replace(QR_BASE_URL_PREFIX_MM, QR_BASE_URL_PREFIX_TL)
+          .replace(QR_BASE_URL_PREFIX_REGEX, "")
       : trimmedValue,
   };
 };
@@ -54,7 +59,11 @@ const getDetailIdFromItemData = (itemData: any, fallbackId: string) => {
     const matchedIdKey = getMatchedKey(detailItem, "id");
     const detailId = matchedIdKey ? detailItem[matchedIdKey] : undefined;
 
-    if (detailId !== null && detailId !== undefined && String(detailId).trim()) {
+    if (
+      detailId !== null &&
+      detailId !== undefined &&
+      String(detailId).trim()
+    ) {
       return String(detailId);
     }
   }

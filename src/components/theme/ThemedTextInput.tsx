@@ -41,12 +41,16 @@ export function ThemedTextInput({
 
 const styles = StyleSheet.create({
   input: {
-    paddingVertical: 12,
+    minHeight: 48,
+    paddingVertical: 0,
     paddingHorizontal: 16,
     borderRadius: 8,
     fontSize: 16,
+    lineHeight: 22,
     fontWeight: "500",
     borderBottomWidth: 1,
     width: "100%",
+    includeFontPadding: false,
+    textAlignVertical: "center",
   },
 });

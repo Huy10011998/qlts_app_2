@@ -138,7 +138,7 @@ export default function LoginScreen() {
   }, [prepareTokenForFaceID]);
 
   const handleLocalNetworkPermission = useCallback(async () => {
-    if (Platform.OS !== "ios" || isLocalNetworkRequestRunning.current) return;
+    if (isLocalNetworkRequestRunning.current) return;
 
     isLocalNetworkRequestRunning.current = true;
     try {
@@ -155,8 +155,6 @@ export default function LoginScreen() {
   }, [applyLocalNetworkStatus]);
 
   const syncLocalNetworkState = useCallback(async () => {
-    if (Platform.OS !== "ios") return;
-
     const currentState = await readStoredLocalNetworkPermission();
 
     if (!currentState.hasRequestedPermission) {
@@ -169,8 +167,6 @@ export default function LoginScreen() {
   }, [applyLocalNetworkStatus, handleLocalNetworkPermission]);
 
   useEffect(() => {
-    if (Platform.OS !== "ios") return;
-
     syncLocalNetworkState();
   }, [syncLocalNetworkState]);
 
@@ -552,24 +548,27 @@ export default function LoginScreen() {
                 )}
               </View>
 
-              {Platform.OS === "ios" && (
+              {(Platform.OS === "ios" || Platform.OS === "android") && (
                 <View style={styles.localNetworkNotice}>
                   <Text style={styles.localNetworkStatusText}>
                     Quyền mạng nội bộ:{" "}
                     {getLocalNetworkPermissionLabel(localNetworkStatus)}
                   </Text>
                   <Text style={styles.localNetworkNoticeText}>
-                    Ứng dụng cần quyền mạng nội bộ để kết nối server. Vui lòng
-                    chọn chấp nhận khi iPhone hỏi quyền này.
+                    {Platform.OS === "ios"
+                      ? "Ứng dụng cần quyền mạng nội bộ để kết nối server. Vui lòng chọn chấp nhận khi iPhone hỏi quyền này."
+                      : "Quyền kết nối server nội bộ trên Android đã được mở sẵn cho ứng dụng."}
                   </Text>
-                  <TouchableOpacity
-                    onPress={openLocalNetworkSettings}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.localNetworkSettingsLink}>
-                      Mở Cài đặt để bật thủ công nếu đã "từ chối"
-                    </Text>
-                  </TouchableOpacity>
+                  {Platform.OS === "ios" && (
+                    <TouchableOpacity
+                      onPress={openLocalNetworkSettings}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.localNetworkSettingsLink}>
+                        Mở Cài đặt để bật thủ công nếu đã "từ chối"
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               )}
 
@@ -752,7 +751,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F6F6F6",
     borderRadius: 14,
     paddingHorizontal: 14,
-    height: 45,
+    minHeight: 48,
     marginBottom: 12,
     borderWidth: 1.5,
     borderColor: "transparent",
@@ -766,8 +765,13 @@ const styles = StyleSheet.create({
   },
   textInput: {
     flex: 1,
+    height: 48,
+    paddingVertical: 0,
     fontSize: 14,
+    lineHeight: 20,
     color: "#111",
+    includeFontPadding: false,
+    textAlignVertical: "center",
   },
 
   // ── Buttons ──

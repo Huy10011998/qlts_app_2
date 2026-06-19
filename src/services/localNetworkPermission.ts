@@ -55,6 +55,14 @@ export const markLocalNetworkNoticeShown = async () => {
 
 export const readStoredLocalNetworkPermission =
   async (): Promise<StoredLocalNetworkPermissionState> => {
+    if (Platform.OS !== "ios") {
+      return {
+        hasShownNotice: true,
+        hasRequestedPermission: true,
+        status: "granted",
+      };
+    }
+
     const values = await AsyncStorage.multiGet([
       LOCAL_NETWORK_NOTICE_SHOWN_KEY,
       LOCAL_NETWORK_PERMISSION_REQUESTED_KEY,
@@ -75,7 +83,10 @@ export const readStoredLocalNetworkPermission =
 
 export const requestLocalNetworkPermission =
   async (): Promise<LocalNetworkPermissionStatus> => {
-    if (Platform.OS !== "ios") return "granted";
+    if (Platform.OS !== "ios") {
+      await savePermissionState("granted");
+      return "granted";
+    }
     if (!nativeLocalNetworkPermission?.requestAccess) return "unknown";
 
     await AsyncStorage.setItem(LOCAL_NETWORK_PERMISSION_REQUESTED_KEY, "1");
@@ -87,7 +98,10 @@ export const requestLocalNetworkPermission =
 
 export const checkLocalNetworkPermission =
   async (): Promise<LocalNetworkPermissionStatus> => {
-    if (Platform.OS !== "ios") return "granted";
+    if (Platform.OS !== "ios") {
+      await savePermissionState("granted");
+      return "granted";
+    }
     if (!nativeLocalNetworkPermission?.checkAccess) return "unknown";
 
     const result = await nativeLocalNetworkPermission.checkAccess();
@@ -100,7 +114,15 @@ export const refreshStoredLocalNetworkPermission =
   async (): Promise<StoredLocalNetworkPermissionState> => {
     const currentState = await readStoredLocalNetworkPermission();
 
-    if (Platform.OS !== "ios" || !currentState.hasRequestedPermission) {
+    if (Platform.OS !== "ios") {
+      return {
+        ...currentState,
+        hasRequestedPermission: true,
+        status: "granted",
+      };
+    }
+
+    if (!currentState.hasRequestedPermission) {
       return currentState;
     }
 

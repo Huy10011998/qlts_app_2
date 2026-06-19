@@ -355,6 +355,7 @@ export default function ReportScreen() {
         isSearching={isSearching}
         resultCount={filteredReports.length}
         showResultCount={Boolean(debouncedSearch.trim())}
+        placeholder="Tìm kiếm báo cáo..."
       />
 
       <SectionList

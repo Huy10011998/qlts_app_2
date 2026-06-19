@@ -355,7 +355,8 @@ export interface CameraCellProps {
   cellH: number;
   token: string;
   pageKey: number;
-  snapshotTimestamp?: number;
+  thumbTimestamp?: number;
+  focusKey: number;
   onPress: (cam: any, idx: number) => void;
   onDoubleTap: (cam: any, idx: number) => void;
   webviewRefRegister?: React.RefObject<Record<string, any>>;

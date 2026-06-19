@@ -26,14 +26,33 @@ export default function HomeEventBanner({
   count,
   onPress,
 }: HomeEventBannerProps) {
+  const [day = "", month = ""] = date.split("/");
+  const monthNumber = Number(month);
+  const monthLabel =
+    month && Number.isFinite(monthNumber) ? `Th ${monthNumber}` : month;
+
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
       <View style={styles.stripe} />
 
       <View style={styles.content}>
         <View style={styles.datePill}>
-          <Text style={styles.dateDay}>{date.split("/")[0]}</Text>
-          <Text style={styles.dateMon}>Th{date.split("/")[1]}</Text>
+          <Text
+            style={styles.dateDay}
+            numberOfLines={1}
+            maxFontSizeMultiplier={1.15}
+          >
+            {day}
+          </Text>
+          <Text
+            style={styles.dateMon}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.85}
+            maxFontSizeMultiplier={1.15}
+          >
+            {monthLabel}
+          </Text>
         </View>
 
         <View style={styles.textBlock}>
@@ -45,22 +64,42 @@ export default function HomeEventBanner({
                 color={HOME_BRAND_RED}
                 style={localStyles.tagIcon}
               />
-              <Text style={styles.tagText}>SỰ KIỆN SẮP TỚI</Text>
+              <Text style={styles.tagText} maxFontSizeMultiplier={1.15}>
+                SỰ KIỆN SẮP TỚI
+              </Text>
             </View>
           </View>
-          <Text style={styles.title} numberOfLines={2}>
+          <Text
+            style={styles.title}
+            numberOfLines={2}
+            maxFontSizeMultiplier={1.15}
+          >
             {title}
           </Text>
           <View style={styles.metaRow}>
             <Ionicons name="location-outline" size={11} color="#8A95A3" />
-            <Text style={styles.meta}>{venue}</Text>
+            <Text
+              style={styles.meta}
+              numberOfLines={1}
+              maxFontSizeMultiplier={1.15}
+            >
+              {venue}
+            </Text>
             <View style={styles.dot} />
             <Ionicons name="time-outline" size={11} color="#8A95A3" />
-            <Text style={styles.meta}>{time}</Text>
+            <Text
+              style={styles.meta}
+              numberOfLines={1}
+              maxFontSizeMultiplier={1.15}
+            >
+              {time}
+            </Text>
           </View>
           <View style={styles.countRow}>
             <Ionicons name="people-outline" size={12} color={HOME_BRAND_RED} />
-            <Text style={styles.countText}>{count} cổ đông đăng ký</Text>
+            <Text style={styles.countText} maxFontSizeMultiplier={1.15}>
+              {count} cổ đông đăng ký
+            </Text>
           </View>
         </View>
       </View>
@@ -102,8 +141,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   datePill: {
-    width: 44,
-    height: 52,
+    width: 54,
+    height: 60,
     borderRadius: 12,
     backgroundColor: "#FFF0F0",
     alignItems: "center",
@@ -118,10 +157,12 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   dateMon: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "600",
     color: HOME_BRAND_RED,
     opacity: 0.7,
+    width: "100%",
+    textAlign: "center",
   },
   textBlock: { flex: 1 },
   tagRow: { flexDirection: "row", marginBottom: 4 },
