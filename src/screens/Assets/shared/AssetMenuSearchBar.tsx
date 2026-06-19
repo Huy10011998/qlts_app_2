@@ -14,6 +14,7 @@ type AssetMenuSearchBarProps = {
   isSearching: boolean;
   resultCount: number;
   showResultCount: boolean;
+  placeholder?: string;
 };
 
 export default function AssetMenuSearchBar({
@@ -22,6 +23,7 @@ export default function AssetMenuSearchBar({
   isSearching,
   resultCount,
   showResultCount,
+  placeholder = "Tìm kiếm tài sản...",
 }: AssetMenuSearchBarProps) {
   return (
     <View style={styles.searchWrap}>
@@ -30,7 +32,7 @@ export default function AssetMenuSearchBar({
           <Ionicons name="search-outline" size={16} color="#8A95A3" />
         </View>
         <TextInput
-          placeholder="Tìm kiếm tài sản..."
+          placeholder={placeholder}
           placeholderTextColor="#B0B8C4"
           value={value}
           onChangeText={onChangeText}
@@ -71,6 +73,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#fff",
     borderRadius: 14,
+    minHeight: 48,
     paddingHorizontal: 12,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "#EDF0F5",
@@ -85,10 +88,14 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    paddingVertical: 13,
+    height: 48,
+    paddingVertical: 0,
     fontSize: 14,
+    lineHeight: 20,
     color: "#0F1923",
     fontWeight: "400",
+    includeFontPadding: false,
+    textAlignVertical: "center",
   },
   spinnerWrap: {
     width: 24,

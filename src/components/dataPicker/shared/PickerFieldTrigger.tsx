@@ -35,12 +35,17 @@ const styles = StyleSheet.create({
     borderColor: "#ccc",
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    minHeight: 48,
+    paddingVertical: 0,
     backgroundColor: "#fff",
   },
   text: {
     color: "#000",
     flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+    includeFontPadding: false,
+    textAlignVertical: "center",
   },
   placeholder: {
     color: "#999",

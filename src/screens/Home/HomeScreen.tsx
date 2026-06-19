@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
 import {
@@ -44,8 +45,8 @@ const HOME_FEATURE_PINNED_IDS_USER_KEY = `${HOME_FEATURE_PINNED_IDS_KEY}:user`;
 const HOME_FEATURE_PINNED_IDS_MIGRATED_KEY = `${HOME_FEATURE_PINNED_IDS_KEY}:view-active-migrated`;
 const HOME_CONTENT_HORIZONTAL_PADDING = 16;
 const HOME_FEATURE_GRID_GAP = 10;
-const HOME_FEATURE_CARD_HEIGHT = 142;
-const HOME_FEATURE_CARD_MIN_WIDTH = 96;
+const HOME_FEATURE_CARD_HEIGHT = 132;
+const HOME_FEATURE_COLUMNS = 4;
 
 const getHomeFeaturePinnedIdsKey = (userName: string | null) => {
   const normalizedUserName = userName?.trim().toLowerCase();
@@ -53,7 +54,7 @@ const getHomeFeaturePinnedIdsKey = (userName: string | null) => {
   if (!normalizedUserName) return HOME_FEATURE_PINNED_IDS_KEY;
 
   return `${HOME_FEATURE_PINNED_IDS_USER_KEY}:${encodeURIComponent(
-    normalizedUserName,
+    normalizedUserName
   )}`;
 };
 
@@ -62,6 +63,7 @@ const getHomeFeaturePinnedIdsMigratedKey = (pinnedIdsKey: string) =>
 
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeNavigationProp>();
+  const { width: windowWidth } = useWindowDimensions();
   const tabsNavigation = navigation.getParent() as any;
   const isFocused = useIsFocused();
   const { canView, loaded } = usePermission();
@@ -80,10 +82,10 @@ const HomeScreen: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isFeatureListVisible, setIsFeatureListVisible] = useState(false);
   const [pinnedFeatureIds, setPinnedFeatureIds] = useState<string[]>(
-    DEFAULT_HOME_FEATURE_IDS,
+    DEFAULT_HOME_FEATURE_IDS
   );
   const [pinnedFeatureIdsKey, setPinnedFeatureIdsKey] = useState(
-    HOME_FEATURE_PINNED_IDS_KEY,
+    HOME_FEATURE_PINNED_IDS_KEY
   );
 
   useEffect(() => {
@@ -95,7 +97,7 @@ const HomeScreen: React.FC = () => {
         const nextPinnedFeatureIdsKey =
           getHomeFeaturePinnedIdsKey(storedUserName);
         const migratedKey = getHomeFeaturePinnedIdsMigratedKey(
-          nextPinnedFeatureIdsKey,
+          nextPinnedFeatureIdsKey
         );
         const hasMigrated = await AsyncStorage.getItem(migratedKey);
         const rawValue = await AsyncStorage.getItem(nextPinnedFeatureIdsKey);
@@ -136,10 +138,10 @@ const HomeScreen: React.FC = () => {
   const persistPinnedFeatureIds = useCallback(
     (nextIds: string[]) => {
       AsyncStorage.setItem(pinnedFeatureIdsKey, JSON.stringify(nextIds)).catch(
-        () => undefined,
+        () => undefined
       );
     },
-    [pinnedFeatureIdsKey],
+    [pinnedFeatureIdsKey]
   );
 
   const togglePinnedFeature = useCallback(
@@ -154,7 +156,7 @@ const HomeScreen: React.FC = () => {
         return nextIds;
       });
     },
-    [persistPinnedFeatureIds],
+    [persistPinnedFeatureIds]
   );
 
   const loadPermissions = useCallback(
@@ -174,7 +176,7 @@ const HomeScreen: React.FC = () => {
         }
       }
     },
-    [dispatch],
+    [dispatch]
   );
 
   useFocusEffect(
@@ -191,7 +193,7 @@ const HomeScreen: React.FC = () => {
       return () => {
         isActive = false;
       };
-    }, [loadPermissions]),
+    }, [loadPermissions])
   );
 
   useNetworkAwareReload(
@@ -205,7 +207,7 @@ const HomeScreen: React.FC = () => {
       onOffline: () => {
         setHasLoadError(true);
       },
-    },
+    }
   );
 
   const refreshHomeData = useCallback(async () => {
@@ -220,18 +222,27 @@ const HomeScreen: React.FC = () => {
   const visibleMenuItems = useMemo(() => {
     if (!loaded) return [];
     return menuItems.filter((item) =>
-      item.viewPermission ? canView(item.viewPermission) : true,
+      item.viewPermission ? canView(item.viewPermission) : true
     );
   }, [canView, loaded, menuItems]);
   const pinnedMenuItems = useMemo(() => {
     const visibleMenuItemsById = new Map(
-      visibleMenuItems.map((item) => [item.id, item]),
+      visibleMenuItems.map((item) => [item.id, item])
     );
 
     return pinnedFeatureIds
       .map((id) => visibleMenuItemsById.get(id))
       .filter((item): item is (typeof visibleMenuItems)[number] => !!item);
   }, [pinnedFeatureIds, visibleMenuItems]);
+  const pinnedMenuRows = useMemo(() => {
+    const rows: (typeof pinnedMenuItems)[] = [];
+
+    for (let i = 0; i < pinnedMenuItems.length; i += HOME_FEATURE_COLUMNS) {
+      rows.push(pinnedMenuItems.slice(i, i + HOME_FEATURE_COLUMNS));
+    }
+
+    return rows;
+  }, [pinnedMenuItems]);
   const hasNoViewFeatures = visibleMenuItems.length === 0;
   const hasNoPinnedFeatures =
     !hasNoViewFeatures && pinnedMenuItems.length === 0;
@@ -243,11 +254,16 @@ const HomeScreen: React.FC = () => {
   const visibleRecentActivities = useMemo(() => {
     if (!loaded) return [];
     return HOME_RECENT_ACTIVITIES.filter((item) =>
-      item.viewPermission ? canView(item.viewPermission) : true,
+      item.viewPermission ? canView(item.viewPermission) : true
     );
   }, [canView, loaded]);
   const hasOverviewStats = canViewShareholdersMeeting || canViewAssets;
   const hasRecentActivities = visibleRecentActivities.length > 0;
+  const homeContentWidth = windowWidth - HOME_CONTENT_HORIZONTAL_PADDING * 2;
+  const homeFeatureCardWidth =
+    (homeContentWidth -
+      HOME_FEATURE_GRID_GAP * Math.max(HOME_FEATURE_COLUMNS - 1, 0)) /
+    HOME_FEATURE_COLUMNS;
   const quickActions = useMemo(
     () => [
       {
@@ -282,7 +298,7 @@ const HomeScreen: React.FC = () => {
         onPress: openSettingScreen,
       },
     ],
-    [canViewAssetReports, openReportScreen, openScanScreen, openSettingScreen],
+    [canViewAssetReports, openReportScreen, openScanScreen, openSettingScreen]
   );
 
   if (hasLoadError || hasMenuLoadError) {
@@ -369,9 +385,23 @@ const HomeScreen: React.FC = () => {
           </View>
         ) : (
           <View style={styles.grid}>
-            {pinnedMenuItems.map((item, index) => (
-              <View key={item.id} style={styles.homeGridItem}>
-                <HomeMenuItemCard {...item} index={index} fixedHeight />
+            {pinnedMenuRows.map((rowItems, rowIndex) => (
+              <View key={`feature-row-${rowIndex}`} style={styles.gridRow}>
+                {rowItems.map((item, itemIndex) => (
+                  <View
+                    key={item.id}
+                    style={[
+                      styles.homeGridItem,
+                      { width: homeFeatureCardWidth },
+                    ]}
+                  >
+                    <HomeMenuItemCard
+                      {...item}
+                      index={rowIndex * HOME_FEATURE_COLUMNS + itemIndex}
+                      fixedHeight
+                    />
+                  </View>
+                ))}
               </View>
             ))}
           </View>
@@ -483,17 +513,16 @@ const styles = StyleSheet.create({
   },
 
   grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: "column",
     gap: HOME_FEATURE_GRID_GAP,
     marginBottom: 14,
   },
+  gridRow: {
+    flexDirection: "row",
+    gap: HOME_FEATURE_GRID_GAP,
+  },
   homeGridItem: {
-    flexBasis: HOME_FEATURE_CARD_MIN_WIDTH,
-    flexGrow: 1,
-    flexShrink: 1,
     height: HOME_FEATURE_CARD_HEIGHT,
-    minWidth: HOME_FEATURE_CARD_MIN_WIDTH,
   },
   featureSheet: {
     maxHeight: "82%",

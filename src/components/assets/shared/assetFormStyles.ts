@@ -119,11 +119,16 @@ export const createAssetFormBaseStyles = ({
   input: {
     borderWidth: 1,
     borderColor: "#E3E8F0",
-    padding: 12,
+    minHeight: 48,
+    paddingHorizontal: 12,
     borderRadius: 12,
-    paddingVertical: 12,
+    paddingVertical: 0,
+    fontSize: 14,
+    lineHeight: 20,
     color: "#0F1923",
     backgroundColor: "#FBFCFE",
+    includeFontPadding: false,
+    textAlignVertical: "center" as const,
   },
   switchRow: {
     flexDirection: "row" as const,

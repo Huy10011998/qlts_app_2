@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   Platform,
   Animated,
+  InteractionManager,
 } from "react-native";
 import {
   useRoute,
@@ -58,7 +59,7 @@ const CameraList: React.FC = () => {
   const [screenWidth, setScreenWidth] = React.useState(
     Dimensions.get("window").width,
   );
-  const [layoutCount, setLayoutCount] = React.useState<number>(4);
+  const [layoutCount, setLayoutCount] = React.useState<number>(16);
   const [showLayoutModal, setShowLayoutModal] = React.useState(false);
   const [fullscreenCamera, setFullscreenCamera] = React.useState<any | null>(
     null,
@@ -215,6 +216,9 @@ const CameraList: React.FC = () => {
 
   useFocusEffect(
     React.useCallback(() => {
+      translateX.stopAnimation(() => {
+        translateX.setValue(0);
+      });
       setFocusKey((k) => k + 1);
       if (isFirstFocusRef.current) {
         isFirstFocusRef.current = false;
@@ -223,7 +227,16 @@ const CameraList: React.FC = () => {
         setThumbTimestamp(0);
       }
       fetchCameraTokenRef.current?.(true);
+
+      const interactionTask = InteractionManager.runAfterInteractions(() => {
+        if (isFocusedRef.current) {
+          translateX.setValue(0);
+          setFocusKey((k) => k + 1);
+        }
+      });
+
       return () => {
+        interactionTask.cancel();
         clearTokenRefreshTimer();
       };
     }, [
@@ -232,6 +245,7 @@ const CameraList: React.FC = () => {
       fetchCameraTokenRef,
       setCameraToken,
       setThumbTimestamp,
+      translateX,
     ]),
   );
 
@@ -255,7 +269,11 @@ const CameraList: React.FC = () => {
       Orientation.lockToPortrait();
       clearAndroidTimers();
     };
-  }, [clearAndroidTimers, clearCloseFullscreenTimeout, clearPendingBackTimeout]);
+  }, [
+    clearAndroidTimers,
+    clearCloseFullscreenTimeout,
+    clearPendingBackTimeout,
+  ]);
 
   React.useEffect(() => {
     const unsubscribe = navigation.addListener("beforeRemove", (event: any) => {
@@ -376,7 +394,9 @@ const CameraList: React.FC = () => {
       setIsClosingFullscreen(false);
       Orientation.lockToPortrait();
       setIsLandscape(false);
-      setPendingThumbUrl(getCameraSnapshotUrl(item.iD_Camera_Ma, thumbTimestamp));
+      setPendingThumbUrl(
+        getCameraSnapshotUrl(item.iD_Camera_Ma, thumbTimestamp),
+      );
       setVideoReady(false);
       setAndroidVideoKey(0);
       setFullscreenCamera(item);
@@ -388,8 +408,7 @@ const CameraList: React.FC = () => {
   const numColumns = layoutCount === 1 ? 1 : 2;
   const itemWidth = screenWidth / numColumns - 16;
   const totalPages = Math.ceil(cameras.length / layoutCount);
-  const isScreenLandscape =
-    screenWidth > Dimensions.get("window").height;
+  const isScreenLandscape = screenWidth > Dimensions.get("window").height;
   const pagedCameras = cameras.slice(
     page * layoutCount,
     (page + 1) * layoutCount,
@@ -403,6 +422,12 @@ const CameraList: React.FC = () => {
   React.useEffect(() => {
     totalPagesRef.current = totalPages;
   }, [totalPages]);
+
+  React.useEffect(() => {
+    if (page > 0 && page >= totalPages) {
+      setPage(Math.max(totalPages - 1, 0));
+    }
+  }, [page, totalPages]);
 
   const changePage = React.useCallback((newPage: number) => {
     setPage(newPage);
@@ -654,11 +679,7 @@ const CameraList: React.FC = () => {
     ],
   );
   const fullscreenDoubleTapGesture = React.useMemo(
-    () =>
-      Gesture.Tap()
-        .runOnJS(true)
-        .numberOfTaps(2)
-        .onEnd(closeFullscreen),
+    () => Gesture.Tap().runOnJS(true).numberOfTaps(2).onEnd(closeFullscreen),
     [closeFullscreen],
   );
   const fullscreenGesture = React.useMemo(
@@ -708,7 +729,7 @@ const CameraList: React.FC = () => {
               keyExtractor={(item) => item.iD_Camera.toString()}
               renderItem={renderItem}
               showsVerticalScrollIndicator={false}
-              removeClippedSubviews
+              removeClippedSubviews={Platform.OS !== "android"}
               contentContainerStyle={[
                 styles.listContent,
                 isEmpty && styles.listContentEmpty,
@@ -866,7 +887,8 @@ const CameraList: React.FC = () => {
                   { transform: [{ translateX: fsTranslateX }] },
                 ]}
               >
-                {isClosingFullscreen ? null : fullscreenCamera && cameraToken ? (
+                {isClosingFullscreen ? null : fullscreenCamera &&
+                  cameraToken ? (
                   <>
                     {Platform.OS === "android" && (
                       <Video
@@ -883,7 +905,7 @@ const CameraList: React.FC = () => {
                         muted={isFullMuted}
                         repeat
                         controls={false}
-                        useTextureView={false}
+                        useTextureView
                         hideShutterView={true}
                         bufferConfig={{
                           minBufferMs: 1000,
@@ -974,6 +996,11 @@ const CameraList: React.FC = () => {
                           style={styles.spinner}
                         />
                       </View>
+                    )}
+                    {Platform.OS === "android" && (
+                      <GestureDetector gesture={fullscreenGesture}>
+                        <View style={styles.fsSwipeOverlay} />
+                      </GestureDetector>
                     )}
                   </>
                 ) : fullscreenCamera ? (
@@ -1168,6 +1195,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   fsVideoArea: { flex: 1, backgroundColor: "#000" },
+  fsSwipeOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "transparent",
+    zIndex: 5,
+  },
   fsPager: {
     position: "absolute",
     alignSelf: "center",

@@ -87,6 +87,7 @@ function CameraMenuDropdownItem({
           <Text
             style={[styles.label, level > 0 && styles.labelChild]}
             numberOfLines={2}
+            allowFontScaling={false}
           >
             {item.label}
           </Text>
@@ -139,6 +140,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#fff",
     borderRadius: 14,
+    minHeight: 58,
     paddingVertical: 11,
     paddingRight: 14,
     paddingLeft: 16,
@@ -148,6 +150,7 @@ const styles = StyleSheet.create({
   },
   itemCardChild: {
     backgroundColor: "#FAFBFE",
+    minHeight: 56,
     shadowOpacity: 0.03,
     elevation: 1,
     borderWidth: StyleSheet.hairlineWidth,
@@ -183,12 +186,15 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#0F1923",
     letterSpacing: 0.1,
-    lineHeight: 18,
+    lineHeight: 20,
+    includeFontPadding: false,
+    textAlignVertical: "center",
   },
   labelChild: {
     fontSize: 12.5,
     fontWeight: "500",
     color: "#374151",
+    lineHeight: 19,
   },
   chevronWrap: {
     width: 24,

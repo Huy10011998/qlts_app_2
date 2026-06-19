@@ -26,6 +26,7 @@ const localStyles = {
     borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 8,
+    minHeight: 48,
     paddingHorizontal: 12,
   },
   inputRowInvalid: {
@@ -34,9 +35,13 @@ const localStyles = {
   },
   textInput: {
     flex: 1,
-    paddingVertical: 12,
+    height: 48,
+    paddingVertical: 0,
     fontSize: 14,
+    lineHeight: 20,
     color: "#333",
+    includeFontPadding: false,
+    textAlignVertical: "center" as const,
   },
   prefix: {
     marginLeft: 8,

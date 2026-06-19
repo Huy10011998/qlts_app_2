@@ -51,7 +51,8 @@ export default function HomeMenuItemCard({
     }).start();
   }, [index, scaleAnim]);
 
-  const theme = HOME_CARD_THEME[viewPermission ?? "default"] ?? HOME_CARD_THEME.default;
+  const theme =
+    HOME_CARD_THEME[viewPermission ?? "default"] ?? HOME_CARD_THEME.default;
   const handleTogglePinned = (event: GestureResponderEvent) => {
     event.stopPropagation();
     onTogglePinned?.();
@@ -59,7 +60,10 @@ export default function HomeMenuItemCard({
 
   return (
     <AnimatedTouchable
-      style={[localStyles.animatedTouchable, { transform: [{ scale: scaleAnim }] }]}
+      style={[
+        localStyles.animatedTouchable,
+        { transform: [{ scale: scaleAnim }] },
+      ]}
       onPress={onPress}
       activeOpacity={0.72}
     >
@@ -102,7 +106,13 @@ export default function HomeMenuItemCard({
         </View>
 
         <View style={styles.labelWrap}>
-          <Text style={[styles.label, { color: theme.color }]} numberOfLines={2}>
+          <Text
+            style={[styles.label, { color: theme.color }]}
+            numberOfLines={2}
+            adjustsFontSizeToFit
+            minimumFontScale={0.82}
+            maxFontSizeMultiplier={1.15}
+          >
             {label}
           </Text>
         </View>
@@ -119,8 +129,8 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 16,
     paddingTop: 0,
-    paddingBottom: 12,
-    paddingHorizontal: 10,
+    paddingBottom: 8,
+    paddingHorizontal: 8,
     alignItems: "center",
     overflow: "hidden",
     shadowColor: "#1A2340",
@@ -137,15 +147,15 @@ const styles = StyleSheet.create({
     width: "100%",
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   iconWrap: {
-    width: 50,
-    height: 50,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   badge: {
     position: "absolute",
@@ -171,12 +181,16 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textAlign: "center",
     lineHeight: 15,
+    width: "100%",
+    includeFontPadding: false,
+    textAlignVertical: "center",
   },
   labelWrap: {
-    height: 34,
+    minHeight: 32,
+    width: "100%",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   arrowChip: {
     width: 20,

@@ -1,5 +1,12 @@
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity } from "react-native";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import LinearGradient from "react-native-linear-gradient";
 import { C } from "../../../utils/helpers/colors";
@@ -31,59 +38,77 @@ export default function ChangePasswordModal({
   onClose,
   onSubmit,
 }: ChangePasswordModalProps) {
+  const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
+  const sheetBottomPadding = Math.max(insets.bottom, 16) + 16;
+
   return (
     <BottomSheetModalShell
       avoidKeyboard
-      keyboardOffset={20}
+      keyboardOffset={sheetBottomPadding}
       visible={visible}
       animationType="slide"
       onClose={onClose}
       statusBarTranslucent
       presentationStyle="overFullScreen"
       overlayStyle={styles.overlay}
-      sheetStyle={styles.sheet}
+      sheetStyle={[
+        styles.sheet,
+        {
+          maxHeight: height * 0.86,
+          paddingBottom: sheetBottomPadding,
+        },
+      ]}
       showCloseButton
       showHandle
     >
-      <LinearGradient colors={[C.red, C.redDeep]} style={styles.iconGradient}>
-        <Ionicons name="lock-closed" size={22} color="#fff" />
-      </LinearGradient>
-
-      <Text style={styles.title}>Đổi mật khẩu</Text>
-      <Text style={styles.subtitle}>
-        Nhập mật khẩu hiện tại và mật khẩu mới
-      </Text>
-
-      <SettingPasswordInput
-        placeholder="Mật khẩu hiện tại"
-        value={oldPassword}
-        onChangeText={onChangeOldPassword}
-      />
-      <SettingPasswordInput
-        placeholder="Mật khẩu mới"
-        value={newPassword}
-        onChangeText={onChangeNewPassword}
-      />
-      <SettingPasswordInput
-        placeholder="Xác nhận mật khẩu mới"
-        value={confirmPassword}
-        onChangeText={onChangeConfirmPassword}
-      />
-
-      <TouchableOpacity
-        onPress={onSubmit}
-        disabled={isLoading}
-        activeOpacity={0.85}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        bounces={false}
       >
-        <LinearGradient
-          colors={[C.redLight, C.red]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.confirmBtn}
-        >
-          <Text style={styles.confirmText}>Xác nhận đổi mật khẩu</Text>
+        <LinearGradient colors={[C.red, C.redDeep]} style={styles.iconGradient}>
+          <Ionicons name="lock-closed" size={22} color="#fff" />
         </LinearGradient>
-      </TouchableOpacity>
+
+        <Text style={styles.title}>Đổi mật khẩu</Text>
+        <Text style={styles.subtitle}>
+          Nhập mật khẩu hiện tại và mật khẩu mới
+        </Text>
+
+        <SettingPasswordInput
+          placeholder="Mật khẩu hiện tại"
+          value={oldPassword}
+          onChangeText={onChangeOldPassword}
+        />
+        <SettingPasswordInput
+          placeholder="Mật khẩu mới"
+          value={newPassword}
+          onChangeText={onChangeNewPassword}
+        />
+        <SettingPasswordInput
+          placeholder="Xác nhận mật khẩu mới"
+          value={confirmPassword}
+          onChangeText={onChangeConfirmPassword}
+        />
+
+        <TouchableOpacity
+          onPress={onSubmit}
+          disabled={isLoading}
+          activeOpacity={0.85}
+        >
+          <LinearGradient
+            colors={[C.redLight, C.red]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.confirmBtn}
+          >
+            <Text style={styles.confirmText}>Xác nhận đổi mật khẩu</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </ScrollView>
     </BottomSheetModalShell>
   );
 }
@@ -99,8 +124,13 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingHorizontal: 24,
-    paddingBottom: 40,
     paddingTop: 4,
+  },
+  scroll: {
+    flexGrow: 0,
+  },
+  scrollContent: {
+    paddingTop: 0,
   },
   iconGradient: {
     width: 56,

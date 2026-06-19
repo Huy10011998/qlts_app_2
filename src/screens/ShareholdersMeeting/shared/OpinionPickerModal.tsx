@@ -219,6 +219,7 @@ const styles = StyleSheet.create({
     borderColor: "#EDF0F5",
     borderRadius: 14,
     backgroundColor: "#fff",
+    minHeight: 48,
     paddingHorizontal: 12,
     marginBottom: 12,
     shadowColor: "#1A2340",
@@ -237,9 +238,13 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     color: C.textPrimary,
+    height: 48,
     fontSize: 14,
+    lineHeight: 20,
     fontWeight: "400",
-    paddingVertical: 13,
+    paddingVertical: 0,
+    includeFontPadding: false,
+    textAlignVertical: "center",
   },
   spinnerWrap: {
     width: 24,

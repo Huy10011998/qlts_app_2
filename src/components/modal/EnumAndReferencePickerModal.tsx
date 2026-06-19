@@ -250,6 +250,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#fff",
+    minHeight: 48,
     paddingHorizontal: 12,
     borderRadius: 14,
     borderWidth: StyleSheet.hairlineWidth,
@@ -272,10 +273,14 @@ const styles = StyleSheet.create({
 
   searchInput: {
     flex: 1,
-    paddingVertical: 13,
+    height: 48,
+    paddingVertical: 0,
     fontSize: 14,
+    lineHeight: 20,
     color: "#0F1923",
     fontWeight: "400",
+    includeFontPadding: false,
+    textAlignVertical: "center",
   },
 
   spinnerWrap: {

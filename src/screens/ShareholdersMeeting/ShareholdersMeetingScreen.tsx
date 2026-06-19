@@ -674,6 +674,7 @@ const attStyles = StyleSheet.create({
     backgroundColor: C.surface,
     marginHorizontal: 16,
     borderRadius: 14,
+    minHeight: 48,
     paddingHorizontal: 12,
     marginBottom: 12,
     borderWidth: StyleSheet.hairlineWidth,
@@ -694,9 +695,13 @@ const attStyles = StyleSheet.create({
   searchInput: {
     flex: 1,
     color: C.textPrimary,
-    paddingVertical: 13,
+    height: 48,
+    paddingVertical: 0,
     fontSize: 14,
+    lineHeight: 20,
     fontWeight: "400",
+    includeFontPadding: false,
+    textAlignVertical: "center",
   },
   spinnerWrapper: {
     width: 24,

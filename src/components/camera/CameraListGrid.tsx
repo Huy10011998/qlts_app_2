@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Dimensions,
   Animated,
   Modal,
   Image,
@@ -13,6 +12,9 @@ import {
   Alert,
   PermissionsAndroid,
   StatusBar,
+  useWindowDimensions,
+  InteractionManager,
+  TouchableWithoutFeedback,
 } from "react-native";
 import {
   useRoute,
@@ -32,6 +34,7 @@ import Video from "react-native-video";
 import WebView from "react-native-webview";
 import type { CameraCellProps } from "../../types/components.d";
 import { useIsFocused } from "@react-navigation/native";
+import CameraSnapshotThumbnail from "./shared/CameraSnapshotThumbnail";
 import {
   buildCameraFullscreenHTML,
   buildCameraGridStreamHTML,
@@ -46,7 +49,6 @@ import {
   stopCameraWebView,
 } from "./shared/cameraWebViewMessaging";
 import {
-  ANDROID_LIVE_CELL_LIMIT,
   CAMERA_LAYOUT_CHOICES,
   GO2RTC_HOST,
   LAYOUT_OPTIONS,
@@ -61,6 +63,11 @@ import { useCameraViewToken } from "./shared/useCameraViewToken";
 import EmptyState from "../ui/EmptyState";
 import { createTabBarStyle } from "../../navigation/shared/tabBarTheme";
 
+const PORTRAIT_CELL_ASPECT = 4 / 3;
+
+// ─── Không dùng isLandscape state nữa — derive trực tiếp từ screenDims ───────
+// Điều này đảm bảo layout luôn sync với kích thước thực tế của màn hình.
+
 const CameraCell = React.memo(
   ({
     cam,
@@ -73,7 +80,8 @@ const CameraCell = React.memo(
     cellH,
     token,
     pageKey,
-    snapshotTimestamp,
+    thumbTimestamp,
+    focusKey,
     onPress,
     onDoubleTap,
     webviewRefRegister,
@@ -114,32 +122,6 @@ const CameraCell = React.memo(
     const shouldRenderWebView = !isPaused && isWebViewActive && !!token;
     const shouldRenderSnapshot =
       !isPaused && !shouldRenderWebView && !!isSnapshotActive;
-    const snapshotUrl =
-      token && snapshotTimestamp
-        ? getCameraSnapshotUrl(cam.iD_Camera_Ma, snapshotTimestamp)
-        : null;
-    const [displayedSnapshotUrl, setDisplayedSnapshotUrl] = React.useState<
-      string | null
-    >(null);
-    const [preloadSnapshotUrl, setPreloadSnapshotUrl] = React.useState<
-      string | null
-    >(null);
-
-    React.useEffect(() => {
-      if (!shouldRenderSnapshot || !snapshotUrl) {
-        setDisplayedSnapshotUrl(null);
-        setPreloadSnapshotUrl(null);
-        return;
-      }
-      if (!displayedSnapshotUrl) {
-        setDisplayedSnapshotUrl(snapshotUrl);
-        setPreloadSnapshotUrl(null);
-        return;
-      }
-      if (snapshotUrl !== displayedSnapshotUrl) {
-        setPreloadSnapshotUrl(snapshotUrl);
-      }
-    }, [displayedSnapshotUrl, shouldRenderSnapshot, snapshotUrl]);
 
     React.useEffect(() => {
       if (
@@ -199,36 +181,14 @@ const CameraCell = React.memo(
                 }
               }}
             />
-          ) : shouldRenderSnapshot && displayedSnapshotUrl ? (
-            <>
-              <Image
-                source={{
-                  uri: displayedSnapshotUrl,
-                  headers: { Authorization: `Bearer ${token}` },
-                }}
-                style={StyleSheet.absoluteFill}
-                resizeMode="cover"
-                fadeDuration={0}
-              />
-              {preloadSnapshotUrl && (
-                <Image
-                  source={{
-                    uri: preloadSnapshotUrl,
-                    headers: { Authorization: `Bearer ${token}` },
-                  }}
-                  style={[StyleSheet.absoluteFill, styles.hiddenSnapshot]}
-                  resizeMode="cover"
-                  fadeDuration={0}
-                  onLoad={() => {
-                    setDisplayedSnapshotUrl(preloadSnapshotUrl);
-                    setPreloadSnapshotUrl(null);
-                  }}
-                  onError={() => {
-                    setPreloadSnapshotUrl(null);
-                  }}
-                />
-              )}
-            </>
+          ) : shouldRenderSnapshot && token && thumbTimestamp ? (
+            <CameraSnapshotThumbnail
+              cameraId={cam.iD_Camera}
+              cameraCode={cam.iD_Camera_Ma}
+              cameraToken={token}
+              thumbTimestamp={thumbTimestamp}
+              focusKey={focusKey}
+            />
           ) : (
             <View style={styles.cellPlaceholder}>
               {!token && !isPaused ? (
@@ -236,7 +196,7 @@ const CameraCell = React.memo(
               ) : !isPaused ? (
                 <Text style={styles.cellPlaceholderText}>
                   {isSnapshotActive
-                    ? "Đang cập nhật ảnh..."
+                    ? "Đang tải ảnh..."
                     : "Nhấn đúp để xem"}
                 </Text>
               ) : null}
@@ -245,15 +205,10 @@ const CameraCell = React.memo(
 
           <View style={StyleSheet.absoluteFill} pointerEvents="none">
             <View style={styles.cellTop}>
-              {isActive && (
+              {isActive && shouldRenderWebView && (
                 <View style={styles.liveBadge}>
                   <View style={styles.liveDot} />
                   <Text style={styles.liveText}>Trực tiếp</Text>
-                </View>
-              )}
-              {!isActive && shouldRenderSnapshot && (
-                <View style={styles.snapshotBadge}>
-                  <Text style={styles.snapshotText}>Anh 5s</Text>
                 </View>
               )}
             </View>
@@ -279,7 +234,8 @@ const CameraCell = React.memo(
     prev.cellH === next.cellH &&
     prev.token === next.token &&
     prev.pageKey === next.pageKey &&
-    prev.snapshotTimestamp === next.snapshotTimestamp &&
+    prev.thumbTimestamp === next.thumbTimestamp &&
+    prev.focusKey === next.focusKey &&
     prev.cam.iD_Camera === next.cam.iD_Camera &&
     prev.onPress === next.onPress &&
     prev.onDoubleTap === next.onDoubleTap &&
@@ -302,18 +258,24 @@ const CameraListGrid: React.FC = () => {
   const [isMuted, setIsMuted] = React.useState(false);
   const [isPaused, setIsPaused] = React.useState(false);
   const [showLayoutPicker, setShowLayoutPicker] = React.useState(false);
-  const [gridContainerH, setGridContainerH] = React.useState(0);
   const [fullscreenCam, setFullscreenCam] = React.useState<any | null>(null);
   const [isFullMuted, setIsFullMuted] = React.useState(false);
   const [videoReady, setVideoReady] = React.useState(false);
-  const [isLandscape, setIsLandscape] = React.useState(false);
   const [isClosingFullscreen, setIsClosingFullscreen] = React.useState(false);
-  const [isBackTransitionCoverVisible, setIsBackTransitionCoverVisible] =
-    React.useState(false);
-  const [gridSnapshotTimestamps, setGridSnapshotTimestamps] = React.useState<{
-    groupA: number;
-    groupB: number;
-  }>({ groupA: 0, groupB: 0 });
+
+  // ─── KEY CHANGE: Bỏ isLandscape state, dùng screenDims trực tiếp ────────────
+  // isLandscape state cũ bị out-of-sync với orientation change event (lag ~100ms)
+  // gây flash layout trước khi state cập nhật. Dùng screenDims.width > height
+  // là source of truth duy nhất — nó luôn chính xác tại thời điểm render.
+  const screenDims = useWindowDimensions();
+  const isLandscape = screenDims.width > screenDims.height;
+
+  // ─── Ref track landscape cho orientation lock logic ───────────────────────
+  const isLandscapeRef = React.useRef(isLandscape);
+  React.useEffect(() => {
+    isLandscapeRef.current = isLandscape;
+  }, [isLandscape]);
+
   const [fsVideoKey, setFsVideoKey] = React.useState(0);
   const [pendingThumbUrl, setPendingThumbUrl] = React.useState<string | null>(
     null
@@ -325,12 +287,14 @@ const CameraListGrid: React.FC = () => {
   const [isGridLandscapeFullscreen, setIsGridLandscapeFullscreen] =
     React.useState(false);
 
+  const isGridLandscapeFullscreenRef = React.useRef(false);
+  React.useEffect(() => {
+    isGridLandscapeFullscreenRef.current = isGridLandscapeFullscreen;
+  }, [isGridLandscapeFullscreen]);
+
   const webviewRefs = React.useRef<Record<string, any>>({});
   const fullscreenWebViewRef = React.useRef<any>(null);
   const isFocusedRef = React.useRef(false);
-  const snapshotRefreshTimerRef = React.useRef<ReturnType<
-    typeof setInterval
-  > | null>(null);
   const startStreamsTimeoutRef = React.useRef<ReturnType<
     typeof setTimeout
   > | null>(null);
@@ -354,9 +318,10 @@ const CameraListGrid: React.FC = () => {
   const androidWatchdogRef = React.useRef<ReturnType<
     typeof setInterval
   > | null>(null);
+  // ─── Ref để track pending navigation action ──────────────────────────────
+  const pendingNavigationRef = React.useRef<any>(null);
 
   const pagedCamerasRef = React.useRef<any[]>([]);
-  const [screenDims, setScreenDims] = React.useState(Dimensions.get("window"));
   const translateX = React.useRef(new Animated.Value(0)).current;
   const fsTranslateX = React.useRef(new Animated.Value(0)).current;
   const fsSwitchOpacity = React.useRef(new Animated.Value(0)).current;
@@ -365,14 +330,26 @@ const CameraListGrid: React.FC = () => {
   const [gridRenderKey, setGridRenderKey] = React.useState(0);
   const fullscreenCamRef = React.useRef<any>(null);
   const isClosingFullscreenRef = React.useRef(false);
-  const pendingBackToPortraitRef = React.useRef(false);
-  const pendingBackTimeoutRef = React.useRef<ReturnType<
-    typeof setTimeout
-  > | null>(null);
-  const pendingBackActionRef = React.useRef<any>(null);
   const closeFullscreenTimeoutRef = React.useRef<ReturnType<
     typeof setTimeout
   > | null>(null);
+
+  const SW = screenDims.width;
+  const isGridFullscreenMode = isGridLandscapeFullscreen;
+  const effectiveLayoutCount = layoutCount;
+  const [cols, rows] = LAYOUT_OPTIONS[effectiveLayoutCount] ?? [4, 4];
+  const perPage = cols * rows;
+  const liveCellLimit =
+    Platform.OS === "android"
+      ? 0
+      : perPage;
+  const totalPages = Math.ceil(cameras.length / perPage);
+  const pagedCameras = cameras.slice(page * perPage, (page + 1) * perPage);
+  pagedCamerasRef.current = pagedCameras;
+  const fullscreenIndex = fullscreenCam
+    ? cameras.findIndex((cam: any) => cam.iD_Camera === fullscreenCam.iD_Camera)
+    : -1;
+
   const {
     cameraToken,
     cameraTokenRef,
@@ -390,31 +367,11 @@ const CameraListGrid: React.FC = () => {
       broadcastCameraWebViewMessage(webviewRefs.current, "stop");
       stopCameraWebView(fullscreenWebViewRef.current);
     },
-    onTokenReceived: (newToken, timestamp) => {
-      setGridSnapshotTimestamps({
-        groupA: timestamp,
-        groupB: timestamp + 1,
-      });
+    onTokenReceived: (newToken) => {
       broadcastCameraWebViewToken(webviewRefs.current, newToken);
       postCameraWebViewToken(fullscreenWebViewRef.current, newToken);
     },
   });
-
-  const SW = screenDims.width;
-  const isGridFullscreenMode = isGridLandscapeFullscreen;
-  const effectiveLayoutCount = layoutCount;
-  const [cols, rows] = LAYOUT_OPTIONS[effectiveLayoutCount] ?? [4, 4];
-  const perPage = cols * rows;
-  const liveCellLimit =
-    Platform.OS === "android"
-      ? Math.min(ANDROID_LIVE_CELL_LIMIT, perPage)
-      : perPage;
-  const totalPages = Math.ceil(cameras.length / perPage);
-  const pagedCameras = cameras.slice(page * perPage, (page + 1) * perPage);
-  pagedCamerasRef.current = pagedCameras;
-  const fullscreenIndex = fullscreenCam
-    ? cameras.findIndex((cam: any) => cam.iD_Camera === fullscreenCam.iD_Camera)
-    : -1;
 
   const displayThumbUrl =
     pendingThumbUrl ??
@@ -423,75 +380,8 @@ const CameraListGrid: React.FC = () => {
       : null);
   const visiblePageIndexes = React.useMemo(
     () => getVisiblePageIndexes(page, totalPages),
-    [page, totalPages],
+    [page, totalPages]
   );
-
-  const isWindowLandscape = React.useCallback(() => {
-    const { width, height } = Dimensions.get("window");
-    return width > height;
-  }, []);
-
-  const clearCloseFullscreenTimeout = React.useCallback(() => {
-    if (closeFullscreenTimeoutRef.current) {
-      clearTimeout(closeFullscreenTimeoutRef.current);
-      closeFullscreenTimeoutRef.current = null;
-    }
-  }, []);
-
-  const clearPendingBackTimeout = React.useCallback(() => {
-    if (pendingBackTimeoutRef.current) {
-      clearTimeout(pendingBackTimeoutRef.current);
-      pendingBackTimeoutRef.current = null;
-    }
-  }, []);
-
-  const clearFullscreenPlaybackTimers = React.useCallback(() => {
-    if (androidFallbackRef.current) {
-      clearTimeout(androidFallbackRef.current);
-      androidFallbackRef.current = null;
-    }
-    if (androidWatchdogRef.current) {
-      clearInterval(androidWatchdogRef.current);
-      androidWatchdogRef.current = null;
-    }
-  }, []);
-
-  const finishPendingBack = React.useCallback(() => {
-    if (!pendingBackToPortraitRef.current || !pendingBackActionRef.current) {
-      return;
-    }
-
-    const action = pendingBackActionRef.current;
-    pendingBackActionRef.current = null;
-    pendingBackToPortraitRef.current = false;
-    setIsBackTransitionCoverVisible(false);
-    clearPendingBackTimeout();
-    navigation.dispatch(action);
-  }, [clearPendingBackTimeout, navigation]);
-
-  const hideFullscreenAfterPortrait = React.useCallback(() => {
-    if (!isClosingFullscreenRef.current) return;
-
-    clearCloseFullscreenTimeout();
-
-    if (!isWindowLandscape()) {
-      setFullscreenCam(null);
-      setIsClosingFullscreen(false);
-      isClosingFullscreenRef.current = false;
-      return;
-    }
-
-    closeFullscreenTimeoutRef.current = setTimeout(() => {
-      closeFullscreenTimeoutRef.current = null;
-      setFullscreenCam(null);
-      setIsClosingFullscreen(false);
-      isClosingFullscreenRef.current = false;
-    }, 500);
-  }, [clearCloseFullscreenTimeout, isWindowLandscape]);
-
-  React.useEffect(() => {
-    isClosingFullscreenRef.current = isClosingFullscreen;
-  }, [isClosingFullscreen]);
 
   React.useEffect(() => {
     pageRef.current = page;
@@ -518,42 +408,45 @@ const CameraListGrid: React.FC = () => {
     fullscreenCamRef.current = fullscreenCam;
   }, [fullscreenCam]);
 
-  React.useEffect(() => {
-    const sub = Dimensions.addEventListener("change", ({ window }) => {
-      setScreenDims(window);
-      if (window.width <= window.height) {
-        hideFullscreenAfterPortrait();
-        finishPendingBack();
-      }
-    });
-    return () => sub?.remove();
-  }, [finishPendingBack, hideFullscreenAfterPortrait]);
+  const clearCloseFullscreenTimeout = React.useCallback(() => {
+    if (closeFullscreenTimeoutRef.current) {
+      clearTimeout(closeFullscreenTimeoutRef.current);
+      closeFullscreenTimeoutRef.current = null;
+    }
+  }, []);
+
+  const finishClosingFullscreen = React.useCallback(() => {
+    if (!isClosingFullscreenRef.current) return;
+    clearCloseFullscreenTimeout();
+    setFullscreenCam(null);
+    setIsClosingFullscreen(false);
+    isClosingFullscreenRef.current = false;
+  }, [clearCloseFullscreenTimeout]);
 
   React.useEffect(() => {
-    const handler = (orientation: string) => {
-      const nextIsLandscape =
-        orientation === "LANDSCAPE-LEFT" || orientation === "LANDSCAPE-RIGHT";
-      setIsLandscape(nextIsLandscape);
-      setScreenDims(Dimensions.get("window"));
+    isClosingFullscreenRef.current = isClosingFullscreen;
+  }, [isClosingFullscreen]);
 
-      if (!nextIsLandscape) {
-        hideFullscreenAfterPortrait();
-        finishPendingBack();
-      }
-    };
-    Orientation.addOrientationListener(handler);
-    return () => Orientation.removeOrientationListener(handler);
-  }, [finishPendingBack, hideFullscreenAfterPortrait]);
+  // Khi screenDims về portrait → layout đã đúng → fade out cover rồi navigate
+  React.useEffect(() => {
+    if (!isLandscape) {
+      finishClosingFullscreen();
+    }
+    if (isLandscape) return;
+    const action = pendingNavigationRef.current;
+    if (!action) return;
+    pendingNavigationRef.current = null;
+    navigation.dispatch(action);
+  }, [finishClosingFullscreen, isLandscape, navigation]);
 
   React.useEffect(() => {
     navigation.setOptions({ gestureEnabled: false });
     return () => {
       clearCloseFullscreenTimeout();
-      clearPendingBackTimeout();
       Orientation.lockToPortrait();
       navigation.setOptions({ gestureEnabled: true, headerShown: true });
     };
-  }, [clearCloseFullscreenTimeout, clearPendingBackTimeout, navigation]);
+  }, [clearCloseFullscreenTimeout, navigation]);
 
   React.useEffect(() => {
     navigation.setOptions({ headerShown: !isGridLandscapeFullscreen });
@@ -597,17 +490,20 @@ const CameraListGrid: React.FC = () => {
     webviewRefs.current = {};
   }, []);
 
-  const restartGridWebView = React.useCallback((cameraId: string | number) => {
-    const key = String(cameraId);
-    const ref = webviewRefs.current[key];
-    const token = cameraTokenRef.current;
-    if (!token) return;
-    stopCameraWebView(ref);
-    setTimeout(() => {
-      const nextRef = webviewRefs.current[key];
-      setCameraWebViewTokenAndStart(nextRef, token);
-    }, 150);
-  }, [cameraTokenRef]);
+  const restartGridWebView = React.useCallback(
+    (cameraId: string | number) => {
+      const key = String(cameraId);
+      const ref = webviewRefs.current[key];
+      const token = cameraTokenRef.current;
+      if (!token) return;
+      stopCameraWebView(ref);
+      setTimeout(() => {
+        const nextRef = webviewRefs.current[key];
+        setCameraWebViewTokenAndStart(nextRef, token);
+      }, 150);
+    },
+    [cameraTokenRef]
+  );
 
   const webviewRestartRef = React.useRef(restartGridWebView);
   React.useEffect(() => {
@@ -624,6 +520,12 @@ const CameraListGrid: React.FC = () => {
       startStreamsTimeoutRef.current = null;
     }, 300);
   }, []);
+
+  const resetGridSwipeOffset = React.useCallback(() => {
+    translateX.stopAnimation(() => {
+      translateX.setValue(0);
+    });
+  }, [translateX]);
 
   const startVisibleAndroidLiveStreams = React.useCallback(
     (pageSnapshot = pageRef.current) => {
@@ -667,7 +569,6 @@ const CameraListGrid: React.FC = () => {
   useFocusEffect(
     React.useCallback(() => {
       Orientation.lockToPortrait();
-      setIsLandscape(false);
       setFocusKey((k) => k + 1);
       fetchCameraTokenRef.current?.(false);
       startAllStreams();
@@ -737,7 +638,7 @@ const CameraListGrid: React.FC = () => {
       return;
     }
     if (!cameraToken) return;
-    if (fullscreenCamRef.current) return; // ← dùng ref thay state
+    if (fullscreenCamRef.current) return;
     if (fullscreenCam) return;
 
     const timer = setTimeout(() => {
@@ -760,38 +661,6 @@ const CameraListGrid: React.FC = () => {
   ]);
 
   React.useEffect(() => {
-    if (snapshotRefreshTimerRef.current) {
-      clearInterval(snapshotRefreshTimerRef.current);
-      snapshotRefreshTimerRef.current = null;
-    }
-    if (
-      Platform.OS !== "android" ||
-      !isFocused ||
-      isPaused ||
-      !cameraToken ||
-      perPage <= liveCellLimit
-    )
-      return;
-    let refreshGroup: "groupA" | "groupB" = "groupA";
-    setGridSnapshotTimestamps({ groupA: Date.now(), groupB: Date.now() + 1 });
-    snapshotRefreshTimerRef.current = setInterval(() => {
-      if (!isFocusedRef.current || isPaused) return;
-      const nextTimestamp = Date.now();
-      setGridSnapshotTimestamps((prev) => {
-        const next = { ...prev, [refreshGroup]: nextTimestamp };
-        refreshGroup = refreshGroup === "groupA" ? "groupB" : "groupA";
-        return next;
-      });
-    }, 2500);
-    return () => {
-      if (snapshotRefreshTimerRef.current) {
-        clearInterval(snapshotRefreshTimerRef.current);
-        snapshotRefreshTimerRef.current = null;
-      }
-    };
-  }, [cameraToken, isFocused, isPaused, perPage, liveCellLimit]);
-
-  React.useEffect(() => {
     const msg = isMuted ? "mute" : "unmute";
     broadcastCameraWebViewMessage(webviewRefs.current, msg);
   }, [isMuted]);
@@ -799,16 +668,14 @@ const CameraListGrid: React.FC = () => {
   React.useEffect(() => {
     postCameraWebViewMessage(
       fullscreenWebViewRef.current,
-      isFullMuted ? "mute" : "unmute",
+      isFullMuted ? "mute" : "unmute"
     );
   }, [isFullMuted]);
 
   React.useEffect(() => {
     if (!videoReady) return;
-
     setPendingThumbUrl(null);
     if (!isSwitchingFullscreen) return;
-
     Animated.timing(fsSwitchOpacity, {
       toValue: 0,
       duration: 180,
@@ -836,9 +703,6 @@ const CameraListGrid: React.FC = () => {
           const missCount = (webviewMissCountRef.current[id] ?? 0) + 1;
           webviewMissCountRef.current[id] = missCount;
           if (missCount >= 2) {
-            console.warn(
-              `[Camera] WebView ${id} miss ${missCount} pings, restarting`
-            );
             webviewMissCountRef.current[id] = 0;
             webviewRestartRef.current?.(id);
           }
@@ -856,6 +720,17 @@ const CameraListGrid: React.FC = () => {
   const handleTokenExpired = React.useCallback(() => {
     fetchCameraTokenRef.current?.(true);
   }, [fetchCameraTokenRef]);
+
+  const clearFullscreenPlaybackTimers = React.useCallback(() => {
+    if (androidFallbackRef.current) {
+      clearTimeout(androidFallbackRef.current);
+      androidFallbackRef.current = null;
+    }
+    if (androidWatchdogRef.current) {
+      clearInterval(androidWatchdogRef.current);
+      androidWatchdogRef.current = null;
+    }
+  }, []);
 
   const startAndroidWatchdog = React.useCallback(() => {
     if (Platform.OS !== "android") return;
@@ -896,8 +771,6 @@ const CameraListGrid: React.FC = () => {
   React.useEffect(() => {
     return () => {
       stopAllStreams();
-      if (snapshotRefreshTimerRef.current)
-        clearInterval(snapshotRefreshTimerRef.current);
       if (startStreamsTimeoutRef.current)
         clearTimeout(startStreamsTimeoutRef.current);
       if (syncTokenTimeoutRef.current)
@@ -908,9 +781,49 @@ const CameraListGrid: React.FC = () => {
     };
   }, [clearAndroidLiveStartRetries, stopAllStreams]);
 
-  const cellW = SW / cols;
-  const cellH =
-    gridContainerH > 0 ? gridContainerH / rows : SW / cols / (16 / 9);
+  const PAGINATION_H = 28;
+  // Dùng kích thước thực tế theo hướng hiện tại của màn hình.
+  // portraitScreenW = cạnh ngắn (chiều rộng khi dọc), landscapeScreenW = cạnh dài.
+  const portraitScreenW = Math.min(screenDims.width, screenDims.height);
+  const landscapeScreenW = Math.max(screenDims.width, screenDims.height);
+  const landscapeScreenH = Math.min(screenDims.width, screenDims.height);
+
+  // ─── FIX: grid bị "dài" hơn khi rows > cols (ví dụ layout 3x4) ─────────────
+  // Trước đây portraitGridMaxH chỉ là 60% chiều dài màn hình — một cap cố định
+  // không phụ thuộc cols/rows. Với layout vuông (2x2, 3x3, 4x4...) tổng chiều cao
+  // luôn ra cùng 1 giá trị baseline (vì cols/rows triệt tiêu nhau trong phép tính
+  // theo tỉ lệ 4:3). Nhưng với layout có rows > cols (như 3x4), chiều cao tính theo
+  // tỉ lệ 4:3 sẽ LỚN HƠN baseline đó, và vì cap 60% quá rộng nên không kịp ghìm lại
+  // → grid bị dài hẳn ra so với các layout vuông khác.
+  // Cách sửa: dùng đúng baseline của layout vuông (portraitScreenW / aspect) làm cap
+  // chung cho MỌI layout. Layout có rows >= cols sẽ luôn bị ghìm về đúng baseline này
+  // (cell nhỏ lại, có thể có viền 2 bên), còn layout có cols > rows vẫn ngắn hơn bình
+  // thường (không bị ảnh hưởng, vì baseline lúc đó không phải là constraint nhỏ nhất).
+  const portraitGridBaselineH = portraitScreenW / PORTRAIT_CELL_ASPECT;
+  const portraitGridMaxH = Math.min(
+    portraitGridBaselineH,
+    Math.max(screenDims.width, screenDims.height) * 0.6
+  );
+  const portraitCellWByWidth = portraitScreenW / cols;
+  const portraitCellHByHeight = portraitGridMaxH / rows;
+
+  // Giữ tỉ lệ 4:3 nhưng đảm bảo không vượt quá chiều cao cho phép
+  const portraitCellH = Math.min(
+    portraitCellWByWidth / PORTRAIT_CELL_ASPECT,
+    portraitCellHByHeight
+  );
+
+  const portraitCellW = portraitScreenW / cols;
+  const landscapeCellW = landscapeScreenW / cols;
+  const landscapeCellH = landscapeScreenH / rows;
+  // ─── KEY CHANGE: Khung đi theo hướng màn hình thực tế (isLandscape) ──
+  // Không phụ thuộc isGridFullscreenMode nữa, để xoay ngang/dọc luôn đổi khung.
+  // isGridFullscreenMode chỉ dùng để control tabBar/header visibility.
+  const cellW = isLandscape ? landscapeCellW : portraitCellW;
+  const cellH = isLandscape ? landscapeCellH : portraitCellH;
+  const gridW = cellW * cols;
+  const gridH = cellH * rows;
+  const topHalfH = isLandscape ? landscapeScreenH : gridH + PAGINATION_H;
 
   const changePage = React.useCallback(
     (newPage: number) => {
@@ -950,7 +863,8 @@ const CameraListGrid: React.FC = () => {
           toValue: -SW,
           duration: 250,
           useNativeDriver: true,
-        }).start(() => {
+        }).start(({ finished }) => {
+          if (!finished) return;
           translateX.setValue(0);
           changePage(curPage + 1);
         });
@@ -959,7 +873,8 @@ const CameraListGrid: React.FC = () => {
           toValue: SW,
           duration: 250,
           useNativeDriver: true,
-        }).start(() => {
+        }).start(({ finished }) => {
+          if (!finished) return;
           translateX.setValue(0);
           changePage(curPage - 1);
         });
@@ -988,30 +903,34 @@ const CameraListGrid: React.FC = () => {
   }, []);
 
   const openGridLandscapeFullscreen = React.useCallback(() => {
+    resetGridSwipeOffset();
     setShowLayoutPicker(false);
     setIsGridLandscapeFullscreen(true);
     Orientation.lockToLandscapeLeft();
-  }, []);
+  }, [resetGridSwipeOffset]);
 
   const closeGridLandscapeFullscreen = React.useCallback(() => {
-    if (!isGridLandscapeFullscreen) return;
+    if (!isGridLandscapeFullscreenRef.current) return;
+    resetGridSwipeOffset();
     setIsGridLandscapeFullscreen(false);
     Orientation.lockToPortrait();
-  }, [isGridLandscapeFullscreen]);
+  }, [resetGridSwipeOffset]);
 
   const handleCamDoubleTap = React.useCallback(
     (cam: any, idx: number) => {
       clearCloseFullscreenTimeout();
       isClosingFullscreenRef.current = false;
       setIsClosingFullscreen(false);
-      if (isGridLandscapeFullscreen) {
-        setIsLandscape(true);
+      // ─── KEY CHANGE: Không set isLandscape state nữa, Orientation.lock sẽ
+      // thay đổi screenDims và isLandscape sẽ tự derive đúng ───────────────
+      if (isGridLandscapeFullscreenRef.current) {
         Orientation.lockToLandscapeLeft();
       } else {
-        setIsLandscape(false);
         Orientation.lockToPortrait();
       }
-      setPendingThumbUrl(getCameraSnapshotUrl(cam.iD_Camera_Ma, thumbTimestamp));
+      setPendingThumbUrl(
+        getCameraSnapshotUrl(cam.iD_Camera_Ma, thumbTimestamp)
+      );
       setActiveIndex(idx);
       setVideoReady(false);
       setFsVideoKey(0);
@@ -1025,7 +944,6 @@ const CameraListGrid: React.FC = () => {
       clearCloseFullscreenTimeout,
       fsSwitchOpacity,
       fsTranslateX,
-      isGridLandscapeFullscreen,
       startAndroidFallback,
       thumbTimestamp,
     ]
@@ -1036,7 +954,6 @@ const CameraListGrid: React.FC = () => {
       const nextCam = cameras[nextIndex];
       if (!nextCam) return;
 
-      // Chỉ stop fullscreen WebView, KHÔNG stop grid
       stopCameraWebView(fullscreenWebViewRef.current);
       if (androidFallbackRef.current) clearTimeout(androidFallbackRef.current);
       if (androidWatchdogRef.current) clearInterval(androidWatchdogRef.current);
@@ -1045,7 +962,7 @@ const CameraListGrid: React.FC = () => {
       const nextLocalIndex = nextIndex % perPage;
 
       setPendingThumbUrl(
-        getCameraSnapshotUrl(nextCam.iD_Camera_Ma, thumbTimestamp),
+        getCameraSnapshotUrl(nextCam.iD_Camera_Ma, thumbTimestamp)
       );
       setVideoReady(false);
       setFsVideoKey(0);
@@ -1163,6 +1080,7 @@ const CameraListGrid: React.FC = () => {
         }),
     [SW, cameras.length, fsTranslateX, fullscreenIndex, handleFullscreenSwipe]
   );
+
   const handleSnapshot = React.useCallback(async () => {
     const activeCam = pagedCamerasRef.current[activeIndex];
     const token = cameraTokenRef.current;
@@ -1192,45 +1110,68 @@ const CameraListGrid: React.FC = () => {
 
   const closeFullscreen = React.useCallback(() => {
     clearFullscreenPlaybackTimers();
-    if (isGridLandscapeFullscreen) {
-      Orientation.lockToLandscapeLeft();
-      setIsLandscape(true);
-    } else {
-      Orientation.lockToPortrait();
-      setIsLandscape(false);
-    }
-    setFsVideoKey(0);
+    clearCloseFullscreenTimeout();
+
     fsTranslateX.setValue(0);
     fsSwitchOpacity.setValue(0);
     setIsSwitchingFullscreen(false);
     setPendingThumbUrl(null);
-    if (isGridLandscapeFullscreen) {
+    setFsVideoKey(0);
+    setVideoReady(false);
+
+    if (isGridLandscapeFullscreenRef.current) {
+      Orientation.lockToLandscapeLeft();
       setFullscreenCam(null);
+      setIsClosingFullscreen(false);
+      isClosingFullscreenRef.current = false;
     } else {
       isClosingFullscreenRef.current = true;
       setIsClosingFullscreen(true);
-      hideFullscreenAfterPortrait();
+      Orientation.lockToPortrait();
+      if (!isLandscapeRef.current) {
+        closeFullscreenTimeoutRef.current = setTimeout(() => {
+          closeFullscreenTimeoutRef.current = null;
+          finishClosingFullscreen();
+        }, 120);
+      } else {
+        closeFullscreenTimeoutRef.current = setTimeout(() => {
+          closeFullscreenTimeoutRef.current = null;
+          finishClosingFullscreen();
+        }, 500);
+      }
     }
-    setTimeout(() => {
+
+    // Dùng InteractionManager thay setTimeout — restart sau khi animations settle
+    InteractionManager.runAfterInteractions(() => {
       if (!isFocusedRef.current) return;
       Object.values(webviewRefs.current).forEach((ref) =>
         ref?.postMessage?.("start")
       );
-    }, 400);
+    });
   }, [
+    clearCloseFullscreenTimeout,
     clearFullscreenPlaybackTimers,
+    finishClosingFullscreen,
     fsSwitchOpacity,
     fsTranslateX,
-    hideFullscreenAfterPortrait,
-    isGridLandscapeFullscreen,
   ]);
+
+  // ─── KEY CHANGE: toggleFullscreenOrientation không set isLandscape state ─
+  const toggleFullscreenOrientation = React.useCallback(() => {
+    if (isLandscape) {
+      Orientation.lockToPortrait();
+    } else {
+      Orientation.lockToLandscapeLeft();
+    }
+    // screenDims sẽ tự update → isLandscape tự derive đúng
+  }, [isLandscape]);
 
   React.useEffect(() => {
     const unsubscribe = navigation.addListener("beforeRemove", (event: any) => {
-      Orientation.lockToPortrait();
-      setIsLandscape(false);
-
-      if (pendingBackToPortraitRef.current) return;
+      // ─── KEY CHANGE: Đơn giản hóa beforeRemove ────────────────────────────
+      // Cũ: lock portrait → set cover visible → setTimeout 700ms → navigate
+      // Mới: lock portrait → lưu action vào ref → navigate khi screenDims đã portrait
+      // Không có cover màn hình đen, không có timeout chain.
 
       if (fullscreenCam) {
         event.preventDefault();
@@ -1238,37 +1179,21 @@ const CameraListGrid: React.FC = () => {
         return;
       }
 
-      if (isGridLandscapeFullscreen || isLandscape || isWindowLandscape()) {
+      if (isGridLandscapeFullscreenRef.current || isLandscapeRef.current) {
         event.preventDefault();
         setIsGridLandscapeFullscreen(false);
-        pendingBackToPortraitRef.current = true;
-        pendingBackActionRef.current = event.data.action;
-        setIsBackTransitionCoverVisible(true);
-        clearPendingBackTimeout();
-        pendingBackTimeoutRef.current = setTimeout(() => {
-          finishPendingBack();
-        }, 700);
+        pendingNavigationRef.current = event.data.action;
+        Orientation.lockToPortrait();
+        // Navigation sẽ được dispatch trong useEffect khi isLandscape trở về false
+        return;
       }
     });
 
     return unsubscribe;
-  }, [
-    clearPendingBackTimeout,
-    closeFullscreen,
-    finishPendingBack,
-    fullscreenCam,
-    isGridLandscapeFullscreen,
-    isLandscape,
-    isWindowLandscape,
-    navigation,
-  ]);
+  }, [closeFullscreen, fullscreenCam, navigation]);
 
   const fullscreenDoubleTapGesture = React.useMemo(
-    () =>
-      Gesture.Tap()
-        .runOnJS(true)
-        .numberOfTaps(2)
-        .onEnd(closeFullscreen),
+    () => Gesture.Tap().runOnJS(true).numberOfTaps(2).onEnd(closeFullscreen),
     [closeFullscreen]
   );
   const fullscreenGesture = React.useMemo(
@@ -1276,17 +1201,6 @@ const CameraListGrid: React.FC = () => {
       Gesture.Simultaneous(fullscreenSwipeGesture, fullscreenDoubleTapGesture),
     [fullscreenDoubleTapGesture, fullscreenSwipeGesture]
   );
-
-  const toggleFullscreenOrientation = () => {
-    if (isLandscape) {
-      setIsLandscape(false);
-      Orientation.lockToPortrait();
-      return;
-    }
-
-    setIsLandscape(true);
-    Orientation.lockToLandscapeLeft();
-  };
 
   if (tokenErrorMessage) {
     return (
@@ -1305,57 +1219,65 @@ const CameraListGrid: React.FC = () => {
   return (
     <GestureHandlerRootView style={styles.root}>
       <StatusBar
-        hidden={isGridFullscreenMode || fullscreenCam !== null || isClosingFullscreen}
+        hidden={
+          isGridFullscreenMode || fullscreenCam !== null || isClosingFullscreen
+        }
       />
-      <GestureDetector gesture={swipeGesture}>
-        <View style={[styles.topHalf, isGridFullscreenMode && styles.topHalfFullscreen]}>
-          <Animated.View
-            style={[styles.grid, { transform: [{ translateX }] }]}
-            onLayout={(e) => setGridContainerH(e.nativeEvent.layout.height)}
-          >
-            {pagedCameras.map((cam: any, idx: number) => {
-              const isAndroidSnapshot =
-                Platform.OS === "android" && idx >= liveCellLimit;
-              const snapshotGroup =
-                (idx - liveCellLimit) % 2 === 0 ? "groupA" : "groupB";
-              return (
-                <CameraCell
-                  key={`${gridRenderKey}-${cam.iD_Camera?.toString() ?? idx}`}
-                  cam={cam}
-                  idx={idx}
-                  isActive={idx === activeIndex}
-                  isPaused={isPaused}
-                  isWebViewActive={idx < liveCellLimit}
-                  isSnapshotActive={isAndroidSnapshot}
-                  cellW={cellW}
-                  cellH={cellH}
-                  token={cameraToken}
-                  pageKey={pageChangeKey}
-                  snapshotTimestamp={
-                    isAndroidSnapshot
-                      ? gridSnapshotTimestamps[snapshotGroup]
-                      : undefined
-                  }
-                  onPress={
-                    isGridLandscapeFullscreen
-                      ? handleCamDoubleTap
-                      : handleCamPress
-                  }
-                  onDoubleTap={
-                    isGridLandscapeFullscreen
-                      ? closeGridLandscapeFullscreen
-                      : handleCamDoubleTap
-                  }
-                  webviewRefRegister={webviewRefs}
-                  pongTimeoutRef={pongTimeoutRef}
-                  webviewRestartRef={webviewRestartRef}
-                  onTokenExpired={handleTokenExpired}
-                />
-              );
-            })}
-          </Animated.View>
 
-          {!isGridFullscreenMode && (
+      <GestureDetector gesture={swipeGesture}>
+        <View
+          style={[
+            styles.topHalf,
+            { height: topHalfH },
+            (isGridFullscreenMode || isLandscape) && styles.topHalfFullscreen,
+          ]}
+        >
+          <View style={[styles.gridViewport, { width: gridW, height: gridH }]}>
+            <Animated.View
+              style={[
+                styles.grid,
+                { width: gridW, height: gridH, transform: [{ translateX }] },
+              ]}
+            >
+              {pagedCameras.map((cam: any, idx: number) => {
+                const isAndroidSnapshot =
+                  Platform.OS === "android" && idx >= liveCellLimit;
+                return (
+                  <CameraCell
+                    key={`${gridRenderKey}-${cam.iD_Camera?.toString() ?? idx}`}
+                    cam={cam}
+                    idx={idx}
+                    isActive={idx === activeIndex}
+                    isPaused={isPaused}
+                    isWebViewActive={idx < liveCellLimit}
+                    isSnapshotActive={isAndroidSnapshot}
+                    cellW={cellW}
+                    cellH={cellH}
+                    token={cameraToken}
+                    pageKey={pageChangeKey}
+                    thumbTimestamp={thumbTimestamp}
+                    focusKey={focusKey}
+                    onPress={
+                      isGridLandscapeFullscreen
+                        ? handleCamDoubleTap
+                        : handleCamPress
+                    }
+                    onDoubleTap={
+                      isGridLandscapeFullscreen
+                        ? closeGridLandscapeFullscreen
+                        : handleCamDoubleTap
+                    }
+                    webviewRefRegister={webviewRefs}
+                    pongTimeoutRef={pongTimeoutRef}
+                    webviewRestartRef={webviewRestartRef}
+                    onTokenExpired={handleTokenExpired}
+                  />
+                );
+              })}
+            </Animated.View>
+          </View>
+
+          {!isGridFullscreenMode && !isLandscape && (
             <View style={styles.paginationRow}>
               {visiblePageIndexes.map((i) => (
                 <TouchableOpacity key={i} onPress={() => changePage(i)}>
@@ -1367,7 +1289,7 @@ const CameraListGrid: React.FC = () => {
         </View>
       </GestureDetector>
 
-      {!isGridFullscreenMode && (
+      {!isGridFullscreenMode && !isLandscape && (
         <View style={[styles.bottomHalf, { paddingBottom: insets.bottom }]}>
           <View style={styles.toolbar}>
             <TouchableOpacity
@@ -1409,7 +1331,11 @@ const CameraListGrid: React.FC = () => {
               style={styles.toolBtn}
               onPress={openGridLandscapeFullscreen}
             >
-              <MaterialCommunityIcons name="overscan" size={26} color="#444" />
+              <MaterialCommunityIcons
+                name="phone-rotate-landscape"
+                size={26}
+                color="#444"
+              />
             </TouchableOpacity>
           </View>
           <View style={styles.divider} />
@@ -1428,7 +1354,11 @@ const CameraListGrid: React.FC = () => {
                 <Ionicons name="camera-outline" size={24} color="#666" />
               </TouchableOpacity>
               <TouchableOpacity style={styles.iconBtn}>
-                <Ionicons name="radio-button-on-outline" size={24} color="#666" />
+                <Ionicons
+                  name="radio-button-on-outline"
+                  size={24}
+                  color="#666"
+                />
               </TouchableOpacity>
               <TouchableOpacity style={styles.iconBtn}>
                 <Ionicons name="mic-outline" size={24} color="#666" />
@@ -1444,29 +1374,67 @@ const CameraListGrid: React.FC = () => {
         </View>
       )}
 
-      {showLayoutPicker && !isGridFullscreenMode && (
-        <View style={styles.layoutPicker}>
-          {CAMERA_LAYOUT_CHOICES.map((n) => (
-            <TouchableOpacity
-              key={n}
+      <Modal
+        visible={showLayoutPicker && !isGridFullscreenMode}
+        animationType="slide"
+        transparent
+        statusBarTranslucent
+        supportedOrientations={[
+          "portrait",
+          "landscape-left",
+          "landscape-right",
+        ]}
+        onRequestClose={() => setShowLayoutPicker(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setShowLayoutPicker(false)}>
+          <View
+            style={[
+              styles.modalOverlay,
+              isLandscape && styles.modalOverlayLandscape,
+            ]}
+          >
+            <View
               style={[
-                styles.layoutOption,
-                layoutCount === n && styles.layoutOptionActive,
+                styles.sheetContainer,
+                isLandscape && styles.sheetContainerLandscape,
+                { paddingBottom: insets.bottom || 16 },
               ]}
-              onPress={() => handleSetLayout(n)}
             >
-              <Text
-                style={[
-                  styles.layoutOptionText,
-                  layoutCount === n && styles.layoutOptionTextActive,
-                ]}
+              <View style={styles.handleWrapper}>
+                <View style={styles.handle} />
+              </View>
+              <Text style={styles.sheetTitle}>Bố trí cửa sổ</Text>
+              <Text style={styles.sheetTitleChild}>Chọn số lượng cửa sổ</Text>
+              {CAMERA_LAYOUT_CHOICES.map((n, index) => (
+                <TouchableOpacity
+                  key={n}
+                  style={[
+                    styles.listItem,
+                    index !== 0 && styles.itemBorder,
+                    layoutCount === n && styles.activeItem,
+                  ]}
+                  onPress={() => handleSetLayout(n)}
+                >
+                  <Text
+                    style={[
+                      styles.listItemText,
+                      layoutCount === n && styles.activeText,
+                    ]}
+                  >
+                    {getCameraLayoutLabel(n)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity
+                style={styles.closeBtn}
+                onPress={() => setShowLayoutPicker(false)}
               >
-                {getCameraLayoutLabel(n)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
+                <Text style={styles.closeText}>Đóng</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
 
       <Modal
         visible={fullscreenCam !== null || isClosingFullscreen}
@@ -1537,12 +1505,12 @@ const CameraListGrid: React.FC = () => {
               {isClosingFullscreen ? null : fullscreenCam && cameraToken ? (
                 <>
                   {Platform.OS === "android" && (
-                      <Video
-                        key={`${fullscreenCam.iD_Camera}-${fsVideoKey}`}
-                        source={{
-                          uri: getCameraHlsUrl(fullscreenCam.iD_Camera_Ma),
-                          headers: { Authorization: `Bearer ${cameraToken}` },
-                        }}
+                    <Video
+                      key={`${fullscreenCam.iD_Camera}-${fsVideoKey}`}
+                      source={{
+                        uri: getCameraHlsUrl(fullscreenCam.iD_Camera_Ma),
+                        headers: { Authorization: `Bearer ${cameraToken}` },
+                      }}
                       style={[
                         StyleSheet.absoluteFill,
                         videoReady ? styles.visibleVideo : styles.hiddenVideo,
@@ -1552,7 +1520,7 @@ const CameraListGrid: React.FC = () => {
                       repeat
                       controls={false}
                       disableFocus
-                      useTextureView={false}
+                      useTextureView
                       hideShutterView
                       bufferConfig={{
                         minBufferMs: 1000,
@@ -1583,7 +1551,9 @@ const CameraListGrid: React.FC = () => {
                       key={`fs-${fullscreenCam.iD_Camera}`}
                       ref={fullscreenWebViewRef}
                       source={{
-                        html: buildCameraFullscreenHTML(fullscreenCam.iD_Camera_Ma),
+                        html: buildCameraFullscreenHTML(
+                          fullscreenCam.iD_Camera_Ma
+                        ),
                         baseUrl: GO2RTC_HOST,
                       }}
                       style={[
@@ -1604,7 +1574,7 @@ const CameraListGrid: React.FC = () => {
                       onLoad={() => {
                         postCameraWebViewToken(
                           fullscreenWebViewRef.current,
-                          cameraToken,
+                          cameraToken
                         );
                       }}
                       onMessage={(e) => {
@@ -1612,8 +1582,7 @@ const CameraListGrid: React.FC = () => {
                         if (data === "ready") setVideoReady(true);
                         else if (data === "token_expired")
                           fetchCameraTokenRef.current?.(true);
-                        else if (data === "close_fullscreen")
-                          closeFullscreen();
+                        else if (data === "close_fullscreen") closeFullscreen();
                         else if (data === "swipe_next")
                           handleFullscreenSwipe("next");
                         else if (data === "swipe_prev")
@@ -1687,7 +1656,10 @@ const CameraListGrid: React.FC = () => {
             style={[
               styles.fsFooter,
               isLandscape
-                ? [styles.fsFooterLandscape, { paddingRight: insets.right || 16 }]
+                ? [
+                    styles.fsFooterLandscape,
+                    { paddingRight: insets.right || 16 },
+                  ]
                 : styles.fsFooterPortrait,
             ]}
           >
@@ -1699,10 +1671,6 @@ const CameraListGrid: React.FC = () => {
           </View>
         </View>
       </Modal>
-
-      {isBackTransitionCoverVisible && (
-        <View pointerEvents="auto" style={styles.backTransitionCover} />
-      )}
     </GestureHandlerRootView>
   );
 };
@@ -1717,9 +1685,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 32,
   },
-  topHalf: { flex: 5, backgroundColor: "#000", overflow: "hidden" },
-  topHalfFullscreen: { flex: 1 },
-  grid: { flex: 1, flexDirection: "row", flexWrap: "wrap" },
+  topHalf: {
+    backgroundColor: "#000",
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "flex-start",
+  },
+  topHalfFullscreen: { flex: 1, justifyContent: "center" },
+  gridViewport: { backgroundColor: "#000", overflow: "hidden" },
+  grid: { flexDirection: "row", flexWrap: "wrap" },
   cell: {
     backgroundColor: "#111",
     overflow: "hidden",
@@ -1744,7 +1718,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  hiddenSnapshot: { opacity: 0, zIndex: -1 },
   cellPlaceholderText: { color: "#555", fontSize: 8, textAlign: "center" },
   liveBadge: {
     flexDirection: "row",
@@ -1757,18 +1730,12 @@ const styles = StyleSheet.create({
   },
   liveDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: "#fff" },
   liveText: { color: "#fff", fontSize: 8, fontWeight: "700" },
-  snapshotBadge: {
-    marginLeft: "auto",
-    backgroundColor: "rgba(0,0,0,0.55)",
-    borderRadius: 3,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-  },
-  snapshotText: { color: "#fff", fontSize: 7, fontWeight: "600" },
   paginationRow: {
+    alignSelf: "stretch",
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
+    width: "100%",
     height: 28,
     backgroundColor: "#fff",
     gap: 4,
@@ -1824,9 +1791,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#333",
   },
-  playbackTextDisabled: {
-    color: "#bbb",
-  },
+  playbackTextDisabled: { color: "#bbb" },
   iconGroup: { flex: 1, flexDirection: "row", justifyContent: "space-between" },
   iconBtn: {
     width: 44,
@@ -1835,37 +1800,56 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   chevronWrapper: { alignItems: "center", paddingBottom: 8 },
-  layoutPicker: {
-    position: "absolute",
-    bottom: 120,
-    right: 16,
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.4)",
+  },
+  modalOverlayLandscape: {
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+  },
+  sheetContainer: {
     backgroundColor: "#fff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
+  sheetContainerLandscape: {
+    width: "100%",
+    maxWidth: 520,
+    borderRadius: 24,
+  },
+  handleWrapper: { alignItems: "center", paddingTop: 10, paddingBottom: 6 },
+  handle: { width: 45, height: 5, backgroundColor: "#ccc", borderRadius: 3 },
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    textAlign: "center",
+    marginBottom: 8,
+    color: "#333",
+  },
+  sheetTitleChild: {
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 12,
+    color: "#aaa",
+  },
+  listItem: { paddingVertical: 16, paddingHorizontal: 20 },
+  listItemText: { fontSize: 16, color: "#333", textAlign: "center" },
+  itemBorder: { borderTopWidth: 0.5, borderColor: "#e5e5e5" },
+  activeItem: { backgroundColor: "#f5f5f5" },
+  activeText: { color: "red", fontWeight: "600" },
+  closeBtn: {
+    marginTop: 10,
+    marginHorizontal: 16,
+    backgroundColor: "#f2f2f2",
     borderRadius: 12,
-    overflow: "hidden",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#ddd",
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 8,
-    zIndex: 99,
-  },
-  layoutOption: {
     paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#eee",
+    alignItems: "center",
   },
-  layoutOptionActive: { backgroundColor: "#fff5f5" },
-  layoutOptionText: { color: "#555", fontSize: 15, textAlign: "center" },
-  layoutOptionTextActive: { color: "#e53935", fontWeight: "700" },
+  closeText: { fontSize: 16, fontWeight: "600", color: "#333" },
   fsContainer: { flex: 1, backgroundColor: "#000" },
-  backTransitionCover: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#000",
-    zIndex: 9999,
-    elevation: 9999,
-  },
   fsVideoArea: { flex: 1, backgroundColor: "#000" },
   fsSwipeOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -1934,17 +1918,6 @@ const styles = StyleSheet.create({
   fsPagerText: { color: "#fff", fontSize: 14, fontWeight: "700" },
   visibleVideo: { opacity: 1 },
   hiddenVideo: { opacity: 0 },
-  fsLiveBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(229,57,53,0.9)",
-    borderRadius: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    gap: 5,
-  },
-  fsLiveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "#fff" },
-  fsLiveText: { color: "#fff", fontSize: 12, fontWeight: "700" },
   thumbOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.35)",
