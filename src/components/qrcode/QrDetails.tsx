@@ -29,10 +29,10 @@ import { useSlideInPanel } from "../../hooks/useSlideInPanel";
 import SlideInSidePanel from "../shared/SlideInSidePanel";
 import { C } from "../../utils/helpers/colors";
 import AssetListEmptyState from "../assets/shared/AssetListEmptyState";
+import { REVIEW_NAME_CLASSES } from "../../constants/reviewNameClasses";
 
 const { width } = Dimensions.get("window");
 const MENU_WIDTH = width * 0.6;
-const REVIEW_NAME_CLASSES = ["BinhChuaChay", "HongChuaChay", "TuChuaChay"];
 
 function QrDetailsMenuButton({ onPress }: { onPress: () => void }) {
   return (
@@ -185,9 +185,7 @@ export default function QrDetails({ children }: QrDetailsProps) {
             style={styles.menuItem}
             onPress={() => log("Báo hỏng")}
           >
-            <Text style={styles.menuItemText}>
-              Báo hỏng / Yêu cầu sửa chữa
-            </Text>
+            <Text style={styles.menuItemText}>Báo hỏng / Yêu cầu sửa chữa</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

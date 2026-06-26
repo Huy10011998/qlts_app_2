@@ -60,7 +60,60 @@ export interface Item {
   stt: string | number;
   isReport: boolean;
   iD_GroupMenu: number;
+  isViewWeb?: boolean | number | string | null;
   iconMobile?: string | null;
+}
+
+export interface ReportConfigReport {
+  id: number;
+  idRootReport_MoTa: string | null;
+  name: string;
+  moTa: string;
+  idRootReport: number;
+  isRootReport: boolean;
+  isActive: boolean;
+  lstPermission: string | null;
+  direct: string;
+  fileType: string | null;
+}
+
+export interface ReportConfigParameter {
+  id: number;
+  iD_Report_MoTa: string;
+  typeProperty_MoTa: number | string | null;
+  iD_Report: number;
+  name: string;
+  moTa: string;
+  typeProperty: number;
+  enumName: string | null;
+  referenceName: string | null;
+  referenceNameMulti: string | null;
+  isMulti: boolean | null;
+  parentsFields: string | null;
+  cascadeClearFields: string | null;
+  defaultValue: string | null;
+  defaultDateNow: boolean | null;
+  defaultYearNow: boolean | null;
+  defaultMonthNow: boolean | null;
+  isRequired: boolean;
+  minValue: number | null;
+  maxValue: number | null;
+  columnSize: number;
+  notShowSplit: boolean | null;
+  showTime: boolean | null;
+  prefix: string | null;
+  isActive: boolean;
+  stt: number;
+}
+
+export interface ReportConfigData {
+  report: ReportConfigReport;
+  parameters: ReportConfigParameter[];
+}
+
+export interface GetConfigReportResponse {
+  message: string;
+  data: ReportConfigData;
 }
 
 // Dữ liệu người dùng cơ bản

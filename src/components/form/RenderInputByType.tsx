@@ -15,33 +15,18 @@ import { formatVND, unFormatVND } from "../../utils/helpers/number";
 import IsLoading from "../ui/IconLoading";
 import { parseLinkHtml } from "../../utils/Link";
 import { DatePicker, TimePicker } from "../dataPicker/DataPicker";
+import { pickerFieldTriggerStyles } from "../dataPicker/shared/pickerFieldTriggerStyles";
 import { log } from "../../utils/Logger";
 import { C } from "../../utils/helpers/colors";
 import { useAssetFormKeyboard } from "../assets/shared/AssetFormScreenShell";
 
 const localStyles = {
-  inputRow: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    minHeight: 48,
-    paddingHorizontal: 12,
-  },
   inputRowInvalid: {
     borderColor: C.red,
     backgroundColor: "#FFF5F5",
   },
   textInput: {
-    flex: 1,
-    height: 48,
-    paddingVertical: 0,
-    fontSize: 14,
-    lineHeight: 20,
     color: "#333",
-    includeFontPadding: false,
-    textAlignVertical: "center" as const,
   },
   prefix: {
     marginLeft: 8,
@@ -69,20 +54,13 @@ const localStyles = {
     color: "blue",
   },
   selectText: {
-    padding: 12,
-    paddingRight: 20,
-    fontSize: 14,
+    color: "#0F1923",
   },
   selectedValueText: {
     color: "#000",
   },
   placeholderValueText: {
     color: "#999",
-  },
-  chevron: {
-    position: "absolute" as const,
-    right: 8,
-    top: 12,
   },
   selectInputInvalid: {
     borderColor: C.red,
@@ -181,6 +159,7 @@ export const RenderInputByType = ({
   setImages,
   styles,
   mode,
+  disableNumberGrouping,
   openEnumReferanceModal,
 }: RenderInputByTypeProps) => {
   const keyboardContext = useAssetFormKeyboard();
@@ -197,8 +176,7 @@ export const RenderInputByType = ({
     [enumData, f.name, f.typeProperty, referenceData],
   );
 
-  const hasValue =
-    value !== null && value !== undefined && value !== "" && value !== 0;
+  const hasValue = value !== null && value !== undefined && value !== "";
 
   const normalizedValue = value == null ? "" : String(value);
   const selectedItem = useMemo(
@@ -240,13 +218,13 @@ export const RenderInputByType = ({
   }: { keyboardType?: "default" | "numeric" } = {}) => (
     <View
       style={[
-        localStyles.inputRow,
+        pickerFieldTriggerStyles.input,
         hasValidationError && localStyles.inputRowInvalid,
       ]}
     >
       <TextInput
         ref={basicInputRef}
-        style={localStyles.textInput}
+        style={[pickerFieldTriggerStyles.textInput, localStyles.textInput]}
         keyboardType={keyboardType}
         value={String(value ?? "")}
         placeholder={`Nhập ${f.moTa ?? f.name}`}
@@ -262,25 +240,27 @@ export const RenderInputByType = ({
   switch (f.typeProperty) {
     case TypeProperty.Int:
     case TypeProperty.Decimal: {
-      const formattedValue = formatVND(value);
+      const formattedValue = disableNumberGrouping
+        ? String(value ?? "")
+        : formatVND(value);
 
       return (
         <View
           style={[
-            localStyles.inputRow,
+            pickerFieldTriggerStyles.input,
             hasValidationError && localStyles.inputRowInvalid,
           ]}
         >
           <TextInput
             ref={numberInputRef}
-            style={localStyles.textInput}
+            style={[pickerFieldTriggerStyles.textInput, localStyles.textInput]}
             keyboardType="numeric"
             value={formattedValue}
             placeholder={`Nhập ${f.moTa ?? f.name}`}
             placeholderTextColor="#888"
             onFocus={() => handleInputFocus(numberInputRef.current)}
             onChangeText={(text) => {
-              const raw = unFormatVND(text);
+              const raw = disableNumberGrouping ? text : unFormatVND(text);
               handleChange(f.name, raw);
             }}
           />
@@ -313,14 +293,18 @@ export const RenderInputByType = ({
 
     case TypeProperty.Date:
       return (
-        <View style={hasValidationError ? localStyles.fieldWrapInvalid : undefined}>
+        <View
+          style={hasValidationError ? localStyles.fieldWrapInvalid : undefined}
+        >
           <DatePicker value={value} onChange={(d) => handleChange(f.name, d)} />
         </View>
       );
 
     case TypeProperty.Time:
       return (
-        <View style={hasValidationError ? localStyles.fieldWrapInvalid : undefined}>
+        <View
+          style={hasValidationError ? localStyles.fieldWrapInvalid : undefined}
+        >
           <TimePicker value={value} onChange={(d) => handleChange(f.name, d)} />
         </View>
       );
@@ -407,14 +391,17 @@ export const RenderInputByType = ({
     case TypeProperty.Reference:
       return (
         <TouchableOpacity
+          style={[
+            pickerFieldTriggerStyles.input,
+            hasValidationError && localStyles.selectInputInvalid,
+          ]}
           onPress={() => {
             openEnumReferanceModal?.(f);
           }}
         >
           <Text
             style={[
-              styles.input,
-              hasValidationError && localStyles.selectInputInvalid,
+              pickerFieldTriggerStyles.text,
               localStyles.selectText,
               hasValue
                 ? localStyles.selectedValueText
@@ -428,7 +415,7 @@ export const RenderInputByType = ({
             name="chevron-down"
             size={20}
             color="#444"
-            style={localStyles.chevron}
+            style={pickerFieldTriggerStyles.icon}
           />
         </TouchableOpacity>
       );

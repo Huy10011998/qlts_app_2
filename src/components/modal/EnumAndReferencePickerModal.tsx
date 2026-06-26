@@ -40,6 +40,7 @@ export default function EnumAndReferencePickerModal({
   title,
   items,
   selectedValue,
+  isMulti,
   onClose,
   onSelect,
   onLoadMore,
@@ -52,6 +53,7 @@ export default function EnumAndReferencePickerModal({
 }: PropsEnum & ExtraProps) {
   const insets = useSafeAreaInsets();
   const [searchText, setSearchText] = useState("");
+  const [multiSelectedValues, setMultiSelectedValues] = useState<string[]>([]);
   const debouncedSearch = useDebounce(searchText, 600);
   const lastSearchRef = useRef("");
   const loaded =
@@ -60,24 +62,43 @@ export default function EnumAndReferencePickerModal({
     if (!Array.isArray(items)) return [];
     if (selectedValue === null || selectedValue === undefined) return items;
 
-    const selectedItems = items.filter(
-      (item) => String(item.value) === String(selectedValue),
+    const selectedValues = String(selectedValue ?? "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+    const selectedItems = items.filter((item) =>
+      isMulti
+        ? selectedValues.includes(String(item.value))
+        : String(item.value) === String(selectedValue),
     );
 
     if (!selectedItems.length) return items;
 
-    const remainingItems = items.filter(
-      (item) => String(item.value) !== String(selectedValue),
+    const remainingItems = items.filter((item) =>
+      isMulti
+        ? !selectedValues.includes(String(item.value))
+        : String(item.value) !== String(selectedValue),
     );
 
     return [...selectedItems, ...remainingItems];
-  }, [items, selectedValue]);
+  }, [isMulti, items, selectedValue]);
   const hasRealItems = orderedItems.some((item) => item.value !== "");
   const isSearchEmpty =
     searchText.trim().length > 0 && total === 0 && !isSearching;
   const isEmpty = Boolean(errorMessage) || isSearchEmpty || !hasRealItems;
   const listItems = isEmpty ? [] : orderedItems;
   const listAnimationKey = `${listItems.length}-${total}-${Boolean(errorMessage)}`;
+  const hasSearchText = searchText.trim().length > 0;
+  const showSearchSpinner = Boolean(isSearching && hasSearchText);
+
+  const handleClearSearch = () => {
+    setSearchText("");
+
+    if (lastSearchRef.current !== "") {
+      lastSearchRef.current = "";
+      onSearch?.("");
+    }
+  };
 
   useEffect(() => {
     if (!visible) return;
@@ -93,27 +114,58 @@ export default function EnumAndReferencePickerModal({
     if (!visible) {
       setSearchText("");
       lastSearchRef.current = "";
+      setMultiSelectedValues([]);
     }
   }, [visible]);
 
   useEffect(() => {
+    if (!visible || !isMulti) return;
+
+    setMultiSelectedValues(
+      String(selectedValue ?? "")
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean),
+    );
+  }, [isMulti, selectedValue, visible]);
+
+  useEffect(() => {
     if (!visible) return;
 
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    if (Platform.OS !== "android") {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    }
   }, [listAnimationKey, visible]);
 
   const renderItem = ({ item }: any) => {
     const isEmptyValue = item.value === "";
     const isSelected =
-      selectedValue !== null &&
-      selectedValue !== undefined &&
-      String(item.value) === String(selectedValue);
+      isMulti
+        ? multiSelectedValues.includes(String(item.value))
+        : selectedValue !== null &&
+          selectedValue !== undefined &&
+          String(item.value) === String(selectedValue);
 
     return (
       <TouchableOpacity
         style={[styles.modalItem, isSelected && styles.modalItemSelected]}
         activeOpacity={0.7}
         onPress={() => {
+          if (isMulti) {
+            if (isEmptyValue) {
+              setMultiSelectedValues([]);
+              return;
+            }
+
+            const itemValue = String(item.value);
+            setMultiSelectedValues((prev) =>
+              prev.includes(itemValue)
+                ? prev.filter((value) => value !== itemValue)
+                : [...prev, itemValue],
+            );
+            return;
+          }
+
           onSelect(item.value);
           onClose();
         }}
@@ -152,6 +204,23 @@ export default function EnumAndReferencePickerModal({
     >
       <Text style={styles.modalTitle}>{title}</Text>
 
+      {isMulti ? (
+        <View style={styles.multiActionRow}>
+          <Text style={styles.multiCount}>
+            Đã chọn: {multiSelectedValues.length}
+          </Text>
+          <TouchableOpacity
+            style={styles.multiDoneButton}
+            onPress={() => {
+              onSelect(multiSelectedValues.join(","));
+              onClose();
+            }}
+          >
+            <Text style={styles.multiDoneText}>Xong</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
       <View style={styles.searchWrapper}>
         <View style={styles.searchIconWrap}>
           <Ionicons name="search-outline" size={16} color="#8A95A3" />
@@ -166,14 +235,14 @@ export default function EnumAndReferencePickerModal({
           returnKeyType="search"
         />
 
-        {isSearching && (
+        {showSearchSpinner && (
           <View style={styles.spinnerWrap}>
             <IsLoading size="small" color={C.red} />
           </View>
         )}
-        {!isSearching && searchText.length > 0 ? (
+        {!showSearchSpinner && searchText.length > 0 ? (
           <Pressable
-            onPress={() => setSearchText("")}
+            onPress={handleClearSearch}
             style={styles.clearButton}
             hitSlop={8}
           >
@@ -181,6 +250,14 @@ export default function EnumAndReferencePickerModal({
           </Pressable>
         ) : null}
       </View>
+
+      {!isEmpty ? (
+        <View style={styles.stickyHeader}>
+          <Text style={styles.header}>
+            Tổng: {total} (Đã tải: {loaded})
+          </Text>
+        </View>
+      ) : null}
 
       <FlatList
         data={listItems}
@@ -193,6 +270,7 @@ export default function EnumAndReferencePickerModal({
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        removeClippedSubviews={Platform.OS === "ios"}
         onEndReached={onLoadMore}
         onEndReachedThreshold={0.4}
         ListFooterComponent={
@@ -202,15 +280,7 @@ export default function EnumAndReferencePickerModal({
             </View>
           ) : null
         }
-        ListHeaderComponent={
-          isEmpty ? null : (
-            <View style={styles.stickyHeader}>
-              <Text style={styles.header}>
-                Tổng: {total} (Đã tải: {loaded})
-              </Text>
-            </View>
-          )
-        }
+        ListHeaderComponent={null}
         ListEmptyComponent={
           <EmptyState
             iconName={errorMessage ? "cloud-offline-outline" : "search-outline"}
@@ -218,7 +288,7 @@ export default function EnumAndReferencePickerModal({
             subtitle={errorMessage || "Thử tìm kiếm với từ khóa khác"}
           />
         }
-        stickyHeaderIndices={isEmpty ? [] : [0]}
+        stickyHeaderIndices={[]}
       />
     </BottomSheetModalShell>
   );
@@ -244,6 +314,34 @@ const styles = StyleSheet.create({
 
   closeButton: {
     top: 10,
+  },
+
+  multiActionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+
+  multiCount: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#667085",
+  },
+
+  multiDoneButton: {
+    minHeight: 36,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: C.red,
+  },
+
+  multiDoneText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#fff",
   },
 
   searchWrapper: {

@@ -766,9 +766,10 @@ const styles = StyleSheet.create({
   textInput: {
     flex: 1,
     height: 48,
+    paddingTop: 0,
+    paddingBottom: 0,
     paddingVertical: 0,
     fontSize: 14,
-    lineHeight: 20,
     color: "#111",
     includeFontPadding: false,
     textAlignVertical: "center",

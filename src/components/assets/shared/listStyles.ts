@@ -67,6 +67,7 @@ export const sharedAssetListStyles = StyleSheet.create({
     paddingVertical: 4,
     borderWidth: 1,
     borderColor: "#FFD6D6",
+    minWidth: 0,
     flexShrink: 1,
   },
   summaryBadgeText: {
@@ -111,6 +112,7 @@ export const sharedAssetListStyles = StyleSheet.create({
   },
   filterCardContent: {
     flex: 1,
+    minWidth: 0,
   },
   filterCardTitle: {
     fontSize: 13.5,
@@ -121,5 +123,6 @@ export const sharedAssetListStyles = StyleSheet.create({
   filterCardSub: {
     fontSize: 11.5,
     color: "#8A95A3",
+    flexShrink: 1,
   },
 });

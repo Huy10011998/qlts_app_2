@@ -1,7 +1,10 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { StyleSheet, Alert } from "react-native";
 import { useParams } from "../../hooks/useParams";
-import type { AssetAddRelatedItemNavigationProp, Field } from "../../types/index";
+import type {
+  AssetAddRelatedItemNavigationProp,
+  Field,
+} from "../../types/index";
 import { TypeProperty } from "../../utils/Enum";
 import { useNavigation } from "@react-navigation/native";
 import {
@@ -11,7 +14,11 @@ import {
 import { fetchImage, pickImage } from "../../utils/Image";
 import { isEffectivelyEmptyCodeValue } from "../../utils/helpers/string";
 import { useImageLoader } from "../../hooks/useImageLoader";
-import { checkValidation, getParentValue, insert } from "../../services/data/callApi";
+import {
+  checkValidation,
+  getParentValue,
+  insert,
+} from "../../services/data/callApi";
 
 import { useSelector } from "react-redux";
 import { RootState } from "../../store/index";
@@ -42,6 +49,7 @@ import {
   ASSET_FORM_BRAND_RED,
   ASSET_FORM_CARD_SHADOW,
 } from "./shared/assetFormTheme";
+import { REVIEW_NAME_CLASSES_DANHGIA } from "../../constants/reviewNameClasses";
 
 const BRAND_RED = ASSET_FORM_BRAND_RED;
 const BG = ASSET_FORM_BG;
@@ -52,6 +60,9 @@ export default function AssetAddRelatedItem() {
     useParams();
   const { can } = usePermission();
   const dispatch = useAppDispatch();
+  const isReviewClass = REVIEW_NAME_CLASSES_DANHGIA.includes(
+    (nameClass || "").trim(),
+  );
 
   const { selectedTreeValue, selectedTreeProperty } = useSelector(
     (state: RootState) => state.asset,
@@ -186,6 +197,12 @@ export default function AssetAddRelatedItem() {
   );
   const { isMounted, showAlertIfActive } = useSafeAlert();
 
+  useEffect(() => {
+    navigation.setOptions({
+      title: isReviewClass ? "Đánh giá" : "Thêm mới",
+    });
+  }, [isReviewClass, navigation]);
+
   const handleCreate = async () => {
     if (nameClass && !can(nameClass, "Insert")) {
       Alert.alert("Không có quyền", "Bạn không có quyền tạo mới dữ liệu!");
@@ -256,10 +273,7 @@ export default function AssetAddRelatedItem() {
       );
     } catch (err: any) {
       setValidationErrors(getApiValidationFieldErrors(err));
-      showAlertIfActive(
-        "Lỗi",
-        getApiErrorMessage(err, "Không thể tạo mới!"),
-      );
+      showAlertIfActive("Lỗi", getApiErrorMessage(err, "Không thể tạo mới!"));
     } finally {
       if (isMounted()) {
         setIsSubmitting(false);
@@ -305,8 +319,14 @@ export default function AssetAddRelatedItem() {
         iconColor={BRAND_RED}
         iconName="link-outline"
         styles={styles}
-        title="Thêm dữ liệu liên quan"
-        subtitle="Tạo mới bản ghi gắn với tài sản hiện tại theo từng nhóm thông tin."
+        title={
+          isReviewClass ? "Đánh giá dữ liệu liên quan" : "Thêm dữ liệu liên quan"
+        }
+        subtitle={
+          isReviewClass
+            ? "Đánh giá bản ghi gắn với tài sản hiện tại theo từng nhóm thông tin."
+            : "Tạo mới bản ghi gắn với tài sản hiện tại theo từng nhóm thông tin."
+        }
       />
 
       <AssetFormGroupedFields
@@ -333,7 +353,7 @@ export default function AssetAddRelatedItem() {
         brandColor={BRAND_RED}
         disabled={!!nameClass && !can(nameClass, "Insert")}
         iconName="checkmark-circle-outline"
-        label="Tạo"
+        label={isReviewClass ? "Xác nhận" : "Tạo"}
         onPress={handleCreate}
         style={styles.createButton}
       />

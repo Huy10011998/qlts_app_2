@@ -123,7 +123,13 @@ export type RootStackParamList = {
         viewPermission?: string;
       }
     | undefined;
-  Report: undefined;
+  Report:
+    | {
+        groupMenuId?: number;
+        titleHeader?: string;
+        viewPermission?: string;
+      }
+    | undefined;
   Camera: undefined;
   CameraList: {
     zoneId: number;

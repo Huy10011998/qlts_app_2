@@ -251,6 +251,7 @@ export type IsLoadingProps = {
 
 export interface ReportViewProps {
   title: string;
+  config?: import("./model.d").ReportConfigData;
   previewEndpoint: string;
   onClose: () => void;
 }
@@ -265,6 +266,7 @@ export interface PropsEnum {
   title: string;
   items: EnumItem[];
   selectedValue?: any;
+  isMulti?: boolean;
   onClose: () => void;
   onSelect: (value: any) => void;
   onSearch?: (keyword: string) => void;
@@ -318,6 +320,7 @@ export interface RenderInputByTypeProps {
 
   mode: "add" | "edit" | "clone";
   getDefaultValueForField: (f: Field) => any;
+  disableNumberGrouping?: boolean;
 
   openEnumReferanceModal: (field: Field) => void;
 }

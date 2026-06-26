@@ -54,7 +54,9 @@ export default function OpinionPickerModal({
   React.useEffect(() => {
     if (!visible) return;
 
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    if (Platform.OS !== "android") {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    }
   }, [listAnimationKey, visible]);
 
   React.useEffect(() => {
@@ -158,9 +160,11 @@ export default function OpinionPickerModal({
       </View>
 
       <FlatList
+        style={styles.listView}
         data={opinions}
         keyExtractor={(item) => item.id}
         keyboardShouldPersistTaps="handled"
+        removeClippedSubviews={Platform.OS === "ios"}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.list,
@@ -256,6 +260,9 @@ const styles = StyleSheet.create({
   clearButton: {
     padding: 4,
     marginLeft: 4,
+  },
+  listView: {
+    flex: 1,
   },
   list: { flexGrow: 1, paddingBottom: 12 },
   listEmpty: { paddingBottom: 0 },

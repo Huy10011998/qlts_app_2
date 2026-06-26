@@ -10,7 +10,11 @@ export const HOME_MEETING_INFO = {
 };
 
 export const HOME_ASSET_SUMMARY = {
-  totalAssets: 1761,
+  totalAssets: 1766,
+};
+
+export const HOME_CAMERA_SUMMARY = {
+  totalCameras: 520,
 };
 
 export const HOME_RECENT_ACTIVITIES = [

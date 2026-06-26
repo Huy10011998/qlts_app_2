@@ -142,7 +142,7 @@ export default function CameraScreen() {
   }, [autoExpand, debouncedSearch]);
 
   const handleToggle = (id: string) => {
-    if (!debouncedSearch) {
+    if (!debouncedSearch && Platform.OS !== "android") {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     }
 
@@ -224,7 +224,7 @@ export default function CameraScreen() {
             styles.listContent,
             isEmpty && styles.listContentEmpty,
           ]}
-          removeClippedSubviews
+          removeClippedSubviews={Platform.OS === "ios"}
           initialNumToRender={20}
           windowSize={10}
           keyboardShouldPersistTaps="handled"
