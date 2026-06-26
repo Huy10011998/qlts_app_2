@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { StyleSheet, Alert } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useSelector } from "react-redux";
@@ -42,6 +42,7 @@ import {
   ASSET_FORM_BRAND_RED,
   ASSET_FORM_CARD_SHADOW,
 } from "./shared/assetFormTheme";
+import { REVIEW_NAME_CLASSES_DANHGIA } from "../../constants/reviewNameClasses";
 
 const BRAND_RED = ASSET_FORM_BRAND_RED;
 const BG = ASSET_FORM_BG;
@@ -52,6 +53,9 @@ export default function AssetAddItemDetails() {
   const navigation = useNavigation<AssetAddItemNavigationProp>();
   const { can } = usePermission();
   const dispatch = useAppDispatch();
+  const isReviewClass = REVIEW_NAME_CLASSES_DANHGIA.includes(
+    (nameClass || "").trim(),
+  );
 
   const { selectedTreeValue, selectedTreeProperty } = useSelector(
     (state: RootState) => state.asset,
@@ -171,6 +175,12 @@ export default function AssetAddItemDetails() {
   );
   const { isMounted, showAlertIfActive } = useSafeAlert();
 
+  useEffect(() => {
+    navigation.setOptions({
+      title: isReviewClass ? "Đánh giá" : "Thêm mới",
+    });
+  }, [isReviewClass, navigation]);
+
   const handleCreate = async () => {
     if (nameClass && !can(nameClass, "Insert")) {
       Alert.alert("Không có quyền", "Bạn không có quyền tạo mới dữ liệu!");
@@ -284,8 +294,12 @@ export default function AssetAddItemDetails() {
         iconColor={BRAND_RED}
         iconName="add-circle-outline"
         styles={styles}
-        title="Tạo tài sản mới"
-        subtitle="Điền thông tin theo từng nhóm để tạo mới dữ liệu đồng bộ."
+        title={isReviewClass ? "Đánh giá tài sản" : "Tạo tài sản mới"}
+        subtitle={
+          isReviewClass
+            ? "Điền đánh giá thông tin theo từng nhóm để tạo mới dữ liệu đồng bộ."
+            : "Điền thông tin theo từng nhóm để tạo mới dữ liệu đồng bộ."
+        }
       />
 
       <AssetFormGroupedFields
@@ -312,7 +326,7 @@ export default function AssetAddItemDetails() {
         brandColor={BRAND_RED}
         disabled={!!nameClass && !can(nameClass, "Insert")}
         iconName="checkmark-circle-outline"
-        label="Tạo"
+        label={isReviewClass ? "Xác nhận" : "Tạo"}
         onPress={handleCreate}
         style={styles.createButton}
       />

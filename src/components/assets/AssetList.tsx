@@ -9,6 +9,7 @@ import {
   Dimensions,
   TouchableOpacity,
   RefreshControl,
+  InteractionManager,
 } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type {
@@ -104,6 +105,15 @@ export default function AssetList() {
   const propertyClassRef = useRef<PropertyResponse | undefined>(undefined);
   const skipSizeRef = useRef(0);
   const isFirstLoadRef = useRef(true);
+  const [listLayoutVersion, setListLayoutVersion] = useState(0);
+
+  const refreshAndroidListLayout = useCallback(() => {
+    if (Platform.OS !== "android") return;
+
+    requestAnimationFrame(() => {
+      setListLayoutVersion((version) => version + 1);
+    });
+  }, []);
 
   useEffect(() => {
     dispatch(resetSelectedTreeNode());
@@ -238,7 +248,9 @@ export default function AssetList() {
         const newItems: Record<string, any>[] = response?.data?.items || [];
         const totalItems = response?.data?.totalCount || 0;
 
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        if (Platform.OS !== "android") {
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        }
 
         if (isLoadMore) {
           const nextSkip = currentSkip + pageSize;
@@ -248,6 +260,7 @@ export default function AssetList() {
         } else {
           skipSizeRef.current = pageSize;
           setAssetItems(newItems);
+          refreshAndroidListLayout();
         }
 
         setTotal(totalItems);
@@ -282,6 +295,7 @@ export default function AssetList() {
       conditions,
       debouncedSearch,
       dispatch,
+      refreshAndroidListLayout,
       isMounted,
       nameClass,
       showAlertIfActive,
@@ -290,11 +304,19 @@ export default function AssetList() {
 
   useFocusEffect(
     React.useCallback(() => {
+      const interaction = InteractionManager.runAfterInteractions(() => {
+        refreshAndroidListLayout();
+      });
+
       if (shouldRefresh) {
         fetchData(false);
         dispatch(resetShouldRefreshList());
       }
-    }, [dispatch, fetchData, shouldRefresh]),
+
+      return () => {
+        interaction.cancel();
+      };
+    }, [dispatch, fetchData, refreshAndroidListLayout, shouldRefresh]),
   );
 
   useNetworkAwareReload(fetchData, {
@@ -464,58 +486,62 @@ export default function AssetList() {
         summaryText={`Tổng ${total} • Đã tải ${assetItems.length}`}
       />
 
-      <FlatList
-        data={assetItems}
-        keyExtractor={(item, index) => String(item.id ?? index)}
-        renderItem={renderItem}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshingTop}
-            onRefresh={refreshTop}
-            colors={[BRAND_RED]}
-            tintColor={BRAND_RED}
-            progressViewOffset={50}
-          />
-        }
-        maxToRenderPerBatch={10}
-        updateCellsBatchingPeriod={50}
-        initialNumToRender={10}
-        windowSize={5}
-        scrollEventThrottle={16}
-        removeClippedSubviews={true}
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.5}
-        ListFooterComponent={isLoadingMore ? <IsLoading /> : null}
-        ListHeaderComponent={
-          isEmpty ? null : (
-            <AssetListSummaryCard
-              iconName="funnel-outline"
-              title={selectedNode ? selectedNode.text : "Toàn bộ tài sản"}
-              subtitle={`${total} kết quả • hiển thị ${assetItems.length}`}
+      {!isEmpty ? (
+        <AssetListSummaryCard
+          iconName="funnel-outline"
+          title={selectedNode ? selectedNode.text : "Toàn bộ tài sản"}
+          subtitle={`${total} kết quả • hiển thị ${assetItems.length}`}
+        />
+      ) : null}
+
+      <View style={styles.listWrap}>
+        <FlatList
+          key={`asset-list-${nameClass || "default"}-${listLayoutVersion}`}
+          style={styles.list}
+          data={assetItems}
+          keyExtractor={(item, index) => String(item.id ?? index)}
+          renderItem={renderItem}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshingTop}
+              onRefresh={refreshTop}
+              colors={[BRAND_RED]}
+              tintColor={BRAND_RED}
+              progressViewOffset={50}
             />
-          )
-        }
-        stickyHeaderIndices={isEmpty ? [] : [0]}
-        contentContainerStyle={[
-          styles.listContent,
-          isEmpty && styles.listContentEmpty,
-        ]}
-        ListEmptyComponent={
-          <AssetListEmptyState
-            iconName="cube-outline"
-            title={
-              hasSearchOrFilter
-                ? "Không tìm thấy tài sản"
-                : "Chưa có dữ liệu tài sản"
-            }
-            subtitle={
-              hasSearchOrFilter
-                ? "Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc danh mục"
-                : "Danh sách tài sản sẽ hiển thị tại đây khi có dữ liệu."
-            }
-          />
-        }
-      />
+          }
+          maxToRenderPerBatch={10}
+          updateCellsBatchingPeriod={50}
+          initialNumToRender={10}
+          windowSize={5}
+          scrollEventThrottle={16}
+          removeClippedSubviews={Platform.OS === "ios"}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={isLoadingMore ? <IsLoading /> : null}
+          ListHeaderComponent={null}
+          stickyHeaderIndices={[]}
+          contentContainerStyle={[
+            styles.listContent,
+            isEmpty && styles.listContentEmpty,
+          ]}
+          ListEmptyComponent={
+            <AssetListEmptyState
+              iconName="cube-outline"
+              title={
+                hasSearchOrFilter
+                  ? "Không tìm thấy tài sản"
+                  : "Chưa có dữ liệu tài sản"
+              }
+              subtitle={
+                hasSearchOrFilter
+                  ? "Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc danh mục"
+                  : "Danh sách tài sản sẽ hiển thị tại đây khi có dữ liệu."
+              }
+            />
+          }
+        />
+      </View>
 
       {renderTreePanel()}
 
@@ -531,6 +557,12 @@ export default function AssetList() {
 }
 
 const styles = StyleSheet.create({
+  listWrap: {
+    flex: 1,
+  },
+  list: {
+    flex: 1,
+  },
   listContentEmpty: {
     paddingTop: 0,
     paddingBottom: 0,

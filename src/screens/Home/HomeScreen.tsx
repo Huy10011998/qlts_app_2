@@ -2,10 +2,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  GestureResponderEvent,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -14,10 +16,10 @@ import {
   useIsFocused,
   useNavigation,
 } from "@react-navigation/native";
+import Ionicons from "react-native-vector-icons/Ionicons";
 import type { HomeNavigationProp } from "../../types";
 import { usePermission } from "../../hooks/usePermission";
 import HomeMenuItemCard from "./shared/HomeMenuItemCard";
-import HomeEventBanner from "./shared/HomeEventBanner";
 import HomeStatCard from "./shared/HomeStatCard";
 import HomeQuickAction from "./shared/HomeQuickAction";
 import HomeSectionTitle from "./shared/HomeSectionTitle";
@@ -25,7 +27,7 @@ import HomeRecentActivities from "./shared/HomeRecentActivities";
 import { HOME_BG, HOME_BRAND_RED } from "./shared/homeTheme";
 import {
   HOME_ASSET_SUMMARY,
-  HOME_MEETING_INFO,
+  HOME_CAMERA_SUMMARY,
   HOME_RECENT_ACTIVITIES,
 } from "./shared/homeData";
 import {
@@ -43,10 +45,13 @@ import { readStoredAuthUsername } from "../../context/authStorage";
 const HOME_FEATURE_PINNED_IDS_KEY = "@home:pinnedFeatureIds";
 const HOME_FEATURE_PINNED_IDS_USER_KEY = `${HOME_FEATURE_PINNED_IDS_KEY}:user`;
 const HOME_FEATURE_PINNED_IDS_MIGRATED_KEY = `${HOME_FEATURE_PINNED_IDS_KEY}:view-active-migrated`;
+const HOME_REPORT_PINNED_IDS_KEY = "@home:pinnedReportIds";
+const HOME_REPORT_PINNED_IDS_USER_KEY = `${HOME_REPORT_PINNED_IDS_KEY}:user`;
 const HOME_CONTENT_HORIZONTAL_PADDING = 16;
 const HOME_FEATURE_GRID_GAP = 10;
 const HOME_FEATURE_CARD_HEIGHT = 132;
 const HOME_FEATURE_COLUMNS = 4;
+const HOME_REPORT_COLUMNS = 3;
 
 const getHomeFeaturePinnedIdsKey = (userName: string | null) => {
   const normalizedUserName = userName?.trim().toLowerCase();
@@ -61,6 +66,81 @@ const getHomeFeaturePinnedIdsKey = (userName: string | null) => {
 const getHomeFeaturePinnedIdsMigratedKey = (pinnedIdsKey: string) =>
   `${HOME_FEATURE_PINNED_IDS_MIGRATED_KEY}:${pinnedIdsKey}`;
 
+const getHomeReportPinnedIdsKey = (userName: string | null) => {
+  const normalizedUserName = userName?.trim().toLowerCase();
+
+  if (!normalizedUserName) return HOME_REPORT_PINNED_IDS_KEY;
+
+  return `${HOME_REPORT_PINNED_IDS_USER_KEY}:${encodeURIComponent(
+    normalizedUserName
+  )}`;
+};
+
+type HomeReportCardProps = {
+  isPinned?: boolean;
+  label: string;
+  onPress?: () => void;
+  onTogglePinned?: () => void;
+  showPinButton?: boolean;
+};
+
+function HomeReportCard({
+  isPinned = false,
+  label,
+  onPress,
+  onTogglePinned,
+  showPinButton = false,
+}: HomeReportCardProps) {
+  const handleTogglePinned = (event: GestureResponderEvent) => {
+    event.stopPropagation();
+    onTogglePinned?.();
+  };
+
+  return (
+    <TouchableOpacity
+      style={styles.reportCard}
+      activeOpacity={0.76}
+      onPress={onPress}
+    >
+      {showPinButton ? (
+        <TouchableOpacity
+          style={[
+            styles.reportPinButton,
+            isPinned && styles.reportPinButtonActive,
+          ]}
+          activeOpacity={0.76}
+          onPress={handleTogglePinned}
+          hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+        >
+          <Ionicons
+            name={isPinned ? "checkmark" : "add"}
+            size={14}
+            color={isPinned ? "#fff" : "#7048E8"}
+          />
+        </TouchableOpacity>
+      ) : null}
+
+      <View style={styles.reportIconWrap}>
+        <Ionicons
+          name="document-text-outline"
+          size={21}
+          color="#7048E8"
+        />
+      </View>
+
+      <View style={styles.reportTextWrap}>
+        <Text style={styles.reportTitle} numberOfLines={2}>
+          {label}
+        </Text>
+      </View>
+
+      <View style={styles.reportArrowWrap}>
+        <Ionicons name="arrow-forward" size={12} color="#7048E8" />
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeNavigationProp>();
   const { width: windowWidth } = useWindowDimensions();
@@ -73,7 +153,6 @@ const HomeScreen: React.FC = () => {
     fetchHomeMenuItems,
     hasMenuLoadError,
     isMenuLoading,
-    openMeetingScreen,
     openReportScreen,
     openScanScreen,
     openSettingScreen,
@@ -81,11 +160,18 @@ const HomeScreen: React.FC = () => {
   const [hasLoadError, setHasLoadError] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isFeatureListVisible, setIsFeatureListVisible] = useState(false);
+  const [isReportListVisible, setIsReportListVisible] = useState(false);
   const [pinnedFeatureIds, setPinnedFeatureIds] = useState<string[]>(
     DEFAULT_HOME_FEATURE_IDS
   );
+  const [pinnedReportIds, setPinnedReportIds] = useState<string[]>([]);
+  const [hasPinnedReportPreference, setHasPinnedReportPreference] =
+    useState(false);
   const [pinnedFeatureIdsKey, setPinnedFeatureIdsKey] = useState(
     HOME_FEATURE_PINNED_IDS_KEY
+  );
+  const [pinnedReportIdsKey, setPinnedReportIdsKey] = useState(
+    HOME_REPORT_PINNED_IDS_KEY
   );
 
   useEffect(() => {
@@ -96,12 +182,32 @@ const HomeScreen: React.FC = () => {
         const storedUserName = await readStoredAuthUsername();
         const nextPinnedFeatureIdsKey =
           getHomeFeaturePinnedIdsKey(storedUserName);
+        const nextPinnedReportIdsKey = getHomeReportPinnedIdsKey(storedUserName);
         const migratedKey = getHomeFeaturePinnedIdsMigratedKey(
           nextPinnedFeatureIdsKey
         );
         const hasMigrated = await AsyncStorage.getItem(migratedKey);
         const rawValue = await AsyncStorage.getItem(nextPinnedFeatureIdsKey);
+        const rawReportValue = await AsyncStorage.getItem(
+          nextPinnedReportIdsKey
+        );
         const parsedValue = rawValue ? JSON.parse(rawValue) : null;
+        const parsedReportValue = rawReportValue
+          ? JSON.parse(rawReportValue)
+          : null;
+
+        if (isActive) {
+          setPinnedReportIdsKey(nextPinnedReportIdsKey);
+
+          if (Array.isArray(parsedReportValue)) {
+            setHasPinnedReportPreference(true);
+            setPinnedReportIds(
+              parsedReportValue.filter(
+                (id): id is string => typeof id === "string"
+              )
+            );
+          }
+        }
 
         if (isActive && Array.isArray(parsedValue)) {
           const nextPinnedFeatureIds = parsedValue
@@ -124,6 +230,8 @@ const HomeScreen: React.FC = () => {
       } catch {
         if (isActive) {
           setPinnedFeatureIds(DEFAULT_HOME_FEATURE_IDS);
+          setPinnedReportIds([]);
+          setHasPinnedReportPreference(false);
         }
       }
     };
@@ -142,6 +250,15 @@ const HomeScreen: React.FC = () => {
       );
     },
     [pinnedFeatureIdsKey]
+  );
+
+  const persistPinnedReportIds = useCallback(
+    (nextIds: string[]) => {
+      AsyncStorage.setItem(pinnedReportIdsKey, JSON.stringify(nextIds)).catch(
+        () => undefined
+      );
+    },
+    [pinnedReportIdsKey]
   );
 
   const togglePinnedFeature = useCallback(
@@ -249,21 +366,24 @@ const HomeScreen: React.FC = () => {
   const isInitialMenuLoading = isMenuLoading && menuItems.length === 0;
   const canViewAllFeatures = visibleMenuItems.length > 0;
   const canViewAssets = loaded && canView("TaiSan");
-  const canViewShareholdersMeeting = loaded && canView("DHCD");
-  const canViewAssetReports = canViewAssets;
+  const canViewCamera = loaded && canView("Camera");
   const visibleRecentActivities = useMemo(() => {
     if (!loaded) return [];
     return HOME_RECENT_ACTIVITIES.filter((item) =>
       item.viewPermission ? canView(item.viewPermission) : true
     );
   }, [canView, loaded]);
-  const hasOverviewStats = canViewShareholdersMeeting || canViewAssets;
+  const hasOverviewStats = canViewCamera || canViewAssets;
   const hasRecentActivities = visibleRecentActivities.length > 0;
   const homeContentWidth = windowWidth - HOME_CONTENT_HORIZONTAL_PADDING * 2;
   const homeFeatureCardWidth =
     (homeContentWidth -
       HOME_FEATURE_GRID_GAP * Math.max(HOME_FEATURE_COLUMNS - 1, 0)) /
     HOME_FEATURE_COLUMNS;
+  const homeReportCardWidth =
+    (homeContentWidth -
+      HOME_FEATURE_GRID_GAP * Math.max(HOME_REPORT_COLUMNS - 1, 0)) /
+    HOME_REPORT_COLUMNS;
   const quickActions = useMemo(
     () => [
       {
@@ -273,17 +393,6 @@ const HomeScreen: React.FC = () => {
         color: "#3B5BDB",
         onPress: openScanScreen,
       },
-      ...(canViewAssetReports
-        ? [
-            {
-              iconName: "document-text-outline",
-              label: "Báo cáo",
-              bg: "#F3F0FF",
-              color: "#7048E8",
-              onPress: openReportScreen,
-            },
-          ]
-        : []),
       {
         iconName: "notifications-outline",
         label: "Thông báo",
@@ -298,8 +407,68 @@ const HomeScreen: React.FC = () => {
         onPress: openSettingScreen,
       },
     ],
-    [canViewAssetReports, openReportScreen, openScanScreen, openSettingScreen]
+    [openScanScreen, openSettingScreen]
   );
+  const reportActions = useMemo(
+    () =>
+      visibleMenuItems
+        .filter((item) => typeof item.groupMenuId === "number")
+        .map((item) => ({
+          ...item,
+          iconName: "document-text-outline",
+          onPress: () =>
+            openReportScreen({
+              groupMenuId: item.groupMenuId,
+              titleHeader: item.label,
+              viewPermission: item.viewPermission,
+            }),
+        })),
+    [openReportScreen, visibleMenuItems]
+  );
+  const togglePinnedReport = useCallback(
+    (reportId: string) => {
+      setPinnedReportIds((currentIds) => {
+        const currentVisibleIds = hasPinnedReportPreference
+          ? currentIds
+          : reportActions
+              .slice(0, HOME_REPORT_COLUMNS)
+              .map((report) => report.id);
+        const isPinned = currentVisibleIds.includes(reportId);
+        const nextIds = isPinned
+          ? currentVisibleIds.filter((id) => id !== reportId)
+          : [...currentVisibleIds, reportId];
+
+        setHasPinnedReportPreference(true);
+        persistPinnedReportIds(nextIds);
+        return nextIds;
+      });
+    },
+    [hasPinnedReportPreference, persistPinnedReportIds, reportActions]
+  );
+  const pinnedReportActions = useMemo(() => {
+    const reportActionsById = new Map(
+      reportActions.map((item) => [item.id, item])
+    );
+    const visibleReportIds = hasPinnedReportPreference
+      ? pinnedReportIds
+      : reportActions.slice(0, HOME_REPORT_COLUMNS).map((item) => item.id);
+
+    return visibleReportIds
+      .map((id) => reportActionsById.get(id))
+      .filter((item): item is (typeof reportActions)[number] => !!item);
+  }, [hasPinnedReportPreference, pinnedReportIds, reportActions]);
+  const visiblePinnedReportActions = useMemo(
+    () => pinnedReportActions.slice(0, HOME_REPORT_COLUMNS),
+    [pinnedReportActions]
+  );
+  const visiblePinnedReportIds = useMemo(
+    () => new Set(pinnedReportActions.map((item) => item.id)),
+    [pinnedReportActions]
+  );
+  const hasNoPinnedReports =
+    hasPinnedReportPreference &&
+    reportActions.length > 0 &&
+    pinnedReportActions.length === 0;
 
   if (hasLoadError || hasMenuLoadError) {
     return (
@@ -346,20 +515,6 @@ const HomeScreen: React.FC = () => {
           />
         }
       >
-        {canViewShareholdersMeeting ? (
-          <>
-            <HomeSectionTitle label="SỰ KIỆN" action="Xem tất cả" />
-            <HomeEventBanner
-              title={HOME_MEETING_INFO.meetingTitle}
-              date={HOME_MEETING_INFO.meetingDate}
-              time={HOME_MEETING_INFO.meetingTime}
-              venue={HOME_MEETING_INFO.meetingVenue}
-              count={HOME_MEETING_INFO.totalShareholders}
-              onPress={openMeetingScreen}
-            />
-          </>
-        ) : null}
-
         <HomeSectionTitle
           label="CHỨC NĂNG"
           action={canViewAllFeatures ? "Xem tất cả" : undefined}
@@ -407,6 +562,43 @@ const HomeScreen: React.FC = () => {
           </View>
         )}
 
+        {reportActions.length > 0 ? (
+          <>
+            <HomeSectionTitle
+              label="BÁO CÁO"
+              action="Xem tất cả"
+              onAction={() => setIsReportListVisible(true)}
+            />
+            {hasNoPinnedReports ? (
+              <View style={styles.noPermissionCard}>
+                <EmptyState
+                  iconName="add-circle-outline"
+                  title="Chưa chọn báo cáo hiển thị"
+                  subtitle="Bấm Xem tất cả rồi chọn dấu + để đưa báo cáo ra Trang chủ."
+                  fullHeight={false}
+                />
+              </View>
+            ) : (
+              <View style={styles.reportList}>
+                {visiblePinnedReportActions.map((item) => (
+                  <View
+                    key={`report-${item.id}`}
+                    style={[
+                      styles.reportGridItem,
+                      { width: homeReportCardWidth },
+                    ]}
+                  >
+                    <HomeReportCard
+                      label={item.label}
+                      onPress={item.onPress}
+                    />
+                  </View>
+                ))}
+              </View>
+            )}
+          </>
+        ) : null}
+
         <HomeSectionTitle label="THAO TÁC NHANH" />
         <View style={styles.qaCard}>
           {quickActions.map((action, index) => (
@@ -421,16 +613,15 @@ const HomeScreen: React.FC = () => {
           <>
             <HomeSectionTitle label="TỔNG QUAN" />
             <View style={styles.statsRow}>
-              {canViewShareholdersMeeting ? (
+              {canViewCamera ? (
                 <HomeStatCard
-                  value={String(HOME_MEETING_INFO.totalShareholders)}
-                  label="Cổ đông tham dự"
+                  value={String(HOME_CAMERA_SUMMARY.totalCameras)}
+                  label="Camera đang quản lý"
                   sub="Cập nhật hôm nay"
                   subColor="#10B981"
-                  iconName="people-circle-outline"
+                  iconName="videocam-outline"
                   iconBg="#E8FBF3"
                   iconColor="#10B981"
-                  trend="up"
                 />
               ) : null}
               {canViewAssets ? (
@@ -479,6 +670,43 @@ const HomeScreen: React.FC = () => {
                   onTogglePinned={() => togglePinnedFeature(item.id)}
                   onPress={() => {
                     setIsFeatureListVisible(false);
+                    requestAnimationFrame(() => item.onPress?.());
+                  }}
+                />
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+      </BottomSheetModalShell>
+      <BottomSheetModalShell
+        visible={isReportListVisible}
+        onClose={() => setIsReportListVisible(false)}
+        closeOnBackdropPress
+        showCloseButton
+        showHandle
+        sheetStyle={styles.featureSheet}
+      >
+        <Text style={styles.featureSheetTitle}>Tất cả báo cáo</Text>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.featureSheetContent}
+        >
+          <View style={styles.reportSheetGrid}>
+            {reportActions.map((item) => (
+              <View
+                key={`report-sheet-${item.id}`}
+                style={[
+                  styles.reportSheetGridItem,
+                  { width: homeReportCardWidth },
+                ]}
+              >
+                <HomeReportCard
+                  isPinned={visiblePinnedReportIds.has(item.id)}
+                  label={item.label}
+                  showPinButton
+                  onTogglePinned={() => togglePinnedReport(item.id)}
+                  onPress={() => {
+                    setIsReportListVisible(false);
                     requestAnimationFrame(() => item.onPress?.());
                   }}
                 />
@@ -561,6 +789,88 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
     elevation: 2,
+  },
+
+  reportList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: HOME_FEATURE_GRID_GAP,
+    marginBottom: 14,
+  },
+  reportGridItem: {
+    minHeight: 118,
+  },
+  reportCard: {
+    flex: 1,
+    minHeight: 118,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#DDD2FF",
+    shadowColor: "#1A2340",
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  reportIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: "#F3F0FF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+  },
+  reportTextWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  reportTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#2F225F",
+    lineHeight: 17,
+    minHeight: 34,
+    marginBottom: 6,
+  },
+  reportArrowWrap: {
+    position: "absolute",
+    right: 12,
+    bottom: 12,
+    width: 24,
+    height: 24,
+    borderRadius: 8,
+    backgroundColor: "#F3F0FF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  reportPinButton: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    zIndex: 2,
+    width: 26,
+    height: 26,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: "#DDD2FF",
+    backgroundColor: "#F3F0FF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  reportPinButtonActive: {
+    borderColor: "#7048E8",
+    backgroundColor: "#7048E8",
+  },
+  reportSheetGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  reportSheetGridItem: {
+    minHeight: 118,
   },
 
   statsRow: { flexDirection: "row", gap: 10, marginBottom: 14 },

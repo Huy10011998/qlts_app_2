@@ -667,3 +667,12 @@ export const checkValidation = async <T = any,>(
 
   return response;
 };
+
+export const getConfigReport = async <T = any,>(nameReport: string) => {
+  log("[API] getConfigReport request", {
+    endpoint: API_ENDPOINTS.GET_CONFIG_REPORT,
+    nameReport,
+  });
+
+  return callApi<T>("POST", API_ENDPOINTS.GET_CONFIG_REPORT, { nameReport });
+};

@@ -25,20 +25,31 @@ export const useModalItems = (
     const selectedText = formData?.[`${activeEnumField.name}_MoTa`];
     const hasSelectedValue =
       selectedValue !== null && selectedValue !== undefined && selectedValue !== "";
+    const selectedValues =
+      activeEnumField.isMulti && hasSelectedValue
+        ? String(selectedValue)
+            .split(",")
+            .map((value) => value.trim())
+            .filter(Boolean)
+        : [String(selectedValue ?? "")];
 
-    const hasSelectedInBase = base.some(
-      (item) => String(item.value) === String(selectedValue),
-    );
-
-    const selectedItem =
-      hasSelectedValue && !hasSelectedInBase
-        ? [
-            {
-              value: String(selectedValue),
-              text: selectedText || String(selectedValue),
-            },
-          ]
+    const selectedTexts =
+      activeEnumField.isMulti && selectedText
+        ? String(selectedText).split(",").map((text) => text.trim())
         : [];
+
+    const selectedItem = hasSelectedValue
+      ? selectedValues
+          .filter(
+            (value) =>
+              value !== "" &&
+              !base.some((item) => String(item.value) === String(value)),
+          )
+          .map((value, index) => ({
+            value,
+            text: selectedTexts[index] || value,
+          }))
+      : [];
 
     return [
       { value: "", text: activeEnumField.moTa },

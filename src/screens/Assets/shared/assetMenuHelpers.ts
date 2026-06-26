@@ -73,6 +73,25 @@ export function buildAssetMenuTree(items: Item[]) {
   return roots;
 }
 
+export function filterMobileAssetMenuTree(data: Item[]) {
+  const filterTree = (nodes: Item[]): Item[] =>
+    nodes
+      .map((node) => {
+        const children = node.children?.length ? filterTree(node.children) : [];
+        const isWebOnly = Boolean(Number(node.isViewWeb));
+        const isActionable = Boolean(node.contentName_Mobile || node.isReport);
+
+        if (!isWebOnly && (isActionable || children.length > 0)) {
+          return { ...node, children };
+        }
+
+        return null;
+      })
+      .filter(Boolean) as Item[];
+
+  return filterTree(data);
+}
+
 export function filterAssetMenuTree(data: Item[], searchText: string) {
   if (!searchText.trim()) {
     return {

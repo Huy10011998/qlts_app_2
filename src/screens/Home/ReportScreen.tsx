@@ -17,7 +17,7 @@ import {
   View,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { API_ENDPOINTS } from "../../config/index";
+import { API_ENDPOINTS, BASE_URL } from "../../config/index";
 import { useDebounce } from "../../hooks/useDebounce";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { usePermission } from "../../hooks/usePermission";
@@ -26,10 +26,16 @@ import { useSafeAlert } from "../../hooks/useSafeAlert";
 import ReportView from "../../components/report/ReportView";
 import IsLoading from "../../components/ui/IconLoading";
 import EmptyState from "../../components/ui/EmptyState";
-import { callApi } from "../../services/data/callApi";
-import type { GetMenuActiveResponse, Item } from "../../types/index";
-import { error } from "../../utils/Logger";
+import { callApi, getConfigReport } from "../../services/data/callApi";
+import type {
+  GetConfigReportResponse,
+  GetMenuActiveResponse,
+  Item,
+  ReportConfigData,
+} from "../../types/index";
+import { error, log } from "../../utils/Logger";
 import { removeVietnameseTones } from "../../utils/Helper";
+import { useParams } from "../../hooks/useParams";
 import AssetMenuSearchBar from "../Assets/shared/AssetMenuSearchBar";
 import { buildAssetMenuTree } from "../Assets/shared/assetMenuHelpers";
 import {
@@ -48,6 +54,17 @@ type ReportListItem = {
 type ReportSection = {
   data: ReportListItem[];
   title: string;
+};
+
+type ActiveReport = {
+  config: ReportConfigData;
+  item: Item;
+  previewEndpoint: string;
+};
+
+const buildReportPreviewEndpoint = (direct: string) => {
+  const normalizedDirect = direct.trim().replace(/^\/+/, "");
+  return `${BASE_URL}/${normalizedDirect}`;
 };
 
 function buildReportList(items: Item[]) {
@@ -151,48 +168,83 @@ function ReportListCard({
 }
 
 export default function ReportScreen() {
+  const {
+    groupMenuId = 2,
+    titleHeader = "Tài sản",
+    viewPermission = "TaiSan",
+  } = useParams<"Report">();
   const { canView, isFullPermission, loaded, permissions } = usePermission();
-  const hasViewPermission = loaded && canView("TaiSan");
+  const hasViewPermission = loaded && canView(viewPermission);
+  const normalizedTitle = titleHeader || "Tài sản";
   const isFullAccess = isFullPermission();
   const [reports, setReports] = useState<ReportListItem[]>([]);
   const [isFetching, setIsFetching] = useState(false);
   const [isRefreshingTop, setIsRefreshingTop] = useState(false);
   const [search, setSearch] = useState("");
-  const [reportItem, setReportItem] = useState<Item | null>(null);
-  const [comingSoonReportItem, setComingSoonReportItem] = useState<Item | null>(
-    null
-  );
+  const [activeReport, setActiveReport] = useState<ActiveReport | null>(null);
   const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
 
   const fetchingRef = useRef(false);
   const debouncedSearch = useDebounce(search, 400);
   const [isSearching, setIsSearching] = useState(false);
-  const { isMounted } = useSafeAlert();
+  const { isMounted, showAlertIfActive } = useSafeAlert();
   const permissionsRef = useRef(permissions);
   const isFullAccessRef = useRef(isFullAccess);
 
   permissionsRef.current = permissions;
   isFullAccessRef.current = isFullAccess;
 
-  const handleShowReport = useCallback(
-    (item: Item) => {
-      const selectedReport = reports.find(
-        (report) => report.item.id === item.id
-      );
-      const normalizedPath = removeVietnameseTones(
-        `${selectedReport?.path || ""} ${item.label}`
-      )
-        .trim()
-        .toUpperCase();
+  const closeActiveReport = useCallback(() => {
+    setActiveReport(null);
+  }, []);
 
-      if (!normalizedPath.split(/\s*>\s*|\s+/).includes("CNTT")) {
-        setComingSoonReportItem(item);
+  const handleShowReport = useCallback(
+    async (item: Item) => {
+      const reportName = item.contentName_Mobile?.trim();
+
+      log("[ReportScreen] Select report", {
+        id: item.id,
+        label: item.label,
+        isReport: item.isReport,
+        contentName_Mobile: item.contentName_Mobile,
+      });
+
+      if (!item.isReport || !reportName) {
+        log("[ReportScreen] Missing report mobile config", {
+          id: item.id,
+          label: item.label,
+        });
+        showAlertIfActive("Thông báo", "Chưa khai báo thông tin Report mobile");
         return;
       }
 
-      setReportItem(item);
+      try {
+        log("[ReportScreen] Calling getConfigReport", { nameReport: reportName });
+        const configResponse =
+          await getConfigReport<GetConfigReportResponse>(reportName);
+        const config = configResponse?.data;
+        const direct = config?.report?.direct?.trim();
+
+        log("[ReportScreen] getConfigReport success", {
+          nameReport: reportName,
+          response: configResponse,
+        });
+
+        if (!config?.report || !direct) {
+          throw new Error("Invalid report config");
+        }
+
+        setActiveReport({
+          item,
+          config,
+          previewEndpoint: buildReportPreviewEndpoint(direct),
+        });
+      } catch (e) {
+        error("Get config report error:", e);
+        showAlertIfActive("Lỗi", "Không thể tải cấu hình báo cáo.");
+      }
     },
-    [reports]
+    [showAlertIfActive]
   );
 
   const fetchData = useCallback(
@@ -206,6 +258,7 @@ export default function ReportScreen() {
           setIsFetching(true);
         }
 
+        log("[ReportScreen] Calling GET_MENU_ACTIVE");
         const response = (await callApi(
           "POST",
           API_ENDPOINTS.GET_MENU_ACTIVE,
@@ -213,20 +266,28 @@ export default function ReportScreen() {
         )) as GetMenuActiveResponse;
 
         if (!Array.isArray(response?.data)) throw new Error("Invalid data");
+        log("[ReportScreen] GET_MENU_ACTIVE success", {
+          totalItems: response.data.length,
+        });
 
         const menuAccount = response.data
-          .filter((item) => item.iD_GroupMenu === 2)
+          .filter((item) => item.iD_GroupMenu === groupMenuId)
           .sort((a, b) => Number(a.stt) - Number(b.stt));
 
-        setReports(
-          buildReportList(
-            filterReportPermissionTree(
-              buildAssetMenuTree(menuAccount),
-              permissionsRef.current,
-              isFullAccessRef.current
-            )
+        const nextReports = buildReportList(
+          filterReportPermissionTree(
+            buildAssetMenuTree(menuAccount),
+            permissionsRef.current,
+            isFullAccessRef.current
           )
         );
+
+        log("[ReportScreen] Report menu prepared", {
+          menuAccountItems: menuAccount.length,
+          reportItems: nextReports.length,
+        });
+
+        setReports(nextReports);
         setLoadErrorMessage(null);
       } catch (e) {
         error("API error:", e);
@@ -241,7 +302,7 @@ export default function ReportScreen() {
         }
       }
     },
-    [isMounted]
+    [groupMenuId, isMounted]
   );
 
   const refreshTop = async () => {
@@ -309,8 +370,8 @@ export default function ReportScreen() {
       >
         <EmptyState
           iconName="lock-closed-outline"
-          title="Bạn chưa có quyền xem báo cáo tài sản"
-          subtitle="Tài khoản cần được cấp quyền xem Tài sản trước khi truy cập danh sách báo cáo."
+          title={`Bạn chưa có quyền xem báo cáo ${normalizedTitle}`}
+          subtitle={`Tài khoản cần được cấp quyền xem ${normalizedTitle} trước khi truy cập danh sách báo cáo.`}
         />
       </KeyboardAvoidingView>
     );
@@ -368,7 +429,7 @@ export default function ReportScreen() {
           <ReportGroupHeader section={section} />
         )}
         contentContainerStyle={[s.listContent, isEmpty && s.listContentEmpty]}
-        removeClippedSubviews
+        removeClippedSubviews={Platform.OS === "ios"}
         initialNumToRender={20}
         windowSize={10}
         keyboardShouldPersistTaps="handled"
@@ -392,49 +453,28 @@ export default function ReportScreen() {
       />
 
       <Modal
-        visible={!!reportItem}
+        visible={!!activeReport}
         animationType="slide"
-        onRequestClose={() => setReportItem(null)}
+        transparent={false}
+        statusBarTranslucent
+        hardwareAccelerated
+        supportedOrientations={[
+          "portrait",
+          "landscape-left",
+          "landscape-right",
+        ]}
+        onRequestClose={closeActiveReport}
       >
-        {reportItem && (
+        {activeReport && (
           <ReportView
-            title={reportItem.label}
-            previewEndpoint={API_ENDPOINTS.PREVIEW_MAYTINH_THONGKE_CNTT}
-            onClose={() => setReportItem(null)}
+            title={activeReport.config.report.moTa || activeReport.item.label}
+            config={activeReport.config}
+            previewEndpoint={activeReport.previewEndpoint}
+            onClose={closeActiveReport}
           />
         )}
       </Modal>
 
-      <Modal
-        visible={!!comingSoonReportItem}
-        animationType="slide"
-        onRequestClose={() => setComingSoonReportItem(null)}
-      >
-        <View style={s.comingSoonContainer}>
-          <View
-            style={[
-              s.comingSoonHeader,
-              Platform.OS === "ios"
-                ? s.comingSoonHeaderIos
-                : s.comingSoonHeaderAndroid,
-            ]}
-          >
-            <Text style={s.comingSoonTitle}>
-              {comingSoonReportItem?.label || "Thông báo"}
-            </Text>
-
-            <TouchableOpacity onPress={() => setComingSoonReportItem(null)}>
-              <Ionicons name="close" size={30} color="#fff" />
-            </TouchableOpacity>
-          </View>
-
-          <EmptyState
-            iconName="notifications-outline"
-            title="Tính năng sắp được triển khai"
-            subtitle="Báo cáo này chưa khả dụng trên ứng dụng."
-          />
-        </View>
-      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -573,30 +613,5 @@ const s = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#F8F5FF",
     flexShrink: 0,
-  },
-  comingSoonContainer: {
-    flex: 1,
-    backgroundColor: ASSET_MENU_BG,
-  },
-  comingSoonHeader: {
-    paddingHorizontal: 16,
-    paddingBottom: 10,
-    backgroundColor: ASSET_MENU_BRAND_RED,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  comingSoonHeaderIos: {
-    paddingTop: 50,
-  },
-  comingSoonHeaderAndroid: {
-    paddingTop: 20,
-  },
-  comingSoonTitle: {
-    flex: 1,
-    paddingRight: 12,
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#fff",
   },
 });

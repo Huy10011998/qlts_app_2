@@ -17,6 +17,7 @@ type AssetFormReferencePickerModalProps = {
   refLoadingMore: boolean;
   refPage: number;
   refSearching: boolean;
+  isMulti?: boolean;
   referenceData: Record<string, { items: any[]; totalCount: number }>;
   setFormData: React.Dispatch<React.SetStateAction<Record<string, any>>>;
   setModalVisible: (visible: boolean) => void;
@@ -42,6 +43,7 @@ export default function AssetFormReferencePickerModal({
   refLoadingMore,
   refPage,
   refSearching,
+  isMulti,
   referenceData,
   setFormData,
   setModalVisible,
@@ -111,6 +113,7 @@ export default function AssetFormReferencePickerModal({
       title={`${activeEnumField?.moTa || activeEnumField?.name}`}
       items={modalItems}
       selectedValue={activeEnumField ? formData[activeEnumField.name] : null}
+      isMulti={isMulti}
       total={
         activeEnumField ? referenceData[activeEnumField.name]?.totalCount || 0 : 0
       }
@@ -124,12 +127,21 @@ export default function AssetFormReferencePickerModal({
       onClose={() => setModalVisible(false)}
       onSelect={(value) => {
         if (activeEnumField) {
+          const selectedValues = String(value ?? "")
+            .split(",")
+            .map((itemValue) => itemValue.trim())
+            .filter(Boolean);
+          const selectedItems = isMulti
+            ? modalItems.filter((item) =>
+                selectedValues.includes(String(item.value)),
+              )
+            : [];
           const selectedItem = modalItems.find(
             (item) => String(item.value) === String(value),
           );
           let finalValue = value;
 
-          if (value !== "" && !isNaN(value)) {
+          if (!isMulti && value !== "" && !isNaN(value)) {
             finalValue = Number(value);
           }
 
@@ -137,7 +149,12 @@ export default function AssetFormReferencePickerModal({
           setFormData((prev) => ({
             ...prev,
             [`${activeEnumField.name}_MoTa`]:
-              value === "" ? "" : selectedItem?.text ?? String(value),
+              value === ""
+                ? ""
+                : isMulti
+                ? selectedItems.map((item) => item.text).join(", ") ||
+                  String(value)
+                : selectedItem?.text ?? String(value),
           }));
         }
 

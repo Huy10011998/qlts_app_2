@@ -1,7 +1,8 @@
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity } from "react-native";
+import { Text, TouchableOpacity } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { C } from "../../../utils/helpers/colors";
+import { pickerFieldTriggerStyles as styles } from "./pickerFieldTriggerStyles";
 
 type PickerFieldTriggerProps = {
   iconName: string;
@@ -25,29 +26,3 @@ export default function PickerFieldTrigger({
     </TouchableOpacity>
   );
 }
-
-const styles = StyleSheet.create({
-  input: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    minHeight: 48,
-    paddingVertical: 0,
-    backgroundColor: "#fff",
-  },
-  text: {
-    color: "#000",
-    flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
-    includeFontPadding: false,
-    textAlignVertical: "center",
-  },
-  placeholder: {
-    color: "#999",
-  },
-});

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   FlatList,
@@ -7,6 +7,7 @@ import {
   Platform,
   UIManager,
   RefreshControl,
+  InteractionManager,
 } from "react-native";
 import {
   useRoute,
@@ -68,8 +69,17 @@ export default function QrReview() {
 
   const [searchText, setSearchText] = useState("");
   const debouncedSearch = useDebounce(searchText, 600);
+  const [listLayoutVersion, setListLayoutVersion] = useState(0);
   const { can, loaded } = usePermission();
   const { isMounted, showAlertIfActive } = useSafeAlert();
+
+  const refreshAndroidListLayout = useCallback(() => {
+    if (Platform.OS !== "android") return;
+
+    requestAnimationFrame(() => {
+      setListLayoutVersion((version) => version + 1);
+    });
+  }, []);
 
   const dispatch = useAppDispatch();
   const {
@@ -109,12 +119,26 @@ export default function QrReview() {
 
   useFocusEffect(
     React.useCallback(() => {
+      const interaction = InteractionManager.runAfterInteractions(() => {
+        refreshAndroidListLayout();
+      });
+
       if (shouldRefresh) {
         fetchData(false);
         dispatch(resetShouldRefreshList());
       }
-    }, [dispatch, fetchData, shouldRefresh]),
+
+      return () => {
+        interaction.cancel();
+      };
+    }, [dispatch, fetchData, refreshAndroidListLayout, shouldRefresh]),
   );
+
+  useEffect(() => {
+    if (!isSearching) {
+      refreshAndroidListLayout();
+    }
+  }, [debouncedSearch, isSearching, refreshAndroidListLayout]);
 
   if (!hasRequiredParams) {
     Alert.alert("Lỗi", "Thiếu param bắt buộc");
@@ -156,50 +180,55 @@ export default function QrReview() {
         summaryText={`Tổng ${total} • Đã tải ${data.length}`}
       />
 
-      <FlatList
-        data={data}
-        keyExtractor={(item) => String(item.id)}
-        renderItem={({ item }) => (
-          <ListCardAsset
-            item={item}
-            fields={fieldShowMobile}
-            icon={propertyClass?.iconMobile || ""}
-            onPress={() => handlePress(item)}
-          />
-        )}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshingTop}
-            onRefresh={refreshTop}
-            colors={[BRAND_RED]}
-            tintColor={BRAND_RED}
-          />
-        }
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.5}
-        ListFooterComponent={isLoadingMore ? <IsLoading /> : null}
-        ListHeaderComponent={
-          isEmpty ? null : (
-            <AssetListSummaryCard
-              iconName="qr-code-outline"
-              title="Danh sách sau quét"
-              subtitle={`${total} kết quả • hiển thị ${data.length}`}
+      {!isEmpty ? (
+        <AssetListSummaryCard
+          iconName="qr-code-outline"
+          title="Danh sách sau quét"
+          subtitle={`${total} kết quả • hiển thị ${data.length}`}
+        />
+      ) : null}
+
+      <View style={styles.listWrap}>
+        <FlatList
+          key={`qr-review-list-${nameClass || "default"}-${listLayoutVersion}`}
+          style={styles.list}
+          data={data}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={({ item }) => (
+            <ListCardAsset
+              item={item}
+              fields={fieldShowMobile}
+              icon={propertyClass?.iconMobile || ""}
+              onPress={() => handlePress(item)}
             />
-          )
-        }
-        stickyHeaderIndices={isEmpty ? [] : [0]}
-        contentContainerStyle={[
-          styles.listContent,
-          isEmpty && styles.listContentEmpty,
-        ]}
-        ListEmptyComponent={
-          <AssetListEmptyState
-            iconName="albums-outline"
-            title="Không có dữ liệu"
-            subtitle="Chưa có bản ghi phù hợp với bộ lọc hiện tại"
-          />
-        }
-      />
+          )}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshingTop}
+              onRefresh={refreshTop}
+              colors={[BRAND_RED]}
+              tintColor={BRAND_RED}
+            />
+          }
+          removeClippedSubviews={Platform.OS === "ios"}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={isLoadingMore ? <IsLoading /> : null}
+          ListHeaderComponent={null}
+          stickyHeaderIndices={[]}
+          contentContainerStyle={[
+            styles.listContent,
+            isEmpty && styles.listContentEmpty,
+          ]}
+          ListEmptyComponent={
+            <AssetListEmptyState
+              iconName="albums-outline"
+              title="Không có dữ liệu"
+              subtitle="Chưa có bản ghi phù hợp với bộ lọc hiện tại"
+            />
+          }
+        />
+      </View>
 
       {loaded && can(nameClass, "Insert") && (
         <AddItem
@@ -219,6 +248,12 @@ export default function QrReview() {
 }
 
 const styles = StyleSheet.create({
+  listWrap: {
+    flex: 1,
+  },
+  list: {
+    flex: 1,
+  },
   listContentEmpty: {
     paddingTop: 0,
     paddingBottom: 0,

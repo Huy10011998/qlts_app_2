@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import type { MenuItemCardProps } from "../../../types";
-import { HOME_BRAND_RED, HOME_CARD_THEME } from "./homeTheme";
+import { HOME_BRAND_RED } from "./homeTheme";
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 const localStyles = StyleSheet.create({
@@ -17,6 +17,14 @@ const localStyles = StyleSheet.create({
     flex: 1,
   },
 });
+
+const HOME_FEATURE_FIXED_THEME = {
+  bg: "#fff",
+  iconBg: "#FFF0F6",
+  color: "#DB2777",
+  text: "#831843",
+  border: "#FBCFE8",
+};
 
 type HomeMenuItemCardProps = MenuItemCardProps & {
   viewPermission?: string;
@@ -33,7 +41,6 @@ export default function HomeMenuItemCard({
   notificationCount,
   index,
   onPress,
-  viewPermission,
   isPinned = false,
   onTogglePinned,
   showPinButton = false,
@@ -51,8 +58,7 @@ export default function HomeMenuItemCard({
     }).start();
   }, [index, scaleAnim]);
 
-  const theme =
-    HOME_CARD_THEME[viewPermission ?? "default"] ?? HOME_CARD_THEME.default;
+  const theme = HOME_FEATURE_FIXED_THEME;
   const handleTogglePinned = (event: GestureResponderEvent) => {
     event.stopPropagation();
     onTogglePinned?.();
@@ -81,7 +87,7 @@ export default function HomeMenuItemCard({
               styles.pinButton,
               {
                 backgroundColor: isPinned ? theme.color : theme.iconBg,
-                borderColor: theme.iconBg,
+                borderColor: isPinned ? theme.color : theme.border,
               },
             ]}
             activeOpacity={0.76}
@@ -107,7 +113,7 @@ export default function HomeMenuItemCard({
 
         <View style={styles.labelWrap}>
           <Text
-            style={[styles.label, { color: theme.color }]}
+            style={[styles.label, { color: theme.text }]}
             numberOfLines={2}
             adjustsFontSizeToFit
             minimumFontScale={0.82}

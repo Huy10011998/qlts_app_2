@@ -53,9 +53,17 @@ export default function AssetListSearchBar({
 
       <View style={styles.summaryRow}>
         <View style={styles.summaryBadge}>
-          <Text style={styles.summaryBadgeText}>{badgeText}</Text>
+          <Text
+            style={styles.summaryBadgeText}
+            numberOfLines={1}
+            allowFontScaling={false}
+          >
+            {badgeText}
+          </Text>
         </View>
-        <Text style={styles.summaryMeta}>{summaryText}</Text>
+        <Text style={styles.summaryMeta} numberOfLines={1} allowFontScaling={false}>
+          {summaryText}
+        </Text>
       </View>
     </View>
   );

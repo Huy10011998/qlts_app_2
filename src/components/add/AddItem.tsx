@@ -4,6 +4,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { AssetAddItemNavigationProp } from "../../types/navigator.d";
 import type { AddItemAssetProps } from "../../types/components.d";
 import AddActionFab from "./shared/AddActionFab";
+import { REVIEW_NAME_CLASSES_DANHGIA } from "../../constants/reviewNameClasses";
 
 function AddItemComponent({
   onPress,
@@ -31,7 +32,14 @@ function AddItemComponent({
     });
   }, [onPress, navigation, field, nameClass, propertyClass]);
 
-  return <AddActionFab label="Thêm mới" onPress={handlePress} variant="extended" />;
+  const normalizedNameClass = (nameClass || "").trim();
+  const label = REVIEW_NAME_CLASSES_DANHGIA.includes(normalizedNameClass)
+    ? "Đánh giá"
+    : "Thêm mới";
+
+  return (
+    <AddActionFab label={label} onPress={handlePress} variant="extended" />
+  );
 }
 
 export const AddItem = memo(AddItemComponent);

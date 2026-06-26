@@ -2,6 +2,7 @@ import React from "react";
 import {
   Image,
   LayoutAnimation,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -46,7 +47,7 @@ function AssetMenuDropdownItem({
 
   const handlePress = () => {
     if (hasChildren) {
-      if (!isSearching) {
+      if (!isSearching && Platform.OS !== "android") {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       }
       onToggle(item.id);

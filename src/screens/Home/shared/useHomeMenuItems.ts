@@ -12,6 +12,7 @@ import { error } from "../../../utils/Logger";
 
 export interface HomeMenuItem extends MenuItemComponent {
   description?: string;
+  groupMenuId?: number;
   iconName: string;
   id: string;
   viewPermission?: string;
@@ -85,7 +86,8 @@ export function useHomeMenuItems(
   );
 
   const openReportScreen = useCallback(
-    () => navigation.navigate("Report"),
+    (params?: { groupMenuId?: number; titleHeader?: string; viewPermission?: string }) =>
+      navigation.navigate("Report", params),
     [navigation],
   );
 
@@ -164,6 +166,7 @@ export function useHomeMenuItems(
       return {
         id: getViewMenuItemId(view),
         label: view.label,
+        groupMenuId,
         iconName: getViewIconName(view),
         viewPermission,
         description: view.longLabel ?? undefined,

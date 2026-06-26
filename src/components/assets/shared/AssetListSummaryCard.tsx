@@ -22,10 +22,16 @@ export default function AssetListSummaryCard({
           <Ionicons name={iconName as any} size={16} color={BRAND_RED} />
         </View>
         <View style={styles.filterCardContent}>
-          <Text style={styles.filterCardTitle} numberOfLines={1}>
+          <Text
+            style={styles.filterCardTitle}
+            numberOfLines={1}
+            allowFontScaling={false}
+          >
             {title}
           </Text>
-          <Text style={styles.filterCardSub}>{subtitle}</Text>
+          <Text style={styles.filterCardSub} numberOfLines={1} allowFontScaling={false}>
+            {subtitle}
+          </Text>
         </View>
       </View>
     </View>

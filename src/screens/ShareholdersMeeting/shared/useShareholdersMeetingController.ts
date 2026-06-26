@@ -38,7 +38,7 @@ import {
 } from "./shareholdersMeetingHelpers";
 import { error, log } from "../../../utils/Logger";
 
-const getApiErrorMessage = (err: unknown, fallback: string) => {
+const getApiErrorDetail = (err: unknown) => {
   const apiError = err as
     | {
         code?: string;
@@ -47,6 +47,7 @@ const getApiErrorMessage = (err: unknown, fallback: string) => {
         response?: { status?: number; data?: { message?: string } | string };
       }
     | undefined;
+
   const status = apiError?.response?.status;
   const method = apiError?.config?.method?.toUpperCase();
   const url = apiError?.config?.url;
@@ -54,7 +55,8 @@ const getApiErrorMessage = (err: unknown, fallback: string) => {
     typeof apiError?.response?.data === "object"
       ? apiError.response.data?.message
       : undefined;
-  const detail = [
+
+  return [
     status ? `HTTP ${status}` : apiError?.code,
     method,
     url,
@@ -62,23 +64,18 @@ const getApiErrorMessage = (err: unknown, fallback: string) => {
   ]
     .filter(Boolean)
     .join(" - ");
-
-  return detail ? `${fallback}\n${detail}` : fallback;
 };
 
 function ShareholdersMeetingScannerButton({
-  disabled = false,
   onPress,
 }: {
-  disabled?: boolean;
   onPress: () => void;
 }) {
   return React.createElement(
     TouchableOpacity,
     {
-      disabled,
       onPress,
-      style: { opacity: disabled ? 0.45 : 1, paddingHorizontal: 5 },
+      style: { paddingHorizontal: 5 },
     },
     React.createElement(MaterialCommunityIcons, {
       name: "qrcode-scan",
@@ -302,10 +299,9 @@ export function useShareholdersMeetingController() {
   const renderHeaderRight = useCallback(
     () =>
       ShareholdersMeetingScannerButton({
-        disabled: isMeetingLocked,
         onPress: openScanner,
       }),
-    [isMeetingLocked, openScanner],
+    [openScanner],
   );
 
   useEffect(() => {
@@ -379,11 +375,10 @@ export function useShareholdersMeetingController() {
               error("[DHCD] fetchShareholders error:", err);
               if (canCommit()) {
                 setShareholders([]);
-                setMeetingError(
-                  getApiErrorMessage(
-                    err,
-                    "Không tải được danh sách cổ đông.",
-                  ),
+                setMeetingError("Không tải được danh sách cổ đông.");
+                error(
+                  "[DHCD] fetchShareholders detail:",
+                  getApiErrorDetail(err),
                 );
               }
             }),
@@ -408,9 +403,8 @@ export function useShareholdersMeetingController() {
               if (!canCommit()) return;
               setOpinions([]);
               setSelectedOpinionId("");
-              setVotingError(
-                getApiErrorMessage(err, "Không tải được danh sách ý kiến."),
-              );
+              setVotingError("Không tải được danh sách ý kiến.");
+              error("[DHCD] fetchOpinions detail:", getApiErrorDetail(err));
             }),
         );
       } else {
@@ -425,9 +419,8 @@ export function useShareholdersMeetingController() {
       setOpinions([]);
       setSelectedOpinionId("");
       error("[DHCD] loadMeetingData error:", err);
-      setMeetingError(
-        getApiErrorMessage(err, "Không tải được dữ liệu đại hội cổ đông."),
-      );
+      setMeetingError("Không tải được dữ liệu đại hội cổ đông.");
+      error("[DHCD] loadMeetingData detail:", getApiErrorDetail(err));
     } finally {
       if (canCommit()) {
         setIsMeetingLoading(false);

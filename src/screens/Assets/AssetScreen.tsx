@@ -18,24 +18,29 @@ import {
   TouchableOpacity,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import type { GetMenuActiveResponse, Item } from "../../types/index";
-import { API_ENDPOINTS } from "../../config/index";
+import type {
+  GetConfigReportResponse,
+  GetMenuActiveResponse,
+  Item,
+  ReportConfigData,
+} from "../../types/index";
+import { API_ENDPOINTS, BASE_URL } from "../../config/index";
 import { useDebounce } from "../../hooks/useDebounce";
 import { usePermission } from "../../hooks/usePermission";
 import { filterReportPermissionTree } from "../../hooks/shared/permissionHelpers";
 import IsLoading from "../../components/ui/IconLoading";
 import EmptyState from "../../components/ui/EmptyState";
 import ReportView from "../../components/report/ReportView";
-import { callApi } from "../../services/data/callApi";
-import { error } from "../../utils/Logger";
+import { callApi, getConfigReport } from "../../services/data/callApi";
+import { error, log } from "../../utils/Logger";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { useParams } from "../../hooks/useParams";
-import { removeVietnameseTones } from "../../utils/Helper";
 import AssetMenuDropdownItem from "./shared/AssetMenuDropdownItem";
 import AssetMenuSearchBar from "./shared/AssetMenuSearchBar";
 import {
   buildAssetMenuTree,
+  filterMobileAssetMenuTree,
   filterAssetMenuTree,
 } from "./shared/assetMenuHelpers";
 import { ASSET_MENU_BG, ASSET_MENU_BRAND_RED } from "./shared/assetMenuTheme";
@@ -46,6 +51,17 @@ if (
 ) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
+
+type ActiveReport = {
+  config: ReportConfigData;
+  item: Item;
+  previewEndpoint: string;
+};
+
+const buildReportPreviewEndpoint = (direct: string) => {
+  const normalizedDirect = direct.trim().replace(/^\/+/, "");
+  return `${BASE_URL}/${normalizedDirect}`;
+};
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function AssetScreen() {
@@ -64,7 +80,7 @@ export default function AssetScreen() {
   const [isRefreshingTop, setIsRefreshingTop] = useState(false);
   const [search, setSearch] = useState("");
   const [expandedIds, setExpandedIds] = useState<(string | number)[]>([]);
-  const [reportItem, setReportItem] = useState<Item | null>(null);
+  const [activeReport, setActiveReport] = useState<ActiveReport | null>(null);
   const [comingSoonReportItem, setComingSoonReportItem] = useState<Item | null>(
     null
   );
@@ -80,54 +96,53 @@ export default function AssetScreen() {
   permissionsRef.current = permissions;
   isFullAccessRef.current = isFullAccess;
 
-  const assetMenuMap = useMemo(() => {
-    const map: Record<string | number, Item> = {};
-
-    const walk = (items: Item[]) => {
-      items.forEach((item) => {
-        map[item.id] = item;
-        if (item.children?.length) {
-          walk(item.children);
-        }
-      });
-    };
-
-    walk(data);
-    return map;
-  }, [data]);
-
-  const isCnttReport = useCallback(
-    (item: Item) => {
-      let current: Item | undefined = item;
-
-      while (current) {
-        const normalizedLabel = removeVietnameseTones(current.label)
-          .trim()
-          .toUpperCase();
-
-        if (normalizedLabel === "CNTT") {
-          return true;
-        }
-
-        current =
-          current.parent === null ? undefined : assetMenuMap[current.parent];
-      }
-
-      return false;
-    },
-    [assetMenuMap]
-  );
-
   const handleShowReport = useCallback(
-    (item: Item) => {
-      if (!isCnttReport(item)) {
+    async (item: Item) => {
+      const reportName = item.contentName_Mobile?.trim();
+
+      log("[AssetScreen] Select report", {
+        id: item.id,
+        label: item.label,
+        isReport: item.isReport,
+        contentName_Mobile: item.contentName_Mobile,
+      });
+
+      if (!item.isReport || !reportName) {
+        log("[AssetScreen] Missing report mobile config", {
+          id: item.id,
+          label: item.label,
+        });
         setComingSoonReportItem(item);
         return;
       }
 
-      setReportItem(item);
+      try {
+        log("[AssetScreen] Calling getConfigReport", { nameReport: reportName });
+        const configResponse =
+          await getConfigReport<GetConfigReportResponse>(reportName);
+        const config = configResponse?.data;
+        const direct = config?.report?.direct?.trim();
+
+        log("[AssetScreen] getConfigReport success", {
+          nameReport: reportName,
+          response: configResponse,
+        });
+
+        if (!config?.report || !direct) {
+          throw new Error("Invalid report config");
+        }
+
+        setActiveReport({
+          item,
+          config,
+          previewEndpoint: buildReportPreviewEndpoint(direct),
+        });
+      } catch (e) {
+        error("Get config report error:", e);
+        setComingSoonReportItem(item);
+      }
     },
-    [isCnttReport]
+    []
   );
 
   // ── Fetch ──
@@ -150,12 +165,16 @@ export default function AssetScreen() {
         const menuAccount = response.data
           .filter((item) => item.iD_GroupMenu === groupMenuId)
           .sort((a, b) => Number(a.stt) - Number(b.stt));
+        const permissionFilteredTree = filterReportPermissionTree(
+          buildAssetMenuTree(menuAccount),
+          permissionsRef.current,
+          isFullAccessRef.current
+        );
+
         setData(
-          filterReportPermissionTree(
-            buildAssetMenuTree(menuAccount),
-            permissionsRef.current,
-            isFullAccessRef.current
-          )
+          Platform.OS === "web"
+            ? permissionFilteredTree
+            : filterMobileAssetMenuTree(permissionFilteredTree)
         );
         setLoadErrorMessage(null);
       } catch (e) {
@@ -290,7 +309,7 @@ export default function AssetScreen() {
           />
         )}
         contentContainerStyle={[s.listContent, isEmpty && s.listContentEmpty]}
-        removeClippedSubviews
+        removeClippedSubviews={Platform.OS === "ios"}
         initialNumToRender={20}
         windowSize={10}
         keyboardShouldPersistTaps="handled"
@@ -322,15 +341,24 @@ export default function AssetScreen() {
       />
 
       <Modal
-        visible={!!reportItem}
+        visible={!!activeReport}
         animationType="slide"
-        onRequestClose={() => setReportItem(null)}
+        transparent={false}
+        statusBarTranslucent
+        hardwareAccelerated
+        supportedOrientations={[
+          "portrait",
+          "landscape-left",
+          "landscape-right",
+        ]}
+        onRequestClose={() => setActiveReport(null)}
       >
-        {reportItem && (
+        {activeReport && (
           <ReportView
-            title={reportItem.label}
-            previewEndpoint={API_ENDPOINTS.PREVIEW_MAYTINH_THONGKE_CNTT}
-            onClose={() => setReportItem(null)}
+            title={activeReport.config.report.moTa || activeReport.item.label}
+            config={activeReport.config}
+            previewEndpoint={activeReport.previewEndpoint}
+            onClose={() => setActiveReport(null)}
           />
         )}
       </Modal>
@@ -360,8 +388,8 @@ export default function AssetScreen() {
 
           <EmptyState
             iconName="notifications-outline"
-            title="Tính năng sắp được triển khai"
-            subtitle="Báo cáo này chưa khả dụng trên ứng dụng."
+            title="Chưa khai báo thông tin Report mobile"
+            subtitle="Vui lòng liên hệ quản trị viên để cấu hình báo cáo này."
           />
         </View>
       </Modal>
