@@ -11,8 +11,11 @@ import { AuthProvider } from "./src/context/AuthContext";
 import { Provider } from "react-redux";
 import { store } from "./src/store/index";
 import AppBootstrap from "./src/app/AppBootstrap";
+import { configureTextScalingDefaults } from "./src/utils/helpers/textScaling";
 
 const LANDSCAPE_ALLOWED_ROUTES = new Set(["CameraList", "CameraListGrid"]);
+
+configureTextScalingDefaults();
 
 export default function App() {
   const navigationRef = useNavigationContainerRef();

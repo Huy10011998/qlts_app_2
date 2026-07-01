@@ -98,7 +98,10 @@ export default function AssetActions({
           >
             {action.icon}
           </View>
-          <Text style={[styles.actionText, { color: action.color }]}>
+          <Text
+            style={[styles.actionText, { color: action.color }]}
+            allowFontScaling={false}
+          >
             {action.label}
           </Text>
         </Pressable>

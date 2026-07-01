@@ -24,10 +24,17 @@ export default function IosSpinnerPickerSheet({
     >
       <View style={styles.toolbar}>
         <TouchableOpacity onPress={onCancel}>
-          <Text style={styles.toolbarText}>Hủy</Text>
+          <Text style={styles.toolbarText} allowFontScaling={false}>
+            Hủy
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={onConfirm}>
-          <Text style={[styles.toolbarText, styles.toolbarTextBold]}>Chọn</Text>
+          <Text
+            style={[styles.toolbarText, styles.toolbarTextBold]}
+            allowFontScaling={false}
+          >
+            Chọn
+          </Text>
         </TouchableOpacity>
       </View>
 

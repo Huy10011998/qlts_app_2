@@ -7,6 +7,9 @@ export type ModalItem = {
   text: string;
 };
 
+const hasDisplayText = (text: unknown) =>
+  text !== null && text !== undefined && String(text).trim() !== "";
+
 export const useModalItems = (
   activeEnumField: Field | null,
   referenceData: Record<string, { items: ModalItem[] }>,
@@ -36,18 +39,19 @@ export const useModalItems = (
     const selectedTexts =
       activeEnumField.isMulti && selectedText
         ? String(selectedText).split(",").map((text) => text.trim())
-        : [];
+        : [String(selectedText ?? "").trim()];
 
     const selectedItem = hasSelectedValue
       ? selectedValues
           .filter(
-            (value) =>
+            (value, index) =>
               value !== "" &&
+              hasDisplayText(selectedTexts[index]) &&
               !base.some((item) => String(item.value) === String(value)),
           )
           .map((value, index) => ({
             value,
-            text: selectedTexts[index] || value,
+            text: selectedTexts[index],
           }))
       : [];
 

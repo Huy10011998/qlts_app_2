@@ -7,6 +7,7 @@ import {
   ASSET_MENU_BRAND_RED,
   ASSET_MENU_CARD_SHADOW,
 } from "./assetMenuTheme";
+import { COMPACT_TEXT_MAX_SCALE } from "../../../utils/helpers/textScaling";
 
 type AssetMenuSearchBarProps = {
   value: string;
@@ -39,6 +40,7 @@ export default function AssetMenuSearchBar({
           style={styles.searchInput}
           clearButtonMode="never"
           returnKeyType="search"
+          maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
         />
         {isSearching ? (
           <View style={styles.spinnerWrap}>
@@ -54,7 +56,9 @@ export default function AssetMenuSearchBar({
 
       {showResultCount ? (
         <View style={styles.resultBadge}>
-          <Text style={styles.resultText}>{resultCount} kết quả</Text>
+          <Text style={styles.resultText} allowFontScaling={false}>
+            {resultCount} kết quả
+          </Text>
         </View>
       ) : null}
     </View>

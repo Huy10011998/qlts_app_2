@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { C } from "../../../utils/helpers/colors";
+import { COMPACT_TEXT_MAX_SCALE } from "../../../utils/helpers/textScaling";
 
 type SettingPasswordInputProps = {
   placeholder: string;
@@ -25,6 +26,7 @@ export default function SettingPasswordInput({
         secureTextEntry={!show}
         value={value}
         onChangeText={onChangeText}
+        maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
       />
       <TouchableOpacity onPress={() => setShow((current) => !current)} style={styles.eye}>
         <Ionicons

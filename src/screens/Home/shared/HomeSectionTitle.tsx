@@ -25,10 +25,14 @@ export default function HomeSectionTitle({
   return (
     <View style={styles.row}>
       <View style={styles.pill} />
-      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.label} allowFontScaling={false}>
+        {label}
+      </Text>
       {action ? (
         <TouchableOpacity onPress={handleActionPress}>
-          <Text style={styles.action}>{action}</Text>
+          <Text style={styles.action} allowFontScaling={false}>
+            {action}
+          </Text>
         </TouchableOpacity>
       ) : null}
     </View>

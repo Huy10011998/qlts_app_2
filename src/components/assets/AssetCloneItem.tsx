@@ -38,6 +38,10 @@ import AssetFormGroupedFields from "./shared/AssetFormGroupedFields";
 import AssetFormHeroCard from "./shared/AssetFormHeroCard";
 import AssetFormReferencePickerModal from "./shared/AssetFormReferencePickerModal";
 import AssetFormScreenShell from "./shared/AssetFormScreenShell";
+import {
+  getRequiredFieldErrors,
+  getRequiredFieldsMessage,
+} from "./shared/assetFormValidation";
 import { createAssetFormBaseStyles } from "./shared/assetFormStyles";
 import {
   ASSET_FORM_BG,
@@ -98,8 +102,13 @@ export default function AssetCloneItem() {
     return selectedTreeValue.split(",").map((v) => v.trim());
   }, [selectedTreeValue]);
 
-  const { fieldActive, groupedFields, collapsedGroups, toggleGroup } =
-    useGroupedFields(field);
+  const {
+    fieldActive,
+    groupedFields,
+    collapsedGroups,
+    toggleGroup,
+    expandGroupsWithErrors,
+  } = useGroupedFields(field);
 
   const didInitRef = useRef(false);
   useEffect(() => {
@@ -119,6 +128,14 @@ export default function AssetCloneItem() {
 
       const matchedKey = getMatchedKey(item || {}, name);
       const raw = matchedKey ? item?.[matchedKey] : undefined;
+      const matchedMoTaKey = getMatchedKey(item || {}, `${name}_MoTa`);
+      const matchedKeyMoTaKey = matchedKey
+        ? getMatchedKey(item || {}, `${matchedKey}_MoTa`)
+        : undefined;
+      const rawText =
+        (matchedKeyMoTaKey && item?.[matchedKeyMoTaKey]) ??
+        (matchedMoTaKey && item?.[matchedMoTaKey]) ??
+        "";
 
       switch (f.typeProperty) {
         case TypeProperty.Date:
@@ -139,16 +156,13 @@ export default function AssetCloneItem() {
         case TypeProperty.Enum:
           initial[name] =
             raw !== undefined && raw !== null && raw !== "" ? raw : "";
+          if (f.typeProperty === TypeProperty.Enum) {
+            initial[`${name}_MoTa`] = rawText ?? "";
+          }
           break;
 
         case TypeProperty.Reference: {
           initial[name] = raw ?? "";
-
-          const rawText =
-            (matchedKey && item?.[`${matchedKey}_MoTa`]) ??
-            item?.[`${name}_MoTa`] ??
-            "";
-
           initial[`${name}_MoTa`] = rawText ?? "";
           break;
         }
@@ -174,7 +188,7 @@ export default function AssetCloneItem() {
     fieldActive,
     setEnumData,
     setReferenceData,
-    referenceData,
+    referenceData
   );
 
   const parentField = propertyClass?.prentTuDongTang;
@@ -200,7 +214,7 @@ export default function AssetCloneItem() {
             f.referenceName!,
             f.name,
             parentValues,
-            setReferenceData,
+            setReferenceData
           );
         }
       }
@@ -253,7 +267,7 @@ export default function AssetCloneItem() {
     activeEnumField,
     referenceData,
     enumData,
-    formData,
+    formData
   );
   const { showAlertIfActive } = useSafeAlert();
 
@@ -268,10 +282,21 @@ export default function AssetCloneItem() {
       return;
     }
 
+    const requiredErrors = getRequiredFieldErrors(fieldActive, formData);
+    if (Object.keys(requiredErrors).length) {
+      setValidationErrors((prev) => ({ ...prev, ...requiredErrors }));
+      expandGroupsWithErrors(requiredErrors);
+      Alert.alert(
+        "Thiếu thông tin",
+        getRequiredFieldsMessage(fieldActive, requiredErrors)
+      );
+      return;
+    }
+
     try {
       const payloadData: Record<string, any> = { ...formData };
       ["id", "ID", "Id"].forEach(
-        (k) => payloadData[k] && delete payloadData[k],
+        (k) => payloadData[k] && delete payloadData[k]
       );
       payloadData.id = 0;
       fieldActive.forEach((f) => {
@@ -298,7 +323,7 @@ export default function AssetCloneItem() {
         }
       });
       Object.keys(payloadData).forEach(
-        (k) => k.endsWith("_MoTa") && delete payloadData[k],
+        (k) => k.endsWith("_MoTa") && delete payloadData[k]
       );
 
       const autoCodeField = propertyClass?.propertyTuDongTang;
@@ -372,13 +397,13 @@ export default function AssetCloneItem() {
             },
           },
         ],
-        { cancelable: false },
+        { cancelable: false }
       );
     } catch (err: any) {
       setValidationErrors(getApiValidationFieldErrors(err));
       showAlertIfActive(
         "Lỗi",
-        getApiErrorMessage(err, "Không thể tạo bản sao!"),
+        getApiErrorMessage(err, "Không thể tạo bản sao!")
       );
     }
   };
@@ -389,6 +414,15 @@ export default function AssetCloneItem() {
       contentContainerStyle={styles.scrollContent}
       refLoadingMore={refLoadingMore}
       style={styles.container}
+      footer={
+        <AssetFormActionButton
+          brandColor={BRAND_RED}
+          iconName="copy-outline"
+          label="Tạo bản sao"
+          onPress={handleClone}
+          style={styles.createCloneButton}
+        />
+      }
       modal={
         <AssetFormReferencePickerModal
           activeEnumField={activeEnumField}
@@ -442,14 +476,6 @@ export default function AssetCloneItem() {
         setLoadingImages={setLoadingImages}
         styles={styles}
         toggleGroup={toggleGroup}
-      />
-
-      <AssetFormActionButton
-        brandColor={BRAND_RED}
-        iconName="copy-outline"
-        label="Tạo bản sao"
-        onPress={handleClone}
-        style={styles.createCloneButton}
       />
     </AssetFormScreenShell>
   );

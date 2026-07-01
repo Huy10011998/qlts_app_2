@@ -19,6 +19,7 @@ import IsLoading from "../ui/IconLoading";
 import EmptyState from "../ui/EmptyState";
 import BottomSheetModalShell from "../shared/BottomSheetModalShell";
 import { C } from "../../utils/helpers/colors";
+import { COMPACT_TEXT_MAX_SCALE } from "../../utils/helpers/textScaling";
 
 if (
   Platform.OS === "android" &&
@@ -60,7 +61,13 @@ export default function EnumAndReferencePickerModal({
     loadedCount ?? items?.filter((i) => i.value !== "").length ?? 0;
   const orderedItems = useMemo(() => {
     if (!Array.isArray(items)) return [];
-    if (selectedValue === null || selectedValue === undefined) return items;
+    if (
+      selectedValue === null ||
+      selectedValue === undefined ||
+      String(selectedValue).trim() === ""
+    ) {
+      return items;
+    }
 
     const selectedValues = String(selectedValue ?? "")
       .split(",")
@@ -139,11 +146,15 @@ export default function EnumAndReferencePickerModal({
 
   const renderItem = ({ item }: any) => {
     const isEmptyValue = item.value === "";
+    const hasSelectedValue =
+      selectedValue !== null &&
+      selectedValue !== undefined &&
+      String(selectedValue).trim() !== "";
     const isSelected =
       isMulti
-        ? multiSelectedValues.includes(String(item.value))
-        : selectedValue !== null &&
-          selectedValue !== undefined &&
+        ? !isEmptyValue && multiSelectedValues.includes(String(item.value))
+        : !isEmptyValue &&
+          hasSelectedValue &&
           String(item.value) === String(selectedValue);
 
     return (
@@ -202,11 +213,13 @@ export default function EnumAndReferencePickerModal({
       showCloseButton
       showHandle
     >
-      <Text style={styles.modalTitle}>{title}</Text>
+      <Text style={styles.modalTitle} allowFontScaling={false}>
+        {title}
+      </Text>
 
       {isMulti ? (
         <View style={styles.multiActionRow}>
-          <Text style={styles.multiCount}>
+          <Text style={styles.multiCount} allowFontScaling={false}>
             Đã chọn: {multiSelectedValues.length}
           </Text>
           <TouchableOpacity
@@ -216,7 +229,9 @@ export default function EnumAndReferencePickerModal({
               onClose();
             }}
           >
-            <Text style={styles.multiDoneText}>Xong</Text>
+            <Text style={styles.multiDoneText} allowFontScaling={false}>
+              Xong
+            </Text>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -233,6 +248,7 @@ export default function EnumAndReferencePickerModal({
           style={styles.searchInput}
           clearButtonMode="never"
           returnKeyType="search"
+          maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
         />
 
         {showSearchSpinner && (
@@ -253,7 +269,7 @@ export default function EnumAndReferencePickerModal({
 
       {!isEmpty ? (
         <View style={styles.stickyHeader}>
-          <Text style={styles.header}>
+          <Text style={styles.header} allowFontScaling={false}>
             Tổng: {total} (Đã tải: {loaded})
           </Text>
         </View>

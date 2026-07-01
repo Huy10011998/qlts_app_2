@@ -135,7 +135,9 @@ export default function HeaderHome(_props: HeaderHomeProps) {
               color="rgba(255,255,255,0.85)"
             />
           </View>
-          <Text style={styles.greetText}>{greeting.text}</Text>
+          <Text style={styles.greetText} allowFontScaling={false}>
+            {greeting.text}
+          </Text>
         </View>
         <View style={styles.timePill}>
           <Ionicons
@@ -144,11 +146,15 @@ export default function HeaderHome(_props: HeaderHomeProps) {
             color="rgba(255,255,255,0.7)"
             style={styles.timeIcon}
           />
-          <Text style={styles.timeText}>{formatTime(now)}</Text>
+          <Text style={styles.timeText} allowFontScaling={false}>
+            {formatTime(now)}
+          </Text>
         </View>
       </View>
 
-      <Text style={styles.dateText}>{formatDate(now)}</Text>
+      <Text style={styles.dateText} allowFontScaling={false}>
+        {formatDate(now)}
+      </Text>
 
       <View style={styles.waveContainer}>
         <HeaderWave />

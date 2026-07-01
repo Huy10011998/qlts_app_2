@@ -11,7 +11,7 @@ import { RootState } from "../../store/index";
 import { useAppDispatch } from "../../store/hooks";
 import { setShouldRefreshList } from "../../store/AssetSlice";
 
-import type { AssetAddItemNavigationProp, Field } from "../../types/index";
+import type { AssetAddItemNavigationProp } from "../../types/index";
 import { TypeProperty } from "../../utils/Enum";
 import { formatDateForBE, getDefaultValueForField } from "../../utils/Date";
 import {
@@ -30,12 +30,17 @@ import { useDefaultDateTime } from "../../hooks/AssetAddItem/useDefaultDateTime"
 import { useAutoIncrementCode } from "../../hooks/AssetAddItem/useAutoIncrementCode";
 import { useModalItems } from "../../hooks/AssetAddItem/useModalItems";
 import { useOpenReferenceModal } from "../../hooks/AssetAddItem/useOpenReferenceModal";
+import { useAssetFormState } from "../../hooks/AssetAddItem/useAssetFormState";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import AssetFormGroupedFields from "./shared/AssetFormGroupedFields";
 import AssetFormActionButton from "./shared/AssetFormActionButton";
 import AssetFormHeroCard from "./shared/AssetFormHeroCard";
 import AssetFormReferencePickerModal from "./shared/AssetFormReferencePickerModal";
 import AssetFormScreenShell from "./shared/AssetFormScreenShell";
+import {
+  getRequiredFieldErrors,
+  getRequiredFieldsMessage,
+} from "./shared/assetFormValidation";
 import { createAssetFormBaseStyles } from "./shared/assetFormStyles";
 import {
   ASSET_FORM_BG,
@@ -54,11 +59,11 @@ export default function AssetAddItemDetails() {
   const { can } = usePermission();
   const dispatch = useAppDispatch();
   const isReviewClass = REVIEW_NAME_CLASSES_DANHGIA.includes(
-    (nameClass || "").trim(),
+    (nameClass || "").trim()
   );
 
   const { selectedTreeValue, selectedTreeProperty } = useSelector(
-    (state: RootState) => state.asset,
+    (state: RootState) => state.asset
   );
 
   const rawTreeValues = useMemo(() => {
@@ -66,41 +71,51 @@ export default function AssetAddItemDetails() {
     return selectedTreeValue.split(",").map((v) => v.trim());
   }, [selectedTreeValue]);
 
-  const [formData, setFormData] = useState<Record<string, any>>({});
-  const [enumData, setEnumData] = useState<Record<string, any[]>>({});
-  const [referenceData, setReferenceData] = useState<
-    Record<string, { items: any[]; totalCount: number }>
-  >({});
-
-  const [modalVisible, setModalVisible] = useState(false);
-  const [activeEnumField, setActiveEnumField] = useState<Field | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<
-    Record<string, string>
-  >({});
+  const {
+    activeEnumField,
+    enumData,
+    formData,
+    images,
+    loadingImages,
+    modalVisible,
+    pageSize,
+    refHasMore,
+    refKeyword,
+    refLoadingMore,
+    refPage,
+    refSearching,
+    referenceData,
+    referenceErrorMessage,
+    setActiveEnumField,
+    setEnumData,
+    setFormData,
+    setImages,
+    setLoadingImages,
+    setModalVisible,
+    setRefHasMore,
+    setRefKeyword,
+    setRefLoadingMore,
+    setRefPage,
+    setRefSearching,
+    setReferenceData,
+    setReferenceErrorMessage,
+    setValidationErrors,
+    validationErrors,
+  } = useAssetFormState();
 
-  const [images, setImages] = useState<Record<string, string>>({});
-  const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>(
-    {},
-  );
-
-  const PAGE_SIZE = 20;
-  const [refPage, setRefPage] = useState(0);
-  const [refKeyword, setRefKeyword] = useState("");
-  const [referenceErrorMessage, setReferenceErrorMessage] = useState<
-    string | null
-  >(null);
-  const [refLoadingMore, setRefLoadingMore] = useState(false);
-  const [refHasMore, setRefHasMore] = useState(true);
-  const [refSearching, setRefSearching] = useState(false);
-
-  const { fieldActive, groupedFields, collapsedGroups, toggleGroup } =
-    useGroupedFields(field);
+  const {
+    fieldActive,
+    groupedFields,
+    collapsedGroups,
+    toggleGroup,
+    expandGroupsWithErrors,
+  } = useGroupedFields(field);
 
   const { handleChange: baseHandleChange } = useCascadeForm(
     fieldActive,
     setFormData,
-    setReferenceData,
+    setReferenceData
   );
 
   const handleChange = React.useCallback(
@@ -115,7 +130,7 @@ export default function AssetAddItemDetails() {
 
       baseHandleChange(name, value);
     },
-    [baseHandleChange, validationErrors],
+    [baseHandleChange, validationErrors]
   );
 
   useTreeToForm({
@@ -131,7 +146,7 @@ export default function AssetAddItemDetails() {
     fieldActive,
     setEnumData,
     setReferenceData,
-    referenceData,
+    referenceData
   );
 
   useDefaultDateTime(fieldActive, setFormData);
@@ -164,14 +179,14 @@ export default function AssetAddItemDetails() {
     setModalVisible,
     setReferenceErrorMessage,
     setReferenceData,
-    pageSize: PAGE_SIZE,
+    pageSize,
   });
 
   const modalItems = useModalItems(
     activeEnumField,
     referenceData,
     enumData,
-    formData,
+    formData
   );
   const { isMounted, showAlertIfActive } = useSafeAlert();
 
@@ -194,6 +209,17 @@ export default function AssetAddItemDetails() {
 
     if (!nameClass) {
       Alert.alert("Lỗi", "Không xác định được danh mục!");
+      return;
+    }
+
+    const requiredErrors = getRequiredFieldErrors(fieldActive, formData);
+    if (Object.keys(requiredErrors).length) {
+      setValidationErrors((prev) => ({ ...prev, ...requiredErrors }));
+      expandGroupsWithErrors(requiredErrors);
+      Alert.alert(
+        "Thiếu thông tin",
+        getRequiredFieldsMessage(fieldActive, requiredErrors)
+      );
       return;
     }
 
@@ -244,10 +270,7 @@ export default function AssetAddItemDetails() {
       ]);
     } catch (error: any) {
       setValidationErrors(getApiValidationFieldErrors(error));
-      showAlertIfActive(
-        "Lỗi",
-        getApiErrorMessage(error, "Không thể tạo mới!"),
-      );
+      showAlertIfActive("Lỗi", getApiErrorMessage(error, "Không thể tạo mới!"));
     } finally {
       if (isMounted()) {
         setIsSubmitting(false);
@@ -263,6 +286,16 @@ export default function AssetAddItemDetails() {
       loadingOverlayStyle={styles.loadingOverlay}
       refLoadingMore={refLoadingMore}
       style={styles.container}
+      footer={
+        <AssetFormActionButton
+          brandColor={BRAND_RED}
+          disabled={!!nameClass && !can(nameClass, "Insert")}
+          iconName="checkmark-circle-outline"
+          label={isReviewClass ? "Xác nhận" : "Tạo"}
+          onPress={handleCreate}
+          style={styles.createButton}
+        />
+      }
       modal={
         <AssetFormReferencePickerModal
           activeEnumField={activeEnumField}
@@ -320,15 +353,6 @@ export default function AssetAddItemDetails() {
         setLoadingImages={setLoadingImages}
         styles={styles}
         toggleGroup={toggleGroup}
-      />
-
-      <AssetFormActionButton
-        brandColor={BRAND_RED}
-        disabled={!!nameClass && !can(nameClass, "Insert")}
-        iconName="checkmark-circle-outline"
-        label={isReviewClass ? "Xác nhận" : "Tạo"}
-        onPress={handleCreate}
-        style={styles.createButton}
       />
     </AssetFormScreenShell>
   );

@@ -426,7 +426,9 @@ export default function ShareholdersMeetingScannerScreen() {
         </TouchableOpacity>
 
         <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>Quét mã QR</Text>
+          <Text style={styles.headerTitle} allowFontScaling={false}>
+            Quét mã QR
+          </Text>
         </View>
 
         <View style={styles.headerRight}>

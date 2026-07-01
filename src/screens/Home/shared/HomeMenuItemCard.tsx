@@ -72,6 +72,7 @@ export default function HomeMenuItemCard({
       ]}
       onPress={onPress}
       activeOpacity={0.72}
+      accessibilityLabel={label}
     >
       <View
         style={[
@@ -106,7 +107,9 @@ export default function HomeMenuItemCard({
           <Ionicons name={iconName} color={theme.color} size={22} />
           {notificationCount ? (
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>{notificationCount}</Text>
+              <Text style={styles.badgeText} allowFontScaling={false}>
+                {notificationCount}
+              </Text>
             </View>
           ) : null}
         </View>
@@ -114,10 +117,9 @@ export default function HomeMenuItemCard({
         <View style={styles.labelWrap}>
           <Text
             style={[styles.label, { color: theme.text }]}
+            allowFontScaling={false}
             numberOfLines={2}
-            adjustsFontSizeToFit
-            minimumFontScale={0.82}
-            maxFontSizeMultiplier={1.15}
+            ellipsizeMode="tail"
           >
             {label}
           </Text>
@@ -183,10 +185,10 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   label: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: "700",
     textAlign: "center",
-    lineHeight: 15,
+    lineHeight: 17,
     width: "100%",
     includeFontPadding: false,
     textAlignVertical: "center",

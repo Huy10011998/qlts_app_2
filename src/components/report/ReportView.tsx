@@ -58,7 +58,7 @@ const parseReportDate = (dateStr: string): Date | null => {
     now.getHours(),
     now.getMinutes(),
     now.getSeconds(),
-    now.getMilliseconds(),
+    now.getMilliseconds()
   );
 };
 
@@ -323,7 +323,7 @@ const normalizeReportPayloadKey = (name: string) =>
 
 const normalizeReportPayloadValue = (
   parameter: ReportConfigParameter,
-  value: any,
+  value: any
 ) => {
   if (parameter.isMulti) {
     if (Array.isArray(value)) return value;
@@ -342,7 +342,7 @@ const normalizeReportPayloadValue = (
 };
 
 const mapReportParameterToField = (
-  parameter: ReportConfigParameter,
+  parameter: ReportConfigParameter
 ): Field => ({
   id: parameter.id,
   iD_Class: parameter.iD_Report,
@@ -355,7 +355,7 @@ const mapReportParameterToField = (
   isActive: parameter.isActive,
   typeProperty: parameter.typeProperty,
   typeProperty_MoTa: Number(
-    parameter.typeProperty_MoTa ?? parameter.typeProperty,
+    parameter.typeProperty_MoTa ?? parameter.typeProperty
   ),
   maxLength: 0,
   maxValue: parameter.maxValue ?? 0,
@@ -466,21 +466,21 @@ const ReportView: React.FC<ReportViewProps> = ({
 }) => {
   const reportConfig = useMemo(
     () => config ?? createDefaultReportConfig(title),
-    [config, title],
+    [config, title]
   );
   const activeParameters = useMemo(
     () =>
       [...(reportConfig.parameters ?? [])]
         .filter((parameter) => parameter.isActive)
         .sort((a, b) => Number(a.stt) - Number(b.stt)),
-    [reportConfig.parameters],
+    [reportConfig.parameters]
   );
   const parameterFields = useMemo(
     () => activeParameters.map(mapReportParameterToField),
-    [activeParameters],
+    [activeParameters]
   );
   const [parameterValues, setParameterValues] = useState<Record<string, any>>(
-    () => buildInitialParameterValues(activeParameters),
+    () => buildInitialParameterValues(activeParameters)
   );
   const [enumData, setEnumData] = useState<Record<string, any[]>>({});
   const [referenceData, setReferenceData] = useState<
@@ -507,12 +507,16 @@ const ReportView: React.FC<ReportViewProps> = ({
   const webViewRef = useRef<WebView>(null);
   const { isMounted, showAlertIfActive } = useSafeAlert();
   const PAGE_SIZE = 20;
+  const reportWebViewSource = useMemo(
+    () => ({ html: reportHtml ?? "" }),
+    [reportHtml]
+  );
 
   useEnumAndReferenceLoader(
     parameterFields,
     setEnumData,
     setReferenceData,
-    referenceData,
+    referenceData
   );
 
   const handleParameterChange = useCallback(
@@ -527,7 +531,7 @@ const ReportView: React.FC<ReportViewProps> = ({
         setRefHasMore,
       });
     },
-    [parameterFields],
+    [parameterFields]
   );
 
   const loadReferenceModalData = useCallback(
@@ -537,7 +541,7 @@ const ReportView: React.FC<ReportViewProps> = ({
         textSearch = "",
         page = 0,
         append = false,
-      }: { textSearch?: string; page?: number; append?: boolean } = {},
+      }: { textSearch?: string; page?: number; append?: boolean } = {}
     ) => {
       setReferenceErrorMessage(null);
 
@@ -569,14 +573,14 @@ const ReportView: React.FC<ReportViewProps> = ({
           },
         }));
         setReferenceErrorMessage(
-          String(result.errorMessage || "Không thể tải dữ liệu."),
+          String(result.errorMessage || "Không thể tải dữ liệu.")
         );
         return "error";
       }
 
       return result !== false;
     },
-    [parameterValues],
+    [parameterValues]
   );
 
   const openReferenceModal = useCallback(
@@ -594,110 +598,113 @@ const ReportView: React.FC<ReportViewProps> = ({
       setRefHasMore(true);
       setModalVisible(true);
     },
-    [loadReferenceModalData],
+    [loadReferenceModalData]
   );
 
   const modalItems = useModalItems(
     activeEnumField,
     referenceData,
     enumData,
-    parameterValues,
+    parameterValues
   );
 
   const getRequiredLabel = (parameter: ReportConfigParameter) =>
     parameter.moTa || parameter.name;
 
-  const buildReportPayload = useCallback((isPreview = true) => {
-    const payload: Record<string, any> = { isPreview };
+  const buildReportPayload = useCallback(
+    (isPreview = true) => {
+      const payload: Record<string, any> = { isPreview };
 
-    for (const parameter of activeParameters) {
-      const value = parameterValues[parameter.name];
-      const payloadKey = normalizeReportPayloadKey(parameter.name);
+      for (const parameter of activeParameters) {
+        const value = parameterValues[parameter.name];
+        const payloadKey = normalizeReportPayloadKey(parameter.name);
 
-      const isEmptyValue =
-        value === "" ||
-        value === null ||
-        value === undefined ||
-        (Array.isArray(value) && value.length === 0);
+        const isEmptyValue =
+          value === "" ||
+          value === null ||
+          value === undefined ||
+          (Array.isArray(value) && value.length === 0);
 
-      if (parameter.isRequired && isEmptyValue) {
-        throw new Error(`REQUIRED:${getRequiredLabel(parameter)}`);
-      }
+        if (parameter.isRequired && isEmptyValue) {
+          throw new Error(`REQUIRED:${getRequiredLabel(parameter)}`);
+        }
 
-      if (parameter.isMulti && isEmptyValue) {
-        payload[payloadKey] = [];
-        continue;
-      }
+        if (parameter.isMulti && isEmptyValue) {
+          payload[payloadKey] = [];
+          continue;
+        }
 
-      switch (parameter.typeProperty) {
-        case TypeProperty.Date: {
-          if (!value) {
-            payload[payloadKey] = null;
+        switch (parameter.typeProperty) {
+          case TypeProperty.Date: {
+            if (!value) {
+              payload[payloadKey] = null;
+              break;
+            }
+
+            if (!parseReportDate(String(value))) {
+              throw new Error(`INVALID_DATE:${getRequiredLabel(parameter)}`);
+            }
+
+            payload[payloadKey] = formatDateForBE(value);
             break;
           }
 
-          if (!parseReportDate(String(value))) {
-            throw new Error(`INVALID_DATE:${getRequiredLabel(parameter)}`);
-          }
+          case TypeProperty.Int:
+          case TypeProperty.Decimal:
+            payload[payloadKey] =
+              value === "" || value === null || value === undefined
+                ? null
+                : Number(value);
+            break;
 
-          payload[payloadKey] = formatDateForBE(value);
-          break;
+          case TypeProperty.Bool:
+            payload[payloadKey] = Boolean(value);
+            break;
+
+          case TypeProperty.String:
+          case TypeProperty.Text:
+          case TypeProperty.Enum:
+          case TypeProperty.Reference:
+          case TypeProperty.Time:
+          case TypeProperty.Link:
+            payload[payloadKey] =
+              value === "" || value === null || value === undefined
+                ? null
+                : normalizeReportPayloadValue(parameter, value);
+            break;
+
+          default:
+            payload[payloadKey] =
+              value === "" || value === null || value === undefined
+                ? null
+                : normalizeReportPayloadValue(parameter, value);
         }
-
-        case TypeProperty.Int:
-        case TypeProperty.Decimal:
-          payload[payloadKey] =
-            value === "" || value === null || value === undefined
-              ? null
-              : Number(value);
-          break;
-
-        case TypeProperty.Bool:
-          payload[payloadKey] = Boolean(value);
-          break;
-
-        case TypeProperty.String:
-        case TypeProperty.Text:
-        case TypeProperty.Enum:
-        case TypeProperty.Reference:
-        case TypeProperty.Time:
-        case TypeProperty.Link:
-          payload[payloadKey] =
-            value === "" || value === null || value === undefined
-              ? null
-              : normalizeReportPayloadValue(parameter, value);
-          break;
-
-        default:
-          payload[payloadKey] =
-            value === "" || value === null || value === undefined
-              ? null
-              : normalizeReportPayloadValue(parameter, value);
       }
-    }
 
-    const fromValue =
-      parameterValues.TuNgay ??
-      parameterValues.tuNgay ??
-      payload.tuNgay ??
-      payload.TuNgay ??
-      null;
-    const toValue =
-      parameterValues.DenNgay ??
-      parameterValues.denNgay ??
-      payload.denNgay ??
-      payload.DenNgay ??
-      null;
-    const fromDate =
-      typeof fromValue === "string" ? parseReportDate(fromValue) : null;
-    const toDate =
-      typeof toValue === "string" ? parseReportDate(toValue) : null;
-    if (fromDate && toDate && fromDate > toDate) {
-      throw new Error("INVALID_DATE_RANGE");
-    }
+      const fromValue =
+        parameterValues.TuNgay ??
+        parameterValues.tuNgay ??
+        payload.tuNgay ??
+        payload.TuNgay ??
+        null;
+      const toValue =
+        parameterValues.DenNgay ??
+        parameterValues.denNgay ??
+        payload.denNgay ??
+        payload.DenNgay ??
+        null;
+      const fromDate =
+        typeof fromValue === "string" ? parseReportDate(fromValue) : null;
+      const toDate =
+        typeof toValue === "string" ? parseReportDate(toValue) : null;
+      if (fromDate && toDate && fromDate > toDate) {
+        throw new Error("INVALID_DATE_RANGE");
+      }
 
-    return payload;
-  }, [activeParameters, parameterValues]);
+      return payload;
+    },
+    [activeParameters, parameterValues]
+  );
 
   const loadReport = useCallback(
     async (options?: { silent?: boolean }) => {
@@ -764,7 +771,7 @@ const ReportView: React.FC<ReportViewProps> = ({
       reportConfig.report.fileType,
       reportConfig.report.name,
       showAlertIfActive,
-    ],
+    ]
   );
 
   const handleSubmit = useCallback(() => {
@@ -832,7 +839,9 @@ const ReportView: React.FC<ReportViewProps> = ({
         throw new Error("Report share data is empty");
       }
 
-      const fileName = `${sanitizeShareFileName(title)}_${formatShareTimestamp()}.${fileInfo.extension}`;
+      const fileName = `${sanitizeShareFileName(
+        title
+      )}_${formatShareTimestamp()}.${fileInfo.extension}`;
       const filePath = `${RNFS.CachesDirectoryPath}/${fileName}`;
 
       await RNFS.writeFile(filePath, base64Data, "base64");
@@ -849,46 +858,44 @@ const ReportView: React.FC<ReportViewProps> = ({
       reportConfig.report.name,
       reportPdfBase64,
       title,
-    ],
+    ]
   );
 
-  const handleShareReport = useCallback(async (option: ShareReportOption) => {
-    if (isSharing) return;
+  const handleShareReport = useCallback(
+    async (option: ShareReportOption) => {
+      if (isSharing) return;
 
-    try {
-      setIsSharing(true);
-      setShareOptionsVisible(false);
-      await shareReportFile(option);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "";
-      if (message.startsWith("REQUIRED:")) {
-        const label = message.replace("REQUIRED:", "");
-        showAlertIfActive("Lỗi", `Vui lòng nhập ${label}.`);
-        return;
-      }
-      if (message.startsWith("INVALID_DATE:")) {
-        const label = message.replace("INVALID_DATE:", "");
-        showAlertIfActive("Lỗi", `${label} không hợp lệ.`);
-        return;
-      }
-      if (message === "INVALID_DATE_RANGE") {
-        showAlertIfActive("Lỗi", "Từ ngày không được lớn hơn Đến ngày.");
-        return;
-      }
+      try {
+        setIsSharing(true);
+        setShareOptionsVisible(false);
+        await shareReportFile(option);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "";
+        if (message.startsWith("REQUIRED:")) {
+          const label = message.replace("REQUIRED:", "");
+          showAlertIfActive("Lỗi", `Vui lòng nhập ${label}.`);
+          return;
+        }
+        if (message.startsWith("INVALID_DATE:")) {
+          const label = message.replace("INVALID_DATE:", "");
+          showAlertIfActive("Lỗi", `${label} không hợp lệ.`);
+          return;
+        }
+        if (message === "INVALID_DATE_RANGE") {
+          showAlertIfActive("Lỗi", "Từ ngày không được lớn hơn Đến ngày.");
+          return;
+        }
 
-      error("Share report error:", err);
-      showAlertIfActive("Lỗi", "Không thể mở chia sẻ báo cáo.");
-    } finally {
-      if (isMounted()) {
-        setIsSharing(false);
+        error("Share report error:", err);
+        showAlertIfActive("Lỗi", "Không thể mở chia sẻ báo cáo.");
+      } finally {
+        if (isMounted()) {
+          setIsSharing(false);
+        }
       }
-    }
-  }, [
-    isMounted,
-    isSharing,
-    shareReportFile,
-    showAlertIfActive,
-  ]);
+    },
+    [isMounted, isSharing, shareReportFile, showAlertIfActive]
+  );
 
   const handleWebViewMessage = (event: any) => {
     try {
@@ -909,7 +916,7 @@ const ReportView: React.FC<ReportViewProps> = ({
   useEffect(() => {
     const handler = (orientation: string) => {
       setIsLandscape(
-        orientation === "LANDSCAPE-LEFT" || orientation === "LANDSCAPE-RIGHT",
+        orientation === "LANDSCAPE-LEFT" || orientation === "LANDSCAPE-RIGHT"
       );
     };
 
@@ -937,7 +944,11 @@ const ReportView: React.FC<ReportViewProps> = ({
               <Ionicons name="chevron-back" size={26} color="#fff" />
             </TouchableOpacity>
 
-            <Text style={[styles.title, styles.previewTitle]} numberOfLines={1}>
+            <Text
+              style={[styles.title, styles.previewTitle]}
+              allowFontScaling={false}
+              numberOfLines={1}
+            >
               {title}
             </Text>
 
@@ -1000,7 +1011,7 @@ const ReportView: React.FC<ReportViewProps> = ({
           <WebView
             ref={webViewRef}
             originWhitelist={["*"]}
-            source={{ html: reportHtml }}
+            source={reportWebViewSource}
             style={styles.reportWebView}
             javaScriptEnabled
             domStorageEnabled
@@ -1066,7 +1077,9 @@ const ReportView: React.FC<ReportViewProps> = ({
           presentationStyle="overFullScreen"
           sheetStyle={styles.shareSheet}
         >
-          <Text style={styles.shareSheetTitle}>Chọn loại file chia sẻ</Text>
+          <Text style={styles.shareSheetTitle} allowFontScaling={false}>
+            Chọn loại file chia sẻ
+          </Text>
 
           <View style={styles.shareOptionList}>
             {SHARE_REPORT_OPTIONS.map((option) => (
@@ -1080,7 +1093,9 @@ const ReportView: React.FC<ReportViewProps> = ({
                 <View style={styles.shareOptionIcon}>
                   <Ionicons name={option.icon} size={20} color={C.red} />
                 </View>
-                <Text style={styles.shareOptionText}>{option.label}</Text>
+                <Text style={styles.shareOptionText} allowFontScaling={false}>
+                  {option.label}
+                </Text>
                 <Ionicons name="chevron-forward" size={18} color="#98A2B3" />
               </TouchableOpacity>
             ))}
@@ -1098,9 +1113,18 @@ const ReportView: React.FC<ReportViewProps> = ({
           Platform.OS === "ios" ? styles.headerIos : styles.headerAndroid,
         ]}
       >
-        <Text style={styles.title}>{title}</Text>
+        <Text
+          style={styles.formTitle}
+          allowFontScaling={false}
+          numberOfLines={2}
+        >
+          {title}
+        </Text>
 
-        <TouchableOpacity onPress={closeReportModal}>
+        <TouchableOpacity
+          style={styles.headerIconButton}
+          onPress={closeReportModal}
+        >
           <Ionicons name="close" size={30} color="#fff" />
         </TouchableOpacity>
       </View>
@@ -1144,7 +1168,9 @@ const ReportView: React.FC<ReportViewProps> = ({
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.submitButtonText}>Thực hiện</Text>
+            <Text style={styles.submitButtonText} allowFontScaling={false}>
+              Thực hiện
+            </Text>
           )}
         </TouchableOpacity>
       </ScrollView>
@@ -1191,6 +1217,7 @@ const styles = StyleSheet.create({
     flexDirection: "row" as const,
     justifyContent: "space-between" as const,
     alignItems: "center" as const,
+    gap: 8,
   },
   headerIos: {
     paddingTop: 50,
@@ -1203,9 +1230,18 @@ const styles = StyleSheet.create({
     fontWeight: "bold" as const,
     color: "#fff",
   },
+  formTitle: {
+    flex: 1,
+    flexShrink: 1,
+    fontSize: 18,
+    fontWeight: "bold" as const,
+    color: "#fff",
+    lineHeight: 23,
+  },
   headerIconButton: {
     width: 38,
     height: 38,
+    flexShrink: 0,
     alignItems: "center",
     justifyContent: "center",
   },

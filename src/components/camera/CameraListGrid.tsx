@@ -1403,8 +1403,12 @@ const CameraListGrid: React.FC = () => {
               <View style={styles.handleWrapper}>
                 <View style={styles.handle} />
               </View>
-              <Text style={styles.sheetTitle}>Bố trí cửa sổ</Text>
-              <Text style={styles.sheetTitleChild}>Chọn số lượng cửa sổ</Text>
+              <Text style={styles.sheetTitle} allowFontScaling={false}>
+                Bố trí cửa sổ
+              </Text>
+              <Text style={styles.sheetTitleChild} allowFontScaling={false}>
+                Chọn số lượng cửa sổ
+              </Text>
               {CAMERA_LAYOUT_CHOICES.map((n, index) => (
                 <TouchableOpacity
                   key={n}
@@ -1420,6 +1424,7 @@ const CameraListGrid: React.FC = () => {
                       styles.listItemText,
                       layoutCount === n && styles.activeText,
                     ]}
+                    allowFontScaling={false}
                   >
                     {getCameraLayoutLabel(n)}
                   </Text>
@@ -1429,7 +1434,9 @@ const CameraListGrid: React.FC = () => {
                 style={styles.closeBtn}
                 onPress={() => setShowLayoutPicker(false)}
               >
-                <Text style={styles.closeText}>Đóng</Text>
+                <Text style={styles.closeText} allowFontScaling={false}>
+                  Đóng
+                </Text>
               </TouchableOpacity>
             </View>
           </View>

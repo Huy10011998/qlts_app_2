@@ -232,9 +232,11 @@ function HeaderDetailsBar({
               color="rgba(255,255,255,0.82)"
               style={styles.titleBadgeIcon}
             />
-            <Text style={styles.titleBadgeText}>{meta.badgeLabel}</Text>
+            <Text style={styles.titleBadgeText} allowFontScaling={false}>
+              {meta.badgeLabel}
+            </Text>
           </View>
-          <Text style={styles.title} numberOfLines={1}>
+          <Text style={styles.title} numberOfLines={1} allowFontScaling={false}>
             {title}
           </Text>
         </View>

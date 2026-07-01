@@ -1,6 +1,7 @@
 import { StyleSheet, Text } from "react-native";
 import { useThemeColor } from "../../hooks/useThemeColor";
 import type { ThemedTextProps } from "../../types/index";
+import { READABLE_TEXT_MAX_SCALE } from "../../utils/helpers/textScaling";
 
 export function ThemedText({
   style,
@@ -22,6 +23,7 @@ export function ThemedText({
         type === "link" ? styles.link : undefined,
         style,
       ]}
+      maxFontSizeMultiplier={READABLE_TEXT_MAX_SCALE}
       {...rest}
     />
   );

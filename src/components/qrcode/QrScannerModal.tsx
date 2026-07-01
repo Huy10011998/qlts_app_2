@@ -142,9 +142,13 @@ export default function QrScannerModal({
               </TouchableOpacity>
 
               <View style={styles.headerTitleWrap}>
-                <Text style={styles.headerTitle}>{title}</Text>
+                <Text style={styles.headerTitle} allowFontScaling={false}>
+                  {title}
+                </Text>
                 {subtitle ? (
-                  <Text style={styles.headerSubtitle}>{subtitle}</Text>
+                  <Text style={styles.headerSubtitle} allowFontScaling={false}>
+                    {subtitle}
+                  </Text>
                 ) : null}
               </View>
 

@@ -786,8 +786,12 @@ const CameraList: React.FC = () => {
               <View style={styles.handleWrapper}>
                 <View style={styles.handle} />
               </View>
-              <Text style={styles.sheetTitle}>Bố trí cửa sổ</Text>
-              <Text style={styles.sheetTitleChild}>Chọn số lượng cửa sổ</Text>
+              <Text style={styles.sheetTitle} allowFontScaling={false}>
+                Bố trí cửa sổ
+              </Text>
+              <Text style={styles.sheetTitleChild} allowFontScaling={false}>
+                Chọn số lượng cửa sổ
+              </Text>
               {["1", "4", "8", "12", "16"].map((item, index) => (
                 <TouchableOpacity
                   key={item}
@@ -803,6 +807,7 @@ const CameraList: React.FC = () => {
                       styles.listItemText,
                       layoutCount === Number(item) && styles.activeText,
                     ]}
+                    allowFontScaling={false}
                   >
                     {item}
                   </Text>
@@ -812,7 +817,9 @@ const CameraList: React.FC = () => {
                 style={styles.closeBtn}
                 onPress={() => setShowLayoutModal(false)}
               >
-                <Text style={styles.closeText}>Đóng</Text>
+                <Text style={styles.closeText} allowFontScaling={false}>
+                  Đóng
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
