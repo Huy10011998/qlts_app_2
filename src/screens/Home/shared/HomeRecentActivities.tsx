@@ -22,10 +22,12 @@ export default function HomeRecentActivities({
           style={[styles.row, index === items.length - 1 && styles.rowLast]}
         >
           <View style={[styles.dot, { backgroundColor: item.dot }]} />
-          <Text style={styles.text} numberOfLines={1}>
+          <Text style={styles.text} numberOfLines={1} allowFontScaling={false}>
             {item.text}
           </Text>
-          <Text style={styles.time}>{item.time}</Text>
+          <Text style={styles.time} allowFontScaling={false}>
+            {item.time}
+          </Text>
         </View>
       ))}
     </View>
@@ -64,12 +66,15 @@ const styles = StyleSheet.create({
   },
   text: {
     flex: 1,
-    fontSize: 11.5,
+    fontSize: 13,
+    lineHeight: 17,
     color: "#374151",
-    fontWeight: "400",
+    fontWeight: "600",
   },
   time: {
-    fontSize: 10,
+    fontSize: 11.5,
+    lineHeight: 15,
     color: "#9CA3AF",
+    fontWeight: "600",
   },
 });

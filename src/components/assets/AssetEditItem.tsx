@@ -35,6 +35,10 @@ import AssetFormGroupedFields from "./shared/AssetFormGroupedFields";
 import AssetFormHeroCard from "./shared/AssetFormHeroCard";
 import AssetFormReferencePickerModal from "./shared/AssetFormReferencePickerModal";
 import AssetFormScreenShell from "./shared/AssetFormScreenShell";
+import {
+  getRequiredFieldErrors,
+  getRequiredFieldsMessage,
+} from "./shared/assetFormValidation";
 import { createAssetFormBaseStyles } from "./shared/assetFormStyles";
 import {
   ASSET_FORM_BG,
@@ -52,7 +56,7 @@ export default function AssetEditItem() {
   const dispatch = useAppDispatch();
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [originalItem, setOriginalItem] = useState<Record<string, any>>(
-    item ? { ...item } : {},
+    item ? { ...item } : {}
   );
 
   const [enumData, setEnumData] = useState<Record<string, any[]>>({});
@@ -80,8 +84,13 @@ export default function AssetEditItem() {
 
   const [images, setImages] = useState<Record<string, string>>({});
 
-  const { fieldActive, groupedFields, collapsedGroups, toggleGroup } =
-    useGroupedFields(field);
+  const {
+    fieldActive,
+    groupedFields,
+    collapsedGroups,
+    toggleGroup,
+    expandGroupsWithErrors,
+  } = useGroupedFields(field);
 
   useEffect(() => {
     const initial: Record<string, any> = {};
@@ -96,6 +105,14 @@ export default function AssetEditItem() {
       const name = f.name;
       const matchedKey = getMatchedKey(item || {}, name);
       const raw = matchedKey ? item?.[matchedKey] : undefined;
+      const matchedMoTaKey = getMatchedKey(item || {}, `${name}_MoTa`);
+      const matchedKeyMoTaKey = matchedKey
+        ? getMatchedKey(item || {}, `${matchedKey}_MoTa`)
+        : undefined;
+      const rawText =
+        (matchedKeyMoTaKey && item?.[matchedKeyMoTaKey]) ??
+        (matchedMoTaKey && item?.[matchedMoTaKey]) ??
+        "";
 
       switch (f.typeProperty) {
         case TypeProperty.Date:
@@ -115,14 +132,9 @@ export default function AssetEditItem() {
           break;
         case TypeProperty.Enum:
           initial[name] = raw != null ? raw : "";
+          initial[`${name}_MoTa`] = rawText ?? "";
           break;
         case TypeProperty.Reference: {
-          const rawText =
-            (matchedKey && item?.[`${matchedKey}_MoTa`]) ??
-            item?.[`${name}_MoTa`] ??
-            item?.[`${f.name}_MoTa`] ??
-            "";
-
           initial[name] = raw ?? "";
           initial[`${name}_MoTa`] = rawText ?? "";
 
@@ -151,7 +163,7 @@ export default function AssetEditItem() {
     fieldActive,
     setEnumData,
     setReferenceData,
-    referenceData,
+    referenceData
   );
 
   useEffect(() => {
@@ -166,7 +178,7 @@ export default function AssetEditItem() {
             f.referenceName!,
             f.name,
             parentValues,
-            setReferenceData,
+            setReferenceData
           );
         }
       }
@@ -219,7 +231,7 @@ export default function AssetEditItem() {
     activeEnumField,
     referenceData,
     enumData,
-    formData,
+    formData
   );
   const { showAlertIfActive } = useSafeAlert();
 
@@ -227,6 +239,17 @@ export default function AssetEditItem() {
     try {
       if (!originalItem?.id) {
         Alert.alert("Lỗi", "Không tìm thấy ID để cập nhật!");
+        return;
+      }
+
+      const requiredErrors = getRequiredFieldErrors(fieldActive, formData);
+      if (Object.keys(requiredErrors).length) {
+        setValidationErrors((prev) => ({ ...prev, ...requiredErrors }));
+        expandGroupsWithErrors(requiredErrors);
+        Alert.alert(
+          "Thiếu thông tin",
+          getRequiredFieldsMessage(fieldActive, requiredErrors)
+        );
         return;
       }
 
@@ -289,10 +312,7 @@ export default function AssetEditItem() {
       });
 
       const autoCodeField = item?.propertyClass?.propertyTuDongTang;
-      if (
-        autoCodeField &&
-        isEffectivelyEmptyCodeValue(entity[autoCodeField])
-      ) {
+      if (autoCodeField && isEffectivelyEmptyCodeValue(entity[autoCodeField])) {
         entity[autoCodeField] = null;
       }
 
@@ -331,7 +351,7 @@ export default function AssetEditItem() {
       setValidationErrors(getApiValidationFieldErrors(err));
       showAlertIfActive(
         "Lỗi",
-        getApiErrorMessage(err, "Không thể cập nhật dữ liệu!"),
+        getApiErrorMessage(err, "Không thể cập nhật dữ liệu!")
       );
     }
   };
@@ -344,6 +364,14 @@ export default function AssetEditItem() {
     fieldActive.forEach((f) => {
       const matchedKey = getMatchedKey(originalItem || {}, f.name);
       const raw = matchedKey ? originalItem[matchedKey] : undefined;
+      const matchedMoTaKey = getMatchedKey(originalItem || {}, `${f.name}_MoTa`);
+      const matchedKeyMoTaKey = matchedKey
+        ? getMatchedKey(originalItem || {}, `${matchedKey}_MoTa`)
+        : undefined;
+      const rawText =
+        (matchedKeyMoTaKey && originalItem?.[matchedKeyMoTaKey]) ??
+        (matchedMoTaKey && originalItem?.[matchedMoTaKey]) ??
+        "";
 
       switch (f.typeProperty) {
         case TypeProperty.Date:
@@ -358,11 +386,14 @@ export default function AssetEditItem() {
           reset[f.name] = raw ?? "";
           break;
 
+        case TypeProperty.Enum:
+          reset[f.name] = raw != null ? raw : "";
+          reset[`${f.name}_MoTa`] = rawText ?? "";
+          break;
+
         case TypeProperty.Reference:
-          const rawText =
-            (matchedKey && originalItem?.[`${matchedKey}_MoTa`]) ??
-            originalItem?.[`${f.name}_MoTa`];
-          reset[f.name] = raw != null ? raw : rawText ?? "";
+          reset[f.name] = raw ?? "";
+          reset[`${f.name}_MoTa`] = rawText ?? "";
           break;
 
         default:
@@ -392,6 +423,35 @@ export default function AssetEditItem() {
       contentContainerStyle={styles.scrollContent}
       refLoadingMore={refLoadingMore}
       style={styles.container}
+      footer={
+        <View style={styles.actionRow}>
+          <AssetFormActionButton
+            brandColor={BRAND_RED}
+            iconName="save-outline"
+            label="Cập nhật"
+            onPress={handleUpdate}
+            style={[styles.updateButton, styles.actionButton]}
+          />
+
+          <AssetFormActionButton
+            brandColor={BRAND_RED}
+            iconName="refresh-outline"
+            label="Reset"
+            onPress={() =>
+              Alert.alert(
+                "Xác nhận",
+                "Bạn muốn đặt lại mọi thay đổi về giá trị ban đầu?",
+                [
+                  { text: "Huỷ", style: "cancel" },
+                  { text: "Đặt lại", onPress: handleReset },
+                ]
+              )
+            }
+            style={[styles.resetButton, styles.actionButton]}
+            variant="secondary"
+          />
+        </View>
+      }
       modal={
         <AssetFormReferencePickerModal
           activeEnumField={activeEnumField}
@@ -446,34 +506,6 @@ export default function AssetEditItem() {
         styles={styles}
         toggleGroup={toggleGroup}
       />
-
-      <View style={styles.actionRow}>
-        <AssetFormActionButton
-          brandColor={BRAND_RED}
-          iconName="save-outline"
-          label="Cập nhật"
-          onPress={handleUpdate}
-          style={[styles.updateButton, styles.actionButton]}
-        />
-
-        <AssetFormActionButton
-          brandColor={BRAND_RED}
-          iconName="refresh-outline"
-          label="Reset"
-          onPress={() =>
-            Alert.alert(
-              "Xác nhận",
-              "Bạn muốn đặt lại mọi thay đổi về giá trị ban đầu?",
-              [
-                { text: "Huỷ", style: "cancel" },
-                { text: "Đặt lại", onPress: handleReset },
-              ],
-            )
-          }
-          style={[styles.resetButton, styles.actionButton]}
-          variant="secondary"
-        />
-      </View>
     </AssetFormScreenShell>
   );
 }

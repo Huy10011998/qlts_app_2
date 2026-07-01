@@ -31,10 +31,28 @@ export function useGroupedFields(field: any) {
     setCollapsedGroups((prev) => ToggleGroupUtil(prev, groupName));
   };
 
+  const expandGroupsWithErrors = (errors: Record<string, string>) => {
+    const errorNames = new Set(Object.keys(errors));
+    if (!errorNames.size) return;
+
+    setCollapsedGroups((prev) => {
+      const next = { ...prev };
+
+      Object.entries(groupedFields).forEach(([groupName, fields]) => {
+        if (fields.some((field) => errorNames.has(field.name))) {
+          next[groupName] = false;
+        }
+      });
+
+      return next;
+    });
+  };
+
   return {
     fieldActive,
     groupedFields,
     collapsedGroups,
     toggleGroup,
+    expandGroupsWithErrors,
   };
 }

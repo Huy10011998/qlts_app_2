@@ -40,7 +40,7 @@ export default function HomeStatCard({
           <View style={[styles.iconWrap, { backgroundColor: iconBg }]}>
             <Ionicons name={iconName} color={iconColor} size={16} />
           </View>
-          <Text style={styles.label} numberOfLines={2}>
+          <Text style={styles.label} numberOfLines={2} allowFontScaling={false}>
             {label}
           </Text>
         </View>
@@ -60,10 +60,15 @@ export default function HomeStatCard({
         numberOfLines={1}
         adjustsFontSizeToFit
         minimumFontScale={0.72}
+        allowFontScaling={false}
       >
         {value}
       </Text>
-      {sub ? <Text style={[styles.sub, { color: subColor }]}>{sub}</Text> : null}
+      {sub ? (
+        <Text style={[styles.sub, { color: subColor }]} allowFontScaling={false}>
+          {sub}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -113,14 +118,16 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   label: {
-    fontSize: 10.5,
+    fontSize: 13,
+    lineHeight: 17,
     color: "#6B7280",
-    fontWeight: "600",
+    fontWeight: "700",
     flex: 1,
   },
   sub: {
-    fontSize: 9.5,
+    fontSize: 11.5,
+    lineHeight: 15,
     marginTop: 5,
-    fontWeight: "500",
+    fontWeight: "600",
   },
 });

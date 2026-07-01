@@ -38,7 +38,12 @@ export default function HomeQuickAction({
       <View style={[styles.icon, { backgroundColor: bg }, disabled && styles.iconDisabled]}>
         <Ionicons name={iconName} size={17} color={color} />
       </View>
-      <Text style={[styles.label, disabled && styles.labelDisabled]}>{label}</Text>
+      <Text
+        style={[styles.label, disabled && styles.labelDisabled]}
+        allowFontScaling={false}
+      >
+        {label}
+      </Text>
     </TouchableOpacity>
   );
 }
@@ -68,8 +73,9 @@ const styles = StyleSheet.create({
     elevation: 0,
   },
   label: {
-    fontSize: 10,
-    fontWeight: "600",
+    fontSize: 13,
+    lineHeight: 17,
+    fontWeight: "700",
     color: "#4B5563",
     textAlign: "center",
   },

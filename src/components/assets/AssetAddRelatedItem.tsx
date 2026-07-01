@@ -43,6 +43,10 @@ import AssetFormActionButton from "./shared/AssetFormActionButton";
 import AssetFormHeroCard from "./shared/AssetFormHeroCard";
 import AssetFormReferencePickerModal from "./shared/AssetFormReferencePickerModal";
 import AssetFormScreenShell from "./shared/AssetFormScreenShell";
+import {
+  getRequiredFieldErrors,
+  getRequiredFieldsMessage,
+} from "./shared/assetFormValidation";
 import { createAssetFormBaseStyles } from "./shared/assetFormStyles";
 import {
   ASSET_FORM_BG,
@@ -61,11 +65,11 @@ export default function AssetAddRelatedItem() {
   const { can } = usePermission();
   const dispatch = useAppDispatch();
   const isReviewClass = REVIEW_NAME_CLASSES_DANHGIA.includes(
-    (nameClass || "").trim(),
+    (nameClass || "").trim()
   );
 
   const { selectedTreeValue, selectedTreeProperty } = useSelector(
-    (state: RootState) => state.asset,
+    (state: RootState) => state.asset
   );
 
   const navigation = useNavigation<AssetAddRelatedItemNavigationProp>();
@@ -105,13 +109,18 @@ export default function AssetAddRelatedItem() {
     return selectedTreeValue.split(",").map((v) => v.trim());
   }, [selectedTreeValue]);
 
-  const { fieldActive, groupedFields, collapsedGroups, toggleGroup } =
-    useGroupedFields(field);
+  const {
+    fieldActive,
+    groupedFields,
+    collapsedGroups,
+    toggleGroup,
+    expandGroupsWithErrors,
+  } = useGroupedFields(field);
 
   const { handleChange: baseHandleChange } = useCascadeForm(
     fieldActive,
     setFormData,
-    setReferenceData,
+    setReferenceData
   );
 
   const handleChange = React.useCallback(
@@ -126,7 +135,7 @@ export default function AssetAddRelatedItem() {
 
       baseHandleChange(name, value);
     },
-    [baseHandleChange, validationErrors],
+    [baseHandleChange, validationErrors]
   );
 
   useTreeToForm({
@@ -142,7 +151,7 @@ export default function AssetAddRelatedItem() {
     fieldActive,
     setEnumData,
     setReferenceData,
-    referenceData,
+    referenceData
   );
 
   const parentField = propertyClass?.prentTuDongTang;
@@ -193,7 +202,7 @@ export default function AssetAddRelatedItem() {
     activeEnumField,
     referenceData,
     enumData,
-    formData,
+    formData
   );
   const { isMounted, showAlertIfActive } = useSafeAlert();
 
@@ -215,6 +224,17 @@ export default function AssetAddRelatedItem() {
 
     if (!nameClass) {
       Alert.alert("Lỗi", "Không xác định được danh mục!");
+      return;
+    }
+
+    const requiredErrors = getRequiredFieldErrors(fieldActive, formData);
+    if (Object.keys(requiredErrors).length) {
+      setValidationErrors((prev) => ({ ...prev, ...requiredErrors }));
+      expandGroupsWithErrors(requiredErrors);
+      Alert.alert(
+        "Thiếu thông tin",
+        getRequiredFieldsMessage(fieldActive, requiredErrors)
+      );
       return;
     }
 
@@ -269,7 +289,7 @@ export default function AssetAddRelatedItem() {
             },
           },
         ],
-        { cancelable: false },
+        { cancelable: false }
       );
     } catch (err: any) {
       setValidationErrors(getApiValidationFieldErrors(err));
@@ -288,6 +308,16 @@ export default function AssetAddRelatedItem() {
       isSubmitting={isSubmitting}
       loadingOverlayStyle={styles.loadingOverlay}
       style={styles.container}
+      footer={
+        <AssetFormActionButton
+          brandColor={BRAND_RED}
+          disabled={!!nameClass && !can(nameClass, "Insert")}
+          iconName="checkmark-circle-outline"
+          label={isReviewClass ? "Xác nhận" : "Tạo"}
+          onPress={handleCreate}
+          style={styles.createButton}
+        />
+      }
       modal={
         <AssetFormReferencePickerModal
           activeEnumField={activeEnumField}
@@ -320,7 +350,9 @@ export default function AssetAddRelatedItem() {
         iconName="link-outline"
         styles={styles}
         title={
-          isReviewClass ? "Đánh giá dữ liệu liên quan" : "Thêm dữ liệu liên quan"
+          isReviewClass
+            ? "Đánh giá dữ liệu liên quan"
+            : "Thêm dữ liệu liên quan"
         }
         subtitle={
           isReviewClass
@@ -347,15 +379,6 @@ export default function AssetAddRelatedItem() {
         setLoadingImages={setLoadingImages}
         styles={styles}
         toggleGroup={toggleGroup}
-      />
-
-      <AssetFormActionButton
-        brandColor={BRAND_RED}
-        disabled={!!nameClass && !can(nameClass, "Insert")}
-        iconName="checkmark-circle-outline"
-        label={isReviewClass ? "Xác nhận" : "Tạo"}
-        onPress={handleCreate}
-        style={styles.createButton}
       />
     </AssetFormScreenShell>
   );

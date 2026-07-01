@@ -5,7 +5,7 @@ import {
   TouchableOpacity,
   Animated,
   StyleSheet,
-  Dimensions,
+  useWindowDimensions,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
@@ -21,8 +21,8 @@ export default function BottomBarDetails({
   activeTab,
   onTabPress,
 }: BottomBarProps) {
-  const SCREEN_WIDTH = Dimensions.get("window").width;
-  const BAR_WIDTH = SCREEN_WIDTH - SHELL_INSET * 2;
+  const { width: screenWidth } = useWindowDimensions();
+  const BAR_WIDTH = screenWidth - SHELL_INSET * 2;
   const { nameClass } = useParams();
   const { can, loaded } = usePermission();
 
@@ -111,6 +111,8 @@ export default function BottomBarDetails({
                 />
               </View>
               <Text
+                allowFontScaling={false}
+                numberOfLines={1}
                 style={[
                   styles.bottomLabel,
                   isActive && styles.bottomLabelActive,

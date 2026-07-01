@@ -129,7 +129,11 @@ function HomeReportCard({
       </View>
 
       <View style={styles.reportTextWrap}>
-        <Text style={styles.reportTitle} numberOfLines={2}>
+        <Text
+          style={styles.reportTitle}
+          allowFontScaling={false}
+          numberOfLines={2}
+        >
           {label}
         </Text>
       </View>
@@ -654,7 +658,9 @@ const HomeScreen: React.FC = () => {
         showHandle
         sheetStyle={styles.featureSheet}
       >
-        <Text style={styles.featureSheetTitle}>Tất cả chức năng</Text>
+        <Text style={styles.featureSheetTitle} allowFontScaling={false}>
+          Tất cả chức năng
+        </Text>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.featureSheetContent}
@@ -686,7 +692,9 @@ const HomeScreen: React.FC = () => {
         showHandle
         sheetStyle={styles.featureSheet}
       >
-        <Text style={styles.featureSheetTitle}>Tất cả báo cáo</Text>
+        <Text style={styles.featureSheetTitle} allowFontScaling={false}>
+          Tất cả báo cáo
+        </Text>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.featureSheetContent}

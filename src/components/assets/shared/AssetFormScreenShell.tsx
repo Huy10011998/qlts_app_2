@@ -8,6 +8,7 @@ import React, {
 import {
   findNodeHandle,
   Platform,
+  StyleSheet,
   StyleProp,
   View,
   ViewStyle,
@@ -31,8 +32,10 @@ type AssetFormScreenShellProps = {
   children: React.ReactNode;
   contentContainerStyle: StyleProp<ViewStyle>;
   modal?: React.ReactNode;
+  footer?: React.ReactNode;
   refLoadingMore?: boolean;
   isSubmitting?: boolean;
+  footerStyle?: StyleProp<ViewStyle>;
   loadingOverlayStyle?: StyleProp<ViewStyle>;
   style?: StyleProp<ViewStyle>;
 };
@@ -42,8 +45,10 @@ export default function AssetFormScreenShell({
   children,
   contentContainerStyle,
   modal,
+  footer,
   refLoadingMore = false,
   isSubmitting = false,
+  footerStyle,
   loadingOverlayStyle,
   style,
 }: AssetFormScreenShellProps) {
@@ -96,7 +101,9 @@ export default function AssetFormScreenShell({
           contentContainerStyle={[
             contentContainerStyle,
             {
-              paddingBottom: Math.max(insets.bottom, 16) + 132,
+              paddingBottom: footer
+                ? Math.max(insets.bottom, 12) + 96
+                : Math.max(insets.bottom, 12) + 24,
             },
           ]}
           keyboardDismissMode="on-drag"
@@ -111,6 +118,18 @@ export default function AssetFormScreenShell({
           {children}
         </KeyboardAwareScrollView>
 
+        {footer ? (
+          <View
+            style={[
+              styles.footer,
+              { paddingBottom: Math.max(insets.bottom, 12) + 10 },
+              footerStyle,
+            ]}
+          >
+            {footer}
+          </View>
+        ) : null}
+
         {modal}
         {refLoadingMore && <IsLoading size="large" color={brandColor} />}
 
@@ -123,3 +142,17 @@ export default function AssetFormScreenShell({
     </AssetFormKeyboardContext.Provider>
   );
 }
+
+const styles = StyleSheet.create({
+  footer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    backgroundColor: "rgba(246, 247, 251, 0.96)",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(15, 25, 35, 0.08)",
+  },
+});

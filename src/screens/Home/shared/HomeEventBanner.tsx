@@ -2,6 +2,7 @@ import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { HOME_BRAND_RED } from "./homeTheme";
+import { COMPACT_TEXT_MAX_SCALE } from "../../../utils/helpers/textScaling";
 
 const localStyles = StyleSheet.create({
   tagIcon: {
@@ -40,7 +41,7 @@ export default function HomeEventBanner({
           <Text
             style={styles.dateDay}
             numberOfLines={1}
-            maxFontSizeMultiplier={1.15}
+            maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
           >
             {day}
           </Text>
@@ -49,7 +50,7 @@ export default function HomeEventBanner({
             numberOfLines={1}
             adjustsFontSizeToFit
             minimumFontScale={0.85}
-            maxFontSizeMultiplier={1.15}
+            maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
           >
             {monthLabel}
           </Text>
@@ -64,7 +65,10 @@ export default function HomeEventBanner({
                 color={HOME_BRAND_RED}
                 style={localStyles.tagIcon}
               />
-              <Text style={styles.tagText} maxFontSizeMultiplier={1.15}>
+              <Text
+                style={styles.tagText}
+                maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
+              >
                 SỰ KIỆN SẮP TỚI
               </Text>
             </View>
@@ -72,7 +76,7 @@ export default function HomeEventBanner({
           <Text
             style={styles.title}
             numberOfLines={2}
-            maxFontSizeMultiplier={1.15}
+            maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
           >
             {title}
           </Text>
@@ -81,7 +85,7 @@ export default function HomeEventBanner({
             <Text
               style={styles.meta}
               numberOfLines={1}
-              maxFontSizeMultiplier={1.15}
+              maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
             >
               {venue}
             </Text>
@@ -90,14 +94,17 @@ export default function HomeEventBanner({
             <Text
               style={styles.meta}
               numberOfLines={1}
-              maxFontSizeMultiplier={1.15}
+              maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
             >
               {time}
             </Text>
           </View>
           <View style={styles.countRow}>
             <Ionicons name="people-outline" size={12} color={HOME_BRAND_RED} />
-            <Text style={styles.countText} maxFontSizeMultiplier={1.15}>
+            <Text
+              style={styles.countText}
+              maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
+            >
               {count} cổ đông đăng ký
             </Text>
           </View>

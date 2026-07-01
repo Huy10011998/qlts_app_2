@@ -59,6 +59,7 @@ export default function AssetFormActionButton({
             : [styles.secondaryLabel, { color: brandColor }],
           textStyle,
         ]}
+        allowFontScaling={false}
       >
         {label}
       </Text>
@@ -68,13 +69,12 @@ export default function AssetFormActionButton({
 
 const styles = StyleSheet.create({
   button: {
-    paddingVertical: 15,
+    paddingVertical: 10,
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
     gap: 8,
-    marginTop: 8,
   },
   secondaryButton: {
     backgroundColor: "#fff",

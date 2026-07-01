@@ -2,6 +2,7 @@ import React from "react";
 import { StyleSheet, TextInput } from "react-native";
 import { useThemeColor } from "../../hooks/useThemeColor";
 import type { ThemedTextInputProps } from "../../types/index";
+import { READABLE_TEXT_MAX_SCALE } from "../../utils/helpers/textScaling";
 
 export function ThemedTextInput({
   style,
@@ -33,6 +34,7 @@ export function ThemedTextInput({
         { backgroundColor, color: textColor, borderColor },
         style,
       ]}
+      maxFontSizeMultiplier={READABLE_TEXT_MAX_SCALE}
       placeholderTextColor={placeholderColor}
       {...otherProps}
     />

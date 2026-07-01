@@ -55,6 +55,7 @@ export default function Tabs() {
         headerShown: false,
         tabBarHideOnKeyboard: true,
         lazy: false,
+        tabBarAllowFontScaling: false,
         tabBarLabelStyle: tabBarStyles.label,
         tabBarActiveTintColor: TAB_ACTIVE_COLOR,
         tabBarStyle: createTabBarStyle({ bottomInset: insets.bottom }),

@@ -232,6 +232,7 @@ export default function QrReview() {
 
       {loaded && can(nameClass, "Insert") && (
         <AddItem
+          nameClass={nameClass}
           onPress={() =>
             navigation.navigate("AssetAddRelatedItem", {
               field: JSON.stringify(fieldActive),
