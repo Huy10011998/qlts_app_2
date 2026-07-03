@@ -17,22 +17,33 @@ export const API_ENDPOINTS = {
   PREVIEW_ATTACH_PROPERTY: `${BASE_URL}/Common/preview-attach-property`,
   GET_CATEGORY_ENUM: `${BASE_URL}/Common/get-category-enum`,
   GET_CATEGORY: `${BASE_URL}/Common/get-category`,
+
   // PERMISSION
   GET_PERMISSION: `${BASE_URL}/Common/get-permission`,
+
   // CAMERA
   GET_VUNG_CAMERA_STEAM: `${BASE_URL}/VungCamera_ChiTiet/get-vung-camera-steam`,
+
   // GET TOKEN CAMERA
   GET_TOKEN_VIEW_CAMERA: `${BASE_URL}/Common/get-token-view-camera`,
-  //GET ACTIVE DHCD
+
+  // GET ACTIVE DHCD
   GET_ACTIVE_DHCD: `${BASE_URL}/DaiHoiCoDong/get-active-dhcd`,
-  //GET CODONG DHCD
+
+  // GET CODONG DHCD
   GET_CODONG_DHCD: `${BASE_URL}/DaiHoiCoDong/get-codong-dhcd`,
+
   // DIEM DANH DHCD
   DIEM_DANH_DHCD: `${BASE_URL}/DaiHoiCoDong_CoDong/diem-danh-dhcd`,
   HUY_DIEM_DANH_DHCD: `${BASE_URL}/DaiHoiCoDong_CoDong/huy-diem-danh-dhcd`,
   LUU_Y_KIEN_CO_DONG_DHCD: `${BASE_URL}/DaiHoiCoDong_CoDong/luu-ykien-codong`,
+
   // GET VIEW ACTIVE
   GET_VIEW_ACTIVE: `${BASE_URL}/Common/get-view-active`,
-  //GET_CONFIG_REPORT
+
+  // GET_CONFIG_REPORT
   GET_CONFIG_REPORT: `${BASE_URL}/Common/get-config`,
+
+  // GET_SOLAR
+  GET_SOLAR: `${BASE_URL}/TieuThu_Solar/get-solar`,
 };

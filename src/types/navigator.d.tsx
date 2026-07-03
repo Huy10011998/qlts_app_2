@@ -130,6 +130,7 @@ export type RootStackParamList = {
         viewPermission?: string;
       }
     | undefined;
+  SolarPlant: undefined;
   Camera: undefined;
   CameraList: {
     zoneId: number;

@@ -127,6 +127,55 @@ const SHARE_REPORT_OPTIONS: Array<{
   { key: "pdf", label: "Share file PDF", icon: "document-outline" },
 ];
 
+const getReportErrorLogInfo = (err: unknown) => {
+  const apiError = err as any;
+
+  return {
+    code: apiError?.code,
+    message: apiError?.message,
+    name: apiError?.name,
+    status: apiError?.response?.status,
+    statusText: apiError?.response?.statusText,
+    responseHeaders: apiError?.response?.headers,
+    responseDataType: typeof apiError?.response?.data,
+    responseDataLength:
+      typeof apiError?.response?.data === "string"
+        ? apiError.response.data.length
+        : apiError?.response?.data?.byteLength,
+    isTimeout:
+      apiError?.code === "ECONNABORTED" ||
+      String(apiError?.message ?? "")
+        .toLowerCase()
+        .includes("timeout"),
+  };
+};
+
+const getReportPreviewErrorMessage = (
+  errorInfo: ReturnType<typeof getReportErrorLogInfo>,
+  durationMs?: number
+) => {
+  const durationText =
+    typeof durationMs === "number" ? ` | ${durationMs}ms` : "";
+
+  if (errorInfo.isTimeout) {
+    return `Không thể tải báo cáo.\nBáo cáo xử lý quá lâu. Mã: TIMEOUT${durationText}`;
+  }
+
+  if (errorInfo.status === 401 || errorInfo.status === 403) {
+    return `Không thể tải báo cáo.\nPhiên đăng nhập có thể đã hết hạn. Mã: HTTP_${errorInfo.status}${durationText}`;
+  }
+
+  if (typeof errorInfo.status === "number") {
+    return `Không thể tải báo cáo.\nMáy chủ xử lý báo cáo lỗi. Mã: HTTP_${errorInfo.status}${durationText}`;
+  }
+
+  if (errorInfo.code) {
+    return `Không thể tải báo cáo.\nLỗi kết nối. Mã: ${errorInfo.code}${durationText}`;
+  }
+
+  return `Không thể tải báo cáo.\nMã: UNKNOWN${durationText}`;
+};
+
 export const buildReportHtml = (pdfBase64: string) => `
 <html>
   <head>
@@ -709,26 +758,34 @@ const ReportView: React.FC<ReportViewProps> = ({
   const loadReport = useCallback(
     async (options?: { silent?: boolean }) => {
       const silent = options?.silent;
+      let requestPayload: Record<string, any> | undefined;
+      let requestId: string | undefined;
+      let startedAt: number | undefined;
 
       try {
-        const payload = buildReportPayload(true);
+        requestPayload = buildReportPayload(true);
+        startedAt = Date.now();
+        requestId = `${reportConfig.report.name || "report"}-${startedAt}`;
 
         setLoading(true);
         log("[ReportView] Calling report preview", {
+          requestId,
           reportName: reportConfig.report.name,
           endpoint: previewEndpoint,
-          payload,
+          payload: requestPayload,
         });
-        const res = await getPreviewBC(payload, previewEndpoint);
+        const res = await getPreviewBC(requestPayload, previewEndpoint);
 
         if (!res.data) {
           throw new Error("Report response is empty");
         }
 
         log("[ReportView] Report preview success", {
+          requestId,
           reportName: reportConfig.report.name,
           fileType: reportConfig.report.fileType,
           bytesBase64: res.data.length,
+          durationMs: startedAt ? Date.now() - startedAt : undefined,
         });
         setReportError(null);
         setIsReportRendering(true);
@@ -753,10 +810,24 @@ const ReportView: React.FC<ReportViewProps> = ({
           return;
         }
 
-        error("Lỗi khi gọi API:", err);
-        setReportError("Không thể tải báo cáo.");
+        const durationMs = startedAt ? Date.now() - startedAt : undefined;
+        const errorInfo = getReportErrorLogInfo(err);
+        const reportErrorMessage = getReportPreviewErrorMessage(
+          errorInfo,
+          durationMs
+        );
+
+        error("[ReportView] Report preview failed", {
+          requestId,
+          reportName: reportConfig.report.name,
+          endpoint: previewEndpoint,
+          payload: requestPayload,
+          durationMs,
+          error: errorInfo,
+        });
+        setReportError(reportErrorMessage);
         if (!silent) {
-          showAlertIfActive("Lỗi", "Không thể tải báo cáo.");
+          showAlertIfActive("Lỗi", reportErrorMessage);
         }
       } finally {
         if (isMounted()) {
@@ -1461,6 +1532,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#4B5563",
     fontWeight: "600",
+    lineHeight: 19,
+    paddingHorizontal: 24,
+    textAlign: "center",
   },
   fullscreenContainer: {
     flex: 1,

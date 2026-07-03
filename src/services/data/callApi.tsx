@@ -553,7 +553,7 @@ export const getPreviewBC = async (
 ) => {
   const res = await api.post(path, param, {
     responseType: "arraybuffer",
-    timeout: 10000,
+    timeout: 30000,
   });
   return {
     headers: res.headers,

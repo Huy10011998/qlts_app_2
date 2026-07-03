@@ -56,7 +56,8 @@ const getViewIconName = (item: ViewActiveItem) => {
   return iconName;
 };
 
-const getViewOrderNumber = (item: ViewActiveItem) => Number(item.stt ?? item.id);
+const getViewOrderNumber = (item: ViewActiveItem) =>
+  Number(item.stt ?? item.id);
 
 const getViewMenuItemId = (item: ViewActiveItem) =>
   String(getViewOrderNumber(item));
@@ -86,8 +87,16 @@ export function useHomeMenuItems(
   );
 
   const openReportScreen = useCallback(
-    (params?: { groupMenuId?: number; titleHeader?: string; viewPermission?: string }) =>
-      navigation.navigate("Report", params),
+    (params?: {
+      groupMenuId?: number;
+      titleHeader?: string;
+      viewPermission?: string;
+    }) => navigation.navigate("Report", params),
+    [navigation],
+  );
+
+  const openSolarPlantScreen = useCallback(
+    () => navigation.navigate("SolarPlant"),
     [navigation],
   );
 
@@ -182,13 +191,22 @@ export function useHomeMenuItems(
   );
 
   const menuItems = useMemo<HomeMenuItem[]>(
-    () =>
-      apiViews.map((view) =>
+    () => [
+      {
+        id: "solar-plant-demo",
+        label: "Cholimex Solar Plant",
+        iconName: "sunny-outline",
+        viewPermission: "SOLAR_PLANT",
+        description: "Giám sát năng lượng",
+        onPress: openSolarPlantScreen,
+      },
+      ...apiViews.map((view) =>
         STATIC_VIEW_ORDER_NUMBERS.has(getViewOrderNumber(view))
           ? createStaticMenuItem(view)
           : createApiMenuItem(view),
       ),
-    [apiViews, createApiMenuItem, createStaticMenuItem],
+    ],
+    [apiViews, createApiMenuItem, createStaticMenuItem, openSolarPlantScreen],
   );
 
   return {
