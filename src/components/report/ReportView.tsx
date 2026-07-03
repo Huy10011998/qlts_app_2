@@ -6,6 +6,8 @@ import React, {
   useState,
 } from "react";
 import {
+  AppState,
+  AppStateStatus,
   View,
   Text,
   Platform,
@@ -127,54 +129,30 @@ const SHARE_REPORT_OPTIONS: Array<{
   { key: "pdf", label: "Share file PDF", icon: "document-outline" },
 ];
 
-const getReportErrorLogInfo = (err: unknown) => {
+const shouldRetryReportPreview = (err: unknown) => {
   const apiError = err as any;
+  const status = apiError?.response?.status;
+  const isTimeout =
+    apiError?.code === "ECONNABORTED" ||
+    String(apiError?.message ?? "")
+      .toLowerCase()
+      .includes("timeout");
 
-  return {
-    code: apiError?.code,
-    message: apiError?.message,
-    name: apiError?.name,
-    status: apiError?.response?.status,
-    statusText: apiError?.response?.statusText,
-    responseHeaders: apiError?.response?.headers,
-    responseDataType: typeof apiError?.response?.data,
-    responseDataLength:
-      typeof apiError?.response?.data === "string"
-        ? apiError.response.data.length
-        : apiError?.response?.data?.byteLength,
-    isTimeout:
-      apiError?.code === "ECONNABORTED" ||
-      String(apiError?.message ?? "")
-        .toLowerCase()
-        .includes("timeout"),
-  };
+  if (status === 401 || status === 403) return false;
+  if (isTimeout) return true;
+  if (typeof status === "number") return status >= 500;
+  return Boolean(apiError?.code);
 };
 
-const getReportPreviewErrorMessage = (
-  errorInfo: ReturnType<typeof getReportErrorLogInfo>,
-  durationMs?: number
-) => {
-  const durationText =
-    typeof durationMs === "number" ? ` | ${durationMs}ms` : "";
+const REPORT_PREVIEW_RETRY_DELAY_MS = 800;
+const REPORT_PREVIEW_MAX_ATTEMPTS = 2;
+const REPORT_PREVIEW_ATTEMPT_TIMEOUT_MS = 15000;
+const REPORT_SLOW_LOADING_MS = 8000;
 
-  if (errorInfo.isTimeout) {
-    return `Không thể tải báo cáo.\nBáo cáo xử lý quá lâu. Mã: TIMEOUT${durationText}`;
-  }
-
-  if (errorInfo.status === 401 || errorInfo.status === 403) {
-    return `Không thể tải báo cáo.\nPhiên đăng nhập có thể đã hết hạn. Mã: HTTP_${errorInfo.status}${durationText}`;
-  }
-
-  if (typeof errorInfo.status === "number") {
-    return `Không thể tải báo cáo.\nMáy chủ xử lý báo cáo lỗi. Mã: HTTP_${errorInfo.status}${durationText}`;
-  }
-
-  if (errorInfo.code) {
-    return `Không thể tải báo cáo.\nLỗi kết nối. Mã: ${errorInfo.code}${durationText}`;
-  }
-
-  return `Không thể tải báo cáo.\nMã: UNKNOWN${durationText}`;
-};
+const sleep = (ms: number) =>
+  new Promise<void>((resolve) => {
+    setTimeout(resolve, ms);
+  });
 
 export const buildReportHtml = (pdfBase64: string) => `
 <html>
@@ -553,7 +531,10 @@ const ReportView: React.FC<ReportViewProps> = ({
   const [isSharing, setIsSharing] = useState(false);
   const [shareOptionsVisible, setShareOptionsVisible] = useState(false);
   const [loading, setLoading] = useState<boolean>(false);
+  const [reportLoadingMessage, setReportLoadingMessage] = useState("");
+  const [webViewRenderKey, setWebViewRenderKey] = useState(0);
   const webViewRef = useRef<WebView>(null);
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const { isMounted, showAlertIfActive } = useSafeAlert();
   const PAGE_SIZE = 20;
   const reportWebViewSource = useMemo(
@@ -567,6 +548,22 @@ const ReportView: React.FC<ReportViewProps> = ({
     setReferenceData,
     referenceData
   );
+
+  useEffect(() => {
+    if (!loading) {
+      setReportLoadingMessage("");
+      return;
+    }
+
+    setReportLoadingMessage("Đang tạo báo cáo...");
+    const timer = setTimeout(() => {
+      setReportLoadingMessage(
+        "Báo cáo đang xử lý, vui lòng chờ thêm vài giây..."
+      );
+    }, REPORT_SLOW_LOADING_MS);
+
+    return () => clearTimeout(timer);
+  }, [loading]);
 
   const handleParameterChange = useCallback(
     (name: string, value: any) => {
@@ -759,34 +756,43 @@ const ReportView: React.FC<ReportViewProps> = ({
     async (options?: { silent?: boolean }) => {
       const silent = options?.silent;
       let requestPayload: Record<string, any> | undefined;
-      let requestId: string | undefined;
-      let startedAt: number | undefined;
 
       try {
         requestPayload = buildReportPayload(true);
-        startedAt = Date.now();
-        requestId = `${reportConfig.report.name || "report"}-${startedAt}`;
 
         setLoading(true);
-        log("[ReportView] Calling report preview", {
-          requestId,
-          reportName: reportConfig.report.name,
-          endpoint: previewEndpoint,
-          payload: requestPayload,
-        });
-        const res = await getPreviewBC(requestPayload, previewEndpoint);
 
-        if (!res.data) {
+        let res: Awaited<ReturnType<typeof getPreviewBC>> | null = null;
+        for (
+          let attempt = 1;
+          attempt <= REPORT_PREVIEW_MAX_ATTEMPTS;
+          attempt++
+        ) {
+          try {
+            res = await getPreviewBC(
+              requestPayload,
+              previewEndpoint,
+              REPORT_PREVIEW_ATTEMPT_TIMEOUT_MS
+            );
+            break;
+          } catch (previewErr) {
+            const canRetry =
+              attempt < REPORT_PREVIEW_MAX_ATTEMPTS &&
+              shouldRetryReportPreview(previewErr);
+
+            if (!canRetry) {
+              throw previewErr;
+            }
+
+            setReportLoadingMessage("Kết nối chưa ổn định, đang thử lại...");
+            await sleep(REPORT_PREVIEW_RETRY_DELAY_MS);
+          }
+        }
+
+        if (!res?.data) {
           throw new Error("Report response is empty");
         }
 
-        log("[ReportView] Report preview success", {
-          requestId,
-          reportName: reportConfig.report.name,
-          fileType: reportConfig.report.fileType,
-          bytesBase64: res.data.length,
-          durationMs: startedAt ? Date.now() - startedAt : undefined,
-        });
         setReportError(null);
         setIsReportRendering(true);
         setReportPdfBase64(res.data);
@@ -810,21 +816,8 @@ const ReportView: React.FC<ReportViewProps> = ({
           return;
         }
 
-        const durationMs = startedAt ? Date.now() - startedAt : undefined;
-        const errorInfo = getReportErrorLogInfo(err);
-        const reportErrorMessage = getReportPreviewErrorMessage(
-          errorInfo,
-          durationMs
-        );
+        const reportErrorMessage = "Không thể tải báo cáo. Vui lòng thử lại sau.";
 
-        error("[ReportView] Report preview failed", {
-          requestId,
-          reportName: reportConfig.report.name,
-          endpoint: previewEndpoint,
-          payload: requestPayload,
-          durationMs,
-          error: errorInfo,
-        });
         setReportError(reportErrorMessage);
         if (!silent) {
           showAlertIfActive("Lỗi", reportErrorMessage);
@@ -839,8 +832,6 @@ const ReportView: React.FC<ReportViewProps> = ({
       buildReportPayload,
       isMounted,
       previewEndpoint,
-      reportConfig.report.fileType,
-      reportConfig.report.name,
       showAlertIfActive,
     ]
   );
@@ -878,6 +869,14 @@ const ReportView: React.FC<ReportViewProps> = ({
   const postToReport = useCallback((message: string) => {
     webViewRef.current?.postMessage(message);
   }, []);
+
+  const remountReportWebView = useCallback(() => {
+    if (!reportHtml) return;
+
+    setReportError(null);
+    setIsReportRendering(true);
+    setWebViewRenderKey((current) => current + 1);
+  }, [reportHtml]);
 
   const shareReportFile = useCallback(
     async (option: ShareReportOption) => {
@@ -998,6 +997,25 @@ const ReportView: React.FC<ReportViewProps> = ({
     };
   }, []);
 
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      const previousState = appStateRef.current;
+      appStateRef.current = nextState;
+
+      if (
+        reportHtml &&
+        nextState === "active" &&
+        previousState.match(/inactive|background/)
+      ) {
+        remountReportWebView();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [remountReportWebView, reportHtml]);
+
   if (reportHtml) {
     return (
       <View style={styles.container}>
@@ -1080,6 +1098,7 @@ const ReportView: React.FC<ReportViewProps> = ({
           ]}
         >
           <WebView
+            key={webViewRenderKey}
             ref={webViewRef}
             originWhitelist={["*"]}
             source={reportWebViewSource}
@@ -1093,6 +1112,8 @@ const ReportView: React.FC<ReportViewProps> = ({
               setIsReportRendering(false);
               setReportError("Không thể hiển thị báo cáo.");
             }}
+            onContentProcessDidTerminate={remountReportWebView}
+            onRenderProcessGone={remountReportWebView}
           />
 
           {isReportRendering && !reportError ? (
@@ -1244,6 +1265,12 @@ const ReportView: React.FC<ReportViewProps> = ({
             </Text>
           )}
         </TouchableOpacity>
+
+        {loading && reportLoadingMessage ? (
+          <Text style={styles.reportLoadingText} allowFontScaling={false}>
+            {reportLoadingMessage}
+          </Text>
+        ) : null}
       </ScrollView>
 
       <AssetFormReferencePickerModal
@@ -1436,17 +1463,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold" as const,
   },
+  reportLoadingText: {
+    color: "#667085",
+    fontSize: 13,
+    fontWeight: "600",
+    lineHeight: 18,
+    paddingHorizontal: 12,
+    textAlign: "center",
+  },
   toolbar: {
     flexDirection: "row",
     justifyContent: "flex-end",
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingBottom: 10,
+    gap: 10,
+    paddingHorizontal: 24,
+    paddingTop: 10,
+    paddingBottom: 12,
     backgroundColor: "#fff",
   },
   toolbarButton: {
-    width: 38,
-    height: 38,
+    width: 42,
+    height: 42,
     borderRadius: 8,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "#E0E4EA",

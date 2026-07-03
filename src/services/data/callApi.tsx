@@ -550,10 +550,11 @@ export const getPreviewAttachProperty = async (path: string) => {
 export const getPreviewBC = async (
   param: Record<string, any>,
   path: string,
+  timeout = 30000,
 ) => {
   const res = await api.post(path, param, {
     responseType: "arraybuffer",
-    timeout: 30000,
+    timeout,
   });
   return {
     headers: res.headers,
