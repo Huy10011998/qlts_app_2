@@ -133,6 +133,7 @@ export interface AssetActionProps {
   onEdit: () => void;
   onDelete: () => void;
   onClone: () => void;
+  showClone?: boolean;
   nameClass?: string;
 }
 
@@ -280,6 +281,10 @@ export type AddItemAssetProps = {
   nameClass?: string;
   propertyClass?: {};
   idRoot?: string;
+  titleHeader?: string;
+  groupMenuId?: number;
+  viewPermission?: string;
+  assetTitleHeader?: string;
 };
 
 export interface HandleCascadeChangeProps {

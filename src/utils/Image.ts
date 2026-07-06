@@ -4,7 +4,7 @@ import {
   uploadAttachProperty,
 } from "../services/data/callApi";
 import { error } from "./Logger";
-import { Alert } from "react-native";
+import { Alert, Platform } from "react-native";
 
 export const buildImageUrlLocal = (raw: any) => {
   if (!raw) return "";
@@ -142,7 +142,24 @@ export const pickImage = async (
     // Update formData
     handleChange(fieldName, url);
   } catch (uploadError: any) {
-    Alert.alert("Lỗi", "Không thể tải ảnh!");
+    const message = String(
+      uploadError?.message ?? uploadError?.errorMessage ?? "",
+    ).toLowerCase();
+    const isPermissionError =
+      message.includes("permission") ||
+      message.includes("denied") ||
+      message.includes("not authorized");
+
+    Alert.alert(
+      isPermissionError ? "Không có quyền truy cập ảnh" : "Lỗi",
+      isPermissionError
+        ? Platform.OS === "android"
+          ? "Ứng dụng cần quyền truy cập ảnh để chọn hình. Vui lòng cấp quyền trong Cài đặt."
+          : "Ứng dụng cần quyền truy cập ảnh để chọn hình."
+        : "Không thể tải ảnh!",
+    );
+  } finally {
+    setLoadingImages((p) => ({ ...p, [fieldName]: false }));
   }
 };
 

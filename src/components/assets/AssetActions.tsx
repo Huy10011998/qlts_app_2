@@ -16,6 +16,7 @@ export default function AssetActions({
   onEdit,
   onDelete,
   onClone,
+  showClone = true,
   nameClass,
 }: AssetActionProps) {
   const { can } = usePermission();
@@ -51,7 +52,7 @@ export default function AssetActions({
           onPress: onDelete,
         }
       : null,
-    allowInsert
+    showClone && allowInsert
       ? {
           key: "clone",
           label: "Bản sao",

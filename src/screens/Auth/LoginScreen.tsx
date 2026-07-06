@@ -61,19 +61,17 @@ import {
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const RED = "#E31E24";
 const COMPANY_FOUNDED_YEAR = 1983;
+const SUPPORT_EMAIL = "cholimexfood@cholimexfood.com.vn";
+const SUPPORT_PHONE = "028 3765 5037";
+const SUPPORT_PHONE_LINK = SUPPORT_PHONE.replace(/\s/g, "");
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const passwordRef = useRef<TextInput>(null);
   const appVersionLabel = `v${DeviceInfo.getVersion()}`;
   const companyAge = new Date().getFullYear() - COMPANY_FOUNDED_YEAR;
-  const {
-    setToken,
-    setRefreshToken,
-    setIosAuthenticated,
-    syncSession,
-    token,
-  } = useAuth();
+  const { setToken, setRefreshToken, setIosAuthenticated, syncSession, token } =
+    useAuth();
 
   const [userName, setUserName] = useState("");
   const [userPassword, setUserPassword] = useState("");
@@ -89,6 +87,28 @@ export default function LoginScreen() {
 
   const isFaceIdRunning = useRef(false);
   const isLocalNetworkRequestRunning = useRef(false);
+  const isLocalNetworkDenied = localNetworkStatus === "denied";
+  const isLocalNetworkGranted = localNetworkStatus === "granted";
+  const localNetworkToneStyle = isLocalNetworkGranted
+    ? styles.localNetworkNoticeGranted
+    : isLocalNetworkDenied
+    ? styles.localNetworkNoticeDenied
+    : styles.localNetworkNoticeUnknown;
+  const localNetworkIconToneStyle = isLocalNetworkGranted
+    ? styles.localNetworkIconGranted
+    : isLocalNetworkDenied
+    ? styles.localNetworkIconDenied
+    : styles.localNetworkIconUnknown;
+  const localNetworkStatusToneStyle = isLocalNetworkGranted
+    ? styles.localNetworkStatusGranted
+    : isLocalNetworkDenied
+    ? styles.localNetworkStatusDenied
+    : styles.localNetworkStatusUnknown;
+  const localNetworkIconColor = isLocalNetworkGranted
+    ? "#15803D"
+    : isLocalNetworkDenied
+    ? RED
+    : "#64748B";
 
   useEffect(() => {
     log("LoginScreen mounted, token:", token);
@@ -103,6 +123,18 @@ export default function LoginScreen() {
 
   const openLocalNetworkSettings = useCallback(() => {
     Linking.openSettings();
+  }, []);
+
+  const handleOpenSupportEmail = useCallback(() => {
+    Linking.openURL(
+      `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
+        "Hỗ trợ đăng nhập hệ thống",
+      )}`,
+    );
+  }, []);
+
+  const handleOpenSupportPhone = useCallback(() => {
+    Linking.openURL(`tel:${SUPPORT_PHONE_LINK}`);
   }, []);
 
   const applyLocalNetworkStatus = useCallback(
@@ -549,28 +581,74 @@ export default function LoginScreen() {
               </View>
 
               {(Platform.OS === "ios" || Platform.OS === "android") && (
-                <View style={styles.localNetworkNotice}>
-                  <Text style={styles.localNetworkStatusText}>
-                    Quyền mạng nội bộ:{" "}
-                    {getLocalNetworkPermissionLabel(localNetworkStatus)}
-                  </Text>
-                  <Text style={styles.localNetworkNoticeText}>
-                    {Platform.OS === "ios"
-                      ? "Ứng dụng cần quyền mạng nội bộ để kết nối server. Vui lòng chọn chấp nhận khi iPhone hỏi quyền này."
-                      : "Quyền kết nối server nội bộ trên Android đã được mở sẵn cho ứng dụng."}
-                  </Text>
-                  {Platform.OS === "ios" && (
+                <View
+                  style={[styles.localNetworkNotice, localNetworkToneStyle]}
+                >
+                  <View
+                    style={[
+                      styles.localNetworkIconWrap,
+                      localNetworkIconToneStyle,
+                    ]}
+                  >
+                    <Ionicons
+                      name={
+                        isLocalNetworkGranted
+                          ? "checkmark-circle"
+                          : "wifi-outline"
+                      }
+                      size={15}
+                      color={localNetworkIconColor}
+                    />
+                  </View>
+                  <View style={styles.localNetworkTextWrap}>
+                    <Text style={styles.localNetworkLabel}>Mạng nội bộ</Text>
+                    <Text
+                      style={[
+                        styles.localNetworkStatusText,
+                        localNetworkStatusToneStyle,
+                      ]}
+                    >
+                      {getLocalNetworkPermissionLabel(localNetworkStatus)}
+                    </Text>
+                  </View>
+                  {Platform.OS === "ios" && isLocalNetworkDenied && (
                     <TouchableOpacity
+                      style={styles.localNetworkSettingsButton}
                       onPress={openLocalNetworkSettings}
                       activeOpacity={0.8}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
-                      <Text style={styles.localNetworkSettingsLink}>
-                        Mở Cài đặt để bật thủ công nếu đã "từ chối"
-                      </Text>
+                      <Ionicons name="settings-outline" size={15} color={RED} />
                     </TouchableOpacity>
                   )}
                 </View>
               )}
+
+              <View style={styles.supportCard}>
+                <View style={styles.supportActions}>
+                  <TouchableOpacity
+                    style={styles.supportAction}
+                    onPress={handleOpenSupportEmail}
+                    activeOpacity={0.82}
+                  >
+                    <Ionicons name="mail-outline" size={15} color="#B91C1C" />
+                    <Text style={styles.supportActionText} numberOfLines={1}>
+                      {SUPPORT_EMAIL}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.supportAction}
+                    onPress={handleOpenSupportPhone}
+                    activeOpacity={0.82}
+                  >
+                    <Ionicons name="call-outline" size={15} color="#15803D" />
+                    <Text style={styles.supportActionText} numberOfLines={1}>
+                      {SUPPORT_PHONE}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
 
               {/* Info chips — chuyển xuống form cho gọn hero */}
               <View style={styles.infoRow}>
@@ -857,31 +935,109 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   localNetworkNotice: {
-    marginTop: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    borderRadius: 16,
-    backgroundColor: "#FFF8EF",
+    marginTop: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 8,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#F5DEC2",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    shadowColor: "#7F1D1D",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 1,
+  },
+  localNetworkNoticeGranted: {
+    backgroundColor: "#F4FBF6",
+    borderColor: "#BFE8C9",
+  },
+  localNetworkNoticeDenied: {
+    backgroundColor: "#FFF7ED",
+    borderColor: "#FDBA74",
+  },
+  localNetworkNoticeUnknown: {
+    backgroundColor: "#F8FAFC",
+    borderColor: "#E2E8F0",
+  },
+  localNetworkIconWrap: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  localNetworkIconGranted: {
+    backgroundColor: "#DCFCE7",
+  },
+  localNetworkIconDenied: {
+    backgroundColor: "#FEE2E2",
+  },
+  localNetworkIconUnknown: {
+    backgroundColor: "#E2E8F0",
+  },
+  localNetworkTextWrap: {
+    flex: 1,
+    gap: 1,
+  },
+  localNetworkLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#64748B",
   },
   localNetworkStatusText: {
     fontSize: 12,
-    fontWeight: "700",
-    color: "#9A3412",
+    fontWeight: "800",
   },
-  localNetworkNoticeText: {
-    marginTop: 6,
-    fontSize: 12.5,
-    lineHeight: 19,
-    color: "#7C2D12",
+  localNetworkStatusGranted: {
+    color: "#15803D",
   },
-  localNetworkSettingsLink: {
-    marginTop: 10,
-    fontSize: 12.5,
+  localNetworkStatusDenied: {
+    color: "#B91C1C",
+  },
+  localNetworkStatusUnknown: {
+    color: "#475569",
+  },
+  localNetworkSettingsButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+  },
+  supportCard: {
+    marginTop: 12,
+    padding: 10,
+    borderRadius: 16,
+    backgroundColor: "#FFF8F8",
+    borderWidth: 1,
+    borderColor: "#FAD1D1",
+  },
+  supportActions: {
+    gap: 8,
+  },
+  supportAction: {
+    flex: 1,
+    minHeight: 36,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#F3E3E3",
+  },
+  supportActionText: {
+    flex: 1,
+    fontSize: 11,
     fontWeight: "700",
-    color: RED,
-    textDecorationLine: "underline",
+    color: "#374151",
   },
 
   // ── Footer ──

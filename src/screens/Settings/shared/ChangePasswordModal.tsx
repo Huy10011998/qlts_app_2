@@ -1,9 +1,13 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Keyboard,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
+  View,
   useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -40,7 +44,56 @@ export default function ChangePasswordModal({
 }: ChangePasswordModalProps) {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [didPressSubmit, setDidPressSubmit] = useState(false);
   const sheetBottomPadding = Math.max(insets.bottom, 16) + 16;
+  const keyboardSpace =
+    keyboardHeight > 0
+      ? Math.min(Math.max(keyboardHeight * 0.25, 72), 140)
+      : 0;
+  const isOldPasswordMissing = didPressSubmit && !oldPassword.trim();
+  const isNewPasswordMissing = didPressSubmit && !newPassword.trim();
+  const isConfirmPasswordMissing =
+    didPressSubmit && !confirmPassword.trim();
+
+  const handleSubmitPress = () => {
+    setDidPressSubmit(true);
+
+    if (
+      !oldPassword.trim() ||
+      !newPassword.trim() ||
+      !confirmPassword.trim()
+    ) {
+      return;
+    }
+
+    onSubmit();
+  };
+
+  useEffect(() => {
+    if (!visible) {
+      setKeyboardHeight(0);
+      setDidPressSubmit(false);
+      return;
+    }
+
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSubscription = Keyboard.addListener(showEvent, (event) => {
+      setKeyboardHeight(event.endCoordinates.height);
+    });
+    const hideSubscription = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, [visible]);
 
   return (
     <BottomSheetModalShell
@@ -59,12 +112,42 @@ export default function ChangePasswordModal({
           paddingBottom: sheetBottomPadding,
         },
       ]}
-      showCloseButton
       showHandle
     >
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.headerIconButton}
+          hitSlop={10}
+          onPress={onClose}
+          disabled={isLoading}
+        >
+          <Ionicons name="close" size={22} color="#4B5563" />
+        </TouchableOpacity>
+
+        <Text style={styles.headerTitle} numberOfLines={1}>
+          Đổi mật khẩu
+        </Text>
+
+        <TouchableOpacity
+          style={[styles.headerSubmitButton, isLoading && styles.disabledBtn]}
+          onPress={handleSubmitPress}
+          disabled={isLoading}
+          activeOpacity={0.82}
+        >
+          {isLoading ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.headerSubmitText}>Lưu</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: keyboardSpace + 24 },
+        ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         bounces={false}
@@ -82,32 +165,20 @@ export default function ChangePasswordModal({
           placeholder="Mật khẩu hiện tại"
           value={oldPassword}
           onChangeText={onChangeOldPassword}
+          hasError={isOldPasswordMissing}
         />
         <SettingPasswordInput
           placeholder="Mật khẩu mới"
           value={newPassword}
           onChangeText={onChangeNewPassword}
+          hasError={isNewPasswordMissing}
         />
         <SettingPasswordInput
           placeholder="Xác nhận mật khẩu mới"
           value={confirmPassword}
           onChangeText={onChangeConfirmPassword}
+          hasError={isConfirmPasswordMissing}
         />
-
-        <TouchableOpacity
-          onPress={onSubmit}
-          disabled={isLoading}
-          activeOpacity={0.85}
-        >
-          <LinearGradient
-            colors={[C.redLight, C.red]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.confirmBtn}
-          >
-            <Text style={styles.confirmText}>Xác nhận đổi mật khẩu</Text>
-          </LinearGradient>
-        </TouchableOpacity>
       </ScrollView>
     </BottomSheetModalShell>
   );
@@ -131,6 +202,45 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingTop: 0,
+  },
+  header: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: -2,
+    marginBottom: 10,
+  },
+  headerIconButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F3F4F6",
+  },
+  headerTitle: {
+    flex: 1,
+    marginHorizontal: 12,
+    color: C.text,
+    fontSize: 16,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  headerSubmitButton: {
+    minWidth: 58,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+    backgroundColor: C.red,
+  },
+  headerSubmitText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "800",
+    includeFontPadding: false,
   },
   iconGradient: {
     width: 56,
@@ -160,23 +270,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     lineHeight: 18,
   },
-  confirmBtn: {
-    borderRadius: 14,
-    minHeight: 56,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 8,
-    shadowColor: C.red,
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-  },
-  confirmText: {
-    color: "#fff",
-    fontWeight: "800",
-    fontSize: 15,
-    lineHeight: 20,
-    letterSpacing: 0.3,
-    includeFontPadding: false,
+  disabledBtn: {
+    opacity: 0.65,
   },
 });

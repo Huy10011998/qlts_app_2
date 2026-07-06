@@ -165,6 +165,7 @@ export const RenderInputByType = ({
   const keyboardContext = useAssetFormKeyboard();
   const basicInputRef = React.useRef<TextInput>(null);
   const numberInputRef = React.useRef<TextInput>(null);
+  const textAreaWrapRef = React.useRef<View>(null);
   const textAreaRef = React.useRef<TextInput>(null);
   const value = formData[f.name];
   const hasValidationError = Boolean(validationErrors?.[f.name]);
@@ -209,7 +210,7 @@ export const RenderInputByType = ({
     return null;
   }
 
-  const handleInputFocus = (target: TextInput | null) => {
+  const handleInputFocus = (target: any) => {
     keyboardContext?.handleInputFocus(target);
   };
 
@@ -314,20 +315,22 @@ export const RenderInputByType = ({
 
     case TypeProperty.Text:
       return (
-        <TextInput
-          ref={textAreaRef}
-          style={[
-            styles.textArea,
-            localStyles.textArea,
-            hasValidationError && localStyles.textAreaInvalid,
-          ]}
-          multiline
-          value={String(value ?? "")}
-          placeholder={`Nhập ${f.moTa ?? f.name}`}
-          placeholderTextColor="#888"
-          onFocus={() => handleInputFocus(textAreaRef.current)}
-          onChangeText={(t) => handleChange(f.name, t)}
-        />
+        <View ref={textAreaWrapRef} collapsable={false}>
+          <TextInput
+            ref={textAreaRef}
+            style={[
+              styles.textArea,
+              localStyles.textArea,
+              hasValidationError && localStyles.textAreaInvalid,
+            ]}
+            multiline
+            value={String(value ?? "")}
+            placeholder={`Nhập ${f.moTa ?? f.name}`}
+            placeholderTextColor="#888"
+            onFocus={() => handleInputFocus(textAreaWrapRef.current)}
+            onChangeText={(t) => handleChange(f.name, t)}
+          />
+        </View>
       );
 
     case TypeProperty.Image: {
@@ -396,6 +399,7 @@ export const RenderInputByType = ({
             hasValidationError && localStyles.selectInputInvalid,
           ]}
           onPress={() => {
+            keyboardContext?.dismissKeyboard();
             openEnumReferanceModal?.(f);
           }}
         >

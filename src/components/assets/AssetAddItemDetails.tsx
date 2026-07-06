@@ -33,10 +33,10 @@ import { useOpenReferenceModal } from "../../hooks/AssetAddItem/useOpenReference
 import { useAssetFormState } from "../../hooks/AssetAddItem/useAssetFormState";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import AssetFormGroupedFields from "./shared/AssetFormGroupedFields";
-import AssetFormActionButton from "./shared/AssetFormActionButton";
 import AssetFormHeroCard from "./shared/AssetFormHeroCard";
 import AssetFormReferencePickerModal from "./shared/AssetFormReferencePickerModal";
 import AssetFormScreenShell from "./shared/AssetFormScreenShell";
+import { createAssetFormHeaderSubmitRight } from "./shared/AssetFormHeaderSubmitButton";
 import {
   getRequiredFieldErrors,
   getRequiredFieldsMessage,
@@ -48,13 +48,22 @@ import {
   ASSET_FORM_CARD_SHADOW,
 } from "./shared/assetFormTheme";
 import { REVIEW_NAME_CLASSES_DANHGIA } from "../../constants/reviewNameClasses";
+import { backToAssetList } from "../../navigation/shared/assetNavigationReset";
 
 const BRAND_RED = ASSET_FORM_BRAND_RED;
 const BG = ASSET_FORM_BG;
 const CARD_SHADOW = ASSET_FORM_CARD_SHADOW;
 
 export default function AssetAddItemDetails() {
-  const { field, nameClass, propertyClass } = useParams();
+  const {
+    field,
+    nameClass,
+    propertyClass,
+    titleHeader,
+    groupMenuId,
+    viewPermission,
+    assetTitleHeader,
+  } = useParams();
   const navigation = useNavigation<AssetAddItemNavigationProp>();
   const { can } = usePermission();
   const dispatch = useAppDispatch();
@@ -130,7 +139,7 @@ export default function AssetAddItemDetails() {
 
       baseHandleChange(name, value);
     },
-    [baseHandleChange, validationErrors]
+    [baseHandleChange, setValidationErrors, validationErrors]
   );
 
   useTreeToForm({
@@ -264,7 +273,20 @@ export default function AssetAddItemDetails() {
             setFormData({});
             setImages({});
             dispatch(setShouldRefreshList(true));
-            navigation.goBack();
+            backToAssetList(navigation, {
+              assetContext: {
+                groupMenuId,
+                viewPermission,
+                assetTitleHeader,
+              },
+              listParams: {
+                nameClass,
+                titleHeader,
+                groupMenuId,
+                viewPermission,
+                assetTitleHeader,
+              },
+            });
           },
         },
       ]);
@@ -278,6 +300,20 @@ export default function AssetAddItemDetails() {
     }
   };
 
+  const handleCreateRef = React.useRef(handleCreate);
+  handleCreateRef.current = handleCreate;
+
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: createAssetFormHeaderSubmitRight({
+        disabled: !!nameClass && !can(nameClass, "Insert"),
+        iconName: "checkmark-circle-outline",
+        label: isReviewClass ? "Xác nhận" : "Tạo",
+        onPress: () => handleCreateRef.current(),
+      }),
+    });
+  }, [can, isReviewClass, nameClass, navigation]);
+
   return (
     <AssetFormScreenShell
       brandColor={BRAND_RED}
@@ -286,16 +322,6 @@ export default function AssetAddItemDetails() {
       loadingOverlayStyle={styles.loadingOverlay}
       refLoadingMore={refLoadingMore}
       style={styles.container}
-      footer={
-        <AssetFormActionButton
-          brandColor={BRAND_RED}
-          disabled={!!nameClass && !can(nameClass, "Insert")}
-          iconName="checkmark-circle-outline"
-          label={isReviewClass ? "Xác nhận" : "Tạo"}
-          onPress={handleCreate}
-          style={styles.createButton}
-        />
-      }
       modal={
         <AssetFormReferencePickerModal
           activeEnumField={activeEnumField}
@@ -366,8 +392,5 @@ const styles = StyleSheet.create({
   }),
   heroIconWrap: {
     backgroundColor: "#FFF3F3",
-  },
-  createButton: {
-    ...CARD_SHADOW,
   },
 });

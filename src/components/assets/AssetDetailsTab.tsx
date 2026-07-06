@@ -8,6 +8,7 @@ import IsLoading from "../ui/IconLoading";
 import EmptyState from "../ui/EmptyState";
 import { error } from "../../utils/Logger";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
+import { useParams } from "../../hooks/useParams";
 import { BG, BRAND_RED } from "./shared/listTheme";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { isNetworkRequestError } from "../../utils/helpers/api";
@@ -22,6 +23,7 @@ export default function AssetDeTailsTab({
   const route = useRoute<StackRoute<"AssetDetails">>();
 
   const { id, nameClass } = route.params;
+  const { groupMenuId, viewPermission, assetTitleHeader } = useParams();
   const { isMounted } = useSafeAlert();
 
   const [isLoading, setIsLoading] = useState(true);
@@ -89,6 +91,9 @@ export default function AssetDeTailsTab({
       idRoot: id,
       nameClassRoot: nameClassRoot,
       titleHeader: item.moTa ?? "Danh sách",
+      groupMenuId,
+      viewPermission,
+      assetTitleHeader,
     });
   };
 

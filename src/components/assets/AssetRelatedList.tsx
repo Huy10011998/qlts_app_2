@@ -52,6 +52,9 @@ export default function AssetRelatedList() {
     idRoot,
     propertyReference,
     nameClassRoot,
+    groupMenuId,
+    viewPermission,
+    assetTitleHeader,
   } = route.params ?? {};
   const hasRequiredParams = !!nameClass && !!idRoot && !!propertyReference;
 
@@ -115,6 +118,9 @@ export default function AssetRelatedList() {
       propertyReference,
       nameClassRoot,
       titleHeader: route.params?.titleHeader,
+      groupMenuId,
+      viewPermission,
+      assetTitleHeader,
     });
   };
 
@@ -245,6 +251,12 @@ export default function AssetRelatedList() {
               propertyClass: mapPropertyResponseToPropertyClass(propertyClass),
               idRoot,
               nameClassRoot,
+              propertyReference,
+              titleHeader: route.params?.titleHeader,
+              returnTo: "assetRelatedList",
+              groupMenuId,
+              viewPermission,
+              assetTitleHeader,
             })
           }
         />

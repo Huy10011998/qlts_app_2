@@ -46,6 +46,7 @@ import ChangePasswordModal from "./shared/ChangePasswordModal";
 import { readStoredAuthTokens } from "../../context/authStorage";
 import {
   getLocalNetworkPermissionLabel,
+  readStoredLocalNetworkPermission,
   requestLocalNetworkPermission,
   refreshStoredLocalNetworkPermission,
   StoredLocalNetworkPermissionState,
@@ -107,6 +108,7 @@ const SettingScreen = () => {
   const isScreenActiveRef = useRef(false);
   const isFocusedRef = useRef(false);
   const blockingLoaderActiveRef = useRef(false);
+  const isFaceIdPromptActiveRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -140,23 +142,27 @@ const SettingScreen = () => {
     [],
   );
 
-  const refreshPermissionState = useCallback(async () => {
-    try {
-      const [nextCameraPermissionStatus, nextLocalNetworkState] =
-        await Promise.all([
-          checkCameraPermission().catch(() => "unknown" as const),
-          refreshStoredLocalNetworkPermission().catch(
-            () => LOCAL_NETWORK_FALLBACK_STATE,
-          ),
-        ]);
+  const refreshPermissionState = useCallback(
+    async (probeLocalNetwork = false) => {
+      try {
+        const [nextCameraPermissionStatus, nextLocalNetworkState] =
+          await Promise.all([
+            checkCameraPermission().catch(() => "unknown" as const),
+            (probeLocalNetwork
+              ? refreshStoredLocalNetworkPermission()
+              : readStoredLocalNetworkPermission()
+            ).catch(() => LOCAL_NETWORK_FALLBACK_STATE),
+          ]);
 
-      if (!canUpdateScreen()) return;
-      setCameraPermissionStatus(nextCameraPermissionStatus);
-      setLocalNetworkState(nextLocalNetworkState);
-    } catch {
-      // Permission status is auxiliary; keep the previous values if refresh fails.
-    }
-  }, [canUpdateScreen]);
+        if (!canUpdateScreen()) return;
+        setCameraPermissionStatus(nextCameraPermissionStatus);
+        setLocalNetworkState(nextLocalNetworkState);
+      } catch {
+        // Permission status is auxiliary; keep the previous values if refresh fails.
+      }
+    },
+    [canUpdateScreen],
+  );
 
   const fetchData = React.useCallback(async () => {
     if (loadingRef.current || !canUpdateScreen()) return;
@@ -221,7 +227,8 @@ const SettingScreen = () => {
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextState) => {
       if (nextState === "active" && isFocusedRef.current) {
-        refreshPermissionState();
+        if (isFaceIdPromptActiveRef.current) return;
+        refreshPermissionState(true);
       }
     });
 
@@ -295,15 +302,21 @@ const SettingScreen = () => {
           accessible: Keychain.ACCESSIBLE.WHEN_PASSCODE_SET_THIS_DEVICE_ONLY,
         },
       );
-      const confirmation = await Keychain.getGenericPassword({
-        service: FACE_ID_LOGIN_SERVICE,
-        authenticationPrompt: {
-          title: "Xác thực FaceID",
-          subtitle: "Xác nhận để bật đăng nhập bằng FaceID",
-          description: "Bật đăng nhập nhanh bằng FaceID",
-          cancel: "Huỷ",
-        },
-      });
+      isFaceIdPromptActiveRef.current = true;
+      let confirmation: false | Keychain.UserCredentials = false;
+      try {
+        confirmation = await Keychain.getGenericPassword({
+          service: FACE_ID_LOGIN_SERVICE,
+          authenticationPrompt: {
+            title: "Xác thực FaceID",
+            subtitle: "Xác nhận để bật đăng nhập bằng FaceID",
+            description: "Bật đăng nhập nhanh bằng FaceID",
+            cancel: "Huỷ",
+          },
+        });
+      } finally {
+        isFaceIdPromptActiveRef.current = false;
+      }
       if (!confirmation) {
         await Keychain.resetGenericPassword({ service: FACE_ID_LOGIN_SERVICE });
         setIsFaceIdEnabled(false);
