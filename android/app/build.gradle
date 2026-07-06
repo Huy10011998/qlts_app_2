@@ -138,7 +138,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 86
-        versionName "2.19"
+        versionName "2.18"
     }
     signingConfigs {
         release {
