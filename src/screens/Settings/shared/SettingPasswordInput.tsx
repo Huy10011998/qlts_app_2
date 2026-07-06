@@ -5,12 +5,14 @@ import { C } from "../../../utils/helpers/colors";
 import { COMPACT_TEXT_MAX_SCALE } from "../../../utils/helpers/textScaling";
 
 type SettingPasswordInputProps = {
+  hasError?: boolean;
   placeholder: string;
   value: string;
   onChangeText: (value: string) => void;
 };
 
 export default function SettingPasswordInput({
+  hasError = false,
   placeholder,
   value,
   onChangeText,
@@ -18,21 +20,24 @@ export default function SettingPasswordInput({
   const [show, setShow] = useState(false);
 
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, hasError && styles.wrapError]}>
       <TextInput
         style={styles.input}
         placeholder={placeholder}
-        placeholderTextColor="#BCC4CE"
+        placeholderTextColor={hasError ? C.red : "#BCC4CE"}
         secureTextEntry={!show}
         value={value}
         onChangeText={onChangeText}
         maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
       />
-      <TouchableOpacity onPress={() => setShow((current) => !current)} style={styles.eye}>
+      <TouchableOpacity
+        onPress={() => setShow((current) => !current)}
+        style={styles.eye}
+      >
         <Ionicons
           name={show ? "eye-off-outline" : "eye-outline"}
           size={18}
-          color="#AAB2BC"
+          color={hasError ? C.red : "#AAB2BC"}
         />
       </TouchableOpacity>
     </View>
@@ -50,6 +55,10 @@ const styles = StyleSheet.create({
     minHeight: 54,
     paddingHorizontal: 16,
     backgroundColor: "#F7F9FC",
+  },
+  wrapError: {
+    borderColor: C.red,
+    backgroundColor: "#FFF5F5",
   },
   input: {
     flex: 1,

@@ -2,27 +2,39 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
 import {
-  findNodeHandle,
+  Keyboard,
+  KeyboardAvoidingView,
+  LayoutChangeEvent,
   Platform,
+  ScrollView,
   StyleSheet,
   StyleProp,
   View,
   ViewStyle,
 } from "react-native";
-import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import IsLoading from "../../ui/IconLoading";
 
 type AssetFormKeyboardContextValue = {
   handleInputFocus: (target: any) => void;
+  dismissKeyboard: () => void;
 };
 
 const AssetFormKeyboardContext =
   createContext<AssetFormKeyboardContextValue | null>(null);
+
+const FOCUSED_INPUT_TOP_GAP = 16;
+const FOCUSED_INPUT_BOTTOM_GAP = 30;
+const DEFAULT_KEYBOARD_BOTTOM_SCROLL_BUFFER = 24;
+const KEYBOARD_SCROLL_SETTLE_DELAY = 220;
+const KEYBOARD_SCROLL_FIRST_DELAY = 120;
+const FOCUSED_INPUT_PREFERRED_VISIBLE_RATIO = 0.4;
 
 export const useAssetFormKeyboard = () =>
   useContext(AssetFormKeyboardContext);
@@ -36,6 +48,7 @@ type AssetFormScreenShellProps = {
   refLoadingMore?: boolean;
   isSubmitting?: boolean;
   footerStyle?: StyleProp<ViewStyle>;
+  keyboardBottomScrollBuffer?: number;
   loadingOverlayStyle?: StyleProp<ViewStyle>;
   style?: StyleProp<ViewStyle>;
 };
@@ -49,82 +62,243 @@ export default function AssetFormScreenShell({
   refLoadingMore = false,
   isSubmitting = false,
   footerStyle,
+  keyboardBottomScrollBuffer = DEFAULT_KEYBOARD_BOTTOM_SCROLL_BUFFER,
   loadingOverlayStyle,
   style,
 }: AssetFormScreenShellProps) {
   const insets = useSafeAreaInsets();
-  const scrollRef = useRef<KeyboardAwareScrollView | null>(null);
+  const [footerHeight, setFooterHeight] = useState(0);
+  const [keyboardTop, setKeyboardTop] = useState(0);
+  const [scrollViewportHeight, setScrollViewportHeight] = useState(0);
+  const [contentHeight, setContentHeight] = useState(0);
+  const scrollRef = useRef<ScrollView | null>(null);
+  const focusedInputRef = useRef<any>(null);
+  const scrollYRef = useRef(0);
+  const keyboardTopRef = useRef(0);
+  const scrollTimeoutsRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
 
-  const handleInputFocus = useCallback((target: any) => {
-    if (!target) return;
+  const bottomSafeArea = Math.max(insets.bottom, 12);
+  const footerSpace = footer ? Math.max(footerHeight, 86) : 0;
+  const keyboardSpace =
+    keyboardTop > 0
+      ? FOCUSED_INPUT_BOTTOM_GAP + keyboardBottomScrollBuffer
+      : 0;
 
-    setTimeout(() => {
+  const clearPendingScrolls = useCallback(() => {
+    scrollTimeoutsRef.current.forEach(clearTimeout);
+    scrollTimeoutsRef.current = [];
+  }, []);
+
+  const scrollToFocusedInput = useCallback(
+    (target: any) => {
       const scrollView = scrollRef.current as any;
-      if (!scrollView) return;
+      const currentKeyboardTop = keyboardTopRef.current;
+      const currentKeyboardSpace =
+        currentKeyboardTop > 0
+          ? FOCUSED_INPUT_BOTTOM_GAP + keyboardBottomScrollBuffer
+          : 0;
 
-      if (typeof scrollView.scrollIntoView === "function") {
-        scrollView.scrollIntoView(target, {
-          getScrollPosition: (
-            parentLayout: { x: number; y: number },
-            childLayout: { x: number; y: number },
-            contentOffset: { x: number; y: number },
-          ) => ({
-            x: 0,
-            y: Math.max(0, childLayout.y - parentLayout.y + contentOffset.y - 24),
-            animated: true,
-          }),
-        });
+      if (!target?.measure || !scrollView?.measure) {
         return;
       }
 
-      const nodeHandle =
-        typeof target === "number" ? target : findNodeHandle(target);
-      if (!nodeHandle) return;
+      scrollView.measure(
+        (
+          _scrollX: number,
+          _scrollY: number,
+          _scrollWidth: number,
+          scrollHeight: number,
+          _scrollPageX: number,
+          scrollPageY: number,
+        ) => {
+          target.measure(
+            (
+              _x: number,
+              _y: number,
+              _width: number,
+              height: number,
+              _pageX: number,
+              pageY: number,
+            ) => {
+              const currentScrollY = scrollYRef.current;
+              const viewportHeight = scrollViewportHeight || scrollHeight;
+              const bottomOffset = footer
+                ? footerSpace + 16
+                : bottomSafeArea + 16;
+              const visibleTop = scrollPageY + FOCUSED_INPUT_TOP_GAP;
+              const keyboardVisibleBottom =
+                currentKeyboardTop > 0
+                  ? currentKeyboardTop - FOCUSED_INPUT_BOTTOM_GAP
+                  : Number.POSITIVE_INFINITY;
+              const visibleBottom = Math.min(
+                scrollPageY + viewportHeight - bottomOffset,
+                keyboardVisibleBottom,
+              );
+              const fieldTop = pageY;
+              const fieldBottom = pageY + height;
+              let nextScrollY = currentScrollY;
 
-      scrollView.scrollToFocusedInput?.(nodeHandle, 120, 0);
-    }, Platform.OS === "ios" ? 60 : 120);
+              if (currentKeyboardTop > 0) {
+                const visibleHeight = Math.max(visibleBottom - visibleTop, 0);
+                const preferredFieldTop =
+                  visibleTop +
+                  visibleHeight * FOCUSED_INPUT_PREFERRED_VISIBLE_RATIO;
+                const preferredScrollY =
+                  currentScrollY + fieldTop - preferredFieldTop;
+                const minimumScrollYToRevealBottom =
+                  currentScrollY + fieldBottom - visibleBottom;
+
+                nextScrollY = Math.max(
+                  preferredScrollY,
+                  minimumScrollYToRevealBottom,
+                );
+              } else if (fieldBottom > visibleBottom) {
+                nextScrollY = currentScrollY + fieldBottom - visibleBottom;
+              } else if (fieldTop < visibleTop) {
+                nextScrollY = currentScrollY - (visibleTop - fieldTop);
+              }
+
+              const transientKeyboardSpace =
+                currentKeyboardTop > 0
+                  ? currentKeyboardSpace + keyboardBottomScrollBuffer
+                  : 0;
+              const maxScrollY = Math.max(
+                contentHeight + transientKeyboardSpace - viewportHeight,
+                0,
+              );
+              const clampedScrollY = Math.min(
+                Math.max(nextScrollY, 0),
+                maxScrollY,
+              );
+
+              if (Math.abs(clampedScrollY - currentScrollY) > 1) {
+                scrollRef.current?.scrollTo({
+                  y: clampedScrollY,
+                  animated: true,
+                });
+              }
+            },
+          );
+        },
+      );
+    },
+    [
+      bottomSafeArea,
+      contentHeight,
+      footer,
+      footerSpace,
+      keyboardBottomScrollBuffer,
+      scrollViewportHeight,
+    ],
+  );
+
+  const scheduleFocusedInputScroll = useCallback(
+    (delays: number[]) => {
+      clearPendingScrolls();
+      delays.forEach((delay) => {
+        const timeout = setTimeout(() => {
+          scrollToFocusedInput(focusedInputRef.current);
+        }, delay);
+        scrollTimeoutsRef.current.push(timeout);
+      });
+    },
+    [clearPendingScrolls, scrollToFocusedInput],
+  );
+
+  const handleInputFocus = useCallback(
+    (target: any) => {
+      focusedInputRef.current = target;
+      if (keyboardTopRef.current > 0) {
+        scheduleFocusedInputScroll([KEYBOARD_SCROLL_FIRST_DELAY]);
+      }
+    },
+    [scheduleFocusedInputScroll],
+  );
+
+  const dismissKeyboard = useCallback(() => {
+    Keyboard.dismiss();
   }, []);
 
+  const handleFooterLayout = useCallback((event: LayoutChangeEvent) => {
+    setFooterHeight(event.nativeEvent.layout.height);
+  }, []);
+
+  useEffect(() => {
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSubscription = Keyboard.addListener(showEvent, (event) => {
+      keyboardTopRef.current = event.endCoordinates.screenY;
+      setKeyboardTop(event.endCoordinates.screenY);
+      scheduleFocusedInputScroll([
+        Platform.OS === "ios" ? KEYBOARD_SCROLL_FIRST_DELAY : 80,
+        KEYBOARD_SCROLL_SETTLE_DELAY,
+      ]);
+    });
+    const hideSubscription = Keyboard.addListener(hideEvent, () => {
+      clearPendingScrolls();
+      keyboardTopRef.current = 0;
+      setKeyboardTop(0);
+      focusedInputRef.current = null;
+    });
+
+    return () => {
+      clearPendingScrolls();
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, [clearPendingScrolls, scheduleFocusedInputScroll]);
+
   const keyboardContextValue = useMemo(
-    () => ({ handleInputFocus }),
-    [handleInputFocus],
+    () => ({ handleInputFocus, dismissKeyboard }),
+    [dismissKeyboard, handleInputFocus],
   );
 
   return (
     <AssetFormKeyboardContext.Provider value={keyboardContextValue}>
-      <View style={style}>
-        <KeyboardAwareScrollView
-          innerRef={(instance) => {
-            scrollRef.current = instance;
-          }}
-          style={{ flex: 1 }}
+      <KeyboardAvoidingView
+        style={[styles.keyboardRoot, style]}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={0}
+      >
+        <ScrollView
+          ref={scrollRef}
+          style={styles.scroll}
           contentContainerStyle={[
             contentContainerStyle,
             {
               paddingBottom: footer
-                ? Math.max(insets.bottom, 12) + 96
-                : Math.max(insets.bottom, 12) + 24,
+                ? bottomSafeArea + footerSpace + keyboardSpace + 24
+                : bottomSafeArea + keyboardSpace + 24,
             },
           ]}
-          keyboardDismissMode="on-drag"
+          onContentSizeChange={(_width, height) => setContentHeight(height)}
+          onLayout={(event) =>
+            setScrollViewportHeight(event.nativeEvent.layout.height)
+          }
+          onScroll={(event) => {
+            scrollYRef.current = event.nativeEvent.contentOffset.y;
+          }}
+          scrollEventThrottle={16}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
-          enableOnAndroid
-          extraHeight={Platform.OS === "ios" ? 120 : 140}
-          extraScrollHeight={Platform.OS === "ios" ? 96 : 120}
-          keyboardOpeningTime={0}
-          enableResetScrollToCoords={false}
+          bounces={false}
         >
           {children}
-        </KeyboardAwareScrollView>
+        </ScrollView>
 
         {footer ? (
           <View
             style={[
               styles.footer,
-              { paddingBottom: Math.max(insets.bottom, 12) + 10 },
+              {
+                paddingBottom: bottomSafeArea + 10,
+              },
               footerStyle,
             ]}
+            onLayout={handleFooterLayout}
           >
             {footer}
           </View>
@@ -138,12 +312,18 @@ export default function AssetFormScreenShell({
             <IsLoading size="large" color={brandColor} />
           </View>
         )}
-      </View>
+      </KeyboardAvoidingView>
     </AssetFormKeyboardContext.Provider>
   );
 }
 
 const styles = StyleSheet.create({
+  keyboardRoot: {
+    flex: 1,
+  },
+  scroll: {
+    flex: 1,
+  },
   footer: {
     position: "absolute",
     left: 0,

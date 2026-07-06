@@ -78,7 +78,13 @@ function AssetListMenuButton({ onPress }: { onPress: () => void }) {
 
 export default function AssetList() {
   const navigation = useNavigation<StackNavigation<"AssetList">>();
-  const { nameClass, titleHeader } = useParams();
+  const {
+    nameClass,
+    titleHeader,
+    groupMenuId,
+    viewPermission,
+    assetTitleHeader,
+  } = useParams();
   const [assetItems, setAssetItems] = useState<Record<string, any>[]>([]);
   const [fieldActive, setFieldActive] = useState<Field[]>([]);
   const [fieldShowMobile, setFieldShowMobile] = useState<Field[]>([]);
@@ -352,6 +358,9 @@ export default function AssetList() {
           nameClass,
           titleHeader,
           propertyClass,
+          groupMenuId,
+          viewPermission,
+          assetTitleHeader,
         });
       } catch (e) {
         error(e);
@@ -365,6 +374,9 @@ export default function AssetList() {
       propertyClass,
       showAlertIfActive,
       titleHeader,
+      groupMenuId,
+      viewPermission,
+      assetTitleHeader,
     ],
   );
 
@@ -550,6 +562,10 @@ export default function AssetList() {
           nameClass={nameClass}
           field={fieldActive}
           propertyClass={propertyClass}
+          titleHeader={titleHeader}
+          groupMenuId={groupMenuId}
+          viewPermission={viewPermission}
+          assetTitleHeader={assetTitleHeader}
         />
       )}
     </View>

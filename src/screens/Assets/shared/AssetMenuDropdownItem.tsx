@@ -9,9 +9,15 @@ import {
   View,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { useRoute } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
-import type { DropdownProps, Item, StackNavigation } from "../../../types/index";
+import type {
+  DropdownProps,
+  Item,
+  StackNavigation,
+  StackRoute,
+} from "../../../types/index";
 import {
   ASSET_MENU_CARD_SHADOW,
 } from "./assetMenuTheme";
@@ -41,6 +47,7 @@ function AssetMenuDropdownItem({
   isSearching,
 }: AssetMenuDropdownItemProps) {
   const navigation = useNavigation<StackNavigation<"AssetList">>();
+  const route = useRoute<StackRoute<"Asset">>();
   const hasChildren = item.children?.length > 0;
   const expanded = expandedIds.includes(item.id);
   const theme = getAssetMenuItemTheme(item, expanded);
@@ -63,6 +70,9 @@ function AssetMenuDropdownItem({
       navigation.navigate("AssetList", {
         nameClass: item.contentName_Mobile,
         titleHeader: item.label,
+        groupMenuId: route.params?.groupMenuId,
+        viewPermission: route.params?.viewPermission,
+        assetTitleHeader: route.params?.titleHeader,
       });
     }
   };

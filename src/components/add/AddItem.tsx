@@ -11,6 +11,10 @@ function AddItemComponent({
   nameClass,
   field,
   propertyClass,
+  titleHeader,
+  groupMenuId,
+  viewPermission,
+  assetTitleHeader,
 }: AddItemAssetProps) {
   const navigation = useNavigation<AssetAddItemNavigationProp>();
 
@@ -29,8 +33,22 @@ function AddItemComponent({
       field: JSON.stringify(field),
       nameClass,
       propertyClass,
+      titleHeader,
+      groupMenuId,
+      viewPermission,
+      assetTitleHeader,
     });
-  }, [onPress, navigation, field, nameClass, propertyClass]);
+  }, [
+    onPress,
+    navigation,
+    field,
+    nameClass,
+    propertyClass,
+    titleHeader,
+    groupMenuId,
+    viewPermission,
+    assetTitleHeader,
+  ]);
 
   const normalizedNameClass = (nameClass || "").trim();
   const label = REVIEW_NAME_CLASSES_DANHGIA.includes(normalizedNameClass)

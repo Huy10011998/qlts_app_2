@@ -32,9 +32,10 @@ export type OptionalParams = {
   titleHeader?: string;
   propertyClass?: PropertyClass;
   itemData?: AssetItem;
-  returnTo?: "assetList" | "assetRelatedList";
+  returnTo?: "assetList" | "assetRelatedList" | "qrReview";
   groupMenuId?: number;
   viewPermission?: string;
+  assetTitleHeader?: string;
 };
 
 // =====================================================
@@ -68,6 +69,9 @@ export type HomeTabParamList = {
     idRoot?: string;
     propertyReference?: string;
     isBuildTree?: boolean;
+    groupMenuId?: number;
+    viewPermission?: string;
+    assetTitleHeader?: string;
   };
 };
 
@@ -148,6 +152,9 @@ export type RootStackParamList = {
     idRoot?: string;
     propertyReference?: string;
     isBuildTree?: boolean;
+    groupMenuId?: number;
+    viewPermission?: string;
+    assetTitleHeader?: string;
   };
 
   AssetDetails: {
@@ -156,6 +163,9 @@ export type RootStackParamList = {
     titleHeader?: string;
     field?: AssetField;
     propertyClass?: PropertyClass;
+    groupMenuId?: number;
+    viewPermission?: string;
+    assetTitleHeader?: string;
   };
 
   /** ================= ASSET HISTORY ================= */
@@ -179,6 +189,9 @@ export type RootStackParamList = {
     idRoot: string;
     nameClassRoot?: string;
     titleHeader?: string; // ✅ FIX
+    groupMenuId?: number;
+    viewPermission?: string;
+    assetTitleHeader?: string;
   };
 
   AssetRelatedDetails: {
@@ -190,6 +203,10 @@ export type RootStackParamList = {
     idRoot?: string;
     propertyReference?: string;
     nameClassRoot?: string;
+    returnTo?: "assetList" | "assetRelatedList" | "qrReview";
+    groupMenuId?: number;
+    viewPermission?: string;
+    assetTitleHeader?: string;
   };
 
   AssetAddRelatedItem: {
@@ -198,6 +215,12 @@ export type RootStackParamList = {
     field: AssetField;
     propertyClass?: PropertyClass;
     nameClassRoot?: string;
+    propertyReference?: string;
+    titleHeader?: string;
+    returnTo?: "assetList" | "assetRelatedList" | "qrReview";
+    groupMenuId?: number;
+    viewPermission?: string;
+    assetTitleHeader?: string;
   };
 
   /** ================= QR (NESTED) ================= */
@@ -217,6 +240,10 @@ export type RootStackParamList = {
     nameClass?: string;
     propertyClass?: PropertyClass;
     idRoot?: string;
+    titleHeader?: string;
+    groupMenuId?: number;
+    viewPermission?: string;
+    assetTitleHeader?: string;
   };
 
   AssetEditItem: {
@@ -230,11 +257,14 @@ export type RootStackParamList = {
     field: string;
     nameClass?: string;
     propertyClass?: PropertyClass;
-    returnTo?: "assetList" | "assetRelatedList";
+    returnTo?: "assetList" | "assetRelatedList" | "qrReview";
     idRoot?: string;
     propertyReference?: string;
     nameClassRoot?: string;
     titleHeader?: string;
+    groupMenuId?: number;
+    viewPermission?: string;
+    assetTitleHeader?: string;
   };
 
   /** ================= SHAREHOLDERS MEETING ================= */

@@ -14,7 +14,7 @@ import { isEffectivelyEmptyCodeValue } from "../../utils/helpers/string";
 import { fetchReferenceByFieldWithParent } from "../../utils/cascade/FetchReferenceByFieldWithParent";
 import { handleCascadeChange } from "../../utils/cascade/index";
 import { useImageLoader } from "../../hooks/useImageLoader";
-import { useNavigation } from "@react-navigation/native";
+import { StackActions, useNavigation } from "@react-navigation/native";
 import { setShouldRefreshList } from "../../store/AssetSlice";
 
 import {
@@ -33,11 +33,11 @@ import { useAutoIncrementCode } from "../../hooks/AssetAddItem/useAutoIncrementC
 import { useOpenReferenceModal } from "../../hooks/AssetAddItem/useOpenReferenceModal";
 import { useModalItems } from "../../hooks/AssetAddItem/useModalItems";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
-import AssetFormActionButton from "./shared/AssetFormActionButton";
 import AssetFormGroupedFields from "./shared/AssetFormGroupedFields";
 import AssetFormHeroCard from "./shared/AssetFormHeroCard";
 import AssetFormReferencePickerModal from "./shared/AssetFormReferencePickerModal";
 import AssetFormScreenShell from "./shared/AssetFormScreenShell";
+import { createAssetFormHeaderSubmitRight } from "./shared/AssetFormHeaderSubmitButton";
 import {
   getRequiredFieldErrors,
   getRequiredFieldsMessage,
@@ -48,6 +48,10 @@ import {
   ASSET_FORM_BRAND_RED,
   ASSET_FORM_CARD_SHADOW,
 } from "./shared/assetFormTheme";
+import {
+  backToAssetList,
+  backToAssetRelatedList,
+} from "../../navigation/shared/assetNavigationReset";
 
 const BRAND_RED = ASSET_FORM_BRAND_RED;
 const BG = ASSET_FORM_BG;
@@ -64,6 +68,9 @@ export default function AssetCloneItem() {
     propertyReference,
     nameClassRoot,
     titleHeader,
+    groupMenuId,
+    viewPermission,
+    assetTitleHeader,
   } = useParams();
   const navigation = useNavigation<AssetCloneItemNavigationProp>();
   const dispatch = useAppDispatch();
@@ -357,42 +364,50 @@ export default function AssetCloneItem() {
               setImages({});
 
               dispatch(setShouldRefreshList(true));
+              if (returnTo === "qrReview") {
+                navigation.dispatch(StackActions.pop(2));
+                return;
+              }
+
               if (
                 returnTo === "assetRelatedList" &&
                 nameClass &&
                 idRoot &&
                 propertyReference
               ) {
-                navigation.reset({
-                  index: 2,
-                  routes: [
-                    { name: "Home" },
-                    { name: "Asset" },
-                    {
-                      name: "AssetRelatedList",
-                      params: {
-                        nameClass,
-                        idRoot,
-                        propertyReference,
-                        nameClassRoot,
-                        titleHeader,
-                      },
-                    },
-                  ],
+                backToAssetRelatedList(navigation, {
+                  assetContext: {
+                    groupMenuId,
+                    viewPermission,
+                    assetTitleHeader,
+                  },
+                  relatedListParams: {
+                    nameClass,
+                    idRoot,
+                    propertyReference,
+                    nameClassRoot,
+                    titleHeader,
+                    groupMenuId,
+                    viewPermission,
+                    assetTitleHeader,
+                  },
                 });
                 return;
               }
 
-              navigation.reset({
-                index: 2,
-                routes: [
-                  { name: "Home" },
-                  { name: "Asset" },
-                  {
-                    name: "AssetList",
-                    params: { nameClass, titleHeader },
-                  },
-                ],
+              backToAssetList(navigation, {
+                assetContext: {
+                  groupMenuId,
+                  viewPermission,
+                  assetTitleHeader,
+                },
+                listParams: {
+                  nameClass,
+                  titleHeader,
+                  groupMenuId,
+                  viewPermission,
+                  assetTitleHeader,
+                },
               });
             },
           },
@@ -408,21 +423,25 @@ export default function AssetCloneItem() {
     }
   };
 
+  const handleCloneRef = React.useRef(handleClone);
+  handleCloneRef.current = handleClone;
+
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: createAssetFormHeaderSubmitRight({
+        iconName: "copy-outline",
+        label: "Bản sao",
+        onPress: () => handleCloneRef.current(),
+      }),
+    });
+  }, [navigation]);
+
   return (
     <AssetFormScreenShell
       brandColor={BRAND_RED}
       contentContainerStyle={styles.scrollContent}
       refLoadingMore={refLoadingMore}
       style={styles.container}
-      footer={
-        <AssetFormActionButton
-          brandColor={BRAND_RED}
-          iconName="copy-outline"
-          label="Tạo bản sao"
-          onPress={handleClone}
-          style={styles.createCloneButton}
-        />
-      }
       modal={
         <AssetFormReferencePickerModal
           activeEnumField={activeEnumField}
@@ -489,8 +508,5 @@ const styles = StyleSheet.create({
   }),
   heroIconWrap: {
     backgroundColor: "#FFF8F0",
-  },
-  createCloneButton: {
-    ...CARD_SHADOW,
   },
 });

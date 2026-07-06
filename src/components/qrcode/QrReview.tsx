@@ -110,6 +110,10 @@ export default function QrReview() {
       id: String(item.id),
       field: JSON.stringify(fieldActive),
       nameClass,
+      idRoot,
+      propertyReference,
+      nameClassRoot,
+      returnTo: "qrReview",
     });
   };
 
@@ -240,6 +244,8 @@ export default function QrReview() {
               propertyClass: mapPropertyResponseToPropertyClass(propertyClass),
               idRoot,
               nameClassRoot,
+              propertyReference,
+              returnTo: "qrReview",
             })
           }
         />

@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Animated, AppState, Platform } from "react-native";
-import { request, PERMISSIONS, RESULTS } from "react-native-permissions";
+import { Animated, AppState } from "react-native";
 import { useCameraDevice, useCameraFormat } from "react-native-vision-camera";
+import {
+  checkCameraPermission,
+  requestCameraPermission,
+} from "../../../services/cameraPermission";
 
 const CAMERA_FORMAT_PREFERENCES = [
   { videoResolution: { width: 1280, height: 720 } },
@@ -72,12 +75,17 @@ export default function useQrScannerController({
   }, [clearInitTimeoutTimer]);
 
   const checkPermission = useCallback(async () => {
-    const result =
-      Platform.OS === "ios"
-        ? await request(PERMISSIONS.IOS.CAMERA)
-        : await request(PERMISSIONS.ANDROID.CAMERA);
+    try {
+      const currentStatus = await checkCameraPermission();
+      const nextStatus =
+        currentStatus === "denied"
+          ? await requestCameraPermission()
+          : currentStatus;
 
-    setHasPermission(result === RESULTS.GRANTED);
+      setHasPermission(nextStatus === "granted");
+    } catch {
+      setHasPermission(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -86,7 +94,7 @@ export default function useQrScannerController({
   }, [checkPermission, enabled]);
 
   useEffect(() => {
-    if (!enabled || appState !== "active" || hasPermission === true) return;
+    if (!enabled || appState !== "active" || hasPermission !== null) return;
     checkPermission();
   }, [appState, checkPermission, enabled, hasPermission]);
 

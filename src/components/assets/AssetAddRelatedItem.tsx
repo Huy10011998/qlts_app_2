@@ -39,10 +39,10 @@ import { useOpenReferenceModal } from "../../hooks/AssetAddItem/useOpenReference
 import { useModalItems } from "../../hooks/AssetAddItem/useModalItems";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import AssetFormGroupedFields from "./shared/AssetFormGroupedFields";
-import AssetFormActionButton from "./shared/AssetFormActionButton";
 import AssetFormHeroCard from "./shared/AssetFormHeroCard";
 import AssetFormReferencePickerModal from "./shared/AssetFormReferencePickerModal";
 import AssetFormScreenShell from "./shared/AssetFormScreenShell";
+import { createAssetFormHeaderSubmitRight } from "./shared/AssetFormHeaderSubmitButton";
 import {
   getRequiredFieldErrors,
   getRequiredFieldsMessage,
@@ -54,14 +54,29 @@ import {
   ASSET_FORM_CARD_SHADOW,
 } from "./shared/assetFormTheme";
 import { REVIEW_NAME_CLASSES_DANHGIA } from "../../constants/reviewNameClasses";
+import {
+  backToAssetList,
+  backToAssetRelatedList,
+} from "../../navigation/shared/assetNavigationReset";
 
 const BRAND_RED = ASSET_FORM_BRAND_RED;
 const BG = ASSET_FORM_BG;
 const CARD_SHADOW = ASSET_FORM_CARD_SHADOW;
 
 export default function AssetAddRelatedItem() {
-  const { field, nameClass, propertyClass, idRoot, nameClassRoot } =
-    useParams();
+  const {
+    field,
+    nameClass,
+    propertyClass,
+    idRoot,
+    nameClassRoot,
+    propertyReference,
+    titleHeader,
+    returnTo,
+    groupMenuId,
+    viewPermission,
+    assetTitleHeader,
+  } = useParams();
   const { can } = usePermission();
   const dispatch = useAppDispatch();
   const isReviewClass = REVIEW_NAME_CLASSES_DANHGIA.includes(
@@ -285,7 +300,51 @@ export default function AssetAddRelatedItem() {
               setImages({});
 
               dispatch(setShouldRefreshList(true));
-              navigation.goBack();
+              if (returnTo === "qrReview") {
+                navigation.goBack();
+                return;
+              }
+
+              if (
+                returnTo === "assetRelatedList" &&
+                nameClass &&
+                idRoot &&
+                propertyReference
+              ) {
+                backToAssetRelatedList(navigation, {
+                  assetContext: {
+                    groupMenuId,
+                    viewPermission,
+                    assetTitleHeader,
+                  },
+                  relatedListParams: {
+                    nameClass,
+                    idRoot,
+                    propertyReference,
+                    nameClassRoot,
+                    titleHeader,
+                    groupMenuId,
+                    viewPermission,
+                    assetTitleHeader,
+                  },
+                });
+                return;
+              }
+
+              backToAssetList(navigation, {
+                assetContext: {
+                  groupMenuId,
+                  viewPermission,
+                  assetTitleHeader,
+                },
+                listParams: {
+                  nameClass,
+                  titleHeader,
+                  groupMenuId,
+                  viewPermission,
+                  assetTitleHeader,
+                },
+              });
             },
           },
         ],
@@ -301,23 +360,28 @@ export default function AssetAddRelatedItem() {
     }
   };
 
+  const handleCreateRef = React.useRef(handleCreate);
+  handleCreateRef.current = handleCreate;
+
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: createAssetFormHeaderSubmitRight({
+        disabled: !!nameClass && !can(nameClass, "Insert"),
+        iconName: "checkmark-circle-outline",
+        label: isReviewClass ? "Xác nhận" : "Tạo",
+        onPress: () => handleCreateRef.current(),
+      }),
+    });
+  }, [can, isReviewClass, nameClass, navigation]);
+
   return (
     <AssetFormScreenShell
       brandColor={BRAND_RED}
       contentContainerStyle={styles.scrollContent}
       isSubmitting={isSubmitting}
+      keyboardBottomScrollBuffer={0}
       loadingOverlayStyle={styles.loadingOverlay}
       style={styles.container}
-      footer={
-        <AssetFormActionButton
-          brandColor={BRAND_RED}
-          disabled={!!nameClass && !can(nameClass, "Insert")}
-          iconName="checkmark-circle-outline"
-          label={isReviewClass ? "Xác nhận" : "Tạo"}
-          onPress={handleCreate}
-          style={styles.createButton}
-        />
-      }
       modal={
         <AssetFormReferencePickerModal
           activeEnumField={activeEnumField}
@@ -392,8 +456,5 @@ const styles = StyleSheet.create({
   }),
   heroIconWrap: {
     backgroundColor: "#FFF3F3",
-  },
-  createButton: {
-    ...CARD_SHADOW,
   },
 });

@@ -116,13 +116,6 @@ export default function QrDetails({ children }: QrDetailsProps) {
       return;
     }
 
-    if (itemData) {
-      setItem(itemData);
-      setLoadErrorMessage(null);
-      setIsLoading(false);
-      return;
-    }
-
     setIsLoading(true);
     try {
       const response = await getDetails(nameClass, id);
@@ -137,7 +130,15 @@ export default function QrDetails({ children }: QrDetailsProps) {
     } finally {
       if (isMounted()) setIsLoading(false);
     }
-  }, [id, isMounted, itemData, nameClass]);
+  }, [id, isMounted, nameClass]);
+
+  useEffect(() => {
+    if (!itemData) return;
+
+    setItem(itemData);
+    setLoadErrorMessage(null);
+    setIsLoading(false);
+  }, [itemData]);
 
   useFocusEffect(
     useCallback(() => {
@@ -159,9 +160,10 @@ export default function QrDetails({ children }: QrDetailsProps) {
   });
 
   useEffect(() => {
+    if (itemData) return;
     if (id && nameClass) fetchDetails();
     else setIsLoading(false);
-  }, [id, nameClass, fetchDetails]);
+  }, [fetchDetails, id, itemData, nameClass]);
 
   const renderMenuPanel = () => (
     <SlideInSidePanel

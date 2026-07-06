@@ -58,8 +58,14 @@ export default function TabContent({
 
   const detailScreens = ["AssetDetails", "QrDetails", "AssetRelatedDetails"];
   const isDetailsScreen = detailScreens.includes(route.name);
+  const canCloneFromCurrentRoute = route.name !== "QrDetails";
 
-  const { propertyClass } = useParams();
+  const {
+    propertyClass,
+    groupMenuId,
+    viewPermission,
+    assetTitleHeader,
+  } = useParams();
   const nameClassRoot = nameClass;
   const { showAlertIfActive } = useSafeAlert();
   const hasLoadedItem = Boolean(item?.id);
@@ -143,26 +149,34 @@ export default function TabContent({
       const relatedRouteParams =
         route.name === "AssetRelatedDetails"
           ? (route.params as {
-              idRoot?: string;
-              propertyReference?: string;
-              nameClassRoot?: string;
-              titleHeader?: string;
-            } | undefined)
-          : undefined;
+            idRoot?: string;
+            propertyReference?: string;
+            nameClassRoot?: string;
+            titleHeader?: string;
+            returnTo?: "assetList" | "assetRelatedList" | "qrReview";
+          } | undefined)
+        : undefined;
+
+      const cloneReturnTo =
+        relatedRouteParams?.returnTo === "qrReview"
+          ? "qrReview"
+          : route.name === "AssetRelatedDetails"
+          ? "assetRelatedList"
+          : "assetList";
 
       navigation.navigate("AssetCloneItem", {
         item: selectedItem,
         nameClass,
         propertyClass,
         field: JSON.stringify(fieldActive ?? []),
-        returnTo:
-          route.name === "AssetRelatedDetails"
-            ? "assetRelatedList"
-            : "assetList",
+        returnTo: cloneReturnTo,
         idRoot: relatedRouteParams?.idRoot,
         propertyReference: relatedRouteParams?.propertyReference,
         nameClassRoot: relatedRouteParams?.nameClassRoot,
         titleHeader: relatedRouteParams?.titleHeader,
+        groupMenuId,
+        viewPermission,
+        assetTitleHeader,
       });
     } catch (err) {
       error(err);
@@ -192,6 +206,7 @@ export default function TabContent({
                   onEdit={() => onPressNavigateToEdit(item)}
                   onDelete={handleDelete}
                   onClone={() => onPressNavigateToClone(item)}
+                  showClone={canCloneFromCurrentRoute}
                   nameClass={nameClass}
                 />
               </View>

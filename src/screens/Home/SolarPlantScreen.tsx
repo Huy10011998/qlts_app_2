@@ -34,8 +34,11 @@ import type { TreeNode } from "../../types";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CHART_WIDTH = SCREEN_WIDTH - 32;
+const MAX_SOLAR_CONTENT_WIDTH = 720;
 const clamp = (value: number, min: number, max: number) =>
   Math.max(min, Math.min(max, value));
+const getSolarContentWidth = (screenWidth: number) =>
+  Math.min(screenWidth, MAX_SOLAR_CONTENT_WIDTH);
 const SOLAR_PLANT_WEATHER_LOCATION = {
   latitude: 10.8276699,
   longitude: 106.5932193,
@@ -70,6 +73,11 @@ const SOLAR_PLANT_TREE_DATA: TreeNode[] = [
 type PeriodTab = (typeof PERIOD_TABS)[number];
 type GraphMode = "Merged" | "Split";
 type CompareMode = "Month" | "Quarter" | "Year";
+type ExpandedChart =
+  | "production-consumption"
+  | "production"
+  | "consumption"
+  | "comparative";
 
 type PlantWeatherState = {
   temperature: number;
@@ -182,6 +190,21 @@ const DEFAULT_DATA: SolarDashboardData = {
   co2Saved: 283000,
   kmDriven: 2050000,
 };
+
+const EXPANDED_COMPARATIVE_MOCK_DATA: SolarDashboardData["comparativeData"] = [
+  { month: "Jan", year2025: 0, year2026: 88 },
+  { month: "Feb", year2025: 0, year2026: 62 },
+  { month: "Mar", year2025: 0, year2026: 108 },
+  { month: "Apr", year2025: 0, year2026: 98 },
+  { month: "May", year2025: 0, year2026: 101 },
+  { month: "Jun", year2025: 0, year2026: 104 },
+  { month: "Jul", year2025: 0, year2026: 14 },
+  { month: "Aug", year2025: 0, year2026: 0 },
+  { month: "Sep", year2025: 0, year2026: 0 },
+  { month: "Oct", year2025: 8, year2026: 0 },
+  { month: "Nov", year2025: 72, year2026: 0 },
+  { month: "Dec", year2025: 90, year2026: 0 },
+];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1258,9 +1281,9 @@ const BarChart: React.FC<{
   const padB = 32;
   const W = width - padL - padR;
   const H = height - padT - padB;
-  const max = Math.max(...data.flatMap((d) => [d.year2025, d.year2026]), 10);
+  const max = Math.max(...data.flatMap((d) => [d.year2025, d.year2026]), 120);
   const barW = (W / data.length) * 0.35;
-  const yTicks = [30, 60, 90];
+  const yTicks = [30, 60, 90, 120];
 
   return (
     <Svg width={width} height={height}>
@@ -1301,7 +1324,7 @@ const BarChart: React.FC<{
                 width={barW}
                 height={padT + H - y25}
                 rx={2}
-                fill="#4e5ab5"
+                fill="#42b0e8"
               />
             )}
             {d.year2026 > 0 && (
@@ -1311,7 +1334,7 @@ const BarChart: React.FC<{
                 width={barW}
                 height={padT + H - y26}
                 rx={2}
-                fill="#42b0e8"
+                fill="#4e5ab5"
               />
             )}
             <SvgText
@@ -1347,6 +1370,213 @@ const BarChart: React.FC<{
   );
 };
 
+type ExpandedChartModalProps = {
+  activeChart: ExpandedChart | null;
+  chartWidth: number;
+  compareMode: CompareMode;
+  data: SolarDashboardData;
+  dateRange: SolarDateRange;
+  period: PeriodTab;
+  visible: boolean;
+  onChangeCompareMode: (mode: CompareMode) => void;
+  onChangePeriod: (period: PeriodTab) => void;
+  onClose: () => void;
+  onGoCurrentRange: () => void;
+  onNextRange: () => void;
+  onOpenDatePicker: () => void;
+  onPreviousRange: () => void;
+};
+
+const getExpandedChartTitle = (chart: ExpandedChart | null) => {
+  if (chart === "production") return "Production";
+  if (chart === "consumption") return "Consumption";
+  if (chart === "comparative") return "Comparative Production";
+  return "Production & Consumption";
+};
+
+const ExpandedChartModal: React.FC<ExpandedChartModalProps> = ({
+  activeChart,
+  chartWidth,
+  compareMode,
+  data,
+  dateRange,
+  period,
+  visible,
+  onChangeCompareMode,
+  onChangePeriod,
+  onClose,
+  onGoCurrentRange,
+  onNextRange,
+  onOpenDatePicker,
+  onPreviousRange,
+}) => {
+  const { height: windowHeight } = useWindowDimensions();
+  const title = getExpandedChartTitle(activeChart);
+  const isComparative = activeChart === "comparative";
+  const chartHeight = isComparative
+    ? clamp(windowHeight - 310, 300, 520)
+    : clamp(windowHeight - 510, 220, 360);
+
+  return (
+    <Modal
+      animationType="slide"
+      onRequestClose={onClose}
+      presentationStyle="fullScreen"
+      visible={visible}
+    >
+      <View style={styles.expandedSafe}>
+        <View style={styles.expandedHeader}>
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={onClose}
+            style={styles.expandedBackButton}
+          >
+            <Ionicons name="chevron-back" size={34} color="#fff" />
+          </TouchableOpacity>
+          <Text numberOfLines={1} style={styles.expandedHeaderTitle}>
+            {title}
+          </Text>
+          <View style={styles.expandedHeaderSpacer} />
+        </View>
+
+        {isComparative ? (
+          <View style={styles.expandedCompareTabs}>
+            {(["Month", "Quarter", "Year"] as const).map((mode) => (
+              <TouchableOpacity
+                key={mode}
+                onPress={() => onChangeCompareMode(mode)}
+                style={[
+                  styles.expandedCompareTab,
+                  compareMode === mode && styles.expandedCompareTabActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.expandedCompareTabText,
+                    compareMode === mode && styles.expandedCompareTabTextActive,
+                  ]}
+                >
+                  {mode}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : (
+          <PeriodHeader
+            activeTab={period}
+            canGoNextRange={canMoveToNextRange(period, dateRange)}
+            dateRange={dateRange}
+            isCurrentRange={isCurrentPeriodRange(period, dateRange)}
+            onChangeTab={onChangePeriod}
+            onGoCurrentRange={onGoCurrentRange}
+            onNextRange={onNextRange}
+            onOpenDatePicker={onOpenDatePicker}
+            onPreviousRange={onPreviousRange}
+          />
+        )}
+
+        <View style={styles.expandedContent}>
+          <Text style={styles.expandedTitle}>{title}</Text>
+
+          {isComparative ? (
+            <>
+              <View style={styles.expandedCompareChartWrap}>
+                <BarChart
+                  data={EXPANDED_COMPARATIVE_MOCK_DATA}
+                  width={chartWidth}
+                  height={chartHeight}
+                />
+              </View>
+              <View style={styles.expandedLegendRow}>
+                <View style={styles.expandedLegendItem}>
+                  <View style={[styles.expandedLegendDot, styles.year2025Dot]} />
+                  <Text style={styles.expandedLegendText}>2025</Text>
+                </View>
+                <View style={styles.expandedLegendItem}>
+                  <View style={[styles.expandedLegendDot, styles.year2026Dot]} />
+                  <Text style={styles.expandedLegendText}>2026</Text>
+                </View>
+              </View>
+            </>
+          ) : (
+            <>
+              <View style={styles.expandedTooltipCard}>
+                <Text style={styles.expandedTooltipDate}>
+                  {dateRange.fromDate.toLocaleDateString("en-US", {
+                    weekday: "long",
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </Text>
+                <View style={styles.expandedTooltipMetricRow}>
+                  <Text style={styles.expandedTooltipLabel}>Production</Text>
+                  <Text style={styles.expandedTooltipValue}>
+                    {formatMetric((data.production ?? 0) / 1000, 2)} MWh
+                  </Text>
+                </View>
+                <View style={styles.expandedTooltipMetricRow}>
+                  <Text style={styles.expandedTooltipLabel}>Consumption</Text>
+                  <Text style={styles.expandedTooltipValue}>
+                    {formatMetric(data.consumption, 2)} MWh
+                  </Text>
+                </View>
+                <View style={styles.expandedTooltipMetricRow}>
+                  <Text style={styles.expandedTooltipLabel}>
+                    Self Consumption
+                  </Text>
+                  <Text style={styles.expandedTooltipValue}>
+                    {formatMetric((data.selfConsumptionKwh ?? 0) / 1000, 2)} MWh{" "}
+                    {formatMetric(data.selfConsumptionPercent)}%
+                  </Text>
+                </View>
+              </View>
+
+              <AreaChart
+                productionData={data.productionHourly}
+                consumptionData={data.consumptionHourly}
+                markerIndex={11}
+                tooltipValue={0.68}
+                variant={
+                  activeChart === "production"
+                    ? "production"
+                    : activeChart === "consumption"
+                    ? "consumption"
+                    : "merged"
+                }
+                width={chartWidth}
+                height={chartHeight}
+              />
+
+              <View style={styles.expandedLegendRow}>
+                <View style={styles.expandedLegendItem}>
+                  <View
+                    style={[styles.expandedLegendDot, styles.productionDot]}
+                  />
+                  <Text style={styles.expandedLegendText}>Production</Text>
+                </View>
+                <View style={styles.expandedLegendItem}>
+                  <View
+                    style={[styles.expandedLegendDot, styles.consumptionDot]}
+                  />
+                  <Text style={styles.expandedLegendText}>Consumption</Text>
+                </View>
+                <View style={styles.expandedLegendItem}>
+                  <View style={[styles.expandedLegendDot, styles.selfDot]} />
+                  <Text style={styles.expandedLegendText}>
+                    Self Consumption ({formatMetric(data.selfConsumptionPercent)}
+                    %)
+                  </Text>
+                </View>
+              </View>
+            </>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 interface Props {
@@ -1364,87 +1594,95 @@ const SolarHeroSection: React.FC<SolarHeroSectionProps> = ({
   screenWidth,
   weather,
 }) => {
-  const heroVisualHeight = clamp(screenWidth * 0.58, 200, 245);
-  const heroCenterBubbleSize = clamp(screenWidth * 0.31, 108, 126);
-  const heroSideBubbleSize = clamp(screenWidth * 0.23, 82, 90);
-  const heroSideBubbleTop = clamp(screenWidth * 0.17, 54, 72);
-  const heroToHomeLeft = clamp(screenWidth * 0.08, 24, 40);
-  const heroFromGridLeft = screenWidth * 0.87 - heroSideBubbleSize / 2;
+  const contentWidth = getSolarContentWidth(screenWidth);
+  const heroVisualHeight = clamp(contentWidth * 0.58, 200, 245);
+  const heroCenterBubbleSize = clamp(contentWidth * 0.31, 108, 126);
+  const heroSideBubbleSize = clamp(contentWidth * 0.23, 82, 90);
+  const heroSideBubbleTop = clamp(contentWidth * 0.17, 54, 72);
+  const heroToHomeLeft = clamp(contentWidth * 0.08, 24, 40);
+  const heroFromGridLeft = contentWidth * 0.87 - heroSideBubbleSize / 2;
 
   return (
     <View style={styles.heroSection}>
-      <View style={styles.heroTopRow}>
-        <View>
-          <Text style={styles.prodLabel}>Production Today</Text>
-          <Text style={styles.prodValue}>
-            {formatMetric(data.productionToday)}{" "}
-            <Text style={styles.prodUnit}>kWh</Text>
-          </Text>
-        </View>
-        <View style={styles.weatherRow}>
-          {weather.isLoading ? null : (
-            <WeatherIcon weatherCode={weather.weatherCode} />
-          )}
-          <Text style={styles.tempText}>
-            {weather.isLoading ? "-- °C" : `${weather.temperature} °C`}
-          </Text>
-        </View>
-      </View>
-
-      <View style={[styles.heroVisual, { height: heroVisualHeight }]}>
-        <View
-          style={[
-            styles.toHomeBubblePosition,
-            { top: heroSideBubbleTop, left: heroToHomeLeft },
-          ]}
-        >
-          <StatBubble
-            value={formatMetric(data.toHome, 2)}
-            unit="MW"
-            label="To Home"
-            size={heroSideBubbleSize}
-            borderColor="#cccccc"
-            borderWidth={2}
-            valueSize={20}
-          />
+      <View style={styles.heroContent}>
+        <View style={styles.heroTopRow}>
+          <View style={styles.productionBlock}>
+            <Text style={styles.prodLabel}>Production Today</Text>
+            <Text
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+              numberOfLines={1}
+              style={styles.prodValue}
+            >
+              {formatMetric(data.productionToday)}{" "}
+              <Text style={styles.prodUnit}>kWh</Text>
+            </Text>
+          </View>
+          <View style={styles.weatherRow}>
+            {weather.isLoading ? null : (
+              <WeatherIcon weatherCode={weather.weatherCode} />
+            )}
+            <Text style={styles.tempText}>
+              {weather.isLoading ? "-- °C" : `${weather.temperature} °C`}
+            </Text>
+          </View>
         </View>
 
-        <View
-          style={[
-            styles.solarPowerBubblePosition,
-            { transform: [{ translateX: -heroCenterBubbleSize / 2 }] },
-          ]}
-        >
-          <StatBubble
-            value={formatMetric(data.solarPowerNow)}
-            unit="kW"
-            label={`Solar Power\nNow`}
-            size={heroCenterBubbleSize}
-            borderColor="#4caf50"
-            borderWidth={4}
-            valueSize={27}
-          />
-        </View>
+        <View style={[styles.heroVisual, { height: heroVisualHeight }]}>
+          <View
+            style={[
+              styles.toHomeBubblePosition,
+              { top: heroSideBubbleTop, left: heroToHomeLeft },
+            ]}
+          >
+            <StatBubble
+              value={formatMetric(data.toHome, 2)}
+              unit="MW"
+              label="To Home"
+              size={heroSideBubbleSize}
+              borderColor="#cccccc"
+              borderWidth={2}
+              valueSize={20}
+            />
+          </View>
 
-        <View
-          style={[
-            styles.fromGridBubblePosition,
-            { top: heroSideBubbleTop, left: heroFromGridLeft },
-          ]}
-        >
-          <StatBubble
-            value={formatMetric(data.fromGrid, 2)}
-            unit="MW"
-            label="From Grid"
-            size={heroSideBubbleSize}
-            borderColor="#f5a623"
-            borderWidth={2.5}
-            valueSize={20}
-          />
-        </View>
+          <View
+            style={[
+              styles.solarPowerBubblePosition,
+              { transform: [{ translateX: -heroCenterBubbleSize / 2 }] },
+            ]}
+          >
+            <StatBubble
+              value={formatMetric(data.solarPowerNow)}
+              unit="kW"
+              label={`Solar Power\nNow`}
+              size={heroCenterBubbleSize}
+              borderColor="#4caf50"
+              borderWidth={4}
+              valueSize={27}
+            />
+          </View>
 
-        <View style={styles.sceneWrap}>
-          <SceneView width={screenWidth} />
+          <View
+            style={[
+              styles.fromGridBubblePosition,
+              { top: heroSideBubbleTop, left: heroFromGridLeft },
+            ]}
+          >
+            <StatBubble
+              value={formatMetric(data.fromGrid, 2)}
+              unit="MW"
+              label="From Grid"
+              size={heroSideBubbleSize}
+              borderColor="#f5a623"
+              borderWidth={2.5}
+              valueSize={20}
+            />
+          </View>
+
+          <View style={styles.sceneWrap}>
+            <SceneView width={contentWidth} />
+          </View>
         </View>
       </View>
     </View>
@@ -1906,8 +2144,9 @@ function SolarPlantMenuButton({ onPress }: { onPress: () => void }) {
 const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
   const navigation = useNavigation();
   const { width: screenWidth } = useWindowDimensions();
-  const chartWidth = screenWidth - 32;
-  const menuWidth = screenWidth * 0.6;
+  const contentWidth = getSolarContentWidth(screenWidth);
+  const chartWidth = Math.max(260, contentWidth - 32);
+  const menuWidth = clamp(screenWidth * 0.6, 280, 420);
   const todayDashboardData = data;
   const [filteredDashboardData, setFilteredDashboardData] =
     useState<SolarDashboardData>(data);
@@ -1917,6 +2156,9 @@ const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
   const [dateRange, setDateRange] =
     useState<SolarDateRange>(createTodayDateRange);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
+  const [expandedChart, setExpandedChart] = useState<ExpandedChart | null>(
+    null
+  );
   const [selectedNode, setSelectedNode] = useState<TreeNode | null>(
     SOLAR_PLANT_TREE_DATA[0]
   );
@@ -1989,6 +2231,10 @@ const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
   const handleChangePeriodTab = useCallback((nextTab: PeriodTab) => {
     setTab(nextTab);
     setDateRange(getDateRangeForPeriod(nextTab, new Date()));
+  }, []);
+
+  const closeExpandedChart = useCallback(() => {
+    setExpandedChart(null);
   }, []);
 
   const handleGoCurrentRange = useCallback(() => {
@@ -2072,7 +2318,9 @@ const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
           weather={weather}
         />
 
-        <EnergyProducedSummary data={todayDashboardData} />
+        <View style={styles.contentFrame}>
+          <EnergyProducedSummary data={todayDashboardData} />
+        </View>
 
         <PeriodHeader
           activeTab={tab}
@@ -2089,7 +2337,7 @@ const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
         {/* ════════════════════════════════════════════════
             SECTION 2 – Energy Balance
         ════════════════════════════════════════════════ */}
-        <View style={styles.whiteSection}>
+        <View style={[styles.whiteSection, styles.contentFrame]}>
           <Text style={styles.sectionTitle}>Energy Balance</Text>
 
           {/* Production block */}
@@ -2211,7 +2459,7 @@ const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
         {/* ════════════════════════════════════════════════
             SECTION 3 – Production & Consumption chart
         ════════════════════════════════════════════════ */}
-        <View style={styles.whiteSection}>
+        <View style={[styles.whiteSection, styles.contentFrame]}>
           {/* Graph mode toggle */}
           <View style={styles.toggleRow}>
             <TouchableOpacity
@@ -2254,7 +2502,13 @@ const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
                 <Text style={styles.chartTitle}>
                   Production &amp; Consumption
                 </Text>
-                <Text style={styles.expandIcon}>⤢</Text>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  onPress={() => setExpandedChart("production-consumption")}
+                  style={styles.expandButton}
+                >
+                  <Text style={styles.expandIcon}>⤢</Text>
+                </TouchableOpacity>
               </View>
               <View style={styles.tooltipBubble}>
                 <View style={[styles.dot, styles.productionDot]} />
@@ -2416,7 +2670,13 @@ const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
               <View style={styles.splitChartBlock}>
                 <View style={styles.chartHeaderRow}>
                   <Text style={styles.chartTitle}>Production</Text>
-                  <Text style={styles.expandIcon}>⤢</Text>
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    onPress={() => setExpandedChart("production")}
+                    style={styles.expandButton}
+                  >
+                    <Text style={styles.expandIcon}>⤢</Text>
+                  </TouchableOpacity>
                 </View>
                 <View style={styles.tooltipBubble}>
                   <View style={[styles.dot, styles.productionDot]} />
@@ -2451,7 +2711,13 @@ const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
               <View style={styles.splitChartBlock}>
                 <View style={styles.chartHeaderRow}>
                   <Text style={styles.chartTitle}>Consumption</Text>
-                  <Text style={styles.expandIcon}>⤢</Text>
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    onPress={() => setExpandedChart("consumption")}
+                    style={styles.expandButton}
+                  >
+                    <Text style={styles.expandIcon}>⤢</Text>
+                  </TouchableOpacity>
                 </View>
                 <View style={styles.tooltipBubble}>
                   <View style={[styles.dot, styles.consumptionDot]} />
@@ -2489,11 +2755,17 @@ const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
         {/* ════════════════════════════════════════════════
             SECTION 4 – Comparative Production + Environmental
         ════════════════════════════════════════════════ */}
-        <View style={styles.whiteSection}>
+        <View style={[styles.whiteSection, styles.contentFrame]}>
           {/* Comparative Production */}
           <View style={styles.chartHeaderRow}>
             <Text style={styles.chartTitle}>Comparative Production</Text>
-            <Text style={styles.expandIcon}>⤢</Text>
+            <TouchableOpacity
+              accessibilityRole="button"
+              onPress={() => setExpandedChart("comparative")}
+              style={styles.expandButton}
+            >
+              <Text style={styles.expandIcon}>⤢</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Sub-tabs: Month / Quarter / Year */}
@@ -2539,7 +2811,7 @@ const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
         </View>
 
         {/* Environmental Benefits */}
-        <View style={styles.whiteSection}>
+        <View style={[styles.whiteSection, styles.contentFrame]}>
           <View style={styles.chartHeaderRow}>
             <Text style={styles.chartTitle}>
               Lifetime Environmental Benefits
@@ -2663,6 +2935,22 @@ const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
         </View>
       </ScrollView>
       {renderTreePanel()}
+      <ExpandedChartModal
+        activeChart={expandedChart}
+        chartWidth={Math.max(300, contentWidth - 48)}
+        compareMode={compareMode}
+        data={filteredDashboardData}
+        dateRange={dateRange}
+        period={tab}
+        visible={expandedChart != null}
+        onChangeCompareMode={setCompareMode}
+        onChangePeriod={handleChangePeriodTab}
+        onClose={closeExpandedChart}
+        onGoCurrentRange={handleGoCurrentRange}
+        onNextRange={() => shiftDateRange(1)}
+        onOpenDatePicker={() => setDatePickerVisible(true)}
+        onPreviousRange={() => shiftDateRange(-1)}
+      />
       <SolarDateRangePicker
         dateRange={dateRange}
         period={tab}
@@ -2688,12 +2976,23 @@ const styles = StyleSheet.create({
 
   // Hero section
   heroSection: { backgroundColor: "#a8d8f2", overflow: "hidden" },
+  heroContent: {
+    width: "100%",
+    maxWidth: MAX_SOLAR_CONTENT_WIDTH,
+    alignSelf: "center",
+  },
   heroTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
+    flexWrap: "wrap",
+    gap: 10,
     paddingHorizontal: 18,
     paddingTop: 12,
+  },
+  productionBlock: {
+    flex: 1,
+    minWidth: 190,
   },
   prodLabel: { fontSize: 14, fontWeight: "600", color: "#2a4060" },
   prodValue: {
@@ -2708,6 +3007,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     marginTop: 4,
+    flexShrink: 0,
   },
   tempText: { fontSize: 20, fontWeight: "600", color: "#2a3c50" },
 
@@ -2757,6 +3057,11 @@ const styles = StyleSheet.create({
   },
 
   // Energy Produced
+  contentFrame: {
+    width: "100%",
+    maxWidth: MAX_SOLAR_CONTENT_WIDTH,
+    alignSelf: "center",
+  },
   energyProducedCard: {
     backgroundColor: "white",
     paddingHorizontal: 16,
@@ -2768,12 +3073,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
     marginBottom: 10,
   },
   sectionTitle: { fontSize: 16, fontWeight: "700", color: "#1a2a3a" },
   updatedNow: { fontSize: 12, color: "#aaa" },
-  epStats: { flexDirection: "row", alignItems: "center" },
-  epItem: { flex: 1, alignItems: "center" },
+  epStats: { flexDirection: "row", alignItems: "center", flexWrap: "wrap" },
+  epItem: { flex: 1, minWidth: 96, alignItems: "center" },
   epLabel: { fontSize: 12, color: "#888", marginBottom: 2 },
   epValue: { fontSize: 20, fontWeight: "700", color: "#1a2a3a" },
   epUnit: { fontSize: 12, fontWeight: "400", color: "#666" },
@@ -2784,25 +3091,35 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     zIndex: 10,
     elevation: 4,
+    alignItems: "center",
   },
   tabBar: {
+    width: "100%",
+    maxWidth: MAX_SOLAR_CONTENT_WIDTH,
     flexDirection: "row",
     backgroundColor: "#f0f0f5",
     paddingHorizontal: 8,
     paddingVertical: 8,
     alignItems: "center",
   },
-  tabItem: { flex: 1, alignItems: "center" },
+  tabItem: { flex: 1, minWidth: 0, alignItems: "center" },
   tabActiveChip: {
     backgroundColor: "#4285f4",
     borderRadius: 18,
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
     paddingVertical: 6,
   },
-  tabActiveText: { color: "white", fontWeight: "600", fontSize: 13 },
-  tabText: { color: "#666", fontSize: 13 },
+  tabActiveText: {
+    color: "white",
+    fontWeight: "600",
+    fontSize: 13,
+    textAlign: "center",
+  },
+  tabText: { color: "#666", fontSize: 13, textAlign: "center" },
 
   dateNav: {
+    width: "100%",
+    maxWidth: MAX_SOLAR_CONTENT_WIDTH,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -2844,10 +3161,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   dateNavCenterText: {
+    flexShrink: 1,
     fontSize: 15,
     lineHeight: 20,
     color: "#6EA0F6",
     fontWeight: "300",
+    textAlign: "center",
   },
   calendarOverlay: {
     flex: 1,
@@ -3072,8 +3391,13 @@ const styles = StyleSheet.create({
   balanceFromGridDot: { backgroundColor: "#f5a623" },
   year2025Dot: { backgroundColor: "#42b0e8" },
   year2026Dot: { backgroundColor: "#4e5ab5" },
-  legendLabel: { fontSize: 13, color: "#555", flex: 1 },
-  legendValue: { fontSize: 13, color: "#333", fontWeight: "500" },
+  legendLabel: { fontSize: 13, color: "#555", flex: 1, minWidth: 86 },
+  legendValue: {
+    fontSize: 13,
+    color: "#333",
+    fontWeight: "500",
+    flexShrink: 1,
+  },
   separator: { height: 1, backgroundColor: "#eee", marginVertical: 14 },
   selfConsumptionRow: { marginTop: 12 },
   selfText: { fontSize: 13, color: "#555" },
@@ -3094,10 +3418,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: 12,
     marginBottom: 8,
   },
-  chartTitle: { fontSize: 15, fontWeight: "700", color: "#1a2a3a" },
-  expandIcon: { fontSize: 18, color: "#888" },
+  chartTitle: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#1a2a3a",
+  },
+  expandButton: {
+    width: 52,
+    height: 52,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  expandIcon: { fontSize: 36, color: "#888" },
   infoIcon: { fontSize: 18, color: "#999" },
 
   tooltipBubble: {
@@ -3195,6 +3531,150 @@ const styles = StyleSheet.create({
     color: "#888",
     textAlign: "center",
     lineHeight: 18,
+  },
+
+  // Expanded chart
+  expandedSafe: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+  },
+  expandedHeader: {
+    minHeight: 112,
+    paddingTop: 42,
+    paddingHorizontal: 12,
+    backgroundColor: "#000633",
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  expandedBackButton: {
+    width: 48,
+    height: 56,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  expandedHeaderTitle: {
+    flex: 1,
+    color: "#fff",
+    fontSize: 19,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  expandedHeaderSpacer: {
+    width: 48,
+  },
+  expandedCompareTabs: {
+    width: "100%",
+    maxWidth: MAX_SOLAR_CONTENT_WIDTH,
+    alignSelf: "center",
+    minHeight: 46,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f0f0f4",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#d2d2d6",
+    borderRadius: 8,
+    padding: 2,
+  },
+  expandedCompareTab: {
+    flex: 1,
+    minHeight: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 7,
+  },
+  expandedCompareTabActive: {
+    backgroundColor: "#eef8ff",
+    borderWidth: 1,
+    borderColor: "#6ea0f6",
+  },
+  expandedCompareTabText: {
+    color: "#333333",
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  expandedCompareTabTextActive: {
+    color: "#6ea0f6",
+    fontWeight: "600",
+  },
+  expandedCompareChartWrap: {
+    marginTop: 92,
+  },
+  expandedContent: {
+    flex: 1,
+    width: "100%",
+    maxWidth: MAX_SOLAR_CONTENT_WIDTH,
+    alignSelf: "center",
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: 14,
+  },
+  expandedTitle: {
+    fontSize: 20,
+    lineHeight: 25,
+    color: "#333333",
+    marginBottom: 22,
+  },
+  expandedTooltipCard: {
+    width: "78%",
+    minWidth: 260,
+    maxWidth: 430,
+    borderWidth: 1,
+    borderColor: "#b9c3da",
+    borderRadius: 6,
+    backgroundColor: "#eef8ff",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginLeft: 28,
+    marginBottom: 4,
+  },
+  expandedTooltipDate: {
+    color: "#81869d",
+    fontSize: 16,
+    lineHeight: 22,
+    marginBottom: 14,
+  },
+  expandedTooltipMetricRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  expandedTooltipLabel: {
+    flex: 1,
+    color: "#81869d",
+    fontSize: 18,
+    lineHeight: 25,
+  },
+  expandedTooltipValue: {
+    color: "#81869d",
+    fontSize: 18,
+    lineHeight: 25,
+    textAlign: "right",
+  },
+  expandedLegendRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 18,
+    marginTop: 8,
+    paddingHorizontal: 8,
+  },
+  expandedLegendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    maxWidth: "100%",
+  },
+  expandedLegendDot: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+  },
+  expandedLegendText: {
+    color: "#777b92",
+    fontSize: 17,
+    lineHeight: 23,
+    fontWeight: "600",
+    flexShrink: 1,
   },
 });
 

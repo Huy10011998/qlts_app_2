@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { View, StyleSheet, Alert } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { StyleSheet, Alert } from "react-native";
 
 import type { AssetEditItemNavigationProp, Field } from "../../types/index";
 import { TypeProperty } from "../../utils/Enum";
@@ -30,11 +30,11 @@ import { useGroupedFields } from "../../hooks/AssetAddItem/useGroupedFields";
 import { useOpenReferenceModal } from "../../hooks/AssetAddItem/useOpenReferenceModal";
 import { useModalItems } from "../../hooks/AssetAddItem/useModalItems";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
-import AssetFormActionButton from "./shared/AssetFormActionButton";
 import AssetFormGroupedFields from "./shared/AssetFormGroupedFields";
 import AssetFormHeroCard from "./shared/AssetFormHeroCard";
 import AssetFormReferencePickerModal from "./shared/AssetFormReferencePickerModal";
 import AssetFormScreenShell from "./shared/AssetFormScreenShell";
+import { createAssetFormHeaderSubmitRight } from "./shared/AssetFormHeaderSubmitButton";
 import {
   getRequiredFieldErrors,
   getRequiredFieldsMessage,
@@ -49,6 +49,74 @@ import {
 const BRAND_RED = ASSET_FORM_BRAND_RED;
 const BG = ASSET_FORM_BG;
 const CARD_SHADOW = ASSET_FORM_CARD_SHADOW;
+
+const normalizeComparableValue = (value: any) => {
+  if (value === undefined || value === "") return null;
+  return value;
+};
+
+const normalizeUpdateFieldValue = (field: Field, value: any) => {
+  switch (field.typeProperty) {
+    case TypeProperty.Date:
+      return value ? formatDateForBE(value) : null;
+
+    case TypeProperty.Int:
+    case TypeProperty.Decimal:
+      return value === "" || value === null || value === undefined
+        ? null
+        : Number(value);
+
+    case TypeProperty.Text:
+    case TypeProperty.String:
+    case TypeProperty.Enum:
+    case TypeProperty.Reference:
+      return value === "" || value === null || value === undefined
+        ? null
+        : value;
+
+    case TypeProperty.Image:
+      if (value === "---") return "";
+      return value === "" || value === null || value === undefined
+        ? null
+        : value;
+
+    default:
+      return value === "" || value === null || value === undefined
+        ? null
+        : value;
+  }
+};
+
+const buildUpdateEntity = (
+  fields: Field[],
+  values: Record<string, any>,
+) => {
+  const entity: Record<string, any> = {};
+
+  fields.forEach((field) => {
+    const matchedKey = getMatchedKey(values, field.name);
+    const value = matchedKey ? values[matchedKey] : values[field.name];
+    entity[field.name] = normalizeUpdateFieldValue(field, value);
+  });
+
+  Object.keys(entity).forEach((key) => {
+    if (key.endsWith("_MoTa")) delete entity[key];
+  });
+
+  return entity;
+};
+
+const areUpdateValuesEqual = (a: Record<string, any>, b: Record<string, any>) => {
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+
+  for (const key of keys) {
+    if (normalizeComparableValue(a[key]) !== normalizeComparableValue(b[key])) {
+      return false;
+    }
+  }
+
+  return true;
+};
 
 export default function AssetEditItem() {
   const { item, field, nameClass } = useParams();
@@ -91,6 +159,21 @@ export default function AssetEditItem() {
     toggleGroup,
     expandGroupsWithErrors,
   } = useGroupedFields(field);
+
+  const currentEntity = useMemo(
+    () => buildUpdateEntity(fieldActive, formData),
+    [fieldActive, formData],
+  );
+
+  const originalEntity = useMemo(
+    () => buildUpdateEntity(fieldActive, originalItem),
+    [fieldActive, originalItem],
+  );
+
+  const hasFormChanges = useMemo(
+    () => !areUpdateValuesEqual(currentEntity, originalEntity),
+    [currentEntity, originalEntity],
+  );
 
   useEffect(() => {
     const initial: Record<string, any> = {};
@@ -242,6 +325,11 @@ export default function AssetEditItem() {
         return;
       }
 
+      if (!hasFormChanges) {
+        Alert.alert("Thông báo", "Chưa có thay đổi để lưu.");
+        return;
+      }
+
       const requiredErrors = getRequiredFieldErrors(fieldActive, formData);
       if (Object.keys(requiredErrors).length) {
         setValidationErrors((prev) => ({ ...prev, ...requiredErrors }));
@@ -253,63 +341,7 @@ export default function AssetEditItem() {
         return;
       }
 
-      const entity: Record<string, any> = {};
-
-      fieldActive.forEach((f) => {
-        const key = f.name;
-        const value = formData[key];
-
-        switch (f.typeProperty) {
-          case TypeProperty.Date:
-            entity[key] = value ? formatDateForBE(value) : null;
-            break;
-
-          case TypeProperty.Int:
-          case TypeProperty.Decimal:
-            entity[key] =
-              value === "" || value === null || value === undefined
-                ? null
-                : Number(value);
-            break;
-
-          case TypeProperty.Text:
-          case TypeProperty.String:
-            entity[key] =
-              value === "" || value === null || value === undefined
-                ? null
-                : value;
-            break;
-
-          case TypeProperty.Enum:
-          case TypeProperty.Reference:
-            entity[key] =
-              value === "" || value === null || value === undefined
-                ? null
-                : value;
-            break;
-
-          case TypeProperty.Image:
-            if (value === "---") {
-              entity[key] = "";
-            } else {
-              entity[key] =
-                value === "" || value === null || value === undefined
-                  ? null
-                  : value;
-            }
-            break;
-
-          default:
-            entity[key] =
-              value === "" || value === null || value === undefined
-                ? null
-                : value;
-        }
-      });
-
-      Object.keys(entity).forEach((k) => {
-        if (k.endsWith("_MoTa")) delete entity[k];
-      });
+      const entity: Record<string, any> = { ...currentEntity };
 
       const autoCodeField = item?.propertyClass?.propertyTuDongTang;
       if (autoCodeField && isEffectivelyEmptyCodeValue(entity[autoCodeField])) {
@@ -356,66 +388,19 @@ export default function AssetEditItem() {
     }
   };
 
-  const handleReset = () => {
-    if (!originalItem) return;
+  const handleUpdateRef = React.useRef(handleUpdate);
+  handleUpdateRef.current = handleUpdate;
 
-    const reset: Record<string, any> = {};
-
-    fieldActive.forEach((f) => {
-      const matchedKey = getMatchedKey(originalItem || {}, f.name);
-      const raw = matchedKey ? originalItem[matchedKey] : undefined;
-      const matchedMoTaKey = getMatchedKey(originalItem || {}, `${f.name}_MoTa`);
-      const matchedKeyMoTaKey = matchedKey
-        ? getMatchedKey(originalItem || {}, `${matchedKey}_MoTa`)
-        : undefined;
-      const rawText =
-        (matchedKeyMoTaKey && originalItem?.[matchedKeyMoTaKey]) ??
-        (matchedMoTaKey && originalItem?.[matchedMoTaKey]) ??
-        "";
-
-      switch (f.typeProperty) {
-        case TypeProperty.Date:
-          reset[f.name] = raw ? normalizeDateFromBE(raw) : "";
-          break;
-
-        case TypeProperty.Image:
-          reset[f.name] = raw ?? "";
-          break;
-
-        case TypeProperty.Link:
-          reset[f.name] = raw ?? "";
-          break;
-
-        case TypeProperty.Enum:
-          reset[f.name] = raw != null ? raw : "";
-          reset[`${f.name}_MoTa`] = rawText ?? "";
-          break;
-
-        case TypeProperty.Reference:
-          reset[f.name] = raw ?? "";
-          reset[`${f.name}_MoTa`] = rawText ?? "";
-          break;
-
-        default:
-          reset[f.name] = raw != null ? raw : "";
-      }
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: createAssetFormHeaderSubmitRight({
+        disabled: !hasFormChanges,
+        iconName: "save-outline",
+        label: "Lưu",
+        onPress: () => handleUpdateRef.current(),
+      }),
     });
-
-    setFormData(reset);
-    fieldActive.forEach((f) => {
-      const matchedKey = getMatchedKey(originalItem || {}, f.name);
-      const raw = matchedKey ? originalItem[matchedKey] : undefined;
-
-      if (f.typeProperty === TypeProperty.Image) {
-        if (!raw || raw === "---") {
-          setImages((p) => ({ ...p, [f.name]: "" }));
-          return;
-        }
-
-        fetchImage(f.name, raw, setLoadingImages, setImages);
-      }
-    });
-  };
+  }, [hasFormChanges, navigation]);
 
   return (
     <AssetFormScreenShell
@@ -423,35 +408,6 @@ export default function AssetEditItem() {
       contentContainerStyle={styles.scrollContent}
       refLoadingMore={refLoadingMore}
       style={styles.container}
-      footer={
-        <View style={styles.actionRow}>
-          <AssetFormActionButton
-            brandColor={BRAND_RED}
-            iconName="save-outline"
-            label="Cập nhật"
-            onPress={handleUpdate}
-            style={[styles.updateButton, styles.actionButton]}
-          />
-
-          <AssetFormActionButton
-            brandColor={BRAND_RED}
-            iconName="refresh-outline"
-            label="Reset"
-            onPress={() =>
-              Alert.alert(
-                "Xác nhận",
-                "Bạn muốn đặt lại mọi thay đổi về giá trị ban đầu?",
-                [
-                  { text: "Huỷ", style: "cancel" },
-                  { text: "Đặt lại", onPress: handleReset },
-                ]
-              )
-            }
-            style={[styles.resetButton, styles.actionButton]}
-            variant="secondary"
-          />
-        </View>
-      }
       modal={
         <AssetFormReferencePickerModal
           activeEnumField={activeEnumField}
@@ -518,20 +474,5 @@ const styles = StyleSheet.create({
   }),
   heroIconWrap: {
     backgroundColor: "#EEF2FF",
-  },
-  actionRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  actionButton: {
-    flex: 1,
-  },
-
-  updateButton: {
-    ...CARD_SHADOW,
-  },
-
-  resetButton: {
-    ...CARD_SHADOW,
   },
 });
