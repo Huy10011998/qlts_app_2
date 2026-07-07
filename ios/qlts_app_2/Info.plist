@@ -57,7 +57,7 @@
 	<key>NSFaceIDUsageDescription</key>
 	<string>Ứng dụng cần sử dụng Face ID để đăng nhập nhanh.</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>App cần truy cập server nội bộ</string>
+	<string>Ứng dụng cần tìm thiết bị trên mạng nội bộ để kết nối đến máy chủ Cholimex trong hệ thống mạng công ty. Ví dụ: khi bạn đăng nhập hoặc đồng bộ dữ liệu, ứng dụng sẽ gửi yêu cầu đến server nội bộ đã cấu hình.</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_http._tcp</string>
