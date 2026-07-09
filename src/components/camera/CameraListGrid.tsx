@@ -15,6 +15,7 @@ import {
   useWindowDimensions,
   InteractionManager,
   TouchableWithoutFeedback,
+  type LayoutChangeEvent,
 } from "react-native";
 import {
   useRoute,
@@ -61,7 +62,10 @@ import {
 } from "./shared/cameraStreamUtils";
 import { useCameraViewToken } from "./shared/useCameraViewToken";
 import EmptyState from "../ui/EmptyState";
-import { createTabBarStyle } from "../../navigation/shared/tabBarTheme";
+import {
+  TAB_HEIGHT,
+  createTabBarStyle,
+} from "../../navigation/shared/tabBarTheme";
 
 const PORTRAIT_CELL_ASPECT = 4 / 3;
 
@@ -269,6 +273,16 @@ const CameraListGrid: React.FC = () => {
   // là source of truth duy nhất — nó luôn chính xác tại thời điểm render.
   const screenDims = useWindowDimensions();
   const isLandscape = screenDims.width > screenDims.height;
+  const [contentLayout, setContentLayout] = React.useState({
+    width: 0,
+    height: 0,
+  });
+  const handleContentLayout = React.useCallback((event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    setContentLayout((prev) =>
+      prev.width === width && prev.height === height ? prev : { width, height }
+    );
+  }, []);
 
   // ─── Ref track landscape cho orientation lock logic ───────────────────────
   const isLandscapeRef = React.useRef(isLandscape);
@@ -318,9 +332,6 @@ const CameraListGrid: React.FC = () => {
   const androidWatchdogRef = React.useRef<ReturnType<
     typeof setInterval
   > | null>(null);
-  // ─── Ref để track pending navigation action ──────────────────────────────
-  const pendingNavigationRef = React.useRef<any>(null);
-
   const pagedCamerasRef = React.useRef<any[]>([]);
   const translateX = React.useRef(new Animated.Value(0)).current;
   const fsTranslateX = React.useRef(new Animated.Value(0)).current;
@@ -427,17 +438,12 @@ const CameraListGrid: React.FC = () => {
     isClosingFullscreenRef.current = isClosingFullscreen;
   }, [isClosingFullscreen]);
 
-  // Khi screenDims về portrait → layout đã đúng → fade out cover rồi navigate
+  // Khi screenDims về portrait → layout đã đúng → fade out cover
   React.useEffect(() => {
     if (!isLandscape) {
       finishClosingFullscreen();
     }
-    if (isLandscape) return;
-    const action = pendingNavigationRef.current;
-    if (!action) return;
-    pendingNavigationRef.current = null;
-    navigation.dispatch(action);
-  }, [finishClosingFullscreen, isLandscape, navigation]);
+  }, [finishClosingFullscreen, isLandscape]);
 
   React.useEffect(() => {
     navigation.setOptions({ gestureEnabled: false });
@@ -785,8 +791,12 @@ const CameraListGrid: React.FC = () => {
   // Dùng kích thước thực tế theo hướng hiện tại của màn hình.
   // portraitScreenW = cạnh ngắn (chiều rộng khi dọc), landscapeScreenW = cạnh dài.
   const portraitScreenW = Math.min(screenDims.width, screenDims.height);
-  const landscapeScreenW = Math.max(screenDims.width, screenDims.height);
-  const landscapeScreenH = Math.min(screenDims.width, screenDims.height);
+  const hasMeasuredContentLayout =
+    contentLayout.width > 0 && contentLayout.height > 0;
+  const measuredLandscapeW = contentLayout.width || screenDims.width;
+  const measuredLandscapeH = contentLayout.height || screenDims.height;
+  const landscapeScreenW = Math.max(measuredLandscapeW, measuredLandscapeH);
+  const landscapeScreenH = Math.min(measuredLandscapeW, measuredLandscapeH);
 
   // ─── FIX: grid bị "dài" hơn khi rows > cols (ví dụ layout 3x4) ─────────────
   // Trước đây portraitGridMaxH chỉ là 60% chiều dài màn hình — một cap cố định
@@ -814,8 +824,17 @@ const CameraListGrid: React.FC = () => {
   );
 
   const portraitCellW = portraitScreenW / cols;
+  const landscapeTabBarH = isGridFullscreenMode
+    ? 0
+    : hasMeasuredContentLayout
+    ? 0
+    : TAB_HEIGHT + insets.bottom;
+  const landscapeAvailableH = Math.max(
+    0,
+    landscapeScreenH - landscapeTabBarH
+  );
   const landscapeCellW = landscapeScreenW / cols;
-  const landscapeCellH = landscapeScreenH / rows;
+  const landscapeCellH = landscapeAvailableH / rows;
   // ─── KEY CHANGE: Khung đi theo hướng màn hình thực tế (isLandscape) ──
   // Không phụ thuộc isGridFullscreenMode nữa, để xoay ngang/dọc luôn đổi khung.
   // isGridFullscreenMode chỉ dùng để control tabBar/header visibility.
@@ -823,7 +842,7 @@ const CameraListGrid: React.FC = () => {
   const cellH = isLandscape ? landscapeCellH : portraitCellH;
   const gridW = cellW * cols;
   const gridH = cellH * rows;
-  const topHalfH = isLandscape ? landscapeScreenH : gridH + PAGINATION_H;
+  const topHalfH = isLandscape ? landscapeAvailableH : gridH + PAGINATION_H;
 
   const changePage = React.useCallback(
     (newPage: number) => {
@@ -1168,11 +1187,6 @@ const CameraListGrid: React.FC = () => {
 
   React.useEffect(() => {
     const unsubscribe = navigation.addListener("beforeRemove", (event: any) => {
-      // ─── KEY CHANGE: Đơn giản hóa beforeRemove ────────────────────────────
-      // Cũ: lock portrait → set cover visible → setTimeout 700ms → navigate
-      // Mới: lock portrait → lưu action vào ref → navigate khi screenDims đã portrait
-      // Không có cover màn hình đen, không có timeout chain.
-
       if (fullscreenCam) {
         event.preventDefault();
         closeFullscreen();
@@ -1180,11 +1194,10 @@ const CameraListGrid: React.FC = () => {
       }
 
       if (isGridLandscapeFullscreenRef.current || isLandscapeRef.current) {
-        event.preventDefault();
+        // Let the back action continue immediately so the grid's black
+        // landscape surface does not flash before the previous screen appears.
         setIsGridLandscapeFullscreen(false);
-        pendingNavigationRef.current = event.data.action;
         Orientation.lockToPortrait();
-        // Navigation sẽ được dispatch trong useEffect khi isLandscape trở về false
         return;
       }
     });
@@ -1217,7 +1230,7 @@ const CameraListGrid: React.FC = () => {
   }
 
   return (
-    <GestureHandlerRootView style={styles.root}>
+    <GestureHandlerRootView style={styles.root} onLayout={handleContentLayout}>
       <StatusBar
         hidden={
           isGridFullscreenMode || fullscreenCam !== null || isClosingFullscreen
@@ -1229,7 +1242,7 @@ const CameraListGrid: React.FC = () => {
           style={[
             styles.topHalf,
             { height: topHalfH },
-            (isGridFullscreenMode || isLandscape) && styles.topHalfFullscreen,
+            isGridFullscreenMode && styles.topHalfFullscreen,
           ]}
         >
           <View style={[styles.gridViewport, { width: gridW, height: gridH }]}>

@@ -46,10 +46,19 @@ export default function ChangePasswordModal({
   const { height } = useWindowDimensions();
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [didPressSubmit, setDidPressSubmit] = useState(false);
+  const isKeyboardVisible = keyboardHeight > 0;
+  const isCompactHeight = height < 760;
   const sheetBottomPadding = Math.max(insets.bottom, 16) + 16;
+  const sheetMaxHeightRatio = isKeyboardVisible
+    ? isCompactHeight
+      ? 0.64
+      : 0.58
+    : isCompactHeight
+    ? 0.64
+    : 0.56;
   const keyboardSpace =
-    keyboardHeight > 0
-      ? Math.min(Math.max(keyboardHeight * 0.25, 72), 140)
+    isKeyboardVisible
+      ? Math.min(Math.max(keyboardHeight * 0.14, 40), 80)
       : 0;
   const isOldPasswordMissing = didPressSubmit && !oldPassword.trim();
   const isNewPasswordMissing = didPressSubmit && !newPassword.trim();
@@ -108,7 +117,7 @@ export default function ChangePasswordModal({
       sheetStyle={[
         styles.sheet,
         {
-          maxHeight: height * 0.86,
+          maxHeight: height * sheetMaxHeightRatio,
           paddingBottom: sheetBottomPadding,
         },
       ]}
@@ -146,18 +155,26 @@ export default function ChangePasswordModal({
         style={styles.scroll}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: keyboardSpace + 24 },
+          isCompactHeight && styles.scrollContentCompact,
+          { paddingBottom: keyboardSpace + (isKeyboardVisible ? 16 : 6) },
         ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
-        <LinearGradient colors={[C.red, C.redDeep]} style={styles.iconGradient}>
+        <LinearGradient
+          colors={[C.red, C.redDeep]}
+          style={[styles.iconGradient, isCompactHeight && styles.iconCompact]}
+        >
           <Ionicons name="lock-closed" size={22} color="#fff" />
         </LinearGradient>
 
-        <Text style={styles.title}>Đổi mật khẩu</Text>
-        <Text style={styles.subtitle}>
+        <Text style={[styles.title, isCompactHeight && styles.titleCompact]}>
+          Đổi mật khẩu
+        </Text>
+        <Text
+          style={[styles.subtitle, isCompactHeight && styles.subtitleCompact]}
+        >
           Nhập mật khẩu hiện tại và mật khẩu mới
         </Text>
 
@@ -201,6 +218,9 @@ const styles = StyleSheet.create({
     flexGrow: 0,
   },
   scrollContent: {
+    paddingTop: 0,
+  },
+  scrollContentCompact: {
     paddingTop: 0,
   },
   header: {
@@ -255,6 +275,12 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
   },
+  iconCompact: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    marginBottom: 10,
+  },
   title: {
     fontSize: 20,
     fontWeight: "800",
@@ -263,12 +289,19 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     letterSpacing: 0.2,
   },
+  titleCompact: {
+    fontSize: 18,
+  },
   subtitle: {
     fontSize: 12.5,
     color: C.textSub,
     textAlign: "center",
     marginBottom: 24,
     lineHeight: 18,
+  },
+  subtitleCompact: {
+    fontSize: 12,
+    marginBottom: 16,
   },
   disabledBtn: {
     opacity: 0.65,

@@ -14,8 +14,8 @@ import {
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
+  useWindowDimensions,
   View,
-  Dimensions,
 } from "react-native";
 import {
   SafeAreaView,
@@ -58,7 +58,6 @@ import {
   SERVER_UNAVAILABLE_MESSAGE,
 } from "../../services/network/reachability";
 
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const RED = "#E31E24";
 const COMPANY_FOUNDED_YEAR = 1983;
 const SUPPORT_EMAIL = "cholimexfood@cholimexfood.com.vn";
@@ -67,6 +66,7 @@ const SUPPORT_PHONE_LINK = SUPPORT_PHONE.replace(/\s/g, "");
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const passwordRef = useRef<TextInput>(null);
   const appVersionLabel = `v${DeviceInfo.getVersion()}`;
   const companyAge = new Date().getFullYear() - COMPANY_FOUNDED_YEAR;
@@ -82,6 +82,9 @@ export default function LoginScreen() {
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
   const [isTokenReady, setIsTokenReady] = useState(false);
   const [isFaceIdEnabled, setIsFaceIdEnabled] = useState(false);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [scrollViewportHeight, setScrollViewportHeight] = useState(0);
+  const [scrollContentHeight, setScrollContentHeight] = useState(0);
   const [localNetworkStatus, setLocalNetworkStatus] =
     useState<LocalNetworkPermissionStatus>("unknown");
 
@@ -109,6 +112,20 @@ export default function LoginScreen() {
     : isLocalNetworkDenied
     ? RED
     : "#64748B";
+  const isCompactHeight = windowHeight < 880;
+  const isShortHeight = windowHeight < 760;
+  const heroRatio = isShortHeight ? 0.17 : isCompactHeight ? 0.18 : 0.2;
+  const heroHeight = Math.min(Math.max(windowHeight * heroRatio, 112), 190);
+  const restingContentTopPadding = Math.min(
+    Math.max(windowHeight * 0.04, 28),
+    40,
+  );
+  const bottomContentPadding = isKeyboardVisible
+    ? Math.max(insets.bottom, 16) + 24
+    : Math.max(insets.bottom, 10) + (isCompactHeight ? 8 : 16);
+  const isContentOverflowing =
+    scrollViewportHeight > 0 &&
+    scrollContentHeight > scrollViewportHeight + 1;
 
   useEffect(() => {
     log("LoginScreen mounted, token:", token);
@@ -116,6 +133,20 @@ export default function LoginScreen() {
       log("LoginScreen unmounted");
     };
   }, [token]);
+
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener("keyboardDidShow", () => {
+      setIsKeyboardVisible(true);
+    });
+    const hideSubscription = Keyboard.addListener("keyboardDidHide", () => {
+      setIsKeyboardVisible(false);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   useEffect(() => {
     setIsLoginDisabled(!(userName.trim() && userPassword.trim()));
@@ -426,16 +457,27 @@ export default function LoginScreen() {
           bottom được handle bởi ScrollView contentInset
         */}
         <SafeAreaView style={styles.root} edges={["top"]}>
-          {/* ── RED HERO (compact ~26%) ── */}
+          {/* ── RED HERO (responsive) ── */}
           <View
-            style={[styles.heroBg, { paddingTop: Math.max(insets.top, 8) + 4 }]}
+            style={[
+              styles.heroBg,
+              {
+                height: heroHeight,
+                paddingBottom: isCompactHeight ? 10 : 16,
+              },
+            ]}
           >
             <View style={styles.circle1} />
             <View style={styles.circle2} />
             <View style={styles.circle3} />
 
             <View style={styles.logoBlock}>
-              <View style={styles.brandPill}>
+              <View
+                style={[
+                  styles.brandPill,
+                  isCompactHeight && styles.brandPillCompact,
+                ]}
+              >
                 <Ionicons
                   name="sparkles-outline"
                   size={11}
@@ -443,15 +485,27 @@ export default function LoginScreen() {
                 />
                 <Text style={styles.brandPillText}>Cholimex Platform</Text>
               </View>
-              <View style={styles.logoShadowWrap}>
+              <View
+                style={[
+                  styles.logoShadowWrap,
+                  isCompactHeight && styles.logoShadowWrapCompact,
+                ]}
+              >
                 <Image
                   source={require("../../assets/images/logo-cholimex.jpg")}
-                  style={styles.logo}
+                  style={[styles.logo, isCompactHeight && styles.logoCompact]}
                 />
               </View>
-              <Text style={styles.heroTagline}>
-                Nền tảng quản lý và vận hành
-              </Text>
+              {!isShortHeight && (
+                <Text
+                  style={[
+                    styles.heroTagline,
+                    isCompactHeight && styles.heroTaglineCompact,
+                  ]}
+                >
+                  Nền tảng quản lý và vận hành
+                </Text>
+              )}
             </View>
           </View>
 
@@ -461,15 +515,41 @@ export default function LoginScreen() {
               style={styles.scrollView}
               contentContainerStyle={[
                 styles.scrollContent,
-                { paddingBottom: Math.max(insets.bottom, 16) + 24 },
+                isCompactHeight && styles.scrollContentCompact,
+                !isKeyboardVisible &&
+                  isCompactHeight &&
+                  { paddingTop: restingContentTopPadding },
+                { paddingBottom: bottomContentPadding },
               ]}
               keyboardShouldPersistTaps="handled"
+              scrollEnabled={isKeyboardVisible || isContentOverflowing}
               showsVerticalScrollIndicator={false}
               bounces={false}
+              onLayout={(event) =>
+                setScrollViewportHeight(event.nativeEvent.layout.height)
+              }
+              onContentSizeChange={(_, height) => setScrollContentHeight(height)}
             >
-              <View style={styles.cardHeader}>
-                <Text style={styles.cardTitle}>Đăng nhập</Text>
-                <Text style={styles.cardSubtitle}>
+              <View
+                style={[
+                  styles.cardHeader,
+                  isCompactHeight && styles.cardHeaderCompact,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.cardTitle,
+                    isCompactHeight && styles.cardTitleCompact,
+                  ]}
+                >
+                  Đăng nhập
+                </Text>
+                <Text
+                  style={[
+                    styles.cardSubtitle,
+                    isCompactHeight && styles.cardSubtitleCompact,
+                  ]}
+                >
                   Đăng nhập để tiếp tục sử dụng hệ thống
                 </Text>
               </View>
@@ -478,6 +558,7 @@ export default function LoginScreen() {
               <View
                 style={[
                   styles.inputWrapper,
+                  isCompactHeight && styles.inputWrapperCompact,
                   isUsernameFocused && styles.inputWrapperFocused,
                 ]}
               >
@@ -488,7 +569,10 @@ export default function LoginScreen() {
                   style={styles.inputIcon}
                 />
                 <TextInput
-                  style={styles.textInput}
+                  style={[
+                    styles.textInput,
+                    isCompactHeight && styles.textInputCompact,
+                  ]}
                   placeholder="Tài khoản"
                   placeholderTextColor="#C8C8C8"
                   value={userName}
@@ -508,6 +592,7 @@ export default function LoginScreen() {
               <View
                 style={[
                   styles.inputWrapper,
+                  isCompactHeight && styles.inputWrapperCompact,
                   isPasswordFocused && styles.inputWrapperFocused,
                 ]}
               >
@@ -519,7 +604,10 @@ export default function LoginScreen() {
                 />
                 <TextInput
                   ref={passwordRef}
-                  style={styles.textInput}
+                  style={[
+                    styles.textInput,
+                    isCompactHeight && styles.textInputCompact,
+                  ]}
                   secureTextEntry={!isPasswordVisible}
                   placeholder="Mật khẩu"
                   placeholderTextColor="#C8C8C8"
@@ -545,7 +633,12 @@ export default function LoginScreen() {
               </View>
 
               {/* Buttons */}
-              <View style={styles.actionsRow}>
+              <View
+                style={[
+                  styles.actionsRow,
+                  isCompactHeight && styles.actionsRowCompact,
+                ]}
+              >
                 <TouchableOpacity
                   style={[
                     styles.loginBtn,
@@ -624,8 +717,18 @@ export default function LoginScreen() {
                 </View>
               )}
 
-              <View style={styles.supportCard}>
-                <View style={styles.supportActions}>
+              <View
+                style={[
+                  styles.supportCard,
+                  isCompactHeight && styles.supportCardCompact,
+                ]}
+              >
+                <View
+                  style={[
+                    styles.supportActions,
+                    isCompactHeight && styles.supportActionsCompact,
+                  ]}
+                >
                   <TouchableOpacity
                     style={styles.supportAction}
                     onPress={handleOpenSupportEmail}
@@ -651,23 +754,27 @@ export default function LoginScreen() {
               </View>
 
               {/* Info chips — chuyển xuống form cho gọn hero */}
-              <View style={styles.infoRow}>
-                <View style={styles.infoChip}>
-                  <Text style={styles.infoLabel}>Thành lập</Text>
-                  <Text style={styles.infoValue}>1983</Text>
+              {!isCompactHeight && (
+                <View style={styles.infoRow}>
+                  <View style={styles.infoChip}>
+                    <Text style={styles.infoLabel}>Thành lập</Text>
+                    <Text style={styles.infoValue}>1983</Text>
+                  </View>
+                  <View style={styles.infoChip}>
+                    <Text style={styles.infoLabel}>Phát triển</Text>
+                    <Text style={styles.infoValue}>{companyAge} năm</Text>
+                  </View>
+                  <View style={[styles.infoChip, styles.infoChipWide]}>
+                    <Text style={styles.infoLabel}>Danh mục</Text>
+                    <Text style={styles.infoValue}>Gia vị · Thực phẩm</Text>
+                  </View>
                 </View>
-                <View style={styles.infoChip}>
-                  <Text style={styles.infoLabel}>Phát triển</Text>
-                  <Text style={styles.infoValue}>{companyAge} năm</Text>
-                </View>
-                <View style={[styles.infoChip, styles.infoChipWide]}>
-                  <Text style={styles.infoLabel}>Danh mục</Text>
-                  <Text style={styles.infoValue}>Gia vị · Thực phẩm</Text>
-                </View>
-              </View>
+              )}
 
               {/* Footer */}
-              <View style={styles.footer}>
+              <View
+                style={[styles.footer, isCompactHeight && styles.footerCompact]}
+              >
                 <View style={styles.secureRow}>
                   <Ionicons
                     name="shield-checkmark-outline"
@@ -702,13 +809,11 @@ const styles = StyleSheet.create({
     backgroundColor: RED, // hero đỏ, card trắng che phần còn lại
   },
 
-  // ── Hero — compact 24% ──
+  // ── Hero ──
   heroBg: {
-    height: SCREEN_HEIGHT * 0.24,
     alignItems: "center",
     justifyContent: "flex-end",
     overflow: "hidden",
-    paddingBottom: 16,
   },
   circle1: {
     position: "absolute",
@@ -754,6 +859,10 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.18)",
     marginBottom: 10,
   },
+  brandPillCompact: {
+    marginBottom: 7,
+    paddingVertical: 4,
+  },
   brandPillText: {
     fontSize: 10,
     fontWeight: "700",
@@ -770,6 +879,9 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 10,
   },
+  logoShadowWrapCompact: {
+    borderRadius: 14,
+  },
   logo: {
     width: 176,
     height: 88,
@@ -777,12 +889,21 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 16,
   },
+  logoCompact: {
+    width: 142,
+    height: 70,
+    borderRadius: 14,
+  },
   heroTagline: {
     marginTop: 10,
     fontSize: 11,
     color: "rgba(255,255,255,0.72)",
     letterSpacing: 0.5,
     fontWeight: "500",
+  },
+  heroTaglineCompact: {
+    marginTop: 6,
+    fontSize: 10,
   },
 
   // ── Card ──
@@ -806,10 +927,17 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     flexGrow: 1,
   },
+  scrollContentCompact: {
+    paddingHorizontal: 24,
+    paddingTop: 14,
+  },
 
   // Card header
   cardHeader: {
     marginBottom: 10,
+  },
+  cardHeaderCompact: {
+    marginBottom: 8,
   },
   cardTitle: {
     fontSize: 26,
@@ -817,10 +945,18 @@ const styles = StyleSheet.create({
     color: "#111827",
     marginBottom: 4,
   },
+  cardTitleCompact: {
+    fontSize: 23,
+    marginBottom: 2,
+  },
   cardSubtitle: {
     fontSize: 14,
     color: "#9AA3AF",
     lineHeight: 20,
+  },
+  cardSubtitleCompact: {
+    fontSize: 13,
+    lineHeight: 18,
   },
   // ── Inputs ──
   inputWrapper: {
@@ -833,6 +969,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1.5,
     borderColor: "transparent",
+  },
+  inputWrapperCompact: {
+    minHeight: 44,
+    marginBottom: 9,
   },
   inputWrapperFocused: {
     borderColor: RED,
@@ -852,6 +992,9 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     textAlignVertical: "center",
   },
+  textInputCompact: {
+    height: 44,
+  },
 
   // ── Buttons ──
   actionsRow: {
@@ -859,6 +1002,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 4,
     gap: 12,
+  },
+  actionsRowCompact: {
+    marginTop: 2,
   },
   loginBtn: {
     flex: 1,
@@ -1018,7 +1164,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#FAD1D1",
   },
+  supportCardCompact: {
+    marginTop: 9,
+    padding: 8,
+    borderRadius: 14,
+  },
   supportActions: {
+    gap: 8,
+  },
+  supportActionsCompact: {
     gap: 8,
   },
   supportAction: {
@@ -1047,6 +1201,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: 24,
     gap: 8,
+  },
+  footerCompact: {
+    marginTop: 12,
   },
   secureRow: {
     flexDirection: "row",

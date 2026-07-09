@@ -49,6 +49,8 @@ import {
 import { useCameraViewToken } from "./shared/useCameraViewToken";
 import EmptyState from "../ui/EmptyState";
 
+const LANDSCAPE_BACK_FALLBACK_DELAY_MS = 120;
+
 const CameraList: React.FC = () => {
   const route = useRoute<any>();
   const { cameras, zoneName } = route.params;
@@ -68,8 +70,6 @@ const CameraList: React.FC = () => {
   const [isFullMuted, setIsFullMuted] = React.useState(false);
   const [isLandscape, setIsLandscape] = React.useState(false);
   const [isClosingFullscreen, setIsClosingFullscreen] = React.useState(false);
-  const [isBackTransitionCoverVisible, setIsBackTransitionCoverVisible] =
-    React.useState(false);
   const [videoReady, setVideoReady] = React.useState(false);
   const [focusKey, setFocusKey] = React.useState(0);
   const [pendingThumbUrl, setPendingThumbUrl] = React.useState<string | null>(
@@ -165,7 +165,6 @@ const CameraList: React.FC = () => {
     const action = pendingBackActionRef.current;
     pendingBackActionRef.current = null;
     pendingBackToPortraitRef.current = false;
-    setIsBackTransitionCoverVisible(false);
     clearPendingBackTimeout();
     navigation.dispatch(action);
   }, [clearPendingBackTimeout, navigation]);
@@ -297,11 +296,10 @@ const CameraList: React.FC = () => {
         event.preventDefault();
         pendingBackToPortraitRef.current = true;
         pendingBackActionRef.current = event.data.action;
-        setIsBackTransitionCoverVisible(true);
         clearPendingBackTimeout();
         pendingBackTimeoutRef.current = setTimeout(() => {
           finishPendingBack();
-        }, 700);
+        }, LANDSCAPE_BACK_FALLBACK_DELAY_MS);
       }
     });
 
@@ -1034,10 +1032,6 @@ const CameraList: React.FC = () => {
           </View>
         </View>
       </Modal>
-
-      {isBackTransitionCoverVisible && (
-        <View pointerEvents="auto" style={styles.backTransitionCover} />
-      )}
     </GestureHandlerRootView>
   );
 };
@@ -1174,12 +1168,6 @@ const styles = StyleSheet.create({
   },
   closeText: { fontSize: 16, fontWeight: "600", color: "#333" },
   fullscreenContainer: { flex: 1, backgroundColor: "#000" },
-  backTransitionCover: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#000",
-    zIndex: 9999,
-    elevation: 9999,
-  },
   fsHeader: {
     flexDirection: "row",
     alignItems: "center",
