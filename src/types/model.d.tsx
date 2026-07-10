@@ -61,6 +61,7 @@ export interface Item {
   isReport: boolean;
   iD_GroupMenu: number;
   isViewWeb?: boolean | number | string | null;
+  viewWebMobile?: string | null;
   iconMobile?: string | null;
 }
 

@@ -1,5 +1,5 @@
-import React from "react";
-import { Text, View } from "react-native";
+import React, { type ComponentProps } from "react";
+import { Text as NativeText, View } from "react-native";
 import Svg, {
   Rect,
   Circle,
@@ -22,6 +22,12 @@ import {
   type SolarDashboardData,
 } from "./SolarPlantScreen.helpers";
 import { styles } from "./SolarPlantScreen.styles";
+
+type SolarTextProps = ComponentProps<typeof NativeText>;
+
+const Text: React.FC<SolarTextProps> = (props) => (
+  <NativeText {...props} allowFontScaling={false} />
+);
 
 // ─── Weather SVG ─────────────────────────────────────────────────────────────
 

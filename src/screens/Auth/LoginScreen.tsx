@@ -66,7 +66,11 @@ const SUPPORT_PHONE_LINK = SUPPORT_PHONE.replace(/\s/g, "");
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
-  const { height: windowHeight } = useWindowDimensions();
+  const {
+    height: windowHeight,
+    width: windowWidth,
+    fontScale,
+  } = useWindowDimensions();
   const passwordRef = useRef<TextInput>(null);
   const appVersionLabel = `v${DeviceInfo.getVersion()}`;
   const companyAge = new Date().getFullYear() - COMPANY_FOUNDED_YEAR;
@@ -114,6 +118,7 @@ export default function LoginScreen() {
     : "#64748B";
   const isCompactHeight = windowHeight < 880;
   const isShortHeight = windowHeight < 760;
+  const isNarrowFooter = windowWidth < 330 * Math.min(fontScale, 1.3);
   const heroRatio = isShortHeight ? 0.17 : isCompactHeight ? 0.18 : 0.2;
   const heroHeight = Math.min(Math.max(windowHeight * heroRatio, 112), 190);
   const restingContentTopPadding = Math.min(
@@ -516,9 +521,9 @@ export default function LoginScreen() {
               contentContainerStyle={[
                 styles.scrollContent,
                 isCompactHeight && styles.scrollContentCompact,
-                !isKeyboardVisible &&
-                  isCompactHeight &&
-                  { paddingTop: restingContentTopPadding },
+                isCompactHeight && {
+                  paddingTop: restingContentTopPadding,
+                },
                 { paddingBottom: bottomContentPadding },
               ]}
               keyboardShouldPersistTaps="handled"
@@ -735,7 +740,10 @@ export default function LoginScreen() {
                     activeOpacity={0.82}
                   >
                     <Ionicons name="mail-outline" size={15} color="#B91C1C" />
-                    <Text style={styles.supportActionText} numberOfLines={1}>
+                    <Text
+                      style={styles.supportActionText}
+                      numberOfLines={2}
+                    >
                       {SUPPORT_EMAIL}
                     </Text>
                   </TouchableOpacity>
@@ -746,7 +754,10 @@ export default function LoginScreen() {
                     activeOpacity={0.82}
                   >
                     <Ionicons name="call-outline" size={15} color="#15803D" />
-                    <Text style={styles.supportActionText} numberOfLines={1}>
+                    <Text
+                      style={styles.supportActionText}
+                      numberOfLines={1}
+                    >
                       {SUPPORT_PHONE}
                     </Text>
                   </TouchableOpacity>
@@ -773,7 +784,11 @@ export default function LoginScreen() {
 
               {/* Footer */}
               <View
-                style={[styles.footer, isCompactHeight && styles.footerCompact]}
+                style={[
+                  styles.footer,
+                  isCompactHeight && styles.footerCompact,
+                  isNarrowFooter && styles.footerNarrow,
+                ]}
               >
                 <View style={styles.secureRow}>
                   <Ionicons
@@ -783,7 +798,7 @@ export default function LoginScreen() {
                   />
                   <Text style={styles.secureText}>Kết nối bảo mật SSL</Text>
                 </View>
-                <View style={styles.footerDot} />
+                {!isNarrowFooter && <View style={styles.footerDot} />}
                 <View style={styles.versionPill}>
                   <Text style={styles.versionText}>
                     {appVersionLabel} · Cholimex Food
@@ -1180,6 +1195,7 @@ const styles = StyleSheet.create({
     minHeight: 36,
     borderRadius: 12,
     paddingHorizontal: 10,
+    paddingVertical: 8,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
@@ -1204,6 +1220,10 @@ const styles = StyleSheet.create({
   },
   footerCompact: {
     marginTop: 12,
+  },
+  footerNarrow: {
+    flexDirection: "column",
+    gap: 6,
   },
   secureRow: {
     flexDirection: "row",

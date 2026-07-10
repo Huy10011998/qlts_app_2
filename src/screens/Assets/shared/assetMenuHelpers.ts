@@ -3,6 +3,16 @@ import { removeVietnameseTones } from "../../../utils/Helper";
 import { normalizeIconImageUri } from "../../../utils/iconImage";
 import { ASSET_MENU_BRAND_RED } from "./assetMenuTheme";
 
+export const isEnabledAssetMenuFlag = (value: Item["isViewWeb"]) =>
+  value === true || value === 1 || value === "1" || value === "true";
+
+export const getAssetMenuMobileRoute = (item: Item) => {
+  if (!isEnabledAssetMenuFlag(item.isViewWeb)) return null;
+
+  const configuredView = item.viewWebMobile?.trim();
+  return configuredView || null;
+};
+
 export const getAssetMenuItemTheme = (item: Item, expanded: boolean) => {
   const iconImageUri = normalizeIconImageUri(item.iconMobile);
 
@@ -78,10 +88,14 @@ export function filterMobileAssetMenuTree(data: Item[]) {
     nodes
       .map((node) => {
         const children = node.children?.length ? filterTree(node.children) : [];
-        const isWebOnly = Boolean(Number(node.isViewWeb));
+        const isWebOnly = isEnabledAssetMenuFlag(node.isViewWeb);
+        const hasMobileWebView = Boolean(getAssetMenuMobileRoute(node));
         const isActionable = Boolean(node.contentName_Mobile || node.isReport);
 
-        if (!isWebOnly && (isActionable || children.length > 0)) {
+        if (
+          (isWebOnly && hasMobileWebView) ||
+          (!isWebOnly && (isActionable || children.length > 0))
+        ) {
           return { ...node, children };
         }
 

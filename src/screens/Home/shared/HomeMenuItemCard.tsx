@@ -26,6 +26,14 @@ const HOME_FEATURE_FIXED_THEME = {
   border: "#FBCFE8",
 };
 
+const HOME_VEHICLE_THEME = {
+  bg: "#FFFFFF",
+  iconBg: "#E0F2FE",
+  color: "#0284C7",
+  text: "#075985",
+  border: "#BAE6FD",
+};
+
 type HomeMenuItemCardProps = MenuItemCardProps & {
   viewPermission?: string;
   description?: string;
@@ -33,6 +41,7 @@ type HomeMenuItemCardProps = MenuItemCardProps & {
   onTogglePinned?: () => void;
   showPinButton?: boolean;
   fixedHeight?: boolean;
+  homeGroup?: "vehicle";
 };
 
 export default function HomeMenuItemCard({
@@ -45,6 +54,7 @@ export default function HomeMenuItemCard({
   onTogglePinned,
   showPinButton = false,
   fixedHeight = false,
+  homeGroup,
 }: HomeMenuItemCardProps) {
   const scaleAnim = useRef(new Animated.Value(0)).current;
 
@@ -58,7 +68,8 @@ export default function HomeMenuItemCard({
     }).start();
   }, [index, scaleAnim]);
 
-  const theme = HOME_FEATURE_FIXED_THEME;
+  const theme =
+    homeGroup === "vehicle" ? HOME_VEHICLE_THEME : HOME_FEATURE_FIXED_THEME;
   const handleTogglePinned = (event: GestureResponderEvent) => {
     event.stopPropagation();
     onTogglePinned?.();

@@ -236,7 +236,13 @@ function HeaderDetailsBar({
               {meta.badgeLabel}
             </Text>
           </View>
-          <Text style={styles.title} numberOfLines={1} allowFontScaling={false}>
+          <Text
+            adjustsFontSizeToFit
+            allowFontScaling={false}
+            minimumFontScale={0.7}
+            numberOfLines={1}
+            style={styles.title}
+          >
             {title}
           </Text>
         </View>

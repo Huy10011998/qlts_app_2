@@ -13,22 +13,22 @@ export enum TypeProperty {
 }
 
 export enum SqlOperator {
-  Equals,
-  NotEquals,
-  GreaterThan,
-  LessThan,
-  GreaterThanOrEqual,
-  LessThanOrEqual,
-  Contains,
-  StartsWith,
-  EndsWith,
-  DoesNotContain,
-  In,
-  NotIn,
-  IsNull,
-  IsNotNull,
-  IsEmpty,
-  IsNotEmpty,
+  Equals, // 0
+  NotEquals, // 1
+  GreaterThan, // 2
+  LessThan, // 3
+  GreaterThanOrEqual, // 4
+  LessThanOrEqual, // 5
+  Contains, // 6
+  StartsWith, // 7
+  EndsWith, // 8
+  DoesNotContain, // 9
+  In, // 10
+  NotIn, // 11
+  IsNull, // 12
+  IsNotNull, // 13
+  IsEmpty, // 14
+  IsNotEmpty, // 15
 }
 
 // CategoryFile

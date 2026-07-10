@@ -164,6 +164,7 @@ const HomeScreen: React.FC = () => {
   const [hasLoadError, setHasLoadError] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isFeatureListVisible, setIsFeatureListVisible] = useState(false);
+  const [isVehicleListVisible, setIsVehicleListVisible] = useState(false);
   const [isReportListVisible, setIsReportListVisible] = useState(false);
   const [pinnedFeatureIds, setPinnedFeatureIds] = useState<string[]>(
     DEFAULT_HOME_FEATURE_IDS
@@ -346,15 +347,23 @@ const HomeScreen: React.FC = () => {
       item.viewPermission ? canView(item.viewPermission) : true
     );
   }, [canView, loaded, menuItems]);
+  const visibleVehicleItems = useMemo(
+    () => visibleMenuItems.filter((item) => item.homeGroup === "vehicle"),
+    [visibleMenuItems]
+  );
+  const visibleFeatureItems = useMemo(
+    () => visibleMenuItems.filter((item) => item.homeGroup !== "vehicle"),
+    [visibleMenuItems]
+  );
   const pinnedMenuItems = useMemo(() => {
     const visibleMenuItemsById = new Map(
-      visibleMenuItems.map((item) => [item.id, item])
+      visibleFeatureItems.map((item) => [item.id, item])
     );
 
     return pinnedFeatureIds
       .map((id) => visibleMenuItemsById.get(id))
       .filter((item): item is (typeof visibleMenuItems)[number] => !!item);
-  }, [pinnedFeatureIds, visibleMenuItems]);
+  }, [pinnedFeatureIds, visibleFeatureItems]);
   const pinnedMenuRows = useMemo(() => {
     const rows: (typeof pinnedMenuItems)[] = [];
 
@@ -364,11 +373,31 @@ const HomeScreen: React.FC = () => {
 
     return rows;
   }, [pinnedMenuItems]);
-  const hasNoViewFeatures = visibleMenuItems.length === 0;
+  const pinnedVehicleItems = useMemo(() => {
+    const visibleVehicleItemsById = new Map(
+      visibleVehicleItems.map((item) => [item.id, item])
+    );
+
+    return pinnedFeatureIds
+      .map((id) => visibleVehicleItemsById.get(id))
+      .filter((item): item is (typeof visibleVehicleItems)[number] => !!item);
+  }, [pinnedFeatureIds, visibleVehicleItems]);
+  const pinnedVehicleRows = useMemo(() => {
+    const rows: (typeof pinnedVehicleItems)[] = [];
+
+    for (let i = 0; i < pinnedVehicleItems.length; i += HOME_FEATURE_COLUMNS) {
+      rows.push(pinnedVehicleItems.slice(i, i + HOME_FEATURE_COLUMNS));
+    }
+
+    return rows;
+  }, [pinnedVehicleItems]);
+  const hasNoViewFeatures = visibleFeatureItems.length === 0;
   const hasNoPinnedFeatures =
     !hasNoViewFeatures && pinnedMenuItems.length === 0;
+  const hasNoPinnedVehicles =
+    visibleVehicleItems.length > 0 && pinnedVehicleItems.length === 0;
   const isInitialMenuLoading = isMenuLoading && menuItems.length === 0;
-  const canViewAllFeatures = visibleMenuItems.length > 0;
+  const canViewAllFeatures = visibleFeatureItems.length > 0;
   const canViewAssets = loaded && canView("TaiSan");
   const canViewCamera = loaded && canView("Camera");
   const visibleRecentActivities = useMemo(() => {
@@ -415,7 +444,7 @@ const HomeScreen: React.FC = () => {
   );
   const reportActions = useMemo(
     () =>
-      visibleMenuItems
+      visibleFeatureItems
         .filter((item) => typeof item.groupMenuId === "number")
         .map((item) => ({
           ...item,
@@ -427,7 +456,7 @@ const HomeScreen: React.FC = () => {
               viewPermission: item.viewPermission,
             }),
         })),
-    [openReportScreen, visibleMenuItems]
+    [openReportScreen, visibleFeatureItems]
   );
   const togglePinnedReport = useCallback(
     (reportId: string) => {
@@ -566,6 +595,48 @@ const HomeScreen: React.FC = () => {
           </View>
         )}
 
+        {visibleVehicleItems.length > 0 ? (
+          <>
+            <HomeSectionTitle
+              label="PHƯƠNG TIỆN"
+              action="Xem tất cả"
+              onAction={() => setIsVehicleListVisible(true)}
+            />
+            {hasNoPinnedVehicles ? (
+              <View style={styles.noPermissionCard}>
+                <EmptyState
+                  iconName="add-circle-outline"
+                  title="Chưa chọn chức năng phương tiện"
+                  subtitle="Bấm Xem tất cả rồi chọn dấu + để đưa chức năng ra Trang chủ."
+                  fullHeight={false}
+                />
+              </View>
+            ) : (
+              <View style={styles.grid}>
+                {pinnedVehicleRows.map((rowItems, rowIndex) => (
+                  <View key={`vehicle-row-${rowIndex}`} style={styles.gridRow}>
+                    {rowItems.map((item, itemIndex) => (
+                      <View
+                        key={item.id}
+                        style={[
+                          styles.homeGridItem,
+                          { width: homeFeatureCardWidth },
+                        ]}
+                      >
+                        <HomeMenuItemCard
+                          {...item}
+                          index={rowIndex * HOME_FEATURE_COLUMNS + itemIndex}
+                          fixedHeight
+                        />
+                      </View>
+                    ))}
+                  </View>
+                ))}
+              </View>
+            )}
+          </>
+        ) : null}
+
         {reportActions.length > 0 ? (
           <>
             <HomeSectionTitle
@@ -666,7 +737,7 @@ const HomeScreen: React.FC = () => {
           contentContainerStyle={styles.featureSheetContent}
         >
           <View style={styles.featureGrid}>
-            {visibleMenuItems.map((item, index) => (
+            {visibleFeatureItems.map((item, index) => (
               <View key={item.id} style={styles.featureGridItem}>
                 <HomeMenuItemCard
                   {...item}
@@ -676,6 +747,40 @@ const HomeScreen: React.FC = () => {
                   onTogglePinned={() => togglePinnedFeature(item.id)}
                   onPress={() => {
                     setIsFeatureListVisible(false);
+                    requestAnimationFrame(() => item.onPress?.());
+                  }}
+                />
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+      </BottomSheetModalShell>
+      <BottomSheetModalShell
+        visible={isVehicleListVisible}
+        onClose={() => setIsVehicleListVisible(false)}
+        closeOnBackdropPress
+        showCloseButton
+        showHandle
+        sheetStyle={styles.featureSheet}
+      >
+        <Text style={styles.featureSheetTitle} allowFontScaling={false}>
+          Tất cả chức năng phương tiện
+        </Text>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.featureSheetContent}
+        >
+          <View style={styles.featureGrid}>
+            {visibleVehicleItems.map((item, index) => (
+              <View key={item.id} style={styles.featureGridItem}>
+                <HomeMenuItemCard
+                  {...item}
+                  index={index}
+                  showPinButton
+                  isPinned={pinnedFeatureIds.includes(item.id)}
+                  onTogglePinned={() => togglePinnedFeature(item.id)}
+                  onPress={() => {
+                    setIsVehicleListVisible(false);
                     requestAnimationFrame(() => item.onPress?.());
                   }}
                 />

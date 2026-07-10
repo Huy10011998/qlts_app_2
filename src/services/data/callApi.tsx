@@ -11,6 +11,7 @@ import { API_ENDPOINTS, BASE_URL } from "../../config/index";
 import { log, warn } from "../../utils/Logger";
 import type { LogoutReason } from "../../types/context.d";
 import { withTimeout } from "../../utils/helpers/promise";
+import { SqlOperator, TypeProperty } from "../../utils/Enum";
 
 type ApiMethod = "GET" | "POST" | "PUT" | "DELETE";
 
@@ -596,6 +597,121 @@ export const uploadAttachProperty = async ({ file }: { file: any }) => {
 
 export const getPermission = async <T = any,>() =>
   callApi<T>("POST", API_ENDPOINTS.GET_PERMISSION);
+
+export const getPhuongTien = async <T = any,>() =>
+  callApi<T>("POST", API_ENDPOINTS.GET_PHUONG_TIEN, {
+    orderby: null,
+    pageSize: null,
+    skipSize: null,
+    conditions: [
+      {
+        property: "ID_Tracking",
+        operator: SqlOperator.IsNotEmpty,
+        value: "",
+        type: TypeProperty.String,
+      },
+      {
+        property: "ID_Tracking",
+        operator: SqlOperator.IsNotNull,
+        value: "",
+        type: TypeProperty.String,
+      },
+    ],
+    searchText: null,
+    conditionsAll: [],
+  });
+
+export const getPhuongTienHanhTrinh = async <T = any,>(
+  vehicleId: string | number,
+  fromDate: string,
+  toDate: string,
+) =>
+  callApi<T>("POST", API_ENDPOINTS.GET_PHUONG_TIEN_HANH_TRINH, {
+    orderby: null,
+    pageSize: null,
+    skipSize: null,
+    conditions: [
+      {
+        property: "ID_PhuongTien",
+        operator: SqlOperator.Equals,
+        value: vehicleId,
+        type: TypeProperty.Int,
+      },
+      {
+        property: "Ngay",
+        operator: SqlOperator.GreaterThanOrEqual,
+        value: fromDate,
+        type: TypeProperty.Date,
+      },
+      {
+        property: "Ngay",
+        operator: SqlOperator.LessThanOrEqual,
+        value: toDate,
+        type: TypeProperty.Date,
+      },
+    ],
+    searchText: null,
+    conditionsAll: [],
+  });
+
+export const getPhuongTienHanhTrinhGps = async <T = any,>(
+  journeyId: string | number,
+) =>
+  callApi<T>("POST", API_ENDPOINTS.GET_PHUONG_TIEN_HANH_TRINH_GPS, {
+    orderby: null,
+    pageSize: null,
+    skipSize: null,
+    conditions: [
+      {
+        property: "ID_HanhTrinh",
+        operator: SqlOperator.Equals,
+        value: journeyId,
+        type: TypeProperty.Int,
+      },
+    ],
+    searchText: null,
+    conditionsAll: [],
+  });
+
+export const getPhuongTienTracking = async <T = any,>(
+  vehicleId: string | number,
+  fromDate: string,
+  toDate: string,
+) =>
+  callApi<T>("POST", API_ENDPOINTS.GET_PHUONG_TIEN_TRACKING, {
+    orderby: null,
+    pageSize: null,
+    skipSize: null,
+    conditions: [
+      {
+        property: "ID_PhuongTien",
+        operator: SqlOperator.Equals,
+        value: vehicleId,
+        type: TypeProperty.Int,
+      },
+      {
+        property: "Ngay",
+        operator: SqlOperator.GreaterThanOrEqual,
+        value: fromDate,
+        type: TypeProperty.Date,
+      },
+      {
+        property: "Ngay",
+        operator: SqlOperator.LessThanOrEqual,
+        value: toDate,
+        type: TypeProperty.Date,
+      },
+    ],
+    searchText: null,
+    conditionsAll: [],
+  });
+
+export const getPhuongTienCurrentLocation = async <T = any,>(
+  trackingId: string,
+) =>
+  callApi<T>("POST", API_ENDPOINTS.GET_PHUONG_TIEN_CURRENT_LOCATION, {
+    iD_Tracking: trackingId,
+  });
 
 export const tuDongTang = async <T = any,>(nameClass: string, payload: {}) =>
   callApi<T>("POST", `/${nameClass}/tu-dong-tang`, payload);
