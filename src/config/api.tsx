@@ -46,4 +46,11 @@ export const API_ENDPOINTS = {
 
   // GET_SOLAR
   GET_SOLAR: `${BASE_URL}/TieuThu_Solar/get-solar`,
+
+  // GET PHUONG TIEN
+  GET_PHUONG_TIEN: `${BASE_URL}/PhuongTien/get-list`,
+  GET_PHUONG_TIEN_HANH_TRINH: `${BASE_URL}/PhuongTien_HanhTrinh/get-list`,
+  GET_PHUONG_TIEN_HANH_TRINH_GPS: `${BASE_URL}/PhuongTien_HanhTrinh_GPS/get-list`,
+  GET_PHUONG_TIEN_TRACKING: `${BASE_URL}/PhuongTien_Tracking/get-list`,
+  GET_PHUONG_TIEN_CURRENT_LOCATION: `${BASE_URL}/PhuongTien/vi-tri-hien-tai`,
 };

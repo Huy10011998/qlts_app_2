@@ -641,6 +641,9 @@ export const styles = StyleSheet.create({
     flex: 1,
     width: "100%",
     alignSelf: "center",
+  },
+  expandedContentContainer: {
+    flexGrow: 1,
     paddingHorizontal: 18,
     paddingTop: 14,
     paddingBottom: 14,

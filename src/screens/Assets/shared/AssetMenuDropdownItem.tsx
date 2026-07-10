@@ -21,7 +21,10 @@ import type {
 import {
   ASSET_MENU_CARD_SHADOW,
 } from "./assetMenuTheme";
-import { getAssetMenuItemTheme } from "./assetMenuHelpers";
+import {
+  getAssetMenuItemTheme,
+  getAssetMenuMobileRoute,
+} from "./assetMenuHelpers";
 
 const localStyles = StyleSheet.create({
   rootWrap: {
@@ -58,6 +61,12 @@ function AssetMenuDropdownItem({
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       }
       onToggle(item.id);
+      return;
+    }
+
+    const mobileRoute = getAssetMenuMobileRoute(item);
+    if (mobileRoute) {
+      navigation.navigate(mobileRoute as never);
       return;
     }
 

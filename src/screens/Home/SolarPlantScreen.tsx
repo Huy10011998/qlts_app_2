@@ -1,13 +1,19 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, {
+  type ComponentProps,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import {
   View,
-  Text,
+  Text as NativeText,
   ScrollView,
   TouchableOpacity,
   useWindowDimensions,
   Modal,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Rect, Circle, Ellipse } from "react-native-svg";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import AssetTreeNodeItem from "../../components/assets/shared/AssetTreeNodeItem";
@@ -56,6 +62,14 @@ import {
   WeatherIcon,
 } from "./SolarPlantScreen.visuals";
 
+type SolarTextProps = ComponentProps<typeof NativeText>;
+
+// Keep this dense dashboard readable when the device uses Display Zoom and
+// the largest accessibility font. Scope the opt-out to this screen only.
+const Text: React.FC<SolarTextProps> = (props) => (
+  <NativeText {...props} allowFontScaling={false} />
+);
+
 type ExpandedChartModalProps = {
   activeChart: ExpandedChart | null;
   chartWidth: number;
@@ -97,11 +111,17 @@ const ExpandedChartModal: React.FC<ExpandedChartModalProps> = ({
   onPreviousRange,
 }) => {
   const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const title = getExpandedChartTitle(activeChart);
   const isComparative = activeChart === "comparative";
+  const bottomSpacing = Math.max(insets.bottom, 16);
   const chartHeight = isComparative
-    ? clamp(windowHeight - 310, 300, 520)
-    : clamp(windowHeight - 510, 220, 360);
+    // Let the comparative chart consume the available vertical space. A fixed
+    // 520px maximum left a large empty area below the legend on iPad.
+    ? Math.max(windowHeight - 334 - bottomSpacing, 300)
+    // The production/consumption charts should also grow on taller screens.
+    // Keeping a 360px ceiling produced the same large empty area on iPad.
+    : Math.max(windowHeight - 534 - bottomSpacing, 220);
 
   return (
     <Modal
@@ -161,7 +181,15 @@ const ExpandedChartModal: React.FC<ExpandedChartModalProps> = ({
           />
         )}
 
-        <View style={styles.expandedContent}>
+        <ScrollView
+          bounces={false}
+          contentContainerStyle={[
+            styles.expandedContentContainer,
+            { paddingBottom: bottomSpacing + 8 },
+          ]}
+          showsVerticalScrollIndicator={false}
+          style={styles.expandedContent}
+        >
           <Text style={styles.expandedTitle}>{title}</Text>
 
           {isComparative ? (
@@ -262,7 +290,7 @@ const ExpandedChartModal: React.FC<ExpandedChartModalProps> = ({
               </View>
             </>
           )}
-        </View>
+        </ScrollView>
       </View>
     </Modal>
   );

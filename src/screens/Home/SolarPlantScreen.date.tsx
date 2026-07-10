@@ -1,5 +1,11 @@
-import React, { useEffect, useState } from "react";
-import { Alert, Modal, Text, TouchableOpacity, View } from "react-native";
+import React, { type ComponentProps, useEffect, useState } from "react";
+import {
+  Alert,
+  Modal,
+  Text as NativeText,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import {
@@ -27,6 +33,12 @@ import {
   DateChevron,
   DateSkipIcon,
 } from "./SolarPlantScreen.visuals";
+
+type SolarTextProps = ComponentProps<typeof NativeText>;
+
+const Text: React.FC<SolarTextProps> = (props) => (
+  <NativeText {...props} allowFontScaling={false} />
+);
 
 type PeriodHeaderProps = {
   activeTab: PeriodTab;

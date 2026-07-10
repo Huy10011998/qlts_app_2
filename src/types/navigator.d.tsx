@@ -134,6 +134,27 @@ export type RootStackParamList = {
         viewPermission?: string;
       }
     | undefined;
+  VehicleJourney: undefined;
+  VehicleJourneyMap: {
+    coordinates: Array<{ lat: number; lng: number }>;
+    titleHeader?: string;
+  };
+  VehicleTracking: undefined;
+  VehicleCurrentLocation: undefined;
+  VehicleTrackingMap: {
+    stopPoints: Array<{
+      id: number;
+      lat: number;
+      lng: number;
+      stt?: number;
+      time?: string;
+      address?: string;
+      duration?: string;
+      seconds?: number;
+    }>;
+    selectedId?: number;
+    titleHeader?: string;
+  };
   SolarPlant: undefined;
   Camera: undefined;
   CameraList: {

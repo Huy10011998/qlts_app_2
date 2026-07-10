@@ -11,6 +11,7 @@ import {
   TAB_ACTIVE_COLOR,
   TAB_INVERTED_BG,
   TAB_INVERTED_INACTIVE_COLOR,
+  HIDDEN_TAB_BAR_STYLE,
   createTabBarStyle,
   tabBarStyles,
 } from "./shared/tabBarTheme";
@@ -67,6 +68,10 @@ export default function Tabs() {
         options={({ route }) => {
           const routeName = getDeepFocusedRouteName(route) ?? "Home";
           const isMeetingScanner = routeName === "ShareholdersMeetingScanner";
+          const isVehicleMap =
+            routeName === "VehicleJourneyMap" ||
+            routeName === "VehicleTrackingMap" ||
+            routeName === "VehicleCurrentLocation";
 
           return {
             title: "Trang chủ",
@@ -82,6 +87,7 @@ export default function Tabs() {
                 backgroundColor: isMeetingScanner ? TAB_INVERTED_BG : "#fff",
                 borderTopColor: isMeetingScanner ? "#000" : undefined,
               }),
+              isVehicleMap ? HIDDEN_TAB_BAR_STYLE : undefined,
             ],
           };
         }}
