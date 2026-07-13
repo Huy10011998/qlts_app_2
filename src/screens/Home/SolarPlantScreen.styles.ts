@@ -577,30 +577,6 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#ffffff",
   },
-  expandedHeader: {
-    minHeight: 112,
-    paddingTop: 42,
-    paddingHorizontal: 12,
-    backgroundColor: "#000633",
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  expandedBackButton: {
-    width: 48,
-    height: 56,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  expandedHeaderTitle: {
-    flex: 1,
-    color: "#fff",
-    fontSize: 19,
-    fontWeight: "700",
-    textAlign: "center",
-  },
-  expandedHeaderSpacer: {
-    width: 48,
-  },
   expandedCompareTabs: {
     width: "100%",
     alignSelf: "center",
@@ -635,7 +611,7 @@ export const styles = StyleSheet.create({
     fontWeight: "600",
   },
   expandedCompareChartWrap: {
-    marginTop: 92,
+    marginTop: 16,
   },
   expandedContent: {
     flex: 1,
@@ -654,17 +630,36 @@ export const styles = StyleSheet.create({
     color: "#333333",
     marginBottom: 22,
   },
+  expandedMetricSummary: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    gap: 16,
+    marginBottom: 22,
+  },
+  expandedMetricName: {
+    flex: 1,
+    color: "#333333",
+    fontSize: 28,
+    lineHeight: 36,
+  },
+  expandedMetricTotal: {
+    flexShrink: 1,
+    color: "#333333",
+    fontSize: 28,
+    lineHeight: 36,
+    textAlign: "right",
+  },
   expandedTooltipCard: {
-    width: "78%",
-    minWidth: 260,
+    width: "100%",
     maxWidth: 430,
+    alignSelf: "center",
     borderWidth: 1,
     borderColor: "#b9c3da",
     borderRadius: 6,
     backgroundColor: "#eef8ff",
     paddingHorizontal: 16,
     paddingVertical: 10,
-    marginLeft: 28,
     marginBottom: 4,
   },
   expandedTooltipDate: {
@@ -685,6 +680,7 @@ export const styles = StyleSheet.create({
     lineHeight: 25,
   },
   expandedTooltipValue: {
+    flexShrink: 1,
     color: "#81869d",
     fontSize: 18,
     lineHeight: 25,

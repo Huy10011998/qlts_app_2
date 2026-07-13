@@ -1,9 +1,9 @@
 import React from "react";
 import {
-  Dimensions,
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import {
@@ -16,8 +16,6 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import Svg, { Path } from "react-native-svg";
 import type { HeaderOptionsProps } from "../../types";
 import { C } from "../../utils/helpers/colors";
-
-const { width: W } = Dimensions.get("window");
 
 const styles = StyleSheet.create({
   outer: {
@@ -170,6 +168,64 @@ export const HeaderDetails = ({
   };
 };
 
+export function HeaderDetailsModalHeader({
+  title,
+  onBack,
+}: {
+  title: string;
+  onBack: () => void;
+}) {
+  const insets = useSafeAreaInsets();
+  const meta = getHeaderMeta(title);
+
+  return (
+    <View style={[styles.outer, { paddingTop: insets.top }]}>
+      <View style={styles.decoLarge} />
+      <View style={styles.decoMid} />
+      <View style={styles.decoSoft} />
+      <View style={styles.decoBubbleOne} />
+      <View style={styles.decoBubbleTwo} />
+
+      <View style={styles.topBar}>
+        <View style={styles.sideSlot}>
+          <TouchableOpacity onPress={onBack} style={styles.iconButton}>
+            <Ionicons name="arrow-back" size={26} color="#fff" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.titleWrap}>
+          <View style={styles.titleBadge}>
+            <Ionicons
+              name={meta.iconName}
+              size={12}
+              color="rgba(255,255,255,0.82)"
+              style={styles.titleBadgeIcon}
+            />
+            <Text style={styles.titleBadgeText} allowFontScaling={false}>
+              {meta.badgeLabel}
+            </Text>
+          </View>
+          <Text
+            adjustsFontSizeToFit
+            allowFontScaling={false}
+            minimumFontScale={0.7}
+            numberOfLines={1}
+            style={styles.title}
+          >
+            {title}
+          </Text>
+        </View>
+
+        <View style={[styles.sideSlot, styles.rightSlot]} />
+      </View>
+
+      <View style={styles.waveContainer}>
+        <HeaderWave />
+      </View>
+    </View>
+  );
+}
+
 function HeaderDetailsBar({
   navigation,
   options,
@@ -276,23 +332,31 @@ function HeaderDetailsBar({
   );
 }
 
-const HeaderWave: React.FC = () => (
-  <Svg
-    width={W}
-    height={20}
-    viewBox={`0 0 ${W} 20`}
-    style={styles.headerWave}
-  >
-    <Path
-      d={`M0,6 C${W * 0.22},20 ${W * 0.44},0 ${W * 0.66},12 C${W * 0.82},20 ${W * 0.92},6 ${W},12 L${W},20 L0,20 Z`}
-      fill="rgba(255,255,255,0.14)"
-    />
-    <Path
-      d={`M0,10 C${W * 0.28},20 ${W * 0.52},4 ${W * 0.78},14 C${W * 0.9},18 ${W},8 ${W},20 L${W},20 L0,20 Z`}
-      fill="#F0F2F8"
-    />
-  </Svg>
-);
+const HeaderWave: React.FC = () => {
+  const { width } = useWindowDimensions();
+
+  return (
+    <Svg
+      width={width}
+      height={20}
+      viewBox={`0 0 ${width} 20`}
+      style={styles.headerWave}
+    >
+      <Path
+        d={`M0,6 C${width * 0.22},20 ${width * 0.44},0 ${width * 0.66},12 C${
+          width * 0.82
+        },20 ${width * 0.92},6 ${width},12 L${width},20 L0,20 Z`}
+        fill="rgba(255,255,255,0.14)"
+      />
+      <Path
+        d={`M0,10 C${width * 0.28},20 ${width * 0.52},4 ${width * 0.78},14 C${
+          width * 0.9
+        },18 ${width},8 ${width},20 L${width},20 L0,20 Z`}
+        fill="#F0F2F8"
+      />
+    </Svg>
+  );
+};
 
 function getHeaderMeta(title: string) {
   const normalizedTitle = title.trim().toLowerCase();

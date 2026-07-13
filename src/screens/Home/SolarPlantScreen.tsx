@@ -2,20 +2,29 @@ import React, {
   type ComponentProps,
   useCallback,
   useEffect,
+  useMemo,
+  useRef,
   useState,
 } from "react";
 import {
+  Animated,
+  Modal,
   View,
   Text as NativeText,
   ScrollView,
   TouchableOpacity,
   useWindowDimensions,
-  Modal,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import {
+  Gesture,
+  GestureDetector,
+  GestureHandlerRootView,
+} from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Rect, Circle, Ellipse } from "react-native-svg";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import { HeaderDetailsModalHeader } from "../../components/header/HeaderDetails";
 import AssetTreeNodeItem from "../../components/assets/shared/AssetTreeNodeItem";
 import SlideInSidePanel from "../../components/shared/SlideInSidePanel";
 import { API_ENDPOINTS } from "../../config";
@@ -94,6 +103,32 @@ const getExpandedChartTitle = (chart: ExpandedChart | null) => {
   return "Production & Consumption";
 };
 
+const ExpandedMetricRow = ({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) => (
+  <View style={styles.expandedTooltipMetricRow}>
+    <Text style={styles.expandedTooltipLabel}>{label}</Text>
+    <Text style={styles.expandedTooltipValue}>{value}</Text>
+  </View>
+);
+
+const ExpandedLegendItem = ({
+  dotStyle,
+  label,
+}: {
+  dotStyle: ComponentProps<typeof View>["style"];
+  label: string;
+}) => (
+  <View style={styles.expandedLegendItem}>
+    <View style={[styles.expandedLegendDot, dotStyle]} />
+    <Text style={styles.expandedLegendText}>{label}</Text>
+  </View>
+);
+
 const ExpandedChartModal: React.FC<ExpandedChartModalProps> = ({
   activeChart,
   chartWidth,
@@ -110,41 +145,96 @@ const ExpandedChartModal: React.FC<ExpandedChartModalProps> = ({
   onOpenDatePicker,
   onPreviousRange,
 }) => {
-  const { height: windowHeight } = useWindowDimensions();
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const title = getExpandedChartTitle(activeChart);
   const isComparative = activeChart === "comparative";
+  const isProduction = activeChart === "production";
+  const isConsumption = activeChart === "consumption";
+  const isSplitChart = isProduction || isConsumption;
+  const markerIndex = 11;
+  const productionMarkerValue = data.productionHourly[markerIndex] ?? 0;
+  const consumptionMarkerValue = data.consumptionHourly[markerIndex] ?? 0;
   const bottomSpacing = Math.max(insets.bottom, 16);
-  const chartHeight = isComparative
-    // Let the comparative chart consume the available vertical space. A fixed
-    // 520px maximum left a large empty area below the legend on iPad.
-    ? Math.max(windowHeight - 334 - bottomSpacing, 300)
-    // The production/consumption charts should also grow on taller screens.
-    // Keeping a 360px ceiling produced the same large empty area on iPad.
+  const responsiveChartWidth = Math.max(
+    240,
+    Math.min(chartWidth, windowWidth - 36)
+  );
+  const canGoNext = canMoveToNextRange(period, dateRange);
+  const [contentViewportHeight, setContentViewportHeight] = useState(0);
+  const swipeTranslateX = useRef(new Animated.Value(0)).current;
+  const swipeGesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .runOnJS(true)
+        .enabled(!isComparative)
+        .activeOffsetX([-15, 15])
+        .failOffsetY([-10, 10])
+        .onUpdate((event) => {
+          // Match the directions observed on-device: the user's right swipe
+          // reaches the negative translation branch, which must be the guarded
+          // next-range direction when the current range is Today.
+          const isPastCurrentRange = !canGoNext && event.translationX < 0;
+          swipeTranslateX.setValue(
+            isPastCurrentRange ? event.translationX * 0.2 : event.translationX
+          );
+        })
+        .onEnd((event) => {
+          const threshold = windowWidth * 0.3;
+          const moveToPrevious = event.translationX > threshold;
+          const moveToNext = event.translationX < -threshold && canGoNext;
+
+          if (moveToNext || moveToPrevious) {
+            Animated.timing(swipeTranslateX, {
+              toValue: moveToPrevious ? windowWidth : -windowWidth,
+              duration: 250,
+              useNativeDriver: true,
+            }).start(({ finished }) => {
+              if (!finished) return;
+              swipeTranslateX.setValue(0);
+              if (moveToNext) onNextRange();
+              else onPreviousRange();
+            });
+          } else {
+            Animated.spring(swipeTranslateX, {
+              toValue: 0,
+              tension: 100,
+              friction: 10,
+              useNativeDriver: true,
+            }).start();
+          }
+        }),
+    [
+      canGoNext,
+      isComparative,
+      onNextRange,
+      onPreviousRange,
+      swipeTranslateX,
+      windowWidth,
+    ]
+  );
+  const fallbackChartHeight = isComparative
+    ? Math.max(windowHeight - 410 - bottomSpacing, 300)
     : Math.max(windowHeight - 534 - bottomSpacing, 220);
+  const nonChartContentHeight = isComparative
+    ? 132 + bottomSpacing
+    : 250 + bottomSpacing;
+  const chartHeight = contentViewportHeight
+    ? Math.max(contentViewportHeight - nonChartContentHeight, 220)
+    : fallbackChartHeight;
+
+  if (!visible) return null;
 
   return (
     <Modal
       animationType="slide"
       onRequestClose={onClose}
       presentationStyle="fullScreen"
+      statusBarTranslucent
       visible={visible}
     >
-      <View style={styles.expandedSafe}>
-        <View style={styles.expandedHeader}>
-          <TouchableOpacity
-            accessibilityRole="button"
-            onPress={onClose}
-            style={styles.expandedBackButton}
-          >
-            <Ionicons name="chevron-back" size={34} color="#fff" />
-          </TouchableOpacity>
-          <Text numberOfLines={1} style={styles.expandedHeaderTitle}>
-            {title}
-          </Text>
-          <View style={styles.expandedHeaderSpacer} />
-        </View>
-
+      <GestureHandlerRootView style={styles.expandedSafe}>
+        <HeaderDetailsModalHeader title={title} onBack={onClose} />
         {isComparative ? (
           <View style={styles.expandedCompareTabs}>
             {(["Month", "Quarter", "Year"] as const).map((mode) => (
@@ -181,117 +271,258 @@ const ExpandedChartModal: React.FC<ExpandedChartModalProps> = ({
           />
         )}
 
-        <ScrollView
-          bounces={false}
-          contentContainerStyle={[
-            styles.expandedContentContainer,
-            { paddingBottom: bottomSpacing + 8 },
-          ]}
-          showsVerticalScrollIndicator={false}
-          style={styles.expandedContent}
-        >
-          <Text style={styles.expandedTitle}>{title}</Text>
+        <GestureDetector gesture={swipeGesture}>
+          <Animated.View
+            onLayout={(event) => {
+              const nextHeight = Math.round(event.nativeEvent.layout.height);
+              setContentViewportHeight((currentHeight) =>
+                currentHeight === nextHeight ? currentHeight : nextHeight
+              );
+            }}
+            style={[
+              styles.expandedContent,
+              { transform: [{ translateX: swipeTranslateX }] },
+            ]}
+          >
+            <ScrollView
+              bounces={false}
+              contentContainerStyle={[
+                styles.expandedContentContainer,
+                { paddingBottom: bottomSpacing + 8 },
+              ]}
+              showsVerticalScrollIndicator={false}
+              style={styles.expandedContent}
+            >
+              {isSplitChart ? (
+                <View style={styles.expandedMetricSummary}>
+                  <Text
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.7}
+                    numberOfLines={1}
+                    style={styles.expandedMetricName}
+                  >
+                    {title}
+                  </Text>
+                  <Text
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.7}
+                    numberOfLines={1}
+                    style={styles.expandedMetricTotal}
+                  >
+                    {isProduction
+                      ? formatMetric((data.production ?? 0) / 1000, 2)
+                      : formatMetric(data.consumption, 2)}{" "}
+                    MWh
+                  </Text>
+                </View>
+              ) : (
+                <Text style={styles.expandedTitle}>{title}</Text>
+              )}
 
-          {isComparative ? (
-            <>
-              <View style={styles.expandedCompareChartWrap}>
-                <BarChart
-                  data={EXPANDED_COMPARATIVE_MOCK_DATA}
-                  width={chartWidth}
-                  height={chartHeight}
-                />
-              </View>
-              <View style={styles.expandedLegendRow}>
-                <View style={styles.expandedLegendItem}>
-                  <View
-                    style={[styles.expandedLegendDot, styles.year2025Dot]}
-                  />
-                  <Text style={styles.expandedLegendText}>2025</Text>
-                </View>
-                <View style={styles.expandedLegendItem}>
-                  <View
-                    style={[styles.expandedLegendDot, styles.year2026Dot]}
-                  />
-                  <Text style={styles.expandedLegendText}>2026</Text>
-                </View>
-              </View>
-            </>
-          ) : (
-            <>
-              <View style={styles.expandedTooltipCard}>
-                <Text style={styles.expandedTooltipDate}>
-                  {dateRange.fromDate.toLocaleDateString("en-US", {
-                    weekday: "long",
-                    month: "long",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
-                </Text>
-                <View style={styles.expandedTooltipMetricRow}>
-                  <Text style={styles.expandedTooltipLabel}>Production</Text>
-                  <Text style={styles.expandedTooltipValue}>
-                    {formatMetric((data.production ?? 0) / 1000, 2)} MWh
-                  </Text>
-                </View>
-                <View style={styles.expandedTooltipMetricRow}>
-                  <Text style={styles.expandedTooltipLabel}>Consumption</Text>
-                  <Text style={styles.expandedTooltipValue}>
-                    {formatMetric(data.consumption, 2)} MWh
-                  </Text>
-                </View>
-                <View style={styles.expandedTooltipMetricRow}>
-                  <Text style={styles.expandedTooltipLabel}>
-                    Self Consumption
-                  </Text>
-                  <Text style={styles.expandedTooltipValue}>
-                    {formatMetric((data.selfConsumptionKwh ?? 0) / 1000, 2)} MWh{" "}
-                    {formatMetric(data.selfConsumptionPercent)}%
-                  </Text>
-                </View>
-              </View>
+              {isComparative ? (
+                <>
+                  <View style={styles.expandedCompareChartWrap}>
+                    <BarChart
+                      data={EXPANDED_COMPARATIVE_MOCK_DATA}
+                      width={responsiveChartWidth}
+                      height={chartHeight}
+                    />
+                  </View>
+                  <View style={styles.expandedLegendRow}>
+                    <View style={styles.expandedLegendItem}>
+                      <View
+                        style={[styles.expandedLegendDot, styles.year2025Dot]}
+                      />
+                      <Text style={styles.expandedLegendText}>2025</Text>
+                    </View>
+                    <View style={styles.expandedLegendItem}>
+                      <View
+                        style={[styles.expandedLegendDot, styles.year2026Dot]}
+                      />
+                      <Text style={styles.expandedLegendText}>2026</Text>
+                    </View>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={styles.expandedTooltipCard}>
+                    <Text style={styles.expandedTooltipDate}>
+                      {dateRange.fromDate.toLocaleDateString("en-US", {
+                        weekday: "long",
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </Text>
+                    {isProduction ? (
+                      <>
+                        <ExpandedMetricRow
+                          label="Production"
+                          value={`${formatMetric(productionMarkerValue, 2)} MW`}
+                        />
+                        <ExpandedMetricRow
+                          label="To Home"
+                          value={`${formatMetric(
+                            productionMarkerValue,
+                            2
+                          )} MW ${formatMetric(data.toHomePercent)}%`}
+                        />
+                        <ExpandedMetricRow
+                          label="To Grid"
+                          value={`${formatMetric(
+                            data.toGridWh === 0
+                              ? 0
+                              : productionMarkerValue *
+                                  ((data.toGridPercent ?? 0) / 100),
+                            2
+                          )} MW ${formatMetric(data.toGridPercent)}%`}
+                        />
+                      </>
+                    ) : isConsumption ? (
+                      <>
+                        <ExpandedMetricRow
+                          label="Consumption"
+                          value={`${formatMetric(
+                            consumptionMarkerValue,
+                            2
+                          )} MW`}
+                        />
+                        <ExpandedMetricRow
+                          label="From Solar"
+                          value={`${formatMetric(
+                            consumptionMarkerValue *
+                              ((data.fromSolarPercent ?? 0) / 100),
+                            2
+                          )} MW ${formatMetric(data.fromSolarPercent)}%`}
+                        />
+                        <ExpandedMetricRow
+                          label="From Grid"
+                          value={`${formatMetric(
+                            consumptionMarkerValue *
+                              ((data.fromGridPercent ?? 0) / 100),
+                            2
+                          )} MW ${formatMetric(data.fromGridPercent)}%`}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <ExpandedMetricRow
+                          label="Production"
+                          value={`${formatMetric(
+                            (data.production ?? 0) / 1000,
+                            2
+                          )} MWh`}
+                        />
+                        <ExpandedMetricRow
+                          label="Consumption"
+                          value={`${formatMetric(data.consumption, 2)} MWh`}
+                        />
+                        <ExpandedMetricRow
+                          label="Self Consumption"
+                          value={`${formatMetric(
+                            (data.selfConsumptionKwh ?? 0) / 1000,
+                            2
+                          )} MWh ${formatMetric(data.selfConsumptionPercent)}%`}
+                        />
+                      </>
+                    )}
+                  </View>
 
-              <AreaChart
-                productionData={data.productionHourly}
-                consumptionData={data.consumptionHourly}
-                markerIndex={11}
-                tooltipValue={0.68}
-                variant={
-                  activeChart === "production"
-                    ? "production"
-                    : activeChart === "consumption"
-                    ? "consumption"
-                    : "merged"
-                }
-                width={chartWidth}
-                height={chartHeight}
-              />
+                  <AreaChart
+                    productionData={data.productionHourly}
+                    consumptionData={data.consumptionHourly}
+                    markerIndex={markerIndex}
+                    tooltipValue={
+                      isConsumption
+                        ? consumptionMarkerValue
+                        : productionMarkerValue
+                    }
+                    showReferenceLine={isSplitChart}
+                    variant={
+                      activeChart === "production"
+                        ? "production"
+                        : activeChart === "consumption"
+                        ? "consumption"
+                        : "merged"
+                    }
+                    width={responsiveChartWidth}
+                    height={chartHeight}
+                  />
 
-              <View style={styles.expandedLegendRow}>
-                <View style={styles.expandedLegendItem}>
-                  <View
-                    style={[styles.expandedLegendDot, styles.productionDot]}
-                  />
-                  <Text style={styles.expandedLegendText}>Production</Text>
-                </View>
-                <View style={styles.expandedLegendItem}>
-                  <View
-                    style={[styles.expandedLegendDot, styles.consumptionDot]}
-                  />
-                  <Text style={styles.expandedLegendText}>Consumption</Text>
-                </View>
-                <View style={styles.expandedLegendItem}>
-                  <View style={[styles.expandedLegendDot, styles.selfDot]} />
-                  <Text style={styles.expandedLegendText}>
-                    Self Consumption (
-                    {formatMetric(data.selfConsumptionPercent)}
-                    %)
-                  </Text>
-                </View>
-              </View>
-            </>
-          )}
-        </ScrollView>
-      </View>
+                  <View style={styles.expandedLegendRow}>
+                    {isProduction ? (
+                      <>
+                        <ExpandedLegendItem
+                          dotStyle={styles.productionDot}
+                          label={`To Home (${formatMetric(
+                            data.toHomePercent
+                          )}%)`}
+                        />
+                        <ExpandedLegendItem
+                          dotStyle={styles.toGridDot}
+                          label={`To Grid (${formatMetric(
+                            data.toGridPercent
+                          )}%)`}
+                        />
+                      </>
+                    ) : isConsumption ? (
+                      <>
+                        <ExpandedLegendItem
+                          dotStyle={styles.fromSolarDot}
+                          label={`From Solar (${formatMetric(
+                            data.fromSolarPercent
+                          )}%)`}
+                        />
+                        <ExpandedLegendItem
+                          dotStyle={styles.consumptionDot}
+                          label={`From Grid (${formatMetric(
+                            data.fromGridPercent
+                          )}%)`}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <View style={styles.expandedLegendItem}>
+                          <View
+                            style={[
+                              styles.expandedLegendDot,
+                              styles.productionDot,
+                            ]}
+                          />
+                          <Text style={styles.expandedLegendText}>
+                            Production
+                          </Text>
+                        </View>
+                        <View style={styles.expandedLegendItem}>
+                          <View
+                            style={[
+                              styles.expandedLegendDot,
+                              styles.consumptionDot,
+                            ]}
+                          />
+                          <Text style={styles.expandedLegendText}>
+                            Consumption
+                          </Text>
+                        </View>
+                        <View style={styles.expandedLegendItem}>
+                          <View
+                            style={[styles.expandedLegendDot, styles.selfDot]}
+                          />
+                          <Text style={styles.expandedLegendText}>
+                            Self Consumption (
+                            {formatMetric(data.selfConsumptionPercent)}
+                            %)
+                          </Text>
+                        </View>
+                      </>
+                    )}
+                  </View>
+                </>
+              )}
+            </ScrollView>
+          </Animated.View>
+        </GestureDetector>
+      </GestureHandlerRootView>
     </Modal>
   );
 };
@@ -485,6 +716,9 @@ const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
   const [expandedChart, setExpandedChart] = useState<ExpandedChart | null>(
     null
   );
+  const dashboardScrollRef = useRef<ScrollView>(null);
+  const dashboardScrollOffset = useRef(0);
+  const savedDashboardScrollOffset = useRef(0);
   const [selectedNode, setSelectedNode] = useState<TreeNode | null>(
     SOLAR_PLANT_TREE_DATA[0]
   );
@@ -546,6 +780,14 @@ const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
     [tab]
   );
 
+  const handlePreviousRange = useCallback(() => {
+    shiftDateRange(-1);
+  }, [shiftDateRange]);
+
+  const handleNextRange = useCallback(() => {
+    shiftDateRange(1);
+  }, [shiftDateRange]);
+
   const handleConfirmDateRange = useCallback(
     (nextDateRange: SolarDateRange) => {
       setDateRange(nextDateRange);
@@ -559,8 +801,25 @@ const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
     setDateRange(getDateRangeForPeriod(nextTab, new Date()));
   }, []);
 
+  const openExpandedChart = useCallback((chart: ExpandedChart) => {
+    savedDashboardScrollOffset.current = dashboardScrollOffset.current;
+    setTab("Day");
+    setDateRange(getDateRangeForPeriod("Day", new Date()));
+    setExpandedChart(chart);
+  }, []);
+
   const closeExpandedChart = useCallback(() => {
+    const savedOffset = savedDashboardScrollOffset.current;
     setExpandedChart(null);
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        dashboardScrollRef.current?.scrollTo({
+          y: savedOffset,
+          animated: false,
+        });
+      });
+    });
   }, []);
 
   const handleGoCurrentRange = useCallback(() => {
@@ -630,8 +889,15 @@ const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
   );
 
   return (
-    <View style={styles.safe}>
+    <GestureHandlerRootView style={styles.safe}>
       <ScrollView
+        ref={dashboardScrollRef}
+        onScroll={(event) => {
+          if (expandedChart == null) {
+            dashboardScrollOffset.current = event.nativeEvent.contentOffset.y;
+          }
+        }}
+        scrollEventThrottle={16}
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
         stickyHeaderIndices={[2]}
@@ -653,9 +919,9 @@ const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
           isCurrentRange={isCurrentPeriodRange(tab, dateRange)}
           onChangeTab={handleChangePeriodTab}
           onGoCurrentRange={handleGoCurrentRange}
-          onNextRange={() => shiftDateRange(1)}
+          onNextRange={handleNextRange}
           onOpenDatePicker={() => setDatePickerVisible(true)}
-          onPreviousRange={() => shiftDateRange(-1)}
+          onPreviousRange={handlePreviousRange}
         />
 
         {/* ════════════════════════════════════════════════
@@ -828,7 +1094,7 @@ const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
                 </Text>
                 <TouchableOpacity
                   accessibilityRole="button"
-                  onPress={() => setExpandedChart("production-consumption")}
+                  onPress={() => openExpandedChart("production-consumption")}
                   style={styles.expandButton}
                 >
                   <Text style={styles.expandIcon}>⤢</Text>
@@ -994,7 +1260,7 @@ const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
                   <Text style={styles.chartTitle}>Production</Text>
                   <TouchableOpacity
                     accessibilityRole="button"
-                    onPress={() => setExpandedChart("production")}
+                    onPress={() => openExpandedChart("production")}
                     style={styles.expandButton}
                   >
                     <Text style={styles.expandIcon}>⤢</Text>
@@ -1035,7 +1301,7 @@ const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
                   <Text style={styles.chartTitle}>Consumption</Text>
                   <TouchableOpacity
                     accessibilityRole="button"
-                    onPress={() => setExpandedChart("consumption")}
+                    onPress={() => openExpandedChart("consumption")}
                     style={styles.expandButton}
                   >
                     <Text style={styles.expandIcon}>⤢</Text>
@@ -1083,7 +1349,7 @@ const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
             <Text style={styles.chartTitle}>Comparative Production</Text>
             <TouchableOpacity
               accessibilityRole="button"
-              onPress={() => setExpandedChart("comparative")}
+              onPress={() => openExpandedChart("comparative")}
               style={styles.expandButton}
             >
               <Text style={styles.expandIcon}>⤢</Text>
@@ -1269,9 +1535,9 @@ const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
         onChangePeriod={handleChangePeriodTab}
         onClose={closeExpandedChart}
         onGoCurrentRange={handleGoCurrentRange}
-        onNextRange={() => shiftDateRange(1)}
+        onNextRange={handleNextRange}
         onOpenDatePicker={() => setDatePickerVisible(true)}
-        onPreviousRange={() => shiftDateRange(-1)}
+        onPreviousRange={handlePreviousRange}
       />
       <SolarDateRangePicker
         dateRange={dateRange}
@@ -1280,7 +1546,7 @@ const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
         onCancel={() => setDatePickerVisible(false)}
         onConfirm={handleConfirmDateRange}
       />
-    </View>
+    </GestureHandlerRootView>
   );
 };
 
