@@ -395,6 +395,15 @@ const formatDateRangeLabel = (
     return "Today";
   }
 
+  const yesterday = addDays(today, -1);
+  if (
+    period === "Day" &&
+    isSameDate(fromDate, yesterday) &&
+    isSameDate(toDate, yesterday)
+  ) {
+    return "Yesterday";
+  }
+
   if (period === "Month") {
     return formatMonthYear(fromDate);
   }
