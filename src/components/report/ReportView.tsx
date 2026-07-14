@@ -20,6 +20,7 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import Orientation from "react-native-orientation-locker";
 import { WebView } from "react-native-webview";
+import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import RNFS from "react-native-fs";
 import Share from "react-native-share";
 import type {
@@ -526,6 +527,7 @@ const ReportView: React.FC<ReportViewProps> = ({
   const [reportHtml, setReportHtml] = useState<string | null>(null);
   const [reportPdfBase64, setReportPdfBase64] = useState<string | null>(null);
   const [reportError, setReportError] = useState<string | null>(null);
+  const [reportLoadFailed, setReportLoadFailed] = useState(false);
   const [isReportRendering, setIsReportRendering] = useState(false);
   const [isLandscape, setIsLandscape] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
@@ -794,6 +796,7 @@ const ReportView: React.FC<ReportViewProps> = ({
         }
 
         setReportError(null);
+        setReportLoadFailed(false);
         setIsReportRendering(true);
         setReportPdfBase64(res.data);
         setReportHtml(buildReportHtml(res.data));
@@ -816,9 +819,11 @@ const ReportView: React.FC<ReportViewProps> = ({
           return;
         }
 
-        const reportErrorMessage = "Không thể tải báo cáo. Vui lòng thử lại sau.";
+        const reportErrorMessage =
+          "Không thể tải báo cáo. Vui lòng thử lại sau.";
 
         setReportError(reportErrorMessage);
+        setReportLoadFailed(true);
         if (!silent) {
           showAlertIfActive("Lỗi", reportErrorMessage);
         }
@@ -828,17 +833,17 @@ const ReportView: React.FC<ReportViewProps> = ({
         }
       }
     },
-    [
-      buildReportPayload,
-      isMounted,
-      previewEndpoint,
-      showAlertIfActive,
-    ]
+    [buildReportPayload, isMounted, previewEndpoint, showAlertIfActive]
   );
 
   const handleSubmit = useCallback(() => {
     loadReport();
   }, [loadReport]);
+
+  useNetworkAwareReload(() => loadReport({ silent: true }), {
+    enabled: reportLoadFailed,
+    hasError: reportLoadFailed,
+  });
 
   const closeReportPreview = useCallback(() => {
     Orientation.lockToPortrait();
@@ -846,6 +851,7 @@ const ReportView: React.FC<ReportViewProps> = ({
     setReportHtml(null);
     setReportPdfBase64(null);
     setReportError(null);
+    setReportLoadFailed(false);
     setIsReportRendering(false);
     setShareOptionsVisible(false);
   }, []);

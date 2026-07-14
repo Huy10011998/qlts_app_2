@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { DatePicker } from "../../components/dataPicker/DataPicker";
 import EnumAndReferencePickerModal from "../../components/modal/EnumAndReferencePickerModal";
@@ -19,7 +19,7 @@ import {
 } from "../../services/data/callApi";
 import type { HomeNavigationProp } from "../../types";
 import { error, log } from "../../utils/Logger";
-import { HIDDEN_TAB_BAR_STYLE } from "../../navigation/shared/tabBarTheme";
+import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 
 type Vehicle = Record<string, unknown> & { id?: string | number };
 type Stop = Record<string, unknown> & {
@@ -57,7 +57,7 @@ const vehicleLabel = (item: Vehicle) =>
   `Phương tiện ${String(item.id ?? "")}`;
 const formatDate = (date: Date) =>
   `${String(date.getDate()).padStart(2, "0")}-${String(
-    date.getMonth() + 1,
+    date.getMonth() + 1
   ).padStart(2, "0")}-${date.getFullYear()}`;
 const apiDate = (value: string, timezone = false) => {
   const [day, month, year] = value.split("-");
@@ -83,7 +83,7 @@ const dateTitle = (value: string) => {
     ? value
     : `${days[date.getDay()]}, ${String(date.getDate()).padStart(
         2,
-        "0",
+        "0"
       )}/${String(date.getMonth() + 1).padStart(2, "0")}/${date.getFullYear()}`;
 };
 const stopColor = (seconds = 0) =>
@@ -107,10 +107,11 @@ const toStopPoint = (item: Stop): StopPoint | null => {
 
 export default function VehicleTrackingScreen() {
   const navigation = useNavigation<HomeNavigationProp>();
+  const isFocused = useIsFocused();
   const today = useMemo(() => new Date(), []);
   const firstDay = useMemo(
     () => new Date(today.getFullYear(), today.getMonth(), 1),
-    [today],
+    [today]
   );
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -134,7 +135,7 @@ export default function VehicleTrackingScreen() {
       }))
       .filter(
         (item) =>
-          !keyword || item.text.toLocaleLowerCase("vi").includes(keyword),
+          !keyword || item.text.toLocaleLowerCase("vi").includes(keyword)
       );
 
     return keyword
@@ -155,7 +156,7 @@ export default function VehicleTrackingScreen() {
   const stopPoints = useMemo(
     () =>
       stops.map(toStopPoint).filter((item): item is StopPoint => item !== null),
-    [stops],
+    [stops]
   );
 
   const loadVehicles = useCallback(async () => {
@@ -164,15 +165,20 @@ export default function VehicleTrackingScreen() {
       ? response.data.items
       : [];
     setVehicles(items);
+    setLoadError(false);
   }, []);
   const loadStops = useCallback(async () => {
-    if (vehicle?.id === undefined || vehicle?.id === null) return setStops([]);
+    if (vehicle?.id === undefined || vehicle?.id === null) {
+      setStops([]);
+      setLoadError(false);
+      return;
+    }
     setStopLoading(true);
     try {
       const response = await getPhuongTienTracking<ListResponse<Stop>>(
         vehicle.id,
         apiDate(fromDate),
-        apiDate(toDate, true),
+        apiDate(toDate, true)
       );
       const items = Array.isArray(response?.data?.items)
         ? response.data.items
@@ -182,8 +188,8 @@ export default function VehicleTrackingScreen() {
       setExpanded(
         Array.from(new Set(items.map((item) => item.ngay.slice(0, 10)))).slice(
           0,
-          1,
-        ),
+          1
+        )
       );
       setLoadError(false);
     } catch (exception) {
@@ -207,21 +213,38 @@ export default function VehicleTrackingScreen() {
     loadStops();
   }, [loadStops]);
 
+  useNetworkAwareReload(
+    async () => {
+      try {
+        await loadVehicles();
+        await loadStops();
+      } catch (exception) {
+        error("[VehicleTracking] network reload error", exception);
+        setLoadError(true);
+      }
+    },
+    {
+      enabled: isFocused,
+      hasError: loadError,
+      onOffline: () => {
+        setVehicles([]);
+        setVehicle(null);
+        setStops([]);
+        setLoadError(true);
+      },
+    }
+  );
+
   const refresh = async () => {
     setRefreshing(true);
     await Promise.allSettled([loadVehicles(), loadStops()]);
     setRefreshing(false);
   };
   const openMap = (selectedId?: number) => {
-    navigation.getParent()?.setOptions({
-      tabBarStyle: HIDDEN_TAB_BAR_STYLE,
-    });
-    requestAnimationFrame(() => {
-      navigation.navigate("VehicleTrackingMap", {
-        stopPoints,
-        selectedId,
-        titleHeader: "Bản đồ dừng đỗ",
-      });
+    navigation.navigate("VehicleTrackingMap", {
+      stopPoints,
+      selectedId,
+      titleHeader: "Bản đồ dừng đỗ",
     });
   };
 
@@ -319,7 +342,7 @@ export default function VehicleTrackingScreen() {
                       setExpanded((current) =>
                         current.includes(date)
                           ? current.filter((x) => x !== date)
-                          : [...current, date],
+                          : [...current, date]
                       )
                     }
                   >
@@ -416,7 +439,7 @@ export default function VehicleTrackingScreen() {
             return;
           }
           const index = vehicles.findIndex(
-            (item, i) => String(item.id ?? i) === String(value),
+            (item, i) => String(item.id ?? i) === String(value)
           );
           if (index >= 0) setVehicle(vehicles[index]);
           setPickerVisible(false);

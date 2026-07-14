@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { AppState, AppStateStatus } from "react-native";
 import NetInfo, { NetInfoState } from "@react-native-community/netinfo";
 import { useAutoReload } from "./useAutoReload";
@@ -14,7 +14,7 @@ type Options = {
 
 export function useNetworkAwareReload(
   reloadFn: () => void | Promise<void>,
-  options?: Options,
+  options?: Options
 ) {
   const {
     enabled = true,
@@ -36,21 +36,21 @@ export function useNetworkAwareReload(
   onOfflineRef.current = onOffline;
   hasErrorRef.current = hasError;
 
-  useAutoReload(reloadFn, {
+  const retryIfNeeded = useCallback(() => {
+    const now = Date.now();
+    if (now - lastRetryAtRef.current < debounceMs) return;
+
+    lastRetryAtRef.current = now;
+    fnRef.current();
+  }, [debounceMs]);
+
+  useAutoReload(retryIfNeeded, {
     enabled: enabled && refetchOnAppResume,
     debounceMs,
   });
 
   useEffect(() => {
     if (!enabled || (!hasError && !hasOfflineHandler)) return;
-
-    const retryIfNeeded = () => {
-      const now = Date.now();
-      if (now - lastRetryAtRef.current < debounceMs) return;
-
-      lastRetryAtRef.current = now;
-      fnRef.current();
-    };
 
     const handleNetworkState = (state: NetInfoState) => {
       const isConnected =
@@ -87,13 +87,12 @@ export function useNetworkAwareReload(
         NetInfo.fetch()
           .then(handleNetworkState)
           .catch(() => {});
-      },
+      }
     );
 
     const pollInterval = hasError
       ? setInterval(() => {
           if (appStateRef.current !== "active") return;
-          retryIfNeeded();
           if (lastConnectedRef.current) retryIfNeeded();
         }, reconnectPollMs)
       : null;
@@ -103,5 +102,5 @@ export function useNetworkAwareReload(
       appStateSubscription.remove();
       if (pollInterval) clearInterval(pollInterval);
     };
-  }, [debounceMs, enabled, hasError, hasOfflineHandler, reconnectPollMs]);
+  }, [enabled, hasError, hasOfflineHandler, reconnectPollMs, retryIfNeeded]);
 }
