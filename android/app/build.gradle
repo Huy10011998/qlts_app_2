@@ -138,7 +138,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 91
-        versionName "2.21"
+        versionName "2.22"
     }
     signingConfigs {
         release {
