@@ -219,9 +219,12 @@ export default function ReportScreen() {
       }
 
       try {
-        log("[ReportScreen] Calling getConfigReport", { nameReport: reportName });
-        const configResponse =
-          await getConfigReport<GetConfigReportResponse>(reportName);
+        log("[ReportScreen] Calling getConfigReport", {
+          nameReport: reportName,
+        });
+        const configResponse = await getConfigReport<GetConfigReportResponse>(
+          reportName
+        );
         const config = configResponse?.data;
         const direct = config?.report?.direct?.trim();
 
@@ -330,6 +333,7 @@ export default function ReportScreen() {
       hasError: Boolean(loadErrorMessage),
       refetchOnAppResume: false,
       onOffline: () => {
+        if (activeReport) return;
         setLoadErrorMessage(
           "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại."
         );
@@ -474,7 +478,6 @@ export default function ReportScreen() {
           />
         )}
       </Modal>
-
     </KeyboardAvoidingView>
   );
 }

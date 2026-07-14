@@ -59,7 +59,7 @@ export function useNetworkAwareReload(
 
       lastConnectedRef.current = isConnected;
 
-      if (!isConnected && previousConnected === true) {
+      if (!isConnected && previousConnected !== false) {
         onOfflineRef.current?.();
         return;
       }
