@@ -118,6 +118,7 @@ const formatLocationTime = (value?: string | null) => {
 export default function VehicleCurrentLocationScreen() {
   const isFocused = useIsFocused();
   const webViewRef = useRef<WebView>(null);
+  const networkAvailableRef = useRef(true);
   const { remountWebView, renderKey } = useForegroundWebViewRemount();
   const requestVersionRef = useRef(0);
   const pollingRef = useRef(false);
@@ -172,7 +173,8 @@ export default function VehicleCurrentLocationScreen() {
 
   const loadLocation = useCallback(
     async (showLoading: boolean) => {
-      if (!trackingId || pollingRef.current) return;
+      if (!trackingId || pollingRef.current || !networkAvailableRef.current)
+        return;
       const requestVersion = requestVersionRef.current;
       pollingRef.current = true;
       if (showLoading) setLocationLoading(true);
@@ -218,6 +220,7 @@ export default function VehicleCurrentLocationScreen() {
 
   useNetworkAwareReload(
     async () => {
+      networkAvailableRef.current = true;
       await loadVehicles();
       await loadLocation(Boolean(trackingId));
     },
@@ -225,10 +228,7 @@ export default function VehicleCurrentLocationScreen() {
       enabled: isFocused,
       hasError: loadError,
       onOffline: () => {
-        requestVersionRef.current += 1;
-        setVehicles([]);
-        setSelectedVehicle(null);
-        setLocation(null);
+        networkAvailableRef.current = false;
         setLoadError(true);
       },
     }
