@@ -10,7 +10,6 @@ import type {
 } from "../../../types";
 import { HOME_MEETING_INFO } from "./homeData";
 import { error, log } from "../../../utils/Logger";
-import { HIDDEN_TAB_BAR_STYLE } from "../../../navigation/shared/tabBarTheme";
 
 export interface HomeMenuItem extends MenuItemComponent {
   description?: string;
@@ -23,7 +22,6 @@ export interface HomeMenuItem extends MenuItemComponent {
 
 type ParentNavigation = {
   navigate: (screen: string, params?: any) => void;
-  setOptions?: (options: Record<string, unknown>) => void;
 };
 
 const FALLBACK_ICON_NAME = "apps-outline";
@@ -305,17 +303,10 @@ export function useHomeMenuItems(
         iconName: "navigate-outline",
         viewPermission: assetView?.ma,
         description: "Theo dõi vị trí hiện tại phương tiện",
-        onPress: () => {
-          tabsNavigation?.setOptions?.({
-            tabBarStyle: HIDDEN_TAB_BAR_STYLE,
-          });
-          requestAnimationFrame(() => {
-            navigation.navigate("VehicleCurrentLocation");
-          });
-        },
+        onPress: () => navigation.navigate("VehicleCurrentLocation"),
       };
     },
-    [apiViews, navigation, tabsNavigation],
+    [apiViews, navigation],
   );
 
   const menuItems = useMemo<HomeMenuItem[]>(

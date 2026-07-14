@@ -9,7 +9,7 @@ import {
   View,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { useNavigation } from "@react-navigation/native";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
 import {
   getPhuongTien,
   getPhuongTienHanhTrinh,
@@ -20,7 +20,7 @@ import { DatePicker } from "../../components/dataPicker/DataPicker";
 import EmptyState from "../../components/ui/EmptyState";
 import EnumAndReferencePickerModal from "../../components/modal/EnumAndReferencePickerModal";
 import type { HomeNavigationProp } from "../../types";
-import { HIDDEN_TAB_BAR_STYLE } from "../../navigation/shared/tabBarTheme";
+import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 
 type VehicleRecord = Record<string, unknown> & { id?: string | number };
 type JourneyRecord = Record<string, unknown> & {
@@ -106,7 +106,7 @@ const getJourneyTime = (item: JourneyRecord, start: boolean) => {
     item,
     start
       ? ["thoiGianBD", "gioBatDau", "GioBatDau", "startTime"]
-      : ["thoiGianKT", "gioKetThuc", "GioKetThuc", "endTime"],
+      : ["thoiGianKT", "gioKetThuc", "GioKetThuc", "endTime"]
   );
   const timePart = value.includes("T") ? value.split("T")[1] : value;
   return timePart.slice(0, 5);
@@ -126,7 +126,7 @@ const formatGroupDate = (value: string) => {
   ];
   return `${weekdays[date.getDay()]}, ${String(date.getDate()).padStart(
     2,
-    "0",
+    "0"
   )}/${String(date.getMonth() + 1).padStart(2, "0")}/${date.getFullYear()}`;
 };
 
@@ -139,14 +139,15 @@ const parseCoordinate = (value?: string | null): MapCoordinate | null => {
 
 export default function VehicleJourneyScreen() {
   const navigation = useNavigation<HomeNavigationProp>();
+  const isFocused = useIsFocused();
   const today = useMemo(() => new Date(), []);
   const firstDay = useMemo(
     () => new Date(today.getFullYear(), today.getMonth(), 1),
-    [today],
+    [today]
   );
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleRecord | null>(
-    null,
+    null
   );
   const [fromDate, setFromDate] = useState(formatDate(firstDay));
   const [toDate, setToDate] = useState(formatDate(today));
@@ -160,7 +161,7 @@ export default function VehicleJourneyScreen() {
   const [journeyError, setJourneyError] = useState(false);
   const [expandedDates, setExpandedDates] = useState<string[]>([]);
   const [gpsLoadingJourneyId, setGpsLoadingJourneyId] = useState<number | null>(
-    null,
+    null
   );
   const vehicleModalItems = useMemo(() => {
     const keyword = vehicleSearch.trim().toLocaleLowerCase("vi");
@@ -172,7 +173,7 @@ export default function VehicleJourneyScreen() {
       }))
       .filter(
         (item) =>
-          !keyword || item.text.toLocaleLowerCase("vi").includes(keyword),
+          !keyword || item.text.toLocaleLowerCase("vi").includes(keyword)
       );
 
     return keyword
@@ -221,6 +222,7 @@ export default function VehicleJourneyScreen() {
   const fetchJourneys = useCallback(async () => {
     if (selectedVehicle?.id === undefined || selectedVehicle?.id === null) {
       setJourneys([]);
+      setJourneyError(false);
       return;
     }
     setJourneyLoading(true);
@@ -228,7 +230,7 @@ export default function VehicleJourneyScreen() {
       const response = await getPhuongTienHanhTrinh<JourneyListResponse>(
         selectedVehicle.id,
         toApiDate(fromDate),
-        toApiDate(toDate, true),
+        toApiDate(toDate, true)
       );
       const items = Array.isArray(response?.data?.items)
         ? response.data.items
@@ -236,7 +238,7 @@ export default function VehicleJourneyScreen() {
       log("[VehicleJourney] GET_PHUONG_TIEN_HANH_TRINH items", items);
       setJourneys(items);
       const dates = Array.from(
-        new Set(items.map((item) => getJourneyDate(item).slice(0, 10))),
+        new Set(items.map((item) => getJourneyDate(item).slice(0, 10)))
       ).filter(Boolean);
       setExpandedDates(dates.slice(0, 1));
       setJourneyError(false);
@@ -253,18 +255,33 @@ export default function VehicleJourneyScreen() {
     fetchJourneys();
   }, [fetchJourneys]);
 
+  useNetworkAwareReload(
+    () => Promise.allSettled([fetchVehicles(), fetchJourneys()]).then(() => {}),
+    {
+      enabled: isFocused,
+      hasError: loadError || journeyError,
+      onOffline: () => {
+        setVehicles([]);
+        setSelectedVehicle(null);
+        setJourneys([]);
+        setLoadError(true);
+        setJourneyError(true);
+      },
+    }
+  );
+
   const openJourneyMap = useCallback(
     async (item: JourneyRecord) => {
       setGpsLoadingJourneyId(item.id);
       try {
         const response = await getPhuongTienHanhTrinhGps<GpsListResponse>(
-          item.id,
+          item.id
         );
         const gpsItems = Array.isArray(response?.data?.items)
           ? [...response.data.items].sort((a, b) =>
               getText(a, ["thoiGian", "ThoiGian"]).localeCompare(
-                getText(b, ["thoiGian", "ThoiGian"]),
-              ),
+                getText(b, ["thoiGian", "ThoiGian"])
+              )
             )
           : [];
         const coordinates = gpsItems
@@ -273,7 +290,7 @@ export default function VehicleJourneyScreen() {
             lng: Number(gps.lng ?? gps.Lng),
           }))
           .filter(
-            (point) => Number.isFinite(point.lat) && Number.isFinite(point.lng),
+            (point) => Number.isFinite(point.lat) && Number.isFinite(point.lng)
           );
         const fallback = [
           parseCoordinate(item.toaDo_BD),
@@ -282,38 +299,28 @@ export default function VehicleJourneyScreen() {
 
         log("[VehicleJourney] GET_PHUONG_TIEN_HANH_TRINH_GPS items", gpsItems);
         const mapCoordinates = coordinates.length ? coordinates : fallback;
-        navigation.getParent()?.setOptions({
-          tabBarStyle: HIDDEN_TAB_BAR_STYLE,
-        });
-        requestAnimationFrame(() => {
-          navigation.navigate("VehicleJourneyMap", {
-            coordinates: mapCoordinates,
-            titleHeader: `Hành trình #${item.stt ?? item.id}`,
-          });
+        navigation.navigate("VehicleJourneyMap", {
+          coordinates: mapCoordinates,
+          titleHeader: `Hành trình #${item.stt ?? item.id}`,
         });
       } catch (exception) {
         error(
           "[VehicleJourney] GET_PHUONG_TIEN_HANH_TRINH_GPS error",
-          exception,
+          exception
         );
         const fallback = [
           parseCoordinate(item.toaDo_BD),
           parseCoordinate(item.toaDo_KT),
         ].filter((point): point is MapCoordinate => point !== null);
-        navigation.getParent()?.setOptions({
-          tabBarStyle: HIDDEN_TAB_BAR_STYLE,
-        });
-        requestAnimationFrame(() => {
-          navigation.navigate("VehicleJourneyMap", {
-            coordinates: fallback,
-            titleHeader: `Hành trình #${item.stt ?? item.id}`,
-          });
+        navigation.navigate("VehicleJourneyMap", {
+          coordinates: fallback,
+          titleHeader: `Hành trình #${item.stt ?? item.id}`,
         });
       } finally {
         setGpsLoadingJourneyId(null);
       }
     },
-    [navigation],
+    [navigation]
   );
 
   const refreshAll = useCallback(async () => {
@@ -358,9 +365,7 @@ export default function VehicleJourneyScreen() {
             ]}
             numberOfLines={1}
           >
-            {selectedVehicle
-              ? getVehicleLabel(selectedVehicle)
-              : "Phương tiện"}
+            {selectedVehicle ? getVehicleLabel(selectedVehicle) : "Phương tiện"}
           </Text>
           <Ionicons name="chevron-down" size={18} color="#64748B" />
         </TouchableOpacity>
@@ -435,7 +440,7 @@ export default function VehicleJourneyScreen() {
                       setExpandedDates((current) =>
                         current.includes(date)
                           ? current.filter((value) => value !== date)
-                          : [...current, date],
+                          : [...current, date]
                       )
                     }
                   >
@@ -600,7 +605,7 @@ export default function VehicleJourneyScreen() {
             return;
           }
           const selectedIndex = vehicles.findIndex(
-            (item, index) => String(item.id ?? index) === String(value),
+            (item, index) => String(item.id ?? index) === String(value)
           );
           if (selectedIndex >= 0) setSelectedVehicle(vehicles[selectedIndex]);
           setPickerVisible(false);

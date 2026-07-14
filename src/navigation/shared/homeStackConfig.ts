@@ -18,10 +18,7 @@ import ShareholdersMeetingScreen from "../../screens/ShareholdersMeeting/Shareho
 import ReportScreen from "../../screens/Home/ReportScreen";
 import SolarPlantScreen from "../../screens/Home/SolarPlantScreen";
 import VehicleJourneyScreen from "../../screens/Home/VehicleJourneyScreen";
-import VehicleJourneyMapScreen from "../../screens/Home/VehicleJourneyMapScreen";
 import VehicleTrackingScreen from "../../screens/Home/VehicleTrackingScreen";
-import VehicleTrackingMapScreen from "../../screens/Home/VehicleTrackingMapScreen";
-import VehicleCurrentLocationScreen from "../../screens/Home/VehicleCurrentLocationScreen";
 
 type HomeStackScreenName = keyof RootStackParamList;
 
@@ -47,24 +44,9 @@ export const HOME_STACK_STATIC_SCREENS: HomeStackStaticScreen[] = [
     title: "Hành trình phương tiện",
   },
   {
-    name: "VehicleJourneyMap",
-    component: VehicleJourneyMapScreen,
-    title: "Bản đồ hành trình",
-  },
-  {
     name: "VehicleTracking",
     component: VehicleTrackingScreen,
     title: "Dừng đỗ phương tiện",
-  },
-  {
-    name: "VehicleCurrentLocation",
-    component: VehicleCurrentLocationScreen,
-    title: "Vị trí hiện tại phương tiện",
-  },
-  {
-    name: "VehicleTrackingMap",
-    component: VehicleTrackingMapScreen,
-    title: "Bản đồ dừng đỗ",
   },
   {
     name: "SolarPlant",
