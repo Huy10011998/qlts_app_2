@@ -240,14 +240,27 @@ export const SceneView: React.FC<{ width?: number }> = ({
   const panelLineY = panelY + 15;
   const panelLineStartX = cabinetX - 7;
   const panelLineEndX = panelX + panelCellW * 3 + 8;
-  const panelLineSegments = Array.from({ length: 8 }).map((_, i) => {
-    const x1 = panelLineStartX - i * 10;
-    return {
-      x1,
-      x2: x1 - 6,
-      color: i === 2 || i === 4 ? "#f5a623" : "#12b04f",
-    };
-  });
+  const panelArrowBaseX = panelLineEndX + 12;
+  const downArrowBaseY = 114;
+  const downArrowTipY = 126;
+  const downArrowSegments = Array.from({ length: 9 }, (_, i) => 36 + i * 9);
+  const panelLineSegmentCount = Math.ceil(
+    (panelLineStartX - panelArrowBaseX) / 10,
+  );
+  const panelLineSegments = Array.from(
+    { length: panelLineSegmentCount },
+    (_, i) => {
+      // Anchor the first segment at the arrowhead base. Building the dashes
+      // from the cabinet side can leave the first visible segment a few
+      // pixels away from the arrowhead after tablet Display Zoom rounding.
+      const x2 = panelArrowBaseX + i * 10;
+      return {
+        x1: Math.min(x2 + 6, panelLineStartX),
+        x2,
+        color: i === 2 || i === 4 ? "#f5a623" : "#12b04f",
+      };
+    },
+  ).filter((segment) => segment.x1 > segment.x2);
   return (
     <Svg
       width={W}
@@ -360,20 +373,20 @@ export const SceneView: React.FC<{ width?: number }> = ({
       {/* ── Arrows (all converge on the red control cabinet at x≈W*0.46+14, y:118-170) ── */}
 
       {/* down arrow: solar power → top of the cabinet */}
-      {[0, 9, 18, 27, 36, 45, 54, 63].map((y) => (
+      {downArrowSegments.map((y) => (
         <Line
           key={y}
           x1={W * 0.46 + 14}
-          y1={36 + y}
+          y1={y}
           x2={W * 0.46 + 14}
-          y2={43 + y}
+          y2={y + 7}
           stroke="#4caf50"
           strokeWidth={3}
           strokeLinecap="round"
         />
       ))}
       <Polygon
-        points={`${cabinetX + 14},126 ${cabinetX + 6},114 ${cabinetX + 22},114`}
+        points={`${cabinetX + 14},${downArrowTipY} ${cabinetX + 6},${downArrowBaseY} ${cabinetX + 22},${downArrowBaseY}`}
         fill="#4caf50"
       />
 
@@ -381,9 +394,9 @@ export const SceneView: React.FC<{ width?: number }> = ({
       {panelLineSegments.map((segment, i) => (
         <Line
           key={i}
-          x1={Math.max(segment.x1, panelLineEndX)}
+          x1={segment.x1}
           y1={panelLineY}
-          x2={Math.max(segment.x2, panelLineEndX)}
+          x2={segment.x2}
           y2={panelLineY}
           stroke={segment.color}
           strokeWidth={4}
