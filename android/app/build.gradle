@@ -137,7 +137,7 @@ android {
         applicationId "com.qlts_app_2"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 92
+        versionCode 93
         versionName "2.22"
     }
     signingConfigs {
