@@ -536,6 +536,7 @@ const ReportView: React.FC<ReportViewProps> = ({
   const [reportLoadingMessage, setReportLoadingMessage] = useState("");
   const [webViewRenderKey, setWebViewRenderKey] = useState(0);
   const webViewRef = useRef<WebView>(null);
+  const reportHtmlRef = useRef<string | null>(null);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const { isMounted, showAlertIfActive } = useSafeAlert();
   const PAGE_SIZE = 20;
@@ -543,6 +544,8 @@ const ReportView: React.FC<ReportViewProps> = ({
     () => ({ html: reportHtml ?? "" }),
     [reportHtml]
   );
+
+  reportHtmlRef.current = reportHtml;
 
   useEnumAndReferenceLoader(
     parameterFields,
@@ -822,8 +825,13 @@ const ReportView: React.FC<ReportViewProps> = ({
         const reportErrorMessage =
           "Không thể tải báo cáo. Vui lòng thử lại sau.";
 
-        setReportError(reportErrorMessage);
-        setReportLoadFailed(true);
+        // A reconnect refresh must never replace a report that the user can
+        // still read. Keep the current WebView/PDF and retry on the next
+        // connection event; only expose the error when there is no preview.
+        if (!silent || !reportHtmlRef.current) {
+          setReportError(reportErrorMessage);
+          setReportLoadFailed(true);
+        }
         if (!silent) {
           showAlertIfActive("Lỗi", reportErrorMessage);
         }
@@ -841,8 +849,12 @@ const ReportView: React.FC<ReportViewProps> = ({
   }, [loadReport]);
 
   useNetworkAwareReload(() => loadReport({ silent: true }), {
-    enabled: reportLoadFailed,
+    enabled: Boolean(reportHtml) || reportLoadFailed,
     hasError: reportLoadFailed,
+    refetchOnAppResume: false,
+    // Supplying an offline handler lets the hook remember the offline state.
+    // We deliberately leave the rendered report untouched while disconnected.
+    onOffline: () => {},
   });
 
   const closeReportPreview = useCallback(() => {
