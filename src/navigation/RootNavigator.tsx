@@ -115,6 +115,16 @@ export default function RootNavigator() {
 
     let isMounted = true;
 
+    // Connectivity blocking is only needed while bootstrapping the signed-in
+    // app. Once permissions are loaded, replacing AppNavigator with IsLoading
+    // would unmount the whole navigation tree (including an open report/map)
+    // whenever the device goes offline.
+    if (loaded) {
+      setIsAndroidOfflineBlocked(false);
+      hasShownAndroidOfflineRef.current = false;
+      return;
+    }
+
     const syncAndroidOfflineState = async () => {
       if (!authReady || !isAuthenticated) {
         if (isMounted) {
@@ -153,6 +163,7 @@ export default function RootNavigator() {
     authReady,
     checkAndroidBootstrapConnectivity,
     isAuthenticated,
+    loaded,
     showAndroidOfflineAlert,
   ]);
 
