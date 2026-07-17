@@ -38,12 +38,12 @@ export default function ListCardHistory({ item, icon, onPress }: CardItemProps) 
 const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     marginHorizontal: 12,
     marginVertical: 6,
     padding: 16,
     borderRadius: 16,
-    shadowColor: "#000",
+    shadowColor: C.shadow,
     shadowOpacity: 0.08,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 6,
@@ -54,7 +54,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#E0F2FE",
+    backgroundColor: C.blueSurface,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 16,
@@ -66,6 +66,6 @@ const styles = StyleSheet.create({
   },
 
   info: { flex: 1 },
-  text: { fontSize: 14, color: "#000", marginBottom: 4, paddingTop: 5 },
-  label: { fontWeight: "bold", color: "#000", fontSize: 14 },
+  text: { fontSize: 14, color: C.text, marginBottom: 4, paddingTop: 5 },
+  label: { fontWeight: "bold", color: C.text, fontSize: 14 },
 });

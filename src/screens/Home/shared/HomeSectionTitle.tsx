@@ -1,6 +1,7 @@
 import React from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { HOME_BRAND_RED } from "./homeTheme";
+import { C } from "../../../utils/helpers/colors";
 
 type HomeSectionTitleProps = {
   label: string;
@@ -57,7 +58,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     fontWeight: "700",
-    color: "#374151",
+    color: C.textSecondary,
     letterSpacing: 0.5,
   },
   action: {

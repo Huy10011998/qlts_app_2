@@ -20,6 +20,7 @@ import {
 } from "../../utils/helpers/api";
 import { fetchImage, pickImage } from "../../utils/Image";
 import { isEffectivelyEmptyCodeValue } from "../../utils/helpers/string";
+import { C } from "../../utils/helpers/colors";
 import { checkValidation, insert } from "../../services/data/callApi";
 
 import { useGroupedFields } from "../../hooks/AssetAddItem/useGroupedFields";
@@ -349,7 +350,7 @@ export default function AssetAddItemDetails() {
       }
     >
       <AssetFormHeroCard
-        iconBgColor="#FFF3F3"
+        iconBgColor={C.redSurface}
         iconColor={BRAND_RED}
         iconName="add-circle-outline"
         styles={styles}
@@ -391,6 +392,6 @@ const styles = StyleSheet.create({
     cardShadow: CARD_SHADOW,
   }),
   heroIconWrap: {
-    backgroundColor: "#FFF3F3",
+    backgroundColor: C.redSurface,
   },
 });

@@ -31,6 +31,7 @@ import {
   Gesture,
 } from "react-native-gesture-handler";
 import Orientation from "react-native-orientation-locker";
+import { C } from "../../utils/helpers/colors";
 import Video from "react-native-video";
 import WebView from "react-native-webview";
 import type { CameraCellProps } from "../../types/components.d";
@@ -196,7 +197,7 @@ const CameraCell = React.memo(
           ) : (
             <View style={styles.cellPlaceholder}>
               {!token && !isPaused ? (
-                <ActivityIndicator size="small" color="#555" />
+                <ActivityIndicator size="small" color={C.textMuted} />
               ) : !isPaused ? (
                 <Text style={styles.cellPlaceholderText}>
                   {isSnapshotActive
@@ -1312,7 +1313,7 @@ const CameraListGrid: React.FC = () => {
               <Ionicons
                 name={isPaused ? "play-outline" : "pause-outline"}
                 size={26}
-                color="#444"
+                color={C.textSecondary}
               />
             </TouchableOpacity>
             <TouchableOpacity
@@ -1322,7 +1323,7 @@ const CameraListGrid: React.FC = () => {
               <Ionicons
                 name={isMuted ? "volume-mute-outline" : "volume-medium-outline"}
                 size={26}
-                color={isMuted ? "#e53935" : "#444"}
+                color={isMuted ? "#e53935" : C.textSecondary}
               />
             </TouchableOpacity>
             <TouchableOpacity style={styles.toolBtn}>
@@ -1337,7 +1338,7 @@ const CameraListGrid: React.FC = () => {
               <MaterialCommunityIcons
                 name="view-grid-outline"
                 size={26}
-                color="#444"
+                color={C.textSecondary}
               />
             </TouchableOpacity>
             <TouchableOpacity
@@ -1347,7 +1348,7 @@ const CameraListGrid: React.FC = () => {
               <MaterialCommunityIcons
                 name="phone-rotate-landscape"
                 size={26}
-                color="#444"
+                color={C.textSecondary}
               />
             </TouchableOpacity>
           </View>
@@ -1357,32 +1358,32 @@ const CameraListGrid: React.FC = () => {
               style={[styles.playbackBtn, styles.playbackBtnDisabled]}
               disabled
             >
-              <Ionicons name="play" size={16} color="#bbb" />
+              <Ionicons name="play" size={16} color={C.placeholder} />
               <Text style={[styles.playbackText, styles.playbackTextDisabled]}>
                 Phát lại
               </Text>
             </TouchableOpacity>
             <View style={styles.iconGroup}>
               <TouchableOpacity style={styles.iconBtn} onPress={handleSnapshot}>
-                <Ionicons name="camera-outline" size={24} color="#666" />
+                <Ionicons name="camera-outline" size={24} color={C.textSecondary} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.iconBtn}>
                 <Ionicons
                   name="radio-button-on-outline"
                   size={24}
-                  color="#666"
+                  color={C.textSecondary}
                 />
               </TouchableOpacity>
               <TouchableOpacity style={styles.iconBtn}>
-                <Ionicons name="mic-outline" size={24} color="#666" />
+                <Ionicons name="mic-outline" size={24} color={C.textSecondary} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.iconBtn}>
-                <Ionicons name="person-circle-outline" size={24} color="#666" />
+                <Ionicons name="person-circle-outline" size={24} color={C.textSecondary} />
               </TouchableOpacity>
             </View>
           </View>
           <View style={styles.chevronWrapper}>
-            <Ionicons name="chevron-down" size={20} color="#aaa" />
+            <Ionicons name="chevron-down" size={20} color={C.textMuted} />
           </View>
         </View>
       )}
@@ -1738,7 +1739,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  cellPlaceholderText: { color: "#555", fontSize: 8, textAlign: "center" },
+  cellPlaceholderText: { color: C.textMuted, fontSize: 8, textAlign: "center" },
   liveBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -1757,18 +1758,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     width: "100%",
     height: 28,
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     gap: 4,
     paddingHorizontal: 12,
   },
-  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "#ccc" },
+  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: C.borderStrong },
   dotActive: {
     width: 22,
     height: 7,
     backgroundColor: "#e53935",
     borderRadius: 4,
   },
-  bottomHalf: { flex: 4, backgroundColor: "#f7f7f7" },
+  bottomHalf: { flex: 4, backgroundColor: C.bg },
   toolbar: {
     flexDirection: "row",
     justifyContent: "space-evenly",
@@ -1778,15 +1779,15 @@ const styles = StyleSheet.create({
   toolBtn: { alignItems: "center", justifyContent: "center" },
   sdBadge: {
     borderWidth: 1.5,
-    borderColor: "#444",
+    borderColor: C.textSecondary,
     borderRadius: 6,
     paddingHorizontal: 10,
     paddingVertical: 3,
   },
-  sdText: { fontSize: 12, fontWeight: "700", color: "#444" },
+  sdText: { fontSize: 12, fontWeight: "700", color: C.textSecondary },
   divider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: "#ddd",
+    backgroundColor: C.border,
     marginHorizontal: 20,
   },
   actionContainer: {
@@ -1798,7 +1799,7 @@ const styles = StyleSheet.create({
   playbackBtn: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#ececec",
+    backgroundColor: C.surfaceAlt,
     borderRadius: 30,
     paddingHorizontal: 22,
     paddingVertical: 12,
@@ -1809,9 +1810,9 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     fontSize: 15,
     fontWeight: "600",
-    color: "#333",
+    color: C.text,
   },
-  playbackTextDisabled: { color: "#bbb" },
+  playbackTextDisabled: { color: C.placeholder },
   iconGroup: { flex: 1, flexDirection: "row", justifyContent: "space-between" },
   iconBtn: {
     width: 44,
@@ -1831,7 +1832,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   sheetContainer: {
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
@@ -1841,34 +1842,34 @@ const styles = StyleSheet.create({
     borderRadius: 24,
   },
   handleWrapper: { alignItems: "center", paddingTop: 10, paddingBottom: 6 },
-  handle: { width: 45, height: 5, backgroundColor: "#ccc", borderRadius: 3 },
+  handle: { width: 45, height: 5, backgroundColor: C.borderStrong, borderRadius: 3 },
   sheetTitle: {
     fontSize: 18,
     fontWeight: "600",
     textAlign: "center",
     marginBottom: 8,
-    color: "#333",
+    color: C.text,
   },
   sheetTitleChild: {
     fontSize: 16,
     textAlign: "center",
     marginBottom: 12,
-    color: "#aaa",
+    color: C.textMuted,
   },
   listItem: { paddingVertical: 16, paddingHorizontal: 20 },
-  listItemText: { fontSize: 16, color: "#333", textAlign: "center" },
-  itemBorder: { borderTopWidth: 0.5, borderColor: "#e5e5e5" },
-  activeItem: { backgroundColor: "#f5f5f5" },
-  activeText: { color: "red", fontWeight: "600" },
+  listItemText: { fontSize: 16, color: C.text, textAlign: "center" },
+  itemBorder: { borderTopWidth: 0.5, borderColor: C.border },
+  activeItem: { backgroundColor: C.surfaceAlt },
+  activeText: { color: C.red, fontWeight: "600" },
   closeBtn: {
     marginTop: 10,
     marginHorizontal: 16,
-    backgroundColor: "#f2f2f2",
+    backgroundColor: C.surfaceAlt,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: "center",
   },
-  closeText: { fontSize: 16, fontWeight: "600", color: "#333" },
+  closeText: { fontSize: 16, fontWeight: "600", color: C.text },
   fsContainer: { flex: 1, backgroundColor: "#000" },
   fsVideoArea: { flex: 1, backgroundColor: "#000" },
   fsSwipeOverlay: {

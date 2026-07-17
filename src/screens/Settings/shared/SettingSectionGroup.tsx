@@ -51,10 +51,12 @@ const styles = StyleSheet.create({
     backgroundColor: C.card,
     borderRadius: 18,
     overflow: "hidden",
-    shadowColor: "#1A2340",
+    shadowColor: C.shadow,
     shadowOpacity: 0.07,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
     elevation: 3,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: C.border,
   },
 });

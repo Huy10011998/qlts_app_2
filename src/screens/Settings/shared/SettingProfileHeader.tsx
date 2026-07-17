@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
     right: -20,
   },
   avatarShadowWrap: {
-    shadowColor: "#000",
+    shadowColor: C.shadow,
     shadowOpacity: 0.25,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
     overflow: "hidden",
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
   },
   initialsGradient: {
     flex: 1,

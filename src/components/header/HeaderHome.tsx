@@ -215,11 +215,11 @@ const styles = StyleSheet.create({
     paddingBottom: 2,
   },
   logoWrap: {
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     borderRadius: 50,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    shadowColor: "#000",
+    shadowColor: C.shadow,
     shadowOpacity: 0.12,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },

@@ -4,7 +4,7 @@ import AssetDetailsContent from "../Assets/shared/AssetDetailsContent";
 
 export default function QrDetailsScreen() {
   return (
-    <ScreenContainer backgroundColor="#F9F9F9">
+    <ScreenContainer>
       <QrDetails>
         {({
           activeTab,

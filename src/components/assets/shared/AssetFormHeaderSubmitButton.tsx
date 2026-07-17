@@ -1,3 +1,4 @@
+import { C } from "../../../utils/helpers/colors";
 import React from "react";
 import {
   StyleSheet,
@@ -51,7 +52,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 5,
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "rgba(255,255,255,0.7)",
   },

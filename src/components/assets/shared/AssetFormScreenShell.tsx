@@ -20,6 +20,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import IsLoading from "../../ui/IconLoading";
+import { C } from "../../../utils/helpers/colors";
 
 type AssetFormKeyboardContextValue = {
   handleInputFocus: (target: any) => void;
@@ -331,8 +332,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     paddingHorizontal: 16,
     paddingTop: 10,
-    backgroundColor: "rgba(246, 247, 251, 0.96)",
+    backgroundColor: C.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(15, 25, 35, 0.08)",
+    borderTopColor: C.border,
   },
 });

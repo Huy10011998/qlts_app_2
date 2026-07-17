@@ -28,6 +28,7 @@ import { TouchableWithoutFeedback } from "react-native";
 import Video from "react-native-video";
 import WebView from "react-native-webview";
 import Orientation from "react-native-orientation-locker";
+import { C } from "../../utils/helpers/colors";
 import {
   GestureHandlerRootView,
   GestureDetector,
@@ -449,7 +450,7 @@ const CameraList: React.FC = () => {
         <View style={[styles.card, { width: itemWidth }]}>
           <View style={styles.cardHeader}>
             <View style={styles.titleRow}>
-              <MaterialIcons name="videocam" size={16} color="#333" />
+              <MaterialIcons name="videocam" size={16} color={C.text} />
               <Text style={styles.cardTitle} numberOfLines={1}>
                 {item.iD_Camera_MoTa}
               </Text>
@@ -470,7 +471,7 @@ const CameraList: React.FC = () => {
               />
             ) : (
               <View style={[styles.preview, styles.previewLoadingBackground]}>
-                <ActivityIndicator size="small" color="#555" />
+                <ActivityIndicator size="small" color={C.textMuted} />
               </View>
             )}
           </TouchableOpacity>
@@ -707,10 +708,10 @@ const CameraList: React.FC = () => {
         </Text>
         <View style={styles.headerRight}>
           <TouchableOpacity onPress={handleNavigate}>
-            <Ionicons name="apps" size={24} color="#333" />
+            <Ionicons name="apps" size={24} color={C.text} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setShowLayoutModal(true)}>
-            <Ionicons name="grid" size={24} color="#333" />
+            <Ionicons name="grid" size={24} color={C.text} />
           </TouchableOpacity>
         </View>
       </View>
@@ -1064,12 +1065,12 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: "600",
-    color: "#000",
+    color: C.text,
     marginRight: 12,
   },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 16 },
   card: {
-    backgroundColor: "#FFF",
+    backgroundColor: C.surface,
     borderRadius: 12,
     margin: 8,
     padding: 6,
@@ -1078,7 +1079,7 @@ const styles = StyleSheet.create({
   },
   cardHeader: { marginBottom: 4 },
   titleRow: { flexDirection: "row", alignItems: "center" },
-  cardTitle: { fontSize: 12, marginLeft: 4, flex: 1 },
+  cardTitle: { fontSize: 12, marginLeft: 4, flex: 1, color: C.text },
   videoWrapper: {
     width: "100%",
     aspectRatio: 16 / 9,
@@ -1107,11 +1108,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     height: 28,
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     gap: 4,
     paddingHorizontal: 12,
   },
-  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "#ccc" },
+  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: C.borderStrong },
   dotActive: {
     width: 22,
     height: 7,
@@ -1129,7 +1130,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   sheetContainer: {
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
@@ -1139,34 +1140,34 @@ const styles = StyleSheet.create({
     borderRadius: 24,
   },
   handleWrapper: { alignItems: "center", paddingTop: 10, paddingBottom: 6 },
-  handle: { width: 45, height: 5, backgroundColor: "#ccc", borderRadius: 3 },
+  handle: { width: 45, height: 5, backgroundColor: C.borderStrong, borderRadius: 3 },
   sheetTitle: {
     fontSize: 18,
     fontWeight: "600",
     textAlign: "center",
     marginBottom: 8,
-    color: "#333",
+    color: C.text,
   },
   sheetTitleChild: {
     fontSize: 16,
     textAlign: "center",
     marginBottom: 12,
-    color: "#aaa",
+    color: C.textMuted,
   },
   listItem: { paddingVertical: 16, paddingHorizontal: 20 },
-  listItemText: { fontSize: 16, color: "#333", textAlign: "center" },
-  itemBorder: { borderTopWidth: 0.5, borderColor: "#e5e5e5" },
-  activeItem: { backgroundColor: "#f5f5f5" },
-  activeText: { color: "red", fontWeight: "600" },
+  listItemText: { fontSize: 16, color: C.text, textAlign: "center" },
+  itemBorder: { borderTopWidth: 0.5, borderColor: C.border },
+  activeItem: { backgroundColor: C.surfaceAlt },
+  activeText: { color: C.red, fontWeight: "600" },
   closeBtn: {
     marginTop: 10,
     marginHorizontal: 16,
-    backgroundColor: "#f2f2f2",
+    backgroundColor: C.surfaceAlt,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: "center",
   },
-  closeText: { fontSize: 16, fontWeight: "600", color: "#333" },
+  closeText: { fontSize: 16, fontWeight: "600", color: C.text },
   fullscreenContainer: { flex: 1, backgroundColor: "#000" },
   fsHeader: {
     flexDirection: "row",

@@ -40,7 +40,7 @@ const rowS = StyleSheet.create({
     paddingVertical: 11,
     paddingHorizontal: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#EDF0F5",
+    borderBottomColor: C.border,
     gap: 12,
   },
   last: { borderBottomWidth: 0 },
@@ -55,12 +55,12 @@ const rowS = StyleSheet.create({
   col: { flex: 1 },
   label: {
     fontSize: 10.5,
-    color: "#8A95A3",
+    color: C.textSub,
     fontWeight: "600",
     letterSpacing: 0.3,
     marginBottom: 2,
   },
-  value: { fontSize: 13.5, color: "#0F1923", fontWeight: "500" },
+  value: { fontSize: 13.5, color: C.text, fontWeight: "500" },
 });
 
 const Section: React.FC<{ title: string; children: React.ReactNode }> = ({
@@ -89,18 +89,20 @@ const secS = StyleSheet.create({
   title: {
     fontSize: 11.5,
     fontWeight: "700",
-    color: "#374151",
+    color: C.textSecondary,
     letterSpacing: 0.5,
   },
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     borderRadius: 18,
     overflow: "hidden",
-    shadowColor: "#1A2340",
+    shadowColor: C.shadow,
     shadowOpacity: 0.07,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 3 },
     elevation: 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: C.border,
   },
 });
 
@@ -193,14 +195,14 @@ const ProfileScreen: React.FC = () => {
       <Section title="THÔNG TIN CƠ BẢN">
         <InfoRow
           iconName="person-outline"
-          iconBg="#EEF2FF"
+          iconBg={C.indigoSurface}
           iconColor="#3B5BDB"
           label="Họ và tên"
           value={user.moTa}
         />
         <InfoRow
           iconName="mail-outline"
-          iconBg="#FFF0F6"
+          iconBg={C.pinkSurface}
           iconColor="#E64980"
           label="Email"
           value={user.email}
@@ -211,28 +213,28 @@ const ProfileScreen: React.FC = () => {
       <Section title="ĐƠN VỊ CÔNG TÁC">
         <InfoRow
           iconName="business-outline"
-          iconBg="#FFF5F5"
+          iconBg={C.redSurface}
           iconColor={C.red}
           label="Đơn vị"
           value={user.donVi}
         />
         <InfoRow
           iconName="layers-outline"
-          iconBg="#F3F0FF"
+          iconBg={C.violetSurface}
           iconColor="#7048E8"
           label="Phòng ban"
           value={user.phongBan}
         />
         <InfoRow
           iconName="git-branch-outline"
-          iconBg="#F0FBF7"
+          iconBg={C.greenLight}
           iconColor="#10B981"
           label="Bộ phận"
           value={user.boPhan}
         />
         <InfoRow
           iconName="people-outline"
-          iconBg="#FFF8F0"
+          iconBg={C.orangeSurface}
           iconColor="#E67700"
           label="Tổ nhóm"
           value={user.toNhom}
@@ -243,14 +245,14 @@ const ProfileScreen: React.FC = () => {
       <Section title="CHỨC VỤ & DANH HIỆU">
         <InfoRow
           iconName="briefcase-outline"
-          iconBg="#F0F4FF"
+          iconBg={C.blueSurface}
           iconColor="#3B5BDB"
           label="Chức vụ"
           value={user.chucVu}
         />
         <InfoRow
           iconName="ribbon-outline"
-          iconBg="#FFF0F6"
+          iconBg={C.pinkSurface}
           iconColor="#E64980"
           label="Chức danh"
           value={user.chucDanh}

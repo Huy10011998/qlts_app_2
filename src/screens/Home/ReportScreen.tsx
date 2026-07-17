@@ -1,3 +1,4 @@
+import { C } from "../../utils/helpers/colors";
 import React, {
   useCallback,
   useEffect,
@@ -153,7 +154,7 @@ function ReportListCard({
           {report.item.label}
         </Text>
         <View style={s.reportPathWrap}>
-          <Ionicons name="git-branch-outline" size={12} color="#667085" />
+          <Ionicons name="git-branch-outline" size={12} color={C.textMuted} />
           <Text style={s.reportPath} numberOfLines={2}>
             {report.path || "Báo cáo tài sản"}
           </Text>
@@ -537,32 +538,32 @@ const s = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     fontWeight: "800",
-    color: "#0F1923",
+    color: C.text,
     letterSpacing: 0.2,
   },
   groupCount: {
     fontSize: 11,
     fontWeight: "700",
     color: ASSET_MENU_BRAND_RED,
-    backgroundColor: "#FFF0F0",
+    backgroundColor: C.redSurface,
     borderRadius: 999,
     paddingHorizontal: 9,
     paddingVertical: 4,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#FFD6D6",
+    borderColor: C.redBorder,
     overflow: "hidden",
   },
   reportCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     borderRadius: 12,
     paddingVertical: 13,
     paddingHorizontal: 14,
     marginBottom: 9,
     gap: 10,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#E8ECF3",
+    borderColor: C.border,
     overflow: "hidden",
     ...ASSET_MENU_CARD_SHADOW,
   },
@@ -580,10 +581,10 @@ const s = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F3F0FF",
+    backgroundColor: C.violetSurface,
     flexShrink: 0,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#DDD6FE",
+    borderColor: C.violetBorder,
   },
   reportTextWrap: {
     flex: 1,
@@ -592,7 +593,7 @@ const s = StyleSheet.create({
   reportTitle: {
     fontSize: 14.5,
     fontWeight: "700",
-    color: "#0F1923",
+    color: C.text,
     lineHeight: 20,
   },
   reportPathWrap: {
@@ -605,7 +606,7 @@ const s = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     fontWeight: "500",
-    color: "#667085",
+    color: C.textMuted,
     lineHeight: 16,
   },
   reportChevronWrap: {
@@ -614,7 +615,7 @@ const s = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F8F5FF",
+    backgroundColor: C.violetSurface,
     flexShrink: 0,
   },
 });

@@ -11,6 +11,7 @@ import {
 } from "../../utils/helpers/api";
 import { fetchImage, pickImage } from "../../utils/Image";
 import { isEffectivelyEmptyCodeValue } from "../../utils/helpers/string";
+import { C } from "../../utils/helpers/colors";
 import { fetchReferenceByFieldWithParent } from "../../utils/cascade/FetchReferenceByFieldWithParent";
 import { handleCascadeChange } from "../../utils/cascade/index";
 import { useImageLoader } from "../../hooks/useImageLoader";
@@ -469,7 +470,7 @@ export default function AssetCloneItem() {
       }
     >
       <AssetFormHeroCard
-        iconBgColor="#FFF8F0"
+        iconBgColor={C.orangeSurface}
         iconColor="#E67700"
         iconName="copy-outline"
         styles={styles}
@@ -507,6 +508,6 @@ const styles = StyleSheet.create({
     cardShadow: CARD_SHADOW,
   }),
   heroIconWrap: {
-    backgroundColor: "#FFF8F0",
+    backgroundColor: C.amberLight,
   },
 });

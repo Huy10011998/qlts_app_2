@@ -10,6 +10,7 @@ import {
 import Ionicons from "react-native-vector-icons/Ionicons";
 import type { MenuItemCardProps } from "../../../types";
 import { HOME_BRAND_RED } from "./homeTheme";
+import { C } from "../../../utils/helpers/colors";
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 const localStyles = StyleSheet.create({
@@ -19,19 +20,19 @@ const localStyles = StyleSheet.create({
 });
 
 const HOME_FEATURE_FIXED_THEME = {
-  bg: "#fff",
-  iconBg: "#FFF0F6",
-  color: "#DB2777",
-  text: "#831843",
-  border: "#FBCFE8",
+  bg: C.surface,
+  iconBg: C.pinkSurface,
+  color: C.rose,
+  text: C.text,
+  border: C.border,
 };
 
 const HOME_VEHICLE_THEME = {
-  bg: "#FFFFFF",
-  iconBg: "#E0F2FE",
-  color: "#0284C7",
-  text: "#075985",
-  border: "#BAE6FD",
+  bg: C.surface,
+  iconBg: C.blueSurface,
+  color: C.sky,
+  text: C.text,
+  border: C.border,
 };
 
 type HomeMenuItemCardProps = MenuItemCardProps & {
@@ -152,7 +153,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     alignItems: "center",
     overflow: "hidden",
-    shadowColor: "#1A2340",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: C.border,
+    shadowColor: C.shadow,
     shadowOpacity: 0.08,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },

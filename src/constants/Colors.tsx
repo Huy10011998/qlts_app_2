@@ -1,26 +1,27 @@
-const tintColorLight = "#E31E24";
-const tintColorDark = "#fff";
+import { C } from "../utils/helpers/colors";
 
 export const Colors = {
   light: {
-    text: "#000",
-    background: "#fff",
-    tint: tintColorLight,
+    text: "#0F1923",
+    background: "#F0F2F8",
+    card: "#FFFFFF",
+    tint: C.red,
     icon: "#687076",
     tabIconDefault: "#687076",
-    tabIconSelected: tintColorLight,
-    placeholderTextColor: "#aaa",
-    borderColor: "#aaa",
+    tabIconSelected: C.red,
+    placeholderTextColor: C.textSub,
+    borderColor: C.border,
   },
 
   dark: {
-    text: "#ECEDEE",
-    background: "#151718",
-    tint: tintColorDark,
-    icon: "#9BA1A6",
-    tabIconDefault: "#9BA1A6",
-    tabIconSelected: tintColorDark,
-    placeholderTextColor: "#fff",
-    borderColor: "#fff",
+    text: "#F5F7FB",
+    background: "#09111B",
+    card: "#151F2C",
+    tint: "#FF6267",
+    icon: "#AAB7C8",
+    tabIconDefault: "#8796A9",
+    tabIconSelected: "#FF6267",
+    placeholderTextColor: "#718197",
+    borderColor: "#273649",
   },
 };

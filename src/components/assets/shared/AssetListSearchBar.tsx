@@ -1,3 +1,4 @@
+import { C } from "../../../utils/helpers/colors";
 import React from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
@@ -28,11 +29,11 @@ export default function AssetListSearchBar({
     <View style={styles.searchWrap}>
       <View style={styles.searchBox}>
         <View style={styles.searchIconWrap}>
-          <Ionicons name="search-outline" size={16} color="#8A95A3" />
+          <Ionicons name="search-outline" size={16} color={C.textSub} />
         </View>
         <TextInput
           placeholder={placeholder}
-          placeholderTextColor="#B0B8C4"
+          placeholderTextColor={C.placeholder}
           value={value}
           onChangeText={onChangeText}
           style={styles.searchInput}
@@ -46,7 +47,7 @@ export default function AssetListSearchBar({
         )}
         {!isSearching && value.length > 0 && (
           <Pressable onPress={onClear} style={styles.clearButton}>
-            <Ionicons name="close-circle" size={16} color="#B0B8C4" />
+            <Ionicons name="close-circle" size={16} color={C.placeholder} />
           </Pressable>
         )}
       </View>

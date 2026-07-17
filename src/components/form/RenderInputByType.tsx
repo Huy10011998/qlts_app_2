@@ -23,19 +23,19 @@ import { useAssetFormKeyboard } from "../assets/shared/AssetFormScreenShell";
 const localStyles = {
   inputRowInvalid: {
     borderColor: C.red,
-    backgroundColor: "#FFF5F5",
+    backgroundColor: C.redSurface,
   },
   textInput: {
-    color: "#333",
+    color: C.text,
   },
   prefix: {
     marginLeft: 8,
-    color: "#333",
+    color: C.text,
     fontSize: 14,
   },
   textArea: {
     textAlignVertical: "top" as const,
-    color: "#333",
+    color: C.text,
   },
   imageButtonText: {
     marginLeft: 8,
@@ -48,34 +48,34 @@ const localStyles = {
     gap: 10,
   },
   inputText: {
-    color: "#333",
+    color: C.text,
   },
   linkText: {
     color: "blue",
   },
   selectText: {
-    color: "#0F1923",
+    color: C.text,
   },
   selectedValueText: {
-    color: "#000",
+    color: C.text,
   },
   placeholderValueText: {
-    color: "#999",
+    color: C.textMuted,
   },
   selectInputInvalid: {
     borderColor: C.red,
-    backgroundColor: "#FFF5F5",
+    backgroundColor: C.redSurface,
   },
   textAreaInvalid: {
     borderColor: C.red,
-    backgroundColor: "#FFF5F5",
+    backgroundColor: C.redSurface,
   },
   fieldWrapInvalid: {
     borderWidth: 1,
     borderColor: C.red,
     borderRadius: 12,
     overflow: "hidden" as const,
-    backgroundColor: "#FFF5F5",
+    backgroundColor: C.redSurface,
   },
 };
 
@@ -111,7 +111,7 @@ function LinkInputField({
         ref={urlInputRef}
         style={[styles.input, localStyles.inputText]}
         placeholder="Nhập đường link"
-        placeholderTextColor="#888"
+        placeholderTextColor={C.textMuted}
         value={url}
         onFocus={() => {
           keyboardContext?.handleInputFocus(urlInputRef.current);
@@ -125,7 +125,7 @@ function LinkInputField({
         ref={labelInputRef}
         style={[styles.input, localStyles.inputText]}
         placeholder="Nhập label"
-        placeholderTextColor="#888"
+        placeholderTextColor={C.textMuted}
         value={label}
         onFocus={() => {
           keyboardContext?.handleInputFocus(labelInputRef.current);
@@ -229,7 +229,7 @@ export const RenderInputByType = ({
         keyboardType={keyboardType}
         value={String(value ?? "")}
         placeholder={`Nhập ${f.moTa ?? f.name}`}
-        placeholderTextColor="#888"
+        placeholderTextColor={C.textMuted}
         onFocus={() => handleInputFocus(basicInputRef.current)}
         onChangeText={(t) => handleChange(f.name, t)}
       />
@@ -258,7 +258,7 @@ export const RenderInputByType = ({
             keyboardType="numeric"
             value={formattedValue}
             placeholder={`Nhập ${f.moTa ?? f.name}`}
-            placeholderTextColor="#888"
+            placeholderTextColor={C.textMuted}
             onFocus={() => handleInputFocus(numberInputRef.current)}
             onChangeText={(text) => {
               const raw = disableNumberGrouping ? text : unFormatVND(text);
@@ -286,7 +286,7 @@ export const RenderInputByType = ({
           <Switch
             value={!!value}
             onValueChange={(v) => handleChange(f.name, v)}
-            trackColor={{ false: "#888", true: C.red }}
+            trackColor={{ false: C.borderStrong, true: C.red }}
             thumbColor={value ? "#ffffff" : "#f4f3f4"}
           />
         </View>
@@ -326,7 +326,7 @@ export const RenderInputByType = ({
             multiline
             value={String(value ?? "")}
             placeholder={`Nhập ${f.moTa ?? f.name}`}
-            placeholderTextColor="#888"
+            placeholderTextColor={C.textMuted}
             onFocus={() => handleInputFocus(textAreaWrapRef.current)}
             onChangeText={(t) => handleChange(f.name, t)}
           />
@@ -418,7 +418,7 @@ export const RenderInputByType = ({
           <Ionicons
             name="chevron-down"
             size={20}
-            color="#444"
+            color={C.textSecondary}
             style={pickerFieldTriggerStyles.icon}
           />
         </TouchableOpacity>

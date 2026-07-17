@@ -1,3 +1,4 @@
+import { C } from "../../../utils/helpers/colors";
 import React, { useEffect, useState } from "react";
 import {
   LayoutAnimation,
@@ -15,10 +16,10 @@ const localStyles = {
     paddingLeft: 16,
   },
   folderIconWrap: {
-    backgroundColor: "#FFF8F0",
+    backgroundColor: C.amberLight,
   },
   leafIconWrap: {
-    backgroundColor: "#EEF2FF",
+    backgroundColor: C.indigoSurface,
   },
 };
 
@@ -108,7 +109,7 @@ export default function AssetTreeNodeItem({
             />
           </TouchableOpacity>
         ) : (
-          <Ionicons name="chevron-forward" size={14} color="#C7C7CC" />
+          <Ionicons name="chevron-forward" size={14} color={C.textMuted} />
         )}
       </View>
 
@@ -137,7 +138,7 @@ const styles = StyleSheet.create({
   nodeRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     borderRadius: 14,
     minHeight: 58,
     paddingVertical: 11,
@@ -148,17 +149,17 @@ const styles = StyleSheet.create({
     ...CARD_SHADOW,
   },
   nodeRowChild: {
-    backgroundColor: "#FAFBFE",
+    backgroundColor: C.surfaceAlt,
     minHeight: 56,
     shadowOpacity: 0.03,
     elevation: 1,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#EDF0F5",
+    borderColor: C.border,
   },
   nodeRowSelected: {
     borderWidth: 1,
-    borderColor: "#FFD6D6",
-    backgroundColor: "#FFF8F8",
+    borderColor: C.redBorder,
+    backgroundColor: C.redSurface,
   },
   nodeAccent: {
     position: "absolute",
@@ -186,7 +187,7 @@ const styles = StyleSheet.create({
   nodeText: {
     flex: 1,
     fontSize: 13.5,
-    color: "#0F1923",
+    color: C.text,
     fontWeight: "600",
     lineHeight: 20,
     includeFontPadding: false,
@@ -195,7 +196,7 @@ const styles = StyleSheet.create({
   nodeTextChild: {
     fontSize: 12.5,
     fontWeight: "500",
-    color: "#374151",
+    color: C.textSecondary,
     lineHeight: 19,
   },
   nodeChevronWrap: {
@@ -204,6 +205,6 @@ const styles = StyleSheet.create({
     borderRadius: 7,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFF8F0",
+    backgroundColor: C.amberLight,
   },
 });

@@ -97,9 +97,9 @@ export function SettingSwitchRow({
       <Switch
         value={value}
         onValueChange={onValueChange}
-        trackColor={{ false: "#DDE1EA", true: C.red }}
+        trackColor={{ false: C.borderStrong, true: C.red }}
         thumbColor="#fff"
-        ios_backgroundColor="#DDE1EA"
+        ios_backgroundColor={C.borderStrong}
       />
     </View>
   );
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: 14,
-    shadowColor: "#000",
+    shadowColor: C.shadow,
     shadowOpacity: 0.12,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },

@@ -20,12 +20,14 @@ import ShareholderAttendanceRow from "./shared/ShareholderAttendanceRow";
 import OpinionPickerModal from "./shared/OpinionPickerModal";
 import { VOTING_OPTIONS } from "./shared/shareholdersMeetingHelpers";
 import { useShareholdersMeetingController } from "./shared/useShareholdersMeetingController";
+import { useColorScheme } from "../../hooks/useColorScheme";
 
 function AttendanceSeparator() {
   return <View style={attStyles.separator} />;
 }
 
 const ShareholdersMeetingScreen: React.FC = () => {
+  const isDark = useColorScheme() === "dark";
   const {
     activeMeeting,
     activeTab,
@@ -135,7 +137,10 @@ const ShareholdersMeetingScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.safe} edges={["left", "right"]}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={C.bg}
+      />
 
       <View style={styles.heroCard}>
         <Text style={styles.heroTitle}>
@@ -288,13 +293,13 @@ const ShareholdersMeetingScreen: React.FC = () => {
               <MaterialCommunityIcons
                 name="magnify"
                 size={16}
-                color="#8A95A3"
+                color={C.textSub}
               />
             </View>
             <TextInput
               style={attStyles.searchInput}
               placeholder="Tìm theo tên hoặc mã cổ đông..."
-              placeholderTextColor="#B0B8C4"
+              placeholderTextColor={C.placeholder}
               value={searchQuery}
               onChangeText={setSearchQuery}
               clearButtonMode="never"
@@ -314,7 +319,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
                 <MaterialCommunityIcons
                   name="close-circle"
                   size={16}
-                  color="#B0B8C4"
+                  color={C.placeholder}
                 />
               </TouchableOpacity>
             ) : null}
@@ -586,7 +591,7 @@ const styles = StyleSheet.create({
     gap: 8,
     borderBottomWidth: 1,
     borderBottomColor: C.border,
-    shadowColor: "#000",
+    shadowColor: C.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
@@ -643,7 +648,7 @@ const attStyles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: C.border,
-    shadowColor: "#000",
+    shadowColor: C.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 2,
@@ -678,8 +683,8 @@ const attStyles = StyleSheet.create({
     paddingHorizontal: 12,
     marginBottom: 12,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#EDF0F5",
-    shadowColor: "#1A2340",
+    borderColor: C.border,
+    shadowColor: C.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
@@ -735,7 +740,7 @@ const voteStyles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: C.border,
-    shadowColor: "#000",
+    shadowColor: C.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 2,
@@ -762,7 +767,7 @@ const voteStyles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1,
     borderColor: C.border,
-    shadowColor: "#000",
+    shadowColor: C.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
@@ -856,7 +861,7 @@ const voteStyles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: "#C5D3F5",
+    borderColor: C.borderStrong,
   },
   selectedInfoHeader: {
     marginBottom: 8,
@@ -866,10 +871,10 @@ const voteStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: C.surface,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "#C5D3F5",
+    borderColor: C.borderStrong,
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
@@ -928,7 +933,7 @@ const voteStyles = StyleSheet.create({
     backgroundColor: C.accentLight,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#C5D3F5",
+    borderColor: C.borderStrong,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },

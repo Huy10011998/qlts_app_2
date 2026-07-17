@@ -24,7 +24,7 @@ export default function SettingPasswordInput({
       <TextInput
         style={styles.input}
         placeholder={placeholder}
-        placeholderTextColor={hasError ? C.red : "#BCC4CE"}
+        placeholderTextColor={hasError ? C.red : C.placeholder}
         secureTextEntry={!show}
         value={value}
         onChangeText={onChangeText}
@@ -37,7 +37,7 @@ export default function SettingPasswordInput({
         <Ionicons
           name={show ? "eye-off-outline" : "eye-outline"}
           size={18}
-          color={hasError ? C.red : "#AAB2BC"}
+          color={hasError ? C.red : C.placeholder}
         />
       </TouchableOpacity>
     </View>
@@ -49,16 +49,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1.5,
-    borderColor: "#EDF0F5",
+    borderColor: C.border,
     borderRadius: 14,
     marginBottom: 12,
     minHeight: 54,
     paddingHorizontal: 16,
-    backgroundColor: "#F7F9FC",
+    backgroundColor: C.input,
   },
   wrapError: {
     borderColor: C.red,
-    backgroundColor: "#FFF5F5",
+    backgroundColor: C.redSurface,
   },
   input: {
     flex: 1,

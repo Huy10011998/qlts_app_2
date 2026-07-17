@@ -13,6 +13,7 @@ import {
 } from "../../utils/helpers/api";
 import { fetchImage, pickImage } from "../../utils/Image";
 import { isEffectivelyEmptyCodeValue } from "../../utils/helpers/string";
+import { C } from "../../utils/helpers/colors";
 import { useImageLoader } from "../../hooks/useImageLoader";
 import {
   checkValidation,
@@ -409,7 +410,7 @@ export default function AssetAddRelatedItem() {
       }
     >
       <AssetFormHeroCard
-        iconBgColor="#FFF3F3"
+        iconBgColor={C.redSurface}
         iconColor={BRAND_RED}
         iconName="link-outline"
         styles={styles}
@@ -455,6 +456,6 @@ const styles = StyleSheet.create({
     cardShadow: CARD_SHADOW,
   }),
   heroIconWrap: {
-    backgroundColor: "#FFF3F3",
+    backgroundColor: C.redSurface,
   },
 });

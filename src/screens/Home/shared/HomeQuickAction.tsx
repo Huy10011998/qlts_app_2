@@ -1,6 +1,7 @@
 import React from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import { C } from "../../../utils/helpers/colors";
 
 type HomeQuickActionProps = {
   iconName: string;
@@ -62,7 +63,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
+    shadowColor: C.shadow,
     shadowOpacity: 0.08,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
@@ -76,10 +77,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 17,
     fontWeight: "700",
-    color: "#4B5563",
+    color: C.textSecondary,
     textAlign: "center",
   },
   labelDisabled: {
-    color: "#9CA3AF",
+    color: C.textMuted,
   },
 });

@@ -3,6 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { HOME_BRAND_RED } from "./homeTheme";
 import { COMPACT_TEXT_MAX_SCALE } from "../../../utils/helpers/textScaling";
+import { C } from "../../../utils/helpers/colors";
 
 const localStyles = StyleSheet.create({
   tagIcon: {
@@ -81,7 +82,7 @@ export default function HomeEventBanner({
             {title}
           </Text>
           <View style={styles.metaRow}>
-            <Ionicons name="location-outline" size={11} color="#8A95A3" />
+            <Ionicons name="location-outline" size={11} color={C.textSub} />
             <Text
               style={styles.meta}
               numberOfLines={1}
@@ -90,7 +91,7 @@ export default function HomeEventBanner({
               {venue}
             </Text>
             <View style={styles.dot} />
-            <Ionicons name="time-outline" size={11} color="#8A95A3" />
+            <Ionicons name="time-outline" size={11} color={C.textSub} />
             <Text
               style={styles.meta}
               numberOfLines={1}
@@ -112,7 +113,7 @@ export default function HomeEventBanner({
       </View>
 
       <View style={styles.chevronWrap}>
-        <Ionicons name="chevron-forward" size={14} color="#C7C7CC" />
+        <Ionicons name="chevron-forward" size={14} color={C.textMuted} />
       </View>
     </TouchableOpacity>
   );
@@ -120,18 +121,20 @@ export default function HomeEventBanner({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     borderRadius: 18,
     marginBottom: 14,
     flexDirection: "row",
     alignItems: "center",
     overflow: "hidden",
-    shadowColor: "#1A2340",
+    shadowColor: C.shadow,
     shadowOpacity: 0.08,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 3 },
     elevation: 3,
     paddingRight: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: C.border,
   },
   stripe: {
     width: 5,
@@ -151,11 +154,11 @@ const styles = StyleSheet.create({
     width: 54,
     height: 60,
     borderRadius: 12,
-    backgroundColor: "#FFF0F0",
+    backgroundColor: C.redSurface,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#FFD6D6",
+    borderColor: C.redBorder,
   },
   dateDay: {
     fontSize: 20,
@@ -176,7 +179,7 @@ const styles = StyleSheet.create({
   tag: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFF0F0",
+    backgroundColor: C.redSurface,
     borderRadius: 6,
     paddingHorizontal: 7,
     paddingVertical: 2,
@@ -190,7 +193,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#0F1923",
+    color: C.text,
     marginBottom: 5,
     lineHeight: 18,
   },
@@ -200,15 +203,15 @@ const styles = StyleSheet.create({
     gap: 4,
     marginBottom: 4,
   },
-  meta: { fontSize: 10, color: "#8A95A3" },
-  dot: { width: 3, height: 3, borderRadius: 2, backgroundColor: "#D1D5DB" },
+  meta: { fontSize: 10, color: C.textSub },
+  dot: { width: 3, height: 3, borderRadius: 2, backgroundColor: C.borderStrong },
   countRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   countText: { fontSize: 11, fontWeight: "600", color: HOME_BRAND_RED },
   chevronWrap: {
     width: 24,
     height: 24,
     borderRadius: 8,
-    backgroundColor: "#F0F2F8",
+    backgroundColor: C.surfaceAlt,
     alignItems: "center",
     justifyContent: "center",
   },

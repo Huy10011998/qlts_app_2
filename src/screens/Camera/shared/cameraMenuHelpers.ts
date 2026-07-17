@@ -1,4 +1,5 @@
 import { removeVietnameseTones } from "../../../utils/Helper";
+import { C } from "../../../utils/helpers/colors";
 
 export interface CameraItem {
   id: string;
@@ -13,13 +14,13 @@ export const getCameraItemTheme = (item: CameraItem, expanded: boolean) => {
       ? {
           icon: "folder-open",
           lib: "ionicons" as const,
-          bg: "#FFF5F5",
+          bg: C.redSurface,
           color: "#E31E24",
         }
       : {
           icon: "folder",
           lib: "ionicons" as const,
-          bg: "#FFF8F0",
+          bg: C.orangeSurface,
           color: "#E67700",
         };
   }
@@ -27,7 +28,7 @@ export const getCameraItemTheme = (item: CameraItem, expanded: boolean) => {
   return {
     icon: "videocam",
     lib: "material" as const,
-    bg: "#EEF2FF",
+    bg: C.indigoSurface,
     color: "#3B5BDB",
   };
 };

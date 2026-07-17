@@ -203,11 +203,11 @@ export default function AssetGroupList({
 
 const styles = StyleSheet.create({
   groupCard: {
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
-    shadowColor: "#000",
+    shadowColor: C.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 6,
@@ -233,23 +233,23 @@ const styles = StyleSheet.create({
 
   label: {
     fontWeight: "600",
-    color: "#000",
+    color: C.text,
     fontSize: 14,
     marginRight: 6,
   },
 
   value: {
     fontSize: 14,
-    color: "#000",
+    color: C.text,
     flexShrink: 1,
   },
   changedValue: {
-    color: "red",
+    color: C.red,
     fontWeight: "600",
   },
 
   link: {
-    color: "blue",
+    color: C.blue,
     textDecorationLine: "underline",
   },
 
@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 8,
-    backgroundColor: "#f2f2f2",
+    backgroundColor: C.surfaceAlt,
   },
 
   modalContainer: {

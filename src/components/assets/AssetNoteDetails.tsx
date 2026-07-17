@@ -1,5 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet, Dimensions, View, Animated } from "react-native";
+import {
+  StyleSheet,
+  Dimensions,
+  View,
+  Animated,
+  useColorScheme,
+} from "react-native";
 import { WebView } from "react-native-webview";
 import type { CenterTextProps } from "../../types";
 import IsLoading from "../ui/IconLoading";
@@ -10,6 +16,9 @@ export default function AssetNoteDetails({
   text,
   loadErrorMessage,
 }: CenterTextProps) {
+  const isDark = useColorScheme() === "dark";
+  const webTextColor = isDark ? "#E8EEF6" : "#172033";
+  const webBackgroundColor = isDark ? "#151F2C" : "#FFFFFF";
   const safeText =
     typeof text === "string" && text.trim().length > 0 ? text : "---";
   const shouldShowLoader = safeText !== "---";
@@ -28,7 +37,8 @@ export default function AssetNoteDetails({
           margin: 0;
           font-size: 14px; 
           padding: 10px; 
-          color: #000; 
+          color: ${webTextColor};
+          background-color: ${webBackgroundColor};
           font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
         }
         span, div { white-space: pre-wrap; }
@@ -120,6 +130,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.6)",
+    backgroundColor: C.loadingOverlay,
   },
 });

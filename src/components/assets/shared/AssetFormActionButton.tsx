@@ -1,3 +1,4 @@
+import { C } from "../../../utils/helpers/colors";
 import React from "react";
 import {
   StyleProp,
@@ -77,13 +78,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   secondaryButton: {
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     borderWidth: 1,
-    borderColor: "#FFD6D6",
+    borderColor: C.redBorder,
   },
   primaryButton: {},
   primaryButtonDisabled: {
-    backgroundColor: "#ccc",
+    backgroundColor: C.borderStrong,
   },
   label: {
     fontSize: 16,

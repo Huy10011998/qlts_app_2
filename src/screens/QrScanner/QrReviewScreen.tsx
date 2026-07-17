@@ -4,7 +4,7 @@ import ScreenContainer from "../shared/ScreenContainer";
 
 export default function QrReviewScreen() {
   return (
-    <ScreenContainer backgroundColor="#F3F4F6">
+    <ScreenContainer>
       <QrReview />
     </ScreenContainer>
   );

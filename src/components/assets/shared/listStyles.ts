@@ -1,5 +1,6 @@
 import { StyleSheet } from "react-native";
 import { BG, BRAND_RED, CARD_SHADOW } from "./listTheme";
+import { C } from "../../../utils/helpers/colors";
 
 export const sharedAssetListStyles = StyleSheet.create({
   container: {
@@ -15,12 +16,12 @@ export const sharedAssetListStyles = StyleSheet.create({
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     minHeight: 48,
     paddingHorizontal: 12,
     borderRadius: 14,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#EDF0F5",
+    borderColor: C.border,
     ...CARD_SHADOW,
   },
   searchIconWrap: {
@@ -36,7 +37,7 @@ export const sharedAssetListStyles = StyleSheet.create({
     paddingVertical: 0,
     fontSize: 14,
     lineHeight: 20,
-    color: "#0F1923",
+    color: C.text,
     fontWeight: "400",
     includeFontPadding: false,
     textAlignVertical: "center",
@@ -61,12 +62,12 @@ export const sharedAssetListStyles = StyleSheet.create({
   },
   summaryBadge: {
     alignSelf: "flex-start",
-    backgroundColor: "#FFF0F0",
+    backgroundColor: C.redSurface,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderWidth: 1,
-    borderColor: "#FFD6D6",
+    borderColor: C.redBorder,
     minWidth: 0,
     flexShrink: 1,
   },
@@ -77,7 +78,7 @@ export const sharedAssetListStyles = StyleSheet.create({
   },
   summaryMeta: {
     fontSize: 11.5,
-    color: "#8A95A3",
+    color: C.textSub,
     fontWeight: "500",
   },
   listContent: {
@@ -94,11 +95,11 @@ export const sharedAssetListStyles = StyleSheet.create({
   filterCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     borderRadius: 14,
     padding: 12,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#EDF0F5",
+    borderColor: C.border,
     ...CARD_SHADOW,
   },
   filterCardIcon: {
@@ -107,7 +108,7 @@ export const sharedAssetListStyles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFF5F5",
+    backgroundColor: C.redSurface,
     marginRight: 10,
   },
   filterCardContent: {
@@ -117,12 +118,12 @@ export const sharedAssetListStyles = StyleSheet.create({
   filterCardTitle: {
     fontSize: 13.5,
     fontWeight: "700",
-    color: "#0F1923",
+    color: C.text,
     marginBottom: 2,
   },
   filterCardSub: {
     fontSize: 11.5,
-    color: "#8A95A3",
+    color: C.textSub,
     flexShrink: 1,
   },
 });

@@ -1,4 +1,5 @@
 import { StyleSheet } from "react-native";
+import { C } from "../../utils/helpers/colors";
 
 export const TAB_HEIGHT = 56;
 export const TAB_ACTIVE_COLOR = "#E31E24";
@@ -20,7 +21,7 @@ type TabBarStyleParams = {
 
 export const createTabBarStyle = ({
   bottomInset,
-  backgroundColor = "#fff",
+  backgroundColor = C.surface,
   borderTopColor,
 }: TabBarStyleParams) => ({
   backgroundColor,

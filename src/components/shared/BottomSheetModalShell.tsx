@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import { C } from "../../utils/helpers/colors";
 
 type BottomSheetModalShellProps = {
   avoidKeyboard?: boolean;
@@ -139,7 +140,7 @@ export default function BottomSheetModalShell({
               hitSlop={10}
               onPress={onClose}
             >
-              <Ionicons name="close" size={22} color="#6B7280" />
+              <Ionicons name="close" size={22} color={C.textSecondary} />
             </TouchableOpacity>
           ) : null}
           {showHandle ? <View style={styles.handle} /> : null}
@@ -160,7 +161,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sheet: {
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
   },
   closeButton: {
     position: "absolute",
@@ -172,12 +173,12 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F3F4F6",
+    backgroundColor: C.surfaceAlt,
   },
   handle: {
     width: 45,
     height: 5,
-    backgroundColor: "#ccc",
+    backgroundColor: C.borderStrong,
     borderRadius: 3,
     alignSelf: "center",
     marginTop: 10,

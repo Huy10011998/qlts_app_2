@@ -56,7 +56,6 @@ export const TimePickerModalAndroid = ({
           display="spinner"
           is24Hour={true}
           onChange={handleTimeChange}
-          themeVariant="light"
         />
       )}
     </View>

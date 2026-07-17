@@ -238,11 +238,11 @@ export default function EnumAndReferencePickerModal({
 
       <View style={styles.searchWrapper}>
         <View style={styles.searchIconWrap}>
-          <Ionicons name="search-outline" size={16} color="#8A95A3" />
+          <Ionicons name="search-outline" size={16} color={C.textSub} />
         </View>
         <TextInput
           placeholder="Tìm kiếm..."
-          placeholderTextColor="#B0B8C4"
+          placeholderTextColor={C.placeholder}
           value={searchText}
           onChangeText={setSearchText}
           style={styles.searchInput}
@@ -262,7 +262,7 @@ export default function EnumAndReferencePickerModal({
             style={styles.clearButton}
             hitSlop={8}
           >
-            <Ionicons name="close-circle" size={16} color="#B0B8C4" />
+            <Ionicons name="close-circle" size={16} color={C.placeholder} />
           </Pressable>
         ) : null}
       </View>
@@ -313,7 +313,7 @@ export default function EnumAndReferencePickerModal({
 const styles = StyleSheet.create({
   modalContainer: {
     height: "75%",
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     paddingHorizontal: 16,
     paddingTop: 8,
     borderTopLeftRadius: 18,
@@ -323,6 +323,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: "700",
+    color: C.text,
     marginBottom: 16,
     textAlign: "center",
     paddingHorizontal: 52,
@@ -342,7 +343,7 @@ const styles = StyleSheet.create({
   multiCount: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#667085",
+    color: C.textMuted,
   },
 
   multiDoneButton: {
@@ -363,14 +364,14 @@ const styles = StyleSheet.create({
   searchWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     minHeight: 48,
     paddingHorizontal: 12,
     borderRadius: 14,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#EDF0F5",
+    borderColor: C.border,
     marginBottom: 8,
-    shadowColor: "#1A2340",
+    shadowColor: C.shadow,
     shadowOpacity: 0.06,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
@@ -391,7 +392,7 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
     fontSize: 14,
     lineHeight: 20,
-    color: "#0F1923",
+    color: C.text,
     fontWeight: "400",
     includeFontPadding: false,
     textAlignVertical: "center",
@@ -430,7 +431,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 4,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: "#eee",
+    borderColor: C.border,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -438,35 +439,35 @@ const styles = StyleSheet.create({
 
   modalItemText: {
     fontSize: 15,
-    color: "#000",
+    color: C.text,
     flex: 1,
     paddingRight: 12,
   },
 
   modalItemSelected: {
-    backgroundColor: "#F0FDF4",
+    backgroundColor: C.greenLight,
   },
 
   modalItemTextSelected: {
     fontWeight: "700",
-    color: "#15803D",
+    color: C.green,
   },
 
   header: {
     textAlign: "center",
     fontSize: 14,
-    color: "#333",
+    color: C.text,
     fontWeight: "600",
   },
 
   stickyHeader: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: C.surfaceAlt,
     paddingVertical: 10,
     zIndex: 10,
   },
 
   emptyItemText: {
-    color: "#999", // xám nhạt
+    color: C.textMuted, // xám nhạt
     fontStyle: "italic", // nhìn là biết option đặc biệt
   },
 });

@@ -126,7 +126,7 @@ export const VOTING_OPTIONS: Array<{
     label: "Không tán thành",
     description: "Ghi nhận cổ đông không đồng ý với ý kiến đã chọn.",
     color: C.red,
-    bg: "#FFF1F2",
+    bg: C.redSurface,
     border: C.redBorder,
     icon: "close-circle-outline",
   },

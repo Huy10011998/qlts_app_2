@@ -1,3 +1,4 @@
+import { C } from "../../utils/helpers/colors";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -280,7 +281,7 @@ export default function VehicleTrackingScreen() {
           >
             {vehicle ? vehicleLabel(vehicle) : "Phương tiện"}
           </Text>
-          <Ionicons name="chevron-down" size={18} color="#64748B" />
+          <Ionicons name="chevron-down" size={18} color={C.textSecondary} />
         </TouchableOpacity>
         <View style={styles.dateRow}>
           <View style={styles.dateField}>
@@ -349,7 +350,7 @@ export default function VehicleTrackingScreen() {
                     <Ionicons
                       name="calendar-outline"
                       size={18}
-                      color="#64748B"
+                      color={C.textSecondary}
                     />
                     <Text style={styles.groupDate}>{dateTitle(date)}</Text>
                     <View style={styles.count}>
@@ -358,7 +359,7 @@ export default function VehicleTrackingScreen() {
                     <Ionicons
                       name={opened ? "chevron-up" : "chevron-down"}
                       size={18}
-                      color="#64748B"
+                      color={C.textSecondary}
                     />
                   </TouchableOpacity>
                   {opened
@@ -404,7 +405,7 @@ export default function VehicleTrackingScreen() {
                             <Ionicons
                               name="map-outline"
                               size={20}
-                              color="#64748B"
+                              color={C.textSecondary}
                             />
                           </TouchableOpacity>
                         );
@@ -451,7 +452,7 @@ export default function VehicleTrackingScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#F8FAFC" },
+  root: { flex: 1, backgroundColor: C.surfaceAlt },
   content: {
     flexGrow: 1,
     paddingHorizontal: 16,
@@ -462,26 +463,26 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F8FAFC",
+    backgroundColor: C.surfaceAlt,
   },
-  loadingText: { marginTop: 9, color: "#64748B" },
+  loadingText: { marginTop: 9, color: C.textSecondary },
 
-  title: { fontSize: 19, fontWeight: "700", color: "#1E293B" },
-  subtitle: { fontSize: 13, color: "#64748B", marginTop: 2 },
-  label: { fontSize: 13, fontWeight: "600", color: "#475569", marginBottom: 7 },
+  title: { fontSize: 19, fontWeight: "700", color: C.text },
+  subtitle: { fontSize: 13, color: C.textSecondary, marginTop: 2 },
+  label: { fontSize: 13, fontWeight: "600", color: C.text, marginBottom: 7 },
   select: {
     height: 50,
     borderWidth: 1.5,
     borderColor: "#4F46E5",
     borderRadius: 10,
-    backgroundColor: "#FFF",
+    backgroundColor: C.surface,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 13,
     marginBottom: 16,
   },
-  selectText: { flex: 1, marginHorizontal: 10, fontSize: 15, color: "#334155" },
-  placeholderText: { color: "#94A3B8" },
+  selectText: { flex: 1, marginHorizontal: 10, fontSize: 15, color: C.text },
+  placeholderText: { color: C.textMuted },
   dateRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
   dateField: { flex: 1 },
   actions: { flexDirection: "row", gap: 10, marginBottom: 18 },
@@ -501,9 +502,9 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 280,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: C.border,
     borderRadius: 14,
-    backgroundColor: "#FFF",
+    backgroundColor: C.surface,
     overflow: "hidden",
   },
   listState: {
@@ -512,23 +513,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  group: { borderBottomWidth: 1, borderBottomColor: "#E2E8F0" },
+  group: { borderBottomWidth: 1, borderBottomColor: C.border },
   groupHeader: {
     minHeight: 52,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 13,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: C.surfaceAlt,
     gap: 8,
   },
-  groupDate: { flex: 1, color: "#64748B", fontSize: 13, fontWeight: "700" },
+  groupDate: { flex: 1, color: C.textSecondary, fontSize: 13, fontWeight: "700" },
   count: {
-    backgroundColor: "#E2E8F0",
+    backgroundColor: C.border,
     borderRadius: 12,
     paddingHorizontal: 9,
     paddingVertical: 4,
   },
-  countText: { fontSize: 11, fontWeight: "700", color: "#64748B" },
+  countText: { fontSize: 11, fontWeight: "700", color: C.textSecondary },
   stopRow: { flexDirection: "row", paddingHorizontal: 14, paddingTop: 14 },
   lineCol: { width: 25, alignItems: "center" },
   dot: {
@@ -536,12 +537,12 @@ const styles = StyleSheet.create({
     height: 14,
     borderRadius: 7,
     borderWidth: 3,
-    backgroundColor: "#FFF",
+    backgroundColor: C.surface,
   },
-  line: { width: 2, flex: 1, minHeight: 66, backgroundColor: "#E2E8F0" },
+  line: { width: 2, flex: 1, minHeight: 66, backgroundColor: C.border },
   stopBody: { flex: 1, paddingLeft: 5, paddingBottom: 16 },
-  time: { fontSize: 13, color: "#94A3B8" },
-  address: { fontSize: 15, fontWeight: "600", color: "#1E293B", marginTop: 6 },
+  time: { fontSize: 13, color: C.textMuted },
+  address: { fontSize: 15, fontWeight: "600", color: C.text, marginTop: 6 },
   duration: {
     alignSelf: "flex-start",
     flexDirection: "row",

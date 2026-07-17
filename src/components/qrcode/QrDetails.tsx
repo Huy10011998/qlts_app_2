@@ -255,7 +255,7 @@ export default function QrDetails({ children }: QrDetailsProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9F9F9",
+    backgroundColor: C.surfaceAlt,
   },
   emptyStateRoot: {
     flex: 1,
@@ -271,12 +271,12 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    borderBottomColor: C.border,
   },
 
   menuItemText: {
     fontSize: 15,
-    color: "#333",
+    color: C.text,
     fontWeight: "500",
   },
   headerButton: {

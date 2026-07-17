@@ -14,6 +14,7 @@ import WebView from "react-native-webview";
 import type { StackRoute } from "../../types";
 import { VEHICLE_MAP_CONTROL_CSS } from "./shared/vehicleMapControlStyles";
 import { useForegroundWebViewRemount } from "./shared/useForegroundWebViewRemount";
+import { C } from "../../utils/helpers/colors";
 
 type MapCoordinate = { lat: number; lng: number };
 
@@ -109,7 +110,7 @@ export default function VehicleJourneyMapScreen() {
               isLandscape ? "phone-portrait-outline" : "phone-landscape-outline"
             }
             size={23}
-            color="#334155"
+            color={C.text}
           />
         </TouchableOpacity>
       ) : null}
@@ -118,15 +119,15 @@ export default function VehicleJourneyMapScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#E2E8F0" },
-  map: { flex: 1, backgroundColor: "#E2E8F0" },
+  root: { flex: 1, backgroundColor: C.border },
+  map: { flex: 1, backgroundColor: C.border },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F8FAFC",
+    backgroundColor: C.surfaceAlt,
   },
-  loadingText: { marginTop: 12, color: "#64748B", fontSize: 14 },
+  loadingText: { marginTop: 12, color: C.textSecondary, fontSize: 14 },
   rotateButton: {
     position: "absolute",
     top: 12,
@@ -136,8 +137,8 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.96)",
-    shadowColor: "#000000",
+    backgroundColor: C.surface,
+    shadowColor: C.shadow,
     shadowOpacity: 0.15,
     shadowRadius: 5,
     shadowOffset: { width: 0, height: 2 },

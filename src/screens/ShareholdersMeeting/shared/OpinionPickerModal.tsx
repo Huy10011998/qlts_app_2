@@ -128,12 +128,12 @@ export default function OpinionPickerModal({
 
       <View style={styles.searchBox}>
         <View style={styles.searchIconWrap}>
-          <MaterialCommunityIcons name="magnify" size={16} color="#8A95A3" />
+          <MaterialCommunityIcons name="magnify" size={16} color={C.textSub} />
         </View>
         <TextInput
           style={styles.searchInput}
           placeholder="Tìm theo mã hoặc tên ý kiến..."
-          placeholderTextColor="#B0B8C4"
+          placeholderTextColor={C.placeholder}
           value={searchQuery}
           onChangeText={onChangeSearchQuery}
           clearButtonMode="never"
@@ -153,7 +153,7 @@ export default function OpinionPickerModal({
             <MaterialCommunityIcons
               name="close-circle"
               size={16}
-              color="#B0B8C4"
+              color={C.placeholder}
             />
           </TouchableOpacity>
         ) : null}
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   sheet: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: C.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 16,
@@ -220,13 +220,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#EDF0F5",
+    borderColor: C.border,
     borderRadius: 14,
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     minHeight: 48,
     paddingHorizontal: 12,
     marginBottom: 12,
-    shadowColor: "#1A2340",
+    shadowColor: C.shadow,
     shadowOpacity: 0.06,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
