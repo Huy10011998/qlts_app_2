@@ -41,6 +41,7 @@ import { useAppDispatch } from "../../store/hooks";
 import { reloadPermissions } from "../../store/PermissionActions";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { readStoredAuthUsername } from "../../context/authStorage";
+import { C } from "../../utils/helpers/colors";
 
 const HOME_FEATURE_PINNED_IDS_KEY = "@home:pinnedFeatureIds";
 const HOME_FEATURE_PINNED_IDS_USER_KEY = `${HOME_FEATURE_PINNED_IDS_KEY}:user`;
@@ -422,21 +423,21 @@ const HomeScreen: React.FC = () => {
       {
         iconName: "qr-code-outline",
         label: "Quét QR",
-        bg: "#F0F4FF",
-        color: "#3B5BDB",
+        bg: C.indigoSurface,
+        color: C.blue,
         onPress: openScanScreen,
       },
       {
         iconName: "notifications-outline",
         label: "Thông báo",
-        bg: "#FFF5F5",
+        bg: C.redSurface,
         color: HOME_BRAND_RED,
       },
       {
         iconName: "settings-outline",
         label: "Cài đặt",
-        bg: "#F0FBF7",
-        color: "#10B981",
+        bg: C.greenLight,
+        color: C.emerald,
         onPress: openSettingScreen,
       },
     ],
@@ -693,10 +694,10 @@ const HomeScreen: React.FC = () => {
                   value={String(HOME_CAMERA_SUMMARY.totalCameras)}
                   label="Camera đang quản lý"
                   sub="Cập nhật hôm nay"
-                  subColor="#10B981"
+                  subColor={C.emerald}
                   iconName="videocam-outline"
-                  iconBg="#E8FBF3"
-                  iconColor="#10B981"
+                  iconBg={C.greenLight}
+                  iconColor={C.emerald}
                 />
               ) : null}
               {canViewAssets ? (
@@ -704,9 +705,9 @@ const HomeScreen: React.FC = () => {
                   value={String(HOME_ASSET_SUMMARY.totalAssets)}
                   label="Tài sản đang quản lý"
                   sub="Cập nhật hôm nay"
-                  subColor="#8A95A3"
+                  subColor={C.textMuted}
                   iconName="cube-outline"
-                  iconBg="#FFF0F0"
+                  iconBg={C.redIconSurface}
                   iconColor={HOME_BRAND_RED}
                   trend="neutral"
                 />
@@ -876,7 +877,7 @@ const styles = StyleSheet.create({
   featureSheetTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#111827",
+    color: C.text,
     marginBottom: 14,
     paddingRight: 44,
   },
@@ -892,16 +893,18 @@ const styles = StyleSheet.create({
     width: "48%",
   },
   noPermissionCard: {
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     borderRadius: 18,
     paddingVertical: 20,
     paddingHorizontal: 12,
     marginBottom: 14,
-    shadowColor: "#1A2340",
+    shadowColor: C.shadow,
     shadowOpacity: 0.07,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
     elevation: 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: C.border,
   },
 
   reportList: {
@@ -916,12 +919,12 @@ const styles = StyleSheet.create({
   reportCard: {
     flex: 1,
     minHeight: 118,
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     borderRadius: 16,
     padding: 12,
     borderWidth: 1,
-    borderColor: "#DDD2FF",
-    shadowColor: "#1A2340",
+    borderColor: C.violetBorder,
+    shadowColor: C.shadow,
     shadowOpacity: 0.07,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
@@ -931,7 +934,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: "#F3F0FF",
+    backgroundColor: C.violetSurface,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 10,
@@ -943,7 +946,7 @@ const styles = StyleSheet.create({
   reportTitle: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#2F225F",
+    color: C.text,
     lineHeight: 17,
     minHeight: 34,
     marginBottom: 6,
@@ -955,7 +958,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 8,
-    backgroundColor: "#F3F0FF",
+    backgroundColor: C.violetSurface,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -968,8 +971,8 @@ const styles = StyleSheet.create({
     height: 26,
     borderRadius: 9,
     borderWidth: 1,
-    borderColor: "#DDD2FF",
-    backgroundColor: "#F3F0FF",
+    borderColor: C.violetBorder,
+    backgroundColor: C.violetSurface,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -988,7 +991,7 @@ const styles = StyleSheet.create({
 
   statsRow: { flexDirection: "row", gap: 10, marginBottom: 14 },
   qaCard: {
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     borderRadius: 18,
     flexDirection: "row",
     alignItems: "center",
@@ -996,16 +999,18 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 8,
     marginBottom: 14,
-    shadowColor: "#1A2340",
+    shadowColor: C.shadow,
     shadowOpacity: 0.07,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
     elevation: 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: C.border,
   },
   qaDivider: {
     width: 1,
     height: 36,
-    backgroundColor: "#EDF0F5",
+    backgroundColor: C.border,
   },
 });
 

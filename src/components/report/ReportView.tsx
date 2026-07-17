@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
+  useColorScheme,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
@@ -155,7 +156,7 @@ const sleep = (ms: number) =>
     setTimeout(resolve, ms);
   });
 
-export const buildReportHtml = (pdfBase64: string) => `
+export const buildReportHtml = (pdfBase64: string, isDark = false) => `
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.5, maximum-scale=4.0, user-scalable=yes">
@@ -182,11 +183,19 @@ export const buildReportHtml = (pdfBase64: string) => `
     </script>
     <style>
       * { box-sizing: border-box; }
-      body { margin:0; padding:0; overflow-x:hidden; overflow-y:auto; background:#f5f5f5; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
-      #status { position:sticky; top:0; z-index:2; display:flex; align-items:center; justify-content:center; gap:8px; min-height:44px; padding:10px 14px; background:#fff; color:#4B5563; font-size:13px; box-shadow:0 1px 4px rgba(15,25,35,0.08); }
+      body { margin:0; padding:0; overflow-x:hidden; overflow-y:auto; background:${
+        isDark ? "#09111B" : "#F5F5F5"
+      }; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+      #status { position:sticky; top:0; z-index:2; display:flex; align-items:center; justify-content:center; gap:8px; min-height:44px; padding:10px 14px; background:${
+        isDark ? "#151F2C" : "#FFFFFF"
+      }; color:${isDark ? "#AAB7C8" : "#4B5563"}; font-size:13px; box-shadow:0 1px 4px rgba(15,25,35,0.18); }
       #status.hidden { display:none; }
-      #status.error { color:#B42318; background:#FFF5F5; }
-      #spinner { width:16px; height:16px; border-radius:50%; border:2px solid #E5E7EB; border-top-color:#C8102E; animation:spin 0.8s linear infinite; }
+      #status.error { color:${isDark ? "#FF9AA0" : "#B42318"}; background:${
+        isDark ? "#3A2028" : "#FFF5F5"
+      }; }
+      #spinner { width:16px; height:16px; border-radius:50%; border:2px solid ${
+        isDark ? "#3B4D63" : "#E5E7EB"
+      }; border-top-color:#C8102E; animation:spin 0.8s linear infinite; }
       #container { display:flex; flex-direction:column; align-items:center; width:100%; padding:10px; }
       canvas { display:block; width:100%; max-width:none !important; height:auto !important; margin-bottom:12px; border:1px solid #D9DEE8; box-shadow:0 2px 6px rgba(0,0,0,0.1); background:#fff; transform-origin:top center; }
       @keyframes spin { to { transform:rotate(360deg); } }
@@ -492,6 +501,7 @@ const ReportView: React.FC<ReportViewProps> = ({
   previewEndpoint,
   onClose,
 }) => {
+  const isDark = useColorScheme() === "dark";
   const reportConfig = useMemo(
     () => config ?? createDefaultReportConfig(title),
     [config, title]
@@ -802,7 +812,7 @@ const ReportView: React.FC<ReportViewProps> = ({
         setReportLoadFailed(false);
         setIsReportRendering(true);
         setReportPdfBase64(res.data);
-        setReportHtml(buildReportHtml(res.data));
+        setReportHtml(buildReportHtml(res.data, isDark));
       } catch (err) {
         const message = err instanceof Error ? err.message : "";
         if (message.startsWith("REQUIRED:")) {
@@ -841,8 +851,14 @@ const ReportView: React.FC<ReportViewProps> = ({
         }
       }
     },
-    [buildReportPayload, isMounted, previewEndpoint, showAlertIfActive]
+    [buildReportPayload, isDark, isMounted, previewEndpoint, showAlertIfActive]
   );
+
+  useEffect(() => {
+    if (!reportPdfBase64) return;
+    setReportHtml(buildReportHtml(reportPdfBase64, isDark));
+    setWebViewRenderKey((currentKey) => currentKey + 1);
+  }, [isDark, reportPdfBase64]);
 
   const handleSubmit = useCallback(() => {
     loadReport();
@@ -1206,7 +1222,7 @@ const ReportView: React.FC<ReportViewProps> = ({
                 <Text style={styles.shareOptionText} allowFontScaling={false}>
                   {option.label}
                 </Text>
-                <Ionicons name="chevron-forward" size={18} color="#98A2B3" />
+                <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
               </TouchableOpacity>
             ))}
           </View>
@@ -1324,7 +1340,7 @@ export default ReportView;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
   },
   header: {
     paddingHorizontal: 16,
@@ -1379,7 +1395,7 @@ const styles = StyleSheet.create({
   parameterLabel: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#293241",
+    color: C.text,
   },
   required: {
     color: C.red,
@@ -1388,32 +1404,32 @@ const styles = StyleSheet.create({
     minHeight: 46,
     borderRadius: 8,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#D7DDE8",
-    backgroundColor: "#fff",
+    borderColor: C.borderStrong,
+    backgroundColor: C.surface,
     paddingHorizontal: 12,
     fontSize: 14,
-    color: "#1F2937",
+    color: C.text,
   },
   input: {
     minHeight: 46,
     borderRadius: 8,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#D7DDE8",
-    backgroundColor: "#fff",
+    borderColor: C.borderStrong,
+    backgroundColor: C.surface,
     paddingHorizontal: 12,
     fontSize: 14,
-    color: "#1F2937",
+    color: C.text,
   },
   textArea: {
     minHeight: 92,
     borderRadius: 8,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#D7DDE8",
-    backgroundColor: "#fff",
+    borderColor: C.borderStrong,
+    backgroundColor: C.surface,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: "#1F2937",
+    color: C.text,
   },
   boolRow: {
     minHeight: 36,
@@ -1433,19 +1449,19 @@ const styles = StyleSheet.create({
   tooltipLabel: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#4B5563",
+    color: C.textSecondary,
   },
   tooltipText: {
     flex: 1,
     fontSize: 12,
-    color: "#667085",
+    color: C.textMuted,
   },
   uploadButton: {
     minHeight: 46,
     borderRadius: 8,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#D7DDE8",
-    backgroundColor: "#fff",
+    borderColor: C.borderStrong,
+    backgroundColor: C.surface,
     paddingHorizontal: 12,
     flexDirection: "row",
     alignItems: "center",
@@ -1454,7 +1470,7 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 160,
     borderRadius: 8,
-    backgroundColor: "#EEF1F6",
+    backgroundColor: C.surfaceAlt,
   },
   removeImageButton: {
     position: "absolute",
@@ -1482,7 +1498,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold" as const,
   },
   reportLoadingText: {
-    color: "#667085",
+    color: C.textMuted,
     fontSize: 13,
     fontWeight: "600",
     lineHeight: 18,
@@ -1496,21 +1512,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 10,
     paddingBottom: 12,
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
   },
   toolbarButton: {
     width: 42,
     height: 42,
     borderRadius: 8,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#E0E4EA",
-    backgroundColor: "#fff",
+    borderColor: C.border,
+    backgroundColor: C.surface,
     alignItems: "center",
     justifyContent: "center",
   },
   reportContainer: {
     flex: 1,
-    backgroundColor: "#F5F6F8",
+    backgroundColor: C.bg,
   },
   reportContainerLandscape: {
     backgroundColor: "#000",
@@ -1544,7 +1560,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 17,
     fontWeight: "800",
-    color: "#101828",
+    color: C.text,
     marginBottom: 12,
   },
   shareOptionList: {
@@ -1554,8 +1570,8 @@ const styles = StyleSheet.create({
     minHeight: 54,
     borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#E4E7EC",
-    backgroundColor: "#fff",
+    borderColor: C.border,
+    backgroundColor: C.surface,
     paddingHorizontal: 12,
     flexDirection: "row",
     alignItems: "center",
@@ -1566,12 +1582,12 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFF1F3",
+    backgroundColor: C.redSurface,
     marginRight: 10,
   },
   shareOptionText: {
     flex: 1,
-    color: "#1F2937",
+    color: C.text,
     fontSize: 14.5,
     fontWeight: "700",
   },
@@ -1579,12 +1595,12 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.78)",
+    backgroundColor: C.loadingOverlay,
     gap: 10,
   },
   renderOverlayText: {
     fontSize: 13,
-    color: "#4B5563",
+    color: C.textSecondary,
     fontWeight: "600",
     lineHeight: 19,
     paddingHorizontal: 24,
@@ -1622,6 +1638,6 @@ const styles = StyleSheet.create({
   },
   fullscreenReportArea: {
     flex: 1,
-    backgroundColor: "#F5F6F8",
+    backgroundColor: C.bg,
   },
 });

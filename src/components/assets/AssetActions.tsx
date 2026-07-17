@@ -1,3 +1,4 @@
+import { C } from "../../utils/helpers/colors";
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
@@ -8,7 +9,7 @@ import { BRAND_RED } from "./shared/listTheme";
 
 const localStyles = StyleSheet.create({
   iconBadgeBackground: {
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
   },
 });
 
@@ -31,8 +32,8 @@ export default function AssetActions({
           key: "edit",
           label: "Sửa",
           color: "#3B5BDB",
-          bg: "#EEF2FF",
-          border: "#DCE5FF",
+          bg: C.indigoSurface,
+          border: C.violetBorder,
           icon: (
             <MaterialIcons name="edit" size={18} color="#3B5BDB" />
           ),
@@ -44,8 +45,8 @@ export default function AssetActions({
           key: "delete",
           label: "Xóa",
           color: BRAND_RED,
-          bg: "#FFF3F3",
-          border: "#FFD6D6",
+          bg: C.redSurface,
+          border: C.redBorder,
           icon: (
             <MaterialIcons name="delete-outline" size={18} color={BRAND_RED} />
           ),
@@ -57,8 +58,8 @@ export default function AssetActions({
           key: "clone",
           label: "Bản sao",
           color: "#E67700",
-          bg: "#FFF8F0",
-          border: "#FFE1BF",
+          bg: C.orangeSurface,
+          border: C.amberBorder,
           icon: (
             <FontAwesome5 name="clone" size={16} color="#E67700" />
           ),
@@ -126,7 +127,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 12,
-    shadowColor: "#1A2340",
+    shadowColor: C.shadow,
     shadowOpacity: 0.05,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },

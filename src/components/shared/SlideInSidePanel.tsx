@@ -1,3 +1,4 @@
+import { C } from "../../utils/helpers/colors";
 import React from "react";
 import {
   Animated,
@@ -57,7 +58,7 @@ export default function SlideInSidePanel({
             </View>
             {showCloseButton ? (
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <Ionicons name="close" size={18} color="#6B7280" />
+                <Ionicons name="close" size={18} color={C.textSecondary} />
               </TouchableOpacity>
             ) : null}
           </View>
@@ -81,7 +82,7 @@ const styles = StyleSheet.create({
     top: 0,
     right: 0,
     height: "100%",
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     padding: 16,
     paddingBottom: 12,
     elevation: 5,
@@ -100,18 +101,18 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#0F1923",
+    color: C.text,
   },
   subtitle: {
     marginTop: 4,
     fontSize: 12,
-    color: "#8A95A3",
+    color: C.textSub,
   },
   closeButton: {
     width: 32,
     height: 32,
     borderRadius: 10,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: C.surfaceAlt,
     alignItems: "center",
     justifyContent: "center",
   },

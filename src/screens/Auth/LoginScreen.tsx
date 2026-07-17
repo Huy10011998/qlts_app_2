@@ -1,3 +1,4 @@
+import { C } from "../../utils/helpers/colors";
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import {
   Alert,
@@ -570,7 +571,7 @@ export default function LoginScreen() {
                 <Ionicons
                   name="person-outline"
                   size={18}
-                  color={isUsernameFocused ? RED : "#C0C0C0"}
+                  color={isUsernameFocused ? RED : C.placeholder}
                   style={styles.inputIcon}
                 />
                 <TextInput
@@ -579,7 +580,7 @@ export default function LoginScreen() {
                     isCompactHeight && styles.textInputCompact,
                   ]}
                   placeholder="Tài khoản"
-                  placeholderTextColor="#C8C8C8"
+                  placeholderTextColor={C.placeholder}
                   value={userName}
                   onChangeText={setUserName}
                   onFocus={() => setIsUsernameFocused(true)}
@@ -604,7 +605,7 @@ export default function LoginScreen() {
                 <Ionicons
                   name="lock-closed-outline"
                   size={18}
-                  color={isPasswordFocused ? RED : "#C0C0C0"}
+                  color={isPasswordFocused ? RED : C.placeholder}
                   style={styles.inputIcon}
                 />
                 <TextInput
@@ -615,7 +616,7 @@ export default function LoginScreen() {
                   ]}
                   secureTextEntry={!isPasswordVisible}
                   placeholder="Mật khẩu"
-                  placeholderTextColor="#C8C8C8"
+                  placeholderTextColor={C.placeholder}
                   value={userPassword}
                   onChangeText={setUserPassword}
                   onFocus={() => setIsPasswordFocused(true)}
@@ -632,7 +633,7 @@ export default function LoginScreen() {
                   <Ionicons
                     name={isPasswordVisible ? "eye-outline" : "eye-off-outline"}
                     size={20}
-                    color="#C0C0C0"
+                    color={C.placeholder}
                   />
                 </TouchableOpacity>
               </View>
@@ -794,7 +795,7 @@ export default function LoginScreen() {
                   <Ionicons
                     name="shield-checkmark-outline"
                     size={13}
-                    color="#C8C8C8"
+                    color={C.placeholder}
                   />
                   <Text style={styles.secureText}>Kết nối bảo mật SSL</Text>
                 </View>
@@ -817,7 +818,7 @@ const styles = StyleSheet.create({
   // ── Root ──
   kvRoot: {
     flex: 1,
-    backgroundColor: "#fff", // phải là trắng — màu lộ ra phía sau bàn phím
+    backgroundColor: C.surface, // phải là trắng — màu lộ ra phía sau bàn phím
   },
   root: {
     flex: 1,
@@ -888,7 +889,7 @@ const styles = StyleSheet.create({
   logoShadowWrap: {
     borderRadius: 16,
     overflow: "hidden",
-    shadowColor: "#000",
+    shadowColor: C.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
@@ -901,7 +902,7 @@ const styles = StyleSheet.create({
     width: 176,
     height: 88,
     resizeMode: "contain",
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     borderRadius: 16,
   },
   logoCompact: {
@@ -924,15 +925,17 @@ const styles = StyleSheet.create({
   // ── Card ──
   card: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    shadowColor: "#000",
+    shadowColor: C.shadow,
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 16,
     overflow: "hidden",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: C.border,
   },
   scrollView: {
     flex: 1,
@@ -957,7 +960,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 26,
     fontWeight: "800",
-    color: "#111827",
+    color: C.text,
     marginBottom: 4,
   },
   cardTitleCompact: {
@@ -966,7 +969,7 @@ const styles = StyleSheet.create({
   },
   cardSubtitle: {
     fontSize: 14,
-    color: "#9AA3AF",
+    color: C.textMuted,
     lineHeight: 20,
   },
   cardSubtitleCompact: {
@@ -977,7 +980,7 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F6F6F6",
+    backgroundColor: C.surfaceAlt,
     borderRadius: 14,
     paddingHorizontal: 14,
     minHeight: 48,
@@ -991,7 +994,7 @@ const styles = StyleSheet.create({
   },
   inputWrapperFocused: {
     borderColor: RED,
-    backgroundColor: "#FFF5F5",
+    backgroundColor: C.redSurface,
   },
   inputIcon: {
     marginRight: 10,
@@ -1003,7 +1006,7 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
     paddingVertical: 0,
     fontSize: 14,
-    color: "#111",
+    color: C.text,
     includeFontPadding: false,
     textAlignVertical: "center",
   },
@@ -1049,11 +1052,11 @@ const styles = StyleSheet.create({
     width: 45,
     height: 45,
     borderRadius: 14,
-    backgroundColor: "#F6F6F6",
+    backgroundColor: C.surfaceAlt,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1.5,
-    borderColor: "#EFEFEF",
+    borderColor: C.border,
   },
   faceIdBtnDimmed: {
     opacity: 0.4,
@@ -1075,9 +1078,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 8,
     borderRadius: 12,
-    backgroundColor: "#FFF5F5",
+    backgroundColor: C.redSurface,
     borderWidth: 1,
-    borderColor: "#FDDEDE",
+    borderColor: C.redBorder,
     alignItems: "center",
   },
   infoChipWide: {
@@ -1112,16 +1115,16 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   localNetworkNoticeGranted: {
-    backgroundColor: "#F4FBF6",
-    borderColor: "#BFE8C9",
+    backgroundColor: C.greenLight,
+    borderColor: C.greenBorder,
   },
   localNetworkNoticeDenied: {
-    backgroundColor: "#FFF7ED",
-    borderColor: "#FDBA74",
+    backgroundColor: C.orangeSurface,
+    borderColor: C.amberBorder,
   },
   localNetworkNoticeUnknown: {
-    backgroundColor: "#F8FAFC",
-    borderColor: "#E2E8F0",
+    backgroundColor: C.surfaceAlt,
+    borderColor: C.border,
   },
   localNetworkIconWrap: {
     width: 26,
@@ -1131,13 +1134,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   localNetworkIconGranted: {
-    backgroundColor: "#DCFCE7",
+    backgroundColor: C.greenLight,
   },
   localNetworkIconDenied: {
-    backgroundColor: "#FEE2E2",
+    backgroundColor: C.redSurface,
   },
   localNetworkIconUnknown: {
-    backgroundColor: "#E2E8F0",
+    backgroundColor: C.border,
   },
   localNetworkTextWrap: {
     flex: 1,
@@ -1146,7 +1149,7 @@ const styles = StyleSheet.create({
   localNetworkLabel: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#64748B",
+    color: C.textSecondary,
   },
   localNetworkStatusText: {
     fontSize: 12,
@@ -1159,7 +1162,7 @@ const styles = StyleSheet.create({
     color: "#B91C1C",
   },
   localNetworkStatusUnknown: {
-    color: "#475569",
+    color: C.text,
   },
   localNetworkSettingsButton: {
     width: 28,
@@ -1167,17 +1170,17 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: C.surface,
     borderWidth: 1,
-    borderColor: "#FECACA",
+    borderColor: C.redBorder,
   },
   supportCard: {
     marginTop: 12,
     padding: 10,
     borderRadius: 16,
-    backgroundColor: "#FFF8F8",
+    backgroundColor: C.redSurface,
     borderWidth: 1,
-    borderColor: "#FAD1D1",
+    borderColor: C.redBorder,
   },
   supportCardCompact: {
     marginTop: 9,
@@ -1199,15 +1202,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: C.surface,
     borderWidth: 1,
-    borderColor: "#F3E3E3",
+    borderColor: C.redBorder,
   },
   supportActionText: {
     flex: 1,
     fontSize: 11,
     fontWeight: "700",
-    color: "#374151",
+    color: C.textSecondary,
   },
 
   // ── Footer ──
@@ -1232,25 +1235,25 @@ const styles = StyleSheet.create({
   },
   secureText: {
     fontSize: 12,
-    color: "#C8C8C8",
+    color: C.placeholder,
   },
   footerDot: {
     width: 3,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: "#DEDEDE",
+    backgroundColor: C.borderStrong,
   },
   versionPill: {
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 999,
-    backgroundColor: "#F7F7F8",
+    backgroundColor: C.surfaceAlt,
     borderWidth: 1,
-    borderColor: "#F0F0F2",
+    borderColor: C.border,
   },
   versionText: {
     fontSize: 12,
-    color: "#B2B8C2",
+    color: C.textMuted,
     fontWeight: "600",
   },
 });

@@ -14,6 +14,7 @@ import {
   createTabBarStyle,
   tabBarStyles,
 } from "./shared/tabBarTheme";
+import { C } from "../utils/helpers/colors";
 
 const Tab = createBottomTabNavigator();
 
@@ -78,8 +79,8 @@ export default function Tabs() {
             tabBarStyle: [
               createTabBarStyle({
                 bottomInset: insets.bottom,
-                backgroundColor: isMeetingScanner ? TAB_INVERTED_BG : "#fff",
-                borderTopColor: isMeetingScanner ? "#000" : undefined,
+                backgroundColor: isMeetingScanner ? TAB_INVERTED_BG : C.surface,
+                borderTopColor: isMeetingScanner ? "#000" : C.border,
               }),
             ],
           };
@@ -103,8 +104,8 @@ export default function Tabs() {
             tabBarStyle: [
               createTabBarStyle({
                 bottomInset: insets.bottom,
-                backgroundColor: isScanScreen ? TAB_INVERTED_BG : "#fff",
-                borderTopColor: "#000",
+                backgroundColor: isScanScreen ? TAB_INVERTED_BG : C.surface,
+                borderTopColor: isScanScreen ? "#000" : C.border,
               }),
             ],
           };

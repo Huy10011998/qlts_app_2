@@ -5,10 +5,10 @@ import { C } from "../../../utils/helpers/colors";
 
 const trendStyles = StyleSheet.create({
   up: {
-    backgroundColor: "#E8FBF3",
+    backgroundColor: C.greenLight,
   },
   down: {
-    backgroundColor: "#FFF0F0",
+    backgroundColor: C.redSurface,
   },
 });
 
@@ -27,7 +27,7 @@ export default function HomeStatCard({
   value,
   label,
   sub,
-  subColor = "#aaa",
+  subColor = C.textMuted,
   iconName,
   iconBg,
   iconColor,
@@ -76,10 +76,12 @@ export default function HomeStatCard({
 const styles = StyleSheet.create({
   card: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     borderRadius: 16,
     padding: 14,
-    shadowColor: "#1A2340",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: C.border,
+    shadowColor: C.shadow,
     shadowOpacity: 0.07,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
@@ -120,7 +122,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 13,
     lineHeight: 17,
-    color: "#6B7280",
+    color: C.textSecondary,
     fontWeight: "700",
     flex: 1,
   },

@@ -1,3 +1,4 @@
+import { C } from "../../../utils/helpers/colors";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import BottomSheetModalShell from "../../shared/BottomSheetModalShell";
@@ -45,7 +46,7 @@ export default function IosSpinnerPickerSheet({
 
 const styles = StyleSheet.create({
   pickerContainer: {
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     overflow: "hidden",
@@ -56,7 +57,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderColor: "#eee",
+    borderColor: C.border,
   },
   toolbarText: {
     fontSize: 18,
@@ -66,7 +67,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   pickerBox: {
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     height: 250,
     width: "100%",
     alignItems: "center",

@@ -1,3 +1,4 @@
+import { C } from "../../../utils/helpers/colors";
 import React from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
@@ -28,13 +29,13 @@ export default function CameraMenuSearchBar({
     <View style={styles.searchWrap}>
       <View style={styles.searchBox}>
         <View style={styles.searchIconWrap}>
-          <Ionicons name="search-outline" size={16} color="#8A95A3" />
+          <Ionicons name="search-outline" size={16} color={C.textSub} />
         </View>
         <TextInput
           placeholder="Tìm kiếm camera..."
           value={value}
           onChangeText={onChangeText}
-          placeholderTextColor="#B0B8C4"
+          placeholderTextColor={C.placeholder}
           style={styles.searchInput}
           clearButtonMode="never"
           returnKeyType="search"
@@ -47,7 +48,7 @@ export default function CameraMenuSearchBar({
         ) : null}
         {!isSearching && value.length > 0 ? (
           <Pressable onPress={() => onChangeText("")} style={styles.clearButton}>
-            <Ionicons name="close-circle" size={16} color="#B0B8C4" />
+            <Ionicons name="close-circle" size={16} color={C.placeholder} />
           </Pressable>
         ) : null}
       </View>
@@ -73,12 +74,12 @@ const styles = StyleSheet.create({
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     minHeight: 48,
     paddingHorizontal: 12,
     borderRadius: 14,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#EDF0F5",
+    borderColor: C.border,
     ...CAMERA_MENU_CARD_SHADOW,
   },
   searchIconWrap: {
@@ -94,7 +95,7 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
     fontSize: 14,
     lineHeight: 20,
-    color: "#0F1923",
+    color: C.text,
     fontWeight: "400",
     includeFontPadding: false,
     textAlignVertical: "center",
@@ -113,12 +114,12 @@ const styles = StyleSheet.create({
   resultBadge: {
     alignSelf: "flex-start",
     marginTop: 8,
-    backgroundColor: "#FFF0F0",
+    backgroundColor: C.redSurface,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 3,
     borderWidth: 1,
-    borderColor: "#FFD6D6",
+    borderColor: C.redBorder,
   },
   resultText: {
     fontSize: 11,

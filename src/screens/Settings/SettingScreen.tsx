@@ -43,6 +43,7 @@ import SettingProfileHeader from "./shared/SettingProfileHeader";
 import SettingSectionGroup from "./shared/SettingSectionGroup";
 import { SettingRowItem, SettingSwitchRow } from "./shared/SettingRowItem";
 import ChangePasswordModal from "./shared/ChangePasswordModal";
+import { useColorScheme } from "../../hooks/useColorScheme";
 import { readStoredAuthTokens } from "../../context/authStorage";
 import {
   getLocalNetworkPermissionLabel,
@@ -68,6 +69,7 @@ const LOCAL_NETWORK_FALLBACK_STATE: StoredLocalNetworkPermissionState = {
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 const SettingScreen = () => {
+  const isDark = useColorScheme() === "dark";
   const [isLoading, setIsLoading] = useState(false);
   const [user, setUser] = useState<UserInfo>();
   const appVersionLabel = `v${DeviceInfo.getVersion()}`;
@@ -571,7 +573,10 @@ const SettingScreen = () => {
   if (loadErrorMessage) {
     return (
       <View style={styles.emptyStateRoot}>
-        <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
+        <StatusBar
+          barStyle={isDark ? "light-content" : "dark-content"}
+          backgroundColor={C.bg}
+        />
         <EmptyState
           iconName="cloud-offline-outline"
           title="Không thể tải dữ liệu Cài đặt"
@@ -584,7 +589,10 @@ const SettingScreen = () => {
   if (!user) {
     return (
       <View style={styles.emptyStateRoot}>
-        <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
+        <StatusBar
+          barStyle={isDark ? "light-content" : "dark-content"}
+          backgroundColor={C.bg}
+        />
         <EmptyState
           iconName="person-circle-outline"
           title="Không có thông tin người dùng"
@@ -746,7 +754,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     paddingHorizontal: 16,
     paddingVertical: 16,
-    shadowColor: "#1A2340",
+    shadowColor: C.shadow,
     shadowOpacity: 0.06,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
@@ -763,7 +771,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.greenLight,
   },
   localNetworkStatusDenied: {
-    backgroundColor: "#FFF1F2",
+    backgroundColor: C.redSurface,
   },
   localNetworkStatusUnknown: {
     backgroundColor: C.amberLight,

@@ -1,3 +1,4 @@
+import { C } from "../../utils/helpers/colors";
 import React, { type ComponentProps, useEffect, useState } from "react";
 import {
   Alert,
@@ -250,7 +251,7 @@ export const SolarDateRangePicker: React.FC<SolarDateRangePickerProps> = ({
           <Text style={styles.calendarTitle}>Select date</Text>
           <View style={styles.calendarSelectedRow}>
             <Text style={styles.calendarSelectedText}>{selectedTitle}</Text>
-            <Ionicons name="pencil-outline" size={28} color="#333" />
+            <Ionicons name="pencil-outline" size={28} color={C.text} />
           </View>
 
           <View style={styles.calendarMonthRow}>
@@ -280,7 +281,7 @@ export const SolarDateRangePicker: React.FC<SolarDateRangePickerProps> = ({
                   setVisibleMonth((current) => addMonths(current, -1));
                 }}
               >
-                <Ionicons name="chevron-up" size={25} color="#888" />
+                <Ionicons name="chevron-up" size={25} color={C.textMuted} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
@@ -302,7 +303,7 @@ export const SolarDateRangePicker: React.FC<SolarDateRangePickerProps> = ({
                   setVisibleMonth((current) => addMonths(current, 1));
                 }}
               >
-                <Ionicons name="chevron-down" size={25} color="#888" />
+                <Ionicons name="chevron-down" size={25} color={C.textMuted} />
               </TouchableOpacity>
             </View>
           </View>

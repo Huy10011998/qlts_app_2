@@ -2,6 +2,7 @@ import type { Item } from "../../../types/index";
 import { removeVietnameseTones } from "../../../utils/Helper";
 import { normalizeIconImageUri } from "../../../utils/iconImage";
 import { ASSET_MENU_BRAND_RED } from "./assetMenuTheme";
+import { C } from "../../../utils/helpers/colors";
 
 export const isEnabledAssetMenuFlag = (value: Item["isViewWeb"]) =>
   value === true || value === 1 || value === "1" || value === "true";
@@ -21,7 +22,7 @@ export const getAssetMenuItemTheme = (item: Item, expanded: boolean) => {
       icon: "image-outline",
       iconImageUri,
       lib: "ionicons" as const,
-      bg: "#EEF2FF",
+      bg: C.indigoSurface,
       color: "#3B5BDB",
     };
   }
@@ -30,7 +31,7 @@ export const getAssetMenuItemTheme = (item: Item, expanded: boolean) => {
     return {
       icon: "bar-chart",
       lib: "material" as const,
-      bg: "#FFF0F6",
+      bg: C.pinkSurface,
       color: "#E64980",
     };
   }
@@ -39,7 +40,7 @@ export const getAssetMenuItemTheme = (item: Item, expanded: boolean) => {
     return {
       icon: "book",
       lib: "material" as const,
-      bg: "#EEF2FF",
+      bg: C.indigoSurface,
       color: "#3B5BDB",
     };
   }
@@ -48,7 +49,7 @@ export const getAssetMenuItemTheme = (item: Item, expanded: boolean) => {
     return {
       icon: "folder-open",
       lib: "ionicons" as const,
-      bg: "#FFF5F5",
+      bg: C.redSurface,
       color: ASSET_MENU_BRAND_RED,
     };
   }
@@ -56,7 +57,7 @@ export const getAssetMenuItemTheme = (item: Item, expanded: boolean) => {
   return {
     icon: "folder",
     lib: "ionicons" as const,
-    bg: "#FFF8F0",
+    bg: C.orangeSurface,
     color: "#E67700",
   };
 };

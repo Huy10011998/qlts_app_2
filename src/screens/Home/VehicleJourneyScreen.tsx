@@ -1,3 +1,4 @@
+import { C } from "../../utils/helpers/colors";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -367,7 +368,7 @@ export default function VehicleJourneyScreen() {
           >
             {selectedVehicle ? getVehicleLabel(selectedVehicle) : "Phương tiện"}
           </Text>
-          <Ionicons name="chevron-down" size={18} color="#64748B" />
+          <Ionicons name="chevron-down" size={18} color={C.textSecondary} />
         </TouchableOpacity>
 
         <View style={styles.dateRow}>
@@ -447,7 +448,7 @@ export default function VehicleJourneyScreen() {
                     <Ionicons
                       name="calendar-outline"
                       size={18}
-                      color="#64748B"
+                      color={C.textSecondary}
                     />
                     <Text style={styles.groupDate}>
                       {formatGroupDate(date)}
@@ -460,7 +461,7 @@ export default function VehicleJourneyScreen() {
                     <Ionicons
                       name={expanded ? "chevron-up" : "chevron-down"}
                       size={18}
-                      color="#64748B"
+                      color={C.textSecondary}
                     />
                   </TouchableOpacity>
                   {expanded
@@ -515,7 +516,7 @@ export default function VehicleJourneyScreen() {
                                 <Ionicons
                                   name="time-outline"
                                   size={15}
-                                  color="#94A3B8"
+                                  color={C.textMuted}
                                 />
                                 <Text style={styles.tripTime}>
                                   {getJourneyTime(item, true) || "--:--"} –{" "}
@@ -617,7 +618,7 @@ export default function VehicleJourneyScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#F8FAFC" },
+  root: { flex: 1, backgroundColor: C.surfaceAlt },
   content: {
     flexGrow: 1,
     paddingHorizontal: 16,
@@ -628,12 +629,12 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F8FAFC",
+    backgroundColor: C.surfaceAlt,
   },
-  loadingText: { marginTop: 10, color: "#64748B", fontSize: 14 },
+  loadingText: { marginTop: 10, color: C.textSecondary, fontSize: 14 },
 
   fieldLabel: {
-    color: "#475569",
+    color: C.text,
     fontSize: 13,
     fontWeight: "600",
     marginBottom: 7,
@@ -643,14 +644,14 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#4F46E5",
     borderRadius: 10,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: C.surface,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 13,
     marginBottom: 16,
   },
-  selectText: { flex: 1, color: "#334155", fontSize: 15, marginHorizontal: 10 },
-  placeholderText: { color: "#94A3B8" },
+  selectText: { flex: 1, color: C.text, fontSize: 15, marginHorizontal: 10 },
+  placeholderText: { color: C.textMuted },
   dateRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
   dateField: { flex: 1 },
   actionRow: { flexDirection: "row", gap: 10, marginBottom: 18 },
@@ -669,9 +670,9 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 300,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: C.border,
     borderRadius: 14,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: C.surface,
     overflow: "hidden",
   },
   journeyLoading: {
@@ -680,25 +681,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  journeyGroup: { borderBottomWidth: 1, borderBottomColor: "#E2E8F0" },
+  journeyGroup: { borderBottomWidth: 1, borderBottomColor: C.border },
   groupHeader: {
     minHeight: 52,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 13,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: C.surfaceAlt,
     gap: 8,
   },
-  groupDate: { flex: 1, color: "#64748B", fontSize: 13, fontWeight: "700" },
+  groupDate: { flex: 1, color: C.textSecondary, fontSize: 13, fontWeight: "700" },
   tripCountBadge: {
-    backgroundColor: "#E2E8F0",
+    backgroundColor: C.border,
     borderRadius: 12,
     paddingHorizontal: 9,
     paddingVertical: 4,
   },
-  tripCountText: { color: "#64748B", fontSize: 11, fontWeight: "700" },
+  tripCountText: { color: C.textSecondary, fontSize: 11, fontWeight: "700" },
   tripRow: { flexDirection: "row", paddingHorizontal: 14, paddingTop: 14 },
-  tripRowSelected: { backgroundColor: "#EEF4FF" },
+  tripRowSelected: { backgroundColor: C.accentLight },
   timelineColumn: { width: 25, alignItems: "center" },
   timelineDot: {
     width: 14,
@@ -706,30 +707,30 @@ const styles = StyleSheet.create({
     borderRadius: 7,
     borderWidth: 3,
     borderColor: "#22C55E",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: C.surface,
   },
   timelineLine: {
     width: 2,
     flex: 1,
     minHeight: 76,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: C.border,
   },
   tripContent: { flex: 1, paddingLeft: 5, paddingBottom: 16 },
   tripTimeRow: { flexDirection: "row", alignItems: "center", gap: 5 },
-  tripTime: { color: "#94A3B8", fontSize: 13 },
+  tripTime: { color: C.textMuted, fontSize: 13 },
   startAddress: {
-    color: "#1E293B",
+    color: C.text,
     fontSize: 15,
     fontWeight: "600",
     marginTop: 7,
   },
-  endAddress: { color: "#94A3B8", fontSize: 13, marginTop: 5 },
+  endAddress: { color: C.textMuted, fontSize: 13, marginTop: 5 },
   metricRow: { flexDirection: "row", flexWrap: "wrap", gap: 7, marginTop: 9 },
   distanceBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#E3F2FD",
+    backgroundColor: C.blueSurface,
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -738,7 +739,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#E8F5E9",
+    backgroundColor: C.greenLight,
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,

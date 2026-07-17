@@ -1,8 +1,10 @@
-export const ASSET_MENU_BRAND_RED = "#E31E24";
-export const ASSET_MENU_BG = "#F0F2F8";
+import { C } from "../../../utils/helpers/colors";
+
+export const ASSET_MENU_BRAND_RED = C.red;
+export const ASSET_MENU_BG = C.bg;
 
 export const ASSET_MENU_CARD_SHADOW = {
-  shadowColor: "#1A2340",
+  shadowColor: C.shadow,
   shadowOpacity: 0.06,
   shadowRadius: 6,
   shadowOffset: { width: 0, height: 2 },

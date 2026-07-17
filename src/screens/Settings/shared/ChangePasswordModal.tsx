@@ -92,7 +92,7 @@ export default function ChangePasswordModal({
               onPress={onClose}
               disabled={isLoading}
             >
-              <Ionicons name="close" size={22} color="#4B5563" />
+              <Ionicons name="close" size={22} color={C.textSecondary} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -173,14 +173,16 @@ const styles = StyleSheet.create({
   popup: {
     width: "100%",
     maxWidth: 420,
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     borderRadius: 24,
     padding: 24,
-    shadowColor: "#000",
+    shadowColor: C.shadow,
     shadowOpacity: 0.22,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 8 },
     elevation: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: C.border,
   },
   popupCompact: {
     padding: 20,
@@ -201,7 +203,7 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F3F4F6",
+    backgroundColor: C.surfaceAlt,
   },
 
   headerSubmitButton: {

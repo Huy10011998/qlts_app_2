@@ -9,6 +9,7 @@ import {
   getApiValidationFieldErrors,
 } from "../../utils/helpers/api";
 import { isEffectivelyEmptyCodeValue } from "../../utils/helpers/string";
+import { C } from "../../utils/helpers/colors";
 import { useParams } from "../../hooks/useParams";
 import { fetchImage, pickImage } from "../../utils/Image";
 import { fetchReferenceByFieldWithParent } from "../../utils/cascade/FetchReferenceByFieldWithParent";
@@ -435,7 +436,7 @@ export default function AssetEditItem() {
       }
     >
       <AssetFormHeroCard
-        iconBgColor="#EEF2FF"
+        iconBgColor={C.indigoSurface}
         iconColor="#3B5BDB"
         iconName="create-outline"
         styles={styles}
@@ -473,6 +474,6 @@ const styles = StyleSheet.create({
     cardShadow: CARD_SHADOW,
   }),
   heroIconWrap: {
-    backgroundColor: "#EEF2FF",
+    backgroundColor: C.indigoSurface,
   },
 });

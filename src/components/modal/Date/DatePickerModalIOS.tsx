@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View, useColorScheme } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { formatDMY, parseDate } from "../../../utils/Date";
 import IosSpinnerPickerSheet from "../../dataPicker/shared/IosSpinnerPickerSheet";
 import PickerFieldTrigger from "../../dataPicker/shared/PickerFieldTrigger";
+import { C } from "../../../utils/helpers/colors";
 
 export const DatePickerModalIOS = ({
   value,
@@ -14,6 +15,7 @@ export const DatePickerModalIOS = ({
   placeholder?: string;
   onChange: (val: string) => void;
 }) => {
+  const isDark = useColorScheme() === "dark";
   const [showPicker, setShowPicker] = useState(false);
   const [tempDate, setTempDate] = useState<Date>(
     value ? parseDate(value) : new Date(),
@@ -63,8 +65,10 @@ export const DatePickerModalIOS = ({
           mode="date"
           display="spinner"
           onChange={handleDateChange}
-          textColor="#000"
-          {...(Platform.OS === "ios" ? { themeVariant: "light" } : {})}
+          textColor={C.text}
+          {...(Platform.OS === "ios"
+            ? { themeVariant: isDark ? "dark" : "light" }
+            : {})}
         />
       </IosSpinnerPickerSheet>
     </View>

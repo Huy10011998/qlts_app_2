@@ -1,3 +1,4 @@
+import { C } from "../../../utils/helpers/colors";
 import React from "react";
 import {
   ActivityIndicator,
@@ -40,7 +41,7 @@ export default React.memo(function CameraSnapshotThumbnail({
     <View style={styles.preview}>
       {!isLoaded && (
         <View style={styles.previewLoading}>
-          <ActivityIndicator size="small" color="#555" />
+          <ActivityIndicator size="small" color={C.textSecondary} />
         </View>
       )}
       <Image

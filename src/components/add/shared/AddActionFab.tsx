@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     ...(Platform.OS === "ios"
       ? {
-          shadowColor: "#1A2340",
+          shadowColor: C.shadow,
           shadowOpacity: 0.18,
           shadowOffset: { width: 0, height: 4 },
           shadowRadius: 10,

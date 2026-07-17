@@ -1,3 +1,4 @@
+import { C } from "../../../utils/helpers/colors";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -110,7 +111,7 @@ function CameraMenuDropdownItem({
             />
           </Pressable>
         ) : (
-          <Ionicons name="chevron-forward" size={14} color="#C7C7CC" />
+          <Ionicons name="chevron-forward" size={14} color={C.textMuted} />
         )}
       </View>
 
@@ -138,7 +139,7 @@ const styles = StyleSheet.create({
   itemCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     borderRadius: 14,
     minHeight: 58,
     paddingVertical: 11,
@@ -149,12 +150,12 @@ const styles = StyleSheet.create({
     ...CAMERA_MENU_CARD_SHADOW,
   },
   itemCardChild: {
-    backgroundColor: "#FAFBFE",
+    backgroundColor: C.surfaceAlt,
     minHeight: 56,
     shadowOpacity: 0.03,
     elevation: 1,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#EDF0F5",
+    borderColor: C.border,
   },
   itemMainPressable: {
     flexDirection: "row",
@@ -184,7 +185,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13.5,
     fontWeight: "600",
-    color: "#0F1923",
+    color: C.text,
     letterSpacing: 0.1,
     lineHeight: 20,
     includeFontPadding: false,
@@ -193,7 +194,7 @@ const styles = StyleSheet.create({
   labelChild: {
     fontSize: 12.5,
     fontWeight: "500",
-    color: "#374151",
+    color: C.textSecondary,
     lineHeight: 19,
   },
   chevronWrap: {

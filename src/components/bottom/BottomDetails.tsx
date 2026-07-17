@@ -107,7 +107,7 @@ export default function BottomBarDetails({
                 <Ionicons
                   name={tab.icon}
                   size={20}
-                  color={isActive ? C.red : "#8A95A3"}
+                  color={isActive ? C.red : C.textSub}
                 />
               </View>
               <Text
@@ -138,12 +138,12 @@ const styles = StyleSheet.create({
   bottomBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     height: 74,
     borderRadius: 22,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#EDF0F5",
-    shadowColor: "#1A2340",
+    borderColor: C.border,
+    shadowColor: C.shadow,
     shadowOpacity: 0.1,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
@@ -162,16 +162,16 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F5F7FB",
+    backgroundColor: C.surfaceAlt,
     marginBottom: 4,
   },
   iconWrapActive: {
-    backgroundColor: "#FFF3F3",
+    backgroundColor: C.redSurface,
   },
   bottomLabel: {
     fontSize: 11.5,
     fontWeight: "600",
-    color: "#8A95A3",
+    color: C.textSub,
   },
   bottomLabelActive: { fontWeight: "700", color: C.red },
   underline: {

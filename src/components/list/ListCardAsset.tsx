@@ -116,7 +116,7 @@ export default memo(ListCardAsset);
 const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     marginHorizontal: 12,
     marginVertical: 6,
     padding: 16,
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#E0F2FE",
+    backgroundColor: C.blueSurface,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 16,
@@ -155,13 +155,13 @@ const styles = StyleSheet.create({
 
   text: {
     fontSize: 14,
-    color: "#000",
+    color: C.text,
     marginBottom: 2,
   },
 
   label: {
     fontWeight: "bold",
-    color: "#000",
+    color: C.text,
   },
 
   link: {

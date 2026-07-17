@@ -1,3 +1,4 @@
+import { C } from "../../utils/helpers/colors";
 import React, {
   useCallback,
   useEffect,
@@ -225,7 +226,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
     marginTop: 4,
     marginBottom: 16,
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     borderRadius: 12,
     ...CARD_SHADOW,
     paddingBottom: 8,
@@ -238,6 +239,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#E5E7EB",
+    borderBottomColor: C.border,
   },
 });

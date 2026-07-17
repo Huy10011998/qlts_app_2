@@ -1,3 +1,4 @@
+import { C } from "../../utils/helpers/colors";
 import React, { useCallback, useEffect, useState } from "react";
 import { View, Text, FlatList, Pressable, StyleSheet, Image } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -110,7 +111,7 @@ export default function AssetDeTailsTab({
         )}
       </View>
       <Text style={styles.label}>{item.label}</Text>
-      <Ionicons name="chevron-forward" size={14} color="#C7C7CC" />
+      <Ionicons name="chevron-forward" size={14} color={C.textMuted} />
     </Pressable>
   );
 
@@ -170,12 +171,12 @@ const styles = StyleSheet.create({
   item: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     borderRadius: 14,
     paddingVertical: 11,
     paddingHorizontal: 14,
     marginBottom: 8,
-    shadowColor: "#1A2340",
+    shadowColor: C.shadow,
     shadowOpacity: 0.06,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
@@ -189,7 +190,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 10,
-    backgroundColor: "#FFF5F5",
+    backgroundColor: C.redSurface,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -201,7 +202,7 @@ const styles = StyleSheet.create({
   label: {
     flex: 1,
     fontSize: 13.5,
-    color: "#0F1923",
+    color: C.text,
     fontWeight: "600",
     lineHeight: 18,
   },

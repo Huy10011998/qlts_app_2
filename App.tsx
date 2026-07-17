@@ -2,6 +2,8 @@ import React from "react";
 import { StatusBar } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import {
+  DarkTheme,
+  DefaultTheme,
   NavigationContainer,
   useNavigationContainerRef,
 } from "@react-navigation/native";
@@ -12,12 +14,16 @@ import { Provider } from "react-redux";
 import { store } from "./src/store/index";
 import AppBootstrap from "./src/app/AppBootstrap";
 import { configureTextScalingDefaults } from "./src/utils/helpers/textScaling";
+import { useColorScheme } from "./src/hooks/useColorScheme";
+import { Colors } from "./src/constants/Colors";
 
 const LANDSCAPE_ALLOWED_ROUTES = new Set(["CameraList", "CameraListGrid"]);
 
 configureTextScalingDefaults();
 
 export default function App() {
+  const colorScheme = useColorScheme() ?? "light";
+  const isDark = colorScheme === "dark";
   const navigationRef = useNavigationContainerRef();
   const routeNameRef = React.useRef<string | undefined>(undefined);
 
@@ -47,6 +53,7 @@ export default function App() {
         translucent={false}
         backgroundColor="#E31E24"
         barStyle="light-content"
+        animated
       />
 
       <Provider store={store}>
@@ -54,6 +61,19 @@ export default function App() {
           <AppBootstrap />
           <NavigationContainer
             ref={navigationRef}
+            theme={{
+              ...(isDark ? DarkTheme : DefaultTheme),
+              dark: isDark,
+              colors: {
+                ...(isDark ? DarkTheme.colors : DefaultTheme.colors),
+                primary: Colors[colorScheme].tint,
+                background: Colors[colorScheme].background,
+                card: Colors[colorScheme].card,
+                text: Colors[colorScheme].text,
+                border: Colors[colorScheme].borderColor,
+                notification: "#E31E24",
+              },
+            }}
             onReady={syncOrientationWithRoute}
             onStateChange={syncOrientationWithRoute}
           >

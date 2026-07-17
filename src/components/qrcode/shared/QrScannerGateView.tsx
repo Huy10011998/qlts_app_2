@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import { C } from "../../../utils/helpers/colors";
 
 type QrScannerGateViewProps = {
   actionLabel?: string;
@@ -25,7 +26,7 @@ export default function QrScannerGateView({
   actionLabel,
   contentOffsetY = 0,
   description,
-  iconColor = "#999",
+  iconColor = C.textMuted,
   iconName,
   onAction,
   onBack,
@@ -36,7 +37,7 @@ export default function QrScannerGateView({
     <SafeAreaView style={[styles.root, rootStyle]}>
       {onBack ? (
         <TouchableOpacity style={styles.backBtn} hitSlop={10} onPress={onBack}>
-          <Ionicons name="arrow-back" size={24} color="#333" />
+          <Ionicons name="arrow-back" size={24} color={C.text} />
         </TouchableOpacity>
       ) : null}
 
@@ -57,7 +58,7 @@ export default function QrScannerGateView({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
   },
   backBtn: {
     padding: 16,
@@ -71,14 +72,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#222",
+    color: C.text,
     marginTop: 16,
     marginBottom: 8,
     textAlign: "center",
   },
   description: {
     fontSize: 14,
-    color: "#666",
+    color: C.textSecondary,
     textAlign: "center",
     lineHeight: 22,
   },

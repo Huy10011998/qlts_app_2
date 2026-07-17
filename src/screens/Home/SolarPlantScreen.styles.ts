@@ -1,7 +1,8 @@
+import { C } from "../../utils/helpers/colors";
 import { StyleSheet } from "react-native";
 
 export const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#f5f6fa" },
+  safe: { flex: 1, backgroundColor: C.bg },
   scroll: { flex: 1 },
   headerButton: {
     paddingHorizontal: 5,
@@ -11,7 +12,7 @@ export const styles = StyleSheet.create({
   },
 
   // Hero section
-  heroSection: { backgroundColor: "#a8d8f2", overflow: "hidden" },
+  heroSection: { backgroundColor: C.solarHero, overflow: "hidden" },
   heroContent: {
     width: "100%",
     alignSelf: "center",
@@ -29,11 +30,11 @@ export const styles = StyleSheet.create({
     flex: 1,
     minWidth: 190,
   },
-  prodLabel: { fontSize: 14, fontWeight: "600", color: "#2a4060" },
+  prodLabel: { fontSize: 14, fontWeight: "600", color: C.textSecondary },
   prodValue: {
     fontSize: 36,
     fontWeight: "700",
-    color: "#1a3050",
+    color: C.text,
     lineHeight: 43,
   },
   prodUnit: { fontSize: 19, fontWeight: "400" },
@@ -44,7 +45,7 @@ export const styles = StyleSheet.create({
     marginTop: 4,
     flexShrink: 0,
   },
-  tempText: { fontSize: 20, fontWeight: "600", color: "#2a3c50" },
+  tempText: { fontSize: 20, fontWeight: "600", color: C.text },
 
   // Hero visual
   heroVisual: {
@@ -72,7 +73,7 @@ export const styles = StyleSheet.create({
     zIndex: 2,
   },
   bubble: {
-    backgroundColor: "rgba(255,255,255,0.88)",
+    backgroundColor: C.surface,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -83,16 +84,16 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 6,
   },
-  bubbleValue: { fontWeight: "600", color: "#5a7a9a" },
+  bubbleValue: { fontWeight: "600", color: C.textSecondary },
   bubbleUnit: {
     fontSize: 11,
-    color: "#7a9ab0",
+    color: C.textMuted,
     marginBottom: 3,
     marginLeft: 2,
   },
   bubbleLabel: {
     fontSize: 10,
-    color: "#6a8aa8",
+    color: C.textMuted,
     textAlign: "center",
     lineHeight: 14,
     marginTop: 2,
@@ -104,11 +105,11 @@ export const styles = StyleSheet.create({
     alignSelf: "center",
   },
   energyProducedCard: {
-    backgroundColor: "white",
+    backgroundColor: C.surface,
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 0.5,
-    borderBottomColor: "#eee",
+    borderBottomColor: C.border,
   },
   epRow: {
     flexDirection: "row",
@@ -118,18 +119,18 @@ export const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 10,
   },
-  sectionTitle: { fontSize: 16, fontWeight: "700", color: "#1a2a3a" },
-  updatedNow: { fontSize: 12, color: "#aaa" },
+  sectionTitle: { fontSize: 16, fontWeight: "700", color: C.text },
+  updatedNow: { fontSize: 12, color: C.textMuted },
   epStats: { flexDirection: "row", alignItems: "center", flexWrap: "wrap" },
   epItem: { flex: 1, minWidth: 96, alignItems: "center" },
-  epLabel: { fontSize: 12, color: "#888", marginBottom: 2 },
-  epValue: { fontSize: 20, fontWeight: "700", color: "#1a2a3a" },
-  epUnit: { fontSize: 12, fontWeight: "400", color: "#666" },
-  epDivider: { width: 1, height: 36, backgroundColor: "#e8e8e8" },
+  epLabel: { fontSize: 12, color: C.textMuted, marginBottom: 2 },
+  epValue: { fontSize: 20, fontWeight: "700", color: C.text },
+  epUnit: { fontSize: 12, fontWeight: "400", color: C.textSecondary },
+  epDivider: { width: 1, height: 36, backgroundColor: C.border },
 
   // Tabs
   stickyPeriodHeader: {
-    backgroundColor: "white",
+    backgroundColor: C.surface,
     zIndex: 10,
     elevation: 4,
     alignItems: "center",
@@ -137,7 +138,7 @@ export const styles = StyleSheet.create({
   tabBar: {
     width: "100%",
     flexDirection: "row",
-    backgroundColor: "#f0f0f5",
+    backgroundColor: C.surfaceAlt,
     paddingHorizontal: 8,
     paddingVertical: 8,
     alignItems: "center",
@@ -155,20 +156,20 @@ export const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: "center",
   },
-  tabText: { color: "#666", fontSize: 13, textAlign: "center" },
+  tabText: { color: C.textSecondary, fontSize: 13, textAlign: "center" },
 
   dateNav: {
     width: "100%",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "white",
+    backgroundColor: C.surface,
     minHeight: 60,
     paddingHorizontal: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#eeeeee",
+    borderTopColor: C.border,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#d9d9d9",
+    borderBottomColor: C.border,
   },
   dateNavSide: {
     width: 72,
@@ -219,11 +220,11 @@ export const styles = StyleSheet.create({
     maxWidth: 420,
     minHeight: 456,
     borderRadius: 18,
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     overflow: "hidden",
   },
   calendarTitle: {
-    color: "#333",
+    color: C.text,
     fontSize: 18,
     fontWeight: "600",
     paddingHorizontal: 28,
@@ -236,11 +237,11 @@ export const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 28,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#dddddd",
+    borderBottomColor: C.border,
   },
   calendarSelectedText: {
     flex: 1,
-    color: "#333",
+    color: C.text,
     fontSize: 34,
     fontWeight: "400",
     marginRight: 16,
@@ -253,7 +254,7 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 28,
   },
   calendarMonthText: {
-    color: "#777",
+    color: C.textMuted,
     fontSize: 20,
     fontWeight: "400",
   },
@@ -278,7 +279,7 @@ export const styles = StyleSheet.create({
   },
   calendarWeekText: {
     flex: 1,
-    color: "#333",
+    color: C.text,
     fontSize: 20,
     textAlign: "center",
   },
@@ -295,7 +296,7 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
   },
   calendarDayInRange: {
-    backgroundColor: "#eaf1ff",
+    backgroundColor: C.accentLight,
   },
   calendarDayCircle: {
     width: 46,
@@ -308,12 +309,12 @@ export const styles = StyleSheet.create({
     backgroundColor: "#5d8ff6",
   },
   calendarDayText: {
-    color: "#777",
+    color: C.textMuted,
     fontSize: 22,
     fontWeight: "400",
   },
   calendarDayMuted: {
-    color: "#c7c7c7",
+    color: C.placeholder,
   },
   calendarDaySelectedText: {
     color: "#fff",
@@ -346,7 +347,7 @@ export const styles = StyleSheet.create({
     opacity: 0.35,
   },
   calendarOptionText: {
-    color: "#333",
+    color: C.text,
     fontSize: 22,
     fontWeight: "400",
   },
@@ -354,7 +355,7 @@ export const styles = StyleSheet.create({
     color: "#fff",
   },
   calendarOptionDisabledText: {
-    color: "#9a9a9a",
+    color: C.textMuted,
   },
   calendarActionRow: {
     minHeight: 72,
@@ -377,7 +378,7 @@ export const styles = StyleSheet.create({
 
   // White sections
   whiteSection: {
-    backgroundColor: "white",
+    backgroundColor: C.surface,
     marginTop: 8,
     paddingHorizontal: 16,
     paddingVertical: 16,
@@ -386,24 +387,24 @@ export const styles = StyleSheet.create({
   // Energy Balance
   balanceSubLabel: {
     fontSize: 14,
-    color: "#555",
+    color: C.textSecondary,
     marginTop: 12,
     marginBottom: 4,
   },
   balanceBigValue: {
     fontSize: 36,
     fontWeight: "700",
-    color: "#1a2a3a",
+    color: C.text,
     lineHeight: 44,
   },
-  balanceUnit: { fontSize: 18, fontWeight: "400", color: "#666" },
+  balanceUnit: { fontSize: 18, fontWeight: "400", color: C.textSecondary },
   barTrack: {
     flexDirection: "row",
     height: 10,
     borderRadius: 5,
     overflow: "hidden",
     marginVertical: 10,
-    backgroundColor: "#eee",
+    backgroundColor: C.border,
   },
   barFill: { height: 10 },
   toHomeBarFill: { backgroundColor: "#4caf50" },
@@ -430,17 +431,17 @@ export const styles = StyleSheet.create({
   balanceFromGridDot: { backgroundColor: "#f5a623" },
   year2025Dot: { backgroundColor: "#42b0e8" },
   year2026Dot: { backgroundColor: "#4e5ab5" },
-  legendLabel: { fontSize: 13, color: "#555", flex: 1, minWidth: 86 },
+  legendLabel: { fontSize: 13, color: C.textSecondary, flex: 1, minWidth: 86 },
   legendValue: {
     fontSize: 13,
-    color: "#333",
+    color: C.text,
     fontWeight: "500",
     flexShrink: 1,
   },
-  separator: { height: 1, backgroundColor: "#eee", marginVertical: 14 },
+  separator: { height: 1, backgroundColor: C.border, marginVertical: 14 },
   selfConsumptionRow: { marginTop: 12 },
-  selfText: { fontSize: 13, color: "#555" },
-  selfBold: { fontWeight: "700", color: "#1a2a3a" },
+  selfText: { fontSize: 13, color: C.textSecondary },
+  selfBold: { fontWeight: "700", color: C.text },
   productionDot: { backgroundColor: "#04b850" },
   productionRing: { borderColor: "#04b850" },
   consumptionDot: { backgroundColor: "#ff9800" },
@@ -464,7 +465,7 @@ export const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     fontWeight: "700",
-    color: "#1a2a3a",
+    color: C.text,
   },
   expandButton: {
     width: 52,
@@ -472,8 +473,8 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  expandIcon: { fontSize: 36, color: "#888" },
-  infoIcon: { fontSize: 18, color: "#999" },
+  expandIcon: { fontSize: 36, color: C.textMuted },
+  infoIcon: { fontSize: 18, color: C.textMuted },
 
   tooltipBubble: {
     flexDirection: "row",
@@ -503,10 +504,10 @@ export const styles = StyleSheet.create({
   },
   chartLegendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   chartLegendItemCompact: { gap: 4, flexShrink: 1 },
-  chartLegendText: { fontSize: 13, color: "#444" },
-  chartLegendTextMuted: { fontSize: 13, color: "#888" },
+  chartLegendText: { fontSize: 13, color: C.textSecondary },
+  chartLegendTextMuted: { fontSize: 13, color: C.textMuted },
   chartLegendTextCompact: { fontSize: 11, flexShrink: 1 },
-  chartLegendTextSmall: { fontSize: 12, color: "#888", lineHeight: 17 },
+  chartLegendTextSmall: { fontSize: 12, color: C.textMuted, lineHeight: 17 },
   checkCircle: {
     width: 22,
     height: 22,
@@ -536,10 +537,10 @@ export const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     alignItems: "center",
-    backgroundColor: "white",
+    backgroundColor: C.surface,
   },
-  toggleBtnActive: { backgroundColor: "#eef3ff" },
-  toggleText: { fontSize: 14, color: "#555" },
+  toggleBtnActive: { backgroundColor: C.accentLight },
+  toggleText: { fontSize: 14, color: C.textSecondary },
   toggleTextActive: { color: "#4285f4", fontWeight: "600" },
 
   // Sub-tabs
@@ -555,19 +556,19 @@ export const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 8,
     alignItems: "center",
-    backgroundColor: "white",
+    backgroundColor: C.surface,
   },
-  subTabActive: { backgroundColor: "#eef3ff" },
-  subTabText: { fontSize: 13, color: "#555" },
+  subTabActive: { backgroundColor: C.accentLight },
+  subTabText: { fontSize: 13, color: C.textSecondary },
   subTabTextActive: { color: "#4285f4", fontWeight: "600" },
 
   // Environmental
   envRow: { flexDirection: "row", marginTop: 12 },
   envItem: { flex: 1, alignItems: "center", gap: 4 },
-  envValue: { fontSize: 30, fontWeight: "700", color: "#1a2a3a" },
+  envValue: { fontSize: 30, fontWeight: "700", color: C.text },
   envLabel: {
     fontSize: 12,
-    color: "#888",
+    color: C.textMuted,
     textAlign: "center",
     lineHeight: 18,
   },
@@ -575,7 +576,7 @@ export const styles = StyleSheet.create({
   // Expanded chart
   expandedSafe: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: C.surface,
   },
   expandedCompareTabs: {
     width: "100%",
@@ -583,9 +584,9 @@ export const styles = StyleSheet.create({
     minHeight: 46,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f0f0f4",
+    backgroundColor: C.surfaceAlt,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#d2d2d6",
+    borderColor: C.border,
     borderRadius: 8,
     padding: 2,
   },
@@ -597,12 +598,12 @@ export const styles = StyleSheet.create({
     borderRadius: 7,
   },
   expandedCompareTabActive: {
-    backgroundColor: "#eef8ff",
+    backgroundColor: C.blueSurface,
     borderWidth: 1,
     borderColor: "#6ea0f6",
   },
   expandedCompareTabText: {
-    color: "#333333",
+    color: C.text,
     fontSize: 16,
     lineHeight: 22,
   },
@@ -627,7 +628,7 @@ export const styles = StyleSheet.create({
   expandedTitle: {
     fontSize: 20,
     lineHeight: 25,
-    color: "#333333",
+    color: C.text,
     marginBottom: 22,
   },
   expandedMetricSummary: {
@@ -639,13 +640,13 @@ export const styles = StyleSheet.create({
   },
   expandedMetricName: {
     flex: 1,
-    color: "#333333",
+    color: C.text,
     fontSize: 28,
     lineHeight: 36,
   },
   expandedMetricTotal: {
     flexShrink: 1,
-    color: "#333333",
+    color: C.text,
     fontSize: 28,
     lineHeight: 36,
     textAlign: "right",
@@ -655,15 +656,15 @@ export const styles = StyleSheet.create({
     maxWidth: 430,
     alignSelf: "center",
     borderWidth: 1,
-    borderColor: "#b9c3da",
+    borderColor: C.borderStrong,
     borderRadius: 6,
-    backgroundColor: "#eef8ff",
+    backgroundColor: C.blueSurface,
     paddingHorizontal: 16,
     paddingVertical: 10,
     marginBottom: 4,
   },
   expandedTooltipDate: {
-    color: "#81869d",
+    color: C.textMuted,
     fontSize: 16,
     lineHeight: 22,
     marginBottom: 14,
@@ -675,13 +676,13 @@ export const styles = StyleSheet.create({
   },
   expandedTooltipLabel: {
     flex: 1,
-    color: "#81869d",
+    color: C.textMuted,
     fontSize: 18,
     lineHeight: 25,
   },
   expandedTooltipValue: {
     flexShrink: 1,
-    color: "#81869d",
+    color: C.textMuted,
     fontSize: 18,
     lineHeight: 25,
     textAlign: "right",
@@ -706,7 +707,7 @@ export const styles = StyleSheet.create({
     borderRadius: 9,
   },
   expandedLegendText: {
-    color: "#777b92",
+    color: C.textMuted,
     fontSize: 17,
     lineHeight: 23,
     fontWeight: "600",

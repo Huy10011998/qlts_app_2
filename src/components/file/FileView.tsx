@@ -106,7 +106,7 @@ export default function FileView({ visible, onClose, params }: ViewerProps) {
               style={[styles.imagePreview, { height: windowHeight }]}
             />
           ) : (
-            <Text>❌ Không tải được ảnh</Text>
+            <Text style={styles.stateText}>❌ Không tải được ảnh</Text>
           )}
         </ScrollView>
       );
@@ -171,7 +171,7 @@ export default function FileView({ visible, onClose, params }: ViewerProps) {
 
     return (
       <ScrollView contentContainerStyle={styles.unsupportedContent}>
-        <Text>❌ Không hỗ trợ hiển thị file này</Text>
+        <Text style={styles.stateText}>❌ Không hỗ trợ hiển thị file này</Text>
       </ScrollView>
     );
   };
@@ -208,7 +208,7 @@ export default function FileView({ visible, onClose, params }: ViewerProps) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: C.surface },
 
   header: {
     paddingTop: Platform.OS === "ios" ? 50 : 20,
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.6)",
+    backgroundColor: C.loadingOverlay,
   },
   imageScrollContent: {
     flex: 1,
@@ -249,6 +249,9 @@ const styles = StyleSheet.create({
   },
   unsupportedContent: {
     padding: 16,
+  },
+  stateText: {
+    color: C.text,
   },
   titleWrap: {
     flex: 1,

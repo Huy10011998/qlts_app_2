@@ -1,5 +1,6 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { C } from "../../../utils/helpers/colors";
 
 type HomeRecentActivityItem = {
   text: string;
@@ -36,16 +37,18 @@ export default function HomeRecentActivities({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     borderRadius: 18,
     paddingHorizontal: 14,
     paddingVertical: 4,
     marginBottom: 14,
-    shadowColor: "#1A2340",
+    shadowColor: C.shadow,
     shadowOpacity: 0.07,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
     elevation: 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: C.border,
   },
   row: {
     flexDirection: "row",
@@ -53,7 +56,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 11,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#EDF0F5",
+    borderBottomColor: C.border,
   },
   rowLast: {
     borderBottomWidth: 0,
@@ -68,13 +71,13 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     lineHeight: 17,
-    color: "#374151",
+    color: C.textSecondary,
     fontWeight: "600",
   },
   time: {
     fontSize: 11.5,
     lineHeight: 15,
-    color: "#9CA3AF",
+    color: C.textMuted,
     fontWeight: "600",
   },
 });

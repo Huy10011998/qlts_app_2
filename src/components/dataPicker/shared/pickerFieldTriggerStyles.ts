@@ -1,3 +1,4 @@
+import { C } from "../../../utils/helpers/colors";
 import { StyleSheet } from "react-native";
 
 export const pickerFieldTriggerStyles = StyleSheet.create({
@@ -6,15 +7,15 @@ export const pickerFieldTriggerStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: C.borderStrong,
     borderRadius: 8,
     paddingHorizontal: 12,
     minHeight: 48,
     paddingVertical: 0,
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
   },
   text: {
-    color: "#000",
+    color: C.text,
     flex: 1,
     fontSize: 14,
     lineHeight: 20,
@@ -22,7 +23,7 @@ export const pickerFieldTriggerStyles = StyleSheet.create({
     textAlignVertical: "center",
   },
   textInput: {
-    color: "#000",
+    color: C.text,
     flex: 1,
     height: 48,
     paddingTop: 0,
@@ -33,7 +34,7 @@ export const pickerFieldTriggerStyles = StyleSheet.create({
     textAlignVertical: "center",
   },
   placeholder: {
-    color: "#999",
+    color: C.textMuted,
   },
   icon: {
     marginLeft: 0,

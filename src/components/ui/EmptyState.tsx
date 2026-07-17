@@ -1,3 +1,4 @@
+import { C } from "../../utils/helpers/colors";
 import React from "react";
 import {
   StyleProp,
@@ -32,7 +33,7 @@ export default function EmptyState({
     <View style={[styles.wrap, fullHeight && styles.fullHeight, style]}>
       {iconName ? (
         <View style={styles.iconWrap}>
-          <Ionicons name={iconName as any} size={32} color="#C7C7CC" />
+          <Ionicons name={iconName as any} size={32} color={C.textMuted} />
         </View>
       ) : null}
       <Text style={[styles.title, titleStyle]}>{title}</Text>
@@ -56,11 +57,11 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 22,
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
-    shadowColor: "#1A2340",
+    shadowColor: C.shadow,
     shadowOpacity: 0.06,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
@@ -69,13 +70,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#374151",
+    color: C.textSecondary,
     marginBottom: 6,
     textAlign: "center",
   },
   subtitle: {
     fontSize: 12,
-    color: "#8A95A3",
+    color: C.textSub,
     textAlign: "center",
     lineHeight: 18,
   },
