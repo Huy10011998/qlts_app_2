@@ -19,6 +19,7 @@ import type {
   TreeNode,
 } from "../../types/index";
 import {
+  getDetails,
   getFieldActive,
   getList,
   getPropertyClass,
@@ -35,6 +36,7 @@ import { RootState } from "../../store";
 import {
   resetSelectedTreeNode,
   resetShouldRefreshList,
+  resetUpdatedListItem,
   setSelectedTreeNode,
 } from "../../store/AssetSlice";
 import { error } from "../../utils/Logger";
@@ -129,6 +131,31 @@ export default function AssetList() {
 
   const shouldRefresh = useSelector(
     (state: RootState) => state.asset.shouldRefreshList,
+  );
+  const updatedListItem = useSelector(
+    (state: RootState) => state.asset.updatedListItem,
+  );
+
+  // Chỉ fetch lại đúng item vừa sửa rồi merge vào list tại chỗ,
+  // giữ nguyên scroll, các trang đã load-more, search và bộ lọc.
+  const mergeUpdatedItem = useCallback(
+    async (itemId: string) => {
+      if (!nameClass) return;
+      try {
+        const response = await getDetails(nameClass, itemId);
+        const freshItem = response?.data;
+        if (!freshItem || !isMounted()) return;
+
+        setAssetItems((prev) =>
+          prev.map((it) =>
+            String(it.id) === itemId ? { ...it, ...freshItem } : it,
+          ),
+        );
+      } catch (e) {
+        error("Lỗi cập nhật item trong list:", e);
+      }
+    },
+    [isMounted, nameClass],
   );
   const { can, loaded } = usePermission();
 
@@ -317,12 +344,23 @@ export default function AssetList() {
       if (shouldRefresh) {
         fetchData(false);
         dispatch(resetShouldRefreshList());
+      } else if (updatedListItem && updatedListItem.nameClass === nameClass) {
+        mergeUpdatedItem(updatedListItem.id);
+        dispatch(resetUpdatedListItem());
       }
 
       return () => {
         interaction.cancel();
       };
-    }, [dispatch, fetchData, refreshAndroidListLayout, shouldRefresh]),
+    }, [
+      dispatch,
+      fetchData,
+      mergeUpdatedItem,
+      nameClass,
+      refreshAndroidListLayout,
+      shouldRefresh,
+      updatedListItem,
+    ]),
   );
 
   useNetworkAwareReload(fetchData, {
@@ -527,7 +565,7 @@ export default function AssetList() {
           initialNumToRender={10}
           windowSize={5}
           scrollEventThrottle={16}
-          removeClippedSubviews={Platform.OS === "ios"}
+          removeClippedSubviews={Platform.OS === "android"}
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
           ListFooterComponent={isLoadingMore ? <IsLoading /> : null}

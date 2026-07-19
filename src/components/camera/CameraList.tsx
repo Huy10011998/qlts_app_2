@@ -728,7 +728,7 @@ const CameraList: React.FC = () => {
               keyExtractor={(item) => item.iD_Camera.toString()}
               renderItem={renderItem}
               showsVerticalScrollIndicator={false}
-              removeClippedSubviews={Platform.OS !== "android"}
+              removeClippedSubviews={Platform.OS === "android"}
               contentContainerStyle={[
                 styles.listContent,
                 isEmpty && styles.listContentEmpty,

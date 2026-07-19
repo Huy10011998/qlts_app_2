@@ -655,6 +655,13 @@ const SettingScreen = () => {
           </SettingSectionGroup>
 
           <SettingSectionGroup title="KHÁC">
+            <SettingRowItem
+              iconName="contrast-outline"
+              iconBg={C.violet}
+              label="Hiển thị"
+              sublabel="Theo thiết bị, giao diện sáng hoặc tối"
+              onPress={() => navigation.navigate("Appearance")}
+            />
             <SettingSwitchRow
               iconName="wifi-outline"
               iconBg={C.sky}

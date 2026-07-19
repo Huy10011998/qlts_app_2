@@ -5,6 +5,8 @@ const initialState: AssetState = {
   shouldRefreshList: false,
   shouldRefreshDetails: false,
 
+  updatedListItem: null,
+
   selectedTreeValue: null,
   selectedTreeProperty: null,
   selectedTreeText: null,
@@ -19,6 +21,16 @@ const assetSlice = createSlice({
     },
     resetShouldRefreshList(state) {
       state.shouldRefreshList = false;
+    },
+
+    setUpdatedListItem(
+      state,
+      action: PayloadAction<{ id: string; nameClass: string }>
+    ) {
+      state.updatedListItem = action.payload;
+    },
+    resetUpdatedListItem(state) {
+      state.updatedListItem = null;
     },
 
     setShouldRefreshDetails(state, action: PayloadAction<boolean>) {
@@ -53,6 +65,8 @@ const assetSlice = createSlice({
 export const {
   setShouldRefreshList,
   resetShouldRefreshList,
+  setUpdatedListItem,
+  resetUpdatedListItem,
   setShouldRefreshDetails,
   resetShouldRefreshDetails,
   setSelectedTreeNode,

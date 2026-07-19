@@ -164,7 +164,7 @@ export default function OpinionPickerModal({
         data={opinions}
         keyExtractor={(item) => item.id}
         keyboardShouldPersistTaps="handled"
-        removeClippedSubviews={Platform.OS === "ios"}
+        removeClippedSubviews={Platform.OS === "android"}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.list,

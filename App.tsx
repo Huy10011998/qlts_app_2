@@ -16,12 +16,13 @@ import AppBootstrap from "./src/app/AppBootstrap";
 import { configureTextScalingDefaults } from "./src/utils/helpers/textScaling";
 import { useColorScheme } from "./src/hooks/useColorScheme";
 import { Colors } from "./src/constants/Colors";
+import { ThemeProvider } from "./src/context/ThemeContext";
 
 const LANDSCAPE_ALLOWED_ROUTES = new Set(["CameraList", "CameraListGrid"]);
 
 configureTextScalingDefaults();
 
-export default function App() {
+function AppContent() {
   const colorScheme = useColorScheme() ?? "light";
   const isDark = colorScheme === "dark";
   const navigationRef = useNavigationContainerRef();
@@ -82,5 +83,13 @@ export default function App() {
         </AuthProvider>
       </Provider>
     </SafeAreaProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   );
 }
