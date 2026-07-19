@@ -434,7 +434,7 @@ export default function ReportScreen() {
           <ReportGroupHeader section={section} />
         )}
         contentContainerStyle={[s.listContent, isEmpty && s.listContentEmpty]}
-        removeClippedSubviews={Platform.OS === "ios"}
+        removeClippedSubviews={Platform.OS === "android"}
         initialNumToRender={20}
         windowSize={10}
         keyboardShouldPersistTaps="handled"
@@ -470,14 +470,16 @@ export default function ReportScreen() {
         ]}
         onRequestClose={closeActiveReport}
       >
-        {activeReport && (
-          <ReportView
-            title={activeReport.config.report.moTa || activeReport.item.label}
-            config={activeReport.config}
-            previewEndpoint={activeReport.previewEndpoint}
-            onClose={closeActiveReport}
-          />
-        )}
+        <View style={s.reportModalBackdrop}>
+          {activeReport && (
+            <ReportView
+              title={activeReport.config.report.moTa || activeReport.item.label}
+              config={activeReport.config}
+              previewEndpoint={activeReport.previewEndpoint}
+              onClose={closeActiveReport}
+            />
+          )}
+        </View>
       </Modal>
     </KeyboardAvoidingView>
   );
@@ -487,6 +489,10 @@ const s = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: ASSET_MENU_BG,
+  },
+  reportModalBackdrop: {
+    flex: 1,
+    backgroundColor: C.surface,
   },
   centerState: {
     flex: 1,

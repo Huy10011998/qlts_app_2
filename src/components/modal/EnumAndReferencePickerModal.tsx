@@ -286,7 +286,7 @@ export default function EnumAndReferencePickerModal({
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        removeClippedSubviews={Platform.OS === "ios"}
+        removeClippedSubviews={Platform.OS === "android"}
         onEndReached={onLoadMore}
         onEndReachedThreshold={0.4}
         ListFooterComponent={

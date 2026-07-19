@@ -44,6 +44,7 @@ import {
   filterAssetMenuTree,
 } from "./shared/assetMenuHelpers";
 import { ASSET_MENU_BG, ASSET_MENU_BRAND_RED } from "./shared/assetMenuTheme";
+import { C } from "../../utils/helpers/colors";
 
 if (
   Platform.OS === "android" &&
@@ -309,7 +310,7 @@ export default function AssetScreen() {
           />
         )}
         contentContainerStyle={[s.listContent, isEmpty && s.listContentEmpty]}
-        removeClippedSubviews={Platform.OS === "ios"}
+        removeClippedSubviews={Platform.OS === "android"}
         initialNumToRender={20}
         windowSize={10}
         keyboardShouldPersistTaps="handled"
@@ -353,14 +354,16 @@ export default function AssetScreen() {
         ]}
         onRequestClose={() => setActiveReport(null)}
       >
-        {activeReport && (
-          <ReportView
-            title={activeReport.config.report.moTa || activeReport.item.label}
-            config={activeReport.config}
-            previewEndpoint={activeReport.previewEndpoint}
-            onClose={() => setActiveReport(null)}
-          />
-        )}
+        <View style={s.reportModalBackdrop}>
+          {activeReport && (
+            <ReportView
+              title={activeReport.config.report.moTa || activeReport.item.label}
+              config={activeReport.config}
+              previewEndpoint={activeReport.previewEndpoint}
+              onClose={() => setActiveReport(null)}
+            />
+          )}
+        </View>
       </Modal>
 
       <Modal
@@ -402,6 +405,10 @@ const s = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: ASSET_MENU_BG,
+  },
+  reportModalBackdrop: {
+    flex: 1,
+    backgroundColor: C.surface,
   },
   centerState: {
     flex: 1,

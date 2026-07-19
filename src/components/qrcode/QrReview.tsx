@@ -28,7 +28,10 @@ import { usePermission } from "../../hooks/usePermission";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store";
 import { useAppDispatch } from "../../store/hooks";
-import { resetShouldRefreshList } from "../../store/AssetSlice";
+import {
+  resetShouldRefreshList,
+  resetUpdatedListItem,
+} from "../../store/AssetSlice";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { useRelatedAssetListData } from "../../hooks/useRelatedAssetListData";
 import AssetListSearchBar from "../assets/shared/AssetListSearchBar";
@@ -94,6 +97,7 @@ export default function QrReview() {
     loadErrorMessage,
     total,
     fetchData,
+    mergeItemById,
     refreshTop,
     handleLoadMore,
   } = useRelatedAssetListData({
@@ -120,6 +124,9 @@ export default function QrReview() {
   const shouldRefresh = useSelector(
     (state: RootState) => state.asset.shouldRefreshList,
   );
+  const updatedListItem = useSelector(
+    (state: RootState) => state.asset.updatedListItem,
+  );
 
   useFocusEffect(
     React.useCallback(() => {
@@ -130,12 +137,23 @@ export default function QrReview() {
       if (shouldRefresh) {
         fetchData(false);
         dispatch(resetShouldRefreshList());
+      } else if (updatedListItem && updatedListItem.nameClass === nameClass) {
+        mergeItemById(updatedListItem.id);
+        dispatch(resetUpdatedListItem());
       }
 
       return () => {
         interaction.cancel();
       };
-    }, [dispatch, fetchData, refreshAndroidListLayout, shouldRefresh]),
+    }, [
+      dispatch,
+      fetchData,
+      mergeItemById,
+      nameClass,
+      refreshAndroidListLayout,
+      shouldRefresh,
+      updatedListItem,
+    ]),
   );
 
   useEffect(() => {
@@ -214,7 +232,7 @@ export default function QrReview() {
               tintColor={BRAND_RED}
             />
           }
-          removeClippedSubviews={Platform.OS === "ios"}
+          removeClippedSubviews={Platform.OS === "android"}
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
           ListFooterComponent={isLoadingMore ? <IsLoading /> : null}

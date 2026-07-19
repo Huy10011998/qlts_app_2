@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getFieldActive, getList, getPropertyClass } from "../services";
+import {
+  getDetails,
+  getFieldActive,
+  getList,
+  getPropertyClass,
+} from "../services";
 import type { Field, PropertyResponse } from "../types/index";
 import { error } from "../utils/Logger";
 import { useNetworkAwareReload } from "./useNetworkAwareReload";
@@ -190,6 +195,28 @@ export function useRelatedAssetListData({
     });
   }, [debouncedSearch, enabled, fetchData, isMounted, nameClass]);
 
+  // Chỉ fetch lại đúng item vừa sửa rồi merge vào list tại chỗ,
+  // giữ nguyên scroll, các trang đã load-more và từ khóa tìm kiếm.
+  const mergeItemById = useCallback(
+    async (itemId: string) => {
+      if (!enabled || !nameClass) return;
+      try {
+        const response = await getDetails(nameClass, itemId);
+        const freshItem = response?.data;
+        if (!freshItem || !isMounted()) return;
+
+        setData((prev) =>
+          prev.map((item) =>
+            String(item.id) === itemId ? { ...item, ...freshItem } : item,
+          ),
+        );
+      } catch (e) {
+        if (!isNetworkRequestError(e)) error(e);
+      }
+    },
+    [enabled, isMounted, nameClass],
+  );
+
   const refreshTop = async () => {
     if (!enabled || !nameClass || isRefreshingTop) return;
 
@@ -221,6 +248,7 @@ export function useRelatedAssetListData({
     loadErrorMessage,
     total,
     fetchData,
+    mergeItemById,
     refreshTop,
     handleLoadMore,
   };

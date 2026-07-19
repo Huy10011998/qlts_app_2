@@ -224,7 +224,7 @@ export default function CameraScreen() {
             styles.listContent,
             isEmpty && styles.listContentEmpty,
           ]}
-          removeClippedSubviews={Platform.OS === "ios"}
+          removeClippedSubviews={Platform.OS === "android"}
           initialNumToRender={20}
           windowSize={10}
           keyboardShouldPersistTaps="handled"

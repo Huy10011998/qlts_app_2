@@ -10,7 +10,6 @@ import {
   AppStateStatus,
   View,
   Text,
-  Platform,
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
@@ -41,6 +40,7 @@ import { useEnumAndReferenceLoader } from "../../hooks/AssetAddItem/useEnumAndRe
 import { useModalItems } from "../../hooks/AssetAddItem/useModalItems";
 import AssetFormReferencePickerModal from "../assets/shared/AssetFormReferencePickerModal";
 import BottomSheetModalShell from "../shared/BottomSheetModalShell";
+import { HeaderDetailsModalHeader } from "../header/HeaderDetails";
 import { handleCascadeChange } from "../../utils/cascade";
 import {
   buildReferenceFetchParams,
@@ -1054,39 +1054,30 @@ const ReportView: React.FC<ReportViewProps> = ({
     return (
       <View style={styles.container}>
         {!isLandscape ? (
-          <View
-            style={[
-              styles.header,
-              Platform.OS === "ios" ? styles.headerIos : styles.headerAndroid,
-            ]}
-          >
-            <TouchableOpacity
-              style={styles.headerIconButton}
-              onPress={closeReportPreview}
-            >
-              <Ionicons name="chevron-back" size={26} color="#fff" />
-            </TouchableOpacity>
-
-            <Text
-              style={[styles.title, styles.previewTitle]}
-              allowFontScaling={false}
-              numberOfLines={1}
-            >
-              {title}
-            </Text>
-
-            <TouchableOpacity
-              style={styles.headerIconButton}
-              onPress={() => setShareOptionsVisible(true)}
-              disabled={isSharing}
-            >
-              {isSharing ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Ionicons name="share-social-outline" size={24} color="#fff" />
-              )}
-            </TouchableOpacity>
-          </View>
+          <HeaderDetailsModalHeader
+            title={title}
+            onBack={closeReportPreview}
+            backIcon="chevron-back"
+            badgeLabel="Bao cao"
+            iconName="bar-chart-outline"
+            rightSlot={
+              <TouchableOpacity
+                style={styles.headerIconButton}
+                onPress={() => setShareOptionsVisible(true)}
+                disabled={isSharing}
+              >
+                {isSharing ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Ionicons
+                    name="share-social-outline"
+                    size={24}
+                    color="#fff"
+                  />
+                )}
+              </TouchableOpacity>
+            }
+          />
         ) : null}
 
         {!isLandscape ? (
@@ -1233,27 +1224,19 @@ const ReportView: React.FC<ReportViewProps> = ({
 
   return (
     <View style={styles.container}>
-      <View
-        style={[
-          styles.header,
-          Platform.OS === "ios" ? styles.headerIos : styles.headerAndroid,
-        ]}
-      >
-        <Text
-          style={styles.formTitle}
-          allowFontScaling={false}
-          numberOfLines={2}
-        >
-          {title}
-        </Text>
-
-        <TouchableOpacity
-          style={styles.headerIconButton}
-          onPress={closeReportModal}
-        >
-          <Ionicons name="close" size={30} color="#fff" />
-        </TouchableOpacity>
-      </View>
+      <HeaderDetailsModalHeader
+        title={title}
+        badgeLabel="Dieu kien loc"
+        iconName="options-outline"
+        rightSlot={
+          <TouchableOpacity
+            style={styles.headerIconButton}
+            onPress={closeReportModal}
+          >
+            <Ionicons name="close" size={30} color="#fff" />
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView
         style={styles.formScroll}
@@ -1342,44 +1325,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: C.surface,
   },
-  header: {
-    paddingHorizontal: 16,
-    paddingBottom: 10,
-    backgroundColor: C.red,
-    flexDirection: "row" as const,
-    justifyContent: "space-between" as const,
-    alignItems: "center" as const,
-    gap: 8,
-  },
-  headerIos: {
-    paddingTop: 50,
-  },
-  headerAndroid: {
-    paddingTop: 20,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "bold" as const,
-    color: "#fff",
-  },
-  formTitle: {
-    flex: 1,
-    flexShrink: 1,
-    fontSize: 18,
-    fontWeight: "bold" as const,
-    color: "#fff",
-    lineHeight: 23,
-  },
   headerIconButton: {
     width: 38,
     height: 38,
     flexShrink: 0,
     alignItems: "center",
     justifyContent: "center",
-  },
-  previewTitle: {
-    flex: 1,
-    marginHorizontal: 6,
   },
   form: {
     padding: 16,

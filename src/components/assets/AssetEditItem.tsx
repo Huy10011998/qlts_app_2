@@ -17,7 +17,10 @@ import { handleCascadeChange } from "../../utils/cascade/index";
 import { useImageLoader } from "../../hooks/useImageLoader";
 import { checkValidation, update } from "../../services/data/callApi";
 import { useNavigation } from "@react-navigation/native";
-import { setShouldRefreshDetails } from "../../store/AssetSlice";
+import {
+  setShouldRefreshDetails,
+  setUpdatedListItem,
+} from "../../store/AssetSlice";
 
 import {
   formatDateForBE,
@@ -376,6 +379,12 @@ export default function AssetEditItem() {
             setFormData({});
             setImages({});
             dispatch(setShouldRefreshDetails(true));
+            dispatch(
+              setUpdatedListItem({
+                id: String(originalItem.id),
+                nameClass,
+              }),
+            );
             navigation.goBack();
           },
         },

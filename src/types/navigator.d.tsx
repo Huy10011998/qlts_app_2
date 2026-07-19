@@ -118,6 +118,7 @@ export type RootStackParamList = {
   /** ================= SETTINGS ================= */
   Settings: undefined;
   Profile: undefined;
+  Appearance: undefined;
 
   /** ================= ASSET ================= */
   Asset:

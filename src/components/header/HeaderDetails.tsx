@@ -171,12 +171,22 @@ export const HeaderDetails = ({
 export function HeaderDetailsModalHeader({
   title,
   onBack,
+  backIcon = "arrow-back",
+  badgeLabel,
+  iconName,
+  rightSlot,
 }: {
   title: string;
-  onBack: () => void;
+  onBack?: () => void;
+  backIcon?: React.ComponentProps<typeof Ionicons>["name"];
+  badgeLabel?: string;
+  iconName?: React.ComponentProps<typeof Ionicons>["name"];
+  rightSlot?: React.ReactNode;
 }) {
   const insets = useSafeAreaInsets();
   const meta = getHeaderMeta(title);
+  const resolvedBadgeLabel = badgeLabel ?? meta.badgeLabel;
+  const resolvedIconName = iconName ?? meta.iconName;
 
   return (
     <View style={[styles.outer, { paddingTop: insets.top }]}>
@@ -188,21 +198,23 @@ export function HeaderDetailsModalHeader({
 
       <View style={styles.topBar}>
         <View style={styles.sideSlot}>
-          <TouchableOpacity onPress={onBack} style={styles.iconButton}>
-            <Ionicons name="arrow-back" size={26} color="#fff" />
-          </TouchableOpacity>
+          {onBack ? (
+            <TouchableOpacity onPress={onBack} style={styles.iconButton}>
+              <Ionicons name={backIcon} size={26} color="#fff" />
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         <View style={styles.titleWrap}>
           <View style={styles.titleBadge}>
             <Ionicons
-              name={meta.iconName}
+              name={resolvedIconName}
               size={12}
               color="rgba(255,255,255,0.82)"
               style={styles.titleBadgeIcon}
             />
             <Text style={styles.titleBadgeText} allowFontScaling={false}>
-              {meta.badgeLabel}
+              {resolvedBadgeLabel}
             </Text>
           </View>
           <Text
@@ -216,7 +228,7 @@ export function HeaderDetailsModalHeader({
           </Text>
         </View>
 
-        <View style={[styles.sideSlot, styles.rightSlot]} />
+        <View style={[styles.sideSlot, styles.rightSlot]}>{rightSlot}</View>
       </View>
 
       <View style={styles.waveContainer}>
