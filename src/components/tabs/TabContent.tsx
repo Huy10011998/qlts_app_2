@@ -78,8 +78,8 @@ export default function TabContent({
         const refMessage = refList.map((e) => `• ${e.message}`).join("\n");
 
         showAlertIfActive(
-          "Không thể xóa tài sản",
-          `Tài sản đang được tham chiếu tại:\n\n${refMessage}`,
+          "Không thể xóa thông tin",
+          `Thông tin đang được tham chiếu tại:\n\n${refMessage}`,
         );
         return;
       }
@@ -123,7 +123,7 @@ export default function TabContent({
         },
       ]);
     } catch (err) {
-      showAlertIfActive("Lỗi", "Không thể xoá tài sản!");
+      showAlertIfActive("Lỗi", "Không thể xoá thông tin!");
     }
   };
 
@@ -189,7 +189,7 @@ export default function TabContent({
           <View style={styles.emptyStateRoot}>
             <AssetListEmptyState
               iconName="cloud-offline-outline"
-              title="Không thể tải chi tiết tài sản"
+              title="Không thể tải chi tiết thông tin"
               subtitle={
                 loadErrorMessage ||
                 "Vui lòng kiểm tra kết nối mạng hoặc quay lại để thử lại."
