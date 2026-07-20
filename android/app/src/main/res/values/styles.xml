@@ -3,7 +3,7 @@
     <!-- Native launch theme. Use only the transparent foreground artwork so
          Android does not draw the launcher adaptive-icon background/mask. -->
     <style name="AppTheme.Starting" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/app_background</item>
+        <item name="windowSplashScreenBackground">@color/red</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
         <item name="windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
         <item name="postSplashScreenTheme">@style/AppTheme</item>

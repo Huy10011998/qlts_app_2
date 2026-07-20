@@ -17,17 +17,17 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="AppLogo" translatesAutoresizingMaskIntoConstraints="NO" id="AppLogoImage">
-                                <rect key="frame" x="67.5" y="279.5" width="240" height="128"/>
+                                <rect key="frame" x="133.5" y="279.5" width="108" height="108"/>
                             </imageView>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="Bcu-3y-fUS"/>
-                        <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                        <color key="backgroundColor" red="0.8901960784313725" green="0.11764705882352941" blue="0.1411764705882353" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <color key="tintColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <constraints>
                             <constraint firstItem="AppLogoImage" firstAttribute="centerX" secondItem="Bcu-3y-fUS" secondAttribute="centerX" id="centerX-logo"/>
                             <constraint firstItem="AppLogoImage" firstAttribute="centerY" secondItem="Bcu-3y-fUS" secondAttribute="centerY" id="centerY-logo"/>
-                            <constraint firstItem="AppLogoImage" firstAttribute="height" constant="128" id="height-logo"/>
-                            <constraint firstItem="AppLogoImage" firstAttribute="width" constant="240" id="width-logo"/>
+                            <constraint firstItem="AppLogoImage" firstAttribute="height" constant="108" id="height-logo"/>
+                            <constraint firstItem="AppLogoImage" firstAttribute="width" constant="108" id="width-logo"/>
                         </constraints>
                     </view>
                 </viewController>
