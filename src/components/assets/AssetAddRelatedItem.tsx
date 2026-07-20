@@ -13,7 +13,7 @@ import {
 } from "../../utils/helpers/api";
 import { fetchImage, pickImage } from "../../utils/Image";
 import { isEffectivelyEmptyCodeValue } from "../../utils/helpers/string";
-import { C } from "../../utils/helpers/colors";
+import { C, useAccentBorderColors } from "../../utils/helpers/colors";
 import { useImageLoader } from "../../hooks/useImageLoader";
 import {
   checkValidation,
@@ -65,6 +65,7 @@ const BG = ASSET_FORM_BG;
 const CARD_SHADOW = ASSET_FORM_CARD_SHADOW;
 
 export default function AssetAddRelatedItem() {
+  const accentBorders = useAccentBorderColors();
   const {
     field,
     nameClass,
@@ -442,7 +443,13 @@ export default function AssetAddRelatedItem() {
         validationErrors={validationErrors}
         setImages={setImages}
         setLoadingImages={setLoadingImages}
-        styles={styles}
+        styles={{
+          ...styles,
+          uploadButton: [
+            styles.uploadButton,
+            { borderColor: accentBorders.red },
+          ],
+        }}
         toggleGroup={toggleGroup}
       />
     </AssetFormScreenShell>

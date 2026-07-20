@@ -1,13 +1,13 @@
-import { C } from "../../../utils/helpers/colors";
+import {
+  useAccentBorderColors,
+  useAppColors,
+  useHairlineBorderColor,
+} from "../../../utils/helpers/colors";
 import React from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import IsLoading from "../../../components/ui/IconLoading";
-import {
-  ASSET_MENU_BG,
-  ASSET_MENU_BRAND_RED,
-  ASSET_MENU_CARD_SHADOW,
-} from "./assetMenuTheme";
+import { ASSET_MENU_BRAND_RED } from "./assetMenuTheme";
 import { COMPACT_TEXT_MAX_SCALE } from "../../../utils/helpers/textScaling";
 
 type AssetMenuSearchBarProps = {
@@ -27,18 +27,31 @@ export default function AssetMenuSearchBar({
   showResultCount,
   placeholder = "Tìm kiếm tài sản...",
 }: AssetMenuSearchBarProps) {
+  const hairlineBorderColor = useHairlineBorderColor();
+  const accentBorders = useAccentBorderColors();
+  const colors = useAppColors();
+
   return (
-    <View style={styles.searchWrap}>
-      <View style={styles.searchBox}>
+    <View style={[styles.searchWrap, { backgroundColor: colors.bg }]}>
+      <View
+        style={[
+          styles.searchBox,
+          {
+            backgroundColor: colors.surface,
+            borderColor: hairlineBorderColor,
+            shadowColor: colors.shadow,
+          },
+        ]}
+      >
         <View style={styles.searchIconWrap}>
-          <Ionicons name="search-outline" size={16} color={C.textSub} />
+          <Ionicons name="search-outline" size={16} color={colors.textSub} />
         </View>
         <TextInput
           placeholder={placeholder}
-          placeholderTextColor={C.placeholder}
+          placeholderTextColor={colors.placeholder}
           value={value}
           onChangeText={onChangeText}
-          style={styles.searchInput}
+          style={[styles.searchInput, { color: colors.text }]}
           clearButtonMode="never"
           returnKeyType="search"
           maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
@@ -50,13 +63,25 @@ export default function AssetMenuSearchBar({
         ) : null}
         {!isSearching && value.length > 0 ? (
           <Pressable onPress={() => onChangeText("")} style={styles.clearBtn}>
-            <Ionicons name="close-circle" size={16} color={C.placeholder} />
+            <Ionicons
+              name="close-circle"
+              size={16}
+              color={colors.placeholder}
+            />
           </Pressable>
         ) : null}
       </View>
 
       {showResultCount ? (
-        <View style={styles.resultBadge}>
+        <View
+          style={[
+            styles.resultBadge,
+            {
+              backgroundColor: colors.redSurface,
+              borderColor: accentBorders.red,
+            },
+          ]}
+        >
           <Text style={styles.resultText} allowFontScaling={false}>
             {resultCount} kết quả
           </Text>
@@ -71,18 +96,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingTop: 14,
     paddingBottom: 8,
-    backgroundColor: ASSET_MENU_BG,
   },
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: C.surface,
     borderRadius: 14,
     minHeight: 48,
     paddingHorizontal: 12,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: C.border,
-    ...ASSET_MENU_CARD_SHADOW,
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   searchIconWrap: {
     marginRight: 8,
@@ -97,7 +122,6 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
     fontSize: 14,
     lineHeight: 20,
-    color: C.text,
     fontWeight: "400",
     includeFontPadding: false,
     textAlignVertical: "center",
@@ -116,12 +140,10 @@ const styles = StyleSheet.create({
   resultBadge: {
     alignSelf: "flex-start",
     marginTop: 8,
-    backgroundColor: C.redSurface,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 3,
     borderWidth: 1,
-    borderColor: C.redBorder,
   },
   resultText: {
     fontSize: 11,

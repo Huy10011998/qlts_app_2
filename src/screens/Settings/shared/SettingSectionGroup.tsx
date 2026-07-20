@@ -1,6 +1,9 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { C } from "../../../utils/helpers/colors";
+import {
+  useAppColors,
+  useHairlineBorderColor,
+} from "../../../utils/helpers/colors";
 
 type SettingSectionGroupProps = {
   title?: string;
@@ -11,16 +14,34 @@ export default function SettingSectionGroup({
   title,
   children,
 }: SettingSectionGroupProps) {
+  const colors = useAppColors();
+  const hairlineBorderColor = useHairlineBorderColor();
+
   return (
     <View style={styles.group}>
       {title ? (
         <View style={styles.titleRow}>
-          <View style={styles.titleLine} />
-          <Text style={styles.title}>{title}</Text>
-          <View style={styles.titleLine} />
+          <View
+            style={[styles.titleLine, { backgroundColor: colors.border }]}
+          />
+          <Text style={[styles.title, { color: colors.textSub }]}>{title}</Text>
+          <View
+            style={[styles.titleLine, { backgroundColor: colors.border }]}
+          />
         </View>
       ) : null}
-      <View style={styles.card}>{children}</View>
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: colors.surface,
+            borderColor: hairlineBorderColor,
+            shadowColor: colors.shadow,
+          },
+        ]}
+      >
+        {children}
+      </View>
     </View>
   );
 }
@@ -38,25 +59,20 @@ const styles = StyleSheet.create({
   titleLine: {
     flex: 1,
     height: 1,
-    backgroundColor: C.border,
   },
   title: {
     fontSize: 11,
     fontWeight: "700",
-    color: C.textSub,
     letterSpacing: 1.2,
     marginHorizontal: 10,
   },
   card: {
-    backgroundColor: C.card,
     borderRadius: 18,
     overflow: "hidden",
-    shadowColor: C.shadow,
     shadowOpacity: 0.07,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
     elevation: 3,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: C.border,
   },
 });

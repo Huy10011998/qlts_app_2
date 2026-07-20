@@ -28,7 +28,7 @@ import { TouchableWithoutFeedback } from "react-native";
 import Video from "react-native-video";
 import WebView from "react-native-webview";
 import Orientation from "react-native-orientation-locker";
-import { C } from "../../utils/helpers/colors";
+import { C, useSeparatorColor } from "../../utils/helpers/colors";
 import {
   GestureHandlerRootView,
   GestureDetector,
@@ -53,6 +53,7 @@ import EmptyState from "../ui/EmptyState";
 const LANDSCAPE_BACK_FALLBACK_DELAY_MS = 120;
 
 const CameraList: React.FC = () => {
+  const separatorColor = useSeparatorColor();
   const route = useRoute<any>();
   const { cameras, zoneName } = route.params;
   const insets = useSafeAreaInsets();
@@ -797,6 +798,7 @@ const CameraList: React.FC = () => {
                   style={[
                     styles.listItem,
                     index !== 0 && styles.itemBorder,
+                    index !== 0 && { borderColor: separatorColor },
                     layoutCount === Number(item) && styles.activeItem,
                   ]}
                   onPress={() => handleSetLayout(Number(item))}

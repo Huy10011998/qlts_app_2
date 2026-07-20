@@ -1,6 +1,7 @@
 import React from "react";
 import { useNetworkAwareReload } from "../../../hooks/useNetworkAwareReload";
 import EnumAndReferencePickerModal from "../../modal/EnumAndReferencePickerModal";
+import { TypeProperty } from "../../../utils/Enum";
 
 type AssetFormReferencePickerModalProps = {
   activeEnumField: any;
@@ -56,6 +57,9 @@ export default function AssetFormReferencePickerModal({
 }: AssetFormReferencePickerModalProps) {
   const [showSearchingIndicator, setShowSearchingIndicator] =
     React.useState(false);
+  const isReferenceField =
+    activeEnumField?.typeProperty === TypeProperty.Reference;
+  const realItemCount = modalItems.filter((item) => item.value !== "").length;
 
   React.useEffect(() => {
     if (refSearching) {
@@ -115,14 +119,16 @@ export default function AssetFormReferencePickerModal({
       selectedValue={activeEnumField ? formData[activeEnumField.name] : null}
       isMulti={isMulti}
       total={
-        activeEnumField ? referenceData[activeEnumField.name]?.totalCount || 0 : 0
+        isReferenceField
+          ? referenceData[activeEnumField.name]?.totalCount || 0
+          : realItemCount
       }
       loadedCount={
-        activeEnumField
+        isReferenceField
           ? (referenceData[activeEnumField.name]?.items ?? []).filter(
               (item) => item.value !== "",
             ).length
-          : 0
+          : realItemCount
       }
       onClose={() => setModalVisible(false)}
       onSelect={(value) => {

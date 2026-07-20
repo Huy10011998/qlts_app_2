@@ -9,7 +9,7 @@ import {
   getApiValidationFieldErrors,
 } from "../../utils/helpers/api";
 import { isEffectivelyEmptyCodeValue } from "../../utils/helpers/string";
-import { C } from "../../utils/helpers/colors";
+import { C, useAccentBorderColors } from "../../utils/helpers/colors";
 import { useParams } from "../../hooks/useParams";
 import { fetchImage, pickImage } from "../../utils/Image";
 import { fetchReferenceByFieldWithParent } from "../../utils/cascade/FetchReferenceByFieldWithParent";
@@ -123,6 +123,7 @@ const areUpdateValuesEqual = (a: Record<string, any>, b: Record<string, any>) =>
 };
 
 export default function AssetEditItem() {
+  const accentBorders = useAccentBorderColors();
   const { item, field, nameClass } = useParams();
   const navigation = useNavigation<AssetEditItemNavigationProp>();
   const dispatch = useAppDispatch();
@@ -469,7 +470,13 @@ export default function AssetEditItem() {
         validationErrors={validationErrors}
         setImages={setImages}
         setLoadingImages={setLoadingImages}
-        styles={styles}
+        styles={{
+          ...styles,
+          uploadButton: [
+            styles.uploadButton,
+            { borderColor: accentBorders.red },
+          ],
+        }}
         toggleGroup={toggleGroup}
       />
     </AssetFormScreenShell>

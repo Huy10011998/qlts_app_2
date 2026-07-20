@@ -1,4 +1,8 @@
-import { C } from "../../utils/helpers/colors";
+import {
+  C,
+  useHairlineBorderColor,
+  useSeparatorColor,
+} from "../../utils/helpers/colors";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -108,6 +112,8 @@ const toStopPoint = (item: Stop): StopPoint | null => {
 
 export default function VehicleTrackingScreen() {
   const navigation = useNavigation<HomeNavigationProp>();
+  const hairlineBorderColor = useHairlineBorderColor();
+  const separatorColor = useSeparatorColor();
   const isFocused = useIsFocused();
   const today = useMemo(() => new Date(), []);
   const firstDay = useMemo(
@@ -311,7 +317,7 @@ export default function VehicleTrackingScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.list}>
+        <View style={[styles.list, { borderColor: hairlineBorderColor }]}>
           {stopLoading ? (
             <View style={styles.listState}>
               <ActivityIndicator color="#4F46E5" />
@@ -336,7 +342,10 @@ export default function VehicleTrackingScreen() {
             groups.map(([date, items]) => {
               const opened = expanded.includes(date);
               return (
-                <View key={date} style={styles.group}>
+                <View
+                  key={date}
+                  style={[styles.group, { borderBottomColor: separatorColor }]}
+                >
                   <TouchableOpacity
                     style={styles.groupHeader}
                     onPress={() =>

@@ -1,4 +1,8 @@
-import { C } from "../../../utils/helpers/colors";
+import {
+  C,
+  useAccentBorderColors,
+  useHairlineBorderColor,
+} from "../../../utils/helpers/colors";
 import React from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
@@ -25,9 +29,12 @@ export default function AssetListSearchBar({
   badgeText,
   summaryText,
 }: AssetListSearchBarProps) {
+  const hairlineBorderColor = useHairlineBorderColor();
+  const accentBorders = useAccentBorderColors();
+
   return (
     <View style={styles.searchWrap}>
-      <View style={styles.searchBox}>
+      <View style={[styles.searchBox, { borderColor: hairlineBorderColor }]}>
         <View style={styles.searchIconWrap}>
           <Ionicons name="search-outline" size={16} color={C.textSub} />
         </View>
@@ -53,7 +60,7 @@ export default function AssetListSearchBar({
       </View>
 
       <View style={styles.summaryRow}>
-        <View style={styles.summaryBadge}>
+        <View style={[styles.summaryBadge, { borderColor: accentBorders.red }]}>
           <Text
             style={styles.summaryBadgeText}
             numberOfLines={1}

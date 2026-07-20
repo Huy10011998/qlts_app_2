@@ -1,4 +1,8 @@
-import { C } from "../../utils/helpers/colors";
+import {
+  C,
+  useAccentBorderColors,
+  useHairlineBorderColor,
+} from "../../utils/helpers/colors";
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import {
   Alert,
@@ -67,6 +71,8 @@ const SUPPORT_PHONE_LINK = SUPPORT_PHONE.replace(/\s/g, "");
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
+  const hairlineBorderColor = useHairlineBorderColor();
+  const accentBorders = useAccentBorderColors();
   const {
     height: windowHeight,
     width: windowWidth,
@@ -98,10 +104,10 @@ export default function LoginScreen() {
   const isLocalNetworkDenied = localNetworkStatus === "denied";
   const isLocalNetworkGranted = localNetworkStatus === "granted";
   const localNetworkToneStyle = isLocalNetworkGranted
-    ? styles.localNetworkNoticeGranted
+    ? [styles.localNetworkNoticeGranted, { borderColor: accentBorders.green }]
     : isLocalNetworkDenied
-    ? styles.localNetworkNoticeDenied
-    : styles.localNetworkNoticeUnknown;
+    ? [styles.localNetworkNoticeDenied, { borderColor: accentBorders.amber }]
+    : [styles.localNetworkNoticeUnknown, { borderColor: hairlineBorderColor }];
   const localNetworkIconToneStyle = isLocalNetworkGranted
     ? styles.localNetworkIconGranted
     : isLocalNetworkDenied
@@ -516,7 +522,7 @@ export default function LoginScreen() {
           </View>
 
           {/* ── FORM CARD (scroll để không bị che) ── */}
-          <View style={styles.card}>
+          <View style={[styles.card, { borderColor: hairlineBorderColor }]}>
             <ScrollView
               style={styles.scrollView}
               contentContainerStyle={[
@@ -665,6 +671,7 @@ export default function LoginScreen() {
                   <TouchableOpacity
                     style={[
                       styles.faceIdBtn,
+                      { borderColor: hairlineBorderColor },
                       (!isTokenReady || !isFaceIdEnabled) &&
                         styles.faceIdBtnDimmed,
                     ]}
@@ -712,7 +719,10 @@ export default function LoginScreen() {
                   </View>
                   {Platform.OS === "ios" && isLocalNetworkDenied && (
                     <TouchableOpacity
-                      style={styles.localNetworkSettingsButton}
+                      style={[
+                        styles.localNetworkSettingsButton,
+                        { borderColor: accentBorders.red },
+                      ]}
                       onPress={openLocalNetworkSettings}
                       activeOpacity={0.8}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -726,6 +736,7 @@ export default function LoginScreen() {
               <View
                 style={[
                   styles.supportCard,
+                  { borderColor: accentBorders.red },
                   isCompactHeight && styles.supportCardCompact,
                 ]}
               >
@@ -736,7 +747,7 @@ export default function LoginScreen() {
                   ]}
                 >
                   <TouchableOpacity
-                    style={styles.supportAction}
+                    style={[styles.supportAction, { borderColor: accentBorders.red }]}
                     onPress={handleOpenSupportEmail}
                     activeOpacity={0.82}
                   >
@@ -750,7 +761,7 @@ export default function LoginScreen() {
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={styles.supportAction}
+                    style={[styles.supportAction, { borderColor: accentBorders.red }]}
                     onPress={handleOpenSupportPhone}
                     activeOpacity={0.82}
                   >
@@ -765,23 +776,45 @@ export default function LoginScreen() {
                 </View>
               </View>
 
-              {/* Info chips — chuyển xuống form cho gọn hero */}
-              {!isCompactHeight && (
-                <View style={styles.infoRow}>
-                  <View style={styles.infoChip}>
-                    <Text style={styles.infoLabel}>Thành lập</Text>
-                    <Text style={styles.infoValue}>1983</Text>
-                  </View>
-                  <View style={styles.infoChip}>
-                    <Text style={styles.infoLabel}>Phát triển</Text>
-                    <Text style={styles.infoValue}>{companyAge} năm</Text>
-                  </View>
-                  <View style={[styles.infoChip, styles.infoChipWide]}>
-                    <Text style={styles.infoLabel}>Danh mục</Text>
-                    <Text style={styles.infoValue}>Gia vị · Thực phẩm</Text>
-                  </View>
+              {/* Info chips — luôn hiển thị, màn hình thấp sẽ cuộn khi cần */}
+              <View
+                style={[
+                  styles.infoRow,
+                  isCompactHeight && styles.infoRowCompact,
+                ]}
+              >
+                <View
+                  style={[
+                    styles.infoChip,
+                    isCompactHeight && styles.infoChipCompact,
+                    { borderColor: accentBorders.red },
+                  ]}
+                >
+                  <Text style={styles.infoLabel}>Thành lập</Text>
+                  <Text style={styles.infoValue}>1983</Text>
                 </View>
-              )}
+                <View
+                  style={[
+                    styles.infoChip,
+                    isCompactHeight && styles.infoChipCompact,
+                    { borderColor: accentBorders.red },
+                  ]}
+                >
+                  <Text style={styles.infoLabel}>Phát triển</Text>
+                  <Text style={styles.infoValue}>{companyAge} năm</Text>
+                </View>
+                <View
+                  style={[
+                    styles.infoChip,
+                    isCompactHeight && styles.infoChipCompact,
+                    { borderColor: accentBorders.red },
+                    styles.infoChipWide,
+                  ]}
+                >
+                  <Text style={styles.infoLabel}>Danh mục</Text>
+                  <Text style={styles.infoValue}>Gia vị · Thực phẩm</Text>
+                </View>
+              </View>
 
               {/* Footer */}
               <View
@@ -800,7 +833,7 @@ export default function LoginScreen() {
                   <Text style={styles.secureText}>Kết nối bảo mật SSL</Text>
                 </View>
                 {!isNarrowFooter && <View style={styles.footerDot} />}
-                <View style={styles.versionPill}>
+                <View style={[styles.versionPill, { borderColor: hairlineBorderColor }]}>
                   <Text style={styles.versionText}>
                     {appVersionLabel} · Cholimex Food
                   </Text>
@@ -1073,6 +1106,9 @@ const styles = StyleSheet.create({
     marginTop: 20,
     alignItems: "stretch",
   },
+  infoRowCompact: {
+    marginTop: 12,
+  },
   infoChip: {
     flex: 1,
     paddingVertical: 10,
@@ -1082,6 +1118,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.redBorder,
     alignItems: "center",
+  },
+  infoChipCompact: {
+    paddingVertical: 8,
+    paddingHorizontal: 6,
   },
   infoChipWide: {
     flex: 1.4,

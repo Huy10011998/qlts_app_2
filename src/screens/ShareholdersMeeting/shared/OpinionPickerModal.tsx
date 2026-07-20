@@ -13,7 +13,7 @@ import {
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import EmptyState from "../../../components/ui/EmptyState";
 import IsLoading from "../../../components/ui/IconLoading";
-import { C } from "../../../utils/helpers/colors";
+import { C, useHairlineBorderColor } from "../../../utils/helpers/colors";
 import BottomSheetModalShell from "../../../components/shared/BottomSheetModalShell";
 import { MeetingOpinion } from "./shareholdersMeetingHelpers";
 
@@ -47,6 +47,7 @@ export default function OpinionPickerModal({
   onClose,
   onSelect,
 }: OpinionPickerModalProps) {
+  const hairlineBorderColor = useHairlineBorderColor();
   const [showSearchingIndicator, setShowSearchingIndicator] =
     React.useState(false);
   const listAnimationKey = `${opinions.length}-${searchQuery}`;
@@ -80,7 +81,7 @@ export default function OpinionPickerModal({
 
       return (
         <TouchableOpacity
-          style={[styles.item, isSelected && styles.itemActive]}
+          style={[styles.item, { borderColor: hairlineBorderColor }, isSelected && styles.itemActive]}
           activeOpacity={0.9}
           onPress={() => onSelect(item.id)}
         >
@@ -107,7 +108,7 @@ export default function OpinionPickerModal({
         </TouchableOpacity>
       );
     },
-    [onSelect, selectedOpinionId],
+    [onSelect, selectedOpinionId, hairlineBorderColor],
   );
 
   return (
@@ -126,7 +127,7 @@ export default function OpinionPickerModal({
         <Text style={styles.title}>Chọn ý kiến</Text>
       </View>
 
-      <View style={styles.searchBox}>
+      <View style={[styles.searchBox, { borderColor: hairlineBorderColor }]}>
         <View style={styles.searchIconWrap}>
           <MaterialCommunityIcons name="magnify" size={16} color={C.textSub} />
         </View>

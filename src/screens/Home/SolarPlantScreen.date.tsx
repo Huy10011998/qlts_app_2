@@ -1,4 +1,4 @@
-import { C } from "../../utils/helpers/colors";
+import { C, useSeparatorColor } from "../../utils/helpers/colors";
 import React, { type ComponentProps, useEffect, useState } from "react";
 import {
   Alert,
@@ -63,71 +63,80 @@ export const PeriodHeader: React.FC<PeriodHeaderProps> = ({
   onNextRange,
   onOpenDatePicker,
   onPreviousRange,
-}) => (
-  <View style={styles.stickyPeriodHeader}>
-    <View style={styles.tabBar}>
-      {PERIOD_TABS.map((tab) => (
-        <TouchableOpacity
-          key={tab}
-          onPress={() => onChangeTab(tab)}
-          style={styles.tabItem}
-        >
-          {activeTab === tab ? (
-            <View style={styles.tabActiveChip}>
-              <Text style={styles.tabActiveText}>{tab}</Text>
-            </View>
-          ) : (
-            <Text style={styles.tabText}>{tab}</Text>
-          )}
-        </TouchableOpacity>
-      ))}
-    </View>
-    <View style={styles.dateNav}>
-      <TouchableOpacity
-        style={styles.dateNavSide}
-        activeOpacity={0.7}
-        onPress={onPreviousRange}
-      >
-        <DateChevron direction="left" />
-      </TouchableOpacity>
+}) => {
+  const separatorColor = useSeparatorColor();
 
-      <TouchableOpacity
-        style={styles.dateNavCenter}
-        activeOpacity={0.7}
-        onPress={onOpenDatePicker}
+  return (
+    <View style={styles.stickyPeriodHeader}>
+      <View style={styles.tabBar}>
+        {PERIOD_TABS.map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            onPress={() => onChangeTab(tab)}
+            style={styles.tabItem}
+          >
+            {activeTab === tab ? (
+              <View style={styles.tabActiveChip}>
+                <Text style={styles.tabActiveText}>{tab}</Text>
+              </View>
+            ) : (
+              <Text style={styles.tabText}>{tab}</Text>
+            )}
+          </TouchableOpacity>
+        ))}
+      </View>
+      <View
+        style={[
+          styles.dateNav,
+          { borderTopColor: separatorColor, borderBottomColor: separatorColor },
+        ]}
       >
-        <DateCalendarIcon />
-        <Text style={styles.dateNavCenterText}>
-          {formatDateRangeLabel(dateRange, activeTab)}
-        </Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.dateNavSide}
+          activeOpacity={0.7}
+          onPress={onPreviousRange}
+        >
+          <DateChevron direction="left" />
+        </TouchableOpacity>
 
-      <View style={[styles.dateNavSide, styles.dateNavRight]}>
         <TouchableOpacity
-          style={[
-            styles.dateNavIconButton,
-            isCurrentRange && styles.dateNavIconButtonDisabled,
-          ]}
+          style={styles.dateNavCenter}
           activeOpacity={0.7}
-          disabled={!canGoNextRange}
-          onPress={onNextRange}
+          onPress={onOpenDatePicker}
         >
-          <DateChevron direction="right" muted={isCurrentRange} />
+          <DateCalendarIcon />
+          <Text style={styles.dateNavCenterText}>
+            {formatDateRangeLabel(dateRange, activeTab)}
+          </Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.dateNavIconButton,
-            isCurrentRange && styles.dateNavIconButtonDisabled,
-          ]}
-          activeOpacity={0.7}
-          onPress={onGoCurrentRange}
-        >
-          <DateSkipIcon muted={isCurrentRange} />
-        </TouchableOpacity>
+
+        <View style={[styles.dateNavSide, styles.dateNavRight]}>
+          <TouchableOpacity
+            style={[
+              styles.dateNavIconButton,
+              isCurrentRange && styles.dateNavIconButtonDisabled,
+            ]}
+            activeOpacity={0.7}
+            disabled={!canGoNextRange}
+            onPress={onNextRange}
+          >
+            <DateChevron direction="right" muted={isCurrentRange} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.dateNavIconButton,
+              isCurrentRange && styles.dateNavIconButtonDisabled,
+            ]}
+            activeOpacity={0.7}
+            onPress={onGoCurrentRange}
+          >
+            <DateSkipIcon muted={isCurrentRange} />
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
-  </View>
-);
+  );
+};
 
 type SolarDateRangePickerProps = {
   dateRange: SolarDateRange;
@@ -144,6 +153,7 @@ export const SolarDateRangePicker: React.FC<SolarDateRangePickerProps> = ({
   period,
   visible,
 }) => {
+  const separatorColor = useSeparatorColor();
   const [tempRange, setTempRange] = useState<SolarDateRange>(dateRange);
   const [visibleMonth, setVisibleMonth] = useState(
     startOfMonth(dateRange.fromDate)
@@ -249,7 +259,12 @@ export const SolarDateRangePicker: React.FC<SolarDateRangePickerProps> = ({
       <View style={styles.calendarOverlay}>
         <View style={styles.calendarDialog}>
           <Text style={styles.calendarTitle}>Select date</Text>
-          <View style={styles.calendarSelectedRow}>
+          <View
+            style={[
+              styles.calendarSelectedRow,
+              { borderBottomColor: separatorColor },
+            ]}
+          >
             <Text style={styles.calendarSelectedText}>{selectedTitle}</Text>
             <Ionicons name="pencil-outline" size={28} color={C.text} />
           </View>

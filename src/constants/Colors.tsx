@@ -10,7 +10,7 @@ export const Colors = {
     tabIconDefault: "#687076",
     tabIconSelected: C.red,
     placeholderTextColor: C.textSub,
-    borderColor: C.border,
+    borderColor: "#F3F5F9",
   },
 
   dark: {

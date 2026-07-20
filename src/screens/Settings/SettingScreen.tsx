@@ -35,7 +35,7 @@ import {
   FACE_ID_MARKER_PASSWORD,
   FACE_ID_MARKER_USERNAME,
 } from "../../constants/AuthStorage";
-import { C } from "../../utils/helpers/colors";
+import { C, useAppColors } from "../../utils/helpers/colors";
 import EmptyState from "../../components/ui/EmptyState";
 import { warn } from "../../utils/Logger";
 import SettingWaveDivider from "./shared/SettingWaveDivider";
@@ -70,6 +70,7 @@ const LOCAL_NETWORK_FALLBACK_STATE: StoredLocalNetworkPermissionState = {
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 const SettingScreen = () => {
   const isDark = useColorScheme() === "dark";
+  const colors = useAppColors();
   const [isLoading, setIsLoading] = useState(false);
   const [user, setUser] = useState<UserInfo>();
   const appVersionLabel = `v${DeviceInfo.getVersion()}`;
@@ -133,7 +134,7 @@ const SettingScreen = () => {
       isFocusedRef.current &&
       !isLoggingOutRef.current &&
       logoutReason !== "EXPIRED",
-    [logoutReason],
+    [logoutReason]
   );
 
   const isAuthExpiredError = useCallback(
@@ -141,7 +142,7 @@ const SettingScreen = () => {
       error?.NEED_LOGIN ||
       error?.response?.status === 401 ||
       error?.response?.status === 403,
-    [],
+    []
   );
 
   const refreshPermissionState = useCallback(
@@ -163,7 +164,7 @@ const SettingScreen = () => {
         // Permission status is auxiliary; keep the previous values if refresh fails.
       }
     },
-    [canUpdateScreen],
+    [canUpdateScreen]
   );
 
   const fetchData = React.useCallback(async () => {
@@ -178,7 +179,7 @@ const SettingScreen = () => {
         callApi<{ success: boolean; data: UserInfo }>(
           "POST",
           API_ENDPOINTS.GET_INFO,
-          {},
+          {}
         ),
         AsyncStorage.getItem(FACE_ID_ENABLED_KEY),
       ]);
@@ -204,7 +205,7 @@ const SettingScreen = () => {
       ) {
         if (canUpdateScreen() && !isAuthExpiredError(error)) {
           setLoadErrorMessage(
-            "Vui lòng kiểm tra kết nối mạng và thử mở lại màn hình này.",
+            "Vui lòng kiểm tra kết nối mạng và thử mở lại màn hình này."
           );
         }
         return;
@@ -260,10 +261,10 @@ const SettingScreen = () => {
       hasError: Boolean(loadErrorMessage),
       onOffline: () => {
         setLoadErrorMessage(
-          "Vui lòng kiểm tra kết nối mạng và thử mở lại màn hình này.",
+          "Vui lòng kiểm tra kết nối mạng và thử mở lại màn hình này."
         );
       },
-    },
+    }
   );
 
   const handleToggleFaceID = async (value: boolean) => {
@@ -284,7 +285,7 @@ const SettingScreen = () => {
       if (biometryType !== Keychain.BIOMETRY_TYPE.FACE_ID) {
         Alert.alert(
           "FaceID chưa sẵn sàng",
-          "Thiết bị chưa hỗ trợ FaceID hoặc chưa thiết lập FaceID.",
+          "Thiết bị chưa hỗ trợ FaceID hoặc chưa thiết lập FaceID."
         );
         setIsFaceIdEnabled(false);
         return;
@@ -302,7 +303,7 @@ const SettingScreen = () => {
           accessControl:
             Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
           accessible: Keychain.ACCESSIBLE.WHEN_PASSCODE_SET_THIS_DEVICE_ONLY,
-        },
+        }
       );
       isFaceIdPromptActiveRef.current = true;
       let confirmation: false | Keychain.UserCredentials = false;
@@ -363,15 +364,15 @@ const SettingScreen = () => {
   };
 
   const localNetworkStatusLabel = getLocalNetworkPermissionLabel(
-    localNetworkState.status,
+    localNetworkState.status
   );
   const cameraStatusLabel = getCameraPermissionLabel(cameraPermissionStatus);
-  const localNetworkStatusTone =
+  const localNetworkStatusBackground =
     localNetworkState.status === "granted"
-      ? styles.localNetworkStatusGranted
+      ? colors.greenLight
       : localNetworkState.status === "denied"
-      ? styles.localNetworkStatusDenied
-      : styles.localNetworkStatusUnknown;
+      ? colors.redSurface
+      : colors.amberLight;
 
   const handleToggleLocalNetworkPermission = useCallback(
     async (value: boolean) => {
@@ -380,7 +381,7 @@ const SettingScreen = () => {
       if (Platform.OS === "android") {
         Alert.alert(
           "Quyền mạng nội bộ",
-          "Android không có công tắc riêng cho quyền mạng nội bộ. Quyền này đã được mở mặc định để app kết nối server nội bộ.",
+          "Android không có công tắc riêng cho quyền mạng nội bộ. Quyền này đã được mở mặc định để app kết nối server nội bộ."
         );
         const refreshedState = await refreshStoredLocalNetworkPermission();
         setLocalNetworkState(refreshedState);
@@ -399,7 +400,7 @@ const SettingScreen = () => {
                 openAppPermissionSettings();
               },
             },
-          ],
+          ]
         );
         return;
       }
@@ -426,19 +427,19 @@ const SettingScreen = () => {
                   openAppPermissionSettings();
                 },
               },
-            ],
+            ]
           );
         }
       } catch {
         Alert.alert(
           "Lỗi",
-          "Chưa thể cập nhật quyền mạng nội bộ lúc này. Vui lòng thử lại.",
+          "Chưa thể cập nhật quyền mạng nội bộ lúc này. Vui lòng thử lại."
         );
       } finally {
         if (isMountedRef.current) setIsUpdatingLocalNetworkPermission(false);
       }
     },
-    [isUpdatingLocalNetworkPermission],
+    [isUpdatingLocalNetworkPermission]
   );
 
   const handleToggleCameraPermission = useCallback(
@@ -457,7 +458,7 @@ const SettingScreen = () => {
                 openAppPermissionSettings();
               },
             },
-          ],
+          ]
         );
         return;
       }
@@ -479,7 +480,7 @@ const SettingScreen = () => {
                   openAppPermissionSettings();
                 },
               },
-            ],
+            ]
           );
           return;
         }
@@ -487,7 +488,7 @@ const SettingScreen = () => {
         if (nextStatus === "denied" || nextStatus === "unavailable") {
           Alert.alert(
             "Quyền camera",
-            "Chưa thể bật quyền camera trên thiết bị này.",
+            "Chưa thể bật quyền camera trên thiết bị này."
           );
         }
       } catch {
@@ -496,7 +497,7 @@ const SettingScreen = () => {
         if (isMountedRef.current) setIsUpdatingCameraPermission(false);
       }
     },
-    [isUpdatingCameraPermission],
+    [isUpdatingCameraPermission]
   );
 
   const closeModal = () => {
@@ -559,7 +560,7 @@ const SettingScreen = () => {
       Alert.alert(
         "Lỗi",
         error.response?.data?.message ||
-          "Không thể đổi mật khẩu. Vui lòng thử lại.",
+          "Không thể đổi mật khẩu. Vui lòng thử lại."
       );
     } finally {
       if (isMountedRef.current) setIsLoading(false);
@@ -572,10 +573,10 @@ const SettingScreen = () => {
 
   if (loadErrorMessage) {
     return (
-      <View style={styles.emptyStateRoot}>
+      <View style={[styles.emptyStateRoot, { backgroundColor: colors.bg }]}>
         <StatusBar
           barStyle={isDark ? "light-content" : "dark-content"}
-          backgroundColor={C.bg}
+          backgroundColor={isDark ? "#09111B" : "#F0F2F8"}
         />
         <EmptyState
           iconName="cloud-offline-outline"
@@ -588,10 +589,10 @@ const SettingScreen = () => {
 
   if (!user) {
     return (
-      <View style={styles.emptyStateRoot}>
+      <View style={[styles.emptyStateRoot, { backgroundColor: colors.bg }]}>
         <StatusBar
           barStyle={isDark ? "light-content" : "dark-content"}
-          backgroundColor={C.bg}
+          backgroundColor={isDark ? "#09111B" : "#F0F2F8"}
         />
         <EmptyState
           iconName="person-circle-outline"
@@ -603,7 +604,7 @@ const SettingScreen = () => {
   }
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: colors.bg }]}>
       <StatusBar barStyle="light-content" backgroundColor={C.red} />
       <ScrollView
         style={styles.scroll}
@@ -624,7 +625,7 @@ const SettingScreen = () => {
           <SettingWaveDivider />
         </LinearGradient>
 
-        <View style={styles.greyZone}>
+        <View style={[styles.greyZone, { backgroundColor: colors.bg }]}>
           <SettingSectionGroup title="TÀI KHOẢN">
             <SettingRowItem
               iconName="person-outline"
@@ -701,26 +702,59 @@ const SettingScreen = () => {
             />
           </SettingSectionGroup>
 
-          <View style={styles.localNetworkSummary}>
+          <View
+            style={[
+              styles.localNetworkSummary,
+              {
+                backgroundColor: colors.surface,
+                shadowColor: colors.shadow,
+              },
+            ]}
+          >
             <View
-              style={[styles.localNetworkStatusBadge, localNetworkStatusTone]}
+              style={[
+                styles.localNetworkStatusBadge,
+                { backgroundColor: localNetworkStatusBackground },
+              ]}
             >
-              <Text style={styles.localNetworkStatusBadgeText}>
+              <Text
+                style={[
+                  styles.localNetworkStatusBadgeText,
+                  { color: colors.text },
+                ]}
+              >
                 {localNetworkStatusLabel}
               </Text>
             </View>
-            <Text style={styles.localNetworkSummaryText}>
+            <Text
+              style={[styles.localNetworkSummaryText, { color: colors.text }]}
+            >
               Ứng dụng đã lưu trạng thái quyền mạng nội bộ để hỗ trợ kết nối
               server nội bộ.
             </Text>
-            <Text style={styles.localNetworkSummaryHint}>
+            <Text
+              style={[
+                styles.localNetworkSummaryHint,
+                { color: colors.textSub },
+              ]}
+            >
               Bạn có thể đổi quyền mạng nội bộ và camera trong Cài đặt hệ thống
               bất kỳ lúc nào.
             </Text>
           </View>
 
           <View style={styles.versionWrap}>
-            <Text style={styles.versionText}>{appVersionLabel}</Text>
+            <Text
+              style={[
+                styles.versionText,
+                {
+                  backgroundColor: colors.surface,
+                  color: colors.textMuted,
+                },
+              ]}
+            >
+              {appVersionLabel}
+            </Text>
           </View>
         </View>
       </ScrollView>
@@ -743,25 +777,22 @@ const SettingScreen = () => {
 
 // ─── Global Styles ────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.bg },
+  root: { flex: 1 },
   emptyStateRoot: {
     flex: 1,
-    backgroundColor: C.bg,
   },
   scroll: { flex: 1 },
   scrollContent: { flexGrow: 1 },
   redZone: {
     /* gradient applied inline */
   },
-  greyZone: { backgroundColor: C.bg, flexGrow: 1, paddingBottom: 48 },
+  greyZone: { flexGrow: 1, paddingBottom: 48 },
   localNetworkSummary: {
     marginHorizontal: 16,
     marginTop: 14,
-    backgroundColor: C.card,
     borderRadius: 18,
     paddingHorizontal: 16,
     paddingVertical: 16,
-    shadowColor: C.shadow,
     shadowOpacity: 0.06,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
@@ -774,30 +805,18 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     marginBottom: 10,
   },
-  localNetworkStatusGranted: {
-    backgroundColor: C.greenLight,
-  },
-  localNetworkStatusDenied: {
-    backgroundColor: C.redSurface,
-  },
-  localNetworkStatusUnknown: {
-    backgroundColor: C.amberLight,
-  },
   localNetworkStatusBadgeText: {
     fontSize: 11,
     fontWeight: "700",
-    color: C.textPrimary,
   },
   localNetworkSummaryText: {
     fontSize: 13,
     lineHeight: 20,
-    color: C.textPrimary,
   },
   localNetworkSummaryHint: {
     marginTop: 6,
     fontSize: 12,
     lineHeight: 18,
-    color: C.textSub,
   },
   versionWrap: {
     alignItems: "center",
@@ -805,10 +824,8 @@ const styles = StyleSheet.create({
   },
   versionText: {
     fontSize: 11,
-    color: C.textMuted,
     fontWeight: "500",
     letterSpacing: 0.5,
-    backgroundColor: C.card,
     paddingHorizontal: 14,
     paddingVertical: 5,
     borderRadius: 20,

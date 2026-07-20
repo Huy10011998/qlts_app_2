@@ -10,7 +10,11 @@ import {
 import Ionicons from "react-native-vector-icons/Ionicons";
 import type { MenuItemCardProps } from "../../../types";
 import { HOME_BRAND_RED } from "./homeTheme";
-import { C } from "../../../utils/helpers/colors";
+import {
+  C,
+  useAppColors,
+  useHairlineBorderColor,
+} from "../../../utils/helpers/colors";
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 const localStyles = StyleSheet.create({
@@ -18,22 +22,6 @@ const localStyles = StyleSheet.create({
     flex: 1,
   },
 });
-
-const HOME_FEATURE_FIXED_THEME = {
-  bg: C.surface,
-  iconBg: C.pinkSurface,
-  color: C.rose,
-  text: C.text,
-  border: C.border,
-};
-
-const HOME_VEHICLE_THEME = {
-  bg: C.surface,
-  iconBg: C.blueSurface,
-  color: C.sky,
-  text: C.text,
-  border: C.border,
-};
 
 type HomeMenuItemCardProps = MenuItemCardProps & {
   viewPermission?: string;
@@ -58,6 +46,8 @@ export default function HomeMenuItemCard({
   homeGroup,
 }: HomeMenuItemCardProps) {
   const scaleAnim = useRef(new Animated.Value(0)).current;
+  const colors = useAppColors();
+  const hairlineBorderColor = useHairlineBorderColor();
 
   useEffect(() => {
     Animated.spring(scaleAnim, {
@@ -70,7 +60,21 @@ export default function HomeMenuItemCard({
   }, [index, scaleAnim]);
 
   const theme =
-    homeGroup === "vehicle" ? HOME_VEHICLE_THEME : HOME_FEATURE_FIXED_THEME;
+    homeGroup === "vehicle"
+      ? {
+          bg: colors.surface,
+          iconBg: colors.blueSurface,
+          color: C.sky,
+          text: colors.text,
+          border: colors.border,
+        }
+      : {
+          bg: colors.surface,
+          iconBg: colors.pinkSurface,
+          color: C.rose,
+          text: colors.text,
+          border: colors.border,
+        };
   const handleTogglePinned = (event: GestureResponderEvent) => {
     event.stopPropagation();
     onTogglePinned?.();
@@ -89,6 +93,8 @@ export default function HomeMenuItemCard({
       <View
         style={[
           styles.card,
+          { borderColor: hairlineBorderColor },
+          { shadowColor: colors.shadow },
           fixedHeight ? styles.fixedHeightCard : null,
           { backgroundColor: theme.bg },
         ]}

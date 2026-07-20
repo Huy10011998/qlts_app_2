@@ -1,6 +1,11 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { C } from "../../../utils/helpers/colors";
+import {
+  C,
+  useAppColors,
+  useHairlineBorderColor,
+  useSeparatorColor,
+} from "../../../utils/helpers/colors";
 
 type HomeRecentActivityItem = {
   text: string;
@@ -15,18 +20,41 @@ type HomeRecentActivitiesProps = {
 export default function HomeRecentActivities({
   items,
 }: HomeRecentActivitiesProps) {
+  const colors = useAppColors();
+  const hairlineBorderColor = useHairlineBorderColor();
+  const separatorColor = useSeparatorColor();
   return (
-    <View style={styles.card}>
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor: colors.surface,
+          borderColor: hairlineBorderColor,
+          shadowColor: colors.shadow,
+        },
+      ]}
+    >
       {items.map((item, index) => (
         <View
           key={`${item.text}-${index}`}
-          style={[styles.row, index === items.length - 1 && styles.rowLast]}
+          style={[
+            styles.row,
+            { borderBottomColor: separatorColor },
+            index === items.length - 1 && styles.rowLast,
+          ]}
         >
           <View style={[styles.dot, { backgroundColor: item.dot }]} />
-          <Text style={styles.text} numberOfLines={1} allowFontScaling={false}>
+          <Text
+            style={[styles.text, { color: colors.textSecondary }]}
+            numberOfLines={1}
+            allowFontScaling={false}
+          >
             {item.text}
           </Text>
-          <Text style={styles.time} allowFontScaling={false}>
+          <Text
+            style={[styles.time, { color: colors.textMuted }]}
+            allowFontScaling={false}
+          >
             {item.time}
           </Text>
         </View>

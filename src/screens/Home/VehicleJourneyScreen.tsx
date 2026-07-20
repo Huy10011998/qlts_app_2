@@ -1,4 +1,8 @@
-import { C } from "../../utils/helpers/colors";
+import {
+  C,
+  useHairlineBorderColor,
+  useSeparatorColor,
+} from "../../utils/helpers/colors";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -140,6 +144,8 @@ const parseCoordinate = (value?: string | null): MapCoordinate | null => {
 
 export default function VehicleJourneyScreen() {
   const navigation = useNavigation<HomeNavigationProp>();
+  const hairlineBorderColor = useHairlineBorderColor();
+  const separatorColor = useSeparatorColor();
   const isFocused = useIsFocused();
   const today = useMemo(() => new Date(), []);
   const firstDay = useMemo(
@@ -392,7 +398,7 @@ export default function VehicleJourneyScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.journeyArea}>
+        <View style={[styles.journeyArea, { borderColor: hairlineBorderColor }]}>
           {loadError ? (
             <EmptyState
               iconName="cloud-offline-outline"
@@ -434,7 +440,13 @@ export default function VehicleJourneyScreen() {
             journeyGroups.map(([date, items]) => {
               const expanded = expandedDates.includes(date);
               return (
-                <View key={date} style={styles.journeyGroup}>
+                <View
+                  key={date}
+                  style={[
+                    styles.journeyGroup,
+                    { borderBottomColor: separatorColor },
+                  ]}
+                >
                   <TouchableOpacity
                     style={styles.groupHeader}
                     onPress={() =>

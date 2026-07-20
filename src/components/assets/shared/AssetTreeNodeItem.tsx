@@ -1,4 +1,8 @@
-import { C } from "../../../utils/helpers/colors";
+import {
+  C,
+  useAccentBorderColors,
+  useHairlineBorderColor,
+} from "../../../utils/helpers/colors";
 import React, { useEffect, useState } from "react";
 import {
   LayoutAnimation,
@@ -39,6 +43,8 @@ export default function AssetTreeNodeItem({
   selectedNode,
 }: AssetTreeNodeItemProps) {
   const [expanded, setExpanded] = useState(node.expanded || expandAll);
+  const hairlineBorderColor = useHairlineBorderColor();
+  const accentBorders = useAccentBorderColors();
 
   useEffect(() => {
     if (expandAll) {
@@ -61,7 +67,9 @@ export default function AssetTreeNodeItem({
         style={[
           styles.nodeRow,
           level > 0 && styles.nodeRowChild,
+          level > 0 && { borderColor: hairlineBorderColor },
           isSelected && styles.nodeRowSelected,
+          isSelected && { borderColor: accentBorders.red },
         ]}
       >
         <View

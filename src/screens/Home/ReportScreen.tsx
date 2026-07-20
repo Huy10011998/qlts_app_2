@@ -1,4 +1,8 @@
-import { C } from "../../utils/helpers/colors";
+import {
+  useAppColors,
+  useHairlineBorderColor,
+  useSchemeColor,
+} from "../../utils/helpers/colors";
 import React, {
   useCallback,
   useEffect,
@@ -39,11 +43,7 @@ import { removeVietnameseTones } from "../../utils/Helper";
 import { useParams } from "../../hooks/useParams";
 import AssetMenuSearchBar from "../Assets/shared/AssetMenuSearchBar";
 import { buildAssetMenuTree } from "../Assets/shared/assetMenuHelpers";
-import {
-  ASSET_MENU_BG,
-  ASSET_MENU_BRAND_RED,
-  ASSET_MENU_CARD_SHADOW,
-} from "../Assets/shared/assetMenuTheme";
+import { ASSET_MENU_BRAND_RED } from "../Assets/shared/assetMenuTheme";
 
 type ReportListItem = {
   groupTitle: string;
@@ -116,17 +116,27 @@ function buildReportSections(reports: ReportListItem[]) {
 }
 
 function ReportGroupHeader({ section }: { section: ReportSection }) {
+  const redBorderColor = useSchemeColor("#FECACA", "#65343B");
+  const colors = useAppColors();
+
   return (
-    <View style={s.groupHeader}>
+    <View style={[s.groupHeader, { backgroundColor: colors.bg }]}>
       <View style={s.groupTitleWrap}>
         <View style={s.groupIconWrap}>
           <Ionicons name="folder-open-outline" size={15} color="#fff" />
         </View>
-        <Text style={s.groupTitle} numberOfLines={1}>
+        <Text style={[s.groupTitle, { color: colors.text }]} numberOfLines={1}>
           {section.title}
         </Text>
       </View>
-      <Text style={s.groupCount}>{section.data.length} báo cáo</Text>
+      <Text
+        style={[
+          s.groupCount,
+          { backgroundColor: colors.redSurface, borderColor: redBorderColor },
+        ]}
+      >
+        {section.data.length} báo cáo
+      </Text>
     </View>
   );
 }
@@ -138,30 +148,58 @@ function ReportListCard({
   report: ReportListItem;
   onPress: (item: Item) => void;
 }) {
+  const hairlineBorderColor = useHairlineBorderColor();
+  const violetBorderColor = useSchemeColor("#DDD2FF", "#554778");
+  const colors = useAppColors();
+
   return (
     <TouchableOpacity
-      style={s.reportCard}
+      style={[
+        s.reportCard,
+        {
+          backgroundColor: colors.surface,
+          borderColor: hairlineBorderColor,
+          shadowColor: colors.shadow,
+        },
+      ]}
       onPress={() => onPress(report.item)}
       activeOpacity={0.76}
     >
       <View style={s.reportAccent} />
-      <View style={s.reportIconWrap}>
+      <View
+        style={[
+          s.reportIconWrap,
+          {
+            backgroundColor: colors.violetSurface,
+            borderColor: violetBorderColor,
+          },
+        ]}
+      >
         <Ionicons name="bar-chart-outline" size={19} color="#7048E8" />
       </View>
 
       <View style={s.reportTextWrap}>
-        <Text style={s.reportTitle} numberOfLines={2}>
+        <Text style={[s.reportTitle, { color: colors.text }]} numberOfLines={2}>
           {report.item.label}
         </Text>
         <View style={s.reportPathWrap}>
-          <Ionicons name="git-branch-outline" size={12} color={C.textMuted} />
-          <Text style={s.reportPath} numberOfLines={2}>
+          <Ionicons
+            name="git-branch-outline"
+            size={12}
+            color={colors.textMuted}
+          />
+          <Text
+            style={[s.reportPath, { color: colors.textMuted }]}
+            numberOfLines={2}
+          >
             {report.path || "Báo cáo tài sản"}
           </Text>
         </View>
       </View>
 
-      <View style={s.reportChevronWrap}>
+      <View
+        style={[s.reportChevronWrap, { backgroundColor: colors.violetSurface }]}
+      >
         <Ionicons name="chevron-forward" size={15} color="#7048E8" />
       </View>
     </TouchableOpacity>
@@ -169,6 +207,7 @@ function ReportListCard({
 }
 
 export default function ReportScreen() {
+  const colors = useAppColors();
   const {
     groupMenuId = 2,
     titleHeader = "Tài sản",
@@ -370,7 +409,7 @@ export default function ReportScreen() {
   if (!hasViewPermission) {
     return (
       <KeyboardAvoidingView
-        style={s.centerState}
+        style={[s.centerState, { backgroundColor: colors.bg }]}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <EmptyState
@@ -389,7 +428,7 @@ export default function ReportScreen() {
   if (loadErrorMessage) {
     return (
       <KeyboardAvoidingView
-        style={s.centerState}
+        style={[s.centerState, { backgroundColor: colors.bg }]}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <EmptyState
@@ -412,7 +451,7 @@ export default function ReportScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={s.container}
+      style={[s.container, { backgroundColor: colors.bg }]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <AssetMenuSearchBar
@@ -470,7 +509,9 @@ export default function ReportScreen() {
         ]}
         onRequestClose={closeActiveReport}
       >
-        <View style={s.reportModalBackdrop}>
+        <View
+          style={[s.reportModalBackdrop, { backgroundColor: colors.surface }]}
+        >
           {activeReport && (
             <ReportView
               title={activeReport.config.report.moTa || activeReport.item.label}
@@ -488,15 +529,12 @@ export default function ReportScreen() {
 const s = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: ASSET_MENU_BG,
   },
   reportModalBackdrop: {
     flex: 1,
-    backgroundColor: C.surface,
   },
   centerState: {
     flex: 1,
-    backgroundColor: ASSET_MENU_BG,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 32,
@@ -517,7 +555,6 @@ const s = StyleSheet.create({
     justifyContent: "space-between",
     paddingTop: 14,
     paddingBottom: 9,
-    backgroundColor: ASSET_MENU_BG,
   },
   groupTitleWrap: {
     flex: 1,
@@ -544,34 +581,32 @@ const s = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     fontWeight: "800",
-    color: C.text,
     letterSpacing: 0.2,
   },
   groupCount: {
     fontSize: 11,
     fontWeight: "700",
     color: ASSET_MENU_BRAND_RED,
-    backgroundColor: C.redSurface,
     borderRadius: 999,
     paddingHorizontal: 9,
     paddingVertical: 4,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: C.redBorder,
     overflow: "hidden",
   },
   reportCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: C.surface,
     borderRadius: 12,
     paddingVertical: 13,
     paddingHorizontal: 14,
     marginBottom: 9,
     gap: 10,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: C.border,
     overflow: "hidden",
-    ...ASSET_MENU_CARD_SHADOW,
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   reportAccent: {
     position: "absolute",
@@ -587,10 +622,8 @@ const s = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: C.violetSurface,
     flexShrink: 0,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: C.violetBorder,
   },
   reportTextWrap: {
     flex: 1,
@@ -599,7 +632,6 @@ const s = StyleSheet.create({
   reportTitle: {
     fontSize: 14.5,
     fontWeight: "700",
-    color: C.text,
     lineHeight: 20,
   },
   reportPathWrap: {
@@ -612,7 +644,6 @@ const s = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     fontWeight: "500",
-    color: C.textMuted,
     lineHeight: 16,
   },
   reportChevronWrap: {
@@ -621,7 +652,6 @@ const s = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: C.violetSurface,
     flexShrink: 0,
   },
 });

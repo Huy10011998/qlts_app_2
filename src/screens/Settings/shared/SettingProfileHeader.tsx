@@ -2,7 +2,7 @@ import React from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { C } from "../../../utils/helpers/colors";
+import { C, useAppColors } from "../../../utils/helpers/colors";
 
 const localStyles = StyleSheet.create({
   badgeIcon: {
@@ -32,6 +32,7 @@ export default function SettingProfileHeader({
   avatarUrl,
   safeTop = 44,
 }: SettingProfileHeaderProps) {
+  const colors = useAppColors();
   const initials = getInitials(name);
 
   return (
@@ -39,9 +40,9 @@ export default function SettingProfileHeader({
       <View style={styles.deco1} />
       <View style={styles.deco2} />
 
-      <View style={styles.avatarShadowWrap}>
+      <View style={[styles.avatarShadowWrap, { shadowColor: colors.shadow }]}>
         <View style={styles.avatarRing}>
-          <View style={styles.avatar}>
+          <View style={[styles.avatar, { backgroundColor: colors.surface }]}>
             {avatarUrl ? (
               <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
             ) : (
@@ -97,7 +98,6 @@ const styles = StyleSheet.create({
     right: -20,
   },
   avatarShadowWrap: {
-    shadowColor: C.shadow,
     shadowOpacity: 0.25,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
@@ -119,7 +119,6 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
     overflow: "hidden",
-    backgroundColor: C.surface,
   },
   initialsGradient: {
     flex: 1,

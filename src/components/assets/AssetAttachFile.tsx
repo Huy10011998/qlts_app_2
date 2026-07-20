@@ -1,4 +1,4 @@
-import { C } from "../../utils/helpers/colors";
+import { C, useSeparatorColor } from "../../utils/helpers/colors";
 import React, {
   useCallback,
   useEffect,
@@ -24,6 +24,7 @@ import { sharedAssetListStyles } from "./shared/listStyles";
 import { BG, BRAND_RED, CARD_SHADOW } from "./shared/listTheme";
 
 export default function AssetListAttachFile() {
+  const separatorColor = useSeparatorColor();
   const [file, setFile] = useState<FileItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -166,7 +167,14 @@ export default function AssetListAttachFile() {
 
           return (
             <View style={styles.groupContainer}>
-              <Text style={styles.categoryText}>{categoryLabel}</Text>
+              <Text
+                style={[
+                  styles.categoryText,
+                  { borderBottomColor: separatorColor },
+                ]}
+              >
+                {categoryLabel}
+              </Text>
 
               {groupedData[category].map((fileItem) => (
                 <ListCardAttachFile key={fileItem.id} item={fileItem} />

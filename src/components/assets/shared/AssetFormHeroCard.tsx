@@ -1,6 +1,7 @@
 import React from "react";
 import { Text, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import { useHairlineBorderColor } from "../../../utils/helpers/colors";
 
 type AssetFormHeroCardProps = {
   iconBgColor: string;
@@ -19,8 +20,10 @@ export default function AssetFormHeroCard({
   subtitle,
   title,
 }: AssetFormHeroCardProps) {
+  const hairlineBorderColor = useHairlineBorderColor();
+
   return (
-    <View style={styles.heroCard}>
+    <View style={[styles.heroCard, { borderColor: hairlineBorderColor }]}>
       <View style={[styles.heroIconWrap, { backgroundColor: iconBgColor }]}>
         <Ionicons name={iconName} size={20} color={iconColor} />
       </View>

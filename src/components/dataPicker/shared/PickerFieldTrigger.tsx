@@ -1,7 +1,7 @@
 import React from "react";
 import { Text, TouchableOpacity } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { C } from "../../../utils/helpers/colors";
+import { C, useStrongBorderColor } from "../../../utils/helpers/colors";
 import { pickerFieldTriggerStyles as styles } from "./pickerFieldTriggerStyles";
 
 type PickerFieldTriggerProps = {
@@ -17,8 +17,13 @@ export default function PickerFieldTrigger({
   value,
   onPress,
 }: PickerFieldTriggerProps) {
+  const strongBorderColor = useStrongBorderColor();
   return (
-    <TouchableOpacity style={styles.input} onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity
+      style={[styles.input, { borderColor: strongBorderColor }]}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
       <Text style={[styles.text, !value && styles.placeholder]}>
         {value || placeholder}
       </Text>

@@ -7,7 +7,12 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { Appearance, useColorScheme } from "react-native";
+import {
+  Appearance,
+  NativeModules,
+  Platform,
+  useColorScheme,
+} from "react-native";
 
 export type ThemePreference = "system" | "light" | "dark";
 
@@ -25,25 +30,44 @@ const isThemePreference = (value: string | null): value is ThemePreference =>
   value === "system" || value === "light" || value === "dark";
 
 const applyThemePreference = (preference: ThemePreference) => {
+  if (Platform.OS === "android") {
+    NativeModules.ThemePreference?.setPreference(preference);
+  }
+
   Appearance.setColorScheme(preference === "system" ? null : preference);
 };
 
 export function ThemeProvider({ children }: React.PropsWithChildren) {
   const systemColorScheme = useColorScheme();
   const [preference, setPreferenceState] = useState<ThemePreference>("system");
+  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
     let isActive = true;
 
     AsyncStorage.getItem(THEME_PREFERENCE_KEY)
       .then((storedPreference) => {
-        if (!isActive || !isThemePreference(storedPreference)) return;
+        if (!isActive) return;
 
-        setPreferenceState(storedPreference);
-        applyThemePreference(storedPreference);
+        const initialPreference = isThemePreference(storedPreference)
+          ? storedPreference
+          : "system";
+
+        // Apply the persisted appearance before mounting any screen. Android
+        // resolves PlatformColor resources when native views are created; if a
+        // screen mounts first, its values/values-night colors can stay cached
+        // until the user toggles the appearance again.
+        applyThemePreference(initialPreference);
+        setPreferenceState(initialPreference);
+        setIsHydrated(true);
       })
       .catch(() => {
-        // Keep the safe default: follow the device appearance.
+        if (!isActive) return;
+
+        // Keep the safe default: follow the device appearance, but still
+        // release the bootstrap gate when storage cannot be read.
+        applyThemePreference("system");
+        setIsHydrated(true);
       });
 
     return () => {
@@ -72,6 +96,8 @@ export function ThemeProvider({ children }: React.PropsWithChildren) {
     }),
     [preference, setPreference, systemColorScheme]
   );
+
+  if (!isHydrated) return null;
 
   return (
     <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>

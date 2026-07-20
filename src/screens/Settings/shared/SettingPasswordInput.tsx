@@ -1,7 +1,11 @@
 import React, { useState } from "react";
 import { StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { C } from "../../../utils/helpers/colors";
+import {
+  C,
+  useAppColors,
+  useHairlineBorderColor,
+} from "../../../utils/helpers/colors";
 import { COMPACT_TEXT_MAX_SCALE } from "../../../utils/helpers/textScaling";
 
 type SettingPasswordInputProps = {
@@ -17,14 +21,25 @@ export default function SettingPasswordInput({
   value,
   onChangeText,
 }: SettingPasswordInputProps) {
+  const colors = useAppColors();
   const [show, setShow] = useState(false);
+  const hairlineBorderColor = useHairlineBorderColor();
 
   return (
-    <View style={[styles.wrap, hasError && styles.wrapError]}>
+    <View
+      style={[
+        styles.wrap,
+        {
+          backgroundColor: hasError ? colors.redSurface : colors.input,
+          borderColor: hasError ? C.red : hairlineBorderColor,
+        },
+        hasError && styles.wrapError,
+      ]}
+    >
       <TextInput
-        style={styles.input}
+        style={[styles.input, { color: colors.text }]}
         placeholder={placeholder}
-        placeholderTextColor={hasError ? C.red : C.placeholder}
+        placeholderTextColor={hasError ? C.red : colors.placeholder}
         secureTextEntry={!show}
         value={value}
         onChangeText={onChangeText}
@@ -37,7 +52,7 @@ export default function SettingPasswordInput({
         <Ionicons
           name={show ? "eye-off-outline" : "eye-outline"}
           size={18}
-          color={hasError ? C.red : C.placeholder}
+          color={hasError ? C.red : colors.placeholder}
         />
       </TouchableOpacity>
     </View>
@@ -49,16 +64,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1.5,
-    borderColor: C.border,
     borderRadius: 14,
     marginBottom: 12,
     minHeight: 54,
     paddingHorizontal: 16,
-    backgroundColor: C.input,
   },
   wrapError: {
     borderColor: C.red,
-    backgroundColor: C.redSurface,
   },
   input: {
     flex: 1,
@@ -66,7 +78,6 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
     fontSize: 14,
     lineHeight: 20,
-    color: C.text,
     includeFontPadding: false,
     textAlignVertical: "center",
   },

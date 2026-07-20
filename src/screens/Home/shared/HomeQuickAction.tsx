@@ -1,7 +1,7 @@
 import React from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { C } from "../../../utils/helpers/colors";
+import { C, useAppColors } from "../../../utils/helpers/colors";
 
 type HomeQuickActionProps = {
   iconName: string;
@@ -20,12 +20,13 @@ export default function HomeQuickAction({
   onPress,
   disabled,
 }: HomeQuickActionProps) {
+  const colors = useAppColors();
   const handlePress =
     onPress ??
     (() => {
       Alert.alert(
         "Thông báo",
-        "Chức năng sẽ được triển khai trong thời gian sắp tới.",
+        "Chức năng sẽ được triển khai trong thời gian sắp tới."
       );
     });
 
@@ -36,11 +37,21 @@ export default function HomeQuickAction({
       activeOpacity={0.75}
       disabled={disabled}
     >
-      <View style={[styles.icon, { backgroundColor: bg }, disabled && styles.iconDisabled]}>
+      <View
+        style={[
+          styles.icon,
+          { backgroundColor: bg, shadowColor: colors.shadow },
+          disabled && styles.iconDisabled,
+        ]}
+      >
         <Ionicons name={iconName} size={17} color={color} />
       </View>
       <Text
-        style={[styles.label, disabled && styles.labelDisabled]}
+        style={[
+          styles.label,
+          { color: disabled ? colors.textMuted : colors.textSecondary },
+          disabled && styles.labelDisabled,
+        ]}
         allowFontScaling={false}
       >
         {label}

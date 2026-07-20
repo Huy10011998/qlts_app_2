@@ -14,7 +14,7 @@ import {
   createTabBarStyle,
   tabBarStyles,
 } from "./shared/tabBarTheme";
-import { C } from "../utils/helpers/colors";
+import { useAppColors, useHairlineBorderColor } from "../utils/helpers/colors";
 
 const Tab = createBottomTabNavigator();
 
@@ -44,11 +44,15 @@ function getDeepFocusedRouteName(route: any): string | undefined {
     return directFocusedRouteName ?? route.name;
   }
 
-  return getDeepFocusedRouteName(nestedRoute) ?? directFocusedRouteName ?? route.name;
+  return (
+    getDeepFocusedRouteName(nestedRoute) ?? directFocusedRouteName ?? route.name
+  );
 }
 
 export default function Tabs() {
   const insets = useSafeAreaInsets();
+  const colors = useAppColors();
+  const hairlineBorderColor = useHairlineBorderColor();
 
   return (
     <Tab.Navigator
@@ -59,7 +63,11 @@ export default function Tabs() {
         tabBarAllowFontScaling: false,
         tabBarLabelStyle: tabBarStyles.label,
         tabBarActiveTintColor: TAB_ACTIVE_COLOR,
-        tabBarStyle: createTabBarStyle({ bottomInset: insets.bottom }),
+        tabBarStyle: createTabBarStyle({
+          bottomInset: insets.bottom,
+          backgroundColor: colors.surface,
+          borderTopColor: hairlineBorderColor,
+        }),
       }}
     >
       <Tab.Screen
@@ -79,8 +87,10 @@ export default function Tabs() {
             tabBarStyle: [
               createTabBarStyle({
                 bottomInset: insets.bottom,
-                backgroundColor: isMeetingScanner ? TAB_INVERTED_BG : C.surface,
-                borderTopColor: isMeetingScanner ? "#000" : C.border,
+                backgroundColor: isMeetingScanner
+                  ? TAB_INVERTED_BG
+                  : colors.surface,
+                borderTopColor: isMeetingScanner ? "#000" : hairlineBorderColor,
               }),
             ],
           };
@@ -104,8 +114,10 @@ export default function Tabs() {
             tabBarStyle: [
               createTabBarStyle({
                 bottomInset: insets.bottom,
-                backgroundColor: isScanScreen ? TAB_INVERTED_BG : C.surface,
-                borderTopColor: isScanScreen ? "#000" : C.border,
+                backgroundColor: isScanScreen
+                  ? TAB_INVERTED_BG
+                  : colors.surface,
+                borderTopColor: isScanScreen ? "#000" : hairlineBorderColor,
               }),
             ],
           };
