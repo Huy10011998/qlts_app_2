@@ -94,13 +94,19 @@ const normalizeUpdateFieldValue = (field: Field, value: any) => {
 const buildUpdateEntity = (
   fields: Field[],
   values: Record<string, any>,
+  baseValues?: Record<string, any>,
 ) => {
-  const entity: Record<string, any> = {};
+  const entity: Record<string, any> = baseValues ? { ...baseValues } : {};
 
   fields.forEach((field) => {
-    const matchedKey = getMatchedKey(values, field.name);
-    const value = matchedKey ? values[matchedKey] : values[field.name];
-    entity[field.name] = normalizeUpdateFieldValue(field, value);
+    const valueSource =
+      field.isReadOnly && baseValues ? baseValues : values;
+    const matchedKey = getMatchedKey(valueSource, field.name);
+    const value = matchedKey
+      ? valueSource[matchedKey]
+      : valueSource[field.name];
+    const entityKey = getMatchedKey(entity, field.name) ?? field.name;
+    entity[entityKey] = normalizeUpdateFieldValue(field, value);
   });
 
   Object.keys(entity).forEach((key) => {
@@ -166,12 +172,12 @@ export default function AssetEditItem() {
   } = useGroupedFields(field);
 
   const currentEntity = useMemo(
-    () => buildUpdateEntity(fieldActive, formData),
-    [fieldActive, formData],
+    () => buildUpdateEntity(fieldActive, formData, originalItem),
+    [fieldActive, formData, originalItem],
   );
 
   const originalEntity = useMemo(
-    () => buildUpdateEntity(fieldActive, originalItem),
+    () => buildUpdateEntity(fieldActive, originalItem, originalItem),
     [fieldActive, originalItem],
   );
 
@@ -347,6 +353,9 @@ export default function AssetEditItem() {
       }
 
       const entity: Record<string, any> = { ...currentEntity };
+      const readOnlyFieldNames = fieldActive
+        .filter((activeField) => activeField.isReadOnly)
+        .map((activeField) => activeField.name);
 
       const autoCodeField = item?.propertyClass?.propertyTuDongTang;
       if (autoCodeField && isEffectivelyEmptyCodeValue(entity[autoCodeField])) {
@@ -357,7 +366,7 @@ export default function AssetEditItem() {
         entity,
         iDs: [originalItem.id],
         lstIncludeProperties: [],
-        lstExcludeProperties: [],
+        lstExcludeProperties: readOnlyFieldNames,
         saveHistory: true,
       };
 

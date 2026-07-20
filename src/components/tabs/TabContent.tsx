@@ -60,12 +60,8 @@ export default function TabContent({
   const isDetailsScreen = detailScreens.includes(route.name);
   const canCloneFromCurrentRoute = route.name !== "QrDetails";
 
-  const {
-    propertyClass,
-    groupMenuId,
-    viewPermission,
-    assetTitleHeader,
-  } = useParams();
+  const { propertyClass, groupMenuId, viewPermission, assetTitleHeader } =
+    useParams();
   const nameClassRoot = nameClass;
   const { showAlertIfActive } = useSafeAlert();
   const hasLoadedItem = Boolean(item?.id);
@@ -89,7 +85,7 @@ export default function TabContent({
       }
       Alert.alert(
         "Xác nhận xoá",
-        "Bạn có chắc chắn muốn xoá tài sản này?",
+        "Bạn có chắc chắn muốn xoá thông tin này?",
         [
           {
             text: "Huỷ",
@@ -117,7 +113,7 @@ export default function TabContent({
 
       await deleteItems(nameClass || "", deleteBody);
 
-      showAlertIfActive("Thành công", "Đã xoá tài sản!", [
+      showAlertIfActive("Thành công", "Đã xoá thông tin!", [
         {
           text: "OK",
           onPress: () => {
@@ -148,14 +144,16 @@ export default function TabContent({
     try {
       const relatedRouteParams =
         route.name === "AssetRelatedDetails"
-          ? (route.params as {
-            idRoot?: string;
-            propertyReference?: string;
-            nameClassRoot?: string;
-            titleHeader?: string;
-            returnTo?: "assetList" | "assetRelatedList" | "qrReview";
-          } | undefined)
-        : undefined;
+          ? (route.params as
+              | {
+                  idRoot?: string;
+                  propertyReference?: string;
+                  nameClassRoot?: string;
+                  titleHeader?: string;
+                  returnTo?: "assetList" | "assetRelatedList" | "qrReview";
+                }
+              | undefined)
+          : undefined;
 
       const cloneReturnTo =
         relatedRouteParams?.returnTo === "qrReview"
