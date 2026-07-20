@@ -61,7 +61,16 @@ window.updateVehicleLocation=function(location){
  if(!location)return;const position=[location.lat,location.lng];
  const statusLine=location.statusText?'<span style="color:#1976d2;font-weight:600">'+escapeHtml(location.statusText)+'</span> · '+escapeHtml(location.velocity)+' km/h<br/>':'';
  const popup='<div style="font-size:12px;min-width:190px"><b style="color:#1976d2">Vị trí hiện tại</b><br/>'+statusLine+'<span>'+escapeHtml(location.address)+'</span><br/><span style="color:#888">'+escapeHtml(location.dateTime)+'</span></div>';
- if(!marker){marker=L.marker(position,{icon}).addTo(map);map.setView(position,16);}else{marker.setLatLng(position);map.flyTo(position,map.getZoom(),{animate:true,duration:.8});}
+ if(!marker){
+  marker=L.marker(position,{icon}).addTo(map);map.setView(position,16);
+ }else{
+  const nextPosition=L.latLng(position);
+  const hasMoved=map.distance(marker.getLatLng(),nextPosition)>=3;
+  if(hasMoved){
+   marker.setLatLng(nextPosition);
+   map.panTo(nextPosition,{animate:true,duration:.8});
+  }
+ }
  marker.bindPopup(popup);
 };
 const Focus=L.Control.extend({options:{position:'topleft'},onAdd:function(){const button=L.DomUtil.create('button','vehicle-map-action');button.innerHTML='◎';button.title='Focus vị trí hiện tại';L.DomEvent.disableClickPropagation(button);button.onclick=()=>{if(marker){map.flyTo(marker.getLatLng(),17,{duration:.8});marker.openPopup();}};return button;}});new Focus().addTo(map);
@@ -373,11 +382,6 @@ export default function VehicleCurrentLocationScreen() {
 
             <Text style={styles.infoLabel}>Địa chỉ</Text>
             <Text style={styles.infoValue}>{location.address || "-"}</Text>
-
-            <Text style={styles.infoLabel}>Tọa độ</Text>
-            <Text style={styles.infoValue}>
-              {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
-            </Text>
 
             <View style={styles.liveRow}>
               <Ionicons name="sync-outline" size={16} color={C.green} />
