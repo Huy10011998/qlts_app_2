@@ -1,4 +1,4 @@
-import { C } from "../../../utils/helpers/colors";
+import { C, useSeparatorColor } from "../../../utils/helpers/colors";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import BottomSheetModalShell from "../../shared/BottomSheetModalShell";
@@ -16,6 +16,8 @@ export default function IosSpinnerPickerSheet({
   onConfirm,
   visible,
 }: IosSpinnerPickerSheetProps) {
+  const separatorColor = useSeparatorColor();
+
   return (
     <BottomSheetModalShell
       visible={visible}
@@ -23,7 +25,7 @@ export default function IosSpinnerPickerSheet({
       onClose={onCancel}
       sheetStyle={styles.pickerContainer}
     >
-      <View style={styles.toolbar}>
+      <View style={[styles.toolbar, { borderColor: separatorColor }]}>
         <TouchableOpacity onPress={onCancel}>
           <Text style={styles.toolbarText} allowFontScaling={false}>
             Hủy

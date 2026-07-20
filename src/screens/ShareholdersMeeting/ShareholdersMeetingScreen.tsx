@@ -15,7 +15,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import EmptyState from "../../components/ui/EmptyState";
 import IsLoading from "../../components/ui/IconLoading";
-import { C } from "../../utils/helpers/colors";
+import {
+  C,
+  useAccentBorderColors,
+  useHairlineBorderColor,
+  useSeparatorColor,
+  useStrongBorderColor,
+} from "../../utils/helpers/colors";
 import ShareholderAttendanceRow from "./shared/ShareholderAttendanceRow";
 import OpinionPickerModal from "./shared/OpinionPickerModal";
 import { VOTING_OPTIONS } from "./shared/shareholdersMeetingHelpers";
@@ -28,6 +34,15 @@ function AttendanceSeparator() {
 
 const ShareholdersMeetingScreen: React.FC = () => {
   const isDark = useColorScheme() === "dark";
+  const hairlineBorderColor = useHairlineBorderColor();
+  const separatorColor = useSeparatorColor();
+  const strongBorderColor = useStrongBorderColor();
+  const accentBorders = useAccentBorderColors();
+  const votingChoiceBorders = {
+    agree: accentBorders.green,
+    disagree: accentBorders.red,
+    noOpinion: accentBorders.slate,
+  } as const;
   const {
     activeMeeting,
     activeTab,
@@ -70,10 +85,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
 
   if (!loaded) {
     return (
-      <SafeAreaView
-        style={styles.centerState}
-        edges={["left", "right"]}
-      >
+      <SafeAreaView style={styles.centerState} edges={["left", "right"]}>
         <ActivityIndicator size="small" color={C.accent} />
       </SafeAreaView>
     );
@@ -81,10 +93,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
 
   if (!hasAnyViewPermission) {
     return (
-      <SafeAreaView
-        style={styles.centerState}
-        edges={["left", "right"]}
-      >
+      <SafeAreaView style={styles.centerState} edges={["left", "right"]}>
         <EmptyState
           iconName="shield-outline"
           title="Bạn không có quyền truy cập"
@@ -96,10 +105,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
 
   if (isMeetingLoading) {
     return (
-      <SafeAreaView
-        style={styles.centerState}
-        edges={["left", "right"]}
-      >
+      <SafeAreaView style={styles.centerState} edges={["left", "right"]}>
         <ActivityIndicator size="small" color={C.accent} />
       </SafeAreaView>
     );
@@ -107,10 +113,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
 
   if (meetingError) {
     return (
-      <SafeAreaView
-        style={styles.centerState}
-        edges={["left", "right"]}
-      >
+      <SafeAreaView style={styles.centerState} edges={["left", "right"]}>
         <EmptyState
           iconName="alert-circle-outline"
           title="Không tải được dữ liệu"
@@ -122,10 +125,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
 
   if (!activeMeeting) {
     return (
-      <SafeAreaView
-        style={styles.centerState}
-        edges={["left", "right"]}
-      >
+      <SafeAreaView style={styles.centerState} edges={["left", "right"]}>
         <EmptyState
           iconName="people-outline"
           title="Chưa có đợt đại hội cổ đông"
@@ -139,7 +139,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
     <SafeAreaView style={styles.safe} edges={["left", "right"]}>
       <StatusBar
         barStyle={isDark ? "light-content" : "dark-content"}
-        backgroundColor={C.bg}
+        backgroundColor={isDark ? "#09111B" : "#F0F2F8"}
       />
 
       <View style={styles.heroCard}>
@@ -148,7 +148,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
         </Text>
       </View>
 
-      <View style={styles.tabBar}>
+      <View style={[styles.tabBar, { borderBottomColor: separatorColor }]}>
         {canViewAttendance && (
           <TouchableOpacity
             style={[styles.tab, activeTab === "attendance" && styles.tabActive]}
@@ -233,6 +233,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
             <TouchableOpacity
               style={[
                 attStyles.summaryCard,
+                { borderColor: hairlineBorderColor },
                 attendanceFilter === "all" && attStyles.summaryCardActive,
               ]}
               activeOpacity={0.9}
@@ -251,6 +252,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
             <TouchableOpacity
               style={[
                 attStyles.summaryCard,
+                { borderColor: hairlineBorderColor },
                 attendanceFilter === "presentOrProxy" &&
                   attStyles.summaryCardActive,
               ]}
@@ -271,6 +273,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
             <TouchableOpacity
               style={[
                 attStyles.summaryCard,
+                { borderColor: hairlineBorderColor },
                 attendanceFilter === "pending" && attStyles.summaryCardActive,
               ]}
               activeOpacity={0.9}
@@ -288,7 +291,12 @@ const ShareholdersMeetingScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
 
-          <View style={attStyles.searchContainer}>
+          <View
+            style={[
+              attStyles.searchContainer,
+              { borderColor: hairlineBorderColor },
+            ]}
+          >
             <View style={attStyles.searchIconWrap}>
               <MaterialCommunityIcons
                 name="magnify"
@@ -374,11 +382,21 @@ const ShareholdersMeetingScreen: React.FC = () => {
           keyboardShouldPersistTaps="handled"
         >
           <View style={voteStyles.summaryRow}>
-            <View style={voteStyles.summaryCard}>
+            <View
+              style={[
+                voteStyles.summaryCard,
+                { borderColor: hairlineBorderColor },
+              ]}
+            >
               <Text style={voteStyles.summaryNum}>{opinions.length}</Text>
               <Text style={voteStyles.summaryLabel}>Ý kiến</Text>
             </View>
-            <View style={voteStyles.summaryCard}>
+            <View
+              style={[
+                voteStyles.summaryCard,
+                { borderColor: hairlineBorderColor },
+              ]}
+            >
               <Text style={voteStyles.summaryNum}>
                 {selectedOpinion ? 1 : 0}
               </Text>
@@ -386,9 +404,14 @@ const ShareholdersMeetingScreen: React.FC = () => {
             </View>
           </View>
 
-          <View style={voteStyles.card}>
+          <View style={[voteStyles.card, { borderColor: hairlineBorderColor }]}>
             <Text style={voteStyles.sectionLabel}>Ý kiến cần lấy</Text>
-            <View style={voteStyles.opinionSelector}>
+            <View
+              style={[
+                voteStyles.opinionSelector,
+                { borderColor: hairlineBorderColor },
+              ]}
+            >
               {isVotingLoading ? (
                 <View style={voteStyles.loadingWrap}>
                   <ActivityIndicator size="small" color={C.accent} />
@@ -400,7 +423,12 @@ const ShareholdersMeetingScreen: React.FC = () => {
                     <Text style={voteStyles.opinionSelectorLabel}>
                       Mở danh sách để chọn đúng ý kiến cần ghi nhận
                     </Text>
-                    <View style={voteStyles.opinionSelectorCount}>
+                    <View
+                      style={[
+                        voteStyles.opinionSelectorCount,
+                        { borderColor: hairlineBorderColor },
+                      ]}
+                    >
                       <Text style={voteStyles.opinionSelectorCountText}>
                         {opinions.length} mục
                       </Text>
@@ -408,7 +436,10 @@ const ShareholdersMeetingScreen: React.FC = () => {
                   </View>
 
                   <TouchableOpacity
-                    style={voteStyles.opinionPickerButton}
+                    style={[
+                      voteStyles.opinionPickerButton,
+                      { borderColor: hairlineBorderColor },
+                    ]}
                     activeOpacity={0.9}
                     onPress={() => setIsOpinionModalVisible(true)}
                   >
@@ -443,24 +474,37 @@ const ShareholdersMeetingScreen: React.FC = () => {
                 </>
               ) : (
                 <EmptyState
-                  iconName={votingError ? "alert-circle-outline" : "chatbox-ellipses-outline"}
+                  iconName={
+                    votingError
+                      ? "alert-circle-outline"
+                      : "chatbox-ellipses-outline"
+                  }
                   title={
                     votingError
                       ? "Không tải được danh sách ý kiến"
                       : "Chưa có ý kiến biểu quyết"
                   }
                   subtitle={
-                    votingError ||
-                    "Chưa có ý kiến nào cho đợt đại hội này."
+                    votingError || "Chưa có ý kiến nào cho đợt đại hội này."
                   }
                 />
               )}
             </View>
 
             {selectedOpinion && (
-              <View style={voteStyles.selectedInfoBox}>
+              <View
+                style={[
+                  voteStyles.selectedInfoBox,
+                  { borderColor: strongBorderColor },
+                ]}
+              >
                 <View style={voteStyles.selectedInfoHeader}>
-                  <View style={voteStyles.selectedInfoBadge}>
+                  <View
+                    style={[
+                      voteStyles.selectedInfoBadge,
+                      { borderColor: strongBorderColor },
+                    ]}
+                  >
                     <MaterialCommunityIcons
                       name="check-circle"
                       size={16}
@@ -485,7 +529,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
             )}
           </View>
 
-          <View style={voteStyles.card}>
+          <View style={[voteStyles.card, { borderColor: hairlineBorderColor }]}>
             <Text style={voteStyles.sectionLabel}>Phân loại ý kiến</Text>
             <View style={voteStyles.choiceList}>
               {VOTING_OPTIONS.map((option) => {
@@ -498,7 +542,9 @@ const ShareholdersMeetingScreen: React.FC = () => {
                       voteStyles.choiceCard,
                       {
                         backgroundColor: isSelected ? option.bg : C.surface,
-                        borderColor: isSelected ? option.border : C.border,
+                        borderColor: isSelected
+                          ? votingChoiceBorders[option.key]
+                          : hairlineBorderColor,
                       },
                     ]}
                     activeOpacity={0.9}

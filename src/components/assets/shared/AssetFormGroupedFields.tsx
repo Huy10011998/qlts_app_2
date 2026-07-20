@@ -3,6 +3,7 @@ import { Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { RenderInputByType } from "../../form/RenderInputByType";
 import { BRAND_RED } from "./listTheme";
+import { useHairlineBorderColor } from "../../../utils/helpers/colors";
 
 type AssetFormGroupedFieldsProps = {
   collapsedGroups: Record<string, boolean>;
@@ -45,13 +46,18 @@ export default function AssetFormGroupedFields({
   toggleGroup,
   validationErrors = {},
 }: AssetFormGroupedFieldsProps) {
+  const hairlineBorderColor = useHairlineBorderColor();
+
   return (
     <>
       {Object.entries(groupedFields).map(([groupName, fields]) => {
         const collapsed = collapsedGroups[groupName];
 
         return (
-          <View key={groupName} style={styles.groupCard}>
+          <View
+            key={groupName}
+            style={[styles.groupCard, { borderColor: hairlineBorderColor }]}
+          >
             <TouchableOpacity
               style={styles.groupHeader}
               onPress={() => toggleGroup(groupName)}

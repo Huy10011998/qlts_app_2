@@ -13,7 +13,11 @@ import {
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import LinearGradient from "react-native-linear-gradient";
-import { C } from "../../../utils/helpers/colors";
+import {
+  C,
+  useAppColors,
+  useHairlineBorderColor,
+} from "../../../utils/helpers/colors";
 import SettingPasswordInput from "./SettingPasswordInput";
 
 type ChangePasswordModalProps = {
@@ -41,7 +45,9 @@ export default function ChangePasswordModal({
   onClose,
   onSubmit,
 }: ChangePasswordModalProps) {
+  const colors = useAppColors();
   const { height } = useWindowDimensions();
+  const hairlineBorderColor = useHairlineBorderColor();
   const [didPressSubmit, setDidPressSubmit] = useState(false);
   const isCompactHeight = height < 760;
   const isOldPasswordMissing = didPressSubmit && !oldPassword.trim();
@@ -81,18 +87,26 @@ export default function ChangePasswordModal({
         <View
           style={[
             styles.popup,
+            {
+              backgroundColor: colors.surface,
+              borderColor: hairlineBorderColor,
+              shadowColor: colors.shadow,
+            },
             isCompactHeight && styles.popupCompact,
             { maxHeight: height - 48 },
           ]}
         >
           <View style={styles.header}>
             <TouchableOpacity
-              style={styles.headerIconButton}
+              style={[
+                styles.headerIconButton,
+                { backgroundColor: colors.surfaceAlt },
+              ]}
               hitSlop={10}
               onPress={onClose}
               disabled={isLoading}
             >
-              <Ionicons name="close" size={22} color={C.textSecondary} />
+              <Ionicons name="close" size={22} color={colors.textSecondary} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -129,7 +143,11 @@ export default function ChangePasswordModal({
             </LinearGradient>
 
             <Text
-              style={[styles.title, isCompactHeight && styles.titleCompact]}
+              style={[
+                styles.title,
+                { color: colors.text },
+                isCompactHeight && styles.titleCompact,
+              ]}
             >
               Đổi mật khẩu
             </Text>
@@ -173,16 +191,13 @@ const styles = StyleSheet.create({
   popup: {
     width: "100%",
     maxWidth: 420,
-    backgroundColor: C.surface,
     borderRadius: 24,
     padding: 24,
-    shadowColor: C.shadow,
     shadowOpacity: 0.22,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 8 },
     elevation: 10,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: C.border,
   },
   popupCompact: {
     padding: 20,
@@ -203,7 +218,6 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: C.surfaceAlt,
   },
 
   headerSubmitButton: {
@@ -243,7 +257,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: "800",
-    color: C.text,
     textAlign: "center",
     marginBottom: 4,
     letterSpacing: 0.2,

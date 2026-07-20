@@ -1,4 +1,4 @@
-import { C } from "../../../utils/helpers/colors";
+import { C, useHairlineBorderColor } from "../../../utils/helpers/colors";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -36,6 +36,7 @@ function CameraMenuDropdownItem({
   const hasChildren = item.children.length > 0;
   const expanded = expandedIds.includes(item.id);
   const theme = getCameraItemTheme(item, expanded);
+  const hairlineBorderColor = useHairlineBorderColor();
 
   const handleNavigate = () => {
     const zoneId = Number(item.id);
@@ -63,7 +64,13 @@ function CameraMenuDropdownItem({
 
   return (
     <View style={[styles.itemWrap, level > 0 && localStyles.childWrap]}>
-      <View style={[styles.itemCard, level > 0 && styles.itemCardChild]}>
+      <View
+        style={[
+          styles.itemCard,
+          level > 0 && styles.itemCardChild,
+          level > 0 && { borderColor: hairlineBorderColor },
+        ]}
+      >
         <View style={[styles.accent, { backgroundColor: theme.color }]} />
 
         <Pressable

@@ -1,7 +1,7 @@
 import React from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { HOME_BRAND_RED } from "./homeTheme";
-import { C } from "../../../utils/helpers/colors";
+import { C, useAppColors } from "../../../utils/helpers/colors";
 
 type HomeSectionTitleProps = {
   label: string;
@@ -14,19 +14,23 @@ export default function HomeSectionTitle({
   action,
   onAction,
 }: HomeSectionTitleProps) {
+  const colors = useAppColors();
   const handleActionPress =
     onAction ??
     (() => {
       Alert.alert(
         "Thông báo",
-        "Chức năng sẽ được triển khai trong thời gian sắp tới.",
+        "Chức năng sẽ được triển khai trong thời gian sắp tới."
       );
     });
 
   return (
     <View style={styles.row}>
       <View style={styles.pill} />
-      <Text style={styles.label} allowFontScaling={false}>
+      <Text
+        style={[styles.label, { color: colors.textSecondary }]}
+        allowFontScaling={false}
+      >
         {label}
       </Text>
       {action ? (
@@ -42,6 +46,7 @@ export default function HomeSectionTitle({
 
 const styles = StyleSheet.create({
   row: {
+    width: "100%",
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 10,

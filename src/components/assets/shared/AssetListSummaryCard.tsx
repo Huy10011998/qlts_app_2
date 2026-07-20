@@ -3,6 +3,7 @@ import { Text, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { BRAND_RED } from "./listTheme";
 import { sharedAssetListStyles as styles } from "./listStyles";
+import { useHairlineBorderColor } from "../../../utils/helpers/colors";
 
 type AssetListSummaryCardProps = {
   iconName: string;
@@ -15,9 +16,11 @@ export default function AssetListSummaryCard({
   title,
   subtitle,
 }: AssetListSummaryCardProps) {
+  const hairlineBorderColor = useHairlineBorderColor();
+
   return (
     <View style={styles.stickyHeader}>
-      <View style={styles.filterCard}>
+      <View style={[styles.filterCard, { borderColor: hairlineBorderColor }]}>
         <View style={styles.filterCardIcon}>
           <Ionicons name={iconName as any} size={16} color={BRAND_RED} />
         </View>

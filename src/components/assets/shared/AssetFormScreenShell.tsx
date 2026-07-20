@@ -20,7 +20,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import IsLoading from "../../ui/IconLoading";
-import { C } from "../../../utils/helpers/colors";
+import { C, useSeparatorColor } from "../../../utils/helpers/colors";
 
 type AssetFormKeyboardContextValue = {
   handleInputFocus: (target: any) => void;
@@ -67,6 +67,7 @@ export default function AssetFormScreenShell({
   loadingOverlayStyle,
   style,
 }: AssetFormScreenShellProps) {
+  const separatorColor = useSeparatorColor();
   const insets = useSafeAreaInsets();
   const [footerHeight, setFooterHeight] = useState(0);
   const [keyboardTop, setKeyboardTop] = useState(0);
@@ -295,6 +296,7 @@ export default function AssetFormScreenShell({
             style={[
               styles.footer,
               {
+                borderTopColor: separatorColor,
                 paddingBottom: bottomSafeArea + 10,
               },
               footerStyle,

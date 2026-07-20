@@ -10,7 +10,11 @@ import { callApi } from "../../services/data/callApi";
 import { error } from "../../utils/Logger";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
-import { C } from "../../utils/helpers/colors";
+import {
+  C,
+  useHairlineBorderColor,
+  useSeparatorColor,
+} from "../../utils/helpers/colors";
 
 const InfoRow: React.FC<{
   iconName: string;
@@ -19,19 +23,29 @@ const InfoRow: React.FC<{
   label: string;
   value?: string;
   isLast?: boolean;
-}> = ({ iconName, iconBg, iconColor, label, value, isLast }) => (
-  <View style={[rowS.wrap, isLast && rowS.last]}>
-    <View style={[rowS.iconBox, { backgroundColor: iconBg }]}>
-      <Ionicons name={iconName} size={15} color={iconColor} />
+}> = ({ iconName, iconBg, iconColor, label, value, isLast }) => {
+  const separatorColor = useSeparatorColor();
+
+  return (
+    <View
+      style={[
+        rowS.wrap,
+        { borderBottomColor: separatorColor },
+        isLast && rowS.last,
+      ]}
+    >
+      <View style={[rowS.iconBox, { backgroundColor: iconBg }]}>
+        <Ionicons name={iconName} size={15} color={iconColor} />
+      </View>
+      <View style={rowS.col}>
+        <Text style={rowS.label}>{label}</Text>
+        <Text style={rowS.value} numberOfLines={2}>
+          {value && value.trim() ? value : "---"}
+        </Text>
+      </View>
     </View>
-    <View style={rowS.col}>
-      <Text style={rowS.label}>{label}</Text>
-      <Text style={rowS.value} numberOfLines={2}>
-        {value && value.trim() ? value : "---"}
-      </Text>
-    </View>
-  </View>
-);
+  );
+};
 
 const rowS = StyleSheet.create({
   wrap: {
@@ -66,15 +80,19 @@ const rowS = StyleSheet.create({
 const Section: React.FC<{ title: string; children: React.ReactNode }> = ({
   title,
   children,
-}) => (
-  <View style={secS.group}>
-    <View style={secS.titleRow}>
-      <View style={secS.pill} />
-      <Text style={secS.title}>{title}</Text>
+}) => {
+  const hairlineBorderColor = useHairlineBorderColor();
+
+  return (
+    <View style={secS.group}>
+      <View style={secS.titleRow}>
+        <View style={secS.pill} />
+        <Text style={secS.title}>{title}</Text>
+      </View>
+      <View style={[secS.card, { borderColor: hairlineBorderColor }]}>{children}</View>
     </View>
-    <View style={secS.card}>{children}</View>
-  </View>
-);
+  );
+};
 
 const secS = StyleSheet.create({
   group: { marginHorizontal: 16, marginBottom: 16 },

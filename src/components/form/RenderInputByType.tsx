@@ -17,7 +17,7 @@ import { parseLinkHtml } from "../../utils/Link";
 import { DatePicker, TimePicker } from "../dataPicker/DataPicker";
 import { pickerFieldTriggerStyles } from "../dataPicker/shared/pickerFieldTriggerStyles";
 import { log } from "../../utils/Logger";
-import { C } from "../../utils/helpers/colors";
+import { C, useStrongBorderColor } from "../../utils/helpers/colors";
 import { useAssetFormKeyboard } from "../assets/shared/AssetFormScreenShell";
 
 const localStyles = {
@@ -89,6 +89,7 @@ function LinkInputField({
   styles: RenderInputByTypeProps["styles"];
 }) {
   const keyboardContext = useAssetFormKeyboard();
+  const strongBorderColor = useStrongBorderColor();
   const urlInputRef = React.useRef<TextInput>(null);
   const labelInputRef = React.useRef<TextInput>(null);
   const parsed = useMemo(() => parseLinkHtml(String(value ?? "")), [value]);
@@ -109,7 +110,7 @@ function LinkInputField({
     <View style={localStyles.linkWrap}>
       <TextInput
         ref={urlInputRef}
-        style={[styles.input, localStyles.inputText]}
+        style={[styles.input, { borderColor: strongBorderColor }, localStyles.inputText]}
         placeholder="Nhập đường link"
         placeholderTextColor={C.textMuted}
         value={url}
@@ -123,7 +124,7 @@ function LinkInputField({
       />
       <TextInput
         ref={labelInputRef}
-        style={[styles.input, localStyles.inputText]}
+        style={[styles.input, { borderColor: strongBorderColor }, localStyles.inputText]}
         placeholder="Nhập label"
         placeholderTextColor={C.textMuted}
         value={label}
@@ -163,6 +164,7 @@ export const RenderInputByType = ({
   openEnumReferanceModal,
 }: RenderInputByTypeProps) => {
   const keyboardContext = useAssetFormKeyboard();
+  const strongBorderColor = useStrongBorderColor();
   const basicInputRef = React.useRef<TextInput>(null);
   const numberInputRef = React.useRef<TextInput>(null);
   const textAreaWrapRef = React.useRef<View>(null);
@@ -220,6 +222,7 @@ export const RenderInputByType = ({
     <View
       style={[
         pickerFieldTriggerStyles.input,
+        { borderColor: strongBorderColor },
         hasValidationError && localStyles.inputRowInvalid,
       ]}
     >
@@ -249,6 +252,7 @@ export const RenderInputByType = ({
         <View
           style={[
             pickerFieldTriggerStyles.input,
+            { borderColor: strongBorderColor },
             hasValidationError && localStyles.inputRowInvalid,
           ]}
         >
@@ -320,6 +324,7 @@ export const RenderInputByType = ({
             ref={textAreaRef}
             style={[
               styles.textArea,
+              { borderColor: strongBorderColor },
               localStyles.textArea,
               hasValidationError && localStyles.textAreaInvalid,
             ]}
@@ -396,6 +401,7 @@ export const RenderInputByType = ({
         <TouchableOpacity
           style={[
             pickerFieldTriggerStyles.input,
+            { borderColor: strongBorderColor },
             hasValidationError && localStyles.selectInputInvalid,
           ]}
           onPress={() => {

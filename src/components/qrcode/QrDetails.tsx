@@ -27,7 +27,7 @@ import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { useDetailViewState } from "../../hooks/useDetailViewState";
 import { useSlideInPanel } from "../../hooks/useSlideInPanel";
 import SlideInSidePanel from "../shared/SlideInSidePanel";
-import { C } from "../../utils/helpers/colors";
+import { C, useSeparatorColor } from "../../utils/helpers/colors";
 import AssetListEmptyState from "../assets/shared/AssetListEmptyState";
 import { REVIEW_NAME_CLASSES } from "../../constants/reviewNameClasses";
 
@@ -43,6 +43,7 @@ function QrDetailsMenuButton({ onPress }: { onPress: () => void }) {
 }
 
 export default function QrDetails({ children }: QrDetailsProps) {
+  const separatorColor = useSeparatorColor();
   const { id, nameClass, field, itemData } = useParams();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -184,21 +185,21 @@ export default function QrDetails({ children }: QrDetailsProps) {
       ) : (
         <>
           <TouchableOpacity
-            style={styles.menuItem}
+            style={[styles.menuItem, { borderBottomColor: separatorColor }]}
             onPress={() => log("Báo hỏng")}
           >
             <Text style={styles.menuItemText}>Báo hỏng / Yêu cầu sửa chữa</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.menuItem}
+            style={[styles.menuItem, { borderBottomColor: separatorColor }]}
             onPress={() => log("Thanh lý")}
           >
             <Text style={styles.menuItemText}>Thanh lý</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.menuItem}
+            style={[styles.menuItem, { borderBottomColor: separatorColor }]}
             onPress={() => log("Trung chuyển")}
           >
             <Text style={styles.menuItemText}>Trung chuyển</Text>
@@ -206,7 +207,7 @@ export default function QrDetails({ children }: QrDetailsProps) {
 
           {REVIEW_NAME_CLASSES.includes(nameClass || "") ? (
             <TouchableOpacity
-              style={styles.menuItem}
+              style={[styles.menuItem, { borderBottomColor: separatorColor }]}
               onPress={() => handlePress()}
             >
               <Text style={styles.menuItemText}>Đánh giá</Text>

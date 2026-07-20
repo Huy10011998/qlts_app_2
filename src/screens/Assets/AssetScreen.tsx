@@ -43,8 +43,8 @@ import {
   filterMobileAssetMenuTree,
   filterAssetMenuTree,
 } from "./shared/assetMenuHelpers";
-import { ASSET_MENU_BG, ASSET_MENU_BRAND_RED } from "./shared/assetMenuTheme";
-import { C } from "../../utils/helpers/colors";
+import { ASSET_MENU_BRAND_RED } from "./shared/assetMenuTheme";
+import { useAppColors } from "../../utils/helpers/colors";
 
 if (
   Platform.OS === "android" &&
@@ -66,6 +66,7 @@ const buildReportPreviewEndpoint = (direct: string) => {
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function AssetScreen() {
+  const colors = useAppColors();
   const {
     groupMenuId = 2,
     titleHeader = "Tài sản",
@@ -97,54 +98,52 @@ export default function AssetScreen() {
   permissionsRef.current = permissions;
   isFullAccessRef.current = isFullAccess;
 
-  const handleShowReport = useCallback(
-    async (item: Item) => {
-      const reportName = item.contentName_Mobile?.trim();
+  const handleShowReport = useCallback(async (item: Item) => {
+    const reportName = item.contentName_Mobile?.trim();
 
-      log("[AssetScreen] Select report", {
+    log("[AssetScreen] Select report", {
+      id: item.id,
+      label: item.label,
+      isReport: item.isReport,
+      contentName_Mobile: item.contentName_Mobile,
+    });
+
+    if (!item.isReport || !reportName) {
+      log("[AssetScreen] Missing report mobile config", {
         id: item.id,
         label: item.label,
-        isReport: item.isReport,
-        contentName_Mobile: item.contentName_Mobile,
+      });
+      setComingSoonReportItem(item);
+      return;
+    }
+
+    try {
+      log("[AssetScreen] Calling getConfigReport", { nameReport: reportName });
+      const configResponse = await getConfigReport<GetConfigReportResponse>(
+        reportName
+      );
+      const config = configResponse?.data;
+      const direct = config?.report?.direct?.trim();
+
+      log("[AssetScreen] getConfigReport success", {
+        nameReport: reportName,
+        response: configResponse,
       });
 
-      if (!item.isReport || !reportName) {
-        log("[AssetScreen] Missing report mobile config", {
-          id: item.id,
-          label: item.label,
-        });
-        setComingSoonReportItem(item);
-        return;
+      if (!config?.report || !direct) {
+        throw new Error("Invalid report config");
       }
 
-      try {
-        log("[AssetScreen] Calling getConfigReport", { nameReport: reportName });
-        const configResponse =
-          await getConfigReport<GetConfigReportResponse>(reportName);
-        const config = configResponse?.data;
-        const direct = config?.report?.direct?.trim();
-
-        log("[AssetScreen] getConfigReport success", {
-          nameReport: reportName,
-          response: configResponse,
-        });
-
-        if (!config?.report || !direct) {
-          throw new Error("Invalid report config");
-        }
-
-        setActiveReport({
-          item,
-          config,
-          previewEndpoint: buildReportPreviewEndpoint(direct),
-        });
-      } catch (e) {
-        error("Get config report error:", e);
-        setComingSoonReportItem(item);
-      }
-    },
-    []
-  );
+      setActiveReport({
+        item,
+        config,
+        previewEndpoint: buildReportPreviewEndpoint(direct),
+      });
+    } catch (e) {
+      error("Get config report error:", e);
+      setComingSoonReportItem(item);
+    }
+  }, []);
 
   // ── Fetch ──
   const fetchData = useCallback(
@@ -251,7 +250,7 @@ export default function AssetScreen() {
   if (!hasViewPermission) {
     return (
       <KeyboardAvoidingView
-        style={s.centerState}
+        style={[s.centerState, { backgroundColor: colors.bg }]}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <EmptyState
@@ -269,7 +268,7 @@ export default function AssetScreen() {
   if (loadErrorMessage) {
     return (
       <KeyboardAvoidingView
-        style={s.centerState}
+        style={[s.centerState, { backgroundColor: colors.bg }]}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <EmptyState
@@ -286,7 +285,7 @@ export default function AssetScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={s.container}
+      style={[s.container, { backgroundColor: colors.bg }]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <AssetMenuSearchBar
@@ -354,7 +353,9 @@ export default function AssetScreen() {
         ]}
         onRequestClose={() => setActiveReport(null)}
       >
-        <View style={s.reportModalBackdrop}>
+        <View
+          style={[s.reportModalBackdrop, { backgroundColor: colors.surface }]}
+        >
           {activeReport && (
             <ReportView
               title={activeReport.config.report.moTa || activeReport.item.label}
@@ -371,7 +372,7 @@ export default function AssetScreen() {
         animationType="slide"
         onRequestClose={() => setComingSoonReportItem(null)}
       >
-        <View style={s.comingSoonContainer}>
+        <View style={[s.comingSoonContainer, { backgroundColor: colors.bg }]}>
           <View
             style={[
               s.comingSoonHeader,
@@ -404,15 +405,12 @@ export default function AssetScreen() {
 const s = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: ASSET_MENU_BG,
   },
   reportModalBackdrop: {
     flex: 1,
-    backgroundColor: C.surface,
   },
   centerState: {
     flex: 1,
-    backgroundColor: ASSET_MENU_BG,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 32,
@@ -429,7 +427,6 @@ const s = StyleSheet.create({
   },
   comingSoonContainer: {
     flex: 1,
-    backgroundColor: ASSET_MENU_BG,
   },
   comingSoonHeader: {
     paddingHorizontal: 16,

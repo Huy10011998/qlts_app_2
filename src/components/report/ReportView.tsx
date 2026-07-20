@@ -14,7 +14,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
-  useColorScheme,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
@@ -33,7 +32,12 @@ import { getPreviewBC } from "../../services/data/callApi";
 import { error, log } from "../../utils/Logger";
 import { formatDateForBE } from "../../utils/Date";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
-import { C } from "../../utils/helpers/colors";
+import { useColorScheme } from "../../hooks/useColorScheme";
+import {
+  C,
+  useHairlineBorderColor,
+  useStrongBorderColor,
+} from "../../utils/helpers/colors";
 import { TypeProperty } from "../../utils/Enum";
 import { RenderInputByType } from "../form/RenderInputByType";
 import { useEnumAndReferenceLoader } from "../../hooks/AssetAddItem/useEnumAndReferenceLoader";
@@ -188,11 +192,13 @@ export const buildReportHtml = (pdfBase64: string, isDark = false) => `
       }; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
       #status { position:sticky; top:0; z-index:2; display:flex; align-items:center; justify-content:center; gap:8px; min-height:44px; padding:10px 14px; background:${
         isDark ? "#151F2C" : "#FFFFFF"
-      }; color:${isDark ? "#AAB7C8" : "#4B5563"}; font-size:13px; box-shadow:0 1px 4px rgba(15,25,35,0.18); }
+      }; color:${
+  isDark ? "#AAB7C8" : "#4B5563"
+}; font-size:13px; box-shadow:0 1px 4px rgba(15,25,35,0.18); }
       #status.hidden { display:none; }
       #status.error { color:${isDark ? "#FF9AA0" : "#B42318"}; background:${
-        isDark ? "#3A2028" : "#FFF5F5"
-      }; }
+  isDark ? "#3A2028" : "#FFF5F5"
+}; }
       #spinner { width:16px; height:16px; border-radius:50%; border:2px solid ${
         isDark ? "#3B4D63" : "#E5E7EB"
       }; border-top-color:#C8102E; animation:spin 0.8s linear infinite; }
@@ -502,6 +508,8 @@ const ReportView: React.FC<ReportViewProps> = ({
   onClose,
 }) => {
   const isDark = useColorScheme() === "dark";
+  const hairlineBorderColor = useHairlineBorderColor();
+  const strongBorderColor = useStrongBorderColor();
   const reportConfig = useMemo(
     () => config ?? createDefaultReportConfig(title),
     [config, title]
@@ -1057,7 +1065,6 @@ const ReportView: React.FC<ReportViewProps> = ({
           <HeaderDetailsModalHeader
             title={title}
             onBack={closeReportPreview}
-            backIcon="chevron-back"
             badgeLabel="Bao cao"
             iconName="bar-chart-outline"
             rightSlot={
@@ -1083,28 +1090,40 @@ const ReportView: React.FC<ReportViewProps> = ({
         {!isLandscape ? (
           <View style={styles.toolbar}>
             <TouchableOpacity
-              style={styles.toolbarButton}
+              style={[
+                styles.toolbarButton,
+                { borderColor: hairlineBorderColor },
+              ]}
               onPress={() => postToReport("zoom_out")}
             >
               <Ionicons name="remove-outline" size={18} color={C.red} />
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.toolbarButton}
+              style={[
+                styles.toolbarButton,
+                { borderColor: hairlineBorderColor },
+              ]}
               onPress={() => postToReport("zoom_in")}
             >
               <Ionicons name="add-outline" size={18} color={C.red} />
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.toolbarButton}
+              style={[
+                styles.toolbarButton,
+                { borderColor: hairlineBorderColor },
+              ]}
               onPress={() => postToReport("top")}
             >
               <Ionicons name="arrow-up-outline" size={18} color={C.red} />
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.toolbarButton}
+              style={[
+                styles.toolbarButton,
+                { borderColor: hairlineBorderColor },
+              ]}
               onPress={toggleReportOrientation}
             >
               <MaterialCommunityIcons
@@ -1202,7 +1221,10 @@ const ReportView: React.FC<ReportViewProps> = ({
             {SHARE_REPORT_OPTIONS.map((option) => (
               <TouchableOpacity
                 key={option.key}
-                style={styles.shareOptionItem}
+                style={[
+                  styles.shareOptionItem,
+                  { borderColor: hairlineBorderColor },
+                ]}
                 activeOpacity={0.75}
                 disabled={isSharing}
                 onPress={() => handleShareReport(option.key)}
@@ -1213,7 +1235,11 @@ const ReportView: React.FC<ReportViewProps> = ({
                 <Text style={styles.shareOptionText} allowFontScaling={false}>
                   {option.label}
                 </Text>
-                <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
+                <Ionicons
+                  name="chevron-forward"
+                  size={18}
+                  color={C.textMuted}
+                />
               </TouchableOpacity>
             ))}
           </View>
@@ -1226,16 +1252,9 @@ const ReportView: React.FC<ReportViewProps> = ({
     <View style={styles.container}>
       <HeaderDetailsModalHeader
         title={title}
+        onBack={closeReportModal}
         badgeLabel="Dieu kien loc"
         iconName="options-outline"
-        rightSlot={
-          <TouchableOpacity
-            style={styles.headerIconButton}
-            onPress={closeReportModal}
-          >
-            <Ionicons name="close" size={30} color="#fff" />
-          </TouchableOpacity>
-        }
       />
 
       <ScrollView
@@ -1264,7 +1283,13 @@ const ReportView: React.FC<ReportViewProps> = ({
               disableNumberGrouping={Boolean(parameter.notShowSplit)}
               mode="add"
               openEnumReferanceModal={openReferenceModal}
-              styles={styles}
+              styles={{
+                ...styles,
+                uploadButton: [
+                  styles.uploadButton,
+                  { borderColor: strongBorderColor },
+                ],
+              }}
             />
           </View>
         ))}

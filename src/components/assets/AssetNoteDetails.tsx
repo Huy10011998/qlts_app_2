@@ -1,16 +1,11 @@
 import React, { useEffect, useState } from "react";
-import {
-  StyleSheet,
-  Dimensions,
-  View,
-  Animated,
-  useColorScheme,
-} from "react-native";
+import { StyleSheet, Dimensions, View, Animated } from "react-native";
 import { WebView } from "react-native-webview";
 import type { CenterTextProps } from "../../types";
 import IsLoading from "../ui/IconLoading";
 import { C } from "../../utils/helpers/colors";
 import AssetListEmptyState from "./shared/AssetListEmptyState";
+import { useColorScheme } from "../../hooks/useColorScheme";
 
 export default function AssetNoteDetails({
   text,

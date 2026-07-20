@@ -8,7 +8,7 @@
     <color name="app_text_sub">#8A95A3</color>
     <color name="app_text_muted">#9CA3AF</color>
     <color name="app_placeholder">#AAB2BC</color>
-    <color name="app_border">#EDF0F5</color>
+    <color name="app_border">#F3F5F9</color>
     <color name="app_border_strong">#CDD3DE</color>
     <color name="app_accent">#1A3C8F</color>
     <color name="app_accent_surface">#EEF2FB</color>

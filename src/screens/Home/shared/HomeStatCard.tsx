@@ -1,7 +1,11 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { C } from "../../../utils/helpers/colors";
+import {
+  C,
+  useAppColors,
+  useHairlineBorderColor,
+} from "../../../utils/helpers/colors";
 
 const trendStyles = StyleSheet.create({
   up: {
@@ -33,14 +37,29 @@ export default function HomeStatCard({
   iconColor,
   trend,
 }: HomeStatCardProps) {
+  const colors = useAppColors();
+  const hairlineBorderColor = useHairlineBorderColor();
   return (
-    <View style={styles.card}>
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor: colors.surface,
+          borderColor: hairlineBorderColor,
+          shadowColor: colors.shadow,
+        },
+      ]}
+    >
       <View style={styles.top}>
         <View style={styles.titleWrap}>
           <View style={[styles.iconWrap, { backgroundColor: iconBg }]}>
             <Ionicons name={iconName} color={iconColor} size={16} />
           </View>
-          <Text style={styles.label} numberOfLines={2} allowFontScaling={false}>
+          <Text
+            style={[styles.label, { color: colors.textSecondary }]}
+            numberOfLines={2}
+            allowFontScaling={false}
+          >
             {label}
           </Text>
         </View>
@@ -65,7 +84,10 @@ export default function HomeStatCard({
         {value}
       </Text>
       {sub ? (
-        <Text style={[styles.sub, { color: subColor }]} allowFontScaling={false}>
+        <Text
+          style={[styles.sub, { color: subColor }]}
+          allowFontScaling={false}
+        >
           {sub}
         </Text>
       ) : null}

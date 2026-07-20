@@ -1,6 +1,10 @@
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { C } from "../../../utils/helpers/colors";
+import {
+  C,
+  useAccentBorderColors,
+  useHairlineBorderColor,
+} from "../../../utils/helpers/colors";
 import type { ShareholderRowProps } from "../../../types/index";
 import { statusConfig } from "./shareholdersMeetingHelpers";
 
@@ -11,9 +15,11 @@ export default function ShareholderAttendanceRow({
   isSubmitting = false,
 }: ShareholderRowProps) {
   const cfg = statusConfig[item.status];
+  const hairlineBorderColor = useHairlineBorderColor();
+  const accentBorders = useAccentBorderColors();
 
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, { borderColor: hairlineBorderColor }]}>
       <View style={styles.rowAvatar}>
         <Text style={styles.rowAvatarText}>{item.name.charAt(0)}</Text>
       </View>
@@ -27,7 +33,13 @@ export default function ShareholderAttendanceRow({
         <View
           style={[
             styles.badge,
-            { backgroundColor: cfg.bg, borderColor: cfg.border },
+            {
+              backgroundColor: cfg.bg,
+              borderColor:
+                item.status === "present"
+                  ? accentBorders.green
+                  : accentBorders.slate,
+            },
           ]}
         >
           <Text style={[styles.badgeText, { color: cfg.color }]}>
@@ -35,7 +47,7 @@ export default function ShareholderAttendanceRow({
           </Text>
         </View>
         {item.isLock ? (
-          <View style={styles.lockBadge}>
+          <View style={[styles.lockBadge, { borderColor: accentBorders.slate }]}>
             <Text style={styles.lockBadgeText}>Đã khóa</Text>
           </View>
         ) : item.status === "pending" ? (
@@ -55,6 +67,7 @@ export default function ShareholderAttendanceRow({
           <TouchableOpacity
             style={[
               styles.undoCheckInBtn,
+              { borderColor: accentBorders.red },
               isSubmitting && styles.actionBtnDisabled,
             ]}
             onPress={() => onUndoCheckIn(item.id, item.shareholderId)}

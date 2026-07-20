@@ -3,7 +3,11 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { HOME_BRAND_RED } from "./homeTheme";
 import { COMPACT_TEXT_MAX_SCALE } from "../../../utils/helpers/textScaling";
-import { C } from "../../../utils/helpers/colors";
+import {
+  C,
+  useAccentBorderColors,
+  useHairlineBorderColor,
+} from "../../../utils/helpers/colors";
 
 const localStyles = StyleSheet.create({
   tagIcon: {
@@ -28,17 +32,19 @@ export default function HomeEventBanner({
   count,
   onPress,
 }: HomeEventBannerProps) {
+  const hairlineBorderColor = useHairlineBorderColor();
+  const accentBorders = useAccentBorderColors();
   const [day = "", month = ""] = date.split("/");
   const monthNumber = Number(month);
   const monthLabel =
     month && Number.isFinite(monthNumber) ? `Th ${monthNumber}` : month;
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity style={[styles.card, { borderColor: hairlineBorderColor }]} onPress={onPress} activeOpacity={0.8}>
       <View style={styles.stripe} />
 
       <View style={styles.content}>
-        <View style={styles.datePill}>
+        <View style={[styles.datePill, { borderColor: accentBorders.red }]}>
           <Text
             style={styles.dateDay}
             numberOfLines={1}

@@ -1,4 +1,8 @@
-import { C } from "../../../utils/helpers/colors";
+import {
+  C,
+  useAccentBorderColors,
+  useHairlineBorderColor,
+} from "../../../utils/helpers/colors";
 import React from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
@@ -25,9 +29,12 @@ export default function CameraMenuSearchBar({
   resultCount,
   showResultCount,
 }: CameraMenuSearchBarProps) {
+  const hairlineBorderColor = useHairlineBorderColor();
+  const accentBorders = useAccentBorderColors();
+
   return (
     <View style={styles.searchWrap}>
-      <View style={styles.searchBox}>
+      <View style={[styles.searchBox, { borderColor: hairlineBorderColor }]}>
         <View style={styles.searchIconWrap}>
           <Ionicons name="search-outline" size={16} color={C.textSub} />
         </View>
@@ -54,7 +61,7 @@ export default function CameraMenuSearchBar({
       </View>
 
       {showResultCount ? (
-        <View style={styles.resultBadge}>
+        <View style={[styles.resultBadge, { borderColor: accentBorders.red }]}>
           <Text style={styles.resultText} allowFontScaling={false}>
             {resultCount} kết quả
           </Text>

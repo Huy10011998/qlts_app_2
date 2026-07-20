@@ -31,7 +31,7 @@ import {
   Gesture,
 } from "react-native-gesture-handler";
 import Orientation from "react-native-orientation-locker";
-import { C } from "../../utils/helpers/colors";
+import { C, useAppColors, useSeparatorColor } from "../../utils/helpers/colors";
 import Video from "react-native-video";
 import WebView from "react-native-webview";
 import type { CameraCellProps } from "../../types/components.d";
@@ -200,9 +200,7 @@ const CameraCell = React.memo(
                 <ActivityIndicator size="small" color={C.textMuted} />
               ) : !isPaused ? (
                 <Text style={styles.cellPlaceholderText}>
-                  {isSnapshotActive
-                    ? "Đang tải ảnh..."
-                    : "Nhấn đúp để xem"}
+                  {isSnapshotActive ? "Đang tải ảnh..." : "Nhấn đúp để xem"}
                 </Text>
               ) : null}
             </View>
@@ -251,6 +249,8 @@ const CameraCell = React.memo(
 );
 
 const CameraListGrid: React.FC = () => {
+  const colors = useAppColors();
+  const separatorColor = useSeparatorColor();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { cameras = [] } = route.params ?? {};
@@ -351,10 +351,7 @@ const CameraListGrid: React.FC = () => {
   const effectiveLayoutCount = layoutCount;
   const [cols, rows] = LAYOUT_OPTIONS[effectiveLayoutCount] ?? [4, 4];
   const perPage = cols * rows;
-  const liveCellLimit =
-    Platform.OS === "android"
-      ? 0
-      : perPage;
+  const liveCellLimit = Platform.OS === "android" ? 0 : perPage;
   const totalPages = Math.ceil(cameras.length / perPage);
   const pagedCameras = cameras.slice(page * perPage, (page + 1) * perPage);
   pagedCamerasRef.current = pagedCameras;
@@ -466,15 +463,25 @@ const CameraListGrid: React.FC = () => {
     tabNavigation.setOptions({
       tabBarStyle: isGridFullscreenMode
         ? { display: "none" }
-        : [createTabBarStyle({ bottomInset: insets.bottom })],
+        : [
+            createTabBarStyle({
+              bottomInset: insets.bottom,
+              backgroundColor: colors.surface,
+            }),
+          ],
     });
 
     return () => {
       tabNavigation.setOptions({
-        tabBarStyle: [createTabBarStyle({ bottomInset: insets.bottom })],
+        tabBarStyle: [
+          createTabBarStyle({
+            bottomInset: insets.bottom,
+            backgroundColor: colors.surface,
+          }),
+        ],
       });
     };
-  }, [insets.bottom, isGridFullscreenMode, navigation]);
+  }, [colors.surface, insets.bottom, isGridFullscreenMode, navigation]);
 
   const stopAllStreams = React.useCallback(() => {
     if (startStreamsTimeoutRef.current) {
@@ -830,10 +837,7 @@ const CameraListGrid: React.FC = () => {
     : hasMeasuredContentLayout
     ? 0
     : TAB_HEIGHT + insets.bottom;
-  const landscapeAvailableH = Math.max(
-    0,
-    landscapeScreenH - landscapeTabBarH
-  );
+  const landscapeAvailableH = Math.max(0, landscapeScreenH - landscapeTabBarH);
   const landscapeCellW = landscapeScreenW / cols;
   const landscapeCellH = landscapeAvailableH / rows;
   // ─── KEY CHANGE: Khung đi theo hướng màn hình thực tế (isLandscape) ──
@@ -1365,7 +1369,11 @@ const CameraListGrid: React.FC = () => {
             </TouchableOpacity>
             <View style={styles.iconGroup}>
               <TouchableOpacity style={styles.iconBtn} onPress={handleSnapshot}>
-                <Ionicons name="camera-outline" size={24} color={C.textSecondary} />
+                <Ionicons
+                  name="camera-outline"
+                  size={24}
+                  color={C.textSecondary}
+                />
               </TouchableOpacity>
               <TouchableOpacity style={styles.iconBtn}>
                 <Ionicons
@@ -1375,10 +1383,18 @@ const CameraListGrid: React.FC = () => {
                 />
               </TouchableOpacity>
               <TouchableOpacity style={styles.iconBtn}>
-                <Ionicons name="mic-outline" size={24} color={C.textSecondary} />
+                <Ionicons
+                  name="mic-outline"
+                  size={24}
+                  color={C.textSecondary}
+                />
               </TouchableOpacity>
               <TouchableOpacity style={styles.iconBtn}>
-                <Ionicons name="person-circle-outline" size={24} color={C.textSecondary} />
+                <Ionicons
+                  name="person-circle-outline"
+                  size={24}
+                  color={C.textSecondary}
+                />
               </TouchableOpacity>
             </View>
           </View>
@@ -1429,6 +1445,7 @@ const CameraListGrid: React.FC = () => {
                   style={[
                     styles.listItem,
                     index !== 0 && styles.itemBorder,
+                    index !== 0 && { borderColor: separatorColor },
                     layoutCount === n && styles.activeItem,
                   ]}
                   onPress={() => handleSetLayout(n)}
@@ -1762,7 +1779,12 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 12,
   },
-  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: C.borderStrong },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: C.borderStrong,
+  },
   dotActive: {
     width: 22,
     height: 7,
@@ -1842,7 +1864,12 @@ const styles = StyleSheet.create({
     borderRadius: 24,
   },
   handleWrapper: { alignItems: "center", paddingTop: 10, paddingBottom: 6 },
-  handle: { width: 45, height: 5, backgroundColor: C.borderStrong, borderRadius: 3 },
+  handle: {
+    width: 45,
+    height: 5,
+    backgroundColor: C.borderStrong,
+    borderRadius: 3,
+  },
   sheetTitle: {
     fontSize: 18,
     fontWeight: "600",

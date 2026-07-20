@@ -31,6 +31,11 @@ import { API_ENDPOINTS } from "../../config";
 import { useSlideInPanel } from "../../hooks/useSlideInPanel";
 import { callApi } from "../../services/data/callApi";
 import type { TreeNode } from "../../types";
+import {
+  useHairlineBorderColor,
+  useSeparatorColor,
+  useStrongBorderColor,
+} from "../../utils/helpers/colors";
 
 import {
   addDays,
@@ -147,6 +152,8 @@ const ExpandedChartModal: React.FC<ExpandedChartModalProps> = ({
 }) => {
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const hairlineBorderColor = useHairlineBorderColor();
+  const strongBorderColor = useStrongBorderColor();
   const title = getExpandedChartTitle(activeChart);
   const isComparative = activeChart === "comparative";
   const isProduction = activeChart === "production";
@@ -236,7 +243,7 @@ const ExpandedChartModal: React.FC<ExpandedChartModalProps> = ({
       <GestureHandlerRootView style={styles.expandedSafe}>
         <HeaderDetailsModalHeader title={title} onBack={onClose} />
         {isComparative ? (
-          <View style={styles.expandedCompareTabs}>
+          <View style={[styles.expandedCompareTabs, { borderColor: hairlineBorderColor }]}>
             {(["Month", "Quarter", "Year"] as const).map((mode) => (
               <TouchableOpacity
                 key={mode}
@@ -345,7 +352,12 @@ const ExpandedChartModal: React.FC<ExpandedChartModalProps> = ({
                 </>
               ) : (
                 <>
-                  <View style={styles.expandedTooltipCard}>
+                  <View
+                    style={[
+                      styles.expandedTooltipCard,
+                      { borderColor: strongBorderColor },
+                    ]}
+                  >
                     <Text style={styles.expandedTooltipDate}>
                       {dateRange.fromDate.toLocaleDateString("en-US", {
                         weekday: "long",
@@ -659,36 +671,42 @@ const SolarHeroSection: React.FC<SolarHeroSectionProps> = ({
 
 const EnergyProducedSummary: React.FC<{ data: SolarDashboardData }> = ({
   data,
-}) => (
-  <View style={styles.energyProducedCard}>
-    <View style={styles.epRow}>
-      <Text style={styles.sectionTitle}>Energy Produced</Text>
-      <Text style={styles.updatedNow}>Updated now</Text>
+}) => {
+  const separatorColor = useSeparatorColor();
+
+  return (
+    <View
+      style={[styles.energyProducedCard, { borderBottomColor: separatorColor }]}
+    >
+      <View style={styles.epRow}>
+        <Text style={styles.sectionTitle}>Energy Produced</Text>
+        <Text style={styles.updatedNow}>Updated now</Text>
+      </View>
+      <View style={styles.epStats}>
+        <View style={styles.epItem}>
+          <Text style={styles.epLabel}>This Month</Text>
+          <Text style={styles.epValue}>
+            {formatMetric(data.thisMonth)} <Text style={styles.epUnit}>MWh</Text>
+          </Text>
+        </View>
+        <View style={styles.epDivider} />
+        <View style={styles.epItem}>
+          <Text style={styles.epLabel}>This Year</Text>
+          <Text style={styles.epValue}>
+            {formatMetric(data.thisYear)} <Text style={styles.epUnit}>MWh</Text>
+          </Text>
+        </View>
+        <View style={styles.epDivider} />
+        <View style={styles.epItem}>
+          <Text style={styles.epLabel}>Lifetime</Text>
+          <Text style={styles.epValue}>
+            {formatMetric(data.lifetime)} <Text style={styles.epUnit}>MWh</Text>
+          </Text>
+        </View>
+      </View>
     </View>
-    <View style={styles.epStats}>
-      <View style={styles.epItem}>
-        <Text style={styles.epLabel}>This Month</Text>
-        <Text style={styles.epValue}>
-          {formatMetric(data.thisMonth)} <Text style={styles.epUnit}>MWh</Text>
-        </Text>
-      </View>
-      <View style={styles.epDivider} />
-      <View style={styles.epItem}>
-        <Text style={styles.epLabel}>This Year</Text>
-        <Text style={styles.epValue}>
-          {formatMetric(data.thisYear)} <Text style={styles.epUnit}>MWh</Text>
-        </Text>
-      </View>
-      <View style={styles.epDivider} />
-      <View style={styles.epItem}>
-        <Text style={styles.epLabel}>Lifetime</Text>
-        <Text style={styles.epValue}>
-          {formatMetric(data.lifetime)} <Text style={styles.epUnit}>MWh</Text>
-        </Text>
-      </View>
-    </View>
-  </View>
-);
+  );
+};
 
 function SolarPlantMenuButton({ onPress }: { onPress: () => void }) {
   return (

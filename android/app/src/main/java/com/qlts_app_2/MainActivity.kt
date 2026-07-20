@@ -2,6 +2,7 @@ package com.qlts_app_2
 
 import android.content.pm.ActivityInfo
 import android.os.Bundle
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
@@ -16,6 +17,7 @@ class MainActivity : ReactActivity() {
   override fun getMainComponentName(): String = "qlts_app_2"
 
   override fun onCreate(savedInstanceState: Bundle?) {
+    installSplashScreen()
     requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
     super.onCreate(savedInstanceState)
   }

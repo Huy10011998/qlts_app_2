@@ -1,4 +1,4 @@
-import { C } from "../../../utils/helpers/colors";
+import { C, useAccentBorderColors } from "../../../utils/helpers/colors";
 import React from "react";
 import {
   StyleProp,
@@ -31,6 +31,7 @@ export default function AssetFormActionButton({
   variant = "primary",
   style,
 }: AssetFormActionButtonProps) {
+  const accentBorders = useAccentBorderColors();
   const isPrimary = variant === "primary";
   const iconColor = isPrimary ? "#fff" : brandColor;
 
@@ -45,7 +46,7 @@ export default function AssetFormActionButton({
                 ? styles.primaryButtonDisabled
                 : { backgroundColor: brandColor },
             ]
-          : styles.secondaryButton,
+          : [styles.secondaryButton, { borderColor: accentBorders.red }],
         style,
       ]}
       onPress={onPress}

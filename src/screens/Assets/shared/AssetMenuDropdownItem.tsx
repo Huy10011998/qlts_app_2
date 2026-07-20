@@ -1,4 +1,7 @@
-import { C } from "../../../utils/helpers/colors";
+import {
+  useAppColors,
+  useHairlineBorderColor,
+} from "../../../utils/helpers/colors";
 import React from "react";
 import {
   Image,
@@ -19,9 +22,6 @@ import type {
   StackNavigation,
   StackRoute,
 } from "../../../types/index";
-import {
-  ASSET_MENU_CARD_SHADOW,
-} from "./assetMenuTheme";
 import {
   getAssetMenuItemTheme,
   getAssetMenuMobileRoute,
@@ -55,6 +55,17 @@ function AssetMenuDropdownItem({
   const hasChildren = item.children?.length > 0;
   const expanded = expandedIds.includes(item.id);
   const theme = getAssetMenuItemTheme(item, expanded);
+  const colors = useAppColors();
+  const hairlineBorderColor = useHairlineBorderColor();
+  const themeBackground = theme.iconImageUri
+    ? colors.indigoSurface
+    : item.isReport
+    ? colors.pinkSurface
+    : item.contentName_Mobile
+    ? colors.indigoSurface
+    : expanded
+    ? colors.redSurface
+    : colors.orangeSurface;
 
   const handlePress = () => {
     if (hasChildren) {
@@ -92,7 +103,15 @@ function AssetMenuDropdownItem({
       <Pressable
         style={({ pressed }) => [
           styles.card,
+          {
+            backgroundColor: colors.surface,
+            shadowColor: colors.shadow,
+          },
           level > 0 && styles.cardChild,
+          level > 0 && {
+            backgroundColor: colors.surfaceAlt,
+            borderColor: hairlineBorderColor,
+          },
           pressed && styles.cardPressed,
         ]}
         onPress={handlePress}
@@ -100,18 +119,30 @@ function AssetMenuDropdownItem({
       >
         <View style={[styles.accent, { backgroundColor: theme.color }]} />
 
-        <View style={[styles.iconWrap, { backgroundColor: theme.bg }]}>
+        <View style={[styles.iconWrap, { backgroundColor: themeBackground }]}>
           {theme.iconImageUri ? (
-            <Image source={{ uri: theme.iconImageUri }} style={styles.iconImage} />
+            <Image
+              source={{ uri: theme.iconImageUri }}
+              style={styles.iconImage}
+            />
           ) : theme.lib === "material" ? (
-            <MaterialIcons name={theme.icon as any} size={16} color={theme.color} />
+            <MaterialIcons
+              name={theme.icon as any}
+              size={16}
+              color={theme.color}
+            />
           ) : (
             <Ionicons name={theme.icon as any} size={16} color={theme.color} />
           )}
         </View>
 
         <Text
-          style={[styles.label, level > 0 && styles.labelChild]}
+          style={[
+            styles.label,
+            { color: colors.text },
+            level > 0 && styles.labelChild,
+            level > 0 && { color: colors.textSecondary },
+          ]}
           numberOfLines={2}
           allowFontScaling={false}
         >
@@ -119,7 +150,9 @@ function AssetMenuDropdownItem({
         </Text>
 
         {hasChildren ? (
-          <View style={[styles.chevronWrap, { backgroundColor: theme.bg }]}>
+          <View
+            style={[styles.chevronWrap, { backgroundColor: themeBackground }]}
+          >
             <Ionicons
               name={expanded ? "chevron-up" : "chevron-down"}
               size={13}
@@ -127,7 +160,7 @@ function AssetMenuDropdownItem({
             />
           </View>
         ) : (
-          <Ionicons name="chevron-forward" size={14} color={C.textMuted} />
+          <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
         )}
       </Pressable>
 
@@ -155,7 +188,6 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: C.surface,
     borderRadius: 14,
     minHeight: 58,
     paddingVertical: 11,
@@ -163,15 +195,16 @@ const styles = StyleSheet.create({
     paddingLeft: 16,
     overflow: "hidden",
     gap: 10,
-    ...ASSET_MENU_CARD_SHADOW,
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   cardChild: {
-    backgroundColor: C.surfaceAlt,
     minHeight: 56,
     shadowOpacity: 0.03,
     elevation: 1,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: C.border,
   },
   cardPressed: {
     opacity: 0.75,
@@ -202,7 +235,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13.5,
     fontWeight: "600",
-    color: C.text,
     letterSpacing: 0.1,
     lineHeight: 20,
     includeFontPadding: false,
@@ -211,7 +243,6 @@ const styles = StyleSheet.create({
   labelChild: {
     fontSize: 12.5,
     fontWeight: "500",
-    color: C.textSecondary,
     lineHeight: 19,
   },
   chevronWrap: {

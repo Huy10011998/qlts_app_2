@@ -24,7 +24,7 @@ import HomeStatCard from "./shared/HomeStatCard";
 import HomeQuickAction from "./shared/HomeQuickAction";
 import HomeSectionTitle from "./shared/HomeSectionTitle";
 import HomeRecentActivities from "./shared/HomeRecentActivities";
-import { HOME_BG, HOME_BRAND_RED } from "./shared/homeTheme";
+import { HOME_BRAND_RED } from "./shared/homeTheme";
 import {
   HOME_ASSET_SUMMARY,
   HOME_CAMERA_SUMMARY,
@@ -41,7 +41,12 @@ import { useAppDispatch } from "../../store/hooks";
 import { reloadPermissions } from "../../store/PermissionActions";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { readStoredAuthUsername } from "../../context/authStorage";
-import { C } from "../../utils/helpers/colors";
+import {
+  C,
+  useAppColors,
+  useAccentBorderColors,
+  useHairlineBorderColor,
+} from "../../utils/helpers/colors";
 
 const HOME_FEATURE_PINNED_IDS_KEY = "@home:pinnedFeatureIds";
 const HOME_FEATURE_PINNED_IDS_USER_KEY = `${HOME_FEATURE_PINNED_IDS_KEY}:user`;
@@ -92,6 +97,8 @@ function HomeReportCard({
   onTogglePinned,
   showPinButton = false,
 }: HomeReportCardProps) {
+  const colors = useAppColors();
+  const accentBorders = useAccentBorderColors();
   const handleTogglePinned = (event: GestureResponderEvent) => {
     event.stopPropagation();
     onTogglePinned?.();
@@ -99,7 +106,14 @@ function HomeReportCard({
 
   return (
     <TouchableOpacity
-      style={styles.reportCard}
+      style={[
+        styles.reportCard,
+        {
+          backgroundColor: colors.surface,
+          borderColor: accentBorders.violet,
+          shadowColor: colors.shadow,
+        },
+      ]}
       activeOpacity={0.76}
       onPress={onPress}
     >
@@ -107,6 +121,10 @@ function HomeReportCard({
         <TouchableOpacity
           style={[
             styles.reportPinButton,
+            {
+              backgroundColor: colors.violetSurface,
+              borderColor: accentBorders.violet,
+            },
             isPinned && styles.reportPinButtonActive,
           ]}
           activeOpacity={0.76}
@@ -121,17 +139,18 @@ function HomeReportCard({
         </TouchableOpacity>
       ) : null}
 
-      <View style={styles.reportIconWrap}>
-        <Ionicons
-          name="document-text-outline"
-          size={21}
-          color="#7048E8"
-        />
+      <View
+        style={[
+          styles.reportIconWrap,
+          { backgroundColor: colors.violetSurface },
+        ]}
+      >
+        <Ionicons name="document-text-outline" size={21} color="#7048E8" />
       </View>
 
       <View style={styles.reportTextWrap}>
         <Text
-          style={styles.reportTitle}
+          style={[styles.reportTitle, { color: colors.text }]}
           allowFontScaling={false}
           numberOfLines={2}
         >
@@ -139,7 +158,12 @@ function HomeReportCard({
         </Text>
       </View>
 
-      <View style={styles.reportArrowWrap}>
+      <View
+        style={[
+          styles.reportArrowWrap,
+          { backgroundColor: colors.violetSurface },
+        ]}
+      >
         <Ionicons name="arrow-forward" size={12} color="#7048E8" />
       </View>
     </TouchableOpacity>
@@ -148,6 +172,8 @@ function HomeReportCard({
 
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeNavigationProp>();
+  const colors = useAppColors();
+  const hairlineBorderColor = useHairlineBorderColor();
   const { width: windowWidth } = useWindowDimensions();
   const tabsNavigation = navigation.getParent() as any;
   const isFocused = useIsFocused();
@@ -188,7 +214,8 @@ const HomeScreen: React.FC = () => {
         const storedUserName = await readStoredAuthUsername();
         const nextPinnedFeatureIdsKey =
           getHomeFeaturePinnedIdsKey(storedUserName);
-        const nextPinnedReportIdsKey = getHomeReportPinnedIdsKey(storedUserName);
+        const nextPinnedReportIdsKey =
+          getHomeReportPinnedIdsKey(storedUserName);
         const migratedKey = getHomeFeaturePinnedIdsMigratedKey(
           nextPinnedFeatureIdsKey
         );
@@ -423,25 +450,31 @@ const HomeScreen: React.FC = () => {
       {
         iconName: "qr-code-outline",
         label: "Quét QR",
-        bg: C.indigoSurface,
+        bg: colors.indigoSurface,
         color: C.blue,
         onPress: openScanScreen,
       },
       {
         iconName: "notifications-outline",
         label: "Thông báo",
-        bg: C.redSurface,
+        bg: colors.redSurface,
         color: HOME_BRAND_RED,
       },
       {
         iconName: "settings-outline",
         label: "Cài đặt",
-        bg: C.greenLight,
+        bg: colors.greenLight,
         color: C.emerald,
         onPress: openSettingScreen,
       },
     ],
-    [openScanScreen, openSettingScreen]
+    [
+      colors.greenLight,
+      colors.indigoSurface,
+      colors.redSurface,
+      openScanScreen,
+      openSettingScreen,
+    ]
   );
   const reportActions = useMemo(
     () =>
@@ -507,7 +540,10 @@ const HomeScreen: React.FC = () => {
   if (hasLoadError || hasMenuLoadError) {
     return (
       <ScrollView
-        contentContainerStyle={styles.centerState}
+        contentContainerStyle={[
+          styles.centerState,
+          { backgroundColor: colors.bg },
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -528,14 +564,14 @@ const HomeScreen: React.FC = () => {
 
   if (!loaded || isInitialMenuLoading) {
     return (
-      <View style={styles.loadingWrap}>
+      <View style={[styles.loadingWrap, { backgroundColor: colors.bg }]}>
         <ActivityIndicator size="small" color={HOME_BRAND_RED} />
       </View>
     );
   }
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: colors.bg }]}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -555,7 +591,16 @@ const HomeScreen: React.FC = () => {
           onAction={() => setIsFeatureListVisible(true)}
         />
         {hasNoViewFeatures ? (
-          <View style={styles.noPermissionCard}>
+          <View
+            style={[
+              styles.noPermissionCard,
+              {
+                backgroundColor: colors.surface,
+                borderColor: hairlineBorderColor,
+                shadowColor: colors.shadow,
+              },
+            ]}
+          >
             <EmptyState
               iconName="lock-closed-outline"
               title="Chưa có chức năng khả dụng"
@@ -564,7 +609,16 @@ const HomeScreen: React.FC = () => {
             />
           </View>
         ) : hasNoPinnedFeatures ? (
-          <View style={styles.noPermissionCard}>
+          <View
+            style={[
+              styles.noPermissionCard,
+              {
+                backgroundColor: colors.surface,
+                borderColor: hairlineBorderColor,
+                shadowColor: colors.shadow,
+              },
+            ]}
+          >
             <EmptyState
               iconName="add-circle-outline"
               title="Chưa chọn chức năng hiển thị"
@@ -604,7 +658,16 @@ const HomeScreen: React.FC = () => {
               onAction={() => setIsVehicleListVisible(true)}
             />
             {hasNoPinnedVehicles ? (
-              <View style={styles.noPermissionCard}>
+              <View
+                style={[
+                  styles.noPermissionCard,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: hairlineBorderColor,
+                    shadowColor: colors.shadow,
+                  },
+                ]}
+              >
                 <EmptyState
                   iconName="add-circle-outline"
                   title="Chưa chọn chức năng phương tiện"
@@ -646,7 +709,16 @@ const HomeScreen: React.FC = () => {
               onAction={() => setIsReportListVisible(true)}
             />
             {hasNoPinnedReports ? (
-              <View style={styles.noPermissionCard}>
+              <View
+                style={[
+                  styles.noPermissionCard,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: hairlineBorderColor,
+                    shadowColor: colors.shadow,
+                  },
+                ]}
+              >
                 <EmptyState
                   iconName="add-circle-outline"
                   title="Chưa chọn báo cáo hiển thị"
@@ -664,10 +736,7 @@ const HomeScreen: React.FC = () => {
                       { width: homeReportCardWidth },
                     ]}
                   >
-                    <HomeReportCard
-                      label={item.label}
-                      onPress={item.onPress}
-                    />
+                    <HomeReportCard label={item.label} onPress={item.onPress} />
                   </View>
                 ))}
               </View>
@@ -676,10 +745,23 @@ const HomeScreen: React.FC = () => {
         ) : null}
 
         <HomeSectionTitle label="THAO TÁC NHANH" />
-        <View style={styles.qaCard}>
+        <View
+          style={[
+            styles.qaCard,
+            {
+              backgroundColor: colors.surface,
+              borderColor: hairlineBorderColor,
+              shadowColor: colors.shadow,
+            },
+          ]}
+        >
           {quickActions.map((action, index) => (
             <React.Fragment key={action.label}>
-              {index > 0 ? <View style={styles.qaDivider} /> : null}
+              {index > 0 ? (
+                <View
+                  style={[styles.qaDivider, { backgroundColor: colors.border }]}
+                />
+              ) : null}
               <HomeQuickAction {...action} />
             </React.Fragment>
           ))}
@@ -705,9 +787,9 @@ const HomeScreen: React.FC = () => {
                   value={String(HOME_ASSET_SUMMARY.totalAssets)}
                   label="Tài sản đang quản lý"
                   sub="Cập nhật hôm nay"
-                  subColor={C.textMuted}
+                  subColor={colors.textMuted}
                   iconName="cube-outline"
-                  iconBg={C.redIconSurface}
+                  iconBg={colors.redIconSurface}
                   iconColor={HOME_BRAND_RED}
                   trend="neutral"
                 />
@@ -730,7 +812,10 @@ const HomeScreen: React.FC = () => {
         showHandle
         sheetStyle={styles.featureSheet}
       >
-        <Text style={styles.featureSheetTitle} allowFontScaling={false}>
+        <Text
+          style={[styles.featureSheetTitle, { color: colors.text }]}
+          allowFontScaling={false}
+        >
           Tất cả chức năng
         </Text>
         <ScrollView
@@ -764,7 +849,10 @@ const HomeScreen: React.FC = () => {
         showHandle
         sheetStyle={styles.featureSheet}
       >
-        <Text style={styles.featureSheetTitle} allowFontScaling={false}>
+        <Text
+          style={[styles.featureSheetTitle, { color: colors.text }]}
+          allowFontScaling={false}
+        >
           Tất cả chức năng phương tiện
         </Text>
         <ScrollView
@@ -798,7 +886,10 @@ const HomeScreen: React.FC = () => {
         showHandle
         sheetStyle={styles.featureSheet}
       >
-        <Text style={styles.featureSheetTitle} allowFontScaling={false}>
+        <Text
+          style={[styles.featureSheetTitle, { color: colors.text }]}
+          allowFontScaling={false}
+        >
           Tất cả báo cáo
         </Text>
         <ScrollView
@@ -834,16 +925,14 @@ const HomeScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: HOME_BG },
+  root: { flex: 1 },
   loadingWrap: {
     flex: 1,
-    backgroundColor: HOME_BG,
     alignItems: "center",
     justifyContent: "center",
   },
   centerState: {
     flex: 1,
-    backgroundColor: HOME_BG,
     alignItems: "center",
     justifyContent: "center",
   },

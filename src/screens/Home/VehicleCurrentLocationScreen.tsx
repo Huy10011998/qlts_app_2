@@ -25,7 +25,7 @@ import { error, log } from "../../utils/Logger";
 import { VEHICLE_MAP_CONTROL_CSS } from "./shared/vehicleMapControlStyles";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { useForegroundWebViewRemount } from "./shared/useForegroundWebViewRemount";
-import { C } from "../../utils/helpers/colors";
+import { C, useStrongBorderColor } from "../../utils/helpers/colors";
 
 type Vehicle = Record<string, unknown> & { id?: string | number };
 type VehicleListResponse = { data?: { items?: Vehicle[] } };
@@ -118,6 +118,7 @@ const formatLocationTime = (value?: string | null) => {
 
 export default function VehicleCurrentLocationScreen() {
   const isFocused = useIsFocused();
+  const strongBorderColor = useStrongBorderColor();
   const webViewRef = useRef<WebView>(null);
   const networkAvailableRef = useRef(true);
   const { remountWebView, renderKey } = useForegroundWebViewRemount();
@@ -316,7 +317,7 @@ export default function VehicleCurrentLocationScreen() {
         </View>
       ) : (
         <>
-          <View style={styles.infoCard}>
+          <View style={[styles.infoCard, { borderColor: strongBorderColor }]}>
             <Text style={styles.vehicleName}>
               {vehicleLabel(selectedVehicle)}
             </Text>

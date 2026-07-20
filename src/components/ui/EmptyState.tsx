@@ -1,4 +1,4 @@
-import { C } from "../../utils/helpers/colors";
+import { useAppColors } from "../../utils/helpers/colors";
 import React from "react";
 import {
   StyleProp,
@@ -29,16 +29,29 @@ export default function EmptyState({
   titleStyle,
   subtitleStyle,
 }: EmptyStateProps) {
+  const colors = useAppColors();
+
   return (
     <View style={[styles.wrap, fullHeight && styles.fullHeight, style]}>
       {iconName ? (
-        <View style={styles.iconWrap}>
-          <Ionicons name={iconName as any} size={32} color={C.textMuted} />
+        <View
+          style={[
+            styles.iconWrap,
+            { backgroundColor: colors.surface, shadowColor: colors.shadow },
+          ]}
+        >
+          <Ionicons name={iconName as any} size={32} color={colors.textMuted} />
         </View>
       ) : null}
-      <Text style={[styles.title, titleStyle]}>{title}</Text>
+      <Text style={[styles.title, { color: colors.textSecondary }, titleStyle]}>
+        {title}
+      </Text>
       {subtitle ? (
-        <Text style={[styles.subtitle, subtitleStyle]}>{subtitle}</Text>
+        <Text
+          style={[styles.subtitle, { color: colors.textSub }, subtitleStyle]}
+        >
+          {subtitle}
+        </Text>
       ) : null}
     </View>
   );
@@ -57,11 +70,9 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 22,
-    backgroundColor: C.surface,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
-    shadowColor: C.shadow,
     shadowOpacity: 0.06,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
@@ -70,13 +81,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 15,
     fontWeight: "700",
-    color: C.textSecondary,
     marginBottom: 6,
     textAlign: "center",
   },
   subtitle: {
     fontSize: 12,
-    color: C.textSub,
     textAlign: "center",
     lineHeight: 18,
   },

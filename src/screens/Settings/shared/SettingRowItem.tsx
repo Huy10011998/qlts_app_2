@@ -2,7 +2,11 @@ import React from "react";
 import { StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
-import { C } from "../../../utils/helpers/colors";
+import {
+  C,
+  useAppColors,
+  useSeparatorColor,
+} from "../../../utils/helpers/colors";
 
 type IconLib = "ionicons" | "material-community";
 
@@ -55,9 +59,16 @@ export function SettingRowItem({
   danger,
   isLast,
 }: SettingRowItemProps) {
+  const colors = useAppColors();
+  const separatorColor = useSeparatorColor();
+
   return (
     <TouchableOpacity
-      style={[styles.row, isLast && styles.rowLast]}
+      style={[
+        styles.row,
+        { borderBottomColor: separatorColor },
+        isLast && styles.rowLast,
+      ]}
       onPress={onPress}
       activeOpacity={0.65}
     >
@@ -67,11 +78,17 @@ export function SettingRowItem({
         bg={danger ? C.rose : iconBg ?? C.red}
       />
       <View style={styles.textCol}>
-        <Text style={[styles.label, danger && { color: C.rose }]}>{label}</Text>
-        {sublabel ? <Text style={styles.sub}>{sublabel}</Text> : null}
+        <Text style={[styles.label, { color: danger ? C.rose : colors.text }]}>
+          {label}
+        </Text>
+        {sublabel ? (
+          <Text style={[styles.sub, { color: colors.textSub }]}>
+            {sublabel}
+          </Text>
+        ) : null}
       </View>
-      <View style={styles.chevronWrap}>
-        <Ionicons name="chevron-forward" size={14} color={C.textMuted} />
+      <View style={[styles.chevronWrap, { backgroundColor: colors.border }]}>
+        <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
       </View>
     </TouchableOpacity>
   );
@@ -87,19 +104,32 @@ export function SettingSwitchRow({
   iconBg,
   isLast,
 }: SettingSwitchRowProps) {
+  const colors = useAppColors();
+  const separatorColor = useSeparatorColor();
+
   return (
-    <View style={[styles.row, isLast && styles.rowLast]}>
+    <View
+      style={[
+        styles.row,
+        { borderBottomColor: separatorColor },
+        isLast && styles.rowLast,
+      ]}
+    >
       <SettingItemIcon iconName={iconName} lib={lib} bg={iconBg ?? C.red} />
       <View style={styles.textCol}>
-        <Text style={styles.label}>{label}</Text>
-        {sublabel ? <Text style={styles.sub}>{sublabel}</Text> : null}
+        <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
+        {sublabel ? (
+          <Text style={[styles.sub, { color: colors.textSub }]}>
+            {sublabel}
+          </Text>
+        ) : null}
       </View>
       <Switch
         value={value}
         onValueChange={onValueChange}
-        trackColor={{ false: C.borderStrong, true: C.red }}
+        trackColor={{ false: colors.borderStrong, true: C.red }}
         thumbColor="#fff"
-        ios_backgroundColor={C.borderStrong}
+        ios_backgroundColor={colors.borderStrong}
       />
     </View>
   );
@@ -113,7 +143,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: 14,
-    shadowColor: C.shadow,
     shadowOpacity: 0.12,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
@@ -125,7 +154,6 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     paddingHorizontal: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: C.border,
   },
   rowLast: {
     borderBottomWidth: 0,
@@ -137,14 +165,12 @@ const styles = StyleSheet.create({
     fontSize: 14.5,
     lineHeight: 20,
     fontWeight: "600",
-    color: C.text,
     letterSpacing: 0.1,
     includeFontPadding: false,
   },
   sub: {
     fontSize: 11.5,
     lineHeight: 16,
-    color: C.textSub,
     marginTop: 2,
     includeFontPadding: false,
   },
@@ -153,7 +179,6 @@ const styles = StyleSheet.create({
     height: 24,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: C.border,
     borderRadius: 7,
   },
 });

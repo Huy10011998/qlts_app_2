@@ -14,7 +14,7 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import type { HeaderHomeProps } from "../../types/components.d";
-import { C } from "../../utils/helpers/colors";
+import { C, useAppColors } from "../../utils/helpers/colors";
 
 const { width: W } = Dimensions.get("window");
 
@@ -40,13 +40,8 @@ const formatDate = (d: Date) =>
     year: "numeric",
   });
 
-const HeaderWave: React.FC = () => (
-  <Svg
-    width={W}
-    height={36}
-    viewBox={`0 0 ${W} 36`}
-    style={styles.headerWave}
-  >
+const HeaderWave: React.FC<{ bottomFill: string }> = ({ bottomFill }) => (
+  <Svg width={W} height={36} viewBox={`0 0 ${W} 36`} style={styles.headerWave}>
     <Path
       d={`M0,8 C${W * 0.2},32 ${W * 0.4},0 ${W * 0.6},18 C${W * 0.8},36 ${
         W * 0.9
@@ -57,20 +52,21 @@ const HeaderWave: React.FC = () => (
       d={`M0,18 C${W * 0.25},36 ${W * 0.5},10 ${W * 0.75},28 C${
         W * 0.88
       },38 ${W},16 ${W},36 L${W},36 L0,36 Z`}
-      fill="#F0F2F8"
+      fill={bottomFill}
     />
   </Svg>
 );
 
 export default function HeaderHome(_props: HeaderHomeProps) {
   const insets = useSafeAreaInsets();
+  const colors = useAppColors();
 
   const [now, setNow] = useState(new Date());
   const greeting = getGreeting(now);
   const showComingSoonAlert = () => {
     Alert.alert(
       "Thông báo",
-      "Chức năng sẽ được triển khai trong thời gian sắp tới.",
+      "Chức năng sẽ được triển khai trong thời gian sắp tới."
     );
   };
 
@@ -83,7 +79,7 @@ export default function HeaderHome(_props: HeaderHomeProps) {
         if (nextAppState === "active") {
           updateNow();
         }
-      },
+      }
     );
 
     updateNow();
@@ -105,7 +101,15 @@ export default function HeaderHome(_props: HeaderHomeProps) {
           onPress={() => Linking.openURL("https://cholimexfood.com.vn")}
           activeOpacity={0.8}
         >
-          <View style={styles.logoWrap}>
+          <View
+            style={[
+              styles.logoWrap,
+              {
+                backgroundColor: colors.surface,
+                shadowColor: colors.shadow,
+              },
+            ]}
+          >
             <Image
               source={require("../../assets/images/logo-cholimex-trans.jpg")}
               style={styles.logo}
@@ -157,7 +161,7 @@ export default function HeaderHome(_props: HeaderHomeProps) {
       </Text>
 
       <View style={styles.waveContainer}>
-        <HeaderWave />
+        <HeaderWave bottomFill={colors.bg} />
       </View>
     </View>
   );

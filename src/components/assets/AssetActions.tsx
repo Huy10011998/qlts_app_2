@@ -1,4 +1,4 @@
-import { C } from "../../utils/helpers/colors";
+import { C, useAccentBorderColors } from "../../utils/helpers/colors";
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
@@ -21,6 +21,7 @@ export default function AssetActions({
   nameClass,
 }: AssetActionProps) {
   const { can } = usePermission();
+  const accentBorders = useAccentBorderColors();
 
   const allowEdit = !!nameClass && can(nameClass, "Update");
   const allowDelete = !!nameClass && can(nameClass, "Delete");
@@ -33,7 +34,7 @@ export default function AssetActions({
           label: "Sửa",
           color: "#3B5BDB",
           bg: C.indigoSurface,
-          border: C.violetBorder,
+          border: accentBorders.violet,
           icon: (
             <MaterialIcons name="edit" size={18} color="#3B5BDB" />
           ),
@@ -46,7 +47,7 @@ export default function AssetActions({
           label: "Xóa",
           color: BRAND_RED,
           bg: C.redSurface,
-          border: C.redBorder,
+          border: accentBorders.red,
           icon: (
             <MaterialIcons name="delete-outline" size={18} color={BRAND_RED} />
           ),
@@ -59,7 +60,7 @@ export default function AssetActions({
           label: "Bản sao",
           color: "#E67700",
           bg: C.orangeSurface,
-          border: C.amberBorder,
+          border: accentBorders.amber,
           icon: (
             <FontAwesome5 name="clone" size={16} color="#E67700" />
           ),

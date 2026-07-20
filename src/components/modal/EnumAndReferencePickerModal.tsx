@@ -18,7 +18,11 @@ import { useDebounce } from "../../hooks/useDebounce";
 import IsLoading from "../ui/IconLoading";
 import EmptyState from "../ui/EmptyState";
 import BottomSheetModalShell from "../shared/BottomSheetModalShell";
-import { C } from "../../utils/helpers/colors";
+import {
+  C,
+  useHairlineBorderColor,
+  useSeparatorColor,
+} from "../../utils/helpers/colors";
 import { COMPACT_TEXT_MAX_SCALE } from "../../utils/helpers/textScaling";
 
 if (
@@ -53,6 +57,8 @@ export default function EnumAndReferencePickerModal({
   loadedCount,
 }: PropsEnum & ExtraProps) {
   const insets = useSafeAreaInsets();
+  const hairlineBorderColor = useHairlineBorderColor();
+  const separatorColor = useSeparatorColor();
   const [searchText, setSearchText] = useState("");
   const [multiSelectedValues, setMultiSelectedValues] = useState<string[]>([]);
   const debouncedSearch = useDebounce(searchText, 600);
@@ -159,7 +165,11 @@ export default function EnumAndReferencePickerModal({
 
     return (
       <TouchableOpacity
-        style={[styles.modalItem, isSelected && styles.modalItemSelected]}
+        style={[
+          styles.modalItem,
+          { borderColor: separatorColor },
+          isSelected && styles.modalItemSelected,
+        ]}
         activeOpacity={0.7}
         onPress={() => {
           if (isMulti) {
@@ -236,7 +246,7 @@ export default function EnumAndReferencePickerModal({
         </View>
       ) : null}
 
-      <View style={styles.searchWrapper}>
+      <View style={[styles.searchWrapper, { borderColor: hairlineBorderColor }]}>
         <View style={styles.searchIconWrap}>
           <Ionicons name="search-outline" size={16} color={C.textSub} />
         </View>

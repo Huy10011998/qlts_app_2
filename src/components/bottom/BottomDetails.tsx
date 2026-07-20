@@ -12,7 +12,7 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import type { BottomBarProps } from "../../types/index";
 import { usePermission } from "../../hooks/usePermission";
 import { useParams } from "../../hooks/useParams";
-import { C } from "../../utils/helpers/colors";
+import { C, useHairlineBorderColor } from "../../utils/helpers/colors";
 
 const SHELL_INSET = 12;
 
@@ -25,6 +25,7 @@ export default function BottomBarDetails({
   const BAR_WIDTH = screenWidth - SHELL_INSET * 2;
   const { nameClass } = useParams();
   const { can, loaded } = usePermission();
+  const hairlineBorderColor = useHairlineBorderColor();
 
   const hasAttachPermission = useMemo(() => {
     if (!loaded || !nameClass) return false;
@@ -84,7 +85,7 @@ export default function BottomBarDetails({
 
   return (
     <View style={styles.shell}>
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { borderColor: hairlineBorderColor }]}>
         <Animated.View
           pointerEvents="none"
           style={[
