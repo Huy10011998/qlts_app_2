@@ -34,6 +34,10 @@ type CurrentLocation = {
   lng: number;
   address?: string | null;
   dateTime?: string | null;
+  statusText?: string | null;
+  statusColor?: string | null;
+  statusOnOff?: string | null;
+  velocity: number;
 };
 type CurrentLocationResponse =
   | CurrentLocation
@@ -52,11 +56,21 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'�
 map.setView([10.7769,106.7009],11);
 let marker=null;
 const icon=L.divIcon({className:'',html:'<div style="width:20px;height:20px;border-radius:50%;background:#1976d2;border:3px solid white;box-shadow:0 1px 7px rgba(0,0,0,.45)"></div>',iconSize:[20,20],iconAnchor:[10,10]});
-function escapeHtml(value){return String(value||'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
+function escapeHtml(value){return String(value == null ? '' : value).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
 window.updateVehicleLocation=function(location){
  if(!location)return;const position=[location.lat,location.lng];
- const popup='<div style="font-size:12px;min-width:190px"><b style="color:#1976d2">Vị trí hiện tại</b><br/><span>'+escapeHtml(location.address)+'</span><br/><span style="color:#888">'+escapeHtml(location.dateTime)+'</span></div>';
- if(!marker){marker=L.marker(position,{icon}).addTo(map);map.setView(position,16);}else{marker.setLatLng(position);map.flyTo(position,map.getZoom(),{animate:true,duration:.8});}
+ const statusLine=location.statusText?'<span style="color:#1976d2;font-weight:600">'+escapeHtml(location.statusText)+'</span> · '+escapeHtml(location.velocity)+' km/h<br/>':'';
+ const popup='<div style="font-size:12px;min-width:190px"><b style="color:#1976d2">Vị trí hiện tại</b><br/>'+statusLine+'<span>'+escapeHtml(location.address)+'</span><br/><span style="color:#888">'+escapeHtml(location.dateTime)+'</span></div>';
+ if(!marker){
+  marker=L.marker(position,{icon}).addTo(map);map.setView(position,16);
+ }else{
+  const nextPosition=L.latLng(position);
+  const hasMoved=map.distance(marker.getLatLng(),nextPosition)>=3;
+  if(hasMoved){
+   marker.setLatLng(nextPosition);
+   map.panTo(nextPosition,{animate:true,duration:.8});
+  }
+ }
  marker.bindPopup(popup);
 };
 const Focus=L.Control.extend({options:{position:'topleft'},onAdd:function(){const button=L.DomUtil.create('button','vehicle-map-action');button.innerHTML='◎';button.title='Focus vị trí hiện tại';L.DomEvent.disableClickPropagation(button);button.onclick=()=>{if(marker){map.flyTo(marker.getLatLng(),17,{duration:.8});marker.openPopup();}};return button;}});new Focus().addTo(map);
@@ -93,13 +107,33 @@ const normalizeLocation = (
   const source = raw as CurrentLocation & Record<string, unknown>;
   const lat = Number(source.lat ?? source.Lat);
   const lng = Number(source.lng ?? source.Lng);
+  const velocity = Number(source.velocity ?? source.Velocity ?? 0);
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
   return {
     lat,
     lng,
     address: String(source.address ?? source.Address ?? ""),
     dateTime: String(source.dateTime ?? source.DateTime ?? ""),
+    statusText: String(source.statusText ?? source.StatusText ?? ""),
+    statusColor: String(source.statusColor ?? source.StatusColor ?? ""),
+    statusOnOff: String(source.statusOnOff ?? source.StatusOnOff ?? ""),
+    velocity: Number.isFinite(velocity) ? velocity : 0,
   };
+};
+
+const statusBadgeColor = (color?: string | null) => {
+  switch (color) {
+    case "color_run":
+      return "#388E3C";
+    case "color_park":
+      return "#F9A825";
+    case "color_stop":
+      return "#757575";
+    case "color_gsm":
+      return "#D32F2F";
+    default:
+      return "#607D8B";
+  }
 };
 
 const formatLocationTime = (value?: string | null) => {
@@ -318,21 +352,39 @@ export default function VehicleCurrentLocationScreen() {
       ) : (
         <>
           <View style={[styles.infoCard, { borderColor: strongBorderColor }]}>
-            <Text style={styles.vehicleName}>
-              {vehicleLabel(selectedVehicle)}
-            </Text>
-            <View style={styles.infoRow}>
-              <Ionicons name="time-outline" size={17} color={C.textSecondary} />
-              <Text style={styles.infoText}>
-                {formatLocationTime(location.dateTime)}
+            <View style={styles.vehicleHeader}>
+              <Text style={styles.vehicleName} numberOfLines={2}>
+                {vehicleLabel(selectedVehicle)}
               </Text>
+              {location.statusText ? (
+                <View
+                  style={[
+                    styles.statusBadge,
+                    { backgroundColor: statusBadgeColor(location.statusColor) },
+                  ]}
+                >
+                  <Text style={styles.statusBadgeText}>
+                    {location.statusText}
+                  </Text>
+                </View>
+              ) : null}
             </View>
-            <View style={styles.infoRow}>
-              <Ionicons name="location-outline" size={17} color={C.textSecondary} />
-              <Text style={styles.infoText}>{location.address || "-"}</Text>
-            </View>
+
+            <Text style={styles.infoLabel}>Thời điểm ghi nhận</Text>
+            <Text style={styles.infoValue}>
+              {formatLocationTime(location.dateTime)}
+            </Text>
+
+            <Text style={styles.infoLabel}>Trạng thái</Text>
+            <Text style={styles.infoValue}>
+              {location.statusOnOff || "-"} · {location.velocity} km/h
+            </Text>
+
+            <Text style={styles.infoLabel}>Địa chỉ</Text>
+            <Text style={styles.infoValue}>{location.address || "-"}</Text>
+
             <View style={styles.liveRow}>
-              <View style={styles.liveDot} />
+              <Ionicons name="sync-outline" size={16} color={C.green} />
               <Text style={styles.liveText}>Tự động cập nhật mỗi 5 giây</Text>
             </View>
           </View>
@@ -418,16 +470,30 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: C.surface,
   },
-  vehicleName: { color: C.sky, fontSize: 16, fontWeight: "700" },
-  infoRow: {
+  vehicleHeader: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 7,
-    marginTop: 8,
+    alignItems: "center",
+    gap: 8,
   },
-  infoText: { flex: 1, color: C.text, fontSize: 13, lineHeight: 18 },
-  liveRow: { flexDirection: "row", alignItems: "center", marginTop: 10 },
-  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#22C55E" },
+  vehicleName: { flexShrink: 1, color: C.text, fontSize: 16, fontWeight: "700" },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  statusBadgeText: { color: C.onBrand, fontSize: 12, fontWeight: "600" },
+  infoLabel: {
+    color: C.red,
+    fontSize: 11,
+    fontWeight: "700",
+    marginTop: 9,
+  },
+  infoValue: { color: C.text, fontSize: 13, lineHeight: 18, marginTop: 2 },
+  liveRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 11,
+  },
   liveText: {
     color: C.green,
     fontSize: 12,
