@@ -1,9 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, Alert } from "react-native";
 
-import type { AssetCloneItemNavigationProp, Field } from "../../types/index";
+import type {
+  AssetCloneItemNavigationProp,
+  Field,
+  ReferenceDataMap,
+} from "../../types/index";
 import { TypeProperty } from "../../utils/Enum";
 import { getMatchedKey } from "../../utils/Helper";
+import { parseCsv } from "../../utils/helpers/string";
 import { useParams } from "../../hooks/useParams";
 import {
   getApiErrorMessage,
@@ -81,7 +86,7 @@ export default function AssetCloneItem() {
 
   const [enumData, setEnumData] = useState<Record<string, any[]>>({});
   const [referenceData, setReferenceData] = useState<
-    Record<string, { items: any[]; totalCount: number }>
+    ReferenceDataMap
   >({});
   const [modalVisible, setModalVisible] = useState(false);
   const [activeEnumField, setActiveEnumField] = useState<Field | null>(null);
@@ -108,7 +113,7 @@ export default function AssetCloneItem() {
 
   const rawTreeValues = useMemo(() => {
     if (!selectedTreeValue) return [];
-    return selectedTreeValue.split(",").map((v) => v.trim());
+    return parseCsv(selectedTreeValue);
   }, [selectedTreeValue]);
 
   const {
@@ -215,7 +220,7 @@ export default function AssetCloneItem() {
   useEffect(() => {
     fieldActive.forEach((f) => {
       if (f.typeProperty === TypeProperty.Reference && f.parentsFields) {
-        const parents = f.parentsFields.split(",");
+        const parents = parseCsv(f.parentsFields);
         const haveAll = parents.every((p) => formData[p]);
         if (haveAll) {
           const parentValues = parents.map((p) => formData[p]).join(",");

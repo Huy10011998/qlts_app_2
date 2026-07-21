@@ -1,8 +1,8 @@
-import type { Field } from "../../types/model.d";
+import type { Field, ReferenceDataMap } from "../../types/model.d";
 import { TypeProperty } from "../../utils/Enum";
 import { getDetails, getFieldActive } from "../../services";
 import { getMatchedKey } from "../../utils/Helper";
-import { log } from "../../utils/Logger";
+import { log, warn } from "../../utils/Logger";
 import {
   loadReferenceItemsForField,
   ReferenceDataSetter,
@@ -126,7 +126,7 @@ export const resolveReferenceLabel = async (
         return String(detail[fallbackKey]);
       }
     } catch (candidateErr) {
-      console.warn(
+      warn(
         `[resolveReferenceLabel] failed for ${candidate}:`,
         candidateErr,
       );
@@ -222,7 +222,7 @@ export const syncResolvedReferenceField = ({
   }));
 
   setReferenceData(
-    (prev: Record<string, { items: any[]; totalCount: number }>) => {
+    (prev: ReferenceDataMap) => {
       const oldItems = prev[fieldName]?.items || [];
       const hasItem = oldItems.some(
         (item: any) => String(item.value) === String(rawValue),

@@ -14,6 +14,7 @@ import { setShouldRefreshList } from "../../store/AssetSlice";
 import type { AssetAddItemNavigationProp } from "../../types/index";
 import { TypeProperty } from "../../utils/Enum";
 import { formatDateForBE, getDefaultValueForField } from "../../utils/Date";
+import { parseCsv } from "../../utils/helpers/string";
 import {
   getApiErrorMessage,
   getApiValidationFieldErrors,
@@ -79,7 +80,7 @@ export default function AssetAddItemDetails() {
 
   const rawTreeValues = useMemo(() => {
     if (!selectedTreeValue) return [];
-    return selectedTreeValue.split(",").map((v) => v.trim());
+    return parseCsv(selectedTreeValue);
   }, [selectedTreeValue]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);

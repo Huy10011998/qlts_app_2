@@ -6,6 +6,7 @@ import {
   isTokenStillValid,
 } from "./cameraStreamUtils";
 import { useNetworkAwareReload } from "../../../hooks/useNetworkAwareReload";
+import { warn } from "../../../utils/Logger";
 
 type UseCameraViewTokenParams = {
   isFocused: boolean;
@@ -102,7 +103,7 @@ export function useCameraViewToken({
 
         await tokenRequestRef.current;
       } catch (err) {
-        console.warn("getTokenViewCamera error:", err);
+        warn("getTokenViewCamera error:", err);
         if (isFocusedRef.current) {
           setTokenErrorMessage(
             "Vui lòng kiểm tra kết nối mạng hoặc quay lại để thử lại.",

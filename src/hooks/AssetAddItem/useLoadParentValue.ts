@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { log } from "../../utils/Logger";
+import { log, warn } from "../../utils/Logger";
 import {
   buildParentValuePayload,
   collectParentAssignments,
@@ -100,7 +100,7 @@ export const useLoadParentValue = ({
           }
         }
       } catch (err) {
-        console.warn("[getParentValue] failed:", err);
+        warn("[getParentValue] failed:", err);
       }
     };
 

@@ -1,3 +1,5 @@
+import { parseCsv } from "./string";
+
 export function getMatchedKey(item: Record<string, any>, name: string) {
   const keys = Object.keys(item);
 
@@ -16,7 +18,7 @@ export function getMatchedKey(item: Record<string, any>, name: string) {
 export const getDepth = (field: any, all: any[]): number => {
   if (!field.parentsFields) return 0;
 
-  const parents = field.parentsFields.split(",");
+  const parents = parseCsv(field.parentsFields);
 
   return (
     1 +

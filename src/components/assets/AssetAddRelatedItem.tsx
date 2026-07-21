@@ -4,6 +4,7 @@ import { useParams } from "../../hooks/useParams";
 import type {
   AssetAddRelatedItemNavigationProp,
   Field,
+  ReferenceDataMap,
 } from "../../types/index";
 import { TypeProperty } from "../../utils/Enum";
 import { useNavigation } from "@react-navigation/native";
@@ -12,6 +13,7 @@ import {
   getApiValidationFieldErrors,
 } from "../../utils/helpers/api";
 import { fetchImage, pickImage } from "../../utils/Image";
+import { parseCsv } from "../../utils/helpers/string";
 import { isEffectivelyEmptyCodeValue } from "../../utils/helpers/string";
 import { C, useAccentBorderColors } from "../../utils/helpers/colors";
 import { useImageLoader } from "../../hooks/useImageLoader";
@@ -95,7 +97,7 @@ export default function AssetAddRelatedItem() {
 
   const [enumData, setEnumData] = useState<Record<string, any[]>>({});
   const [referenceData, setReferenceData] = useState<
-    Record<string, { items: any[]; totalCount: number }>
+    ReferenceDataMap
   >({});
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -123,7 +125,7 @@ export default function AssetAddRelatedItem() {
 
   const rawTreeValues = useMemo(() => {
     if (!selectedTreeValue) return [];
-    return selectedTreeValue.split(",").map((v) => v.trim());
+    return parseCsv(selectedTreeValue);
   }, [selectedTreeValue]);
 
   const {

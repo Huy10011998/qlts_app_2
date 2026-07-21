@@ -1,6 +1,7 @@
 import type { HandleCascadeChangeProps } from "../../types/components.d";
 import { TypeProperty } from "../Enum";
 import { fetchReferenceByFieldWithParent } from "./FetchReferenceByFieldWithParent";
+import { parseCsv } from "../helpers/string";
 
 export const handleCascadeChange = ({
   name,
@@ -30,7 +31,7 @@ export const handleCascadeChange = ({
     cascadeFields.forEach((f) => {
       if (!f.parentsFields) return;
 
-      const parents = f.parentsFields.split(",").map((p: string) => p.trim());
+      const parents = parseCsv(f.parentsFields);
 
       // field hiện tại không phải parent của nó
       if (!parents.includes(name)) return;
