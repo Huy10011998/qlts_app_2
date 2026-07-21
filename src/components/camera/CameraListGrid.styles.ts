@@ -31,7 +31,7 @@ export const styles = StyleSheet.create({
   },
   cellTop: { flexDirection: "row", padding: 4 },
   cellBottom: {
-    marginTop: "auto" as any,
+    marginTop: "auto",
     paddingHorizontal: 5,
     paddingVertical: 3,
   },

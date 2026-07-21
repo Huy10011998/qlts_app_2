@@ -549,10 +549,17 @@ const HomeScreen: React.FC = () => {
       .map((id) => reportActionsById.get(id))
       .filter((item): item is (typeof reportActions)[number] => !!item);
   }, [hasPinnedReportPreference, pinnedReportIds, reportActions]);
-  const visiblePinnedReportActions = useMemo(
-    () => pinnedReportActions.slice(0, HOME_REPORT_COLUMNS),
-    [pinnedReportActions]
-  );
+  // Show every report the user pinned, laid out row by row like the other two
+  // home groups (features/vehicles) instead of a single capped row.
+  const pinnedReportRows = useMemo(() => {
+    const rows: (typeof pinnedReportActions)[] = [];
+
+    for (let i = 0; i < pinnedReportActions.length; i += HOME_REPORT_COLUMNS) {
+      rows.push(pinnedReportActions.slice(i, i + HOME_REPORT_COLUMNS));
+    }
+
+    return rows;
+  }, [pinnedReportActions]);
   const visiblePinnedReportIds = useMemo(
     () => new Set(pinnedReportActions.map((item) => item.id)),
     [pinnedReportActions]
@@ -752,20 +759,24 @@ const HomeScreen: React.FC = () => {
                 />
               </View>
             ) : (
-              <View style={styles.reportList}>
-                {visiblePinnedReportActions.map((item, itemIndex) => (
-                  <View
-                    key={`report-${item.id}`}
-                    style={[
-                      styles.reportGridItem,
-                      { width: homeReportCardWidth },
-                    ]}
-                  >
-                    <HomeReportCard
-                      index={itemIndex}
-                      label={item.label}
-                      onPress={item.onPress}
-                    />
+              <View style={styles.grid}>
+                {pinnedReportRows.map((rowItems, rowIndex) => (
+                  <View key={`report-row-${rowIndex}`} style={styles.gridRow}>
+                    {rowItems.map((item, itemIndex) => (
+                      <View
+                        key={`report-${item.id}`}
+                        style={[
+                          styles.reportGridItem,
+                          { width: homeReportCardWidth },
+                        ]}
+                      >
+                        <HomeReportCard
+                          index={rowIndex * HOME_REPORT_COLUMNS + itemIndex}
+                          label={item.label}
+                          onPress={item.onPress}
+                        />
+                      </View>
+                    ))}
                   </View>
                 ))}
               </View>

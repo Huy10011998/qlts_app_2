@@ -1,10 +1,11 @@
 import React from "react";
 import { ActivityIndicator, View, StyleSheet } from "react-native";
 import type { IsLoadingProps } from "../../types";
+import { C } from "../../utils/helpers/colors";
 
 export default function IsLoading({
   size = "large",
-  color = "#E31E24",
+  color = C.red,
   style,
 }: IsLoadingProps) {
   return (

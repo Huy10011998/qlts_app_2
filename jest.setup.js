@@ -65,6 +65,10 @@ jest.mock('react-native-keychain', () => ({
   getGenericPassword: jest.fn(async () => false),
   setGenericPassword: jest.fn(async () => true),
   resetGenericPassword: jest.fn(async () => true),
+  ACCESSIBLE: {
+    AFTER_FIRST_UNLOCK: 'AccessibleAfterFirstUnlock',
+    WHEN_UNLOCKED: 'AccessibleWhenUnlocked',
+  },
 }));
 
 jest.mock('react-native-haptic-feedback', () => ({

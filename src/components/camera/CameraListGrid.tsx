@@ -33,6 +33,7 @@ import {
 import Orientation from "react-native-orientation-locker";
 import { C, useAppColors, useSeparatorColor } from "../../utils/helpers/colors";
 import { styles } from "./CameraListGrid.styles";
+import { externalFetch } from "../../services/network/externalHttp";
 import Video from "react-native-video";
 import WebView from "react-native-webview";
 import type { CameraCellProps } from "../../types/components.d";
@@ -198,7 +199,7 @@ const CameraCell = React.memo(
           ) : (
             <View style={styles.cellPlaceholder}>
               {!token && !isPaused ? (
-                <ActivityIndicator size="small" color={C.textMuted} />
+                <ActivityIndicator size="small" color={C.red} />
               ) : !isPaused ? (
                 <Text style={styles.cellPlaceholderText}>
                   {isSnapshotActive ? "Đang tải ảnh..." : "Nhấn đúp để xem"}
@@ -1123,7 +1124,7 @@ const CameraListGrid: React.FC = () => {
       const url = `${GO2RTC_HOST}/api/frame.jpeg?src=${
         activeCam.iD_Camera_Ma
       }_snap&t=${Date.now()}`;
-      const res = await fetch(url, {
+      const res = await externalFetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Fetch failed");

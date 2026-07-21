@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Dimensions } from "react-native";
 
 import type { TreeNode } from "../../types";
+import { externalFetch } from "../../services/network/externalHttp";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CHART_WIDTH = SCREEN_WIDTH - 32;
@@ -471,7 +472,7 @@ async function fetchPlantWeather(signal?: AbortSignal) {
     "&current=temperature_2m,weather_code" +
     "&timezone=Asia%2FHo_Chi_Minh";
 
-  const response = await fetch(url, { signal });
+  const response = await externalFetch(url, { signal });
 
   if (!response.ok) {
     throw new Error(`Weather request failed: ${response.status}`);

@@ -106,13 +106,8 @@ export const checkValidation = async <T = any,>(
     payload,
   );
 
-  const validationItems =
-    response &&
-    typeof response === "object" &&
-    "data" in (response as any) &&
-    Array.isArray((response as any).data)
-      ? (response as any).data
-      : [];
+  const responseData = (response as { data?: unknown } | null)?.data;
+  const validationItems = Array.isArray(responseData) ? responseData : [];
 
   if (validationItems.length > 0) {
     const validationError: any = new Error("VALIDATION_ERROR");

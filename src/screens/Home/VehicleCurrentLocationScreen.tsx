@@ -287,7 +287,7 @@ export default function VehicleCurrentLocationScreen() {
   if (vehiclesLoading) {
     return (
       <View style={styles.centerState}>
-        <ActivityIndicator color={C.sky} />
+        <ActivityIndicator color={C.red} />
         <Text style={styles.loadingText}>Đang tải phương tiện...</Text>
       </View>
     );
@@ -301,7 +301,7 @@ export default function VehicleCurrentLocationScreen() {
           style={styles.select}
           onPress={() => setPickerVisible(true)}
         >
-          <Ionicons name="car-outline" size={20} color={C.sky} />
+          <Ionicons name="car-outline" size={20} color={C.textSecondary} />
           <Text
             style={[
               styles.selectText,
@@ -335,7 +335,7 @@ export default function VehicleCurrentLocationScreen() {
         </View>
       ) : locationLoading ? (
         <View style={styles.flexState}>
-          <ActivityIndicator color={C.sky} />
+          <ActivityIndicator color={C.red} />
           <Text style={styles.loadingText}>Đang tải vị trí hiện tại...</Text>
         </View>
       ) : !location ? (
@@ -449,17 +449,19 @@ const styles = StyleSheet.create({
   filterWrap: { paddingHorizontal: 16, paddingTop: 8 },
   label: { color: C.text, fontSize: 13, fontWeight: "600", marginBottom: 7 },
   select: {
-    height: 50,
-    borderWidth: 1.5,
-    borderColor: C.sky,
-    borderRadius: 10,
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: C.borderStrong,
+    borderRadius: 8,
     backgroundColor: C.surface,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 13,
+    justifyContent: "space-between",
+    paddingHorizontal: 12,
+    paddingVertical: 0,
     marginBottom: 12,
   },
-  selectText: { flex: 1, color: C.text, fontSize: 15, marginHorizontal: 10 },
+  selectText: { flex: 1, color: C.text, fontSize: 14, marginHorizontal: 10 },
   placeholderText: { color: C.textMuted },
   infoCard: {
     marginHorizontal: 16,

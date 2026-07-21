@@ -473,7 +473,7 @@ const CameraList: React.FC = () => {
               />
             ) : (
               <View style={[styles.preview, styles.previewLoadingBackground]}>
-                <ActivityIndicator size="small" color={C.textMuted} />
+                <ActivityIndicator size="small" color={C.red} />
               </View>
             )}
           </TouchableOpacity>

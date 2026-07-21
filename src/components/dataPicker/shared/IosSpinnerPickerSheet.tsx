@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
   },
   toolbarText: {
     fontSize: 18,
-    color: "#E31E24",
+    color: C.red,
   },
   toolbarTextBold: {
     fontWeight: "bold",

@@ -128,6 +128,10 @@ export default function LoginScreen() {
   const isNarrowFooter = windowWidth < 330 * Math.min(fontScale, 1.3);
   const heroRatio = isShortHeight ? 0.17 : isCompactHeight ? 0.18 : 0.2;
   const heroHeight = Math.min(Math.max(windowHeight * heroRatio, 112), 190);
+  const heroBgStyle = [
+    styles.heroBg,
+    { height: heroHeight, paddingBottom: isCompactHeight ? 10 : 16 },
+  ];
   const restingContentTopPadding = Math.min(
     Math.max(windowHeight * 0.04, 28),
     40,
@@ -470,15 +474,7 @@ export default function LoginScreen() {
         */}
         <SafeAreaView style={styles.root} edges={["top"]}>
           {/* ── RED HERO (responsive) ── */}
-          <View
-            style={[
-              styles.heroBg,
-              {
-                height: heroHeight,
-                paddingBottom: isCompactHeight ? 10 : 16,
-              },
-            ]}
-          >
+          <View style={heroBgStyle}>
             <View style={styles.circle1} />
             <View style={styles.circle2} />
             <View style={styles.circle3} />

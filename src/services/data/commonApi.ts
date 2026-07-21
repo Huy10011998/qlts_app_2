@@ -17,10 +17,7 @@ export const getFieldActive = async <T = any,>(iD_Class_MoTa: string) => {
     iD_Class_MoTa,
   });
 
-  const responseData =
-    response && typeof response === "object" && "data" in (response as any)
-      ? (response as any).data
-      : undefined;
+  const responseData = (response as { data?: unknown } | null)?.data;
 
   log("[API] getFieldActive response", {
     iD_Class_MoTa,

@@ -86,7 +86,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
   if (!loaded) {
     return (
       <SafeAreaView style={styles.centerState} edges={["left", "right"]}>
-        <ActivityIndicator size="small" color={C.accent} />
+        <ActivityIndicator size="small" color={C.red} />
       </SafeAreaView>
     );
   }
@@ -106,7 +106,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
   if (isMeetingLoading) {
     return (
       <SafeAreaView style={styles.centerState} edges={["left", "right"]}>
-        <ActivityIndicator size="small" color={C.accent} />
+        <ActivityIndicator size="small" color={C.red} />
       </SafeAreaView>
     );
   }
@@ -372,7 +372,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
         </View>
       ) : isVotingLoading && opinions.length === 0 ? (
         <View style={styles.contentCenter}>
-          <ActivityIndicator size="small" color={C.accent} />
+          <ActivityIndicator size="small" color={C.red} />
         </View>
       ) : (
         <ScrollView
@@ -414,7 +414,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
             >
               {isVotingLoading ? (
                 <View style={voteStyles.loadingWrap}>
-                  <ActivityIndicator size="small" color={C.accent} />
+                  <ActivityIndicator size="small" color={C.red} />
                   <Text style={voteStyles.loadingText}>Đang tải ý kiến...</Text>
                 </View>
               ) : opinions.length > 0 ? (

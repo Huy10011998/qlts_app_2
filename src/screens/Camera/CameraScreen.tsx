@@ -23,6 +23,7 @@ import IsLoading from "../../components/ui/IconLoading";
 import EmptyState from "../../components/ui/EmptyState";
 import { getVungCamera } from "../../services/data/callApi";
 import { error } from "../../utils/Logger";
+import { C } from "../../utils/helpers/colors";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import CameraMenuDropdownItem from "./shared/CameraMenuDropdownItem";
@@ -233,7 +234,7 @@ export default function CameraScreen() {
             <RefreshControl
               refreshing={isRefreshingTop}
               onRefresh={refreshTop}
-              colors={["#E31E24"]}
+              colors={[C.red]}
               tintColor={CAMERA_MENU_BRAND_RED}
               progressViewOffset={50}
             />

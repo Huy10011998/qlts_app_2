@@ -78,12 +78,6 @@ export const styles = StyleSheet.create({
     borderColor: C.border,
   },
 
-  reportList: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: HOME_FEATURE_GRID_GAP,
-    marginBottom: 14,
-  },
   reportGridItem: {
     minHeight: 118,
   },

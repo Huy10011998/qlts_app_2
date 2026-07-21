@@ -6,11 +6,17 @@ import axios, {
   InternalAxiosRequestConfig,
 } from "axios";
 import { Buffer } from "buffer";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_ENDPOINTS, BASE_URL } from "../../config/index";
 import { log, warn } from "../../utils/Logger";
 import type { LogoutReason } from "../../types/context.d";
 import { withTimeout } from "../../utils/helpers/promise";
+import {
+  clearAuthTokens,
+  readAccessToken,
+  readRefreshToken,
+  writeAccessToken,
+  writeRefreshToken,
+} from "../auth/tokenStore";
 
 export type ApiMethod = "GET" | "POST" | "PUT" | "DELETE";
 
@@ -27,11 +33,6 @@ export type RefreshedSession = {
   accessToken: string;
   refreshToken: string;
 };
-
-const AUTH_STORAGE_KEYS = {
-  accessToken: "token",
-  refreshToken: "refreshToken",
-} as const;
 
 const ACCESS_TOKEN_SOFT_REFRESH_LEEWAY_MS = 5 * 60_000;
 const ACCESS_TOKEN_HARD_REFRESH_LEEWAY_MS = 15_000;
@@ -85,14 +86,14 @@ export const setRefreshInApi = (refresh: string | null) => {
 
 const getToken = async () => {
   if (tokenLoaded) return cachedToken;
-  cachedToken = await AsyncStorage.getItem(AUTH_STORAGE_KEYS.accessToken);
+  cachedToken = await readAccessToken();
   tokenLoaded = true;
   return cachedToken;
 };
 
 const getRefreshToken = async () => {
   if (refreshLoaded) return cachedRefresh;
-  cachedRefresh = await AsyncStorage.getItem(AUTH_STORAGE_KEYS.refreshToken);
+  cachedRefresh = await readRefreshToken();
   refreshLoaded = true;
   return cachedRefresh;
 };
@@ -101,10 +102,7 @@ export const clearTokenStorage = async () => {
   log("[API] Clearing cached tokens");
   syncAccessToken(null);
   syncRefreshToken(null);
-  await AsyncStorage.multiRemove([
-    AUTH_STORAGE_KEYS.accessToken,
-    AUTH_STORAGE_KEYS.refreshToken,
-  ]);
+  await clearAuthTokens();
 };
 
 export const resetRefreshState = () => {
@@ -277,9 +275,9 @@ export const refreshTokenFlow = async (): Promise<RefreshedSession> => {
       syncAccessToken(data.accessToken);
       syncRefreshToken(nextRefreshToken);
 
-      AsyncStorage.multiSet([
-        [AUTH_STORAGE_KEYS.accessToken, data.accessToken],
-        [AUTH_STORAGE_KEYS.refreshToken, nextRefreshToken],
+      Promise.all([
+        writeAccessToken(data.accessToken),
+        writeRefreshToken(nextRefreshToken),
       ]).catch((storageErr) => {
         warn("[API] Persist refreshed token failed", storageErr);
       });

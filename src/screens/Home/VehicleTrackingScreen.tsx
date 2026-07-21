@@ -62,7 +62,7 @@ const vehicleLabel = (item: Vehicle) =>
   `Phương tiện ${String(item.id ?? "")}`;
 const formatDate = (date: Date) =>
   `${String(date.getDate()).padStart(2, "0")}-${String(
-    date.getMonth() + 1
+    date.getMonth() + 1,
   ).padStart(2, "0")}-${date.getFullYear()}`;
 const apiDate = (value: string, timezone = false) => {
   const [day, month, year] = value.split("-");
@@ -88,7 +88,7 @@ const dateTitle = (value: string) => {
     ? value
     : `${days[date.getDay()]}, ${String(date.getDate()).padStart(
         2,
-        "0"
+        "0",
       )}/${String(date.getMonth() + 1).padStart(2, "0")}/${date.getFullYear()}`;
 };
 const stopColor = (seconds = 0) =>
@@ -118,7 +118,7 @@ export default function VehicleTrackingScreen() {
   const today = useMemo(() => new Date(), []);
   const firstDay = useMemo(
     () => new Date(today.getFullYear(), today.getMonth(), 1),
-    [today]
+    [today],
   );
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -142,7 +142,7 @@ export default function VehicleTrackingScreen() {
       }))
       .filter(
         (item) =>
-          !keyword || item.text.toLocaleLowerCase("vi").includes(keyword)
+          !keyword || item.text.toLocaleLowerCase("vi").includes(keyword),
       );
 
     return keyword
@@ -163,7 +163,7 @@ export default function VehicleTrackingScreen() {
   const stopPoints = useMemo(
     () =>
       stops.map(toStopPoint).filter((item): item is StopPoint => item !== null),
-    [stops]
+    [stops],
   );
 
   const loadVehicles = useCallback(async () => {
@@ -185,7 +185,7 @@ export default function VehicleTrackingScreen() {
       const response = await getPhuongTienTracking<ListResponse<Stop>>(
         vehicle.id,
         apiDate(fromDate),
-        apiDate(toDate, true)
+        apiDate(toDate, true),
       );
       const items = Array.isArray(response?.data?.items)
         ? response.data.items
@@ -195,8 +195,8 @@ export default function VehicleTrackingScreen() {
       setExpanded(
         Array.from(new Set(items.map((item) => item.ngay.slice(0, 10)))).slice(
           0,
-          1
-        )
+          1,
+        ),
       );
       setLoadError(false);
     } catch (exception) {
@@ -239,7 +239,7 @@ export default function VehicleTrackingScreen() {
         setStops([]);
         setLoadError(true);
       },
-    }
+    },
   );
 
   const refresh = async () => {
@@ -258,7 +258,7 @@ export default function VehicleTrackingScreen() {
   if (loading)
     return (
       <View style={styles.center}>
-        <ActivityIndicator color="#4F46E5" />
+        <ActivityIndicator color={C.red} />
         <Text style={styles.loadingText}>Đang tải phương tiện...</Text>
       </View>
     );
@@ -271,7 +271,7 @@ export default function VehicleTrackingScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={refresh}
-            colors={["#4F46E5"]}
+            colors={[C.accent]}
           />
         }
       >
@@ -280,7 +280,7 @@ export default function VehicleTrackingScreen() {
           style={styles.select}
           onPress={() => setPickerVisible(true)}
         >
-          <Ionicons name="car-outline" size={20} color="#4F46E5" />
+          <Ionicons name="car-outline" size={20} color={C.textSecondary} />
           <Text
             style={[styles.selectText, !vehicle && styles.placeholderText]}
             numberOfLines={1}
@@ -320,7 +320,7 @@ export default function VehicleTrackingScreen() {
         <View style={[styles.list, { borderColor: hairlineBorderColor }]}>
           {stopLoading ? (
             <View style={styles.listState}>
-              <ActivityIndicator color="#4F46E5" />
+              <ActivityIndicator color={C.red} />
             </View>
           ) : loadError ? (
             <EmptyState
@@ -334,7 +334,7 @@ export default function VehicleTrackingScreen() {
             <EmptyState
               iconName="location-outline"
               title="Chưa có dữ liệu dừng đỗ"
-              subtitle="Thử chọn khoảng thời gian khác."
+              subtitle="Thử chọn phương tiện hoặc khoảng thời gian khác."
               fullHeight={false}
               style={styles.listState}
             />
@@ -352,7 +352,7 @@ export default function VehicleTrackingScreen() {
                       setExpanded((current) =>
                         current.includes(date)
                           ? current.filter((x) => x !== date)
-                          : [...current, date]
+                          : [...current, date],
                       )
                     }
                   >
@@ -449,7 +449,7 @@ export default function VehicleTrackingScreen() {
             return;
           }
           const index = vehicles.findIndex(
-            (item, i) => String(item.id ?? i) === String(value)
+            (item, i) => String(item.id ?? i) === String(value),
           );
           if (index >= 0) setVehicle(vehicles[index]);
           setPickerVisible(false);
@@ -480,17 +480,19 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 13, color: C.textSecondary, marginTop: 2 },
   label: { fontSize: 13, fontWeight: "600", color: C.text, marginBottom: 7 },
   select: {
-    height: 50,
-    borderWidth: 1.5,
-    borderColor: "#4F46E5",
-    borderRadius: 10,
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: C.borderStrong,
+    borderRadius: 8,
     backgroundColor: C.surface,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 13,
+    justifyContent: "space-between",
+    paddingHorizontal: 12,
+    paddingVertical: 0,
     marginBottom: 16,
   },
-  selectText: { flex: 1, marginHorizontal: 10, fontSize: 15, color: C.text },
+  selectText: { flex: 1, marginHorizontal: 10, fontSize: 14, color: C.text },
   placeholderText: { color: C.textMuted },
   dateRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
   dateField: { flex: 1 },
@@ -531,7 +533,12 @@ const styles = StyleSheet.create({
     backgroundColor: C.surfaceAlt,
     gap: 8,
   },
-  groupDate: { flex: 1, color: C.textSecondary, fontSize: 13, fontWeight: "700" },
+  groupDate: {
+    flex: 1,
+    color: C.textSecondary,
+    fontSize: 13,
+    fontWeight: "700",
+  },
   count: {
     backgroundColor: C.border,
     borderRadius: 12,

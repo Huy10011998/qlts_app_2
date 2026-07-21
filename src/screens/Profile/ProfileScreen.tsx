@@ -246,7 +246,7 @@ const ProfileScreen: React.FC = () => {
         <InfoRow
           iconName="git-branch-outline"
           iconBg={C.greenLight}
-          iconColor="#10B981"
+          iconColor={C.emerald}
           label="Bộ phận"
           value={user.boPhan}
         />
