@@ -16,6 +16,7 @@ import AppBootstrap from "./src/app/AppBootstrap";
 import { configureTextScalingDefaults } from "./src/utils/helpers/textScaling";
 import { useColorScheme } from "./src/hooks/useColorScheme";
 import { Colors } from "./src/constants/Colors";
+import { C } from "./src/utils/helpers/colors";
 import { ThemeProvider } from "./src/context/ThemeContext";
 
 const LANDSCAPE_ALLOWED_ROUTES = new Set(["CameraList", "CameraListGrid"]);
@@ -52,7 +53,7 @@ function AppContent() {
     <SafeAreaProvider>
       <StatusBar
         translucent={false}
-        backgroundColor="#E31E24"
+        backgroundColor={C.red}
         barStyle="light-content"
         animated
       />
@@ -72,7 +73,7 @@ function AppContent() {
                 card: Colors[colorScheme].card,
                 text: Colors[colorScheme].text,
                 border: Colors[colorScheme].borderColor,
-                notification: "#E31E24",
+                notification: C.red,
               },
             }}
             onReady={syncOrientationWithRoute}

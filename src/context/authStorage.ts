@@ -5,6 +5,13 @@ import {
   FACE_ID_ENABLED_KEY,
   FACE_ID_LOGIN_SERVICE,
 } from "../constants/AuthStorage";
+import {
+  clearAuthTokens,
+  readAccessToken,
+  readRefreshToken,
+  writeAccessToken,
+  writeRefreshToken,
+} from "../services/auth/tokenStore";
 
 export const AUTH_TOKEN_KEY = "token";
 export const AUTH_REFRESH_TOKEN_KEY = "refreshToken";
@@ -12,8 +19,8 @@ export const AUTH_USERNAME_KEY = "authUserName";
 
 export const readStoredAuthTokens = async () => {
   const [token, refreshToken] = await Promise.all([
-    AsyncStorage.getItem(AUTH_TOKEN_KEY),
-    AsyncStorage.getItem(AUTH_REFRESH_TOKEN_KEY),
+    readAccessToken(),
+    readRefreshToken(),
   ]);
 
   return { token, refreshToken };
@@ -23,6 +30,17 @@ export const writeStoredAuthValue = async (
   key: string,
   value: string | null,
 ) => {
+  // Access/refresh tokens go to the secure Keychain store; other values
+  // (e.g. username) stay in AsyncStorage.
+  if (key === AUTH_TOKEN_KEY) {
+    await writeAccessToken(value);
+    return;
+  }
+  if (key === AUTH_REFRESH_TOKEN_KEY) {
+    await writeRefreshToken(value);
+    return;
+  }
+
   if (value) {
     await AsyncStorage.setItem(key, value);
     return;
@@ -46,8 +64,7 @@ export const readStoredAuthUsername = async () => {
 export const writeStoredAuthUsername = (userName: string | null) =>
   writeStoredAuthValue(AUTH_USERNAME_KEY, userName?.trim() || null);
 
-export const clearStoredAuthTokens = () =>
-  AsyncStorage.multiRemove([AUTH_TOKEN_KEY, AUTH_REFRESH_TOKEN_KEY]);
+export const clearStoredAuthTokens = () => clearAuthTokens();
 
 export const clearStoredFaceIdData = async () => {
   await AsyncStorage.removeItem(FACE_ID_ENABLED_KEY);

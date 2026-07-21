@@ -65,7 +65,7 @@ export default function HomeStatCard({
         </View>
         {trend === "up" ? (
           <View style={[styles.trendBadge, trendStyles.up]}>
-            <Ionicons name="trending-up" size={10} color="#10B981" />
+            <Ionicons name="trending-up" size={10} color={C.emerald} />
           </View>
         ) : null}
         {trend === "down" ? (

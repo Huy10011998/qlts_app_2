@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { log } from "../../utils/Logger";
+import { log, warn } from "../../utils/Logger";
+import type { Field } from "../../types/model.d";
 import {
   buildParentValuePayload,
   collectParentAssignments,
@@ -12,7 +13,7 @@ interface UseLoadParentValueParams {
   idRoot?: number | string;
   nameClassRoot?: string;
   nameClass?: string;
-  fieldActive: any[];
+  fieldActive: Field[];
   getParentValue: (nameClassRoot: string, payload: any) => Promise<any>;
   setReferenceData: any;
   setFormData: React.Dispatch<React.SetStateAction<Record<string, any>>>;
@@ -100,7 +101,7 @@ export const useLoadParentValue = ({
           }
         }
       } catch (err) {
-        console.warn("[getParentValue] failed:", err);
+        warn("[getParentValue] failed:", err);
       }
     };
 

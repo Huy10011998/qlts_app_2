@@ -1,25 +1,2 @@
 export * from "./auth/authApi";
-export {
-  getList,
-  getFieldActive,
-  getPropertyClass,
-  getDetails,
-  getClassReference,
-  getListHistory,
-  getListAttachFile,
-  getPreviewAttachFile,
-  getBuildTree,
-  getDetailsHistory,
-  getPreviewAttachProperty,
-  getPreviewBC,
-  callApi,
-  insert,
-  update,
-  deleteItems,
-  checkValidation,
-  checkReferenceUsage,
-  uploadAttachProperty,
-  getPermission,
-  tuDongTang,
-  luuYKienCoDongDhcd,
-} from "./data/callApi";
+export * from "./data/callApi";

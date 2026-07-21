@@ -1,14 +1,21 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { StyleSheet, Alert } from "react-native";
 
-import type { AssetEditItemNavigationProp, Field } from "../../types/index";
+import type {
+  AssetEditItemNavigationProp,
+  Field,
+  ReferenceDataMap,
+} from "../../types/index";
 import { TypeProperty } from "../../utils/Enum";
 import { getMatchedKey } from "../../utils/Helper";
 import {
   getApiErrorMessage,
   getApiValidationFieldErrors,
 } from "../../utils/helpers/api";
-import { isEffectivelyEmptyCodeValue } from "../../utils/helpers/string";
+import {
+  isEffectivelyEmptyCodeValue,
+  parseCsv,
+} from "../../utils/helpers/string";
 import { C, useAccentBorderColors } from "../../utils/helpers/colors";
 import { useParams } from "../../hooks/useParams";
 import { fetchImage, pickImage } from "../../utils/Image";
@@ -140,7 +147,7 @@ export default function AssetEditItem() {
 
   const [enumData, setEnumData] = useState<Record<string, any[]>>({});
   const [referenceData, setReferenceData] = useState<
-    Record<string, { items: any[]; totalCount: number }>
+    ReferenceDataMap
   >({});
   const [modalVisible, setModalVisible] = useState(false);
   const [activeEnumField, setActiveEnumField] = useState<Field | null>(null);
@@ -263,7 +270,7 @@ export default function AssetEditItem() {
   useEffect(() => {
     fieldActive.forEach((f) => {
       if (f.typeProperty === TypeProperty.Reference && f.parentsFields) {
-        const parents = f.parentsFields.split(",");
+        const parents = parseCsv(f.parentsFields);
         const haveAllParents = parents.every((p) => formData[p]);
 
         if (haveAllParents) {

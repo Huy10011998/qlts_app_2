@@ -1,4 +1,4 @@
-export const ToggleGroupUtil = (
+export const toggleGroupUtil = (
   prevState: Record<string, boolean>,
   groupName: string
 ) => ({

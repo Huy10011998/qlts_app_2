@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { TypeProperty } from "../../utils/Enum";
+import { parseCsv } from "../../utils/helpers/string";
 import type { Field } from "../../types/model.d";
 
 export type ModalItem = {
@@ -30,15 +31,12 @@ export const useModalItems = (
       selectedValue !== null && selectedValue !== undefined && selectedValue !== "";
     const selectedValues =
       activeEnumField.isMulti && hasSelectedValue
-        ? String(selectedValue)
-            .split(",")
-            .map((value) => value.trim())
-            .filter(Boolean)
+        ? parseCsv(String(selectedValue)).filter(Boolean)
         : [String(selectedValue ?? "")];
 
     const selectedTexts =
       activeEnumField.isMulti && selectedText
-        ? String(selectedText).split(",").map((text) => text.trim())
+        ? parseCsv(String(selectedText))
         : [String(selectedText ?? "").trim()];
 
     const selectedItem = hasSelectedValue

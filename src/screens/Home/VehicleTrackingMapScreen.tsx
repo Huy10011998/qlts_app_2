@@ -97,7 +97,7 @@ export default function VehicleTrackingMapScreen() {
       />
       {mapLoading ? (
         <View pointerEvents="none" style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#0284C7" />
+          <ActivityIndicator size="large" color={C.red} />
           <Text style={styles.loadingText}>Đang tải bản đồ dừng đỗ...</Text>
         </View>
       ) : null}

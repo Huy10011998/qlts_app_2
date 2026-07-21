@@ -1,8 +1,8 @@
-import type { Field } from "../../types/model.d";
+import type { Field, ReferenceDataMap } from "../../types/model.d";
 import { TypeProperty } from "../../utils/Enum";
 import { getDetails, getFieldActive } from "../../services";
 import { getMatchedKey } from "../../utils/Helper";
-import { log } from "../../utils/Logger";
+import { log, warn } from "../../utils/Logger";
 import {
   loadReferenceItemsForField,
   ReferenceDataSetter,
@@ -39,17 +39,17 @@ const getDetailFieldValue = (
 
 const buildDisplayLabel = (
   referenceName: string,
-  refFields: any[],
+  refFields: Field[],
   detail: Record<string, any>,
 ) => {
   const codeField = refFields.find(
-    (field: any) =>
+    (field) =>
       /(ma|code|sohieu|kyhieu)/i.test(field.name) ||
       /(m[aã]|code|s[oố] hi[eệ]u|k[yý] hi[eệ]u)/i.test(field.moTa ?? ""),
   );
 
   const nameField = refFields.find(
-    (field: any) =>
+    (field) =>
       /(ten|name|hoten|nguoisudung)/i.test(field.name) ||
       /(t[eê]n|name|ng[uườ]i s[ửu] d[ụu]ng)/i.test(field.moTa ?? ""),
   );
@@ -93,7 +93,7 @@ export const resolveReferenceLabel = async (
         getDetails(candidate, String(id)),
       ]);
 
-      const refFields = fieldRes?.data ?? [];
+      const refFields: Field[] = fieldRes?.data ?? [];
       const detail = detailRes?.data ?? {};
       const composedLabel = buildDisplayLabel(candidate, refFields, detail);
 
@@ -102,8 +102,8 @@ export const resolveReferenceLabel = async (
       }
 
       const prioritizedFields = [
-        ...refFields.filter((field: any) => field.isShowMobile),
-        ...refFields.filter((field: any) => !field.isShowMobile),
+        ...refFields.filter((field) => field.isShowMobile),
+        ...refFields.filter((field) => !field.isShowMobile),
       ];
 
       for (const field of prioritizedFields) {
@@ -126,7 +126,7 @@ export const resolveReferenceLabel = async (
         return String(detail[fallbackKey]);
       }
     } catch (candidateErr) {
-      console.warn(
+      warn(
         `[resolveReferenceLabel] failed for ${candidate}:`,
         candidateErr,
       );
@@ -222,7 +222,7 @@ export const syncResolvedReferenceField = ({
   }));
 
   setReferenceData(
-    (prev: Record<string, { items: any[]; totalCount: number }>) => {
+    (prev: ReferenceDataMap) => {
       const oldItems = prev[fieldName]?.items || [];
       const hasItem = oldItems.some(
         (item: any) => String(item.value) === String(rawValue),

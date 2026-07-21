@@ -1,11 +1,17 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
+  Animated,
   GestureResponderEvent,
   RefreshControl,
   ScrollView,
-  StyleSheet,
   Text,
   TouchableOpacity,
   useWindowDimensions,
@@ -47,15 +53,17 @@ import {
   useAccentBorderColors,
   useHairlineBorderColor,
 } from "../../utils/helpers/colors";
+import {
+  styles,
+  HOME_CONTENT_HORIZONTAL_PADDING,
+  HOME_FEATURE_GRID_GAP,
+} from "./HomeScreen.styles";
 
 const HOME_FEATURE_PINNED_IDS_KEY = "@home:pinnedFeatureIds";
 const HOME_FEATURE_PINNED_IDS_USER_KEY = `${HOME_FEATURE_PINNED_IDS_KEY}:user`;
 const HOME_FEATURE_PINNED_IDS_MIGRATED_KEY = `${HOME_FEATURE_PINNED_IDS_KEY}:view-active-migrated`;
 const HOME_REPORT_PINNED_IDS_KEY = "@home:pinnedReportIds";
 const HOME_REPORT_PINNED_IDS_USER_KEY = `${HOME_REPORT_PINNED_IDS_KEY}:user`;
-const HOME_CONTENT_HORIZONTAL_PADDING = 16;
-const HOME_FEATURE_GRID_GAP = 10;
-const HOME_FEATURE_CARD_HEIGHT = 132;
 const HOME_FEATURE_COLUMNS = 4;
 const HOME_REPORT_COLUMNS = 3;
 
@@ -83,6 +91,7 @@ const getHomeReportPinnedIdsKey = (userName: string | null) => {
 };
 
 type HomeReportCardProps = {
+  index?: number;
   isPinned?: boolean;
   label: string;
   onPress?: () => void;
@@ -90,7 +99,10 @@ type HomeReportCardProps = {
   showPinButton?: boolean;
 };
 
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+
 function HomeReportCard({
+  index = 0,
   isPinned = false,
   label,
   onPress,
@@ -99,19 +111,32 @@ function HomeReportCard({
 }: HomeReportCardProps) {
   const colors = useAppColors();
   const accentBorders = useAccentBorderColors();
+  const scaleAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      delay: index * 80,
+      tension: 55,
+      friction: 7,
+    }).start();
+  }, [index, scaleAnim]);
+
   const handleTogglePinned = (event: GestureResponderEvent) => {
     event.stopPropagation();
     onTogglePinned?.();
   };
 
   return (
-    <TouchableOpacity
+    <AnimatedTouchable
       style={[
         styles.reportCard,
         {
           backgroundColor: colors.surface,
           borderColor: accentBorders.violet,
           shadowColor: colors.shadow,
+          transform: [{ scale: scaleAnim }],
         },
       ]}
       activeOpacity={0.76}
@@ -166,7 +191,7 @@ function HomeReportCard({
       >
         <Ionicons name="arrow-forward" size={12} color="#7048E8" />
       </View>
-    </TouchableOpacity>
+    </AnimatedTouchable>
   );
 }
 
@@ -524,10 +549,17 @@ const HomeScreen: React.FC = () => {
       .map((id) => reportActionsById.get(id))
       .filter((item): item is (typeof reportActions)[number] => !!item);
   }, [hasPinnedReportPreference, pinnedReportIds, reportActions]);
-  const visiblePinnedReportActions = useMemo(
-    () => pinnedReportActions.slice(0, HOME_REPORT_COLUMNS),
-    [pinnedReportActions]
-  );
+  // Show every report the user pinned, laid out row by row like the other two
+  // home groups (features/vehicles) instead of a single capped row.
+  const pinnedReportRows = useMemo(() => {
+    const rows: (typeof pinnedReportActions)[] = [];
+
+    for (let i = 0; i < pinnedReportActions.length; i += HOME_REPORT_COLUMNS) {
+      rows.push(pinnedReportActions.slice(i, i + HOME_REPORT_COLUMNS));
+    }
+
+    return rows;
+  }, [pinnedReportActions]);
   const visiblePinnedReportIds = useMemo(
     () => new Set(pinnedReportActions.map((item) => item.id)),
     [pinnedReportActions]
@@ -727,16 +759,24 @@ const HomeScreen: React.FC = () => {
                 />
               </View>
             ) : (
-              <View style={styles.reportList}>
-                {visiblePinnedReportActions.map((item) => (
-                  <View
-                    key={`report-${item.id}`}
-                    style={[
-                      styles.reportGridItem,
-                      { width: homeReportCardWidth },
-                    ]}
-                  >
-                    <HomeReportCard label={item.label} onPress={item.onPress} />
+              <View style={styles.grid}>
+                {pinnedReportRows.map((rowItems, rowIndex) => (
+                  <View key={`report-row-${rowIndex}`} style={styles.gridRow}>
+                    {rowItems.map((item, itemIndex) => (
+                      <View
+                        key={`report-${item.id}`}
+                        style={[
+                          styles.reportGridItem,
+                          { width: homeReportCardWidth },
+                        ]}
+                      >
+                        <HomeReportCard
+                          index={rowIndex * HOME_REPORT_COLUMNS + itemIndex}
+                          label={item.label}
+                          onPress={item.onPress}
+                        />
+                      </View>
+                    ))}
                   </View>
                 ))}
               </View>
@@ -897,7 +937,7 @@ const HomeScreen: React.FC = () => {
           contentContainerStyle={styles.featureSheetContent}
         >
           <View style={styles.reportSheetGrid}>
-            {reportActions.map((item) => (
+            {reportActions.map((item, itemIndex) => (
               <View
                 key={`report-sheet-${item.id}`}
                 style={[
@@ -906,6 +946,7 @@ const HomeScreen: React.FC = () => {
                 ]}
               >
                 <HomeReportCard
+                  index={itemIndex}
                   isPinned={visiblePinnedReportIds.has(item.id)}
                   label={item.label}
                   showPinButton
@@ -923,184 +964,5 @@ const HomeScreen: React.FC = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  root: { flex: 1 },
-  loadingWrap: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  centerState: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  scroll: { flex: 1 },
-  scrollContent: {
-    paddingHorizontal: HOME_CONTENT_HORIZONTAL_PADDING,
-    paddingTop: 16,
-    paddingBottom: 32,
-  },
-
-  grid: {
-    flexDirection: "column",
-    gap: HOME_FEATURE_GRID_GAP,
-    marginBottom: 14,
-  },
-  gridRow: {
-    flexDirection: "row",
-    gap: HOME_FEATURE_GRID_GAP,
-  },
-  homeGridItem: {
-    height: HOME_FEATURE_CARD_HEIGHT,
-  },
-  featureSheet: {
-    maxHeight: "82%",
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 8,
-  },
-  featureSheetTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: C.text,
-    marginBottom: 14,
-    paddingRight: 44,
-  },
-  featureSheetContent: {
-    paddingBottom: 20,
-  },
-  featureGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  featureGridItem: {
-    width: "48%",
-  },
-  noPermissionCard: {
-    backgroundColor: C.surface,
-    borderRadius: 18,
-    paddingVertical: 20,
-    paddingHorizontal: 12,
-    marginBottom: 14,
-    shadowColor: C.shadow,
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: C.border,
-  },
-
-  reportList: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: HOME_FEATURE_GRID_GAP,
-    marginBottom: 14,
-  },
-  reportGridItem: {
-    minHeight: 118,
-  },
-  reportCard: {
-    flex: 1,
-    minHeight: 118,
-    backgroundColor: C.surface,
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: C.violetBorder,
-    shadowColor: C.shadow,
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
-  },
-  reportIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: C.violetSurface,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 10,
-  },
-  reportTextWrap: {
-    flex: 1,
-    minWidth: 0,
-  },
-  reportTitle: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: C.text,
-    lineHeight: 17,
-    minHeight: 34,
-    marginBottom: 6,
-  },
-  reportArrowWrap: {
-    position: "absolute",
-    right: 12,
-    bottom: 12,
-    width: 24,
-    height: 24,
-    borderRadius: 8,
-    backgroundColor: C.violetSurface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  reportPinButton: {
-    position: "absolute",
-    top: 10,
-    right: 10,
-    zIndex: 2,
-    width: 26,
-    height: 26,
-    borderRadius: 9,
-    borderWidth: 1,
-    borderColor: C.violetBorder,
-    backgroundColor: C.violetSurface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  reportPinButtonActive: {
-    borderColor: "#7048E8",
-    backgroundColor: "#7048E8",
-  },
-  reportSheetGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  reportSheetGridItem: {
-    minHeight: 118,
-  },
-
-  statsRow: { flexDirection: "row", gap: 10, marginBottom: 14 },
-  qaCard: {
-    backgroundColor: C.surface,
-    borderRadius: 18,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-around",
-    paddingVertical: 16,
-    paddingHorizontal: 8,
-    marginBottom: 14,
-    shadowColor: C.shadow,
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: C.border,
-  },
-  qaDivider: {
-    width: 1,
-    height: 36,
-    backgroundColor: C.border,
-  },
-});
 
 export default HomeScreen;

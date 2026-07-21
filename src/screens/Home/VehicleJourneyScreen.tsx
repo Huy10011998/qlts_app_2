@@ -339,7 +339,7 @@ export default function VehicleJourneyScreen() {
   if (loading) {
     return (
       <View style={styles.centerState}>
-        <ActivityIndicator color="#4F46E5" />
+        <ActivityIndicator color={C.red} />
         <Text style={styles.loadingText}>Đang tải phương tiện...</Text>
       </View>
     );
@@ -354,7 +354,7 @@ export default function VehicleJourneyScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={refreshAll}
-            colors={["#4F46E5"]}
+            colors={[C.accent]}
           />
         }
       >
@@ -364,7 +364,7 @@ export default function VehicleJourneyScreen() {
           activeOpacity={0.75}
           onPress={() => setPickerVisible(true)}
         >
-          <Ionicons name="car-outline" size={20} color="#4F46E5" />
+          <Ionicons name="car-outline" size={20} color={C.textSecondary} />
           <Text
             style={[
               styles.selectText,
@@ -417,7 +417,7 @@ export default function VehicleJourneyScreen() {
             />
           ) : journeyLoading ? (
             <View style={styles.journeyLoading}>
-              <ActivityIndicator color="#4F46E5" />
+              <ActivityIndicator color={C.red} />
               <Text style={styles.loadingText}>Đang tải hành trình...</Text>
             </View>
           ) : vehicles.length === 0 ? (
@@ -574,7 +574,7 @@ export default function VehicleJourneyScreen() {
                                 <View style={styles.tripLoadingRow}>
                                   <ActivityIndicator
                                     size="small"
-                                    color="#1976D2"
+                                    color={C.red}
                                   />
                                   <Text style={styles.tripLoadingText}>
                                     Đang mở bản đồ...
@@ -652,17 +652,19 @@ const styles = StyleSheet.create({
     marginBottom: 7,
   },
   selectField: {
-    height: 50,
-    borderWidth: 1.5,
-    borderColor: "#4F46E5",
-    borderRadius: 10,
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: C.borderStrong,
+    borderRadius: 8,
     backgroundColor: C.surface,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 13,
+    justifyContent: "space-between",
+    paddingHorizontal: 12,
+    paddingVertical: 0,
     marginBottom: 16,
   },
-  selectText: { flex: 1, color: C.text, fontSize: 15, marginHorizontal: 10 },
+  selectText: { flex: 1, color: C.text, fontSize: 14, marginHorizontal: 10 },
   placeholderText: { color: C.textMuted },
   dateRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
   dateField: { flex: 1 },
@@ -742,7 +744,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: C.blueSurface,
+    backgroundColor: C.surfaceAlt,
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,

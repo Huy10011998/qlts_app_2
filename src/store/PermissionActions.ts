@@ -1,6 +1,9 @@
 import { AppDispatch } from "./index";
 import { getPermission } from "../services";
 import { setPermissions, clearPermissions } from "./PermissionSlice";
+import { isAuthExpiredError } from "../services/data/callApi";
+import { isNetworkRequestError } from "../utils/helpers/api";
+import { warn, error } from "../utils/Logger";
 
 export const reloadPermissions = () => {
   return async (dispatch: AppDispatch): Promise<boolean> => {
@@ -9,22 +12,16 @@ export const reloadPermissions = () => {
       dispatch(setPermissions(res.data));
       return true;
     } catch (err) {
-      const status = (err as any)?.response?.status;
-      const code = (err as any)?.code;
-      const isNetworkError = !status || code === "ECONNABORTED";
-
-      if (isNetworkError) {
-        console.warn(
-          "Reload permissions failed due to network, keep old permissions",
-        );
+      if (isNetworkRequestError(err)) {
+        warn("Reload permissions failed due to network, keep old permissions");
         return false;
       }
 
-      if (status === 401 || status === 403) {
+      if (isAuthExpiredError(err)) {
         dispatch(clearPermissions());
       }
 
-      console.error("Reload permissions failed", err);
+      error("Reload permissions failed", err);
       return false;
     }
   };

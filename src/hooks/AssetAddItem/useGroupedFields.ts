@@ -1,13 +1,13 @@
 import { useMemo, useEffect, useState } from "react";
-import { ParseFieldActive } from "../../utils/parser/parseFieldActive";
-import { GroupFields } from "../../utils/parser/groupFields";
-import { ToggleGroupUtil } from "../../utils/parser/ToggleGroup";
+import { parseFieldActive } from "../../utils/parser/parseFieldActive";
+import { groupFields } from "../../utils/parser/groupFields";
+import { toggleGroupUtil } from "../../utils/parser/ToggleGroup";
 import type { Field } from "../../types/index";
 
 export function useGroupedFields(field: any) {
-  const fieldActive = useMemo<Field[]>(() => ParseFieldActive(field), [field]);
+  const fieldActive = useMemo<Field[]>(() => parseFieldActive(field), [field]);
 
-  const groupedFields = useMemo(() => GroupFields(fieldActive), [fieldActive]);
+  const groupedFields = useMemo(() => groupFields(fieldActive), [fieldActive]);
 
   const [collapsedGroups, setCollapsedGroups] = useState<
     Record<string, boolean>
@@ -28,7 +28,7 @@ export function useGroupedFields(field: any) {
   }, [groupedFields]);
 
   const toggleGroup = (groupName: string) => {
-    setCollapsedGroups((prev) => ToggleGroupUtil(prev, groupName));
+    setCollapsedGroups((prev) => toggleGroupUtil(prev, groupName));
   };
 
   const expandGroupsWithErrors = (errors: Record<string, string>) => {
@@ -39,7 +39,7 @@ export function useGroupedFields(field: any) {
       const next = { ...prev };
 
       Object.entries(groupedFields).forEach(([groupName, fields]) => {
-        if (fields.some((field) => errorNames.has(field.name))) {
+        if (fields.some((f) => errorNames.has(f.name))) {
           next[groupName] = false;
         }
       });

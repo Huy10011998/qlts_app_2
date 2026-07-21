@@ -1,7 +1,7 @@
 import type { Field } from "../../types/index";
 import { log } from "../Logger";
 
-export const ParseFieldActive = (field: any): Field[] => {
+export const parseFieldActive = (field: any): Field[] => {
   try {
     if (!field) return [];
 

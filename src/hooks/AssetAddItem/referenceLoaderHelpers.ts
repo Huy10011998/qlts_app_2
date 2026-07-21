@@ -91,7 +91,6 @@ export const loadReferenceItemsForField = async ({
 
   const {
     hasParentsFields,
-    parentFields,
     parentValues,
     hasAllParents,
   } = getReferenceParentContext(

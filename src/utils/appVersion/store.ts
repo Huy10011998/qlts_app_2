@@ -11,28 +11,18 @@ import {
 import { log, warn } from "../Logger";
 import { StoreVersionInfo } from "./types";
 import { selectLatestVersionInfo } from "./version";
+import { externalFetch } from "../../services/network/externalHttp";
 
 type StoreLookupResult = {
   latestVersion: string;
   storeUrl: string;
 };
 
-const fetchWithTimeout = async (url: string, timeoutMs = 10000) => {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    return await fetch(url, {
-      method: "GET",
-      signal: controller.signal,
-      headers: {
-        "Cache-Control": "no-cache",
-      },
-    });
-  } finally {
-    clearTimeout(timeout);
-  }
-};
+const fetchWithTimeout = (url: string, timeoutMs = 10000) =>
+  externalFetch(url, {
+    timeoutMs,
+    headers: { "Cache-Control": "no-cache" },
+  });
 
 const getIosStoreVersionByCountry = async (
   country: string,

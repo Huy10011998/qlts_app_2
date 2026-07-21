@@ -204,7 +204,7 @@ export function useShareholdersMeetingController() {
           ? prev
           : opinionList[0]?.id ?? "",
       );
-    } catch (error) {
+    } catch {
       setOpinions([]);
       setSelectedOpinionId("");
       setVotingError("Không tải được danh sách ý kiến.");
@@ -534,7 +534,7 @@ export function useShareholdersMeetingController() {
                 syncShareholderAttendance(id, "present");
                 handledSuccess = true;
                 options?.onSuccess?.();
-              } catch (error) {
+              } catch {
                 Alert.alert("Lỗi", "Không thể điểm danh cổ đông này.");
               } finally {
                 setSubmittingAttendanceId(null);
@@ -575,7 +575,7 @@ export function useShareholdersMeetingController() {
                 setSubmittingAttendanceId(id);
                 await huyDiemDanhDhcd(Number(id));
                 syncShareholderAttendance(id, "pending");
-              } catch (error) {
+              } catch {
                 Alert.alert("Lỗi", "Không thể huỷ điểm danh cổ đông này.");
               } finally {
                 setSubmittingAttendanceId(null);

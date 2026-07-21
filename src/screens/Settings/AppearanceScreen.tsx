@@ -2,8 +2,9 @@ import React from "react";
 import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
 import { useThemePreference } from "../../context/ThemeContext";
 import { useColorScheme } from "../../hooks/useColorScheme";
+import { C } from "../../utils/helpers/colors";
 
-const RED = "#E31E24";
+const RED = C.red;
 
 type AppearanceOptionProps = {
   mode: "light" | "dark";

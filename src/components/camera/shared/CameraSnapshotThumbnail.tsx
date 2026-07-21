@@ -41,7 +41,7 @@ export default React.memo(function CameraSnapshotThumbnail({
     <View style={styles.preview}>
       {!isLoaded && (
         <View style={styles.previewLoading}>
-          <ActivityIndicator size="small" color={C.textSecondary} />
+          <ActivityIndicator size="small" color={C.red} />
         </View>
       )}
       <Image

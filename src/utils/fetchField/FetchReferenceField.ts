@@ -2,20 +2,31 @@ import { API_ENDPOINTS } from "../../config/api";
 import { callApi } from "../../services";
 import { cascadeRequestTracker } from "../cascade/CascadeRequestTracker";
 import { log } from "../Logger";
+import type { ReferenceDataMap } from "../../types";
 
-export const fetchReferenceByField = async (
+type SetReference = React.Dispatch<React.SetStateAction<ReferenceDataMap>>;
+
+export type FetchReferenceOptions = {
+  textSearch?: string;
+  pageSize?: number;
+  skipSize?: number;
+  append?: boolean;
+  currentIds?: Array<string | number>;
+  /** Cascade parent value; sent as `lstParent` when present. */
+  parentValue?: unknown;
+};
+
+/**
+ * Fetch a reference/category list for a form field and merge it into the
+ * reference-data map, deduped by value. A per-field request id guards against
+ * stale responses when the user types/scrolls quickly. Pass `parentValue` for
+ * cascade fields.
+ */
+export const fetchReference = async (
   referenceName: string,
   fieldName: string,
-  setReference: React.Dispatch<
-    React.SetStateAction<Record<string, { items: any[]; totalCount: number }>>
-  >,
-  options?: {
-    textSearch?: string;
-    pageSize?: number;
-    skipSize?: number;
-    append?: boolean;
-    currentIds?: Array<string | number>;
-  },
+  setReference: SetReference,
+  options?: FetchReferenceOptions,
 ) => {
   // chặn stale request
   const requestId = Date.now();
@@ -28,9 +39,10 @@ export const fetchReferenceByField = async (
       skipSize = 0,
       append = false,
       currentIds = [],
+      parentValue,
     } = options || {};
 
-    const payload = {
+    const payload: Record<string, unknown> = {
       type: referenceName,
       currentID: currentIds,
       textSearch,
@@ -38,7 +50,14 @@ export const fetchReferenceByField = async (
       skipSize,
     };
 
-    const res = await callApi<any>("POST", API_ENDPOINTS.GET_CATEGORY, payload);
+    if (parentValue != null && parentValue !== "") {
+      payload.lstParent = String(parentValue);
+    }
+
+    const res = await callApi<{
+      success?: boolean;
+      data?: { items?: any[]; totalCount?: number };
+    }>("POST", API_ENDPOINTS.GET_CATEGORY, payload);
 
     // nếu không phải request mới nhất → bỏ
     if (cascadeRequestTracker[fieldName] !== requestId) {
@@ -82,3 +101,11 @@ export const fetchReferenceByField = async (
     };
   }
 };
+
+/** Non-cascade reference fetch (kept for existing call sites). */
+export const fetchReferenceByField = (
+  referenceName: string,
+  fieldName: string,
+  setReference: SetReference,
+  options?: Omit<FetchReferenceOptions, "parentValue">,
+) => fetchReference(referenceName, fieldName, setReference, options);

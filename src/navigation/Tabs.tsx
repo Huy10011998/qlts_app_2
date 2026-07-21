@@ -84,15 +84,18 @@ export default function Tabs() {
               : undefined,
             tabBarIcon: HomeTabIcon,
             freezeOnBlur: true,
-            tabBarStyle: [
-              createTabBarStyle({
-                bottomInset: insets.bottom,
-                backgroundColor: isMeetingScanner
-                  ? TAB_INVERTED_BG
-                  : colors.surface,
-                borderTopColor: isMeetingScanner ? "#000" : hairlineBorderColor,
-              }),
-            ],
+            // Let the navigator-level, theme-aware style own normal screens.
+            // Keeping a concrete normal style here can leave the frozen Home
+            // descriptor holding the previous theme's background color.
+            ...(isMeetingScanner
+              ? {
+                  tabBarStyle: createTabBarStyle({
+                    bottomInset: insets.bottom,
+                    backgroundColor: TAB_INVERTED_BG,
+                    borderTopColor: "#000",
+                  }),
+                }
+              : {}),
           };
         }}
       />
@@ -111,15 +114,17 @@ export default function Tabs() {
               ? TAB_INVERTED_INACTIVE_COLOR
               : undefined,
             tabBarIcon: ScanTabIcon,
-            tabBarStyle: [
-              createTabBarStyle({
-                bottomInset: insets.bottom,
-                backgroundColor: isScanScreen
-                  ? TAB_INVERTED_BG
-                  : colors.surface,
-                borderTopColor: isScanScreen ? "#000" : hairlineBorderColor,
-              }),
-            ],
+            // Non-scanner routes inherit the live navigator theme instead of
+            // caching a per-screen copy of the old surface color.
+            ...(isScanScreen
+              ? {
+                  tabBarStyle: createTabBarStyle({
+                    bottomInset: insets.bottom,
+                    backgroundColor: TAB_INVERTED_BG,
+                    borderTopColor: "#000",
+                  }),
+                }
+              : {}),
           };
         }}
       />

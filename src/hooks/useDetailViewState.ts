@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
-import { ParseFieldActive } from "../utils/parser/parseFieldActive";
-import { GroupFields } from "../utils/parser/groupFields";
-import { ToggleGroupUtil } from "../utils/parser/ToggleGroup";
+import { parseFieldActive } from "../utils/parser/parseFieldActive";
+import { groupFields } from "../utils/parser/groupFields";
+import { toggleGroupUtil } from "../utils/parser/ToggleGroup";
 
 export function useDetailViewState(
   field: string | undefined,
@@ -12,11 +12,11 @@ export function useDetailViewState(
     Record<string, boolean>
   >({});
 
-  const fieldActive = useMemo(() => ParseFieldActive(field), [field]);
-  const groupedFields = useMemo(() => GroupFields(fieldActive), [fieldActive]);
+  const fieldActive = useMemo(() => parseFieldActive(field), [field]);
+  const groupedFields = useMemo(() => groupFields(fieldActive), [fieldActive]);
 
   const toggleGroup = useCallback((groupName: string) => {
-    setCollapsedGroups((prev) => ToggleGroupUtil(prev, groupName));
+    setCollapsedGroups((prev) => toggleGroupUtil(prev, groupName));
   }, []);
 
   const handleChangeTab = useCallback((tabKey: string) => {

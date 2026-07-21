@@ -42,3 +42,11 @@ export const isEffectivelyEmptyCodeValue = (value: unknown) => {
   const normalized = value.trim();
   return normalized === "" || normalized === ":";
 };
+
+/**
+ * Split a comma-separated string into trimmed parts (e.g. `parentsFields`,
+ * multi-select values). Does not drop empty segments — chain `.filter(Boolean)`
+ * when the caller needs that.
+ */
+export const parseCsv = (value: string): string[] =>
+  value.split(",").map((part) => part.trim());

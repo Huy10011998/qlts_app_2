@@ -35,7 +35,7 @@ export default function AssetFormHeaderSubmitButton({
       disabled={disabled}
       activeOpacity={0.78}
     >
-      <Ionicons name={iconName} size={16} color="#E31E24" />
+      <Ionicons name={iconName} size={16} color={C.red} />
       <Text style={styles.label} allowFontScaling={false}>
         {label}
       </Text>
@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
     opacity: 0.55,
   },
   label: {
-    color: "#E31E24",
+    color: C.red,
     fontSize: 12,
     fontWeight: "800",
   },
