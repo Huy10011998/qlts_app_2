@@ -1,7 +1,14 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
+  Animated,
   GestureResponderEvent,
   RefreshControl,
   ScrollView,
@@ -84,6 +91,7 @@ const getHomeReportPinnedIdsKey = (userName: string | null) => {
 };
 
 type HomeReportCardProps = {
+  index?: number;
   isPinned?: boolean;
   label: string;
   onPress?: () => void;
@@ -91,7 +99,10 @@ type HomeReportCardProps = {
   showPinButton?: boolean;
 };
 
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+
 function HomeReportCard({
+  index = 0,
   isPinned = false,
   label,
   onPress,
@@ -100,19 +111,32 @@ function HomeReportCard({
 }: HomeReportCardProps) {
   const colors = useAppColors();
   const accentBorders = useAccentBorderColors();
+  const scaleAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      delay: index * 80,
+      tension: 55,
+      friction: 7,
+    }).start();
+  }, [index, scaleAnim]);
+
   const handleTogglePinned = (event: GestureResponderEvent) => {
     event.stopPropagation();
     onTogglePinned?.();
   };
 
   return (
-    <TouchableOpacity
+    <AnimatedTouchable
       style={[
         styles.reportCard,
         {
           backgroundColor: colors.surface,
           borderColor: accentBorders.violet,
           shadowColor: colors.shadow,
+          transform: [{ scale: scaleAnim }],
         },
       ]}
       activeOpacity={0.76}
@@ -167,7 +191,7 @@ function HomeReportCard({
       >
         <Ionicons name="arrow-forward" size={12} color="#7048E8" />
       </View>
-    </TouchableOpacity>
+    </AnimatedTouchable>
   );
 }
 
@@ -729,7 +753,7 @@ const HomeScreen: React.FC = () => {
               </View>
             ) : (
               <View style={styles.reportList}>
-                {visiblePinnedReportActions.map((item) => (
+                {visiblePinnedReportActions.map((item, itemIndex) => (
                   <View
                     key={`report-${item.id}`}
                     style={[
@@ -737,7 +761,11 @@ const HomeScreen: React.FC = () => {
                       { width: homeReportCardWidth },
                     ]}
                   >
-                    <HomeReportCard label={item.label} onPress={item.onPress} />
+                    <HomeReportCard
+                      index={itemIndex}
+                      label={item.label}
+                      onPress={item.onPress}
+                    />
                   </View>
                 ))}
               </View>
@@ -898,7 +926,7 @@ const HomeScreen: React.FC = () => {
           contentContainerStyle={styles.featureSheetContent}
         >
           <View style={styles.reportSheetGrid}>
-            {reportActions.map((item) => (
+            {reportActions.map((item, itemIndex) => (
               <View
                 key={`report-sheet-${item.id}`}
                 style={[
@@ -907,6 +935,7 @@ const HomeScreen: React.FC = () => {
                 ]}
               >
                 <HomeReportCard
+                  index={itemIndex}
                   isPinned={visiblePinnedReportIds.has(item.id)}
                   label={item.label}
                   showPinButton
