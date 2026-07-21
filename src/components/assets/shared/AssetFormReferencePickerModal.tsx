@@ -2,6 +2,7 @@ import React from "react";
 import { useNetworkAwareReload } from "../../../hooks/useNetworkAwareReload";
 import EnumAndReferencePickerModal from "../../modal/EnumAndReferencePickerModal";
 import { TypeProperty } from "../../../utils/Enum";
+import type { ReferenceDataMap } from "../../../types";
 
 type AssetFormReferencePickerModalProps = {
   activeEnumField: any;
@@ -19,7 +20,7 @@ type AssetFormReferencePickerModalProps = {
   refPage: number;
   refSearching: boolean;
   isMulti?: boolean;
-  referenceData: Record<string, { items: any[]; totalCount: number }>;
+  referenceData: ReferenceDataMap;
   setFormData: React.Dispatch<React.SetStateAction<Record<string, any>>>;
   setModalVisible: (visible: boolean) => void;
   setReferenceErrorMessage: (value: string | null) => void;

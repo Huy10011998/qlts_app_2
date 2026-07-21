@@ -2,13 +2,13 @@ import { useEffect } from "react";
 import { TypeProperty } from "../../utils/Enum";
 import { fetchEnumByField } from "../../utils/fetchField/FetchEnumField";
 import { fetchReferenceByField } from "../../utils/fetchField/FetchReferenceField";
-import type { Field } from "../../types/index";
+import type { Field, ReferenceDataMap } from "../../types/index";
 
 export function useEnumAndReferenceLoader(
   fieldActive: Field[],
   setEnumData: any,
   setReferenceData: any,
-  referenceData: Record<string, { items: any[]; totalCount: number }>,
+  referenceData: ReferenceDataMap,
 ) {
   useEffect(() => {
     fieldActive.forEach((f) => {

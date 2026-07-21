@@ -5,19 +5,12 @@ import React, {
   ReactElement,
   SetStateAction,
 } from "react";
-import { Field, Item } from "./model.d";
-import {
-  StyleProp,
-  TextInputProps,
-  TextProps,
-  ViewProps,
-  ViewStyle,
-} from "react-native";
+import { Field, Item, ReferenceDataMap } from "./model.d";
+import { StyleProp, ViewStyle } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { TAB_ITEMS } from "../utils/helpers/ui";
 import { TabItem } from "./context.d";
-import { PropertyResponse } from "./api.d";
-import { AssetItem, PropertyClass } from "./navigator.d";
+import { AssetItem } from "./navigator.d";
 
 export interface CardItemProps {
   item: AssetItem;
@@ -72,22 +65,6 @@ export type TabCustomProps = {
   showHeader?: boolean;
   backgroundColor?: string;
   customHeader?: React.ComponentType<any>;
-};
-
-export type ThemedTextProps = TextProps & {
-  lightColor?: string;
-  darkColor?: string;
-  type?: "default" | "title" | "defaultSemiBold" | "subtitle" | "link";
-};
-
-export type ThemedTextInputProps = TextInputProps & {
-  lightColor?: string;
-  darkColor?: string;
-};
-
-export type ThemedViewProps = ViewProps & {
-  lightColor?: string;
-  darkColor?: string;
 };
 
 export interface TabContentProps {
@@ -309,9 +286,9 @@ export interface HandleCascadeChangeProps {
 
 export interface RenderInputByTypeProps {
   f: Field;
-  formData: any;
-  enumData: any;
-  referenceData: any;
+  formData: Record<string, any>;
+  enumData: Record<string, any>;
+  referenceData: ReferenceDataMap;
   validationErrors?: Record<string, string>;
   images?: any;
   loadingImages?: any;
@@ -337,20 +314,6 @@ export interface PreviewImgByTypeProps {
   setImages: any;
   setLoadingImages: any;
 }
-
-export const mapPropertyResponseToPropertyClass = (
-  data?: PropertyResponse,
-): PropertyClass | undefined => {
-  if (!data) return undefined;
-
-  return {
-    isTuDongTang: data.isTuDongTang,
-    propertyTuDongTang: data.propertyTuDongTang,
-    formatTuDongTang: data.formatTuDongTang,
-    prentTuDongTang: data.prentTuDongTang,
-    prefix: data.prefix,
-  };
-};
 
 export interface CameraCellProps {
   cam: any;

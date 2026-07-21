@@ -24,6 +24,7 @@ import RNFS from "react-native-fs";
 import Share from "react-native-share";
 import type {
   Field,
+  ReferenceDataMap,
   ReportConfigData,
   ReportConfigParameter,
   ReportViewProps,
@@ -530,7 +531,7 @@ const ReportView: React.FC<ReportViewProps> = ({
   );
   const [enumData, setEnumData] = useState<Record<string, any[]>>({});
   const [referenceData, setReferenceData] = useState<
-    Record<string, { items: any[]; totalCount: number }>
+    ReferenceDataMap
   >({});
   const [modalVisible, setModalVisible] = useState(false);
   const [activeEnumField, setActiveEnumField] = useState<Field | null>(null);

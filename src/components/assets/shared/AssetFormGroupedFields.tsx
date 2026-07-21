@@ -4,6 +4,7 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { RenderInputByType } from "../../form/RenderInputByType";
 import { BRAND_RED } from "./listTheme";
 import { useHairlineBorderColor } from "../../../utils/helpers/colors";
+import type { ReferenceDataMap } from "../../../types";
 
 type AssetFormGroupedFieldsProps = {
   collapsedGroups: Record<string, boolean>;
@@ -17,7 +18,7 @@ type AssetFormGroupedFieldsProps = {
   mode: "add" | "edit" | "clone";
   openReferenceModal: (field: any) => void;
   pickImage: (...args: any[]) => void;
-  referenceData: Record<string, { items: any[]; totalCount: number }>;
+  referenceData: ReferenceDataMap;
   setImages: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   setLoadingImages: React.Dispatch<
     React.SetStateAction<Record<string, boolean>>

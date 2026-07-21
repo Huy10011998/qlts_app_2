@@ -8,6 +8,19 @@ export type Conditions = {
   type: number;
 };
 
+// Bao ngoài chuẩn của response API ({ data, success?, message? })
+export interface ApiResponse<T> {
+  data: T;
+  success?: boolean;
+  message?: string;
+}
+
+// Map dữ liệu reference dùng chung cho form/picker (referenceName -> items)
+export type ReferenceDataMap = Record<
+  string,
+  { items: any[]; totalCount: number }
+>;
+
 // Loại dữ liệu Field từ API
 export interface Field {
   id: number;

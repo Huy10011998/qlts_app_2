@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Field } from "../../types/index";
+import type { Field, ReferenceDataMap } from "../../types/index";
 
 const ASSET_REFERENCE_PAGE_SIZE = 20;
 
@@ -7,7 +7,7 @@ export function useAssetFormState() {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [enumData, setEnumData] = useState<Record<string, any[]>>({});
   const [referenceData, setReferenceData] = useState<
-    Record<string, { items: any[]; totalCount: number }>
+    ReferenceDataMap
   >({});
 
   const [modalVisible, setModalVisible] = useState(false);

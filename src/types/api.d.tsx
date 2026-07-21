@@ -1,10 +1,6 @@
-import { Field, Item } from "./model.d";
+import { ApiResponse, Field, Item } from "./model.d";
 
-export interface GetMenuActiveResponse {
-  data: Item[];
-  success?: boolean;
-  message?: string;
-}
+export type GetMenuActiveResponse = ApiResponse<Item[]>;
 
 export interface ViewActiveItem {
   id: number;
@@ -20,11 +16,7 @@ export interface ViewActiveItem {
   iconMobile?: string | null;
 }
 
-export interface GetViewActiveResponse {
-  data: ViewActiveItem[];
-  success?: boolean;
-  message?: string;
-}
+export type GetViewActiveResponse = ApiResponse<ViewActiveItem[]>;
 
 export interface ChangePasswordResponse {
   success?: boolean;
@@ -38,14 +30,10 @@ export interface ChangePasswordResponse {
     | null;
 }
 
-export interface LoginResponse {
-  refreshToken: null;
-  accessToken: any;
-  data: {
-    accessToken: string;
-    refreshToken?: string;
-  };
-}
+export type LoginResponse = ApiResponse<{
+  accessToken: string;
+  refreshToken?: string;
+}>;
 
 export interface PropertyResponse {
   prefix: string | undefined;
@@ -53,7 +41,7 @@ export interface PropertyResponse {
   formatTuDongTang: string | undefined;
   propertyTuDongTang: string | undefined;
   isTuDongTang: boolean | undefined;
-  fields(fields: any): Field;
+  fields?: Field[];
   iconMobile: string;
   isBuildTree: boolean;
 }
