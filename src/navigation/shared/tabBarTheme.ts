@@ -1,7 +1,8 @@
 import { StyleSheet } from "react-native";
+import { C } from "../../utils/helpers/colors";
 
 export const TAB_HEIGHT = 56;
-export const TAB_ACTIVE_COLOR = "#E31E24";
+export const TAB_ACTIVE_COLOR = C.red;
 export const TAB_INVERTED_BG = "#3A3A3A";
 export const TAB_INVERTED_INACTIVE_COLOR = "rgba(255,255,255,0.68)";
 export const tabBarStyles = StyleSheet.create({
