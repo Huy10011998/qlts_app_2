@@ -20,4 +20,11 @@ module.exports = {
     "react/react-in-jsx-scope": "off",
     "react-hooks/exhaustive-deps": "warn",
   },
+  overrides: [
+    {
+      // Jest config/setup run in Node with Jest globals.
+      files: ["jest.config.js", "jest.setup.js"],
+      env: { node: true, jest: true },
+    },
+  ],
 };
