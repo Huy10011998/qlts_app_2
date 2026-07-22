@@ -347,6 +347,9 @@ const CameraListGrid: React.FC = () => {
   const closeFullscreenTimeoutRef = React.useRef<ReturnType<
     typeof setTimeout
   > | null>(null);
+  // Hướng orientation đích khi đang đóng fullscreen: true = về grid ngang,
+  // false = về dọc. Cover (isClosingFullscreen) giữ tới khi orientation khớp đích.
+  const closeTargetLandscapeRef = React.useRef(false);
 
   const SW = screenDims.width;
   const isGridFullscreenMode = isGridLandscapeFullscreen;
@@ -438,9 +441,13 @@ const CameraListGrid: React.FC = () => {
     isClosingFullscreenRef.current = isClosingFullscreen;
   }, [isClosingFullscreen]);
 
-  // Khi screenDims về portrait → layout đã đúng → fade out cover
+  // Khi screenDims khớp orientation đích → layout đã đúng → gỡ cover
   React.useEffect(() => {
-    if (!isLandscape) {
+    if (!isClosingFullscreenRef.current) return;
+    const reachedTarget = closeTargetLandscapeRef.current
+      ? isLandscape
+      : !isLandscape;
+    if (reachedTarget) {
       finishClosingFullscreen();
     }
   }, [finishClosingFullscreen, isLandscape]);
@@ -1146,11 +1153,26 @@ const CameraListGrid: React.FC = () => {
     setVideoReady(false);
 
     if (isGridLandscapeFullscreenRef.current) {
+      closeTargetLandscapeRef.current = true;
       Orientation.lockToLandscapeLeft();
-      setFullscreenCam(null);
-      setIsClosingFullscreen(false);
-      isClosingFullscreenRef.current = false;
+      if (isLandscapeRef.current) {
+        // Đang ngang sẵn → đóng ngay, không cần che.
+        setFullscreenCam(null);
+        setIsClosingFullscreen(false);
+        isClosingFullscreenRef.current = false;
+      } else {
+        // Đang dọc (vừa xoay dọc trong fullscreen) → giữ cover che lúc lật
+        // về ngang, tránh flash grid dọc trước khi xoay. Effect finish sẽ gỡ
+        // cover khi screenDims về ngang; timeout là backstop.
+        isClosingFullscreenRef.current = true;
+        setIsClosingFullscreen(true);
+        closeFullscreenTimeoutRef.current = setTimeout(() => {
+          closeFullscreenTimeoutRef.current = null;
+          finishClosingFullscreen();
+        }, 500);
+      }
     } else {
+      closeTargetLandscapeRef.current = false;
       isClosingFullscreenRef.current = true;
       setIsClosingFullscreen(true);
       Orientation.lockToPortrait();
