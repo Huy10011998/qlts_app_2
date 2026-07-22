@@ -84,18 +84,15 @@ export default function Tabs() {
               : undefined,
             tabBarIcon: HomeTabIcon,
             freezeOnBlur: true,
-            // Let the navigator-level, theme-aware style own normal screens.
-            // Keeping a concrete normal style here can leave the frozen Home
-            // descriptor holding the previous theme's background color.
-            ...(isMeetingScanner
-              ? {
-                  tabBarStyle: createTabBarStyle({
-                    bottomInset: insets.bottom,
-                    backgroundColor: TAB_INVERTED_BG,
-                    borderTopColor: "#000",
-                  }),
-                }
-              : {}),
+            // Always give the frozen Home descriptor a concrete tab bar style
+            // (like the last known-good 2.20 build) so the hide-on-keyboard
+            // animation can't leave it stuck off-screen after login. Keep it
+            // theme-aware via colors so it doesn't cache a stale background.
+            tabBarStyle: createTabBarStyle({
+              bottomInset: insets.bottom,
+              backgroundColor: isMeetingScanner ? TAB_INVERTED_BG : colors.surface,
+              borderTopColor: isMeetingScanner ? "#000" : hairlineBorderColor,
+            }),
           };
         }}
       />
@@ -114,17 +111,13 @@ export default function Tabs() {
               ? TAB_INVERTED_INACTIVE_COLOR
               : undefined,
             tabBarIcon: ScanTabIcon,
-            // Non-scanner routes inherit the live navigator theme instead of
-            // caching a per-screen copy of the old surface color.
-            ...(isScanScreen
-              ? {
-                  tabBarStyle: createTabBarStyle({
-                    bottomInset: insets.bottom,
-                    backgroundColor: TAB_INVERTED_BG,
-                    borderTopColor: "#000",
-                  }),
-                }
-              : {}),
+            // Same as Home: keep a concrete, theme-aware tab bar style on every
+            // route so the hide-on-keyboard animation can't strand it off-screen.
+            tabBarStyle: createTabBarStyle({
+              bottomInset: insets.bottom,
+              backgroundColor: isScanScreen ? TAB_INVERTED_BG : colors.surface,
+              borderTopColor: isScanScreen ? "#000" : hairlineBorderColor,
+            }),
           };
         }}
       />

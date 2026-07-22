@@ -36,10 +36,8 @@ import {
   setRefreshInApi,
   shouldRefreshAccessToken,
 } from "../../services/data/callApi";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   AUTH_LOGIN_SERVICE,
-  FACE_ID_ENABLED_KEY,
   FACE_ID_LOGIN_SERVICE,
   FACE_ID_MARKER_PASSWORD,
   FACE_ID_MARKER_USERNAME,
@@ -49,6 +47,7 @@ import {
   readStoredAuthTokens,
   writeStoredAuthUsername,
 } from "../../context/authStorage";
+import { readFaceIdEnabled } from "../../services/auth/faceIdFlag";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import {
   LocalNetworkPermissionStatus,
@@ -193,8 +192,8 @@ export default function LoginScreen() {
 
   const prepareTokenForFaceID = useCallback(async () => {
     try {
-      const enabled = await AsyncStorage.getItem(FACE_ID_ENABLED_KEY);
-      if (enabled !== "1") {
+      const enabled = await readFaceIdEnabled();
+      if (!enabled) {
         await Keychain.resetGenericPassword({ service: FACE_ID_LOGIN_SERVICE });
         setIsFaceIdEnabled(false);
         setIsTokenReady(true);
@@ -268,8 +267,8 @@ export default function LoginScreen() {
 
   const syncFaceIdMarker = useCallback(async () => {
     if (Platform.OS !== "ios") return;
-    const enabled = await AsyncStorage.getItem(FACE_ID_ENABLED_KEY);
-    if (enabled !== "1") {
+    const enabled = await readFaceIdEnabled();
+    if (!enabled) {
       await Keychain.resetGenericPassword({ service: FACE_ID_LOGIN_SERVICE });
       setIsFaceIdEnabled(false);
       return;

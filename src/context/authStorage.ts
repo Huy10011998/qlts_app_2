@@ -2,7 +2,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Keychain from "react-native-keychain";
 import {
   AUTH_LOGIN_SERVICE,
-  FACE_ID_ENABLED_KEY,
   FACE_ID_LOGIN_SERVICE,
 } from "../constants/AuthStorage";
 import {
@@ -12,6 +11,7 @@ import {
   writeAccessToken,
   writeRefreshToken,
 } from "../services/auth/tokenStore";
+import { clearFaceIdEnabled } from "../services/auth/faceIdFlag";
 
 export const AUTH_TOKEN_KEY = "token";
 export const AUTH_REFRESH_TOKEN_KEY = "refreshToken";
@@ -67,7 +67,7 @@ export const writeStoredAuthUsername = (userName: string | null) =>
 export const clearStoredAuthTokens = () => clearAuthTokens();
 
 export const clearStoredFaceIdData = async () => {
-  await AsyncStorage.removeItem(FACE_ID_ENABLED_KEY);
+  await clearFaceIdEnabled();
   await Promise.all([
     Keychain.resetGenericPassword({ service: AUTH_LOGIN_SERVICE }),
     Keychain.resetGenericPassword({ service: FACE_ID_LOGIN_SERVICE }),

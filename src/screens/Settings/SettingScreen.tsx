@@ -25,16 +25,18 @@ import {
   resetAuthState,
 } from "../../services/data/callApi";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { clearPermissions } from "../../store/PermissionSlice";
 import { useAppDispatch } from "../../store/hooks";
 import {
   AUTH_LOGIN_SERVICE,
-  FACE_ID_ENABLED_KEY,
   FACE_ID_LOGIN_SERVICE,
   FACE_ID_MARKER_PASSWORD,
   FACE_ID_MARKER_USERNAME,
 } from "../../constants/AuthStorage";
+import {
+  readFaceIdEnabled,
+  writeFaceIdEnabled,
+} from "../../services/auth/faceIdFlag";
 import { C, useAppColors } from "../../utils/helpers/colors";
 import EmptyState from "../../components/ui/EmptyState";
 import { warn } from "../../utils/Logger";
@@ -181,7 +183,7 @@ const SettingScreen = () => {
           API_ENDPOINTS.GET_INFO,
           {}
         ),
-        AsyncStorage.getItem(FACE_ID_ENABLED_KEY),
+        readFaceIdEnabled(),
       ]);
       if (!canUpdateScreen()) return;
       userRef.current = userResponse.data;
@@ -189,7 +191,7 @@ const SettingScreen = () => {
       setUser(userResponse.data);
       setHasLoadedOnce(true);
       setLoadErrorMessage(null);
-      setIsFaceIdEnabled(faceIdFlag === "1");
+      setIsFaceIdEnabled(faceIdFlag);
       refreshPermissionState();
     } catch (error: any) {
       if (canUpdateScreen()) {
@@ -271,7 +273,7 @@ const SettingScreen = () => {
     if (!isMountedRef.current) return;
     if (!value) {
       await Keychain.resetGenericPassword({ service: FACE_ID_LOGIN_SERVICE });
-      await AsyncStorage.setItem(FACE_ID_ENABLED_KEY, "0");
+      await writeFaceIdEnabled(false);
       if (!isMountedRef.current) return;
       setIsFaceIdEnabled(false);
       Alert.alert("FaceID", "Đã tắt đăng nhập bằng FaceID.");
@@ -325,7 +327,7 @@ const SettingScreen = () => {
         setIsFaceIdEnabled(false);
         return;
       }
-      await AsyncStorage.setItem(FACE_ID_ENABLED_KEY, "1");
+      await writeFaceIdEnabled(true);
       if (!isMountedRef.current) return;
       setIsFaceIdEnabled(true);
       Alert.alert("FaceID", "Đã bật đăng nhập bằng FaceID!");
