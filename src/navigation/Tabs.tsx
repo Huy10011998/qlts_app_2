@@ -83,11 +83,12 @@ export default function Tabs() {
               ? TAB_INVERTED_INACTIVE_COLOR
               : undefined,
             tabBarIcon: HomeTabIcon,
-            freezeOnBlur: true,
-            // Always give the frozen Home descriptor a concrete tab bar style
-            // (like the last known-good 2.20 build) so the hide-on-keyboard
-            // animation can't leave it stuck off-screen after login. Keep it
-            // theme-aware via colors so it doesn't cache a stale background.
+            // Give Home a concrete tab bar style (like the last known-good 2.20
+            // build) so the hide-on-keyboard animation can't leave it stuck
+            // off-screen after login. Do NOT freeze Home on blur: freezing kept
+            // the descriptor holding the previous theme's background color, so
+            // switching dark->light from the Settings tab left this bar dark.
+            // Without freeze the style re-evaluates and stays theme-correct.
             tabBarStyle: createTabBarStyle({
               bottomInset: insets.bottom,
               backgroundColor: isMeetingScanner ? TAB_INVERTED_BG : colors.surface,
