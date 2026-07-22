@@ -18,7 +18,11 @@ import {
   CodeScanner,
   useCodeScanner,
 } from "react-native-vision-camera";
-import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import {
+  useNavigation,
+  useFocusEffect,
+  useIsFocused,
+} from "@react-navigation/native";
 import { getDetails, getFieldActive, getPropertyClass } from "../../services";
 import { error } from "../../utils/Logger";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
@@ -75,6 +79,12 @@ export default function QrScannerScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const { showAlertIfActive } = useSafeAlert();
+  // Only drive the camera controller (and request the camera permission) while
+  // the scanner tab is actually focused. With the tab navigator preloading all
+  // tabs (lazy: false), a hardcoded `enabled: true` would request camera
+  // permission right after login while the user is still on Home, and the
+  // resulting background→foreground transition would flicker/hide the tab bar.
+  const isFocused = useIsFocused();
   const {
     activateScanner,
     cameraActive,
@@ -91,7 +101,7 @@ export default function QrScannerScreen() {
     scannedRef,
     setIsTorchOn,
     startInitTimeoutTimer,
-  } = useQrScannerController({ enabled: true });
+  } = useQrScannerController({ enabled: isFocused });
 
   useFocusEffect(
     useCallback(() => {
