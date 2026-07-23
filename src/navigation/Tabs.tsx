@@ -1,4 +1,5 @@
 import React from "react";
+import { Platform } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -15,6 +16,7 @@ import {
   tabBarStyles,
 } from "./shared/tabBarTheme";
 import { useAppColors, useHairlineBorderColor } from "../utils/helpers/colors";
+import { useColorScheme } from "../hooks/useColorScheme";
 
 const Tab = createBottomTabNavigator();
 
@@ -53,9 +55,15 @@ export default function Tabs() {
   const insets = useSafeAreaInsets();
   const colors = useAppColors();
   const hairlineBorderColor = useHairlineBorderColor();
+  const colorScheme = useColorScheme();
 
   return (
     <Tab.Navigator
+      // Android keeps the mounted tab bar's background from the theme active at
+      // mount time, so switching appearance leaves the bar on the old color.
+      // Remounting the navigator on scheme change rebuilds it with the right
+      // color. iOS reconciles the background fine, so it keeps a stable key.
+      key={Platform.OS === "android" ? colorScheme : undefined}
       screenOptions={{
         headerShown: false,
         tabBarHideOnKeyboard: true,
