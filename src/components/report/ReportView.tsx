@@ -44,12 +44,8 @@ import {
   sanitizeShareFileName,
   formatShareTimestamp,
   SHARE_REPORT_OPTIONS,
-  shouldRetryReportPreview,
-  REPORT_PREVIEW_RETRY_DELAY_MS,
-  REPORT_PREVIEW_MAX_ATTEMPTS,
-  REPORT_PREVIEW_ATTEMPT_TIMEOUT_MS,
+  REPORT_PREVIEW_TIMEOUT_MS,
   REPORT_SLOW_LOADING_MS,
-  sleep,
   buildReportHtml,
   getInitialParameterValue,
   buildInitialParameterValues,
@@ -357,32 +353,11 @@ const ReportView: React.FC<ReportViewProps> = ({
 
         setLoading(true);
 
-        let res: Awaited<ReturnType<typeof getPreviewBC>> | null = null;
-        for (
-          let attempt = 1;
-          attempt <= REPORT_PREVIEW_MAX_ATTEMPTS;
-          attempt++
-        ) {
-          try {
-            res = await getPreviewBC(
-              requestPayload,
-              previewEndpoint,
-              REPORT_PREVIEW_ATTEMPT_TIMEOUT_MS
-            );
-            break;
-          } catch (previewErr) {
-            const canRetry =
-              attempt < REPORT_PREVIEW_MAX_ATTEMPTS &&
-              shouldRetryReportPreview(previewErr);
-
-            if (!canRetry) {
-              throw previewErr;
-            }
-
-            setReportLoadingMessage("Kết nối chưa ổn định, đang thử lại...");
-            await sleep(REPORT_PREVIEW_RETRY_DELAY_MS);
-          }
-        }
+        const res = await getPreviewBC(
+          requestPayload,
+          previewEndpoint,
+          REPORT_PREVIEW_TIMEOUT_MS
+        );
 
         if (!res?.data) {
           throw new Error("Report response is empty");
