@@ -88,34 +88,8 @@ export const SHARE_REPORT_OPTIONS: Array<{
   { key: "pdf", label: "Share file PDF", icon: "document-outline" },
 ];
 
-export const shouldRetryReportPreview = (err: unknown) => {
-  const apiError = err as {
-    response?: { status?: number };
-    code?: string;
-    message?: string;
-  };
-  const status = apiError?.response?.status;
-  const isTimeout =
-    apiError?.code === "ECONNABORTED" ||
-    String(apiError?.message ?? "")
-      .toLowerCase()
-      .includes("timeout");
-
-  if (status === 401 || status === 403) return false;
-  if (isTimeout) return true;
-  if (typeof status === "number") return status >= 500;
-  return Boolean(apiError?.code);
-};
-
-export const REPORT_PREVIEW_RETRY_DELAY_MS = 800;
-export const REPORT_PREVIEW_MAX_ATTEMPTS = 2;
-export const REPORT_PREVIEW_ATTEMPT_TIMEOUT_MS = 15000;
+export const REPORT_PREVIEW_TIMEOUT_MS = 60000;
 export const REPORT_SLOW_LOADING_MS = 8000;
-
-export const sleep = (ms: number) =>
-  new Promise<void>((resolve) => {
-    setTimeout(resolve, ms);
-  });
 
 export const buildReportHtml = (pdfBase64: string, isDark = false) => `
 <html>
