@@ -101,7 +101,7 @@ const CameraCell = React.memo(
         Gesture.Tap()
           .runOnJS(true)
           .onEnd(() => onPress(cam, idx)),
-      [cam, idx, onPress]
+      [cam, idx, onPress],
     );
     const doubleTap = React.useMemo(
       () =>
@@ -109,11 +109,11 @@ const CameraCell = React.memo(
           .runOnJS(true)
           .numberOfTaps(2)
           .onEnd(() => onDoubleTap(cam, idx)),
-      [cam, idx, onDoubleTap]
+      [cam, idx, onDoubleTap],
     );
     const composed = React.useMemo(
       () => Gesture.Exclusive(doubleTap, singleTap),
-      [doubleTap, singleTap]
+      [doubleTap, singleTap],
     );
 
     const webviewRefCb = React.useCallback(
@@ -123,7 +123,7 @@ const CameraCell = React.memo(
           else delete webviewRefRegister.current[cam.iD_Camera];
         }
       },
-      [cam.iD_Camera, webviewRefRegister]
+      [cam.iD_Camera, webviewRefRegister],
     );
 
     const shouldRenderWebView = !isPaused && isWebViewActive && !!token;
@@ -247,7 +247,7 @@ const CameraCell = React.memo(
     prev.webviewRefRegister === next.webviewRefRegister &&
     prev.pongTimeoutRef === next.pongTimeoutRef &&
     prev.webviewRestartRef === next.webviewRestartRef &&
-    prev.onTokenExpired === next.onTokenExpired
+    prev.onTokenExpired === next.onTokenExpired,
 );
 
 const CameraListGrid: React.FC = () => {
@@ -255,12 +255,12 @@ const CameraListGrid: React.FC = () => {
   const separatorColor = useSeparatorColor();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
-  const { cameras = [] } = route.params ?? {};
+  const { cameras = [], zoneName } = route.params ?? {};
   const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();
 
   const [layoutCount, setLayoutCount] = React.useState(16);
-  const [activeIndex, setActiveIndex] = React.useState(0);
+  const [activeIndex, setActiveIndex] = React.useState(-1);
   const [page, setPage] = React.useState(0);
   const [isMuted, setIsMuted] = React.useState(false);
   const [isPaused, setIsPaused] = React.useState(false);
@@ -283,7 +283,7 @@ const CameraListGrid: React.FC = () => {
   const handleContentLayout = React.useCallback((event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
     setContentLayout((prev) =>
-      prev.width === width && prev.height === height ? prev : { width, height }
+      prev.width === width && prev.height === height ? prev : { width, height },
     );
   }, []);
 
@@ -295,7 +295,7 @@ const CameraListGrid: React.FC = () => {
 
   const [fsVideoKey, setFsVideoKey] = React.useState(0);
   const [pendingThumbUrl, setPendingThumbUrl] = React.useState<string | null>(
-    null
+    null,
   );
   const [pageChangeKey, setPageChangeKey] = React.useState(0);
   const [focusKey, setFocusKey] = React.useState(0);
@@ -330,7 +330,7 @@ const CameraListGrid: React.FC = () => {
   const webviewMissCountRef = React.useRef<Record<string, number>>({});
   const lastProgressRef = React.useRef<number>(Date.now());
   const androidFallbackRef = React.useRef<ReturnType<typeof setTimeout> | null>(
-    null
+    null,
   );
   const androidWatchdogRef = React.useRef<ReturnType<
     typeof setInterval
@@ -394,7 +394,7 @@ const CameraListGrid: React.FC = () => {
       : null);
   const visiblePageIndexes = React.useMemo(
     () => getVisiblePageIndexes(page, totalPages),
-    [page, totalPages]
+    [page, totalPages],
   );
 
   React.useEffect(() => {
@@ -525,7 +525,7 @@ const CameraListGrid: React.FC = () => {
         setCameraWebViewTokenAndStart(nextRef, token);
       }, 150);
     },
-    [cameraTokenRef]
+    [cameraTokenRef],
   );
 
   const webviewRestartRef = React.useRef(restartGridWebView);
@@ -571,7 +571,7 @@ const CameraListGrid: React.FC = () => {
         postCameraWebViewMessage(ref, isMuted ? "mute" : "unmute");
       });
     },
-    [cameraTokenRef, cameras, isMuted, isPaused, liveCellLimit, perPage]
+    [cameraTokenRef, cameras, isMuted, isPaused, liveCellLimit, perPage],
   );
 
   const scheduleVisibleAndroidLiveStartRetries = React.useCallback(
@@ -583,10 +583,10 @@ const CameraListGrid: React.FC = () => {
         (delay) =>
           setTimeout(() => {
             startVisibleAndroidLiveStreams(pageSnapshot);
-          }, delay)
+          }, delay),
       );
     },
-    [clearAndroidLiveStartRetries, startVisibleAndroidLiveStreams]
+    [clearAndroidLiveStartRetries, startVisibleAndroidLiveStreams],
   );
 
   useFocusEffect(
@@ -608,7 +608,7 @@ const CameraListGrid: React.FC = () => {
       fetchCameraTokenRef,
       startAllStreams,
       stopAllStreams,
-    ])
+    ]),
   );
 
   React.useEffect(() => {
@@ -691,7 +691,7 @@ const CameraListGrid: React.FC = () => {
   React.useEffect(() => {
     postCameraWebViewMessage(
       fullscreenWebViewRef.current,
-      isFullMuted ? "mute" : "unmute"
+      isFullMuted ? "mute" : "unmute",
     );
   }, [isFullMuted]);
 
@@ -829,7 +829,7 @@ const CameraListGrid: React.FC = () => {
   const portraitGridBaselineH = portraitScreenW / PORTRAIT_CELL_ASPECT;
   const portraitGridMaxH = Math.min(
     portraitGridBaselineH,
-    Math.max(screenDims.width, screenDims.height) * 0.6
+    Math.max(screenDims.width, screenDims.height) * 0.6,
   );
   const portraitCellWByWidth = portraitScreenW / cols;
   const portraitCellHByHeight = portraitGridMaxH / rows;
@@ -837,7 +837,7 @@ const CameraListGrid: React.FC = () => {
   // Giữ tỉ lệ 4:3 nhưng đảm bảo không vượt quá chiều cao cho phép
   const portraitCellH = Math.min(
     portraitCellWByWidth / PORTRAIT_CELL_ASPECT,
-    portraitCellHByHeight
+    portraitCellHByHeight,
   );
 
   const portraitCellW = portraitScreenW / cols;
@@ -864,11 +864,11 @@ const CameraListGrid: React.FC = () => {
       stopAllStreams();
       clearGridWebViewRefs();
       setPage(newPage);
-      setActiveIndex(0);
+      setActiveIndex(-1);
       setGridRenderKey((k) => k + 1);
       setPageChangeKey((k) => k + 1);
     },
-    [clearAndroidLiveStartRetries, clearGridWebViewRefs, stopAllStreams]
+    [clearAndroidLiveStartRetries, clearGridWebViewRefs, stopAllStreams],
   );
 
   const swipeGesture = Gesture.Pan()
@@ -925,7 +925,7 @@ const CameraListGrid: React.FC = () => {
     stopAllStreams();
     setLayoutCount(count);
     setPage(0);
-    setActiveIndex(0);
+    setActiveIndex(-1);
     setShowLayoutPicker(false);
     setGridRenderKey((k) => k + 1);
     setPageChangeKey((k) => k + 1);
@@ -962,7 +962,7 @@ const CameraListGrid: React.FC = () => {
         Orientation.lockToPortrait();
       }
       setPendingThumbUrl(
-        getCameraSnapshotUrl(cam.iD_Camera_Ma, thumbTimestamp)
+        getCameraSnapshotUrl(cam.iD_Camera_Ma, thumbTimestamp),
       );
       setActiveIndex(idx);
       setVideoReady(false);
@@ -979,7 +979,7 @@ const CameraListGrid: React.FC = () => {
       fsTranslateX,
       startAndroidFallback,
       thumbTimestamp,
-    ]
+    ],
   );
 
   const switchFullscreenCamera = React.useCallback(
@@ -995,7 +995,7 @@ const CameraListGrid: React.FC = () => {
       const nextLocalIndex = nextIndex % perPage;
 
       setPendingThumbUrl(
-        getCameraSnapshotUrl(nextCam.iD_Camera_Ma, thumbTimestamp)
+        getCameraSnapshotUrl(nextCam.iD_Camera_Ma, thumbTimestamp),
       );
       setVideoReady(false);
       setFsVideoKey(0);
@@ -1014,7 +1014,7 @@ const CameraListGrid: React.FC = () => {
       }).start();
       if (Platform.OS === "android") startAndroidFallback();
     },
-    [cameras, fsTranslateX, perPage, startAndroidFallback, SW, thumbTimestamp]
+    [cameras, fsTranslateX, perPage, startAndroidFallback, SW, thumbTimestamp],
   );
 
   const handleFullscreenSwipe = React.useCallback(
@@ -1059,7 +1059,7 @@ const CameraListGrid: React.FC = () => {
       fullscreenIndex,
       switchFullscreenCamera,
       SW,
-    ]
+    ],
   );
 
   const fullscreenSwipeGesture = React.useMemo(
@@ -1077,7 +1077,7 @@ const CameraListGrid: React.FC = () => {
           fsTranslateX.setValue(
             isPullingPastStart || isPullingPastEnd
               ? e.translationX * 0.2
-              : e.translationX
+              : e.translationX,
           );
         })
         .onEnd((e) => {
@@ -1111,25 +1111,36 @@ const CameraListGrid: React.FC = () => {
             }).start();
           }
         }),
-    [SW, cameras.length, fsTranslateX, fullscreenIndex, handleFullscreenSwipe]
+    [SW, cameras.length, fsTranslateX, fullscreenIndex, handleFullscreenSwipe],
   );
 
+  const activeCam = pagedCameras[activeIndex] ?? null;
+
+  const openPlayback = React.useCallback(() => {
+    const cam = pagedCamerasRef.current[activeIndex];
+    if (!cam) return;
+
+    navigation.navigate("CameraPlayback", { camera: cam, zoneName });
+  }, [activeIndex, navigation, zoneName]);
+
   const handleSnapshot = React.useCallback(async () => {
-    const activeCam = pagedCamerasRef.current[activeIndex];
+    const snapshotCam = pagedCamerasRef.current[activeIndex];
     const token = cameraTokenRef.current;
-    if (!activeCam || !token) return;
+    if (!snapshotCam || !token) return;
     try {
       if (Platform.OS === "android") {
         const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE
+          PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
         );
         if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
           Alert.alert("Không có quyền", "Cần quyền lưu trữ để chụp ảnh.");
           return;
         }
       }
+
+      // test _snap -> _sub
       const url = `${GO2RTC_HOST}/api/frame.jpeg?src=${
-        activeCam.iD_Camera_Ma
+        snapshotCam.iD_Camera_Ma
       }_snap&t=${Date.now()}`;
       const res = await externalFetch(url, {
         headers: { Authorization: `Bearer ${token}` },
@@ -1193,7 +1204,7 @@ const CameraListGrid: React.FC = () => {
     InteractionManager.runAfterInteractions(() => {
       if (!isFocusedRef.current) return;
       Object.values(webviewRefs.current).forEach((ref) =>
-        ref?.postMessage?.("start")
+        ref?.postMessage?.("start"),
       );
     });
   }, [
@@ -1236,12 +1247,12 @@ const CameraListGrid: React.FC = () => {
 
   const fullscreenDoubleTapGesture = React.useMemo(
     () => Gesture.Tap().runOnJS(true).numberOfTaps(2).onEnd(closeFullscreen),
-    [closeFullscreen]
+    [closeFullscreen],
   );
   const fullscreenGesture = React.useMemo(
     () =>
       Gesture.Simultaneous(fullscreenSwipeGesture, fullscreenDoubleTapGesture),
-    [fullscreenDoubleTapGesture, fullscreenSwipeGesture]
+    [fullscreenDoubleTapGesture, fullscreenSwipeGesture],
   );
 
   if (tokenErrorMessage) {
@@ -1383,13 +1394,15 @@ const CameraListGrid: React.FC = () => {
           <View style={styles.divider} />
           <View style={styles.actionContainer}>
             <TouchableOpacity
-              style={[styles.playbackBtn, styles.playbackBtnDisabled]}
-              disabled
+              style={[
+                styles.playbackBtn,
+                !activeCam && styles.playbackBtnDisabled,
+              ]}
+              disabled={!activeCam}
+              onPress={openPlayback}
             >
-              <Ionicons name="play" size={16} color={C.placeholder} />
-              <Text style={[styles.playbackText, styles.playbackTextDisabled]}>
-                Phát lại
-              </Text>
+              <Ionicons name="play" size={16} color={C.onBrand} />
+              <Text style={styles.playbackText}>Phát lại</Text>
             </TouchableOpacity>
             <View style={styles.iconGroup}>
               <TouchableOpacity style={styles.iconBtn} onPress={handleSnapshot}>
@@ -1614,7 +1627,7 @@ const CameraListGrid: React.FC = () => {
                       ref={fullscreenWebViewRef}
                       source={{
                         html: buildCameraFullscreenHTML(
-                          fullscreenCam.iD_Camera_Ma
+                          fullscreenCam.iD_Camera_Ma,
                         ),
                         baseUrl: GO2RTC_HOST,
                       }}
@@ -1636,7 +1649,7 @@ const CameraListGrid: React.FC = () => {
                       onLoad={() => {
                         postCameraWebViewToken(
                           fullscreenWebViewRef.current,
-                          cameraToken
+                          cameraToken,
                         );
                       }}
                       onMessage={(e) => {

@@ -66,7 +66,7 @@ function resetFrozenWatchdog(){
   frozenTimer=setTimeout(()=>{if(!stopped)scheduleReconnect();},10000);
 }
 function stopAll(){
-  stopped=true;connecting=false;clearTimers();pcId++;
+  stopped=true;connecting=false;notified=false;lastTime=-1;clearTimers();pcId++;
   if(pc){try{pc.close();}catch(e){}pc=null;}
   v.srcObject=null;
 }
@@ -256,7 +256,7 @@ container.addEventListener('touchend',e=>{
 
 let pc=null,reconnectTimer=null,frozenTimer=null;
 let backoffMs=1000;const MAX_BACKOFF=10000;
-let lastTime=-1,connecting=false,stopped=false,notified=false,pcId=0;
+let lastTime=-1,connecting=false,stopped=false,stoppedByNetwork=false,notified=false,pcId=0;
 
 function notifyReady(){if(notified)return;notified=true;window.ReactNativeWebView.postMessage('ready');}
 function clearTimers(){
@@ -337,15 +337,27 @@ v.addEventListener('timeupdate',()=>{
   });
 });
 setTimeout(notifyReady,6000);
-window.addEventListener('offline',()=>{stopAll();});
-window.addEventListener('online',()=>{if(!stopped){stopped=false;backoffMs=1000;connect();}});
+window.addEventListener('offline',()=>{
+  stoppedByNetwork=!stopped;
+  stopAll();
+});
+window.addEventListener('online',()=>{
+  if(!stoppedByNetwork)return;
+  stoppedByNetwork=false;
+  stopped=false;
+  backoffMs=1000;
+  connect();
+});
 function handleMsg(d){
   try{
     const m=typeof d==='string'?JSON.parse(d):d;
     if(m.type==='token'){TOKEN=m.value;stopped=false;backoffMs=1000;connect();return;}
   }catch(e){}
-  if(d==='stop'){stopAll();}
+  if(d==='stop'){stoppedByNetwork=false;stopAll();}
+  else if(d==='pause'){try{v.pause();}catch(e){}}
+  else if(d==='resume'){try{v.play();}catch(e){}}
   else if(d==='start'){
+    stoppedByNetwork=false;
     const wasStopped=stopped;
     stopped=false;backoffMs=1000;
     if(TOKEN&&wasStopped){connect();}

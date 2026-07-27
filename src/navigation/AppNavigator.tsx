@@ -5,6 +5,7 @@ import Tabs from "./Tabs";
 import VehicleJourneyMapScreen from "../screens/Home/VehicleJourneyMapScreen";
 import VehicleTrackingMapScreen from "../screens/Home/VehicleTrackingMapScreen";
 import VehicleCurrentLocationScreen from "../screens/Home/VehicleCurrentLocationScreen";
+import CameraPlaybackScreen from "../screens/Camera/CameraPlaybackScreen";
 import { getScreenTitle, headerWithBack } from "./shared/navigationOptions";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -13,6 +14,7 @@ export default function AppNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Tabs" component={Tabs} />
+      <Stack.Screen name="CameraPlayback" component={CameraPlaybackScreen} />
       <Stack.Screen
         name="VehicleJourneyMap"
         component={VehicleJourneyMapScreen}

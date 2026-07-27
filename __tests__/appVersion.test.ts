@@ -8,6 +8,7 @@ import {
 describe("app version helpers", () => {
   it("detects newer marketing versions", () => {
     expect(isNewerVersion("2.1", "2.2")).toBe(true);
+    expect(isNewerVersion("2.2", "2.2")).toBe(false);
     expect(isNewerVersion("2.3", "2.2")).toBe(false);
   });
 

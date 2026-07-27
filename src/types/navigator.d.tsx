@@ -167,6 +167,10 @@ export type RootStackParamList = {
     zoneName?: string;
     cameras?: CameraRouteItem[];
   };
+  CameraPlayback: {
+    camera: CameraRouteItem;
+    zoneName?: string;
+  };
 
   AssetList: {
     nameClass?: string;

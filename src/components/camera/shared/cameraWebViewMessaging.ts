@@ -29,6 +29,18 @@ export const stopCameraWebView = (ref: CameraWebViewLike) => {
   postCameraWebViewMessage(ref, "stop");
 };
 
+/**
+ * Tạm dừng nhưng KHÔNG ngắt kết nối: `stop` gọi stopAll() và xoá srcObject nên
+ * khung hình thành đen, còn `pause` chỉ dừng thẻ video và giữ lại khung cuối.
+ */
+export const pauseCameraWebView = (ref: CameraWebViewLike) => {
+  postCameraWebViewMessage(ref, "pause");
+};
+
+export const resumeCameraWebView = (ref: CameraWebViewLike) => {
+  postCameraWebViewMessage(ref, "resume");
+};
+
 export const setCameraWebViewTokenAndStart = (
   ref: CameraWebViewLike,
   token: string,

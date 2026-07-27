@@ -1,8 +1,5 @@
 import { Buffer } from "buffer";
-import {
-  GO2RTC_HOST,
-  TOKEN_REFRESH_THRESHOLD_MS,
-} from "./cameraStreamConfig";
+import { GO2RTC_HOST, TOKEN_REFRESH_THRESHOLD_MS } from "./cameraStreamConfig";
 
 export const decodeTokenExpiry = (token: string): number | null => {
   try {
@@ -24,11 +21,13 @@ export const isTokenStillValid = (token: string): boolean => {
   return exp - Date.now() > TOKEN_REFRESH_THRESHOLD_MS;
 };
 
+// test _snap -> sub
 export const getCameraSnapshotUrl = (
   cameraCode: string,
   timestamp: number,
   extraQuery = "",
-) => `${GO2RTC_HOST}/api/frame.jpeg?src=${cameraCode}_snap&t=${timestamp}${extraQuery}`;
+) =>
+  `${GO2RTC_HOST}/api/frame.jpeg?src=${cameraCode}_snap&t=${timestamp}${extraQuery}`;
 
 export const getCameraHlsUrl = (cameraCode: string) =>
   `${GO2RTC_HOST}/api/stream.m3u8?src=${cameraCode}_main&mp4=flac`;

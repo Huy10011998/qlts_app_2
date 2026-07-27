@@ -10,4 +10,5 @@ export * from "./commonApi";
 export * from "./vehicleApi";
 export * from "./dhcdApi";
 export * from "./cameraApi";
+export * from "./playbackApi";
 export * from "./reportApi";
