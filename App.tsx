@@ -19,7 +19,11 @@ import { Colors } from "./src/constants/Colors";
 import { C } from "./src/utils/helpers/colors";
 import { ThemeProvider } from "./src/context/ThemeContext";
 
-const LANDSCAPE_ALLOWED_ROUTES = new Set(["CameraList", "CameraListGrid"]);
+const LANDSCAPE_ALLOWED_ROUTES = new Set([
+  "CameraList",
+  "CameraListGrid",
+  "CameraPlayback",
+]);
 
 configureTextScalingDefaults();
 

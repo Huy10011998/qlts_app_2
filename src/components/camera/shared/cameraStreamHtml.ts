@@ -345,6 +345,8 @@ function handleMsg(d){
     if(m.type==='token'){TOKEN=m.value;stopped=false;backoffMs=1000;connect();return;}
   }catch(e){}
   if(d==='stop'){stopAll();}
+  else if(d==='pause'){try{v.pause();}catch(e){}}
+  else if(d==='resume'){try{v.play();}catch(e){}}
   else if(d==='start'){
     const wasStopped=stopped;
     stopped=false;backoffMs=1000;

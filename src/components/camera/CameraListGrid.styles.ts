@@ -1,5 +1,6 @@
 import { StyleSheet } from "react-native";
 import { C } from "../../utils/helpers/colors";
+import { CAMERA_FULLSCREEN_EDGE_INSET } from "./shared/cameraStreamConfig";
 
 export const styles = StyleSheet.create({
   root: { flex: 1 },
@@ -107,20 +108,21 @@ export const styles = StyleSheet.create({
   playbackBtn: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: C.surfaceAlt,
+    backgroundColor: C.red,
     borderRadius: 30,
     paddingHorizontal: 22,
     paddingVertical: 12,
     marginRight: 20,
   },
+  // Khi chưa chọn camera thì mờ cả nút — giữ chữ/icon trắng để không bị chìm
+  // trên nền đỏ.
   playbackBtnDisabled: { opacity: 0.5 },
   playbackText: {
     marginLeft: 6,
     fontSize: 15,
     fontWeight: "600",
-    color: C.text,
+    color: C.onBrand,
   },
-  playbackTextDisabled: { color: C.placeholder },
   iconGroup: { flex: 1, flexDirection: "row", justifyContent: "space-between" },
   iconBtn: {
     width: 44,
@@ -226,8 +228,8 @@ export const styles = StyleSheet.create({
     zIndex: 10,
   },
   fsHeaderBtn: { padding: 6 },
-  fsHeaderLandscape: { paddingTop: 48 },
-  fsHeaderPortrait: { paddingTop: 48 },
+  fsHeaderLandscape: { paddingTop: CAMERA_FULLSCREEN_EDGE_INSET },
+  fsHeaderPortrait: { paddingTop: CAMERA_FULLSCREEN_EDGE_INSET },
   fsTitle: {
     flex: 1,
     color: "#fff",
@@ -247,8 +249,8 @@ export const styles = StyleSheet.create({
     left: 0,
     right: 0,
   },
-  fsFooterLandscape: { paddingBottom: 48 },
-  fsFooterPortrait: { paddingBottom: 48 },
+  fsFooterLandscape: { paddingBottom: CAMERA_FULLSCREEN_EDGE_INSET },
+  fsFooterPortrait: { paddingBottom: CAMERA_FULLSCREEN_EDGE_INSET },
   fsPagerText: { color: "#fff", fontSize: 14, fontWeight: "700" },
   visibleVideo: { opacity: 1 },
   hiddenVideo: { opacity: 0 },
