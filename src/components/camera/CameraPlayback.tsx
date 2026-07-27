@@ -1,5 +1,6 @@
 import React from "react";
 import {
+  BackHandler,
   Platform,
   Pressable,
   ScrollView,
@@ -9,11 +10,13 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   View,
+  type GestureResponderEvent,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from "react-native";
-import Video from "react-native-video";
+import Video, { type VideoRef } from "react-native-video";
 import WebView from "react-native-webview";
+import LinearGradient from "react-native-linear-gradient";
 import {
   useFocusEffect,
   useIsFocused,
@@ -32,6 +35,7 @@ import PlaybackDateSheet from "./shared/PlaybackDateSheet";
 import PlaybackSpeedSheet from "./shared/PlaybackSpeedSheet";
 import PlaybackTimeline from "./shared/PlaybackTimeline";
 import { useCameraViewToken } from "./shared/useCameraViewToken";
+import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { buildCameraFullscreenHTML } from "./shared/cameraStreamHtml";
 import {
   pauseCameraWebView,
@@ -44,17 +48,31 @@ import { GO2RTC_HOST } from "./shared/cameraStreamConfig";
 import { getCameraHlsUrl } from "./shared/cameraStreamUtils";
 import {
   addDays,
-  buildMockClipGroups,
+  buildPlaybackClipGroups,
   DEFAULT_PLAYBACK_SPEED,
   formatClock,
+  formatElapsed,
   getPlaybackDateLabel,
   getPlaybackSpeedBadge,
   getScrubSecAtOffset,
   getTimelineOffsetForSec,
+  getTotalClipCount,
   startOfDay,
+  type PlaybackClip,
   type PlaybackClipGroup,
   type PlaybackSpeed,
 } from "./shared/cameraPlaybackHelpers";
+import {
+  getPlaybackDayRange,
+  getPlaybackRecordings,
+  getPlaybackRecordingDays,
+  getPlaybackWebSocketUrl,
+  resolvePlaybackHlsUrl,
+  startPlaybackSession,
+  stopPlaybackSession,
+  type PlaybackSession,
+} from "../../services/data/playbackApi";
+import { warn } from "../../utils/Logger";
 import {
   PLAYER_ASPECT_RATIO,
   styles,
@@ -63,16 +81,25 @@ import {
   TIMELINE_TOP_MARGIN,
 } from "./CameraPlayback.styles";
 
-const PROGRESS_TICK_MS = 500;
 /** Nút điều khiển trên video tự ẩn sau khoảng này; chạm vào cam để hiện lại. */
 const CONTROLS_AUTO_HIDE_MS = 4000;
-/** Thời gian chờ trước khi dựng lại player Android sau lỗi stream. */
-const ANDROID_VIDEO_RETRY_MS = 5000;
+const PLAYBACK_START_RETRY_MS = 700;
+const LIVE_RECORDINGS_REFRESH_MS = 30000;
 /** Cuộn timeline quá mức này thì coi như đang tua, hiện nút xem trực tiếp. */
 const LIVE_RETURN_SCROLL_THRESHOLD = 24;
 const TIMELINE_SCALE_STEP = 0.25;
 const TIMELINE_SCALE_MIN = 0.5;
 const TIMELINE_SCALE_MAX = 2;
+const ANDROID_LIVE_WATCHDOG_INTERVAL_MS = 6000;
+const ANDROID_LIVE_STALE_AFTER_MS = 18000;
+/**
+ * Camera chết/mất mạng thì onError bắn liên tục. Giãn dần thời gian thử lại để
+ * không remount player mỗi 2s vô hạn (tốn pin, tốn data), và sau vài lần liên
+ * tiếp thì nói cho người dùng biết thay vì để spinner xoay mãi.
+ */
+const LIVE_RETRY_BASE_MS = 2000;
+const LIVE_RETRY_MAX_MS = 15000;
+const LIVE_ERROR_NOTICE_AFTER = 3;
 
 const CameraPlayback: React.FC = () => {
   const route = useRoute<any>();
@@ -98,6 +125,9 @@ const CameraPlayback: React.FC = () => {
   const [openedGroupId, setOpenedGroupId] = React.useState<string | null>(null);
   // Một cờ tạm dừng duy nhất cho cả stream trực tiếp và tiến trình phát mô phỏng.
   const [isPaused, setIsPaused] = React.useState(false);
+  // Bản ghi đã phát hết: nút play phải phát lại từ đầu chứ không chỉ bỏ pause
+  // (player đã ở cuối stream nên bỏ pause không làm gì).
+  const [isClipEnded, setIsClipEnded] = React.useState(false);
   const [positionSec, setPositionSec] = React.useState(0);
   const [speed, setSpeed] = React.useState<PlaybackSpeed>(
     DEFAULT_PLAYBACK_SPEED
@@ -113,18 +143,57 @@ const CameraPlayback: React.FC = () => {
   const [controlsNonce, setControlsNonce] = React.useState(0);
   const [timelineOffsetY, setTimelineOffsetY] = React.useState(0);
   const [isVideoReady, setIsVideoReady] = React.useState(false);
-  const [androidVideoKey, setAndroidVideoKey] = React.useState(0);
   const [isAppActive, setIsAppActive] = React.useState(true);
+  const [liveNowMs, setLiveNowMs] = React.useState(() => Date.now());
+  const [recordings, setRecordings] = React.useState<
+    Array<{ startMs: number; endMs: number }>
+  >([]);
+  const [recordingDays, setRecordingDays] = React.useState<number[]>([]);
+  const [isRecordingsLoading, setIsRecordingsLoading] = React.useState(true);
+  const [recordingsError, setRecordingsError] = React.useState<string | null>(
+    null
+  );
+  const [loadedRecordingsDayStartMs, setLoadedRecordingsDayStartMs] =
+    React.useState<number | null>(null);
+  const [isConnecting, setIsConnecting] = React.useState(false);
+  const [playbackSession, setPlaybackSession] =
+    React.useState<PlaybackSession | null>(null);
+  const [playbackError, setPlaybackError] = React.useState<string | null>(null);
+  const [progressPreviewRatio, setProgressPreviewRatio] = React.useState<
+    number | null
+  >(null);
+  const [liveVideoKey, setLiveVideoKey] = React.useState(0);
+  const [networkReconnectNonce, setNetworkReconnectNonce] = React.useState(0);
 
+  const videoRef = React.useRef<VideoRef>(null);
   const liveWebViewRef = React.useRef<WebView>(null);
   const timelineScrollRef = React.useRef<ScrollView>(null);
   const viewOffsetsRef = React.useRef<Record<"timeline" | "grid", number>>({
     timeline: 0,
     grid: 0,
   });
-  const androidRetryRef = React.useRef<ReturnType<typeof setTimeout> | null>(
-    null
-  );
+  const sessionRef = React.useRef<PlaybackSession | null>(null);
+  const playbackStartMsRef = React.useRef<number | null>(null);
+  const currentPositionRef = React.useRef(0);
+  const webSocketRef = React.useRef<WebSocket | null>(null);
+  const pingTimerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+  const timelineSeekTimerRef = React.useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
+  const liveRetryTimerRef = React.useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
+  const isTimelineDraggingRef = React.useRef(false);
+  const startRequestIdRef = React.useRef(0);
+  const progressTrackWidthRef = React.useRef(0);
+  const lastLiveProgressAtRef = React.useRef(Date.now());
+  const liveErrorCountRef = React.useRef(0);
+  const activeClipRef = React.useRef<PlaybackClip | null>(null);
+  const reconnectIntentRef = React.useRef<
+    | { mode: "live" }
+    | { mode: "playback"; fromMs: number; endMs: number }
+    | null
+  >(null);
 
   // useCallback để listener AppState trong useCameraViewToken không phải
   // subscribe lại mỗi lần render.
@@ -158,74 +227,52 @@ const CameraPlayback: React.FC = () => {
     }, [clearTokenRefreshTimer, fetchCameraTokenRef])
   );
 
-  const today = React.useMemo(() => startOfDay(new Date()), []);
-  const dayOffset = React.useMemo(
-    () =>
-      Math.round(
-        (selectedDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000)
-      ),
-    [selectedDate, today]
+  // Suy ra từ đồng hồ live thay vì chốt lúc mount: nếu app mở qua nửa đêm thì
+  // "hôm nay" phải đổi theo, nếu không mũi tên ngày sau vẫn bị chặn ở ngày cũ.
+  // Vẫn là useMemo theo mốc ms nên identity chỉ đổi mỗi lần sang ngày mới.
+  const todayMs = startOfDay(new Date(liveNowMs)).getTime();
+  const today = React.useMemo(() => new Date(todayMs), [todayMs]);
+  const { dayStartMs, dayEndMs } = React.useMemo(
+    () => getPlaybackDayRange(selectedDate),
+    [selectedDate]
   );
-
   const clipGroups = React.useMemo(
-    () => buildMockClipGroups(dayOffset),
-    [dayOffset]
+    () => buildPlaybackClipGroups(recordings, dayStartMs),
+    [dayStartMs, recordings]
   );
 
   const activeGroup = React.useMemo(
     () => clipGroups.find((group) => group.id === activeGroupId) ?? null,
     [activeGroupId, clipGroups]
   );
+  const activeClip = React.useMemo(
+    () =>
+      activeGroup?.clips.find((clip) => clip.id === activeClipId) ?? null,
+    [activeClipId, activeGroup]
+  );
 
-  // Đổi ngày thì bản ghi đang phát không còn hợp lệ.
   React.useEffect(() => {
-    setActiveGroupId(null);
-    setActiveClipId(null);
-    setOpenedGroupId(null);
-    setPositionSec(0);
-    setTimelineOffsetY(0);
-    viewOffsetsRef.current = { timeline: 0, grid: 0 };
-    timelineScrollRef.current?.scrollTo({ y: 0, animated: false });
-  }, [dayOffset]);
+    activeClipRef.current = activeClip;
+  }, [activeClip]);
 
-  /* ── Tiến trình phát (mô phỏng — chưa có API playback) ────────────── */
-  React.useEffect(() => {
-    if (isPaused || !activeGroup) return;
-
-    const timer = setInterval(() => {
-      setPositionSec((prev) => {
-        const next = prev + (PROGRESS_TICK_MS / 1000) * speed;
-
-        if (next >= activeGroup.durationSec) {
-          setIsPaused(true);
-          return activeGroup.durationSec;
-        }
-
-        return next;
-      });
-    }, PROGRESS_TICK_MS);
-
-    return () => clearInterval(timer);
-  }, [activeGroup, isPaused, speed]);
-
-  /* ── Stream trực tiếp: đồng bộ trạng thái phát cho iOS ───────────── */
   const isScreenVisible = isFocused && isAppActive;
-  const isLiveActive = isScreenVisible && !isPaused;
+
+  React.useEffect(() => {
+    if (!isScreenVisible || playbackSession) return;
+
+    setLiveNowMs(Date.now());
+    const timer = setInterval(() => setLiveNowMs(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [isScreenVisible, playbackSession]);
 
   React.useEffect(() => {
     if (Platform.OS !== "ios") return;
 
     const webView = liveWebViewRef.current;
-
-    // Rời màn hoặc app xuống nền: ngắt hẳn kết nối cho đỡ tốn băng thông —
-    // lúc này khung hình có đen cũng không ai thấy.
-    if (!isScreenVisible) {
+    if (playbackSession || !isScreenVisible) {
       stopCameraWebView(webView);
       return;
     }
-
-    // Người dùng bấm tạm dừng: chỉ pause thẻ video để giữ lại khung hình cuối.
-    // Gọi 'stop' ở đây sẽ xoá srcObject và làm màn hình đen thui.
     if (isPaused) {
       pauseCameraWebView(webView);
       return;
@@ -233,18 +280,216 @@ const CameraPlayback: React.FC = () => {
 
     startCameraWebView(webView);
     resumeCameraWebView(webView);
-  }, [isPaused, isScreenVisible]);
+  }, [isPaused, isScreenVisible, playbackSession]);
 
   React.useEffect(() => {
-    if (Platform.OS !== "ios" || !cameraToken) return;
+    if (Platform.OS !== "ios" || playbackSession || !cameraToken) return;
     postCameraWebViewToken(liveWebViewRef.current, cameraToken);
-  }, [cameraToken]);
+  }, [cameraToken, playbackSession]);
+
+  const closePlaybackSocket = React.useCallback(() => {
+    if (pingTimerRef.current) {
+      clearInterval(pingTimerRef.current);
+      pingTimerRef.current = null;
+    }
+    if (webSocketRef.current) {
+      webSocketRef.current.onclose = null;
+      webSocketRef.current.onerror = null;
+      webSocketRef.current.close();
+      webSocketRef.current = null;
+    }
+  }, []);
+
+  const stopCurrentSession = React.useCallback(
+    (resetPlayer = true) => {
+      startRequestIdRef.current += 1;
+      closePlaybackSocket();
+
+      const currentSession = sessionRef.current;
+      const wasPlayingBack =
+        currentSession !== null || playbackStartMsRef.current !== null;
+      sessionRef.current = null;
+      if (currentSession)
+        stopPlaybackSession(currentSession.sessionId).catch(() => {});
+
+      if (resetPlayer) {
+        setPlaybackSession(null);
+        playbackStartMsRef.current = null;
+        currentPositionRef.current = 0;
+        setPositionSec(0);
+        setProgressPreviewRatio(null);
+        setIsClipEnded(false);
+        if (wasPlayingBack) setIsVideoReady(false);
+        setIsConnecting(false);
+      }
+    },
+    [closePlaybackSocket]
+  );
+
+  const openPlaybackSocket = React.useCallback(
+    (sessionId: string, playbackSpeed: PlaybackSpeed) => {
+      closePlaybackSocket();
+
+      try {
+        const socket = new WebSocket(getPlaybackWebSocketUrl(sessionId));
+        webSocketRef.current = socket;
+
+        const sendPosition = () => {
+          if (
+            socket.readyState !== WebSocket.OPEN ||
+            playbackStartMsRef.current === null
+          )
+            return;
+
+          socket.send(
+            String(
+              Math.round(
+                playbackStartMsRef.current +
+                  currentPositionRef.current * 1000
+              )
+            )
+          );
+        };
+
+        socket.onopen = () => {
+          sendPosition();
+          const positionIntervalMs =
+            playbackSpeed >= 4 ? 500 : playbackSpeed >= 2 ? 1000 : 2000;
+          pingTimerRef.current = setInterval(
+            sendPosition,
+            positionIntervalMs
+          );
+        };
+        socket.onclose = () => {
+          if (pingTimerRef.current) clearInterval(pingTimerRef.current);
+          pingTimerRef.current = null;
+        };
+        socket.onerror = socket.onclose;
+      } catch (error) {
+        warn("Playback WebSocket error:", error);
+      }
+    },
+    [closePlaybackSocket]
+  );
+
+  // Chỉ reset lựa chọn/player khi đổi camera hoặc đổi ngày. Refresh token
+  // (đặc biệt sau khi có mạng lại) không được xoá mốc playback đang xem.
+  React.useEffect(() => {
+    reconnectIntentRef.current = null;
+    stopCurrentSession();
+    setActiveGroupId(null);
+    setActiveClipId(null);
+    setOpenedGroupId(null);
+    setIsPaused(false);
+    setPlaybackError(null);
+    setRecordingsError(null);
+    setIsRecordingsLoading(true);
+    setLoadedRecordingsDayStartMs(null);
+    setTimelineOffsetY(0);
+    viewOffsetsRef.current = { timeline: 0, grid: 0 };
+    timelineScrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [camera?.iD_Camera_Ma, dayStartMs, stopCurrentSession]);
+
+  React.useEffect(() => {
+    if (!cameraToken || !camera?.iD_Camera_Ma) return;
+
+    let cancelled = false;
+    setRecordingsError(null);
+    setIsRecordingsLoading(true);
+
+    getPlaybackRecordings(
+      camera.iD_Camera_Ma,
+      cameraToken,
+      dayStartMs,
+      dayEndMs
+    )
+      .then((nextRecordings) => {
+        if (!cancelled) {
+          setRecordings(nextRecordings);
+          setLoadedRecordingsDayStartMs(dayStartMs);
+        }
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setRecordings([]);
+        setLoadedRecordingsDayStartMs(dayStartMs);
+        setRecordingsError(
+          error instanceof Error
+            ? error.message
+            : "Không thể tải danh sách bản ghi."
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setIsRecordingsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    camera?.iD_Camera_Ma,
+    cameraToken,
+    dayEndMs,
+    dayStartMs,
+    networkReconnectNonce,
+  ]);
+
+  // Đoạn ghi hiện tại tiếp tục dài ra khi đang xem live. Tải lại nhẹ theo
+  // chu kỳ để timeline nhận thêm segment mới mà không cần vào lại màn hình.
+  React.useEffect(() => {
+    if (
+      !isScreenVisible ||
+      playbackSession ||
+      !cameraToken ||
+      !camera?.iD_Camera_Ma ||
+      selectedDate.getTime() !== today.getTime()
+    )
+      return;
+
+    let cancelled = false;
+    let refreshing = false;
+    const refresh = async () => {
+      if (refreshing) return;
+      refreshing = true;
+      try {
+        const range = getPlaybackDayRange(selectedDate);
+        const nextRecordings = await getPlaybackRecordings(
+          camera.iD_Camera_Ma,
+          cameraToken,
+          range.dayStartMs,
+          range.dayEndMs
+        );
+        if (!cancelled) setRecordings(nextRecordings);
+      } catch {
+        // Poll nền thất bại không thay dữ liệu/lỗi đang hiển thị.
+      } finally {
+        refreshing = false;
+      }
+    };
+
+    const timer = setInterval(refresh, LIVE_RECORDINGS_REFRESH_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [
+    camera?.iD_Camera_Ma,
+    cameraToken,
+    isScreenVisible,
+    playbackSession,
+    selectedDate,
+    today,
+  ]);
 
   React.useEffect(
     () => () => {
-      if (androidRetryRef.current) clearTimeout(androidRetryRef.current);
+      if (timelineSeekTimerRef.current)
+        clearTimeout(timelineSeekTimerRef.current);
+      if (liveRetryTimerRef.current)
+        clearTimeout(liveRetryTimerRef.current);
+      stopCurrentSession(false);
     },
-    []
+    [stopCurrentSession]
   );
 
   /* ── Nút trên video: hiện vài giây rồi tự ẩn ─────────────────────── */
@@ -273,14 +518,14 @@ const CameraPlayback: React.FC = () => {
     setControlsNonce((prev) => prev + 1);
   }, []);
 
-  const handleAndroidVideoError = React.useCallback(() => {
-    if (androidRetryRef.current) clearTimeout(androidRetryRef.current);
-
-    androidRetryRef.current = setTimeout(() => {
-      setIsVideoReady(false);
-      setAndroidVideoKey((prev) => prev + 1);
-    }, ANDROID_VIDEO_RETRY_MS);
-  }, []);
+  useFocusEffect(
+    React.useCallback(
+      () => () => {
+        stopCurrentSession();
+      },
+      [stopCurrentSession]
+    )
+  );
 
   /* ── Toàn màn hình = khoá ngang ──────────────────────────────────── */
   React.useEffect(() => {
@@ -288,8 +533,29 @@ const CameraPlayback: React.FC = () => {
 
     return () => {
       Orientation.lockToPortrait();
+      // Phải bỏ luôn cờ fullscreen: rời màn hình khi đang toàn màn hình rồi
+      // quay lại sẽ có layout fullscreen trong khi máy đã về dọc.
+      setIsFullscreen(false);
     };
   }, [isFocused]);
+
+  // Android: nút back cứng phải thoát toàn màn hình trước, giống fullscreen của
+  // CameraListGrid (nó nằm trong Modal nên có onRequestClose). Ở đây fullscreen
+  // là layout inline, không có Modal, nên phải tự bắt back.
+  React.useEffect(() => {
+    if (Platform.OS !== "android" || !isFullscreen || !isFocused) return;
+
+    const subscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        Orientation.lockToPortrait();
+        setIsFullscreen(false);
+        return true;
+      }
+    );
+
+    return () => subscription.remove();
+  }, [isFocused, isFullscreen]);
 
   const toggleFullscreen = React.useCallback(() => {
     setIsFullscreen((prev) => {
@@ -303,42 +569,296 @@ const CameraPlayback: React.FC = () => {
     });
   }, []);
 
-  const handleSelectGroup = React.useCallback(
-    (group: PlaybackClipGroup, clipId?: string) => {
-      setActiveGroupId(group.id);
-      setActiveClipId(clipId ?? null);
+  const startFrom = React.useCallback(
+    async (fromMs: number, playbackEndMs = dayEndMs) => {
+      if (!cameraToken || !camera?.iD_Camera_Ma) return;
+
+      // Không chặn theo isConnecting: nếu server trả session mà player không
+      // bao giờ phát onLoad/onError thì cờ đó treo mãi và mọi lần chọn bản ghi
+      // sau đó bị bỏ qua. startRequestIdRef + stopCurrentSession đã đảm bảo
+      // yêu cầu cũ bị vô hiệu và phiên cũ được dọn.
+      stopCurrentSession();
+      const requestId = ++startRequestIdRef.current;
+      playbackStartMsRef.current = fromMs;
+      currentPositionRef.current = 0;
       setPositionSec(0);
       setIsPaused(false);
+      setIsClipEnded(false);
+      setIsVideoReady(false);
+      setPlaybackError(null);
+      setIsConnecting(true);
+
+      for (let attempt = 1; attempt <= 2; attempt += 1) {
+        try {
+          const nextSession = await startPlaybackSession(
+            camera.iD_Camera_Ma,
+            cameraToken,
+            fromMs,
+            playbackEndMs
+          );
+
+          if (requestId !== startRequestIdRef.current) {
+            stopPlaybackSession(nextSession.sessionId).catch(() => {});
+            return;
+          }
+
+          sessionRef.current = nextSession;
+          setPlaybackSession(nextSession);
+          openPlaybackSocket(nextSession.sessionId, speed);
+          return;
+        } catch (error) {
+          if (attempt < 2) {
+            await new Promise<void>((resolve) =>
+              setTimeout(() => resolve(), PLAYBACK_START_RETRY_MS)
+            );
+            continue;
+          }
+
+          if (requestId !== startRequestIdRef.current) return;
+          setPlaybackError(
+            error instanceof Error
+              ? error.message
+              : "Không thể bắt đầu phát bản ghi."
+          );
+          setIsConnecting(false);
+          setPlaybackSession(null);
+          sessionRef.current = null;
+        }
+      }
+    },
+    [
+      camera?.iD_Camera_Ma,
+      cameraToken,
+      dayEndMs,
+      openPlaybackSocket,
+      speed,
+      stopCurrentSession,
+    ]
+  );
+
+  const handleNetworkOffline = React.useCallback(() => {
+    const playbackStartMs = playbackStartMsRef.current;
+    if (playbackStartMs !== null) {
+      const clipEndMs = activeClipRef.current?.endMs ?? dayEndMs;
+      reconnectIntentRef.current = {
+        mode: "playback",
+        fromMs: Math.min(
+          playbackStartMs + currentPositionRef.current * 1000,
+          Math.max(playbackStartMs, clipEndMs - 1000)
+        ),
+        endMs: clipEndMs,
+      };
+    } else if (!reconnectIntentRef.current) {
+      reconnectIntentRef.current = { mode: "live" };
+    }
+
+    stopCameraWebView(liveWebViewRef.current);
+    stopCurrentSession();
+    setIsVideoReady(false);
+    setPlaybackError(null);
+  }, [dayEndMs, stopCurrentSession]);
+
+  const handleNetworkReconnect = React.useCallback(async () => {
+    // Token hook cũng lắng nghe reconnect. Request bên trong hook được gộp nên
+    // hai listener không tạo hai request token chạy song song.
+    await fetchCameraTokenRef.current?.(true);
+    setNetworkReconnectNonce((value) => value + 1);
+  }, [fetchCameraTokenRef]);
+
+  useNetworkAwareReload(handleNetworkReconnect, {
+    enabled: isFocused,
+    onOffline: handleNetworkOffline,
+    // App resume đã được useCameraViewToken xử lý; tại đây chỉ phục hồi khi
+    // trạng thái mạng thực sự chuyển từ offline sang online.
+    refetchOnAppResume: false,
+  });
+
+  React.useEffect(() => {
+    if (
+      networkReconnectNonce === 0 ||
+      !cameraToken ||
+      !isScreenVisible
+    )
+      return;
+
+    const intent = reconnectIntentRef.current;
+    if (!intent) return;
+    reconnectIntentRef.current = null;
+    setPlaybackError(null);
+    setIsVideoReady(false);
+
+    if (intent.mode === "playback") {
+      startFrom(intent.fromMs, intent.endMs).catch(() => {});
+      return;
+    }
+
+    setIsConnecting(false);
+    if (Platform.OS === "android") {
+      lastLiveProgressAtRef.current = Date.now();
+      // Có mạng lại là một lần thử "sạch": bỏ backoff đã tích từ lúc offline.
+      liveErrorCountRef.current = 0;
+      setLiveVideoKey((value) => value + 1);
+      return;
+    }
+
+    postCameraWebViewToken(liveWebViewRef.current, cameraToken);
+    startCameraWebView(liveWebViewRef.current);
+    resumeCameraWebView(liveWebViewRef.current);
+  }, [
+    cameraToken,
+    isScreenVisible,
+    networkReconnectNonce,
+    startFrom,
+  ]);
+
+  React.useEffect(() => {
+    if (
+      Platform.OS !== "android" ||
+      !isScreenVisible ||
+      !cameraToken ||
+      playbackSession ||
+      isPaused
+    )
+      return;
+
+    lastLiveProgressAtRef.current = Date.now();
+    const watchdog = setInterval(() => {
+      if (
+        Date.now() - lastLiveProgressAtRef.current <
+        ANDROID_LIVE_STALE_AFTER_MS
+      )
+        return;
+
+      lastLiveProgressAtRef.current = Date.now();
+      setIsVideoReady(false);
+      setPlaybackError(null);
+      setLiveVideoKey((value) => value + 1);
+    }, ANDROID_LIVE_WATCHDOG_INTERVAL_MS);
+
+    return () => clearInterval(watchdog);
+  }, [
+    cameraToken,
+    isPaused,
+    isScreenVisible,
+    liveVideoKey,
+    playbackSession,
+  ]);
+
+  const handleSelectGroup = React.useCallback(
+    (group: PlaybackClipGroup, clipId?: string) => {
+      const clip =
+        group.clips.find((item) => item.id === clipId) ?? group.clips[0];
+      if (!clip) return;
+
+      setActiveGroupId(group.id);
+      setActiveClipId(clip.id);
+      setOpenedGroupId(null);
+      reconnectIntentRef.current = null;
+      startFrom(clip.startMs, clip.endMs).catch(() => {});
+    },
+    [startFrom]
+  );
+
+  const getProgressRatioFromEvent = React.useCallback(
+    (event: GestureResponderEvent) => {
+      const width = progressTrackWidthRef.current;
+      if (width <= 0) return 0;
+      return Math.min(1, Math.max(0, event.nativeEvent.locationX / width));
     },
     []
+  );
+
+  const handleProgressSeekMove = React.useCallback(
+    (event: GestureResponderEvent) => {
+      setProgressPreviewRatio(getProgressRatioFromEvent(event));
+    },
+    [getProgressRatioFromEvent]
+  );
+
+  const handleProgressSeekRelease = React.useCallback(
+    (event: GestureResponderEvent) => {
+      const ratio = getProgressRatioFromEvent(event);
+      setProgressPreviewRatio(null);
+      if (!activeClip || !playbackSession) return;
+
+      // Không seek đúng endMs vì đó là biên ngoài của đoạn ghi.
+      const seekableDurationMs = Math.max(
+        0,
+        activeClip.endMs - activeClip.startMs - 1000
+      );
+      const targetMs =
+        activeClip.startMs + Math.round(seekableDurationMs * ratio);
+      startFrom(targetMs, activeClip.endMs).catch(() => {});
+      keepControlsVisible();
+    },
+    [
+      activeClip,
+      getProgressRatioFromEvent,
+      keepControlsVisible,
+      playbackSession,
+      startFrom,
+    ]
   );
 
   // Thoát chế độ tua: bỏ bản ghi đang chọn, đưa timeline về mốc mới nhất và
   // cho stream chạy lại.
   const handleBackToLive = React.useCallback(() => {
+    // Hủy seek đang chờ từ onScrollEndDrag/onMomentumScrollEnd. Nếu không,
+    // callback cuộn có thể chạy sau thao tác này và tạo lại playback session.
+    if (timelineSeekTimerRef.current) {
+      clearTimeout(timelineSeekTimerRef.current);
+      timelineSeekTimerRef.current = null;
+    }
+    isTimelineDraggingRef.current = false;
+    reconnectIntentRef.current = null;
+
+    stopCurrentSession();
     setActiveGroupId(null);
     setActiveClipId(null);
     setOpenedGroupId(null);
     setPositionSec(0);
     setIsPaused(false);
+    setIsConnecting(false);
+    setPlaybackError(null);
+    setTimelineOffsetY(0);
+    viewOffsetsRef.current.timeline = 0;
     timelineScrollRef.current?.scrollTo({ y: 0, animated: true });
     keepControlsVisible();
-  }, [keepControlsVisible]);
+  }, [keepControlsVisible, stopCurrentSession]);
 
   const handleTogglePause = React.useCallback(() => {
+    // Đã phát hết bản ghi: bấm play là phát lại clip từ đầu.
+    if (isClipEnded && activeClip) {
+      startFrom(activeClip.startMs, activeClip.endMs).catch(() => {});
+      return;
+    }
+
     setIsPaused((prev) => !prev);
-  }, []);
+  }, [activeClip, isClipEnded, startFrom]);
 
   const handleReplay10 = React.useCallback(() => {
-    setPositionSec((prev) => Math.max(0, prev - 10));
+    const nextPosition = Math.max(0, currentPositionRef.current - 10);
+    videoRef.current?.seek(nextPosition);
+    currentPositionRef.current = nextPosition;
+    setPositionSec(nextPosition);
   }, []);
 
-  const handleSelectSpeed = React.useCallback((nextSpeed: PlaybackSpeed) => {
-    setSpeed(nextSpeed);
-    setIsSpeedSheetVisible(false);
-  }, []);
+  const handleSelectSpeed = React.useCallback(
+    (nextSpeed: PlaybackSpeed) => {
+      setSpeed(nextSpeed);
+      setIsSpeedSheetVisible(false);
+
+      const currentSession = sessionRef.current;
+      if (currentSession)
+        openPlaybackSocket(currentSession.sessionId, nextSpeed);
+    },
+    [openPlaybackSocket]
+  );
 
   const handleChangeDate = React.useCallback((amount: number) => {
+    // Giờ bắt đầu chỉ thuộc về ngày đã chọn trong lịch; đổi ngày bằng mũi tên
+    // thì bỏ nó đi, nếu không sheet lịch mở lại vẫn hiện giờ cũ của ngày khác.
+    setSelectedStartTimeSec(null);
     setSelectedDate((prev) => {
       const next = startOfDay(addDays(prev, amount));
       // Không cho chọn ngày ở tương lai.
@@ -364,6 +884,26 @@ const CameraPlayback: React.FC = () => {
     },
     []
   );
+
+  const loadRecordingDays = React.useCallback(
+    async (month: Date) => {
+      if (!cameraToken || !camera?.iD_Camera_Ma) return;
+
+      const days = await getPlaybackRecordingDays(
+        camera.iD_Camera_Ma,
+        cameraToken,
+        month.getFullYear(),
+        month.getMonth() + 1
+      );
+      setRecordingDays(days);
+    },
+    [camera?.iD_Camera_Ma, cameraToken]
+  );
+
+  const handleOpenDateSheet = React.useCallback(() => {
+    setIsDateSheetVisible(true);
+    loadRecordingDays(selectedDate).catch(() => {});
+  }, [loadRecordingDays, selectedDate]);
 
   const handleToggleViewMode = React.useCallback(() => {
     const nextMode = viewMode === "timeline" ? "grid" : "timeline";
@@ -403,6 +943,103 @@ const CameraPlayback: React.FC = () => {
     [viewMode]
   );
 
+  const findClipAtMs = React.useCallback(
+    (targetMs: number): { clip: PlaybackClip; group: PlaybackClipGroup } | null => {
+      for (const group of clipGroups) {
+        const clip = group.clips.find(
+          (item) => targetMs >= item.startMs && targetMs <= item.endMs
+        );
+        if (clip) return { clip, group };
+      }
+      return null;
+    },
+    [clipGroups]
+  );
+
+  const commitTimelineSeek = React.useCallback(
+    (offsetY: number) => {
+      if (viewMode !== "timeline" || clipGroups.length === 0) return;
+
+      const rowHeight = Math.round(TIMELINE_ROW_HEIGHT * timelineScale);
+      const targetSec = getScrubSecAtOffset(
+        clipGroups,
+        offsetY + TIMELINE_READING_OFFSET - TIMELINE_TOP_MARGIN,
+        rowHeight
+      );
+      if (targetSec === null) return;
+
+      const targetMs = dayStartMs + targetSec * 1000;
+      const target = findClipAtMs(targetMs);
+
+      if (!target) {
+        setPlaybackError("Không có bản ghi tại thời điểm này.");
+        return;
+      }
+
+      setPlaybackError(null);
+      setActiveGroupId(target.group.id);
+      setActiveClipId(target.clip.id);
+      setOpenedGroupId(null);
+      startFrom(
+        Math.max(
+          target.clip.startMs,
+          Math.min(targetMs, target.clip.endMs - 1000)
+        ),
+        target.clip.endMs
+      ).catch(() => {});
+      keepControlsVisible();
+    },
+    [
+      clipGroups,
+      dayStartMs,
+      findClipAtMs,
+      keepControlsVisible,
+      startFrom,
+      timelineScale,
+      viewMode,
+    ]
+  );
+
+  const handleTimelineScrollBeginDrag = React.useCallback(() => {
+    isTimelineDraggingRef.current = true;
+    if (timelineSeekTimerRef.current) {
+      clearTimeout(timelineSeekTimerRef.current);
+      timelineSeekTimerRef.current = null;
+    }
+  }, []);
+
+  const handleTimelineScrollEndDrag = React.useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const offsetY = event.nativeEvent.contentOffset.y;
+
+      // Nếu không có momentum, RN không phát onMomentumScrollEnd. Chờ ngắn
+      // để onMomentumScrollBegin có cơ hội hủy timer này.
+      timelineSeekTimerRef.current = setTimeout(() => {
+        timelineSeekTimerRef.current = null;
+        if (!isTimelineDraggingRef.current) return;
+        isTimelineDraggingRef.current = false;
+        commitTimelineSeek(offsetY);
+      }, 120);
+    },
+    [commitTimelineSeek]
+  );
+
+  const handleTimelineMomentumBegin = React.useCallback(() => {
+    if (timelineSeekTimerRef.current) {
+      clearTimeout(timelineSeekTimerRef.current);
+      timelineSeekTimerRef.current = null;
+    }
+  }, []);
+
+  const handleTimelineMomentumEnd = React.useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (!isTimelineDraggingRef.current) return;
+      isTimelineDraggingRef.current = false;
+      commitTimelineSeek(event.nativeEvent.contentOffset.y);
+    },
+    [commitTimelineSeek]
+  );
+
   const handleZoom = React.useCallback((amount: number) => {
     setTimelineScale((prev) =>
       Math.min(TIMELINE_SCALE_MAX, Math.max(TIMELINE_SCALE_MIN, prev + amount))
@@ -410,7 +1047,17 @@ const CameraPlayback: React.FC = () => {
   }, []);
 
   React.useEffect(() => {
-    if (pendingSeekSec === null || clipGroups.length === 0) return;
+    if (
+      pendingSeekSec === null ||
+      loadedRecordingsDayStartMs !== dayStartMs
+    )
+      return;
+
+    if (clipGroups.length === 0) {
+      setPendingSeekSec(null);
+      setPlaybackError("Ngày này không có bản ghi.");
+      return;
+    }
 
     const rowHeight = Math.round(TIMELINE_ROW_HEIGHT * timelineScale);
     const rawTimelineOffset = getTimelineOffsetForSec(
@@ -422,21 +1069,27 @@ const CameraPlayback: React.FC = () => {
       0,
       rawTimelineOffset - TIMELINE_READING_OFFSET + TIMELINE_TOP_MARGIN
     );
-    const closestGroup = clipGroups.reduce((closest, group) =>
-      Math.abs(group.startSec - pendingSeekSec) <
-      Math.abs(closest.startSec - pendingSeekSec)
-        ? group
-        : closest
-    );
+    const targetMs = dayStartMs + pendingSeekSec * 1000;
+    const target = findClipAtMs(targetMs);
 
     setViewMode("timeline");
-    setActiveGroupId(closestGroup.id);
-    setActiveClipId(null);
-    setPositionSec(0);
-    setIsPaused(false);
     setTimelineOffsetY(scrollOffset);
     viewOffsetsRef.current.timeline = scrollOffset;
     setPendingSeekSec(null);
+
+    if (target) {
+      setActiveGroupId(target.group.id);
+      setActiveClipId(target.clip.id);
+      startFrom(
+        Math.max(
+          target.clip.startMs,
+          Math.min(targetMs, target.clip.endMs - 1000)
+        ),
+        target.clip.endMs
+      ).catch(() => {});
+    } else {
+      setPlaybackError("Không có bản ghi tại thời điểm này.");
+    }
 
     requestAnimationFrame(() => {
       timelineScrollRef.current?.scrollTo({
@@ -444,7 +1097,15 @@ const CameraPlayback: React.FC = () => {
         animated: true,
       });
     });
-  }, [clipGroups, pendingSeekSec, timelineScale]);
+  }, [
+    clipGroups,
+    dayStartMs,
+    findClipAtMs,
+    loadedRecordingsDayStartMs,
+    pendingSeekSec,
+    startFrom,
+    timelineScale,
+  ]);
 
   if (!camera) {
     return (
@@ -489,11 +1150,25 @@ const CameraPlayback: React.FC = () => {
     Boolean(activeGroup) ||
     (viewMode === "timeline" &&
       timelineOffsetY > LIVE_RETURN_SCROLL_THRESHOLD);
+  const isSelectedToday = selectedDate.getTime() === today.getTime();
+  const playbackClockSec =
+    playbackSession && playbackStartMsRef.current !== null
+      ? (playbackStartMsRef.current - dayStartMs) / 1000 + positionSec
+      : null;
+  const liveClockSec = Math.max(0, (liveNowMs - dayStartMs) / 1000);
+  const displayedTimelineSec =
+    playbackClockSec ??
+    (!isSeeking && isSelectedToday ? liveClockSec : scrubSec);
   // Tạm dừng thì mở đầy đủ điều khiển + thanh tiến trình như app tham chiếu.
-  const showPlaybackControls = Boolean(activeGroup) || isPaused;
-  const progressRatio = activeGroup
-    ? Math.min(1, positionSec / activeGroup.durationSec)
+  const showPlaybackControls = Boolean(activeClip && playbackSession);
+  const playbackOffsetSec =
+    activeClip && playbackStartMsRef.current !== null
+      ? Math.max(0, (playbackStartMsRef.current - activeClip.startMs) / 1000)
+      : 0;
+  const progressRatio = activeClip
+    ? Math.min(1, (playbackOffsetSec + positionSec) / activeClip.durationSec)
     : 0;
+  const visualProgressRatio = progressPreviewRatio ?? progressRatio;
   const cameraTitle = camera.iD_Camera_MoTa || camera.iD_Camera_Ma || "Camera";
 
   return (
@@ -519,99 +1194,202 @@ const CameraPlayback: React.FC = () => {
             isFullscreen ? styles.playerFrameFill : { height: playerHeight },
           ]}
         >
-          {/* Stream trực tiếp — chưa có API phát lại theo mốc thời gian.
-              Cùng cách CameraListGrid làm ở chế độ toàn màn hình: Android
-              dùng player native, iOS dùng WebView go2rtc, cả hai đều
-              contain/không cắt hình để giữ nguyên OSD của camera. */}
-          {!cameraToken ? (
-            <View style={styles.playerLoading}>
+          {!cameraToken ? null : playbackSession ? (
+            <Video
+              ref={videoRef}
+              key={`playback-${playbackSession.sessionId}`}
+              source={{ uri: resolvePlaybackHlsUrl(playbackSession.hlsUrl) }}
+              style={StyleSheet.absoluteFill}
+              resizeMode="contain"
+              muted
+              paused={!isScreenVisible || isPaused || isConnecting}
+              rate={speed}
+              repeat={false}
+              controls={false}
+              disableFocus
+              useTextureView
+              hideShutterView
+              automaticallyWaitsToMinimizeStalling
+              preferredForwardBufferDuration={30}
+              bufferConfig={{
+                minBufferMs: 10000,
+                maxBufferMs: 120000,
+                bufferForPlaybackMs: 2000,
+                bufferForPlaybackAfterRebufferMs: 5000,
+                backBufferDurationMs: 90000,
+              }}
+              onLoad={() => {
+                if (
+                  sessionRef.current?.sessionId !==
+                  playbackSession.sessionId
+                )
+                  return;
+                setIsVideoReady(true);
+                setIsConnecting(false);
+              }}
+              onReadyForDisplay={() => {
+                if (
+                  sessionRef.current?.sessionId ===
+                  playbackSession.sessionId
+                )
+                  setIsVideoReady(true);
+              }}
+              onProgress={({ currentTime }) => {
+                if (
+                  sessionRef.current?.sessionId !==
+                  playbackSession.sessionId
+                )
+                  return;
+                currentPositionRef.current = currentTime;
+                setPositionSec(currentTime);
+              }}
+              onEnd={() => {
+                if (
+                  sessionRef.current?.sessionId !==
+                  playbackSession.sessionId
+                )
+                  return;
+                setIsPaused(true);
+                setIsClipEnded(true);
+              }}
+              onError={(error) => {
+                if (
+                  sessionRef.current?.sessionId !==
+                  playbackSession.sessionId
+                )
+                  return;
+                warn("Playback video error:", error);
+                if (playbackStartMsRef.current !== null) {
+                  reconnectIntentRef.current = {
+                    mode: "playback",
+                    fromMs:
+                      playbackStartMsRef.current +
+                      currentPositionRef.current * 1000,
+                    endMs: activeClipRef.current?.endMs ?? dayEndMs,
+                  };
+                }
+                stopCurrentSession();
+                setIsConnecting(false);
+                setPlaybackError("Không thể phát bản ghi.");
+              }}
+            />
+          ) : Platform.OS === "android" ? (
+            <Video
+              key={`live-${camera.iD_Camera}-${liveVideoKey}`}
+              source={{
+                uri: getCameraHlsUrl(camera.iD_Camera_Ma),
+                headers: { Authorization: `Bearer ${cameraToken}` },
+              }}
+              style={StyleSheet.absoluteFill}
+              resizeMode="contain"
+              muted
+              paused={!isScreenVisible || isPaused}
+              rate={1}
+              repeat
+              controls={false}
+              disableFocus
+              useTextureView
+              hideShutterView
+              bufferConfig={{
+                minBufferMs: 1000,
+                maxBufferMs: 3000,
+                bufferForPlaybackMs: 500,
+                bufferForPlaybackAfterRebufferMs: 1000,
+                backBufferDurationMs: 0,
+              }}
+              onLoad={() => {
+                lastLiveProgressAtRef.current = Date.now();
+                liveErrorCountRef.current = 0;
+                if (liveRetryTimerRef.current) {
+                  clearTimeout(liveRetryTimerRef.current);
+                  liveRetryTimerRef.current = null;
+                }
+                setIsVideoReady(true);
+                setPlaybackError(null);
+              }}
+              onReadyForDisplay={() => {
+                lastLiveProgressAtRef.current = Date.now();
+                liveErrorCountRef.current = 0;
+                setIsVideoReady(true);
+                setPlaybackError(null);
+              }}
+              onProgress={() => {
+                lastLiveProgressAtRef.current = Date.now();
+              }}
+              onError={(error) => {
+                warn("Live video error:", error);
+                const attempt = (liveErrorCountRef.current += 1);
+                setIsVideoReady(false);
+                setPlaybackError(
+                  attempt >= LIVE_ERROR_NOTICE_AFTER
+                    ? "Không thể phát camera trực tiếp. Đang thử lại..."
+                    : null
+                );
+
+                if (liveRetryTimerRef.current)
+                  clearTimeout(liveRetryTimerRef.current);
+                liveRetryTimerRef.current = setTimeout(
+                  () => {
+                    liveRetryTimerRef.current = null;
+                    lastLiveProgressAtRef.current = Date.now();
+                    setLiveVideoKey((value) => value + 1);
+                  },
+                  Math.min(
+                    LIVE_RETRY_MAX_MS,
+                    LIVE_RETRY_BASE_MS * 2 ** (attempt - 1)
+                  )
+                );
+              }}
+            />
+          ) : (
+            <WebView
+              ref={liveWebViewRef}
+              key={`live-${camera.iD_Camera}-${cameraToken}`}
+              source={{
+                html: buildCameraFullscreenHTML(camera.iD_Camera_Ma),
+                baseUrl: GO2RTC_HOST,
+              }}
+              style={StyleSheet.absoluteFill}
+              javaScriptEnabled
+              domStorageEnabled
+              allowsInlineMediaPlayback
+              mediaPlaybackRequiresUserAction={false}
+              cacheEnabled={false}
+              mixedContentMode="always"
+              originWhitelist={["*"]}
+              allowFileAccess
+              allowUniversalAccessFromFileURLs
+              scrollEnabled={false}
+              scalesPageToFit={false}
+              onLoad={() => {
+                postCameraWebViewToken(liveWebViewRef.current, cameraToken);
+                startCameraWebView(liveWebViewRef.current);
+              }}
+              onMessage={(event) => {
+                const message = event.nativeEvent.data;
+                if (message === "ready") {
+                  setIsVideoReady(true);
+                  setPlaybackError(null);
+                  return;
+                }
+                if (message === "token_expired") {
+                  fetchCameraTokenRef.current?.(true);
+                  return;
+                }
+                if (message === "close_fullscreen" && isFullscreen) {
+                  toggleFullscreen();
+                }
+              }}
+            />
+          )}
+
+          {!cameraToken || isConnecting || !isVideoReady ? (
+            // pointerEvents none: lớp loading phủ kín khung hình, nếu ăn chạm
+            // thì trong lúc chờ kết nối không bấm/hiện lại được nút nào.
+            <View style={styles.playerLoading} pointerEvents="none">
               <IsLoading size="small" />
             </View>
-          ) : Platform.OS === "android" ? (
-            <>
-              <Video
-                key={`${camera.iD_Camera}-${androidVideoKey}`}
-                source={{
-                  uri: getCameraHlsUrl(camera.iD_Camera_Ma),
-                  headers: { Authorization: `Bearer ${cameraToken}` },
-                }}
-                style={StyleSheet.absoluteFill}
-                resizeMode="contain"
-                // Luôn tắt tiếng: không còn nút bật/tắt tiếng trên player, và
-                // WebView iOS cũng chặn autoplay kèm âm thanh.
-                muted
-                paused={!isLiveActive}
-                repeat
-                controls={false}
-                disableFocus
-                useTextureView
-                hideShutterView
-                bufferConfig={{
-                  minBufferMs: 1000,
-                  maxBufferMs: 3000,
-                  bufferForPlaybackMs: 500,
-                  bufferForPlaybackAfterRebufferMs: 1000,
-                }}
-                onReadyForDisplay={() => setIsVideoReady(true)}
-                onError={handleAndroidVideoError}
-              />
-              {isVideoReady ? null : (
-                <View style={styles.playerLoading}>
-                  <IsLoading size="small" />
-                </View>
-              )}
-            </>
-          ) : (
-            <>
-              <WebView
-                ref={liveWebViewRef}
-                source={{
-                  html: buildCameraFullscreenHTML(camera.iD_Camera_Ma),
-                  baseUrl: GO2RTC_HOST,
-                }}
-                style={StyleSheet.absoluteFill}
-                javaScriptEnabled
-                domStorageEnabled
-                allowsInlineMediaPlayback
-                mediaPlaybackRequiresUserAction={false}
-                cacheEnabled={false}
-                mixedContentMode="always"
-                originWhitelist={["*"]}
-                allowFileAccess
-                allowUniversalAccessFromFileURLs
-                scrollEnabled={false}
-                scalesPageToFit={false}
-                onLoad={() => {
-                  postCameraWebViewToken(liveWebViewRef.current, cameraToken);
-                }}
-                onMessage={(event) => {
-                  const message = event.nativeEvent.data;
-
-                  if (message === "ready") {
-                    setIsVideoReady(true);
-                    return;
-                  }
-
-                  if (message === "token_expired") {
-                    fetchCameraTokenRef.current?.(true);
-                    return;
-                  }
-
-                  // HTML fullscreen gửi thêm close_fullscreen (double tap) và
-                  // swipe_next/prev. Playback chỉ có một camera nên bỏ qua
-                  // swipe, còn double tap dùng để thoát toàn màn hình.
-                  if (message === "close_fullscreen" && isFullscreen) {
-                    toggleFullscreen();
-                  }
-                }}
-              />
-              {isVideoReady ? null : (
-                <View style={styles.playerLoading}>
-                  <IsLoading size="small" />
-                </View>
-              )}
-            </>
-          )}
+          ) : null}
 
           {/* Chạm vào khung hình để hiện/ẩn nút. Đặt dưới các nút (khai báo
               trước) nên không chặn thao tác bấm nút. */}
@@ -619,6 +1397,22 @@ const CameraPlayback: React.FC = () => {
             style={StyleSheet.absoluteFill}
             onPress={handleTogglePlayerControls}
           />
+
+          {areControlsVisible ? (
+            <>
+              {/* Vệt tối trên/dưới: nút trắng vẫn rõ khi cảnh camera sáng. */}
+              <LinearGradient
+                colors={["rgba(0,0,0,0.55)", "transparent"]}
+                style={styles.playerScrimTop}
+                pointerEvents="none"
+              />
+              <LinearGradient
+                colors={["transparent", "rgba(0,0,0,0.6)"]}
+                style={styles.playerScrimBottom}
+                pointerEvents="none"
+              />
+            </>
+          ) : null}
 
           {areControlsVisible ? (
             <View
@@ -637,6 +1431,27 @@ const CameraPlayback: React.FC = () => {
               >
                 <Ionicons name="chevron-back" size={22} color="#fff" />
               </TouchableOpacity>
+
+              <View style={styles.playerTopSpacer} />
+
+              {/* Nhãn trạng thái: đang xem trực tiếp hay đang xem lại. Chỉ
+                  mốc giờ, không kèm tên camera — OSD của đầu ghi thường in
+                  chữ ở góc trên-trái khung hình. */}
+              <View style={styles.statusChip}>
+                <View
+                  style={[
+                    styles.statusChipDot,
+                    isSeeking && styles.statusChipDotIdle,
+                  ]}
+                />
+                <Text style={styles.statusChipText} allowFontScaling={false}>
+                  {isSeeking
+                    ? displayedTimelineSec === null
+                      ? "XEM LẠI"
+                      : formatClock(displayedTimelineSec)
+                    : "TRỰC TIẾP"}
+                </Text>
+              </View>
             </View>
           ) : null}
 
@@ -647,94 +1462,137 @@ const CameraPlayback: React.FC = () => {
                 isFullscreen && styles.playerControlsFullscreen,
               ]}
             >
-              <TouchableOpacity
-                style={styles.playerControlBtn}
-                onPress={() => {
-                  keepControlsVisible();
-                  handleTogglePause();
-                }}
-                hitSlop={8}
-                accessibilityLabel={isPaused ? "Phát" : "Tạm dừng"}
-              >
-                <Ionicons
-                  name={isPaused ? "play" : "pause"}
-                  size={24}
-                  color="#fff"
-                />
-              </TouchableOpacity>
+              <View style={styles.playerControlGroup}>
+                <TouchableOpacity
+                  style={styles.playerControlBtn}
+                  onPress={() => {
+                    keepControlsVisible();
+                    handleTogglePause();
+                  }}
+                  hitSlop={8}
+                  accessibilityLabel={
+                    isClipEnded ? "Phát lại" : isPaused ? "Phát" : "Tạm dừng"
+                  }
+                >
+                  <Ionicons
+                    name={
+                      isClipEnded ? "refresh" : isPaused ? "play" : "pause"
+                    }
+                    size={22}
+                    color="#fff"
+                  />
+                </TouchableOpacity>
+
+                {showPlaybackControls && activeClip ? (
+                  <Text style={styles.playerClock} allowFontScaling={false}>
+                    {`${formatElapsed(
+                      playbackOffsetSec + positionSec
+                    )} / ${formatElapsed(activeClip.durationSec)}`}
+                  </Text>
+                ) : null}
+              </View>
 
               <View style={styles.playerControlSpacer} />
 
-              {isSeeking ? (
-                <>
-                  <TouchableOpacity
-                    style={styles.playerControlBtn}
-                    onPress={() => {
-                      keepControlsVisible();
-                      handleReplay10();
-                    }}
-                    hitSlop={8}
-                    accessibilityLabel="Lùi 10 giây"
-                  >
-                    <MaterialCommunityIcons
-                      name="rewind-10"
-                      size={24}
-                      color="#fff"
-                    />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.playerControlBtn, styles.playerSpeedBtn]}
-                    onPress={() => {
-                      keepControlsVisible();
-                      setIsSpeedSheetVisible(true);
-                    }}
-                    hitSlop={8}
-                    accessibilityLabel="Tốc độ phát"
-                  >
-                    <Text
-                      style={styles.playerSpeedText}
-                      allowFontScaling={false}
+              <View style={styles.playerControlGroup}>
+                {/* Lùi 10s và tốc độ chỉ có nghĩa khi đang phát bản ghi —
+                    trước đây hiện cả khi mới cuộn timeline (vẫn đang live) nên
+                    bấm vào không có tác dụng gì. */}
+                {showPlaybackControls ? (
+                  <>
+                    <TouchableOpacity
+                      style={styles.playerControlBtn}
+                      onPress={() => {
+                        keepControlsVisible();
+                        handleReplay10();
+                      }}
+                      hitSlop={8}
+                      accessibilityLabel="Lùi 10 giây"
                     >
-                      {getPlaybackSpeedBadge(speed)}
-                    </Text>
-                    <MaterialCommunityIcons
-                      name="fast-forward-outline"
-                      size={20}
-                      color="#fff"
-                    />
-                  </TouchableOpacity>
-                </>
-              ) : null}
+                      <MaterialCommunityIcons
+                        name="rewind-10"
+                        size={22}
+                        color="#fff"
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.playerControlBtn, styles.playerSpeedBtn]}
+                      onPress={() => {
+                        keepControlsVisible();
+                        setIsSpeedSheetVisible(true);
+                      }}
+                      hitSlop={8}
+                      accessibilityLabel="Tốc độ phát"
+                    >
+                      <Text
+                        style={styles.playerSpeedText}
+                        allowFontScaling={false}
+                      >
+                        {getPlaybackSpeedBadge(speed)}
+                      </Text>
+                      <MaterialCommunityIcons
+                        name="fast-forward-outline"
+                        size={18}
+                        color="#fff"
+                      />
+                    </TouchableOpacity>
+                  </>
+                ) : null}
 
-              <TouchableOpacity
-                style={styles.playerControlBtn}
-                onPress={toggleFullscreen}
-                hitSlop={8}
-                accessibilityLabel="Toàn màn hình"
-              >
-                <MaterialCommunityIcons
-                  name={isFullscreen ? "fullscreen-exit" : "fullscreen"}
-                  size={24}
-                  color="#fff"
-                />
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.playerControlBtn}
+                  onPress={toggleFullscreen}
+                  hitSlop={8}
+                  accessibilityLabel="Toàn màn hình"
+                >
+                  <MaterialCommunityIcons
+                    name={isFullscreen ? "fullscreen-exit" : "fullscreen"}
+                    size={22}
+                    color="#fff"
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
           ) : null}
 
           {showPlaybackControls ? (
-            <View style={styles.progressTrack}>
-              <View
-                style={[
-                  styles.progressFill,
-                  { width: `${progressRatio * 100}%` },
-                ]}
-              />
-              <View
-                style={[
-                  styles.progressHandle,
-                  { left: `${progressRatio * 100}%` },
-                ]}
-              />
+            <View
+              style={styles.progressScrubber}
+              onLayout={(event) => {
+                progressTrackWidthRef.current =
+                  event.nativeEvent.layout.width;
+              }}
+              onStartShouldSetResponder={() =>
+                Boolean(activeClip && playbackSession && !isConnecting)
+              }
+              onMoveShouldSetResponder={() =>
+                Boolean(activeClip && playbackSession && !isConnecting)
+              }
+              onResponderGrant={handleProgressSeekMove}
+              onResponderMove={handleProgressSeekMove}
+              onResponderRelease={handleProgressSeekRelease}
+              onResponderTerminate={() => setProgressPreviewRatio(null)}
+              accessibilityLabel="Tua vị trí phát"
+            >
+              <View style={styles.progressTrackWrap}>
+                <View style={styles.progressTrack}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      { width: `${visualProgressRatio * 100}%` },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.progressHandle,
+                      // Núm to hơn trong lúc kéo để thấy rõ đang tua.
+                      progressPreviewRatio !== null &&
+                        styles.progressHandleActive,
+                      { left: `${visualProgressRatio * 100}%` },
+                    ]}
+                  />
+                </View>
+              </View>
             </View>
           ) : null}
         </View>
@@ -742,6 +1600,21 @@ const CameraPlayback: React.FC = () => {
 
       {isFullscreen ? null : (
         <>
+          <View style={styles.headerRow}>
+            <Text
+              style={styles.headerTitle}
+              numberOfLines={1}
+              allowFontScaling={false}
+            >
+              {cameraTitle}
+            </Text>
+            {clipGroups.length > 0 ? (
+              <Text style={styles.headerMeta} allowFontScaling={false}>
+                {`${getTotalClipCount(clipGroups)} bản ghi`}
+              </Text>
+            ) : null}
+          </View>
+
           {/* Ghim cố định, không cuộn cùng timeline. */}
           <View style={styles.dateRow}>
             <View style={styles.datePill}>
@@ -759,7 +1632,7 @@ const CameraPlayback: React.FC = () => {
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.datePillCenter}
-                onPress={() => setIsDateSheetVisible(true)}
+                onPress={handleOpenDateSheet}
                 activeOpacity={0.7}
                 accessibilityLabel="Mở lịch chọn ngày"
               >
@@ -769,8 +1642,12 @@ const CameraPlayback: React.FC = () => {
                 <Ionicons name="funnel-outline" size={14} color={C.textSub} />
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.datePillBtn}
+                style={[
+                  styles.datePillBtn,
+                  isSelectedToday && styles.datePillBtnDisabled,
+                ]}
                 onPress={() => handleChangeDate(1)}
+                disabled={isSelectedToday}
                 hitSlop={8}
                 accessibilityLabel="Ngày sau"
               >
@@ -783,7 +1660,10 @@ const CameraPlayback: React.FC = () => {
             </View>
 
             <TouchableOpacity
-              style={styles.dateViewBtn}
+              style={[
+                styles.dateViewBtn,
+                viewMode === "grid" && styles.dateViewBtnActive,
+              ]}
               onPress={handleToggleViewMode}
               accessibilityLabel={
                 viewMode === "timeline"
@@ -798,10 +1678,17 @@ const CameraPlayback: React.FC = () => {
                     : "timeline-outline"
                 }
                 size={22}
-                color={C.textSecondary}
+                color={viewMode === "grid" ? C.red : C.textSecondary}
               />
             </TouchableOpacity>
           </View>
+
+          {playbackError ? (
+            <View style={styles.playbackStatus}>
+              <Ionicons name="alert-circle-outline" size={18} color={C.red} />
+              <Text style={styles.playbackStatusText}>{playbackError}</Text>
+            </View>
+          ) : null}
 
           {/* Bọc riêng vùng cuộn để nút zoom canh giữa theo đúng vùng này,
               không tính cả chiều cao player. */}
@@ -815,6 +1702,10 @@ const CameraPlayback: React.FC = () => {
               ]}
               showsVerticalScrollIndicator={false}
               onScroll={handleTimelineScroll}
+              onScrollBeginDrag={handleTimelineScrollBeginDrag}
+              onScrollEndDrag={handleTimelineScrollEndDrag}
+              onMomentumScrollBegin={handleTimelineMomentumBegin}
+              onMomentumScrollEnd={handleTimelineMomentumEnd}
               scrollEventThrottle={16}
             >
               <PlaybackTimeline
@@ -823,42 +1714,73 @@ const CameraPlayback: React.FC = () => {
                 cameraCode={camera.iD_Camera_Ma}
                 cameraId={camera.iD_Camera}
                 cameraToken={cameraToken}
-                emptySubtitle="Chưa có bản ghi nào trong ngày đã chọn."
+                emptySubtitle={
+                  "Chưa có bản ghi nào trong ngày đã chọn."
+                }
+                errorMessage={recordingsError}
                 groups={clipGroups}
                 groupSheetHeight={groupSheetHeight}
                 onCloseGroup={handleCloseGroup}
                 onOpenGroup={handleOpenGroup}
                 onSelectGroup={handleSelectGroup}
                 openedGroupId={openedGroupId}
+                isLoading={isRecordingsLoading}
                 scale={timelineScale}
                 thumbTimestamp={thumbTimestamp}
                 viewMode={viewMode}
               />
             </ScrollView>
 
-            {viewMode !== "timeline" || scrubSec === null ? null : (
-              <View style={styles.scrubBadgeWrap} pointerEvents="none">
-                <View style={styles.scrubBadge}>
-                  <Text style={styles.scrubBadgeText} allowFontScaling={false}>
-                    {formatClock(scrubSec)}
-                  </Text>
-                  <View style={styles.scrubBadgeArrow} />
+            {viewMode !== "timeline" || displayedTimelineSec === null ? null : (
+              <>
+                <View style={styles.scrubLine} pointerEvents="none" />
+                <View style={styles.scrubBadgeWrap} pointerEvents="none">
+                  <View style={styles.scrubBadge}>
+                    <Text
+                      style={styles.scrubBadgeText}
+                      allowFontScaling={false}
+                      numberOfLines={1}
+                    >
+                      {formatClock(displayedTimelineSec)}
+                    </Text>
+                    <View style={styles.scrubBadgeArrow} />
+                  </View>
                 </View>
-              </View>
+              </>
             )}
 
             {viewMode === "timeline" && clipGroups.length > 0 ? (
-              <View style={styles.zoomColumn} pointerEvents="box-none">
+              <View
+                style={[
+                  styles.zoomColumn,
+                  {
+                    borderWidth: StyleSheet.hairlineWidth,
+                    borderColor: hairlineBorderColor,
+                  },
+                ]}
+                pointerEvents="box-none"
+              >
                 <TouchableOpacity
-                  style={[styles.zoomBtn, { borderColor: hairlineBorderColor }]}
+                  style={[
+                    styles.zoomBtn,
+                    timelineScale >= TIMELINE_SCALE_MAX &&
+                      styles.zoomBtnDisabled,
+                  ]}
                   onPress={() => handleZoom(TIMELINE_SCALE_STEP)}
+                  disabled={timelineScale >= TIMELINE_SCALE_MAX}
                   accessibilityLabel="Giãn timeline"
                 >
                   <Ionicons name="add" size={22} color={C.textSecondary} />
                 </TouchableOpacity>
+                <View style={styles.zoomDivider} />
                 <TouchableOpacity
-                  style={[styles.zoomBtn, { borderColor: hairlineBorderColor }]}
+                  style={[
+                    styles.zoomBtn,
+                    timelineScale <= TIMELINE_SCALE_MIN &&
+                      styles.zoomBtnDisabled,
+                  ]}
                   onPress={() => handleZoom(-TIMELINE_SCALE_STEP)}
+                  disabled={timelineScale <= TIMELINE_SCALE_MIN}
                   accessibilityLabel="Thu timeline"
                 >
                   <Ionicons name="remove" size={22} color={C.textSecondary} />
@@ -902,6 +1824,8 @@ const CameraPlayback: React.FC = () => {
         selectedDate={selectedDate}
         selectedStartTimeSec={selectedStartTimeSec}
         today={today}
+        recordingDays={recordingDays}
+        onVisibleMonthChange={loadRecordingDays}
         onConfirm={handleConfirmDate}
         onClose={() => setIsDateSheetVisible(false)}
       />

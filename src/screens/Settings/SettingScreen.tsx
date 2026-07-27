@@ -5,14 +5,17 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  ActivityIndicator,
   AppState,
   Platform,
   StatusBar,
+  TouchableOpacity,
 } from "react-native";
 import * as Keychain from "react-native-keychain";
 import DeviceInfo from "react-native-device-info";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import LinearGradient from "react-native-linear-gradient";
+import Ionicons from "react-native-vector-icons/Ionicons";
 import { useAuth } from "../../context/AuthContext";
 import IsLoading from "../../components/ui/IconLoading";
 import { changePasswordApi } from "../../services";
@@ -62,6 +65,15 @@ import {
   requestCameraPermission,
 } from "../../services/cameraPermission";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
+import {
+  ANDROID_STORE_URL,
+  formatVersionWithBuild,
+  getStoreVersionInfo,
+  IOS_STORE_URL,
+  isNewerAppVersion,
+  openStoreForUpdate,
+  StoreVersionInfo,
+} from "../../utils/AppVersion";
 
 const LOCAL_NETWORK_FALLBACK_STATE: StoredLocalNetworkPermissionState = {
   hasShownNotice: false,
@@ -75,7 +87,15 @@ const SettingScreen = () => {
   const colors = useAppColors();
   const [isLoading, setIsLoading] = useState(false);
   const [user, setUser] = useState<UserInfo>();
-  const appVersionLabel = `v${DeviceInfo.getVersion()}`;
+  const appVersionLabel = `v${formatVersionWithBuild(
+    DeviceInfo.getVersion(),
+    DeviceInfo.getBuildNumber()
+  )}`;
+  const [storeVersionInfo, setStoreVersionInfo] =
+    useState<StoreVersionInfo | null>(null);
+  const [isCheckingAppVersion, setIsCheckingAppVersion] = useState(false);
+  const [hasAppVersionCheckFailed, setHasAppVersionCheckFailed] =
+    useState(false);
 
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
@@ -253,6 +273,33 @@ const SettingScreen = () => {
       isScreenActiveRef.current = false;
     };
   }, [fetchData, isFocused]);
+
+  useEffect(() => {
+    if (!isFocused) return;
+
+    let isCancelled = false;
+    setIsCheckingAppVersion(true);
+    setHasAppVersionCheckFailed(false);
+
+    getStoreVersionInfo()
+      .then((versionInfo) => {
+        if (isCancelled) return;
+        setStoreVersionInfo(versionInfo);
+        setHasAppVersionCheckFailed(!versionInfo);
+      })
+      .catch(() => {
+        if (isCancelled) return;
+        setStoreVersionInfo(null);
+        setHasAppVersionCheckFailed(true);
+      })
+      .finally(() => {
+        if (!isCancelled) setIsCheckingAppVersion(false);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isFocused]);
 
   useNetworkAwareReload(
     () => {
@@ -569,6 +616,33 @@ const SettingScreen = () => {
     }
   };
 
+  const hasNewAppVersion = storeVersionInfo
+    ? isNewerAppVersion(storeVersionInfo)
+    : false;
+  const appVersionStatus = isCheckingAppVersion
+    ? "Đang kiểm tra phiên bản..."
+    : hasNewAppVersion
+    ? `Đã có phiên bản ${storeVersionInfo?.latestVersion}`
+    : hasAppVersionCheckFailed
+    ? "Chưa thể kiểm tra phiên bản trên Store"
+    : "Phiên bản mới nhất";
+
+  const handlePressUpdateApp = async () => {
+    if (!storeVersionInfo || !hasNewAppVersion) return;
+
+    try {
+      await openStoreForUpdate(
+        Platform.OS === "ios" ? IOS_STORE_URL : ANDROID_STORE_URL
+      );
+    } catch (error) {
+      warn("[Settings] Open app store failed:", error);
+      Alert.alert(
+        "Không thể mở Store",
+        "Vui lòng mở Store và cập nhật ứng dụng thủ công."
+      );
+    }
+  };
+
   if (isLoading || (!user && !hasLoadedOnce)) {
     return <IsLoading size="large" color={C.red} />;
   }
@@ -704,6 +778,73 @@ const SettingScreen = () => {
             />
           </SettingSectionGroup>
 
+          <SettingSectionGroup title="THÔNG TIN ỨNG DỤNG">
+            <View style={styles.appVersionRow}>
+              <View
+                style={[
+                  styles.appVersionIcon,
+                  { backgroundColor: C.emerald },
+                ]}
+              >
+                <Ionicons name="cloud-download-outline" size={18} color="#fff" />
+              </View>
+              <View style={styles.appVersionContent}>
+                <Text style={[styles.appVersionTitle, { color: colors.text }]}>
+                  Phiên bản ứng dụng
+                </Text>
+                <Text
+                  style={[
+                    styles.appVersionInstalled,
+                    { color: colors.textSub },
+                  ]}
+                >
+                  Đã cài đặt: {appVersionLabel}
+                </Text>
+                <View style={styles.appVersionStatusRow}>
+                  {isCheckingAppVersion ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={colors.textMuted}
+                      style={styles.appVersionSpinner}
+                    />
+                  ) : (
+                    <View
+                      style={[
+                        styles.appVersionStatusDot,
+                        {
+                          backgroundColor: hasNewAppVersion
+                            ? C.amber
+                            : hasAppVersionCheckFailed
+                            ? colors.textMuted
+                            : C.emerald,
+                        },
+                      ]}
+                    />
+                  )}
+                  <Text
+                    style={[
+                      styles.appVersionStatusText,
+                      {
+                        color: hasNewAppVersion ? C.amber : colors.textMuted,
+                      },
+                    ]}
+                  >
+                    {appVersionStatus}
+                  </Text>
+                </View>
+              </View>
+              {hasNewAppVersion ? (
+                <TouchableOpacity
+                  style={[styles.updateButton, { backgroundColor: C.red }]}
+                  onPress={handlePressUpdateApp}
+                  activeOpacity={0.75}
+                >
+                  <Text style={styles.updateButtonText}>Cập nhật</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          </SettingSectionGroup>
+
           <View
             style={[
               styles.localNetworkSummary,
@@ -742,20 +883,6 @@ const SettingScreen = () => {
             >
               Bạn có thể đổi quyền mạng nội bộ và camera trong Cài đặt hệ thống
               bất kỳ lúc nào.
-            </Text>
-          </View>
-
-          <View style={styles.versionWrap}>
-            <Text
-              style={[
-                styles.versionText,
-                {
-                  backgroundColor: colors.surface,
-                  color: colors.textMuted,
-                },
-              ]}
-            >
-              {appVersionLabel}
             </Text>
           </View>
         </View>
@@ -820,18 +947,71 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
   },
-  versionWrap: {
+  appVersionRow: {
+    minHeight: 88,
+    flexDirection: "row",
     alignItems: "center",
-    marginTop: 32,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
-  versionText: {
+  appVersionIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 14,
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  appVersionContent: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  appVersionTitle: {
+    fontSize: 14.5,
+    lineHeight: 20,
+    fontWeight: "600",
+  },
+  appVersionInstalled: {
+    fontSize: 11.5,
+    lineHeight: 16,
+    marginTop: 2,
+  },
+  appVersionStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 5,
+  },
+  appVersionSpinner: {
+    width: 8,
+    height: 8,
+    marginRight: 6,
+    transform: [{ scale: 0.6 }],
+  },
+  appVersionStatusDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  appVersionStatusText: {
     fontSize: 11,
-    fontWeight: "500",
-    letterSpacing: 0.5,
-    paddingHorizontal: 14,
-    paddingVertical: 5,
-    borderRadius: 20,
-    overflow: "hidden",
+    lineHeight: 15,
+    fontWeight: "600",
+  },
+  updateButton: {
+    minHeight: 34,
+    justifyContent: "center",
+    paddingHorizontal: 13,
+    borderRadius: 10,
+  },
+  updateButtonText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "700",
   },
 });
 

@@ -5,16 +5,23 @@ import { CAMERA_FULLSCREEN_EDGE_INSET } from "./shared/cameraStreamConfig";
 
 export const PLAYER_ASPECT_RATIO = 16 / 9;
 export const TIMELINE_ROW_HEIGHT = 168;
-export const TIMELINE_RAIL_WIDTH = 6;
-export const TIMELINE_LABEL_WIDTH = 74;
-/** Khoảng cách từ đỉnh vùng cuộn tới hàng đầu tiên của timeline. */
-export const TIMELINE_TOP_MARGIN = spacing.lg;
+export const TIMELINE_RAIL_WIDTH = 4;
+// Đủ chỗ cho badge HH:mm:ss (88px) và vẫn chừa khoảng cách với mép màn hình.
+export const TIMELINE_LABEL_WIDTH = 92;
 /** Vạch đọc: badge thời gian nằm cố định ở đây, nội dung cuộn qua nó. */
 export const TIMELINE_READING_OFFSET = 56;
+/**
+ * Hàng đầu tiên phải bắt đầu đúng tại vạch đọc. Nếu margin nhỏ hơn offset,
+ * phần chênh lệch sẽ bị hiểu nhầm là người dùng đã cuộn timeline xuống.
+ */
+export const TIMELINE_TOP_MARGIN = TIMELINE_READING_OFFSET;
 
-const ZOOM_BTN_SIZE = 44;
-/** 2 nút zoom + khoảng cách giữa chúng — dùng để canh giữa cột. */
-const ZOOM_COLUMN_HEIGHT = ZOOM_BTN_SIZE * 2 + spacing.md;
+/** Cố định để vạch đọc canh đúng tâm badge thời gian. */
+const SCRUB_BADGE_HEIGHT = 24;
+
+const ZOOM_BTN_SIZE = 40;
+/** 2 nút zoom trong cùng một viên capsule — dùng để canh giữa cột. */
+const ZOOM_COLUMN_HEIGHT = ZOOM_BTN_SIZE * 2;
 
 export const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
@@ -23,6 +30,23 @@ export const styles = StyleSheet.create({
   player: { backgroundColor: "#000" },
   playerFrame: { width: "100%", backgroundColor: "#000", overflow: "hidden" },
   playerFrameFill: { flex: 1 },
+  // Lớp mờ trên/dưới khung hình: nút và chữ trắng vẫn đọc được khi cảnh sáng.
+  playerScrimTop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 84,
+    zIndex: 2,
+  },
+  playerScrimBottom: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 96,
+    zIndex: 2,
+  },
   playerTopBar: {
     position: "absolute",
     top: 0,
@@ -30,9 +54,33 @@ export const styles = StyleSheet.create({
     right: 0,
     flexDirection: "row",
     alignItems: "center",
+    gap: spacing.sm,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
     zIndex: 3,
+  },
+  playerTopSpacer: { flex: 1 },
+  statusChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    height: 26,
+    paddingHorizontal: 10,
+    borderRadius: radius.pill,
+    backgroundColor: "rgba(0,0,0,0.45)",
+  },
+  statusChipDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: C.red,
+  },
+  statusChipDotIdle: { backgroundColor: "rgba(255,255,255,0.65)" },
+  statusChipText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.6,
   },
   // Toàn màn hình: chừa tai thỏ / home indicator đúng như fullscreen của
   // CameraListGrid (fsHeader/fsFooter).
@@ -43,10 +91,12 @@ export const styles = StyleSheet.create({
   // Chỉ mũi tên, không kèm tên camera: nhiều đầu ghi in sẵn ngày giờ (OSD) ở
   // góc trên-trái khung hình nên chữ của app sẽ đè lên chữ của camera.
   playerBackBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(0,0,0,0.38)",
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.16)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -62,49 +112,123 @@ export const styles = StyleSheet.create({
     position: "absolute",
     left: 0,
     right: 0,
-    bottom: 22,
+    // Cao hơn vùng responder của thanh tiến trình (26) để không tranh chạm.
+    bottom: 28,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.md,
     zIndex: 4,
   },
   playerControlsFullscreen: {
     bottom: CAMERA_FULLSCREEN_EDGE_INSET,
     paddingHorizontal: spacing.lg,
   },
+  // Các nút gom vào một "viên thuốc" kính mờ thay vì nhiều tròn đen rời rạc.
+  playerControlGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    padding: 3,
+    borderRadius: radius.pill,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.14)",
+  },
   playerControlBtn: {
+    minWidth: 34,
+    height: 34,
+    borderRadius: 17,
     paddingHorizontal: 6,
-    paddingVertical: 4,
     alignItems: "center",
     justifyContent: "center",
   },
   playerControlSpacer: { flex: 1 },
-  playerSpeedBtn: { flexDirection: "row", alignItems: "center", gap: 2 },
-  playerSpeedText: { color: "#fff", fontSize: 14, fontWeight: "700" },
-  progressTrack: {
+  playerSpeedBtn: { flexDirection: "row", alignItems: "center", gap: 3 },
+  playerSpeedText: { color: "#fff", fontSize: 13, fontWeight: "800" },
+  playerClock: {
+    marginLeft: spacing.sm,
+    color: "rgba(255,255,255,0.92)",
+    fontSize: 12,
+    fontWeight: "700",
+    fontVariant: ["tabular-nums"],
+  },
+  progressScrubber: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    height: 4,
-    backgroundColor: "rgba(255,255,255,0.28)",
-    zIndex: 4,
+    height: 26,
+    justifyContent: "flex-end",
+    // Chừa chỗ cho núm to lúc kéo — playerFrame overflow hidden sẽ cắt mất nếu
+    // track dính sát mép dưới.
+    paddingBottom: 3,
+    zIndex: 5,
   },
-  progressFill: { height: 4, backgroundColor: C.red },
-  progressHandle: {
-    position: "absolute",
-    // Neo ở đáy track và cao hơn track — playerFrame có overflow hidden nên
-    // không dùng offset âm để tránh bị cắt.
-    bottom: 0,
-    marginLeft: -5,
-    width: 10,
-    height: 10,
+  // Chiều cao đủ để chứa cả núm tròn, nên không cần offset âm (playerFrame
+  // overflow hidden sẽ cắt mất).
+  progressTrackWrap: {
+    height: 14,
+    justifyContent: "center",
+  },
+  progressTrack: {
+    position: "relative",
+    width: "100%",
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.26)",
+  },
+  progressFill: {
+    height: 3,
     borderRadius: 2,
     backgroundColor: C.red,
+  },
+  progressHandle: {
+    position: "absolute",
+    top: -5,
+    marginLeft: -6.5,
+    width: 13,
+    height: 13,
+    borderRadius: 7,
+    backgroundColor: C.red,
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.9)",
     zIndex: 5,
+  },
+  progressHandleActive: {
+    top: -7,
+    marginLeft: -8.5,
+    width: 17,
+    height: 17,
+    borderRadius: 9,
   },
 
   scrollContent: { paddingBottom: spacing.lg },
+
+  /* ── Tên camera + số bản ghi trong ngày ─────────────────────────── */
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.md,
+  },
+  headerTitle: {
+    flex: 1,
+    color: C.text,
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 0.1,
+  },
+  headerMeta: {
+    color: C.textSub,
+    fontSize: 12,
+    fontWeight: "600",
+    overflow: "hidden",
+    backgroundColor: C.surfaceAlt,
+    borderRadius: radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
 
   /* ── Thanh chọn ngày ────────────────────────────────────────────── */
   dateRow: {
@@ -112,29 +236,76 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: spacing.md,
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
   },
   datePill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: C.surfaceAlt,
-    borderRadius: radius.md,
-    paddingHorizontal: 6,
-    paddingVertical: 6,
+    backgroundColor: C.surface,
+    borderRadius: radius.pill,
+    paddingHorizontal: 2,
+    paddingVertical: 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: C.border,
+    ...elevation(2),
   },
-  datePillBtn: { paddingHorizontal: 6, paddingVertical: 2 },
+  datePillBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  datePillBtnDisabled: { opacity: 0.35 },
   datePillCenter: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingHorizontal: spacing.sm,
+    minHeight: 38,
+    paddingHorizontal: 14,
+    borderRadius: radius.pill,
+    backgroundColor: C.surfaceAlt,
   },
-  datePillText: { fontSize: 13, fontWeight: "600", color: C.textSecondary },
+  datePillText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: C.text,
+    letterSpacing: 0.1,
+  },
   dateViewBtn: {
-    width: 36,
-    height: 36,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: C.surface,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: C.borderStrong,
+    ...elevation(2),
+  },
+  dateViewBtnActive: {
+    backgroundColor: C.redIconSurface,
+    borderColor: C.redBorder,
+  },
+  playbackStatus: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: C.redSurface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: C.redBorder,
+  },
+  playbackStatusText: {
+    flex: 1,
+    color: C.red,
+    fontSize: 13,
+    fontWeight: "500",
   },
 
   /* ── Lịch chọn ngày (dùng chung BottomSheetModalShell của app) ─── */
@@ -305,16 +476,24 @@ export const styles = StyleSheet.create({
   /* ── Timeline ───────────────────────────────────────────────────── */
   timeline: {
     marginTop: TIMELINE_TOP_MARGIN,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: 12,
     position: "relative",
   },
   timelineRow: { flexDirection: "row", height: TIMELINE_ROW_HEIGHT },
   timelineLabelCol: {
     width: TIMELINE_LABEL_WIDTH,
     alignItems: "flex-end",
-    paddingRight: spacing.sm,
+    paddingRight: 10,
   },
-  timelineLabel: { fontSize: 13, fontWeight: "600", color: C.textSub },
+  timelineLabel: {
+    fontSize: 13.5,
+    lineHeight: 18,
+    fontWeight: "700",
+    color: C.textSub,
+    letterSpacing: 0.2,
+    fontVariant: ["tabular-nums"],
+  },
+  timelineLabelActive: { color: C.text },
 
   /* ── Badge thời gian ở vạch đọc (cố định, nội dung cuộn qua) ─────── */
   scrubBadgeWrap: {
@@ -323,17 +502,47 @@ export const styles = StyleSheet.create({
     width: TIMELINE_LABEL_WIDTH,
     top: TIMELINE_READING_OFFSET,
     alignItems: "flex-end",
-    zIndex: 6,
+    zIndex: 20,
+    elevation: 10,
+  },
+  // Vạch mảnh kéo từ badge sang hết bề ngang: mắt thấy rõ nội dung nào đang
+  // nằm đúng mốc thời gian đang đọc.
+  scrubLine: {
+    position: "absolute",
+    left: spacing.md + TIMELINE_LABEL_WIDTH,
+    right: spacing.md,
+    top: TIMELINE_READING_OFFSET + SCRUB_BADGE_HEIGHT / 2,
+    height: 1,
+    backgroundColor: C.red,
+    opacity: 0.28,
+    zIndex: 19,
   },
   scrubBadge: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    height: SCRUB_BADGE_HEIGHT,
+    minWidth: 84,
     backgroundColor: C.red,
-    borderRadius: 6,
+    borderRadius: radius.sm,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
+    paddingVertical: 4,
+    overflow: "visible",
+    shadowColor: C.red,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    zIndex: 20,
+    elevation: 10,
   },
-  scrubBadgeText: { fontSize: 12.5, fontWeight: "700", color: C.onBrand },
+  scrubBadgeText: {
+    flexShrink: 0,
+    fontSize: 12.5,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+    color: C.onBrand,
+    fontVariant: ["tabular-nums"],
+  },
   // Mũi nhọn nhỏ chỉ về phía rail — hình vuông xoay 45°.
   scrubBadgeArrow: {
     position: "absolute",
@@ -342,65 +551,96 @@ export const styles = StyleSheet.create({
     height: 8,
     backgroundColor: C.red,
     transform: [{ rotate: "45deg" }],
+    zIndex: 21,
+    elevation: 11,
   },
   timelineLabelDash: {
     width: 10,
     height: 2,
     borderRadius: 1,
     backgroundColor: C.borderStrong,
-    marginTop: 7,
+    marginTop: 6,
   },
   timelineRailCol: {
     width: TIMELINE_RAIL_WIDTH,
-    borderRadius: 3,
-    backgroundColor: C.surfaceAlt,
+    borderRadius: TIMELINE_RAIL_WIDTH / 2,
+    // Rail nền phải luôn nhìn thấy; surfaceAlt gần trùng C.bg nên các khoảng
+    // không có recording trước đây trông như timeline bị đứt/mất.
+    backgroundColor: C.border,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: C.borderStrong,
     overflow: "hidden",
   },
   timelineTick: {
     position: "absolute",
-    left: 0,
-    right: 0,
-    height: 4,
+    left: -1,
+    right: -1,
+    height: 5,
+    borderRadius: 3,
     backgroundColor: C.redLight,
+    opacity: 0.75,
   },
   // Nhóm đang chọn dùng đỏ đậm hơn để vẫn nổi so với các nhóm còn lại.
-  timelineTickActive: { backgroundColor: C.red },
+  timelineTickActive: { backgroundColor: C.red, opacity: 1 },
   timelineClipCol: {
     flex: 1,
-    paddingLeft: spacing.md,
+    paddingLeft: 14,
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: spacing.md,
+    gap: spacing.sm,
   },
-  clipCardWrap: { paddingTop: 4 },
+  clipCardWrap: { paddingTop: 3 },
   clipCardStack: {
     position: "absolute",
-    top: 0,
+    top: -4,
     left: 10,
     right: 10,
-    height: 12,
-    borderRadius: radius.sm,
-    backgroundColor: C.surfaceAlt,
+    height: 10,
+    borderRadius: radius.md,
+    backgroundColor: C.surface,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: C.border,
+    borderColor: C.borderStrong,
   },
   clipCard: {
-    width: 138,
-    height: 84,
-    borderRadius: radius.sm,
+    width: 156,
+    height: 94,
+    borderRadius: radius.md,
     overflow: "hidden",
     backgroundColor: "#111",
-    ...elevation(2),
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.18)",
+    ...elevation(3),
   },
-  clipCardActive: { borderWidth: 2, borderColor: C.red },
+  clipCardActive: {
+    borderWidth: 2,
+    borderColor: C.red,
+    shadowColor: C.red,
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+  },
+  // Lớp tối nhẹ ở đáy card để chữ/nút trắng luôn tách khỏi ảnh thumbnail.
+  clipCardScrim: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 46,
+    zIndex: 1,
+  },
   clipCountText: {
     position: "absolute",
     top: 6,
-    left: 8,
+    left: 6,
     color: "#fff",
-    fontSize: 13,
-    fontWeight: "700",
+    fontSize: 11.5,
+    fontWeight: "800",
+    letterSpacing: 0.2,
     zIndex: 2,
+    overflow: "hidden",
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderRadius: radius.pill,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
   clipPlayBtn: {
     ...StyleSheet.absoluteFillObject,
@@ -410,21 +650,38 @@ export const styles = StyleSheet.create({
     zIndex: 2,
   },
   clipPlayCircle: {
-    width: 24,
-    height: 24,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.35)",
     alignItems: "center",
     justifyContent: "center",
   },
   personChip: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: C.redIconSurface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: C.redBorder,
     alignItems: "center",
     justifyContent: "center",
     marginTop: spacing.xl,
   },
   timelineEmpty: { paddingVertical: spacing.xxl },
+  timelineLoading: {
+    minHeight: 180,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+  },
+  timelineLoadingText: {
+    color: C.textSecondary,
+    fontSize: 14,
+    fontWeight: "500",
+  },
 
   /* ── Bản ghi dạng lưới ──────────────────────────────────────────── */
   playbackGrid: {
@@ -441,48 +698,86 @@ export const styles = StyleSheet.create({
     zIndex: 0,
   },
   playbackGridGroup: { marginBottom: spacing.xl },
-  playbackGridHour: {
-    color: C.textSecondary,
-    fontSize: 17,
-    fontWeight: "500",
+  playbackGridHourRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
     marginBottom: spacing.md,
+  },
+  playbackGridHour: {
+    color: C.text,
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+    fontVariant: ["tabular-nums"],
+  },
+  playbackGridHourRule: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: C.borderStrong,
+  },
+  playbackGridHourCount: {
+    color: C.textSub,
+    fontSize: 12,
+    fontWeight: "600",
   },
   playbackGridClips: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.sm,
   },
+  playbackGridRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
   playbackGridCard: {
     flexBasis: "31%",
     flexGrow: 1,
     maxWidth: "32%",
     aspectRatio: 1.55,
-    borderRadius: radius.sm,
+    borderRadius: radius.md,
     overflow: "hidden",
     backgroundColor: "#111",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.16)",
   },
-  playbackGridCardActive: { borderWidth: 2, borderColor: C.red },
+  playbackGridCardActive: {
+    borderWidth: 2,
+    borderColor: C.red,
+    shadowColor: C.red,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  // Cùng vai trò clipCardScrim nhưng ở đỉnh card, nơi đặt giờ và thời lượng.
+  playbackGridScrim: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 32,
+    zIndex: 1,
+  },
   playbackGridTime: {
     position: "absolute",
     top: 5,
-    left: 6,
+    left: 7,
     color: "#fff",
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "800",
+    letterSpacing: 0.2,
     zIndex: 2,
-    textShadowColor: "rgba(0,0,0,0.65)",
-    textShadowRadius: 2,
+    fontVariant: ["tabular-nums"],
   },
   playbackGridDuration: {
     position: "absolute",
     top: 5,
-    right: 6,
-    color: "#fff",
-    fontSize: 12,
+    right: 7,
+    color: "rgba(255,255,255,0.88)",
+    fontSize: 11.5,
     fontWeight: "700",
     zIndex: 2,
-    textShadowColor: "rgba(0,0,0,0.65)",
-    textShadowRadius: 2,
+    fontVariant: ["tabular-nums"],
   },
   playbackGridEventIcon: {
     position: "absolute",
@@ -538,7 +833,15 @@ export const styles = StyleSheet.create({
     right: spacing.md,
     top: "50%",
     marginTop: -ZOOM_COLUMN_HEIGHT / 2,
-    gap: spacing.md,
+    borderRadius: ZOOM_BTN_SIZE / 2,
+    backgroundColor: C.surface,
+    overflow: "hidden",
+    ...elevation(3),
+  },
+  zoomDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: 8,
+    backgroundColor: C.borderStrong,
   },
   /* ── Nút quay lại xem trực tiếp ─────────────────────────────────── */
   // Nổi ở giữa đáy vùng cuộn; `bottom` do component truyền theo safe area.
@@ -558,20 +861,25 @@ export const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingVertical: 12,
     ...elevation(3),
+    shadowColor: C.red,
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
   },
-  liveButtonText: { fontSize: 15, fontWeight: "700", color: C.onBrand },
+  liveButtonText: {
+    fontSize: 14.5,
+    fontWeight: "800",
+    letterSpacing: 0.2,
+    color: C.onBrand,
+  },
 
   zoomBtn: {
     width: ZOOM_BTN_SIZE,
     height: ZOOM_BTN_SIZE,
-    borderRadius: ZOOM_BTN_SIZE / 2,
-    backgroundColor: C.surface,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: C.border,
-    ...elevation(2),
   },
+  zoomBtnDisabled: { opacity: 0.35 },
 
   /* ── Action sheet chọn tốc độ ───────────────────────────────────── */
   speedSheet: { backgroundColor: "transparent", paddingHorizontal: spacing.sm },

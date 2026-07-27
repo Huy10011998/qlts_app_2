@@ -1,18 +1,21 @@
 import React from "react";
 import {
   Animated,
-  ScrollView,
+  FlatList,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import LinearGradient from "react-native-linear-gradient";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { C } from "../../../utils/helpers/colors";
 import EmptyState from "../../ui/EmptyState";
+import IsLoading from "../../ui/IconLoading";
 import BottomSheetModalShell from "../../shared/BottomSheetModalShell";
 import CameraSnapshotThumbnail from "./CameraSnapshotThumbnail";
 import {
   formatClock,
+  type PlaybackClip,
   type PlaybackClipGroup,
 } from "./cameraPlaybackHelpers";
 import { styles, TIMELINE_ROW_HEIGHT } from "../CameraPlayback.styles";
@@ -24,19 +27,21 @@ type PlaybackTimelineProps = {
   cameraId: string | number;
   cameraToken: string;
   emptySubtitle: string;
+  errorMessage: string | null;
   groups: PlaybackClipGroup[];
   groupSheetHeight: number;
   onCloseGroup: () => void;
   onOpenGroup: (group: PlaybackClipGroup) => void;
   onSelectGroup: (group: PlaybackClipGroup, clipId?: string) => void;
   openedGroupId: string | null;
+  isLoading: boolean;
   /** Hệ số zoom timeline — giãn/thu chiều cao mỗi nhóm. */
   scale: number;
   thumbTimestamp: number;
   viewMode: "timeline" | "grid";
 };
 
-function TimelineRow({
+const TimelineRow = React.memo(function TimelineRow({
   activeGroupId,
   cameraCode,
   cameraId,
@@ -62,8 +67,11 @@ function TimelineRow({
       {/* Mốc giờ của nhóm. Thời gian đang đọc do badge cố định ngoài vùng
           cuộn hiển thị, nên ở đây luôn là nhãn thường. */}
       <View style={styles.timelineLabelCol}>
-        <Text style={styles.timelineLabel} allowFontScaling={false}>
-          {formatClock(group.startSec, false)}
+        <Text
+          style={[styles.timelineLabel, isActive && styles.timelineLabelActive]}
+          allowFontScaling={false}
+        >
+          {`${String(group.hour).padStart(2, "0")}:00`}
         </Text>
         <View style={styles.timelineLabelDash} />
       </View>
@@ -102,6 +110,11 @@ function TimelineRow({
                 thumbTimestamp={thumbTimestamp}
               />
             ) : null}
+            <LinearGradient
+              colors={["transparent", "rgba(0,0,0,0.55)"]}
+              style={styles.clipCardScrim}
+              pointerEvents="none"
+            />
             <Text style={styles.clipCountText} allowFontScaling={false}>
               {group.clipCount} clip
             </Text>
@@ -121,9 +134,70 @@ function TimelineRow({
       </View>
     </View>
   );
-}
+});
 
-function ClipGridGroup({
+const ClipCard = React.memo(function ClipCard({
+  activeClipId,
+  cameraCode,
+  cameraId,
+  cameraToken,
+  clip,
+  group,
+  onSelectGroup,
+  thumbTimestamp,
+}: {
+  activeClipId: string | null;
+  cameraCode: string;
+  cameraId: string | number;
+  cameraToken: string;
+  clip: PlaybackClip;
+  group: PlaybackClipGroup;
+  onSelectGroup: (group: PlaybackClipGroup, clipId?: string) => void;
+  thumbTimestamp: number;
+}) {
+  return (
+    <TouchableOpacity
+      style={[
+        styles.playbackGridCard,
+        clip.id === activeClipId && styles.playbackGridCardActive,
+      ]}
+      activeOpacity={0.85}
+      onPress={() => onSelectGroup(group, clip.id)}
+      accessibilityLabel={`Phát bản ghi lúc ${formatClock(clip.startSec)}`}
+    >
+      {cameraToken ? (
+        <CameraSnapshotThumbnail
+          cameraCode={cameraCode}
+          cameraId={`${cameraId}-${clip.id}`}
+          cameraToken={cameraToken}
+          focusKey={0}
+          showLoadingIndicator={false}
+          thumbTimestamp={thumbTimestamp}
+        />
+      ) : null}
+      <LinearGradient
+        colors={["rgba(0,0,0,0.6)", "transparent"]}
+        style={styles.playbackGridScrim}
+        pointerEvents="none"
+      />
+      <Text style={styles.playbackGridTime} allowFontScaling={false}>
+        {formatClock(clip.startSec, false)}
+      </Text>
+      <Text style={styles.playbackGridDuration} allowFontScaling={false}>
+        {`${Math.floor(clip.durationSec / 60)}'${String(
+          clip.durationSec % 60
+        ).padStart(2, "0")}"`}
+      </Text>
+      {group.hasPerson ? (
+        <View style={styles.playbackGridEventIcon} pointerEvents="none">
+          <Ionicons name="body-outline" size={17} color="#fff" />
+        </View>
+      ) : null}
+    </TouchableOpacity>
+  );
+});
+
+const ClipGridGroup = React.memo(function ClipGridGroup({
   activeClipId,
   cameraCode,
   cameraId,
@@ -142,70 +216,53 @@ function ClipGridGroup({
 }) {
   return (
     <View style={styles.playbackGridGroup}>
-      <Text style={styles.playbackGridHour} allowFontScaling={false}>
-        {`${String(Math.floor(group.startSec / 3600)).padStart(2, "0")}:00`}
-      </Text>
+      <View style={styles.playbackGridHourRow}>
+        <Text style={styles.playbackGridHour} allowFontScaling={false}>
+          {`${String(group.hour).padStart(2, "0")}:00`}
+        </Text>
+        <View style={styles.playbackGridHourRule} />
+        <Text style={styles.playbackGridHourCount} allowFontScaling={false}>
+          {`${group.clipCount} clip`}
+        </Text>
+      </View>
       <View style={styles.playbackGridClips}>
-        {Array.from({ length: group.clipCount }, (_, clipIndex) => {
-          const clipTime = Math.max(0, group.startSec - clipIndex * 60);
-          const clipId = `${group.id}-clip-${clipIndex}`;
-
-          return (
-            <TouchableOpacity
-              key={clipId}
-              style={[
-                styles.playbackGridCard,
-                clipId === activeClipId && styles.playbackGridCardActive,
-              ]}
-              activeOpacity={0.85}
-              onPress={() => onSelectGroup(group, clipId)}
-              accessibilityLabel={`Phát bản ghi lúc ${formatClock(clipTime)}`}
-            >
-              {cameraToken ? (
-                <CameraSnapshotThumbnail
-                  cameraCode={cameraCode}
-                  cameraId={`${cameraId}-${group.id}-${clipIndex}`}
-                  cameraToken={cameraToken}
-                  focusKey={0}
-                  showLoadingIndicator={false}
-                  thumbTimestamp={thumbTimestamp}
-                />
-              ) : null}
-              <Text style={styles.playbackGridTime} allowFontScaling={false}>
-                {formatClock(clipTime, false)}
-              </Text>
-              <Text style={styles.playbackGridDuration} allowFontScaling={false}>
-                0&apos;15&quot;
-              </Text>
-              {group.hasPerson ? (
-                <View
-                  style={styles.playbackGridEventIcon}
-                  pointerEvents="none"
-                >
-                  <Ionicons name="body-outline" size={17} color="#fff" />
-                </View>
-              ) : null}
-            </TouchableOpacity>
-          );
-        })}
+        {group.clips.map((clip) => (
+          <ClipCard
+            key={clip.id}
+            activeClipId={activeClipId}
+            cameraCode={cameraCode}
+            cameraId={cameraId}
+            cameraToken={cameraToken}
+            clip={clip}
+            group={group}
+            onSelectGroup={onSelectGroup}
+            thumbTimestamp={thumbTimestamp}
+          />
+        ))}
       </View>
     </View>
   );
-}
+});
 
-export default function PlaybackTimeline({
+/**
+ * Đồng hồ live/tiến trình phát làm CameraPlayback re-render mỗi giây (và mỗi
+ * frame khi cuộn). Không memo thì toàn bộ row + thumbnail bị dựng lại theo.
+ */
+function PlaybackTimeline({
   activeClipId,
   activeGroupId,
   cameraCode,
   cameraId,
   cameraToken,
   emptySubtitle,
+  errorMessage,
   groups,
   groupSheetHeight,
   onCloseGroup,
   onOpenGroup,
   onSelectGroup,
   openedGroupId,
+  isLoading,
   scale,
   thumbTimestamp,
   viewMode,
@@ -251,6 +308,30 @@ export default function PlaybackTimeline({
   React.useEffect(() => {
     if (openedGroup) setDetailGroup(openedGroup);
   }, [openedGroup]);
+
+  if (groups.length === 0 && isLoading) {
+    return (
+      <View style={styles.timelineLoading}>
+        <IsLoading size="small" />
+        <Text style={styles.timelineLoadingText} allowFontScaling={false}>
+          Đang tải bản ghi...
+        </Text>
+      </View>
+    );
+  }
+
+  if (groups.length === 0 && errorMessage) {
+    return (
+      <View style={styles.timelineEmpty}>
+        <EmptyState
+          iconName="cloud-offline-outline"
+          title="Không thể tải bản ghi"
+          subtitle={errorMessage}
+          fullHeight={false}
+        />
+      </View>
+    );
+  }
 
   if (groups.length === 0) {
     return (
@@ -339,25 +420,35 @@ export default function PlaybackTimeline({
                 Tổng cộng {detailGroup.clipCount} clip
               </Text>
             </View>
-            <ScrollView
+            <FlatList
               style={styles.playbackGroupScroll}
+              contentContainerStyle={styles.playbackGrid}
+              columnWrapperStyle={styles.playbackGridRow}
+              data={detailGroup.clips}
+              keyExtractor={(clip) => clip.id}
+              numColumns={3}
+              initialNumToRender={9}
+              maxToRenderPerBatch={9}
+              windowSize={5}
               showsVerticalScrollIndicator={false}
-            >
-              <View style={styles.playbackGrid}>
-                <ClipGridGroup
+              renderItem={({ item }) => (
+                <ClipCard
                   activeClipId={activeClipId}
                   cameraCode={cameraCode}
                   cameraId={cameraId}
                   cameraToken={cameraToken}
+                  clip={item}
                   group={detailGroup}
                   onSelectGroup={onSelectGroup}
                   thumbTimestamp={thumbTimestamp}
                 />
-              </View>
-            </ScrollView>
+              )}
+            />
           </View>
         ) : null}
       </BottomSheetModalShell>
     </View>
   );
 }
+
+export default React.memo(PlaybackTimeline);

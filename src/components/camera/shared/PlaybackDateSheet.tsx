@@ -19,6 +19,8 @@ const WEEK_DAYS = ["CN", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", 
 type PlaybackDateSheetProps = {
   onClose: () => void;
   onConfirm: (date: Date, startTimeSec: number | null) => void;
+  onVisibleMonthChange?: (date: Date) => void;
+  recordingDays?: number[];
   selectedDate: Date;
   selectedStartTimeSec: number | null;
   today: Date;
@@ -28,6 +30,8 @@ type PlaybackDateSheetProps = {
 export default function PlaybackDateSheet({
   onClose,
   onConfirm,
+  onVisibleMonthChange,
+  recordingDays = [],
   selectedDate,
   selectedStartTimeSec,
   today,
@@ -58,6 +62,21 @@ export default function PlaybackDateSheet({
   const monthLabel = `${visibleMonth.getFullYear()}-${String(
     visibleMonth.getMonth() + 1
   ).padStart(2, "0")}`;
+  const recordingDaySet = React.useMemo(
+    () => new Set(recordingDays),
+    [recordingDays]
+  );
+
+  const changeVisibleMonth = React.useCallback(
+    (amount: number) => {
+      setVisibleMonth((current) => {
+        const next = addMonths(current, amount);
+        onVisibleMonthChange?.(next);
+        return next;
+      });
+    },
+    [onVisibleMonthChange]
+  );
 
   if (isTimeSheetVisible) {
     return (
@@ -95,9 +114,7 @@ export default function PlaybackDateSheet({
         <View style={styles.calendarMonthNav}>
           <TouchableOpacity
             style={styles.calendarMonthBtn}
-            onPress={() =>
-              setVisibleMonth((current) => addMonths(current, -1))
-            }
+            onPress={() => changeVisibleMonth(-1)}
             accessibilityLabel="Tháng trước"
           >
             <Ionicons
@@ -112,9 +129,7 @@ export default function PlaybackDateSheet({
           <TouchableOpacity
             style={styles.calendarMonthBtn}
             disabled={!canGoNextMonth}
-            onPress={() =>
-              setVisibleMonth((current) => addMonths(current, 1))
-            }
+            onPress={() => changeVisibleMonth(1)}
             accessibilityLabel="Tháng sau"
           >
             <Ionicons
@@ -183,7 +198,9 @@ export default function PlaybackDateSheet({
                   {date.getDate()}
                 </Text>
               </View>
-              {isCurrentMonth && !isFuture ? (
+              {isCurrentMonth &&
+              !isFuture &&
+              recordingDaySet.has(date.getDate()) ? (
                 <View style={styles.calendarRecordingDot} />
               ) : null}
             </TouchableOpacity>

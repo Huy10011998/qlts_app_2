@@ -1,4 +1,5 @@
 import { formatDMY } from "../../../utils/Date";
+import type { PlaybackRecording } from "../../../services/data/playbackApi";
 
 /**
  * Playback (phát lại) domain helpers.
@@ -8,18 +9,34 @@ import { formatDMY } from "../../../utils/Date";
  * lần re-render. Khi có API thật chỉ cần thay `buildMockClipGroups`.
  */
 
+export type PlaybackClip = {
+  durationSec: number;
+  endMs: number;
+  id: string;
+  startMs: number;
+  /** Giây tính từ 00:00:00 của ngày đang xem. */
+  startSec: number;
+};
+
 export type PlaybackClipGroup = {
   clipCount: number;
+  clips: PlaybackClip[];
   durationSec: number;
   hasPerson: boolean;
+  hour: number;
   id: string;
   /** Giây tính từ 00:00:00 của ngày đang xem. */
   startSec: number;
+  /** Epoch millisecond thật do API playback trả về. */
+  startMs: number;
+  endMs: number;
   /** Vị trí (0..1) các vạch đã ghi trên rail của nhóm. */
   tickOffsets: number[];
 };
 
-export const PLAYBACK_SPEED_OPTIONS = [16, 8, 4, 2, 1, 0.5] as const;
+// Native player phải bỏ quá nhiều frame ở 8X/16X, đặc biệt với camera FPS
+// thấp/GOP dài. Giới hạn 4X cho trải nghiệm mobile ổn định hơn.
+export const PLAYBACK_SPEED_OPTIONS = [4, 2, 1, 0.5] as const;
 
 export type PlaybackSpeed = (typeof PLAYBACK_SPEED_OPTIONS)[number];
 
@@ -47,6 +64,19 @@ export const formatClock = (totalSec: number, withSeconds = true) => {
 
   const second = String(safeSec % 60).padStart(2, "0");
   return `${hour}:${minute}:${second}`;
+};
+
+/**
+ * Thời lượng/vị trí trong một clip: `mm:ss`, chỉ thêm phần giờ khi cần. Khác
+ * `formatClock` — vốn dùng cho mốc giờ trong ngày nên luôn có `HH:`.
+ */
+export const formatElapsed = (totalSec: number) => {
+  const safeSec = Math.max(0, Math.floor(totalSec));
+  const hour = Math.floor(safeSec / 3600);
+  const minute = String(Math.floor((safeSec % 3600) / 60)).padStart(2, "0");
+  const second = String(safeSec % 60).padStart(2, "0");
+
+  return hour > 0 ? `${hour}:${minute}:${second}` : `${minute}:${second}`;
 };
 
 /** Tem thời gian overlay trên video: `dd-MM-yyyy HH:mm:ss`. */
@@ -137,14 +167,150 @@ export const buildMockClipGroups = (
       seed.clipCount - Math.floor(seededUnit(dayOffset * 5 + index) * 2),
     );
 
+    const startSec = toSeconds(seed.time);
+    const clips = Array.from({ length: clipCount }, (_, clipIndex) => {
+      const clipStartSec = Math.max(0, startSec - clipIndex * 60);
+      const startMs = clipStartSec * 1000;
+      return {
+        id: `${dayOffset}-${seed.time}-clip-${clipIndex}`,
+        startMs,
+        endMs: startMs + SECONDS_PER_CLIP * 1000,
+        startSec: clipStartSec,
+        durationSec: SECONDS_PER_CLIP,
+      };
+    });
+
     return {
       id: `${dayOffset}-${seed.time}`,
-      startSec: toSeconds(seed.time),
+      hour: Math.floor(startSec / 3600),
+      startSec,
+      startMs: startSec * 1000,
+      endMs: startSec * 1000 + clipCount * SECONDS_PER_CLIP * 1000,
       clipCount,
+      clips,
       durationSec: clipCount * SECONDS_PER_CLIP,
       hasPerson: true,
       tickOffsets: buildTickOffsets(index + dayOffset, clipCount),
     };
+  });
+};
+
+const HOUR_MS = 60 * 60 * 1000;
+
+/**
+ * Chuyển các khoảng ghi thật thành group theo giờ:
+ * - khoảng trùng nhau được hợp nhất;
+ * - khoảng đi qua ranh giới giờ được tách để mỗi clip chỉ thuộc một group;
+ * - group có id cố định theo giờ nên polling live không làm timeline nhảy.
+ */
+export const buildPlaybackClipGroups = (
+  recordings: PlaybackRecording[],
+  dayStartMs: number
+): PlaybackClipGroup[] => {
+  const dayEndMs = dayStartMs + 24 * HOUR_MS;
+  const normalized = recordings
+    .slice()
+    .map((recording) => ({
+      startMs: Math.max(dayStartMs, recording.startMs),
+      endMs: Math.min(dayEndMs, recording.endMs),
+    }))
+    .filter((recording) => recording.endMs > recording.startMs)
+    .sort((a, b) => a.startMs - b.startMs)
+    .reduce<PlaybackRecording[]>((merged, recording) => {
+      const previous = merged[merged.length - 1];
+      if (previous && recording.startMs < previous.endMs) {
+        previous.endMs = Math.max(previous.endMs, recording.endMs);
+      } else {
+        merged.push({ ...recording });
+      }
+      return merged;
+    }, []);
+
+  const clipsByHour = new Map<number, PlaybackClip[]>();
+
+  normalized.forEach((recording) => {
+    let cursorMs = recording.startMs;
+    while (cursorMs < recording.endMs) {
+      const hour = Math.min(
+        23,
+        Math.max(0, Math.floor((cursorMs - dayStartMs) / HOUR_MS))
+      );
+      const hourEndMs = dayStartMs + (hour + 1) * HOUR_MS;
+      const clipEndMs = Math.min(recording.endMs, hourEndMs);
+      const clips = clipsByHour.get(hour) ?? [];
+      clips.push({
+        id: `${cursorMs}-${clipEndMs}`,
+        startMs: cursorMs,
+        endMs: clipEndMs,
+        startSec: Math.round((cursorMs - dayStartMs) / 1000),
+        durationSec: Math.max(1, Math.round((clipEndMs - cursorMs) / 1000)),
+      });
+      clipsByHour.set(hour, clips);
+      cursorMs = clipEndMs;
+    }
+  });
+
+  const groups = Array.from(clipsByHour.entries())
+    .sort(([hourA], [hourB]) => hourB - hourA)
+    .map(([hour, clips]) => {
+      const sortedClips = clips.sort((a, b) => b.startMs - a.startMs);
+      const durationSec = sortedClips.reduce(
+        (total, clip) => total + clip.durationSec,
+        0
+      );
+      const groupUpperMs = Math.max(
+        ...sortedClips.map((clip) => clip.endMs)
+      );
+
+      return {
+        id: `${dayStartMs}-hour-${hour}`,
+        hour,
+        startMs: dayStartMs + hour * HOUR_MS,
+        endMs: dayStartMs + (hour + 1) * HOUR_MS,
+        // Anchor trên của row là mốc mới nhất có dữ liệu trong giờ này.
+        startSec: Math.round((groupUpperMs - dayStartMs) / 1000),
+        clipCount: sortedClips.length,
+        clips: sortedClips,
+        durationSec,
+        hasPerson: false,
+        tickOffsets: [],
+      };
+    });
+
+  return groups.map((group, groupIndex) => {
+    const upperSec = group.startSec;
+    const lowerSec =
+      groups[groupIndex + 1]?.startSec ??
+      Math.min(...group.clips.map((clip) => clip.startSec));
+    const rowSpanSec = Math.max(1, upperSec - lowerSec);
+    const tickOffsets = group.clips.flatMap((clip) => {
+      const clipEndSec = Math.round((clip.endMs - dayStartMs) / 1000);
+      const visibleStartSec = Math.max(lowerSec, clip.startSec);
+      const visibleEndSec = Math.min(upperSec, clipEndSec);
+      if (visibleEndSec <= visibleStartSec) return [];
+
+      // Số chấm tỷ lệ với phần row thực sự có recording. Một đoạn phủ cả
+      // hàng sẽ có 14 chấm; đoạn ngắn vẫn có tối thiểu một chấm nhìn thấy.
+      const coverageRatio =
+        (visibleEndSec - visibleStartSec) / rowSpanSec;
+      const tickCount = Math.min(
+        14,
+        Math.max(1, Math.ceil(coverageRatio * 14))
+      );
+
+      return Array.from({ length: tickCount }, (_, tickIndex) => {
+        const sampleSec =
+          visibleEndSec -
+          ((tickIndex + 0.5) / tickCount) *
+            (visibleEndSec - visibleStartSec);
+        return Math.min(
+          1,
+          Math.max(0, (upperSec - sampleSec) / rowSpanSec)
+        );
+      });
+    });
+
+    return { ...group, tickOffsets };
   });
 };
 

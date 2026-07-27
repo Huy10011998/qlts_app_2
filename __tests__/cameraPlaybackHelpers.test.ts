@@ -2,6 +2,7 @@ import {
   addDays,
   addMonths,
   buildMockClipGroups,
+  buildPlaybackClipGroups,
   formatClock,
   formatPlaybackStamp,
   getCalendarDates,
@@ -40,7 +41,7 @@ describe("camera playback helpers", () => {
   describe("speed labels", () => {
     it("marks 1x as the normal speed", () => {
       expect(getPlaybackSpeedLabel(1)).toBe("1 lần (Tốc độ bình thường)");
-      expect(getPlaybackSpeedLabel(16)).toBe("16 lần");
+      expect(getPlaybackSpeedLabel(4)).toBe("4 lần");
       expect(getPlaybackSpeedLabel(0.5)).toBe("0.5 lần");
     });
     it("badge is compact", () => {
@@ -78,6 +79,34 @@ describe("camera playback helpers", () => {
       expect(getPlaybackDateLabel(addDays(today, -1), today)).toBe(
         "23-07-2026",
       );
+    });
+  });
+
+  describe("buildPlaybackClipGroups", () => {
+    it("groups real recordings by hour and keeps actual clips", () => {
+      const dayStartMs = new Date(2026, 6, 27, 0, 0, 0, 0).getTime();
+      const at = (hour: number, minute: number) =>
+        dayStartMs + (hour * 60 + minute) * 60 * 1000;
+      const groups = buildPlaybackClipGroups(
+        [
+          { startMs: at(9, 10), endMs: at(9, 20) },
+          { startMs: at(9, 15), endMs: at(9, 25) },
+          { startMs: at(9, 30), endMs: at(10, 15) },
+        ],
+        dayStartMs
+      );
+
+      expect(groups.map((group) => group.hour)).toEqual([10, 9]);
+      expect(groups[0].startSec).toBe(10 * 3600 + 15 * 60);
+      expect(groups[1].startSec).toBe(10 * 3600);
+      expect(groups[0].clipCount).toBe(1);
+      expect(groups[1].clipCount).toBe(2);
+      expect(groups[1].clips).toHaveLength(2);
+      expect(groups[1].clips[0].startMs).toBe(at(9, 30));
+      expect(groups[1].clips[1]).toMatchObject({
+        startMs: at(9, 10),
+        endMs: at(9, 25),
+      });
     });
   });
 
