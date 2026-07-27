@@ -14,7 +14,7 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from "react-native";
-import Video, { type VideoRef } from "react-native-video";
+import Video from "react-native-video";
 import WebView from "react-native-webview";
 import LinearGradient from "react-native-linear-gradient";
 import {
@@ -165,7 +165,6 @@ const CameraPlayback: React.FC = () => {
   const [liveVideoKey, setLiveVideoKey] = React.useState(0);
   const [networkReconnectNonce, setNetworkReconnectNonce] = React.useState(0);
 
-  const videoRef = React.useRef<VideoRef>(null);
   const liveWebViewRef = React.useRef<WebView>(null);
   const timelineScrollRef = React.useRef<ScrollView>(null);
   const viewOffsetsRef = React.useRef<Record<"timeline" | "grid", number>>({
@@ -184,6 +183,8 @@ const CameraPlayback: React.FC = () => {
     typeof setTimeout
   > | null>(null);
   const isTimelineDraggingRef = React.useRef(false);
+  const timelineDragGenerationRef = React.useRef(0);
+  const timelineMomentumGenerationRef = React.useRef<number | null>(null);
   const startRequestIdRef = React.useRef(0);
   const progressTrackWidthRef = React.useRef(0);
   const lastLiveProgressAtRef = React.useRef(Date.now());
@@ -750,13 +751,46 @@ const CameraPlayback: React.FC = () => {
         group.clips.find((item) => item.id === clipId) ?? group.clips[0];
       if (!clip) return;
 
+      // Card/group và vạch đọc phải cùng trỏ vào một mốc. Trước đây thao tác
+      // này chỉ đổi session phát nên badge chạy đúng giờ nhưng danh sách vẫn
+      // nằm tại offset cũ.
+      const rowHeight = Math.round(TIMELINE_ROW_HEIGHT * timelineScale);
+      const rawTimelineOffset = getTimelineOffsetForSec(
+        clipGroups,
+        clip.startSec,
+        rowHeight
+      );
+      const scrollOffset = Math.max(
+        0,
+        rawTimelineOffset - TIMELINE_READING_OFFSET + TIMELINE_TOP_MARGIN
+      );
+
+      if (timelineSeekTimerRef.current) {
+        clearTimeout(timelineSeekTimerRef.current);
+        timelineSeekTimerRef.current = null;
+      }
+      timelineDragGenerationRef.current += 1;
+      timelineMomentumGenerationRef.current = null;
+      isTimelineDraggingRef.current = false;
+      viewOffsetsRef.current.timeline = scrollOffset;
+      if (viewMode === "timeline") setTimelineOffsetY(scrollOffset);
+
       setActiveGroupId(group.id);
       setActiveClipId(clip.id);
       setOpenedGroupId(null);
       reconnectIntentRef.current = null;
       startFrom(clip.startMs, clip.endMs).catch(() => {});
+
+      if (viewMode === "timeline") {
+        requestAnimationFrame(() => {
+          timelineScrollRef.current?.scrollTo({
+            y: scrollOffset,
+            animated: true,
+          });
+        });
+      }
     },
-    [startFrom]
+    [clipGroups, startFrom, timelineScale, viewMode]
   );
 
   const getProgressRatioFromEvent = React.useCallback(
@@ -809,6 +843,8 @@ const CameraPlayback: React.FC = () => {
       clearTimeout(timelineSeekTimerRef.current);
       timelineSeekTimerRef.current = null;
     }
+    timelineDragGenerationRef.current += 1;
+    timelineMomentumGenerationRef.current = null;
     isTimelineDraggingRef.current = false;
     reconnectIntentRef.current = null;
 
@@ -835,13 +871,6 @@ const CameraPlayback: React.FC = () => {
 
     setIsPaused((prev) => !prev);
   }, [activeClip, isClipEnded, startFrom]);
-
-  const handleReplay10 = React.useCallback(() => {
-    const nextPosition = Math.max(0, currentPositionRef.current - 10);
-    videoRef.current?.seek(nextPosition);
-    currentPositionRef.current = nextPosition;
-    setPositionSec(nextPosition);
-  }, []);
 
   const handleSelectSpeed = React.useCallback(
     (nextSpeed: PlaybackSpeed) => {
@@ -1001,6 +1030,8 @@ const CameraPlayback: React.FC = () => {
   );
 
   const handleTimelineScrollBeginDrag = React.useCallback(() => {
+    timelineDragGenerationRef.current += 1;
+    timelineMomentumGenerationRef.current = null;
     isTimelineDraggingRef.current = true;
     if (timelineSeekTimerRef.current) {
       clearTimeout(timelineSeekTimerRef.current);
@@ -1011,11 +1042,13 @@ const CameraPlayback: React.FC = () => {
   const handleTimelineScrollEndDrag = React.useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       const offsetY = event.nativeEvent.contentOffset.y;
+      const dragGeneration = timelineDragGenerationRef.current;
 
       // Nếu không có momentum, RN không phát onMomentumScrollEnd. Chờ ngắn
       // để onMomentumScrollBegin có cơ hội hủy timer này.
       timelineSeekTimerRef.current = setTimeout(() => {
         timelineSeekTimerRef.current = null;
+        if (timelineDragGenerationRef.current !== dragGeneration) return;
         if (!isTimelineDraggingRef.current) return;
         isTimelineDraggingRef.current = false;
         commitTimelineSeek(offsetY);
@@ -1025,6 +1058,8 @@ const CameraPlayback: React.FC = () => {
   );
 
   const handleTimelineMomentumBegin = React.useCallback(() => {
+    timelineMomentumGenerationRef.current =
+      timelineDragGenerationRef.current;
     if (timelineSeekTimerRef.current) {
       clearTimeout(timelineSeekTimerRef.current);
       timelineSeekTimerRef.current = null;
@@ -1033,6 +1068,13 @@ const CameraPlayback: React.FC = () => {
 
   const handleTimelineMomentumEnd = React.useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const momentumGeneration = timelineMomentumGenerationRef.current;
+      timelineMomentumGenerationRef.current = null;
+      if (
+        momentumGeneration === null ||
+        momentumGeneration !== timelineDragGenerationRef.current
+      )
+        return;
       if (!isTimelineDraggingRef.current) return;
       isTimelineDraggingRef.current = false;
       commitTimelineSeek(event.nativeEvent.contentOffset.y);
@@ -1196,7 +1238,6 @@ const CameraPlayback: React.FC = () => {
         >
           {!cameraToken ? null : playbackSession ? (
             <Video
-              ref={videoRef}
               key={`playback-${playbackSession.sessionId}`}
               source={{ uri: resolvePlaybackHlsUrl(playbackSession.hlsUrl) }}
               style={StyleSheet.absoluteFill}
@@ -1495,48 +1536,29 @@ const CameraPlayback: React.FC = () => {
               <View style={styles.playerControlSpacer} />
 
               <View style={styles.playerControlGroup}>
-                {/* Lùi 10s và tốc độ chỉ có nghĩa khi đang phát bản ghi —
-                    trước đây hiện cả khi mới cuộn timeline (vẫn đang live) nên
-                    bấm vào không có tác dụng gì. */}
+                {/* Tốc độ chỉ có nghĩa khi đang phát bản ghi. */}
                 {showPlaybackControls ? (
-                  <>
-                    <TouchableOpacity
-                      style={styles.playerControlBtn}
-                      onPress={() => {
-                        keepControlsVisible();
-                        handleReplay10();
-                      }}
-                      hitSlop={8}
-                      accessibilityLabel="Lùi 10 giây"
+                  <TouchableOpacity
+                    style={[styles.playerControlBtn, styles.playerSpeedBtn]}
+                    onPress={() => {
+                      keepControlsVisible();
+                      setIsSpeedSheetVisible(true);
+                    }}
+                    hitSlop={8}
+                    accessibilityLabel="Tốc độ phát"
+                  >
+                    <Text
+                      style={styles.playerSpeedText}
+                      allowFontScaling={false}
                     >
-                      <MaterialCommunityIcons
-                        name="rewind-10"
-                        size={22}
-                        color="#fff"
-                      />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.playerControlBtn, styles.playerSpeedBtn]}
-                      onPress={() => {
-                        keepControlsVisible();
-                        setIsSpeedSheetVisible(true);
-                      }}
-                      hitSlop={8}
-                      accessibilityLabel="Tốc độ phát"
-                    >
-                      <Text
-                        style={styles.playerSpeedText}
-                        allowFontScaling={false}
-                      >
-                        {getPlaybackSpeedBadge(speed)}
-                      </Text>
-                      <MaterialCommunityIcons
-                        name="fast-forward-outline"
-                        size={18}
-                        color="#fff"
-                      />
-                    </TouchableOpacity>
-                  </>
+                      {getPlaybackSpeedBadge(speed)}
+                    </Text>
+                    <MaterialCommunityIcons
+                      name="fast-forward-outline"
+                      size={18}
+                      color="#fff"
+                    />
+                  </TouchableOpacity>
                 ) : null}
 
                 <TouchableOpacity
