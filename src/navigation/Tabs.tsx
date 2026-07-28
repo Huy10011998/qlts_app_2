@@ -42,11 +42,12 @@ function ThemeAwareTabBar({
     activeDescriptor?.options.tabBarStyle,
   ) as ViewStyle | undefined;
   const isTabBarHidden = activeTabBarStyle?.display === "none";
-  const routeName = getDeepFocusedRouteName(activeRoute);
-  const usesInvertedStyle =
-    (activeRoute.name === "HomeTab" &&
-      routeName === "ShareholdersMeetingScanner") ||
-    (activeRoute.name === "ScanTab" && routeName === "Scan");
+  // Trust the background color the screen's own `options` already resolved
+  // instead of re-deriving the focused route here. Re-deriving used a different
+  // fallback than the screens do (route.state isn't hydrated yet right after
+  // login), so the inverted tint colors could be applied while this override
+  // reset the background to `colors.surface` — white text on a white tab bar.
+  const usesInvertedStyle = activeTabBarStyle?.backgroundColor === TAB_INVERTED_BG;
 
   const descriptors = activeDescriptor
     ? {
