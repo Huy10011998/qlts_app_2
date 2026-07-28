@@ -366,7 +366,10 @@ const CameraListGrid: React.FC = () => {
   const closeTargetLandscapeRef = React.useRef(false);
 
   const SW = screenDims.width;
-  const isGridFullscreenMode = isGridLandscapeFullscreen;
+  // Chỉ bật layout fullscreen khi màn hình ĐÃ xoay ngang thật. Nếu bật ngay lúc
+  // bấm nút (máy còn dọc), grid bị re-layout fullscreen ở hướng dọc trong ~300ms
+  // chờ rotation → trông như "xoay dọc rồi mới xoay ngang lại".
+  const isGridFullscreenMode = isGridLandscapeFullscreen && isLandscape;
   const effectiveLayoutCount = layoutCount;
   const [cols, rows] = LAYOUT_OPTIONS[effectiveLayoutCount] ?? [4, 4];
   const perPage = cols * rows;
@@ -476,8 +479,8 @@ const CameraListGrid: React.FC = () => {
   }, [clearCloseFullscreenTimeout, navigation]);
 
   React.useEffect(() => {
-    navigation.setOptions({ headerShown: !isGridLandscapeFullscreen });
-  }, [isGridLandscapeFullscreen, navigation]);
+    navigation.setOptions({ headerShown: !isGridFullscreenMode });
+  }, [isGridFullscreenMode, navigation]);
 
   React.useEffect(() => {
     const tabNavigation = navigation.getParent();
@@ -1362,12 +1365,10 @@ const CameraListGrid: React.FC = () => {
                     thumbTimestamp={thumbTimestamp}
                     focusKey={focusKey}
                     onPress={
-                      isGridLandscapeFullscreen
-                        ? handleCamDoubleTap
-                        : handleCamPress
+                      isGridFullscreenMode ? handleCamDoubleTap : handleCamPress
                     }
                     onDoubleTap={
-                      isGridLandscapeFullscreen
+                      isGridFullscreenMode
                         ? closeGridLandscapeFullscreen
                         : handleCamDoubleTap
                     }
