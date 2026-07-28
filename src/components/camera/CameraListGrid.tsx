@@ -357,6 +357,7 @@ const CameraListGrid: React.FC = () => {
   const totalPagesRef = React.useRef(0);
   const [gridRenderKey, setGridRenderKey] = React.useState(0);
   const fullscreenCamRef = React.useRef<any>(null);
+  const pendingFullscreenCamRef = React.useRef<any>(null);
   const isClosingFullscreenRef = React.useRef(false);
   const closeFullscreenTimeoutRef = React.useRef<ReturnType<
     typeof setTimeout
@@ -454,9 +455,23 @@ const CameraListGrid: React.FC = () => {
     isClosingFullscreenRef.current = false;
   }, [clearCloseFullscreenTimeout]);
 
+  const presentPendingFullscreen = React.useCallback(() => {
+    const pendingCam = pendingFullscreenCamRef.current;
+    if (!pendingCam) return;
+
+    pendingFullscreenCamRef.current = null;
+    setFullscreenCam(pendingCam);
+  }, []);
+
   React.useEffect(() => {
     isClosingFullscreenRef.current = isClosingFullscreen;
   }, [isClosingFullscreen]);
+
+  React.useEffect(() => {
+    if (isLandscape) {
+      presentPendingFullscreen();
+    }
+  }, [isLandscape, presentPendingFullscreen]);
 
   // Khi screenDims khớp orientation đích → layout đã đúng → gỡ cover
   React.useEffect(() => {
@@ -473,6 +488,7 @@ const CameraListGrid: React.FC = () => {
     navigation.setOptions({ gestureEnabled: false });
     return () => {
       clearCloseFullscreenTimeout();
+      pendingFullscreenCamRef.current = null;
       Orientation.lockToPortrait();
       navigation.setOptions({ gestureEnabled: true, headerShown: true });
     };
@@ -1002,13 +1018,19 @@ const CameraListGrid: React.FC = () => {
       fsTranslateX.setValue(0);
       fsSwitchOpacity.setValue(0);
       setIsSwitchingFullscreen(false);
-      setFullscreenCam(cam);
+      pendingFullscreenCamRef.current = cam;
+      // Giống CameraList: chỉ mount Modal sau khi kích thước màn hình đã
+      // thật sự chuyển sang ngang, tránh render một frame fullscreen dọc.
+      if (isLandscapeRef.current) {
+        presentPendingFullscreen();
+      }
     },
     [
       clearCloseFullscreenTimeout,
       clearFullscreenPlaybackTimers,
       fsSwitchOpacity,
       fsTranslateX,
+      presentPendingFullscreen,
       thumbTimestamp,
     ],
   );
@@ -1200,6 +1222,7 @@ const CameraListGrid: React.FC = () => {
   }, [activeIndex, cameraTokenRef]);
 
   const closeFullscreen = React.useCallback(() => {
+    pendingFullscreenCamRef.current = null;
     clearFullscreenPlaybackTimers();
     clearCloseFullscreenTimeout();
 
