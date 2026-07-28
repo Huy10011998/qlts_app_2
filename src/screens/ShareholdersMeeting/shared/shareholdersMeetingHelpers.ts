@@ -1,5 +1,5 @@
 import { getMatchedKey } from "../../../utils/helpers/field";
-import { C } from "../../../utils/helpers/colors";
+import { AppColors } from "../../../utils/helpers/colors";
 import type {
   AttendanceFilter,
   AttendanceStatus,
@@ -85,25 +85,29 @@ export const mapOpinionItem = (item: MeetingOpinionApiItem): MeetingOpinion => {
   };
 };
 
-export const statusConfig: Record<
+export const makeStatusConfig = (
+  c: AppColors,
+): Record<
   AttendanceStatus,
   { label: string; color: string; bg: string; border: string }
-> = {
+> => ({
   present: {
     label: "Đã điểm danh",
-    color: C.green,
-    bg: C.greenLight,
-    border: C.greenBorder,
+    color: c.green,
+    bg: c.greenLight,
+    border: c.greenBorder,
   },
   pending: {
     label: "Chưa điểm danh",
-    color: C.slate,
-    bg: C.slateLight,
-    border: C.slateBorder,
+    color: c.slate,
+    bg: c.slateLight,
+    border: c.slateBorder,
   },
-};
+});
 
-export const VOTING_OPTIONS: Array<{
+export const makeVotingOptions = (
+  c: AppColors,
+): Array<{
   key: VotingChoice;
   label: string;
   description: string;
@@ -111,32 +115,32 @@ export const VOTING_OPTIONS: Array<{
   bg: string;
   border: string;
   icon: string;
-}> = [
+}> => [
   {
     key: "agree",
     label: "Tán thành",
     description: "Ghi nhận cổ đông đồng ý với ý kiến đã chọn.",
-    color: C.green,
-    bg: C.greenLight,
-    border: C.greenBorder,
+    color: c.green,
+    bg: c.greenLight,
+    border: c.greenBorder,
     icon: "check-circle-outline",
   },
   {
     key: "disagree",
     label: "Không tán thành",
     description: "Ghi nhận cổ đông không đồng ý với ý kiến đã chọn.",
-    color: C.red,
-    bg: C.redSurface,
-    border: C.redBorder,
+    color: c.red,
+    bg: c.redSurface,
+    border: c.redBorder,
     icon: "close-circle-outline",
   },
   {
     key: "noOpinion",
     label: "Không có ý kiến",
     description: "Ghi nhận cổ đông không đưa ra ý kiến.",
-    color: C.slate,
-    bg: C.slateLight,
-    border: C.slateBorder,
+    color: c.slate,
+    bg: c.slateLight,
+    border: c.slateBorder,
     icon: "minus-circle-outline",
   },
 ];

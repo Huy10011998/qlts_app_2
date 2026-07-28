@@ -89,7 +89,7 @@ const SettingScreen = () => {
   const [user, setUser] = useState<UserInfo>();
   const appVersionLabel = `v${formatVersionWithBuild(
     DeviceInfo.getVersion(),
-    DeviceInfo.getBuildNumber()
+    DeviceInfo.getBuildNumber(),
   )}`;
   const [storeVersionInfo, setStoreVersionInfo] =
     useState<StoreVersionInfo | null>(null);
@@ -156,7 +156,15 @@ const SettingScreen = () => {
       isFocusedRef.current &&
       !isLoggingOutRef.current &&
       logoutReason !== "EXPIRED",
-    [logoutReason]
+    [logoutReason],
+  );
+
+  const canCommitRequest = useCallback(
+    () =>
+      isMountedRef.current &&
+      !isLoggingOutRef.current &&
+      logoutReason !== "EXPIRED",
+    [logoutReason],
   );
 
   const isAuthExpiredError = useCallback(
@@ -164,7 +172,7 @@ const SettingScreen = () => {
       error?.NEED_LOGIN ||
       error?.response?.status === 401 ||
       error?.response?.status === 403,
-    []
+    [],
   );
 
   const refreshPermissionState = useCallback(
@@ -186,7 +194,7 @@ const SettingScreen = () => {
         // Permission status is auxiliary; keep the previous values if refresh fails.
       }
     },
-    [canUpdateScreen]
+    [canUpdateScreen],
   );
 
   const fetchData = React.useCallback(async () => {
@@ -201,11 +209,15 @@ const SettingScreen = () => {
         callApi<{ success: boolean; data: UserInfo }>(
           "POST",
           API_ENDPOINTS.GET_INFO,
-          {}
+          {},
         ),
         readFaceIdEnabled(),
       ]);
-      if (!canUpdateScreen()) return;
+      // SettingScreen remains mounted underneath Appearance. The request may
+      // finish while Appearance has focus, and its data is still valid for the
+      // mounted Settings screen. Dropping it here can leave the blocking loader
+      // active when returning while a second fetch is rejected by loadingRef.
+      if (!canCommitRequest()) return;
       userRef.current = userResponse.data;
       hasLoadedOnceRef.current = true;
       setUser(userResponse.data);
@@ -214,7 +226,7 @@ const SettingScreen = () => {
       setIsFaceIdEnabled(faceIdFlag);
       refreshPermissionState();
     } catch (error: any) {
-      if (canUpdateScreen()) {
+      if (canCommitRequest()) {
         hasLoadedOnceRef.current = true;
         setHasLoadedOnce(true);
       }
@@ -223,31 +235,32 @@ const SettingScreen = () => {
         isOffline ||
         error?.OFFLINE ||
         isAuthExpiredError(error) ||
-        !canUpdateScreen()
+        !canCommitRequest()
       ) {
-        if (canUpdateScreen() && !isAuthExpiredError(error)) {
+        if (canCommitRequest() && !isAuthExpiredError(error)) {
           setLoadErrorMessage(
-            "Vui lòng kiểm tra kết nối mạng và thử mở lại màn hình này."
+            "Vui lòng kiểm tra kết nối mạng và thử mở lại màn hình này.",
           );
         }
         return;
       }
 
-      if (canUpdateScreen()) {
+      if (canCommitRequest()) {
         setLoadErrorMessage("Không thể tải dữ liệu tài khoản hiện tại.");
       }
     } finally {
       loadingRef.current = false;
-      if (
-        blockingLoaderActiveRef.current &&
-        isMountedRef.current &&
-        isScreenActiveRef.current
-      ) {
+      if (blockingLoaderActiveRef.current && isMountedRef.current) {
         setIsLoading(false);
         blockingLoaderActiveRef.current = false;
       }
     }
-  }, [canUpdateScreen, isAuthExpiredError, refreshPermissionState]);
+  }, [
+    canCommitRequest,
+    canUpdateScreen,
+    isAuthExpiredError,
+    refreshPermissionState,
+  ]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextState) => {
@@ -310,10 +323,10 @@ const SettingScreen = () => {
       hasError: Boolean(loadErrorMessage),
       onOffline: () => {
         setLoadErrorMessage(
-          "Vui lòng kiểm tra kết nối mạng và thử mở lại màn hình này."
+          "Vui lòng kiểm tra kết nối mạng và thử mở lại màn hình này.",
         );
       },
-    }
+    },
   );
 
   const handleToggleFaceID = async (value: boolean) => {
@@ -334,7 +347,7 @@ const SettingScreen = () => {
       if (biometryType !== Keychain.BIOMETRY_TYPE.FACE_ID) {
         Alert.alert(
           "FaceID chưa sẵn sàng",
-          "Thiết bị chưa hỗ trợ FaceID hoặc chưa thiết lập FaceID."
+          "Thiết bị chưa hỗ trợ FaceID hoặc chưa thiết lập FaceID.",
         );
         setIsFaceIdEnabled(false);
         return;
@@ -352,7 +365,7 @@ const SettingScreen = () => {
           accessControl:
             Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
           accessible: Keychain.ACCESSIBLE.WHEN_PASSCODE_SET_THIS_DEVICE_ONLY,
-        }
+        },
       );
       isFaceIdPromptActiveRef.current = true;
       let confirmation: false | Keychain.UserCredentials = false;
@@ -413,7 +426,7 @@ const SettingScreen = () => {
   };
 
   const localNetworkStatusLabel = getLocalNetworkPermissionLabel(
-    localNetworkState.status
+    localNetworkState.status,
   );
   const cameraStatusLabel = getCameraPermissionLabel(cameraPermissionStatus);
   const localNetworkStatusBackground =
@@ -430,7 +443,7 @@ const SettingScreen = () => {
       if (Platform.OS === "android") {
         Alert.alert(
           "Quyền mạng nội bộ",
-          "Android không có công tắc riêng cho quyền mạng nội bộ. Quyền này đã được mở mặc định để app kết nối server nội bộ."
+          "Android không có công tắc riêng cho quyền mạng nội bộ. Quyền này đã được mở mặc định để app kết nối server nội bộ.",
         );
         const refreshedState = await refreshStoredLocalNetworkPermission();
         setLocalNetworkState(refreshedState);
@@ -449,7 +462,7 @@ const SettingScreen = () => {
                 openAppPermissionSettings();
               },
             },
-          ]
+          ],
         );
         return;
       }
@@ -476,19 +489,19 @@ const SettingScreen = () => {
                   openAppPermissionSettings();
                 },
               },
-            ]
+            ],
           );
         }
       } catch {
         Alert.alert(
           "Lỗi",
-          "Chưa thể cập nhật quyền mạng nội bộ lúc này. Vui lòng thử lại."
+          "Chưa thể cập nhật quyền mạng nội bộ lúc này. Vui lòng thử lại.",
         );
       } finally {
         if (isMountedRef.current) setIsUpdatingLocalNetworkPermission(false);
       }
     },
-    [isUpdatingLocalNetworkPermission]
+    [isUpdatingLocalNetworkPermission],
   );
 
   const handleToggleCameraPermission = useCallback(
@@ -507,7 +520,7 @@ const SettingScreen = () => {
                 openAppPermissionSettings();
               },
             },
-          ]
+          ],
         );
         return;
       }
@@ -529,7 +542,7 @@ const SettingScreen = () => {
                   openAppPermissionSettings();
                 },
               },
-            ]
+            ],
           );
           return;
         }
@@ -537,7 +550,7 @@ const SettingScreen = () => {
         if (nextStatus === "denied" || nextStatus === "unavailable") {
           Alert.alert(
             "Quyền camera",
-            "Chưa thể bật quyền camera trên thiết bị này."
+            "Chưa thể bật quyền camera trên thiết bị này.",
           );
         }
       } catch {
@@ -546,7 +559,7 @@ const SettingScreen = () => {
         if (isMountedRef.current) setIsUpdatingCameraPermission(false);
       }
     },
-    [isUpdatingCameraPermission]
+    [isUpdatingCameraPermission],
   );
 
   const closeModal = () => {
@@ -609,7 +622,7 @@ const SettingScreen = () => {
       Alert.alert(
         "Lỗi",
         error.response?.data?.message ||
-          "Không thể đổi mật khẩu. Vui lòng thử lại."
+          "Không thể đổi mật khẩu. Vui lòng thử lại.",
       );
     } finally {
       if (isMountedRef.current) setIsLoading(false);
@@ -632,13 +645,13 @@ const SettingScreen = () => {
 
     try {
       await openStoreForUpdate(
-        Platform.OS === "ios" ? IOS_STORE_URL : ANDROID_STORE_URL
+        Platform.OS === "ios" ? IOS_STORE_URL : ANDROID_STORE_URL,
       );
     } catch (error) {
       warn("[Settings] Open app store failed:", error);
       Alert.alert(
         "Không thể mở Store",
-        "Vui lòng mở Store và cập nhật ứng dụng thủ công."
+        "Vui lòng mở Store và cập nhật ứng dụng thủ công.",
       );
     }
   };
@@ -781,12 +794,13 @@ const SettingScreen = () => {
           <SettingSectionGroup title="THÔNG TIN ỨNG DỤNG">
             <View style={styles.appVersionRow}>
               <View
-                style={[
-                  styles.appVersionIcon,
-                  { backgroundColor: C.emerald },
-                ]}
+                style={[styles.appVersionIcon, { backgroundColor: C.emerald }]}
               >
-                <Ionicons name="cloud-download-outline" size={18} color="#fff" />
+                <Ionicons
+                  name="cloud-download-outline"
+                  size={18}
+                  color="#fff"
+                />
               </View>
               <View style={styles.appVersionContent}>
                 <Text style={[styles.appVersionTitle, { color: colors.text }]}>

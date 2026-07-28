@@ -3,16 +3,18 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import type { ListCardAttachFileProps } from "../../types";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import Viewer from "../file/FileView";
-import { C } from "../../utils/helpers/colors";
+import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
 
 export default function ListCardAttachFile({ item }: ListCardAttachFileProps) {
+  const styles = useStyles(makeStyles);
+  const c = useAppColors();
   const [openPdf, setOpenPdf] = useState(false);
 
   return (
     <View>
       <View style={styles.card}>
         <View style={styles.avatar}>
-          <Ionicons name="document-text-outline" size={26} color={C.red} />
+          <Ionicons name="document-text-outline" size={26} color={c.red} />
         </View>
 
         <View style={styles.info}>
@@ -41,42 +43,43 @@ export default function ListCardAttachFile({ item }: ListCardAttachFileProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    flexDirection: "row",
-    backgroundColor: C.surface,
-    marginHorizontal: 12,
-    marginVertical: 6,
-    padding: 16,
-    borderRadius: 16,
-    shadowColor: C.shadow,
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 6,
-    elevation: 3,
-    alignItems: "center",
-  },
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    card: {
+      flexDirection: "row",
+      backgroundColor: c.surface,
+      marginHorizontal: 12,
+      marginVertical: 6,
+      padding: 16,
+      borderRadius: 16,
+      shadowColor: c.shadow,
+      shadowOpacity: 0.08,
+      shadowOffset: { width: 0, height: 2 },
+      shadowRadius: 6,
+      elevation: 3,
+      alignItems: "center",
+    },
 
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: C.blueSurface,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 16,
-  },
+    avatar: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: c.blueSurface,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 16,
+    },
 
-  info: { flex: 1 },
-  text: { fontSize: 14, color: C.textSecondary, marginTop: 4 },
-  label: { fontWeight: "bold", color: C.text, fontSize: 15 },
+    info: { flex: 1 },
+    text: { fontSize: 14, color: c.textSecondary, marginTop: 4 },
+    label: { fontWeight: "bold", color: c.text, fontSize: 15 },
 
-  viewButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    backgroundColor: C.red,
-    borderRadius: 8,
-  },
+    viewButton: {
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      backgroundColor: c.red,
+      borderRadius: 8,
+    },
 
-  viewText: { color: "#fff", fontWeight: "bold", fontSize: 14 },
-});
+    viewText: { color: "#fff", fontWeight: "bold", fontSize: 14 },
+  });

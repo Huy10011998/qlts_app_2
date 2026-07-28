@@ -1,4 +1,8 @@
-import { C, useSeparatorColor } from "../../utils/helpers/colors";
+import {
+  AppColors,
+  useSeparatorColor,
+  useStyles,
+} from "../../utils/helpers/colors";
 import React, {
   useCallback,
   useEffect,
@@ -20,10 +24,11 @@ import { isAuthExpiredError } from "../../services/data/callApi";
 import { isNetworkRequestError } from "../../utils/helpers/api";
 import AssetListEmptyState from "./shared/AssetListEmptyState";
 import AssetListSummaryCard from "./shared/AssetListSummaryCard";
-import { sharedAssetListStyles } from "./shared/listStyles";
-import { BG, BRAND_RED, CARD_SHADOW } from "./shared/listTheme";
+import { makeSharedAssetListStyles } from "./shared/listStyles";
+import { BRAND_RED, cardShadow } from "./shared/listTheme";
 
 export default function AssetListAttachFile() {
+  const styles = useStyles(makeStyles);
   const separatorColor = useSeparatorColor();
   const [file, setFile] = useState<FileItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -211,42 +216,46 @@ export default function AssetListAttachFile() {
   );
 }
 
-const styles = StyleSheet.create({
-  ...sharedAssetListStyles,
-  container: { ...sharedAssetListStyles.container, backgroundColor: BG },
-  listContent: {
-    ...sharedAssetListStyles.listContent,
-    paddingTop: 14,
-    paddingBottom: 20,
-  },
-  listContentEmpty: {
-    paddingTop: 0,
-    paddingBottom: 0,
-  },
-  emptyStateRoot: {
-    flex: 1,
-    backgroundColor: BG,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 32,
-  },
-  groupContainer: {
-    marginHorizontal: 12,
-    marginTop: 4,
-    marginBottom: 16,
-    backgroundColor: C.surface,
-    borderRadius: 12,
-    ...CARD_SHADOW,
-    paddingBottom: 8,
-  },
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    ...makeSharedAssetListStyles(c),
+    container: {
+      ...makeSharedAssetListStyles(c).container,
+      backgroundColor: c.bg,
+    },
+    listContent: {
+      ...makeSharedAssetListStyles(c).listContent,
+      paddingTop: 14,
+      paddingBottom: 20,
+    },
+    listContentEmpty: {
+      paddingTop: 0,
+      paddingBottom: 0,
+    },
+    emptyStateRoot: {
+      flex: 1,
+      backgroundColor: c.bg,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 32,
+    },
+    groupContainer: {
+      marginHorizontal: 12,
+      marginTop: 4,
+      marginBottom: 16,
+      backgroundColor: c.surface,
+      borderRadius: 12,
+      ...cardShadow(c),
+      paddingBottom: 8,
+    },
 
-  categoryText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: C.red,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: C.border,
-  },
-});
+    categoryText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: c.red,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
+    },
+  });

@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState } from "react-native";
 import { getTokenViewCamera } from "../../../services/data/callApi";
-import {
-  decodeTokenExpiry,
-  isTokenStillValid,
-} from "./cameraStreamUtils";
+import { decodeTokenExpiry, isTokenStillValid } from "./cameraStreamUtils";
 import { useNetworkAwareReload } from "../../../hooks/useNetworkAwareReload";
 import { warn } from "../../../utils/Logger";
 
@@ -38,9 +35,9 @@ export function useCameraViewToken({
     cameraTokenRef.current = cameraToken;
   }, [cameraToken]);
 
-  useEffect(() => {
-    isFocusedRef.current = isFocused;
-  }, [isFocused]);
+  // Keep this synchronous with render so a focus callback in the same commit
+  // cannot observe the previous tab's focus state and skip the reload.
+  isFocusedRef.current = isFocused;
 
   const clearTokenRefreshTimer = useCallback(() => {
     if (tokenRefreshTimerRef.current) {
@@ -79,29 +76,31 @@ export function useCameraViewToken({
         return;
       }
 
-      if (tokenRequestRef.current) {
-        await tokenRequestRef.current;
-        return;
-      }
-
+      let request = tokenRequestRef.current;
       try {
-        tokenRequestRef.current = (async () => {
-          const res: any = await getTokenViewCamera();
-          const nextToken = res?.data ?? null;
+        if (!request) {
+          request = (async () => {
+            const res: any = await getTokenViewCamera();
+            return res?.data ?? null;
+          })();
+          tokenRequestRef.current = request;
+        }
 
-          if (nextToken && isFocusedRef.current) {
-            const timestamp = Date.now();
-            setCameraToken(nextToken);
-            setThumbTimestamp(timestamp);
-            setTokenErrorMessage(null);
-            scheduleProactiveRefresh(nextToken);
-            onTokenReceived?.(nextToken, timestamp);
-          }
+        const nextToken = await request;
 
-          return nextToken;
-        })();
-
-        await tokenRequestRef.current;
+        // A request can start on CameraList, finish while the Settings tab is
+        // active, then be awaited by CameraList when it receives focus again.
+        // Apply its result after awaiting based on the *current* focus state;
+        // otherwise that race leaves cameraToken empty and every card loading.
+        if (nextToken && isFocusedRef.current) {
+          const timestamp = Date.now();
+          cameraTokenRef.current = nextToken;
+          setCameraToken(nextToken);
+          setThumbTimestamp(timestamp);
+          setTokenErrorMessage(null);
+          scheduleProactiveRefresh(nextToken);
+          onTokenReceived?.(nextToken, timestamp);
+        }
       } catch (err) {
         warn("getTokenViewCamera error:", err);
         if (isFocusedRef.current) {
@@ -110,7 +109,9 @@ export function useCameraViewToken({
           );
         }
       } finally {
-        tokenRequestRef.current = null;
+        if (tokenRequestRef.current === request) {
+          tokenRequestRef.current = null;
+        }
       }
     },
     [onTokenReceived, scheduleProactiveRefresh],
@@ -120,19 +121,22 @@ export function useCameraViewToken({
     fetchCameraTokenRef.current = fetchCameraToken;
   }, [fetchCameraToken]);
 
-  useNetworkAwareReload(() => {
-    fetchCameraTokenRef.current(true);
-  }, {
-    enabled: isFocused,
-    hasError: Boolean(tokenErrorMessage),
-    onOffline: () => {
-      setCameraToken("");
-      cameraTokenRef.current = "";
-      setTokenErrorMessage(
-        "Vui lòng kiểm tra kết nối mạng hoặc quay lại để thử lại.",
-      );
+  useNetworkAwareReload(
+    () => {
+      fetchCameraTokenRef.current(true);
     },
-  });
+    {
+      enabled: isFocused,
+      hasError: Boolean(tokenErrorMessage),
+      onOffline: () => {
+        setCameraToken("");
+        cameraTokenRef.current = "";
+        setTokenErrorMessage(
+          "Vui lòng kiểm tra kết nối mạng hoặc quay lại để thử lại.",
+        );
+      },
+    },
+  );
 
   useEffect(() => {
     const sub = AppState.addEventListener("change", (state) => {

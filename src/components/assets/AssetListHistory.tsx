@@ -1,3 +1,4 @@
+import { AppColors, useStyles } from "../../utils/helpers/colors";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { View, StyleSheet, FlatList, RefreshControl } from "react-native";
 import type { Field, PropertyResponse, StackNavigation } from "../../types";
@@ -18,10 +19,11 @@ import { isAuthExpiredError } from "../../services/data/callApi";
 import { isNetworkRequestError } from "../../utils/helpers/api";
 import AssetListEmptyState from "./shared/AssetListEmptyState";
 import AssetListSummaryCard from "./shared/AssetListSummaryCard";
-import { sharedAssetListStyles } from "./shared/listStyles";
-import { BG, BRAND_RED } from "./shared/listTheme";
+import { makeSharedAssetListStyles } from "./shared/listStyles";
+import { BRAND_RED } from "./shared/listTheme";
 
 export default function AssetListHistory() {
+  const styles = useStyles(makeStyles);
   const [historyItems, setHistoryItems] = useState<Record<string, any>[]>([]);
   const [fieldActive, setFieldActive] = useState<Field[]>([]);
   const [fieldShowMobile, setFieldShowMobile] = useState<Field[]>([]);
@@ -241,23 +243,24 @@ export default function AssetListHistory() {
   );
 }
 
-const styles = StyleSheet.create({
-  ...sharedAssetListStyles,
-  container: { flex: 1, backgroundColor: BG },
-  listContent: {
-    flexGrow: 1,
-    paddingTop: 14,
-    paddingBottom: 20,
-  },
-  listContentEmpty: {
-    paddingTop: 0,
-    paddingBottom: 0,
-  },
-  emptyStateRoot: {
-    flex: 1,
-    backgroundColor: BG,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 32,
-  },
-});
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    ...makeSharedAssetListStyles(c),
+    container: { flex: 1, backgroundColor: c.bg },
+    listContent: {
+      flexGrow: 1,
+      paddingTop: 14,
+      paddingBottom: 20,
+    },
+    listContentEmpty: {
+      paddingTop: 0,
+      paddingBottom: 0,
+    },
+    emptyStateRoot: {
+      flex: 1,
+      backgroundColor: c.bg,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 32,
+    },
+  });

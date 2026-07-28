@@ -16,9 +16,9 @@ import AssetNoteDetails from "../assets/AssetNoteDetails";
 import { useParams } from "../../hooks/useParams";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import AssetListEmptyState from "../assets/shared/AssetListEmptyState";
-import { BG } from "../assets/shared/listTheme";
+import { AppColors, useThemeValue } from "../../utils/helpers/colors";
 
-const styles = {
+const makeStyles = (c: AppColors) => ({
   container: {
     flex: 1,
   },
@@ -32,12 +32,12 @@ const styles = {
   },
   emptyStateRoot: {
     flex: 1,
-    backgroundColor: BG,
+    backgroundColor: c.bg,
     alignItems: "center" as const,
     justifyContent: "center" as const,
     paddingHorizontal: 32,
   },
-};
+});
 
 export default function TabContent({
   activeTab,
@@ -52,6 +52,7 @@ export default function TabContent({
   fieldActive,
   loadErrorMessage,
 }: TabContentProps) {
+  const styles = useThemeValue(makeStyles);
   const route = useRoute();
   const navigation = useNavigation<AssetDetailsNavigationProp>();
   const dispatch = useDispatch();

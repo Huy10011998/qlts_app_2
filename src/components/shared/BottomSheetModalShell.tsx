@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { C } from "../../utils/helpers/colors";
+import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
 
 type BottomSheetModalShellProps = {
   avoidKeyboard?: boolean;
@@ -48,6 +48,8 @@ export default function BottomSheetModalShell({
   presentationStyle,
   statusBarTranslucent,
 }: BottomSheetModalShellProps) {
+  const styles = useStyles(makeStyles);
+  const c = useAppColors();
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [overlayHeight, setOverlayHeight] = useState(0);
   const [sheetHeight, setSheetHeight] = useState(0);
@@ -140,7 +142,7 @@ export default function BottomSheetModalShell({
               hitSlop={10}
               onPress={onClose}
             >
-              <Ionicons name="close" size={22} color={C.textSecondary} />
+              <Ionicons name="close" size={22} color={c.textSecondary} />
             </TouchableOpacity>
           ) : null}
           {showHandle ? <View style={styles.handle} /> : null}
@@ -151,37 +153,38 @@ export default function BottomSheetModalShell({
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.4)",
-  },
-  backdrop: {
-    flex: 1,
-  },
-  sheet: {
-    backgroundColor: C.surface,
-  },
-  closeButton: {
-    position: "absolute",
-    top: 12,
-    right: 12,
-    zIndex: 2,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: C.surfaceAlt,
-  },
-  handle: {
-    width: 45,
-    height: 5,
-    backgroundColor: C.borderStrong,
-    borderRadius: 3,
-    alignSelf: "center",
-    marginTop: 10,
-    marginBottom: 12,
-  },
-});
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    overlay: {
+      flex: 1,
+      justifyContent: "flex-end",
+      backgroundColor: "rgba(0,0,0,0.4)",
+    },
+    backdrop: {
+      flex: 1,
+    },
+    sheet: {
+      backgroundColor: c.surface,
+    },
+    closeButton: {
+      position: "absolute",
+      top: 12,
+      right: 12,
+      zIndex: 2,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: c.surfaceAlt,
+    },
+    handle: {
+      width: 45,
+      height: 5,
+      backgroundColor: c.borderStrong,
+      borderRadius: 3,
+      alignSelf: "center",
+      marginTop: 10,
+      marginBottom: 12,
+    },
+  });

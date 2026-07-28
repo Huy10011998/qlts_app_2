@@ -1,7 +1,9 @@
 import {
-  C,
+  AppColors,
+  useAppColors,
   useHairlineBorderColor,
   useSeparatorColor,
+  useStyles,
 } from "../../utils/helpers/colors";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -111,7 +113,7 @@ const getJourneyTime = (item: JourneyRecord, start: boolean) => {
     item,
     start
       ? ["thoiGianBD", "gioBatDau", "GioBatDau", "startTime"]
-      : ["thoiGianKT", "gioKetThuc", "GioKetThuc", "endTime"]
+      : ["thoiGianKT", "gioKetThuc", "GioKetThuc", "endTime"],
   );
   const timePart = value.includes("T") ? value.split("T")[1] : value;
   return timePart.slice(0, 5);
@@ -131,7 +133,7 @@ const formatGroupDate = (value: string) => {
   ];
   return `${weekdays[date.getDay()]}, ${String(date.getDate()).padStart(
     2,
-    "0"
+    "0",
   )}/${String(date.getMonth() + 1).padStart(2, "0")}/${date.getFullYear()}`;
 };
 
@@ -143,6 +145,8 @@ const parseCoordinate = (value?: string | null): MapCoordinate | null => {
 };
 
 export default function VehicleJourneyScreen() {
+  const styles = useStyles(makeStyles);
+  const c = useAppColors();
   const navigation = useNavigation<HomeNavigationProp>();
   const hairlineBorderColor = useHairlineBorderColor();
   const separatorColor = useSeparatorColor();
@@ -150,11 +154,11 @@ export default function VehicleJourneyScreen() {
   const today = useMemo(() => new Date(), []);
   const firstDay = useMemo(
     () => new Date(today.getFullYear(), today.getMonth(), 1),
-    [today]
+    [today],
   );
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleRecord | null>(
-    null
+    null,
   );
   const [fromDate, setFromDate] = useState(formatDate(firstDay));
   const [toDate, setToDate] = useState(formatDate(today));
@@ -168,7 +172,7 @@ export default function VehicleJourneyScreen() {
   const [journeyError, setJourneyError] = useState(false);
   const [expandedDates, setExpandedDates] = useState<string[]>([]);
   const [gpsLoadingJourneyId, setGpsLoadingJourneyId] = useState<number | null>(
-    null
+    null,
   );
   const vehicleModalItems = useMemo(() => {
     const keyword = vehicleSearch.trim().toLocaleLowerCase("vi");
@@ -180,7 +184,7 @@ export default function VehicleJourneyScreen() {
       }))
       .filter(
         (item) =>
-          !keyword || item.text.toLocaleLowerCase("vi").includes(keyword)
+          !keyword || item.text.toLocaleLowerCase("vi").includes(keyword),
       );
 
     return keyword
@@ -237,7 +241,7 @@ export default function VehicleJourneyScreen() {
       const response = await getPhuongTienHanhTrinh<JourneyListResponse>(
         selectedVehicle.id,
         toApiDate(fromDate),
-        toApiDate(toDate, true)
+        toApiDate(toDate, true),
       );
       const items = Array.isArray(response?.data?.items)
         ? response.data.items
@@ -245,7 +249,7 @@ export default function VehicleJourneyScreen() {
       log("[VehicleJourney] GET_PHUONG_TIEN_HANH_TRINH items", items);
       setJourneys(items);
       const dates = Array.from(
-        new Set(items.map((item) => getJourneyDate(item).slice(0, 10)))
+        new Set(items.map((item) => getJourneyDate(item).slice(0, 10))),
       ).filter(Boolean);
       setExpandedDates(dates.slice(0, 1));
       setJourneyError(false);
@@ -274,7 +278,7 @@ export default function VehicleJourneyScreen() {
         setLoadError(true);
         setJourneyError(true);
       },
-    }
+    },
   );
 
   const openJourneyMap = useCallback(
@@ -282,13 +286,13 @@ export default function VehicleJourneyScreen() {
       setGpsLoadingJourneyId(item.id);
       try {
         const response = await getPhuongTienHanhTrinhGps<GpsListResponse>(
-          item.id
+          item.id,
         );
         const gpsItems = Array.isArray(response?.data?.items)
           ? [...response.data.items].sort((a, b) =>
               getText(a, ["thoiGian", "ThoiGian"]).localeCompare(
-                getText(b, ["thoiGian", "ThoiGian"])
-              )
+                getText(b, ["thoiGian", "ThoiGian"]),
+              ),
             )
           : [];
         const coordinates = gpsItems
@@ -297,7 +301,7 @@ export default function VehicleJourneyScreen() {
             lng: Number(gps.lng ?? gps.Lng),
           }))
           .filter(
-            (point) => Number.isFinite(point.lat) && Number.isFinite(point.lng)
+            (point) => Number.isFinite(point.lat) && Number.isFinite(point.lng),
           );
         const fallback = [
           parseCoordinate(item.toaDo_BD),
@@ -313,7 +317,7 @@ export default function VehicleJourneyScreen() {
       } catch (exception) {
         error(
           "[VehicleJourney] GET_PHUONG_TIEN_HANH_TRINH_GPS error",
-          exception
+          exception,
         );
         const fallback = [
           parseCoordinate(item.toaDo_BD),
@@ -327,7 +331,7 @@ export default function VehicleJourneyScreen() {
         setGpsLoadingJourneyId(null);
       }
     },
-    [navigation]
+    [navigation],
   );
 
   const refreshAll = useCallback(async () => {
@@ -339,7 +343,7 @@ export default function VehicleJourneyScreen() {
   if (loading) {
     return (
       <View style={styles.centerState}>
-        <ActivityIndicator color={C.red} />
+        <ActivityIndicator color={c.red} />
         <Text style={styles.loadingText}>Đang tải phương tiện...</Text>
       </View>
     );
@@ -354,7 +358,7 @@ export default function VehicleJourneyScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={refreshAll}
-            colors={[C.accent]}
+            colors={[c.accent]}
           />
         }
       >
@@ -364,7 +368,7 @@ export default function VehicleJourneyScreen() {
           activeOpacity={0.75}
           onPress={() => setPickerVisible(true)}
         >
-          <Ionicons name="car-outline" size={20} color={C.textSecondary} />
+          <Ionicons name="car-outline" size={20} color={c.textSecondary} />
           <Text
             style={[
               styles.selectText,
@@ -374,7 +378,7 @@ export default function VehicleJourneyScreen() {
           >
             {selectedVehicle ? getVehicleLabel(selectedVehicle) : "Phương tiện"}
           </Text>
-          <Ionicons name="chevron-down" size={18} color={C.textSecondary} />
+          <Ionicons name="chevron-down" size={18} color={c.textSecondary} />
         </TouchableOpacity>
 
         <View style={styles.dateRow}>
@@ -398,7 +402,9 @@ export default function VehicleJourneyScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={[styles.journeyArea, { borderColor: hairlineBorderColor }]}>
+        <View
+          style={[styles.journeyArea, { borderColor: hairlineBorderColor }]}
+        >
           {loadError ? (
             <EmptyState
               iconName="cloud-offline-outline"
@@ -417,7 +423,7 @@ export default function VehicleJourneyScreen() {
             />
           ) : journeyLoading ? (
             <View style={styles.journeyLoading}>
-              <ActivityIndicator color={C.red} />
+              <ActivityIndicator color={c.red} />
               <Text style={styles.loadingText}>Đang tải hành trình...</Text>
             </View>
           ) : vehicles.length === 0 ? (
@@ -453,14 +459,14 @@ export default function VehicleJourneyScreen() {
                       setExpandedDates((current) =>
                         current.includes(date)
                           ? current.filter((value) => value !== date)
-                          : [...current, date]
+                          : [...current, date],
                       )
                     }
                   >
                     <Ionicons
                       name="calendar-outline"
                       size={18}
-                      color={C.textSecondary}
+                      color={c.textSecondary}
                     />
                     <Text style={styles.groupDate}>
                       {formatGroupDate(date)}
@@ -473,7 +479,7 @@ export default function VehicleJourneyScreen() {
                     <Ionicons
                       name={expanded ? "chevron-up" : "chevron-down"}
                       size={18}
-                      color={C.textSecondary}
+                      color={c.textSecondary}
                     />
                   </TouchableOpacity>
                   {expanded
@@ -528,7 +534,7 @@ export default function VehicleJourneyScreen() {
                                 <Ionicons
                                   name="time-outline"
                                   size={15}
-                                  color={C.textMuted}
+                                  color={c.textMuted}
                                 />
                                 <Text style={styles.tripTime}>
                                   {getJourneyTime(item, true) || "--:--"} –{" "}
@@ -574,7 +580,7 @@ export default function VehicleJourneyScreen() {
                                 <View style={styles.tripLoadingRow}>
                                   <ActivityIndicator
                                     size="small"
-                                    color={C.red}
+                                    color={c.red}
                                   />
                                   <Text style={styles.tripLoadingText}>
                                     Đang mở bản đồ...
@@ -618,7 +624,7 @@ export default function VehicleJourneyScreen() {
             return;
           }
           const selectedIndex = vehicles.findIndex(
-            (item, index) => String(item.id ?? index) === String(value)
+            (item, index) => String(item.id ?? index) === String(value),
           );
           if (selectedIndex >= 0) setSelectedVehicle(vehicles[selectedIndex]);
           setPickerVisible(false);
@@ -629,142 +635,148 @@ export default function VehicleJourneyScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.surfaceAlt },
-  content: {
-    flexGrow: 1,
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 32,
-  },
-  centerState: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: C.surfaceAlt,
-  },
-  loadingText: { marginTop: 10, color: C.textSecondary, fontSize: 14 },
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    root: { flex: 1, backgroundColor: c.surfaceAlt },
+    content: {
+      flexGrow: 1,
+      paddingHorizontal: 16,
+      paddingTop: 8,
+      paddingBottom: 32,
+    },
+    centerState: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: c.surfaceAlt,
+    },
+    loadingText: { marginTop: 10, color: c.textSecondary, fontSize: 14 },
 
-  fieldLabel: {
-    color: C.text,
-    fontSize: 13,
-    fontWeight: "600",
-    marginBottom: 7,
-  },
-  selectField: {
-    minHeight: 48,
-    borderWidth: 1,
-    borderColor: C.borderStrong,
-    borderRadius: 8,
-    backgroundColor: C.surface,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 12,
-    paddingVertical: 0,
-    marginBottom: 16,
-  },
-  selectText: { flex: 1, color: C.text, fontSize: 14, marginHorizontal: 10 },
-  placeholderText: { color: C.textMuted },
-  dateRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
-  dateField: { flex: 1 },
-  actionRow: { flexDirection: "row", gap: 10, marginBottom: 18 },
-  actionButton: {
-    flex: 1,
-    height: 46,
-    borderRadius: 9,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-  },
-  closeButton: { backgroundColor: "#737373" },
-  actionText: { color: "#FFFFFF", fontSize: 14, fontWeight: "600" },
-  journeyArea: {
-    flex: 1,
-    minHeight: 300,
-    borderWidth: 1,
-    borderColor: C.border,
-    borderRadius: 14,
-    backgroundColor: C.surface,
-    overflow: "hidden",
-  },
-  journeyLoading: {
-    flex: 1,
-    minHeight: 260,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  journeyGroup: { borderBottomWidth: 1, borderBottomColor: C.border },
-  groupHeader: {
-    minHeight: 52,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 13,
-    backgroundColor: C.surfaceAlt,
-    gap: 8,
-  },
-  groupDate: { flex: 1, color: C.textSecondary, fontSize: 13, fontWeight: "700" },
-  tripCountBadge: {
-    backgroundColor: C.border,
-    borderRadius: 12,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-  },
-  tripCountText: { color: C.textSecondary, fontSize: 11, fontWeight: "700" },
-  tripRow: { flexDirection: "row", paddingHorizontal: 14, paddingTop: 14 },
-  tripRowSelected: { backgroundColor: C.accentLight },
-  timelineColumn: { width: 25, alignItems: "center" },
-  timelineDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    borderWidth: 3,
-    borderColor: "#22C55E",
-    backgroundColor: C.surface,
-  },
-  timelineLine: {
-    width: 2,
-    flex: 1,
-    minHeight: 76,
-    backgroundColor: C.border,
-  },
-  tripContent: { flex: 1, paddingLeft: 5, paddingBottom: 16 },
-  tripTimeRow: { flexDirection: "row", alignItems: "center", gap: 5 },
-  tripTime: { color: C.textMuted, fontSize: 13 },
-  startAddress: {
-    color: C.text,
-    fontSize: 15,
-    fontWeight: "600",
-    marginTop: 7,
-  },
-  endAddress: { color: C.textMuted, fontSize: 13, marginTop: 5 },
-  metricRow: { flexDirection: "row", flexWrap: "wrap", gap: 7, marginTop: 9 },
-  distanceBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: C.surfaceAlt,
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  durationBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: C.greenLight,
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  distanceText: { color: "#1976D2", fontSize: 12, fontWeight: "700" },
-  durationText: { color: "#2E7D32", fontSize: 12, fontWeight: "700" },
-  tripLoadingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-    marginTop: 10,
-  },
-  tripLoadingText: { color: "#1976D2", fontSize: 12, fontWeight: "600" },
-});
+    fieldLabel: {
+      color: c.text,
+      fontSize: 13,
+      fontWeight: "600",
+      marginBottom: 7,
+    },
+    selectField: {
+      minHeight: 48,
+      borderWidth: 1,
+      borderColor: c.borderStrong,
+      borderRadius: 8,
+      backgroundColor: c.surface,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 12,
+      paddingVertical: 0,
+      marginBottom: 16,
+    },
+    selectText: { flex: 1, color: c.text, fontSize: 14, marginHorizontal: 10 },
+    placeholderText: { color: c.textMuted },
+    dateRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
+    dateField: { flex: 1 },
+    actionRow: { flexDirection: "row", gap: 10, marginBottom: 18 },
+    actionButton: {
+      flex: 1,
+      height: 46,
+      borderRadius: 9,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+    },
+    closeButton: { backgroundColor: "#737373" },
+    actionText: { color: "#FFFFFF", fontSize: 14, fontWeight: "600" },
+    journeyArea: {
+      flex: 1,
+      minHeight: 300,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: 14,
+      backgroundColor: c.surface,
+      overflow: "hidden",
+    },
+    journeyLoading: {
+      flex: 1,
+      minHeight: 260,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    journeyGroup: { borderBottomWidth: 1, borderBottomColor: c.border },
+    groupHeader: {
+      minHeight: 52,
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 13,
+      backgroundColor: c.surfaceAlt,
+      gap: 8,
+    },
+    groupDate: {
+      flex: 1,
+      color: c.textSecondary,
+      fontSize: 13,
+      fontWeight: "700",
+    },
+    tripCountBadge: {
+      backgroundColor: c.border,
+      borderRadius: 12,
+      paddingHorizontal: 9,
+      paddingVertical: 4,
+    },
+    tripCountText: { color: c.textSecondary, fontSize: 11, fontWeight: "700" },
+    tripRow: { flexDirection: "row", paddingHorizontal: 14, paddingTop: 14 },
+    tripRowSelected: { backgroundColor: c.accentLight },
+    timelineColumn: { width: 25, alignItems: "center" },
+    timelineDot: {
+      width: 14,
+      height: 14,
+      borderRadius: 7,
+      borderWidth: 3,
+      borderColor: "#22C55E",
+      backgroundColor: c.surface,
+    },
+    timelineLine: {
+      width: 2,
+      flex: 1,
+      minHeight: 76,
+      backgroundColor: c.border,
+    },
+    tripContent: { flex: 1, paddingLeft: 5, paddingBottom: 16 },
+    tripTimeRow: { flexDirection: "row", alignItems: "center", gap: 5 },
+    tripTime: { color: c.textMuted, fontSize: 13 },
+    startAddress: {
+      color: c.text,
+      fontSize: 15,
+      fontWeight: "600",
+      marginTop: 7,
+    },
+    endAddress: { color: c.textMuted, fontSize: 13, marginTop: 5 },
+    metricRow: { flexDirection: "row", flexWrap: "wrap", gap: 7, marginTop: 9 },
+    distanceBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      backgroundColor: c.surfaceAlt,
+      borderRadius: 12,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+    },
+    durationBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      backgroundColor: c.greenLight,
+      borderRadius: 12,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+    },
+    distanceText: { color: "#1976D2", fontSize: 12, fontWeight: "700" },
+    durationText: { color: "#2E7D32", fontSize: 12, fontWeight: "700" },
+    tripLoadingRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 7,
+      marginTop: 10,
+    },
+    tripLoadingText: { color: "#1976D2", fontSize: 12, fontWeight: "600" },
+  });

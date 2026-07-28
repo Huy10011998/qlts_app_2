@@ -2,6 +2,13 @@ export const GO2RTC_HOST = "https://api.cholimexfood.com.vn/camera-stream";
 
 export const ANDROID_LIVE_CELL_LIMIT = 4;
 
+/** Cấu hình phục hồi live HLS dùng chung cho mọi màn fullscreen Android. */
+export const ANDROID_LIVE_WATCHDOG_INTERVAL_MS = 6000;
+export const ANDROID_LIVE_STALE_AFTER_MS = 18000;
+export const ANDROID_LIVE_RETRY_BASE_MS = 2000;
+export const ANDROID_LIVE_RETRY_MAX_MS = 15000;
+export const ANDROID_LIVE_ERROR_NOTICE_AFTER = 3;
+
 /**
  * Khoảng chừa cho tai thỏ / home indicator khi xem toàn màn hình. Dùng chung
  * cho fullscreen của CameraListGrid và của CameraPlayback để hai màn không lệch.

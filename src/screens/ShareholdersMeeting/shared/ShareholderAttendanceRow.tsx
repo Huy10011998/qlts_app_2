@@ -1,12 +1,14 @@
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import {
-  C,
+  AppColors,
   useAccentBorderColors,
   useHairlineBorderColor,
+  useStyles,
+  useThemeValue,
 } from "../../../utils/helpers/colors";
 import type { ShareholderRowProps } from "../../../types/index";
-import { statusConfig } from "./shareholdersMeetingHelpers";
+import { makeStatusConfig } from "./shareholdersMeetingHelpers";
 
 export default function ShareholderAttendanceRow({
   item,
@@ -14,7 +16,8 @@ export default function ShareholderAttendanceRow({
   onUndoCheckIn,
   isSubmitting = false,
 }: ShareholderRowProps) {
-  const cfg = statusConfig[item.status];
+  const styles = useStyles(makeStyles);
+  const cfg = useThemeValue(makeStatusConfig)[item.status];
   const hairlineBorderColor = useHairlineBorderColor();
   const accentBorders = useAccentBorderColors();
 
@@ -47,7 +50,9 @@ export default function ShareholderAttendanceRow({
           </Text>
         </View>
         {item.isLock ? (
-          <View style={[styles.lockBadge, { borderColor: accentBorders.slate }]}>
+          <View
+            style={[styles.lockBadge, { borderColor: accentBorders.slate }]}
+          >
             <Text style={styles.lockBadgeText}>Đã khóa</Text>
           </View>
         ) : item.status === "pending" ? (
@@ -83,71 +88,72 @@ export default function ShareholderAttendanceRow({
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    paddingVertical: 12,
-    backgroundColor: C.surface,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    marginBottom: 6,
-    borderWidth: 1,
-    borderColor: C.border,
-    shadowColor: C.shadow,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  rowAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: C.accentLight,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-    borderWidth: 1.5,
-    borderColor: C.accent,
-    flexShrink: 0,
-  },
-  rowAvatarText: { color: C.accent, fontWeight: "700", fontSize: 15 },
-  rowInfo: { flex: 1 },
-  rowName: { color: C.textPrimary, fontSize: 14, fontWeight: "600" },
-  rowMeta: { color: C.textMuted, fontSize: 12, marginTop: 2 },
-  rowRight: { alignItems: "flex-end", gap: 6, marginLeft: 8 },
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  badgeText: { fontSize: 11, fontWeight: "600" },
-  lockBadge: {
-    backgroundColor: C.slateLight,
-    borderWidth: 1,
-    borderColor: C.slateBorder,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  lockBadgeText: { color: C.slate, fontSize: 11, fontWeight: "700" },
-  checkInBtn: {
-    backgroundColor: C.accent,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  checkInBtnText: { color: "#FFFFFF", fontSize: 11, fontWeight: "700" },
-  actionBtnDisabled: { opacity: 0.6 },
-  undoCheckInBtn: {
-    backgroundColor: C.red,
-    borderWidth: 1,
-    borderColor: C.redBorder,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  undoCheckInBtnText: { color: "#FFFFFF", fontSize: 11, fontWeight: "700" },
-});
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    row: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      paddingVertical: 12,
+      backgroundColor: c.surface,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      marginBottom: 6,
+      borderWidth: 1,
+      borderColor: c.border,
+      shadowColor: c.shadow,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.03,
+      shadowRadius: 2,
+      elevation: 1,
+    },
+    rowAvatar: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: c.accentLight,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 12,
+      borderWidth: 1.5,
+      borderColor: c.accent,
+      flexShrink: 0,
+    },
+    rowAvatarText: { color: c.accent, fontWeight: "700", fontSize: 15 },
+    rowInfo: { flex: 1 },
+    rowName: { color: c.textPrimary, fontSize: 14, fontWeight: "600" },
+    rowMeta: { color: c.textMuted, fontSize: 12, marginTop: 2 },
+    rowRight: { alignItems: "flex-end", gap: 6, marginLeft: 8 },
+    badge: {
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 8,
+      borderWidth: 1,
+    },
+    badgeText: { fontSize: 11, fontWeight: "600" },
+    lockBadge: {
+      backgroundColor: c.slateLight,
+      borderWidth: 1,
+      borderColor: c.slateBorder,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 8,
+    },
+    lockBadgeText: { color: c.slate, fontSize: 11, fontWeight: "700" },
+    checkInBtn: {
+      backgroundColor: c.accent,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 8,
+    },
+    checkInBtnText: { color: "#FFFFFF", fontSize: 11, fontWeight: "700" },
+    actionBtnDisabled: { opacity: 0.6 },
+    undoCheckInBtn: {
+      backgroundColor: c.red,
+      borderWidth: 1,
+      borderColor: c.redBorder,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 8,
+    },
+    undoCheckInBtnText: { color: "#FFFFFF", fontSize: 11, fontWeight: "700" },
+  });

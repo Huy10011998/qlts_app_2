@@ -1,6 +1,6 @@
 import React, { PropsWithChildren } from "react";
 import { StyleSheet, View } from "react-native";
-import { C } from "../../utils/helpers/colors";
+import { useAppColors } from "../../utils/helpers/colors";
 
 type ScreenContainerProps = PropsWithChildren<{
   backgroundColor?: string;
@@ -8,10 +8,19 @@ type ScreenContainerProps = PropsWithChildren<{
 
 export default function ScreenContainer({
   children,
-  backgroundColor = C.bg,
+  backgroundColor,
 }: ScreenContainerProps) {
+  const colors = useAppColors();
+
   return (
-    <View style={[styles.container, { backgroundColor }]}>{children}</View>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: backgroundColor ?? colors.bg },
+      ]}
+    >
+      {children}
+    </View>
   );
 }
 

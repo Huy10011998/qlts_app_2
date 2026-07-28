@@ -16,23 +16,32 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import EmptyState from "../../components/ui/EmptyState";
 import IsLoading from "../../components/ui/IconLoading";
 import {
-  C,
+  AppColors,
   useAccentBorderColors,
+  useAppColors,
   useHairlineBorderColor,
   useSeparatorColor,
   useStrongBorderColor,
+  useStyles,
+  useThemeValue,
 } from "../../utils/helpers/colors";
 import ShareholderAttendanceRow from "./shared/ShareholderAttendanceRow";
 import OpinionPickerModal from "./shared/OpinionPickerModal";
-import { VOTING_OPTIONS } from "./shared/shareholdersMeetingHelpers";
+import { makeVotingOptions } from "./shared/shareholdersMeetingHelpers";
 import { useShareholdersMeetingController } from "./shared/useShareholdersMeetingController";
 import { useColorScheme } from "../../hooks/useColorScheme";
 
 function AttendanceSeparator() {
+  const attStyles = useStyles(makeAttStyles);
   return <View style={attStyles.separator} />;
 }
 
 const ShareholdersMeetingScreen: React.FC = () => {
+  const styles = useStyles(makeStyles);
+  const attStyles = useStyles(makeAttStyles);
+  const voteStyles = useStyles(makeVoteStyles);
+  const c = useAppColors();
+  const votingOptions = useThemeValue(makeVotingOptions);
   const isDark = useColorScheme() === "dark";
   const hairlineBorderColor = useHairlineBorderColor();
   const separatorColor = useSeparatorColor();
@@ -86,7 +95,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
   if (!loaded) {
     return (
       <SafeAreaView style={styles.centerState} edges={["left", "right"]}>
-        <ActivityIndicator size="small" color={C.red} />
+        <ActivityIndicator size="small" color={c.red} />
       </SafeAreaView>
     );
   }
@@ -106,7 +115,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
   if (isMeetingLoading) {
     return (
       <SafeAreaView style={styles.centerState} edges={["left", "right"]}>
-        <ActivityIndicator size="small" color={C.red} />
+        <ActivityIndicator size="small" color={c.red} />
       </SafeAreaView>
     );
   }
@@ -168,7 +177,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
                 styles.tabBadge,
                 {
                   backgroundColor:
-                    activeTab === "attendance" ? C.accent : C.surfaceAlt,
+                    activeTab === "attendance" ? c.accent : c.surfaceAlt,
                 },
               ]}
             >
@@ -205,7 +214,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
                 styles.tabBadge,
                 {
                   backgroundColor:
-                    activeTab === "voting" ? C.accent : C.surfaceAlt,
+                    activeTab === "voting" ? c.accent : c.surfaceAlt,
                 },
               ]}
             >
@@ -301,13 +310,13 @@ const ShareholdersMeetingScreen: React.FC = () => {
               <MaterialCommunityIcons
                 name="magnify"
                 size={16}
-                color={C.textSub}
+                color={c.textSub}
               />
             </View>
             <TextInput
               style={attStyles.searchInput}
               placeholder="Tìm theo tên hoặc mã cổ đông..."
-              placeholderTextColor={C.placeholder}
+              placeholderTextColor={c.placeholder}
               value={searchQuery}
               onChangeText={setSearchQuery}
               clearButtonMode="never"
@@ -315,7 +324,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
             />
             {isSearching ? (
               <View style={attStyles.spinnerWrapper}>
-                <IsLoading size="small" color={C.red} />
+                <IsLoading size="small" color={c.red} />
               </View>
             ) : null}
             {!isSearching && searchQuery.length > 0 ? (
@@ -327,7 +336,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
                 <MaterialCommunityIcons
                   name="close-circle"
                   size={16}
-                  color={C.placeholder}
+                  color={c.placeholder}
                 />
               </TouchableOpacity>
             ) : null}
@@ -351,8 +360,8 @@ const ShareholdersMeetingScreen: React.FC = () => {
               <RefreshControl
                 refreshing={isRefreshingAttendance}
                 onRefresh={refreshAttendanceList}
-                colors={[C.red]}
-                tintColor={C.red}
+                colors={[c.red]}
+                tintColor={c.red}
               />
             }
             showsVerticalScrollIndicator={false}
@@ -372,7 +381,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
         </View>
       ) : isVotingLoading && opinions.length === 0 ? (
         <View style={styles.contentCenter}>
-          <ActivityIndicator size="small" color={C.red} />
+          <ActivityIndicator size="small" color={c.red} />
         </View>
       ) : (
         <ScrollView
@@ -414,7 +423,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
             >
               {isVotingLoading ? (
                 <View style={voteStyles.loadingWrap}>
-                  <ActivityIndicator size="small" color={C.red} />
+                  <ActivityIndicator size="small" color={c.red} />
                   <Text style={voteStyles.loadingText}>Đang tải ý kiến...</Text>
                 </View>
               ) : opinions.length > 0 ? (
@@ -447,7 +456,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
                       <MaterialCommunityIcons
                         name="format-list-bulleted-square"
                         size={20}
-                        color={C.accent}
+                        color={c.accent}
                       />
                       <View style={voteStyles.opinionPickerTextWrap}>
                         <Text style={voteStyles.opinionPickerLabel}>
@@ -468,7 +477,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
                     <MaterialCommunityIcons
                       name="chevron-down"
                       size={22}
-                      color={C.textMuted}
+                      color={c.textMuted}
                     />
                   </TouchableOpacity>
                 </>
@@ -508,7 +517,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
                     <MaterialCommunityIcons
                       name="check-circle"
                       size={16}
-                      color={C.accent}
+                      color={c.accent}
                     />
                     <Text style={voteStyles.selectedInfoBadgeText}>
                       Đang chọn
@@ -532,7 +541,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
           <View style={[voteStyles.card, { borderColor: hairlineBorderColor }]}>
             <Text style={voteStyles.sectionLabel}>Phân loại ý kiến</Text>
             <View style={voteStyles.choiceList}>
-              {VOTING_OPTIONS.map((option) => {
+              {votingOptions.map((option) => {
                 const isSelected = selectedVotingChoice === option.key;
 
                 return (
@@ -541,7 +550,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
                     style={[
                       voteStyles.choiceCard,
                       {
-                        backgroundColor: isSelected ? option.bg : C.surface,
+                        backgroundColor: isSelected ? option.bg : c.surface,
                         borderColor: isSelected
                           ? votingChoiceBorders[option.key]
                           : hairlineBorderColor,
@@ -558,7 +567,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
                             : "checkbox-blank-outline"
                         }
                         size={22}
-                        color={isSelected ? option.color : C.textMuted}
+                        color={isSelected ? option.color : c.textMuted}
                       />
                       <View style={voteStyles.choiceTextWrap}>
                         <Text
@@ -605,394 +614,397 @@ const ShareholdersMeetingScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.bg },
-  heroCard: {
-    backgroundColor: C.accent,
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 12,
-    borderRadius: 18,
-    padding: 16,
-  },
-  heroTitle: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "800",
-    lineHeight: 24,
-    textAlign: "center",
-  },
-  centerState: {
-    flex: 1,
-    backgroundColor: C.bg,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  tabBar: {
-    flexDirection: "row",
-    backgroundColor: C.surface,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 12,
-    gap: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-    shadowColor: C.shadow,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  tab: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: C.surfaceAlt,
-    gap: 6,
-    borderWidth: 1.5,
-    borderColor: "transparent",
-  },
-  tabActive: {
-    borderColor: C.accent,
-    backgroundColor: C.accentLight,
-  },
-  tabIcon: { fontSize: 14 },
-  tabLabel: { color: C.textMuted, fontSize: 13, fontWeight: "600" },
-  tabLabelActive: { color: C.accent },
-  tabBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  tabBadgeText: { fontSize: 11, fontWeight: "600" },
-  tabBadgeTextActive: { color: "#FFFFFF" },
-  tabBadgeTextInactive: { color: C.textMuted },
-  content: { flex: 1, paddingTop: 12, backgroundColor: C.bg },
-  contentCenter: {
-    flex: 1,
-    backgroundColor: C.bg,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    safe: { flex: 1, backgroundColor: c.bg },
+    heroCard: {
+      backgroundColor: c.accent,
+      marginHorizontal: 16,
+      marginTop: 12,
+      marginBottom: 12,
+      borderRadius: 18,
+      padding: 16,
+    },
+    heroTitle: {
+      color: "#FFFFFF",
+      fontSize: 12,
+      fontWeight: "800",
+      lineHeight: 24,
+      textAlign: "center",
+    },
+    centerState: {
+      flex: 1,
+      backgroundColor: c.bg,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    tabBar: {
+      flexDirection: "row",
+      backgroundColor: c.surface,
+      paddingHorizontal: 16,
+      paddingTop: 12,
+      paddingBottom: 12,
+      gap: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+      shadowColor: c.shadow,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 3,
+      elevation: 2,
+    },
+    tab: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 10,
+      borderRadius: 10,
+      backgroundColor: c.surfaceAlt,
+      gap: 6,
+      borderWidth: 1.5,
+      borderColor: "transparent",
+    },
+    tabActive: {
+      borderColor: c.accent,
+      backgroundColor: c.accentLight,
+    },
+    tabIcon: { fontSize: 14 },
+    tabLabel: { color: c.textMuted, fontSize: 13, fontWeight: "600" },
+    tabLabelActive: { color: c.accent },
+    tabBadge: {
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 10,
+    },
+    tabBadgeText: { fontSize: 11, fontWeight: "600" },
+    tabBadgeTextActive: { color: "#FFFFFF" },
+    tabBadgeTextInactive: { color: c.textMuted },
+    content: { flex: 1, paddingTop: 12, backgroundColor: c.bg },
+    contentCenter: {
+      flex: 1,
+      backgroundColor: c.bg,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+  });
 
-const attStyles = StyleSheet.create({
-  summaryRow: {
-    flexDirection: "row",
-    paddingHorizontal: 16,
-    gap: 8,
-    marginBottom: 12,
-  },
-  summaryCard: {
-    flex: 1,
-    backgroundColor: C.surface,
-    borderRadius: 10,
-    padding: 10,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: C.border,
-    shadowColor: C.shadow,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  summaryCardActive: {
-    borderColor: C.accent,
-    backgroundColor: C.accentLight,
-  },
-  summaryNum: { color: C.textPrimary, fontSize: 20, fontWeight: "700" },
-  summaryNumActive: { color: C.accent },
-  summaryLabel: {
-    color: C.textMuted,
-    fontSize: 10,
-    marginTop: 2,
-    textAlign: "center",
-    fontWeight: "600",
-  },
-  helperText: {
-    color: C.textSecondary,
-    fontSize: 12,
-    marginHorizontal: 16,
-    marginBottom: 12,
-  },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: C.surface,
-    marginHorizontal: 16,
-    borderRadius: 14,
-    minHeight: 48,
-    paddingHorizontal: 12,
-    marginBottom: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: C.border,
-    shadowColor: C.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  searchIconWrap: {
-    marginRight: 8,
-    width: 20,
-    height: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  searchInput: {
-    flex: 1,
-    color: C.textPrimary,
-    height: 48,
-    paddingVertical: 0,
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: "400",
-    includeFontPadding: false,
-    textAlignVertical: "center",
-  },
-  spinnerWrapper: {
-    width: 24,
-    height: 24,
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 6,
-  },
-  clearButton: {
-    padding: 4,
-    marginLeft: 4,
-  },
-  flatList: { flex: 1, backgroundColor: C.bg },
-  list: { flexGrow: 1, paddingHorizontal: 16, paddingBottom: 20 },
-  listEmpty: { paddingTop: 0, paddingBottom: 0 },
-  separator: { height: 1, backgroundColor: C.border, marginVertical: 2 },
-});
+const makeAttStyles = (c: AppColors) =>
+  StyleSheet.create({
+    summaryRow: {
+      flexDirection: "row",
+      paddingHorizontal: 16,
+      gap: 8,
+      marginBottom: 12,
+    },
+    summaryCard: {
+      flex: 1,
+      backgroundColor: c.surface,
+      borderRadius: 10,
+      padding: 10,
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: c.border,
+      shadowColor: c.shadow,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.04,
+      shadowRadius: 2,
+      elevation: 1,
+    },
+    summaryCardActive: {
+      borderColor: c.accent,
+      backgroundColor: c.accentLight,
+    },
+    summaryNum: { color: c.textPrimary, fontSize: 20, fontWeight: "700" },
+    summaryNumActive: { color: c.accent },
+    summaryLabel: {
+      color: c.textMuted,
+      fontSize: 10,
+      marginTop: 2,
+      textAlign: "center",
+      fontWeight: "600",
+    },
+    helperText: {
+      color: c.textSecondary,
+      fontSize: 12,
+      marginHorizontal: 16,
+      marginBottom: 12,
+    },
+    searchContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: c.surface,
+      marginHorizontal: 16,
+      borderRadius: 14,
+      minHeight: 48,
+      paddingHorizontal: 12,
+      marginBottom: 12,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.border,
+      shadowColor: c.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.06,
+      shadowRadius: 8,
+      elevation: 2,
+    },
+    searchIconWrap: {
+      marginRight: 8,
+      width: 20,
+      height: 20,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    searchInput: {
+      flex: 1,
+      color: c.textPrimary,
+      height: 48,
+      paddingVertical: 0,
+      fontSize: 14,
+      lineHeight: 20,
+      fontWeight: "400",
+      includeFontPadding: false,
+      textAlignVertical: "center",
+    },
+    spinnerWrapper: {
+      width: 24,
+      height: 24,
+      alignItems: "center",
+      justifyContent: "center",
+      marginLeft: 6,
+    },
+    clearButton: {
+      padding: 4,
+      marginLeft: 4,
+    },
+    flatList: { flex: 1, backgroundColor: c.bg },
+    list: { flexGrow: 1, paddingHorizontal: 16, paddingBottom: 20 },
+    listEmpty: { paddingTop: 0, paddingBottom: 0 },
+    separator: { height: 1, backgroundColor: c.border, marginVertical: 2 },
+  });
 
-const voteStyles = StyleSheet.create({
-  summaryRow: {
-    flexDirection: "row",
-    paddingHorizontal: 16,
-    gap: 8,
-    marginBottom: 16,
-  },
-  summaryCard: {
-    flex: 1,
-    backgroundColor: C.surface,
-    borderRadius: 12,
-    padding: 12,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: C.border,
-    shadowColor: C.shadow,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  summaryNum: { color: C.textPrimary, fontSize: 22, fontWeight: "700" },
-  summaryLabel: {
-    color: C.textMuted,
-    fontSize: 11,
-    marginTop: 4,
-    fontWeight: "600",
-  },
-  helperText: {
-    color: C.textSecondary,
-    fontSize: 12,
-    marginHorizontal: 16,
-    marginBottom: 12,
-  },
-  card: {
-    backgroundColor: C.surface,
-    marginHorizontal: 16,
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-    shadowColor: C.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  sectionLabel: {
-    color: C.textPrimary,
-    fontSize: 14,
-    fontWeight: "700",
-    marginBottom: 10,
-  },
-  opinionSelector: {
-    borderWidth: 1,
-    borderColor: C.border,
-    borderRadius: 12,
-    backgroundColor: C.surfaceAlt,
-    padding: 12,
-  },
-  opinionSelectorHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
-    marginBottom: 10,
-  },
-  opinionSelectorLabel: {
-    flex: 1,
-    color: C.textSecondary,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  opinionSelectorCount: {
-    backgroundColor: C.surface,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: C.border,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  opinionSelectorCountText: {
-    color: C.textMuted,
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  opinionPickerButton: {
-    minHeight: 64,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-    backgroundColor: C.surface,
-    padding: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  opinionPickerButtonLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  opinionPickerTextWrap: {
-    marginLeft: 10,
-    flex: 1,
-  },
-  opinionPickerLabel: {
-    color: C.textMuted,
-    fontSize: 11,
-    fontWeight: "700",
-    marginBottom: 4,
-  },
-  opinionPickerValue: {
-    color: C.textPrimary,
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: "600",
-  },
-  loadingWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 18,
-    gap: 8,
-  },
-  loadingText: {
-    color: C.textSecondary,
-    fontSize: 13,
-  },
-  selectedInfoBox: {
-    marginTop: 12,
-    backgroundColor: C.accentLight,
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: C.borderStrong,
-  },
-  selectedInfoHeader: {
-    marginBottom: 8,
-  },
-  selectedInfoBadge: {
-    alignSelf: "flex-start",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: C.surface,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: C.borderStrong,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  selectedInfoBadgeText: {
-    color: C.accent,
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  selectedInfoTitle: {
-    color: C.accent,
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  selectedInfoDesc: {
-    color: C.textSecondary,
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 4,
-  },
-  choiceList: {
-    gap: 10,
-  },
-  choiceCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  choiceLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  choiceTextWrap: {
-    marginLeft: 10,
-    flex: 1,
-  },
-  choiceTitle: {
-    color: C.textPrimary,
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  choiceDesc: {
-    color: C.textSecondary,
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 2,
-  },
-  readyHint: {
-    marginTop: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: C.accentLight,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: C.borderStrong,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  readyHintText: {
-    flex: 1,
-    color: C.accent,
-    fontSize: 12,
-    lineHeight: 18,
-    fontWeight: "600",
-  },
-  bottomSpacer: {
-    height: 28,
-  },
-});
+const makeVoteStyles = (c: AppColors) =>
+  StyleSheet.create({
+    summaryRow: {
+      flexDirection: "row",
+      paddingHorizontal: 16,
+      gap: 8,
+      marginBottom: 16,
+    },
+    summaryCard: {
+      flex: 1,
+      backgroundColor: c.surface,
+      borderRadius: 12,
+      padding: 12,
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: c.border,
+      shadowColor: c.shadow,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.04,
+      shadowRadius: 2,
+      elevation: 1,
+    },
+    summaryNum: { color: c.textPrimary, fontSize: 22, fontWeight: "700" },
+    summaryLabel: {
+      color: c.textMuted,
+      fontSize: 11,
+      marginTop: 4,
+      fontWeight: "600",
+    },
+    helperText: {
+      color: c.textSecondary,
+      fontSize: 12,
+      marginHorizontal: 16,
+      marginBottom: 12,
+    },
+    card: {
+      backgroundColor: c.surface,
+      marginHorizontal: 16,
+      borderRadius: 14,
+      padding: 16,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: c.border,
+      shadowColor: c.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    sectionLabel: {
+      color: c.textPrimary,
+      fontSize: 14,
+      fontWeight: "700",
+      marginBottom: 10,
+    },
+    opinionSelector: {
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: 12,
+      backgroundColor: c.surfaceAlt,
+      padding: 12,
+    },
+    opinionSelectorHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 8,
+      marginBottom: 10,
+    },
+    opinionSelectorLabel: {
+      flex: 1,
+      color: c.textSecondary,
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    opinionSelectorCount: {
+      backgroundColor: c.surface,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: c.border,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+    },
+    opinionSelectorCountText: {
+      color: c.textMuted,
+      fontSize: 11,
+      fontWeight: "700",
+    },
+    opinionPickerButton: {
+      minHeight: 64,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.surface,
+      padding: 12,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    opinionPickerButtonLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+    },
+    opinionPickerTextWrap: {
+      marginLeft: 10,
+      flex: 1,
+    },
+    opinionPickerLabel: {
+      color: c.textMuted,
+      fontSize: 11,
+      fontWeight: "700",
+      marginBottom: 4,
+    },
+    opinionPickerValue: {
+      color: c.textPrimary,
+      fontSize: 13,
+      lineHeight: 18,
+      fontWeight: "600",
+    },
+    loadingWrap: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 18,
+      gap: 8,
+    },
+    loadingText: {
+      color: c.textSecondary,
+      fontSize: 13,
+    },
+    selectedInfoBox: {
+      marginTop: 12,
+      backgroundColor: c.accentLight,
+      borderRadius: 12,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: c.borderStrong,
+    },
+    selectedInfoHeader: {
+      marginBottom: 8,
+    },
+    selectedInfoBadge: {
+      alignSelf: "flex-start",
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      backgroundColor: c.surface,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: c.borderStrong,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+    },
+    selectedInfoBadgeText: {
+      color: c.accent,
+      fontSize: 11,
+      fontWeight: "700",
+    },
+    selectedInfoTitle: {
+      color: c.accent,
+      fontSize: 13,
+      fontWeight: "700",
+    },
+    selectedInfoDesc: {
+      color: c.textSecondary,
+      fontSize: 12,
+      lineHeight: 18,
+      marginTop: 4,
+    },
+    choiceList: {
+      gap: 10,
+    },
+    choiceCard: {
+      borderRadius: 12,
+      borderWidth: 1,
+      padding: 14,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    choiceLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+    },
+    choiceTextWrap: {
+      marginLeft: 10,
+      flex: 1,
+    },
+    choiceTitle: {
+      color: c.textPrimary,
+      fontSize: 13,
+      fontWeight: "700",
+    },
+    choiceDesc: {
+      color: c.textSecondary,
+      fontSize: 12,
+      lineHeight: 18,
+      marginTop: 2,
+    },
+    readyHint: {
+      marginTop: 14,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      backgroundColor: c.accentLight,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: c.borderStrong,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+    },
+    readyHintText: {
+      flex: 1,
+      color: c.accent,
+      fontSize: 12,
+      lineHeight: 18,
+      fontWeight: "600",
+    },
+    bottomSpacer: {
+      height: 28,
+    },
+  });
 
 export default ShareholdersMeetingScreen;

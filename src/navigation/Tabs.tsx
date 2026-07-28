@@ -1,6 +1,10 @@
 import React from "react";
-import { Platform } from "react-native";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { StyleSheet, type ViewStyle } from "react-native";
+import {
+  BottomTabBar,
+  BottomTabBarProps,
+  createBottomTabNavigator,
+} from "@react-navigation/bottom-tabs";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getFocusedRouteNameFromRoute } from "@react-navigation/native";
@@ -19,6 +23,59 @@ import { useAppColors, useHairlineBorderColor } from "../utils/helpers/colors";
 import { useColorScheme } from "../hooks/useColorScheme";
 
 const Tab = createBottomTabNavigator();
+
+function ThemeAwareTabBar({
+  backgroundColor,
+  borderTopColor,
+  bottomInset,
+  colorScheme,
+  ...props
+}: BottomTabBarProps & {
+  backgroundColor: string;
+  borderTopColor: string;
+  bottomInset: number;
+  colorScheme: "light" | "dark";
+}) {
+  const activeRoute = props.state.routes[props.state.index];
+  const activeDescriptor = props.descriptors[activeRoute.key];
+  const activeTabBarStyle = StyleSheet.flatten(
+    activeDescriptor?.options.tabBarStyle,
+  ) as ViewStyle | undefined;
+  const isTabBarHidden = activeTabBarStyle?.display === "none";
+  const routeName = getDeepFocusedRouteName(activeRoute);
+  const usesInvertedStyle =
+    (activeRoute.name === "HomeTab" &&
+      routeName === "ShareholdersMeetingScanner") ||
+    (activeRoute.name === "ScanTab" && routeName === "Scan");
+
+  const descriptors = activeDescriptor
+    ? {
+        ...props.descriptors,
+        [activeRoute.key]: {
+          ...activeDescriptor,
+          options: {
+            ...activeDescriptor.options,
+            // Descriptors for a blurred tab can retain the previous theme on
+            // Android. Override the active descriptor with concrete colors so
+            // returning to CameraList cannot reuse a dark tab bar.
+            tabBarStyle: isTabBarHidden
+              ? activeDescriptor.options.tabBarStyle
+              : createTabBarStyle({
+                  bottomInset,
+                  backgroundColor: usesInvertedStyle
+                    ? TAB_INVERTED_BG
+                    : backgroundColor,
+                  borderTopColor: usesInvertedStyle ? "#000" : borderTopColor,
+                }),
+          },
+        },
+      }
+    : props.descriptors;
+
+  return (
+    <BottomTabBar key={colorScheme} {...props} descriptors={descriptors} />
+  );
+}
 
 function HomeTabIcon({ color }: { color: string }) {
   return <Ionicons name="home" size={24} color={color} />;
@@ -56,14 +113,26 @@ export default function Tabs() {
   const colors = useAppColors();
   const hairlineBorderColor = useHairlineBorderColor();
   const colorScheme = useColorScheme();
+  const renderTabBar = React.useCallback(
+    (props: BottomTabBarProps) => (
+      <ThemeAwareTabBar
+        {...props}
+        backgroundColor={colors.surface}
+        borderTopColor={hairlineBorderColor}
+        bottomInset={insets.bottom}
+        colorScheme={colorScheme}
+      />
+    ),
+    [colorScheme, colors.surface, hairlineBorderColor, insets.bottom],
+  );
 
   return (
     <Tab.Navigator
-      // Android keeps the mounted tab bar's background from the theme active at
-      // mount time, so switching appearance leaves the bar on the old color.
-      // Remounting the navigator on scheme change rebuilds it with the right
-      // color. iOS reconciles the background fine, so it keeps a stable key.
-      key={Platform.OS === "android" ? colorScheme : undefined}
+      // Rebuild only the visual tab bar when the appearance changes. Remounting
+      // the entire navigator here used to recreate every nested native stack;
+      // on Android that could leave CameraList with a stale horizontal screen
+      // transform when returning from Settings.
+      tabBar={renderTabBar}
       screenOptions={{
         headerShown: false,
         tabBarHideOnKeyboard: true,
@@ -99,7 +168,9 @@ export default function Tabs() {
             // Without freeze the style re-evaluates and stays theme-correct.
             tabBarStyle: createTabBarStyle({
               bottomInset: insets.bottom,
-              backgroundColor: isMeetingScanner ? TAB_INVERTED_BG : colors.surface,
+              backgroundColor: isMeetingScanner
+                ? TAB_INVERTED_BG
+                : colors.surface,
               borderTopColor: isMeetingScanner ? "#000" : hairlineBorderColor,
             }),
           };

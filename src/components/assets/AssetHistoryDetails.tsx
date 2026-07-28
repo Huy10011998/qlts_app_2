@@ -9,10 +9,12 @@ import { getFieldValue } from "../../utils/fields/GetFieldValue";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { useDetailViewState } from "../../hooks/useDetailViewState";
-import { C } from "../../utils/helpers/colors";
+import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
 import EmptyState from "../ui/EmptyState";
 
 export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
+  const styles = useStyles(makeStyles);
+  const c = useAppColors();
   const route = useRoute<StackRoute<"AssetHistoryDetail">>();
   const { id, id_previous, nameClass, field } = route.params;
 
@@ -96,7 +98,7 @@ export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
     <View style={styles.container}>
       {isLoading && (
         <View style={styles.loadingOverlay}>
-          <IsLoading size="small" color={C.red} />
+          <IsLoading size="small" color={c.red} />
         </View>
       )}
 
@@ -125,21 +127,22 @@ export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: C.surfaceAlt,
-  },
-  loadingOverlay: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    zIndex: 10,
-  },
-  emptyStateRoot: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 32,
-  },
-});
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.surfaceAlt,
+    },
+    loadingOverlay: {
+      position: "absolute",
+      top: 8,
+      right: 8,
+      zIndex: 10,
+    },
+    emptyStateRoot: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 32,
+    },
+  });

@@ -1,3 +1,4 @@
+import { useStyles } from "../../utils/helpers/colors";
 import React, { type ComponentProps } from "react";
 import { Text as NativeText, View } from "react-native";
 import Svg, {
@@ -21,7 +22,7 @@ import {
   SCREEN_WIDTH,
   type SolarDashboardData,
 } from "./SolarPlantScreen.helpers";
-import { styles } from "./SolarPlantScreen.styles";
+import { makeStyles } from "./SolarPlantScreen.styles";
 
 type SolarTextProps = ComponentProps<typeof NativeText>;
 
@@ -168,7 +169,7 @@ export const DateCalendarIcon: React.FC = () => (
           height={2.4}
           fill="#6EA0F6"
         />
-      ))
+      )),
     )}
     <Rect x={10} y={14.8} width={2.4} height={2.4} fill="#6EA0F6" />
     <Rect x={15} y={14.8} width={2.4} height={2.4} fill="#6EA0F6" />
@@ -386,7 +387,9 @@ export const SceneView: React.FC<{ width?: number }> = ({
         />
       ))}
       <Polygon
-        points={`${cabinetX + 14},${downArrowTipY} ${cabinetX + 6},${downArrowBaseY} ${cabinetX + 22},${downArrowBaseY}`}
+        points={`${cabinetX + 14},${downArrowTipY} ${
+          cabinetX + 6
+        },${downArrowBaseY} ${cabinetX + 22},${downArrowBaseY}`}
         fill="#4caf50"
       />
 
@@ -495,7 +498,7 @@ export const SceneView: React.FC<{ width?: number }> = ({
               opacity={0.9}
             />
           );
-        }
+        },
       )}
     </Svg>
   );
@@ -519,48 +522,52 @@ export const StatBubble: React.FC<{
   borderColor,
   borderWidth,
   valueSize = 24,
-}) => (
-  <View
-    style={[
-      styles.bubble,
-      {
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        borderColor,
-        borderWidth,
-      },
-    ]}
-  >
-    <View style={styles.bubbleValueRow}>
-      <Text
-        adjustsFontSizeToFit
-        allowFontScaling={false}
-        minimumFontScale={0.72}
-        numberOfLines={1}
-        style={[styles.bubbleValue, { fontSize: valueSize }]}
-      >
-        {value}
-      </Text>
-      <Text
-        allowFontScaling={false}
-        numberOfLines={1}
-        style={styles.bubbleUnit}
-      >
-        {unit}
-      </Text>
+}) => {
+  const styles = useStyles(makeStyles);
+
+  return (
+    <View
+      style={[
+        styles.bubble,
+        {
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          borderColor,
+          borderWidth,
+        },
+      ]}
+    >
+      <View style={styles.bubbleValueRow}>
+        <Text
+          adjustsFontSizeToFit
+          allowFontScaling={false}
+          minimumFontScale={0.72}
+          numberOfLines={1}
+          style={[styles.bubbleValue, { fontSize: valueSize }]}
+        >
+          {value}
+        </Text>
+        <Text
+          allowFontScaling={false}
+          numberOfLines={1}
+          style={styles.bubbleUnit}
+        >
+          {unit}
+        </Text>
+      </View>
+      {label ? (
+        <Text
+          allowFontScaling={false}
+          numberOfLines={2}
+          style={styles.bubbleLabel}
+        >
+          {label}
+        </Text>
+      ) : null}
     </View>
-    {label ? (
-      <Text
-        allowFontScaling={false}
-        numberOfLines={2}
-        style={styles.bubbleLabel}
-      >
-        {label}
-      </Text>
-    ) : null}
-  </View>
-);
+  );
+};
 
 // ─── Donut chart ──────────────────────────────────────────────────────────────
 
@@ -643,7 +650,7 @@ export const AreaChart: React.FC<{
   const getSeriesValue = (
     dataSet: number[],
     index: number,
-    isActive: boolean
+    isActive: boolean,
   ) => (isActive && index === markerIndex ? markerValue : dataSet[index]);
   const linePath = (dataSet: number[], isActive = false) =>
     dataSet

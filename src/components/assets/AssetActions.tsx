@@ -1,4 +1,9 @@
-import { C, useAccentBorderColors } from "../../utils/helpers/colors";
+import {
+  AppColors,
+  useAccentBorderColors,
+  useAppColors,
+  useStyles,
+} from "../../utils/helpers/colors";
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
@@ -7,11 +12,12 @@ import { usePermission } from "../../hooks/usePermission";
 import type { AssetActionProps } from "../../types";
 import { BRAND_RED } from "./shared/listTheme";
 
-const localStyles = StyleSheet.create({
-  iconBadgeBackground: {
-    backgroundColor: C.surface,
-  },
-});
+const makeLocalStyles = (c: AppColors) =>
+  StyleSheet.create({
+    iconBadgeBackground: {
+      backgroundColor: c.surface,
+    },
+  });
 
 export default function AssetActions({
   onEdit,
@@ -20,6 +26,9 @@ export default function AssetActions({
   showClone = true,
   nameClass,
 }: AssetActionProps) {
+  const styles = useStyles(makeStyles);
+  const localStyles = useStyles(makeLocalStyles);
+  const c = useAppColors();
   const { can } = usePermission();
   const accentBorders = useAccentBorderColors();
 
@@ -33,11 +42,9 @@ export default function AssetActions({
           key: "edit",
           label: "Sửa",
           color: "#3B5BDB",
-          bg: C.indigoSurface,
+          bg: c.indigoSurface,
           border: accentBorders.violet,
-          icon: (
-            <MaterialIcons name="edit" size={18} color="#3B5BDB" />
-          ),
+          icon: <MaterialIcons name="edit" size={18} color="#3B5BDB" />,
           onPress: onEdit,
         }
       : null,
@@ -46,7 +53,7 @@ export default function AssetActions({
           key: "delete",
           label: "Xóa",
           color: BRAND_RED,
-          bg: C.redSurface,
+          bg: c.redSurface,
           border: accentBorders.red,
           icon: (
             <MaterialIcons name="delete-outline" size={18} color={BRAND_RED} />
@@ -59,11 +66,9 @@ export default function AssetActions({
           key: "clone",
           label: "Bản sao",
           color: "#E67700",
-          bg: C.orangeSurface,
+          bg: c.orangeSurface,
           border: accentBorders.amber,
-          icon: (
-            <FontAwesome5 name="clone" size={16} color="#E67700" />
-          ),
+          icon: <FontAwesome5 name="clone" size={16} color="#E67700" />,
           onPress: onClone,
         }
       : null,
@@ -113,41 +118,42 @@ export default function AssetActions({
   );
 }
 
-const styles = StyleSheet.create({
-  actionRow: {
-    flexDirection: "row",
-    marginBottom: 10,
-    gap: 8,
-  },
-  actionButton: {
-    flex: 1,
-    minHeight: 52,
-    borderRadius: 14,
-    borderWidth: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 12,
-    shadowColor: C.shadow,
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
-  },
-  actionButtonPressed: {
-    opacity: 0.8,
-  },
-  iconBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 9,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    marginRight: 8,
-  },
-  actionText: {
-    fontSize: 13,
-    fontWeight: "700",
-  },
-});
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    actionRow: {
+      flexDirection: "row",
+      marginBottom: 10,
+      gap: 8,
+    },
+    actionButton: {
+      flex: 1,
+      minHeight: 52,
+      borderRadius: 14,
+      borderWidth: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 12,
+      shadowColor: c.shadow,
+      shadowOpacity: 0.05,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 1,
+    },
+    actionButtonPressed: {
+      opacity: 0.8,
+    },
+    iconBadge: {
+      width: 28,
+      height: 28,
+      borderRadius: 9,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      marginRight: 8,
+    },
+    actionText: {
+      fontSize: 13,
+      fontWeight: "700",
+    },
+  });

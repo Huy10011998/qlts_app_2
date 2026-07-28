@@ -1,37 +1,20 @@
-import { DynamicColorIOS, Platform, PlatformColor } from "react-native";
+import { StyleSheet } from "react-native";
 import { useThemePreference } from "../../context/ThemeContext";
-
-/**
- * A native adaptive color. Android resolves the value from values/values-night,
- * while iOS keeps both variants and updates it with the current appearance.
- *
- * The cast keeps the existing public API compatible with components in this
- * project which historically typed colors as strings. React Native accepts the
- * opaque native color value at runtime.
- */
-export const adaptiveColor = (
-  resourceName: string,
-  light: string,
-  dark: string
-): string => {
-  if (Platform.OS === "ios") {
-    return DynamicColorIOS({ light, dark }) as unknown as string;
-  }
-
-  if (Platform.OS === "android") {
-    return PlatformColor(`@color/${resourceName}`) as unknown as string;
-  }
-
-  return light;
-};
 
 /**
  * Single source of truth for every theme-aware color.
  *
- * Each entry is a tuple `[androidResource, light, dark]`. `C` derives the
- * native adaptive value from it, `APP_COLORS`/`useAppColors` derive the concrete
- * JS light+dark values from it, and the border hooks pick a variant from it.
- * Keep new colors here so a value is never hand-copied across those consumers.
+ * Each entry is a tuple `[androidResource, light, dark]`. The Android resource
+ * name is kept so `values/values-night` stays in sync for the few surfaces the
+ * platform paints itself (window background, splash), but every color consumed
+ * from JS is resolved from the light/dark pair below.
+ *
+ * Colors are deliberately NOT exposed as native adaptive values
+ * (`PlatformColor` / `DynamicColorIOS`): Android resolves those once, when the
+ * native view is created, so a screen that is already mounted keeps the variant
+ * that was active back then. Because the app lets the user override the
+ * appearance in Settings, every color has to come from React state instead —
+ * see `useAppColors` / `useStyles`.
  */
 const ADAPTIVE = {
   bg: ["app_background", "#F0F2F8", "#09111B"],
@@ -73,6 +56,11 @@ const ADAPTIVE = {
   shadow: ["app_shadow", "#1A2340", "#000000"],
   loadingOverlay: ["app_loading_overlay", "#FFFFFFCC", "#151F2CEB"],
   solarHero: ["app_solar_hero", "#A8D8F2", "#10283A"],
+  // Card outline: a faint rule in light, invisible in dark where the surface
+  // already separates itself from the background by luminance.
+  hairline: ["app_border", "#F3F5F9", "transparent"],
+  // Row divider / toolbar rule: must stay visible in both schemes.
+  separator: ["app_border", "#EDF0F5", "#273649"],
 } as const satisfies Record<string, readonly [string, string, string]>;
 
 /** Brand colors that stay identical across light and dark. */
@@ -90,96 +78,109 @@ const BRAND = {
 } as const;
 
 type AdaptiveKey = keyof typeof ADAPTIVE;
-type Scheme = "light" | "dark";
 
-const schemeValue = (
-  def: readonly [string, string, string],
-  scheme: Scheme
-): string => (scheme === "dark" ? def[2] : def[1]);
+export type Scheme = "light" | "dark";
 
-const adaptiveEntries = (Object.keys(ADAPTIVE) as AdaptiveKey[]).map((key) => {
-  const [resource, light, dark] = ADAPTIVE[key];
-  return [key, adaptiveColor(resource, light, dark)] as const;
-});
+/** Every color available to a component, brand + scheme-resolved. */
+export type AppColors = Record<AdaptiveKey, string> & typeof BRAND;
 
-export const C = {
+/**
+ * Brand-only palette. These values are identical in light and dark, so they are
+ * the only colors safe to inline in a module-level `StyleSheet.create`.
+ * Everything else must come from `useAppColors()` / `useStyles()`.
+ */
+export const C = BRAND;
+
+const buildScheme = (scheme: Scheme): AppColors => ({
   ...BRAND,
-  ...(Object.fromEntries(adaptiveEntries) as Record<AdaptiveKey, string>),
-};
-
-const buildScheme = (scheme: Scheme) =>
-  Object.fromEntries(
+  ...(Object.fromEntries(
     (Object.keys(ADAPTIVE) as AdaptiveKey[]).map((key) => [
       key,
-      schemeValue(ADAPTIVE[key], scheme),
-    ])
-  ) as Record<AdaptiveKey, string>;
+      scheme === "dark" ? ADAPTIVE[key][2] : ADAPTIVE[key][1],
+    ]),
+  ) as Record<AdaptiveKey, string>),
+});
 
-const APP_COLORS: Record<Scheme, Record<AdaptiveKey, string>> = {
+/**
+ * Both palettes, built once. The objects are stable per scheme so styles and
+ * memoized children keep their identity while the appearance does not change.
+ */
+export const APP_COLORS: Record<Scheme, AppColors> = {
   light: buildScheme("light"),
   dark: buildScheme("dark"),
 };
 
-/**
- * Concrete JS colors for views that must update immediately when the user
- * changes the in-app appearance. Android PlatformColor values can keep the
- * resource variant that was active when a StyleSheet was created.
- */
-export const useAppColors = () => {
-  const { resolvedColorScheme } = useThemePreference();
-  return APP_COLORS[resolvedColorScheme];
+/** Colors for the appearance currently selected in Settings. */
+export const useAppColors = (): AppColors =>
+  APP_COLORS[useThemePreference().resolvedColorScheme];
+
+type StyleFactory<T> = (colors: AppColors) => T;
+
+const styleCache = new WeakMap<
+  StyleFactory<unknown>,
+  Partial<Record<Scheme, unknown>>
+>();
+
+/** Run `factory` at most once per (factory, scheme) pair. */
+const cached = <T>(factory: StyleFactory<T>, scheme: Scheme): T => {
+  let perScheme = styleCache.get(factory as StyleFactory<unknown>);
+
+  if (!perScheme) {
+    perScheme = {};
+    styleCache.set(factory as StyleFactory<unknown>, perScheme);
+  }
+
+  if (!(scheme in perScheme)) {
+    perScheme[scheme] = factory(APP_COLORS[scheme]);
+  }
+
+  return perScheme[scheme] as T;
 };
 
 /**
- * Border color resolved in JS instead of via native adaptive color: on the
- * iOS new architecture, borderColor can stay stuck on the light variant when
- * the app overrides the appearance at runtime (Appearance.setColorScheme).
+ * Theme-aware replacement for a module-level `StyleSheet.create`.
+ *
+ * Pass a factory declared at module scope; the sheet is built once per
+ * appearance and cached, so re-renders reuse the same style objects and only an
+ * appearance change produces new ones.
  */
-export const useHairlineBorderColor = (): string => {
-  const { resolvedColorScheme } = useThemePreference();
-  return resolvedColorScheme === "dark" ? "transparent" : ADAPTIVE.border[1];
-};
+export function useStyles<T extends StyleSheet.NamedStyles<T>>(
+  factory: StyleFactory<T>,
+): T {
+  return cached(factory, useThemePreference().resolvedColorScheme);
+}
 
 /**
- * Strong border (input/picker outline) resolved in JS for the same reason as
- * useHairlineBorderColor — must stay visible in dark, just with the dark tint.
+ * Same caching as `useStyles`, for factories that derive plain (non-StyleSheet)
+ * theme values such as icon color maps or option lists.
  */
-export const useStrongBorderColor = (): string => {
-  const { resolvedColorScheme } = useThemePreference();
-  return schemeValue(ADAPTIVE.borderStrong, resolvedColorScheme);
-};
+export function useThemeValue<T>(factory: StyleFactory<T>): T {
+  return cached(factory, useThemePreference().resolvedColorScheme);
+}
 
-/**
- * Separator line (row divider, toolbar rule) resolved in JS — must stay
- * visible in dark, unlike the hairline card outline.
- */
-export const useSeparatorColor = (): string => {
-  const { resolvedColorScheme } = useThemePreference();
-  return resolvedColorScheme === "dark" ? ADAPTIVE.border[2] : "#EDF0F5";
-};
+/** Card outline — faint in light, invisible in dark. */
+export const useHairlineBorderColor = (): string => useAppColors().hairline;
 
-/**
- * Generic scheme-resolved color for border props that need a custom pair
- * (accent borders such as red/violet badges).
- */
-export const useSchemeColor = (light: string, dark: string): string => {
-  const { resolvedColorScheme } = useThemePreference();
-  return resolvedColorScheme === "dark" ? dark : light;
-};
+/** Strong border (input / picker outline). */
+export const useStrongBorderColor = (): string => useAppColors().borderStrong;
 
-/**
- * Accent borders (red/green/amber/gold/violet/slate) resolved in JS — same
- * Fabric limitation as the hooks above; values mirror the C.*Border pairs.
- */
+/** Separator line (row divider, toolbar rule) — visible in both schemes. */
+export const useSeparatorColor = (): string => useAppColors().separator;
+
+/** Scheme-resolved color for a one-off light/dark pair. */
+export const useSchemeColor = (light: string, dark: string): string =>
+  useThemePreference().resolvedColorScheme === "dark" ? dark : light;
+
+/** Accent borders (red/green/amber/gold/violet/slate). */
 export const useAccentBorderColors = () => {
-  const { resolvedColorScheme } = useThemePreference();
-  const scheme = resolvedColorScheme;
+  const colors = useAppColors();
+
   return {
-    red: schemeValue(ADAPTIVE.redBorder, scheme),
-    green: schemeValue(ADAPTIVE.greenBorder, scheme),
-    amber: schemeValue(ADAPTIVE.amberBorder, scheme),
-    gold: schemeValue(ADAPTIVE.goldBorder, scheme),
-    violet: schemeValue(ADAPTIVE.violetBorder, scheme),
-    slate: schemeValue(ADAPTIVE.slateBorder, scheme),
+    red: colors.redBorder,
+    green: colors.greenBorder,
+    amber: colors.amberBorder,
+    gold: colors.goldBorder,
+    violet: colors.violetBorder,
+    slate: colors.slateBorder,
   };
 };

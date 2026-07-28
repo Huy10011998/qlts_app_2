@@ -2,8 +2,8 @@ import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import BottomSheetModalShell from "../../shared/BottomSheetModalShell";
-import { C } from "../../../utils/helpers/colors";
-import { styles } from "../CameraPlayback.styles";
+import { useAppColors, useStyles } from "../../../utils/helpers/colors";
+import { makeStyles } from "../CameraPlayback.styles";
 import PlaybackTimeSheet from "./PlaybackTimeSheet";
 import {
   addMonths,
@@ -37,13 +37,15 @@ export default function PlaybackDateSheet({
   today,
   visible,
 }: PlaybackDateSheetProps) {
+  const c = useAppColors();
+  const styles = useStyles(makeStyles);
   const [tempDate, setTempDate] = React.useState(selectedDate);
   const [tempStartTimeSec, setTempStartTimeSec] = React.useState<number | null>(
-    selectedStartTimeSec
+    selectedStartTimeSec,
   );
   const [isTimeSheetVisible, setIsTimeSheetVisible] = React.useState(false);
   const [visibleMonth, setVisibleMonth] = React.useState(() =>
-    startOfMonth(selectedDate)
+    startOfMonth(selectedDate),
   );
 
   React.useEffect(() => {
@@ -55,16 +57,16 @@ export default function PlaybackDateSheet({
 
   const calendarDates = React.useMemo(
     () => getCalendarDates(visibleMonth),
-    [visibleMonth]
+    [visibleMonth],
   );
   const canGoNextMonth =
     startOfMonth(visibleMonth).getTime() < startOfMonth(today).getTime();
   const monthLabel = `${visibleMonth.getFullYear()}-${String(
-    visibleMonth.getMonth() + 1
+    visibleMonth.getMonth() + 1,
   ).padStart(2, "0")}`;
   const recordingDaySet = React.useMemo(
     () => new Set(recordingDays),
-    [recordingDays]
+    [recordingDays],
   );
 
   const changeVisibleMonth = React.useCallback(
@@ -75,7 +77,7 @@ export default function PlaybackDateSheet({
         return next;
       });
     },
-    [onVisibleMonthChange]
+    [onVisibleMonthChange],
   );
 
   if (isTimeSheetVisible) {
@@ -108,7 +110,7 @@ export default function PlaybackDateSheet({
           hitSlop={8}
           accessibilityLabel="Đóng lịch"
         >
-          <Ionicons name="close" size={28} color={C.text} />
+          <Ionicons name="close" size={28} color={c.text} />
         </TouchableOpacity>
 
         <View style={styles.calendarMonthNav}>
@@ -117,11 +119,7 @@ export default function PlaybackDateSheet({
             onPress={() => changeVisibleMonth(-1)}
             accessibilityLabel="Tháng trước"
           >
-            <Ionicons
-              name="chevron-back"
-              size={22}
-              color={C.textSecondary}
-            />
+            <Ionicons name="chevron-back" size={22} color={c.textSecondary} />
           </TouchableOpacity>
           <Text style={styles.calendarMonthText} allowFontScaling={false}>
             {monthLabel}
@@ -135,7 +133,7 @@ export default function PlaybackDateSheet({
             <Ionicons
               name="chevron-forward"
               size={22}
-              color={canGoNextMonth ? C.textSecondary : C.placeholder}
+              color={canGoNextMonth ? c.textSecondary : c.placeholder}
             />
           </TouchableOpacity>
         </View>
@@ -165,8 +163,7 @@ export default function PlaybackDateSheet({
 
       <View style={styles.calendarGrid}>
         {calendarDates.map((date) => {
-          const isCurrentMonth =
-            date.getMonth() === visibleMonth.getMonth();
+          const isCurrentMonth = date.getMonth() === visibleMonth.getMonth();
           const isSelected = isSameDay(date, tempDate);
           const isFuture =
             startOfDay(date).getTime() > startOfDay(today).getTime();
@@ -223,10 +220,9 @@ export default function PlaybackDateSheet({
               ? "Chưa đặt"
               : formatClock(tempStartTimeSec)}
           </Text>
-          <Ionicons name="chevron-forward" size={20} color={C.placeholder} />
+          <Ionicons name="chevron-forward" size={20} color={c.placeholder} />
         </View>
       </TouchableOpacity>
-
     </BottomSheetModalShell>
   );
 }

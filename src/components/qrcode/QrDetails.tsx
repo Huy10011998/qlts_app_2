@@ -27,7 +27,12 @@ import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { useDetailViewState } from "../../hooks/useDetailViewState";
 import { useSlideInPanel } from "../../hooks/useSlideInPanel";
 import SlideInSidePanel from "../shared/SlideInSidePanel";
-import { C, useSeparatorColor } from "../../utils/helpers/colors";
+import {
+  AppColors,
+  useAppColors,
+  useSeparatorColor,
+  useStyles,
+} from "../../utils/helpers/colors";
 import AssetListEmptyState from "../assets/shared/AssetListEmptyState";
 import { REVIEW_NAME_CLASSES } from "../../constants/reviewNameClasses";
 
@@ -35,6 +40,7 @@ const { width } = Dimensions.get("window");
 const MENU_WIDTH = width * 0.6;
 
 function QrDetailsMenuButton({ onPress }: { onPress: () => void }) {
+  const styles = useStyles(makeStyles);
   return (
     <TouchableOpacity onPress={onPress} style={styles.headerButton}>
       <Ionicons name="menu" size={26} color="#fff" />
@@ -43,6 +49,8 @@ function QrDetailsMenuButton({ onPress }: { onPress: () => void }) {
 }
 
 export default function QrDetails({ children }: QrDetailsProps) {
+  const styles = useStyles(makeStyles);
+  const c = useAppColors();
   const separatorColor = useSeparatorColor();
   const { id, nameClass, field, itemData } = useParams();
   const navigation =
@@ -218,7 +226,7 @@ export default function QrDetails({ children }: QrDetailsProps) {
     </SlideInSidePanel>
   );
 
-  if (isLoading) return <IsLoading size="large" color={C.red} />;
+  if (isLoading) return <IsLoading size="large" color={c.red} />;
 
   if (loadErrorMessage) {
     return (
@@ -253,34 +261,35 @@ export default function QrDetails({ children }: QrDetailsProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: C.surfaceAlt,
-  },
-  emptyStateRoot: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 32,
-  },
-  menuContent: {
-    padding: 16,
-    paddingBottom: 24,
-  },
-  menuItem: {
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-  },
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.surfaceAlt,
+    },
+    emptyStateRoot: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 32,
+    },
+    menuContent: {
+      padding: 16,
+      paddingBottom: 24,
+    },
+    menuItem: {
+      paddingVertical: 14,
+      paddingHorizontal: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+    },
 
-  menuItemText: {
-    fontSize: 15,
-    color: C.text,
-    fontWeight: "500",
-  },
-  headerButton: {
-    paddingHorizontal: 8,
-  },
-});
+    menuItemText: {
+      fontSize: 15,
+      color: c.text,
+      fontWeight: "500",
+    },
+    headerButton: {
+      paddingHorizontal: 8,
+    },
+  });

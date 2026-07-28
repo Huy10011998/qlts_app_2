@@ -1,3 +1,4 @@
+import { AppColors, useStyles } from "../../utils/helpers/colors";
 import React, { useEffect, useState, useCallback } from "react";
 import { View, StyleSheet } from "react-native";
 import type { DetailsProps } from "../../types/index";
@@ -15,10 +16,11 @@ import { useAppDispatch } from "../../store/hooks";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { useDetailViewState } from "../../hooks/useDetailViewState";
-import { BG, BRAND_RED } from "./shared/listTheme";
+import { BRAND_RED } from "./shared/listTheme";
 import { isNetworkRequestError } from "../../utils/helpers/api";
 
 export default function AssetDetails({ children }: DetailsProps) {
+  const styles = useStyles(makeStyles);
   const { id, nameClass, field, activeTab: tabFromParams } = useParams();
 
   const [isLoading, setIsLoading] = useState(true);
@@ -105,6 +107,7 @@ export default function AssetDetails({ children }: DetailsProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BG },
-});
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.bg },
+  });

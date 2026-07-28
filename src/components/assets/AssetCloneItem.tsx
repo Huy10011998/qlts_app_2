@@ -16,7 +16,12 @@ import {
 } from "../../utils/helpers/api";
 import { fetchImage, pickImage } from "../../utils/Image";
 import { isEffectivelyEmptyCodeValue } from "../../utils/helpers/string";
-import { C, useAccentBorderColors } from "../../utils/helpers/colors";
+import {
+  AppColors,
+  useAccentBorderColors,
+  useAppColors,
+  useStyles,
+} from "../../utils/helpers/colors";
 import { fetchReferenceByFieldWithParent } from "../../utils/cascade/FetchReferenceByFieldWithParent";
 import { handleCascadeChange } from "../../utils/cascade/index";
 import { useImageLoader } from "../../hooks/useImageLoader";
@@ -49,21 +54,17 @@ import {
   getRequiredFieldsMessage,
 } from "./shared/assetFormValidation";
 import { createAssetFormBaseStyles } from "./shared/assetFormStyles";
-import {
-  ASSET_FORM_BG,
-  ASSET_FORM_BRAND_RED,
-  ASSET_FORM_CARD_SHADOW,
-} from "./shared/assetFormTheme";
+import { ASSET_FORM_BRAND_RED } from "./shared/assetFormTheme";
 import {
   backToAssetList,
   backToAssetRelatedList,
 } from "../../navigation/shared/assetNavigationReset";
 
 const BRAND_RED = ASSET_FORM_BRAND_RED;
-const BG = ASSET_FORM_BG;
-const CARD_SHADOW = ASSET_FORM_CARD_SHADOW;
 
 export default function AssetCloneItem() {
+  const styles = useStyles(makeStyles);
+  const c = useAppColors();
   const accentBorders = useAccentBorderColors();
   const {
     item,
@@ -85,9 +86,7 @@ export default function AssetCloneItem() {
   const [formData, setFormData] = useState<Record<string, any>>({});
 
   const [enumData, setEnumData] = useState<Record<string, any[]>>({});
-  const [referenceData, setReferenceData] = useState<
-    ReferenceDataMap
-  >({});
+  const [referenceData, setReferenceData] = useState<ReferenceDataMap>({});
   const [modalVisible, setModalVisible] = useState(false);
   const [activeEnumField, setActiveEnumField] = useState<Field | null>(null);
   const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>(
@@ -202,7 +201,7 @@ export default function AssetCloneItem() {
     fieldActive,
     setEnumData,
     setReferenceData,
-    referenceData
+    referenceData,
   );
 
   const parentField = propertyClass?.prentTuDongTang;
@@ -228,7 +227,7 @@ export default function AssetCloneItem() {
             f.referenceName!,
             f.name,
             parentValues,
-            setReferenceData
+            setReferenceData,
           );
         }
       }
@@ -281,7 +280,7 @@ export default function AssetCloneItem() {
     activeEnumField,
     referenceData,
     enumData,
-    formData
+    formData,
   );
   const { showAlertIfActive } = useSafeAlert();
 
@@ -302,7 +301,7 @@ export default function AssetCloneItem() {
       expandGroupsWithErrors(requiredErrors);
       Alert.alert(
         "Thiếu thông tin",
-        getRequiredFieldsMessage(fieldActive, requiredErrors)
+        getRequiredFieldsMessage(fieldActive, requiredErrors),
       );
       return;
     }
@@ -310,7 +309,7 @@ export default function AssetCloneItem() {
     try {
       const payloadData: Record<string, any> = { ...formData };
       ["id", "ID", "Id"].forEach(
-        (k) => payloadData[k] && delete payloadData[k]
+        (k) => payloadData[k] && delete payloadData[k],
       );
       payloadData.id = 0;
       fieldActive.forEach((f) => {
@@ -337,7 +336,7 @@ export default function AssetCloneItem() {
         }
       });
       Object.keys(payloadData).forEach(
-        (k) => k.endsWith("_MoTa") && delete payloadData[k]
+        (k) => k.endsWith("_MoTa") && delete payloadData[k],
       );
 
       const autoCodeField = propertyClass?.propertyTuDongTang;
@@ -419,13 +418,13 @@ export default function AssetCloneItem() {
             },
           },
         ],
-        { cancelable: false }
+        { cancelable: false },
       );
     } catch (err: any) {
       setValidationErrors(getApiValidationFieldErrors(err));
       showAlertIfActive(
         "Lỗi",
-        getApiErrorMessage(err, "Không thể tạo bản sao!")
+        getApiErrorMessage(err, "Không thể tạo bản sao!"),
       );
     }
   };
@@ -476,7 +475,7 @@ export default function AssetCloneItem() {
       }
     >
       <AssetFormHeroCard
-        iconBgColor={C.orangeSurface}
+        iconBgColor={c.orangeSurface}
         iconColor="#E67700"
         iconName="copy-outline"
         styles={styles}
@@ -513,13 +512,10 @@ export default function AssetCloneItem() {
   );
 }
 
-const styles = StyleSheet.create({
-  ...createAssetFormBaseStyles({
-    backgroundColor: BG,
-    brandColor: BRAND_RED,
-    cardShadow: CARD_SHADOW,
-  }),
-  heroIconWrap: {
-    backgroundColor: C.amberLight,
-  },
-});
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    ...createAssetFormBaseStyles(c),
+    heroIconWrap: {
+      backgroundColor: c.amberLight,
+    },
+  });

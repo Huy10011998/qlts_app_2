@@ -1,4 +1,4 @@
-import { C } from "../../utils/helpers/colors";
+import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
 import React from "react";
 import {
   Animated,
@@ -38,6 +38,8 @@ export default function SlideInSidePanel({
   panelStyle,
   showCloseButton = true,
 }: SlideInSidePanelProps) {
+  const styles = useStyles(makeStyles);
+  const c = useAppColors();
   if (!visible) return null;
 
   return (
@@ -54,11 +56,13 @@ export default function SlideInSidePanel({
           <View style={styles.header}>
             <View style={styles.headerContent}>
               {title ? <Text style={styles.title}>{title}</Text> : null}
-              {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+              {subtitle ? (
+                <Text style={styles.subtitle}>{subtitle}</Text>
+              ) : null}
             </View>
             {showCloseButton ? (
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <Ionicons name="close" size={18} color={C.textSecondary} />
+                <Ionicons name="close" size={18} color={c.textSecondary} />
               </TouchableOpacity>
             ) : null}
           </View>
@@ -72,51 +76,52 @@ export default function SlideInSidePanel({
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(15, 25, 35, 0.18)",
-  },
-  panel: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    height: "100%",
-    backgroundColor: C.surface,
-    padding: 16,
-    paddingBottom: 12,
-    elevation: 5,
-    zIndex: 999,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    marginBottom: 14,
-  },
-  headerContent: {
-    flex: 1,
-    paddingRight: 12,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: C.text,
-  },
-  subtitle: {
-    marginTop: 4,
-    fontSize: 12,
-    color: C.textSub,
-  },
-  closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: C.surfaceAlt,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  scroll: {
-    flex: 1,
-  },
-});
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    overlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(15, 25, 35, 0.18)",
+    },
+    panel: {
+      position: "absolute",
+      top: 0,
+      right: 0,
+      height: "100%",
+      backgroundColor: c.surface,
+      padding: 16,
+      paddingBottom: 12,
+      elevation: 5,
+      zIndex: 999,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      justifyContent: "space-between",
+      marginBottom: 14,
+    },
+    headerContent: {
+      flex: 1,
+      paddingRight: 12,
+    },
+    title: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: c.text,
+    },
+    subtitle: {
+      marginTop: 4,
+      fontSize: 12,
+      color: c.textSub,
+    },
+    closeButton: {
+      width: 32,
+      height: 32,
+      borderRadius: 10,
+      backgroundColor: c.surfaceAlt,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    scroll: {
+      flex: 1,
+    },
+  });

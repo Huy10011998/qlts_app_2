@@ -1,7 +1,11 @@
 import React from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { HOME_BRAND_RED } from "./homeTheme";
-import { C, useAppColors } from "../../../utils/helpers/colors";
+import {
+  AppColors,
+  useAppColors,
+  useStyles,
+} from "../../../utils/helpers/colors";
 
 type HomeSectionTitleProps = {
   label: string;
@@ -14,6 +18,7 @@ export default function HomeSectionTitle({
   action,
   onAction,
 }: HomeSectionTitleProps) {
+  const styles = useStyles(makeStyles);
   const colors = useAppColors();
   const handleActionPress =
     onAction ??
@@ -44,31 +49,32 @@ export default function HomeSectionTitle({
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    width: "100%",
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-    marginTop: 4,
-  },
-  pill: {
-    width: 4,
-    height: 14,
-    borderRadius: 2,
-    backgroundColor: HOME_BRAND_RED,
-    marginRight: 8,
-  },
-  label: {
-    flex: 1,
-    fontSize: 12,
-    fontWeight: "700",
-    color: C.textSecondary,
-    letterSpacing: 0.5,
-  },
-  action: {
-    fontSize: 11,
-    color: HOME_BRAND_RED,
-    fontWeight: "600",
-  },
-});
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    row: {
+      width: "100%",
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 10,
+      marginTop: 4,
+    },
+    pill: {
+      width: 4,
+      height: 14,
+      borderRadius: 2,
+      backgroundColor: HOME_BRAND_RED,
+      marginRight: 8,
+    },
+    label: {
+      flex: 1,
+      fontSize: 12,
+      fontWeight: "700",
+      color: c.textSecondary,
+      letterSpacing: 0.5,
+    },
+    action: {
+      fontSize: 11,
+      color: HOME_BRAND_RED,
+      fontWeight: "600",
+    },
+  });

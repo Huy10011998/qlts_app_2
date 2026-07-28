@@ -15,31 +15,37 @@ import { formatVND, unFormatVND } from "../../utils/helpers/number";
 import IsLoading from "../ui/IconLoading";
 import { parseLinkHtml } from "../../utils/Link";
 import { DatePicker, TimePicker } from "../dataPicker/DataPicker";
-import { pickerFieldTriggerStyles } from "../dataPicker/shared/pickerFieldTriggerStyles";
+import { makePickerFieldTriggerStyles } from "../dataPicker/shared/pickerFieldTriggerStyles";
 import { log } from "../../utils/Logger";
-import { C, useStrongBorderColor } from "../../utils/helpers/colors";
+import {
+  AppColors,
+  useAppColors,
+  useStrongBorderColor,
+  useStyles,
+  useThemeValue,
+} from "../../utils/helpers/colors";
 import { useAssetFormKeyboard } from "../assets/shared/AssetFormScreenShell";
 
-const localStyles = {
+const makeLocalStyles = (c: AppColors) => ({
   inputRowInvalid: {
-    borderColor: C.red,
-    backgroundColor: C.redSurface,
+    borderColor: c.red,
+    backgroundColor: c.redSurface,
   },
   textInput: {
-    color: C.text,
+    color: c.text,
   },
   prefix: {
     marginLeft: 8,
-    color: C.text,
+    color: c.text,
     fontSize: 14,
   },
   textArea: {
     textAlignVertical: "top" as const,
-    color: C.text,
+    color: c.text,
   },
   imageButtonText: {
     marginLeft: 8,
-    color: C.red,
+    color: c.red,
   },
   imageWrap: {
     marginTop: 10,
@@ -48,36 +54,36 @@ const localStyles = {
     gap: 10,
   },
   inputText: {
-    color: C.text,
+    color: c.text,
   },
   linkText: {
     color: "blue",
   },
   selectText: {
-    color: C.text,
+    color: c.text,
   },
   selectedValueText: {
-    color: C.text,
+    color: c.text,
   },
   placeholderValueText: {
-    color: C.textMuted,
+    color: c.textMuted,
   },
   selectInputInvalid: {
-    borderColor: C.red,
-    backgroundColor: C.redSurface,
+    borderColor: c.red,
+    backgroundColor: c.redSurface,
   },
   textAreaInvalid: {
-    borderColor: C.red,
-    backgroundColor: C.redSurface,
+    borderColor: c.red,
+    backgroundColor: c.redSurface,
   },
   fieldWrapInvalid: {
     borderWidth: 1,
-    borderColor: C.red,
+    borderColor: c.red,
     borderRadius: 12,
     overflow: "hidden" as const,
-    backgroundColor: C.redSurface,
+    backgroundColor: c.redSurface,
   },
-};
+});
 
 function LinkInputField({
   value,
@@ -88,6 +94,8 @@ function LinkInputField({
   onChange: (nextValue: string) => void;
   styles: RenderInputByTypeProps["styles"];
 }) {
+  const c = useAppColors();
+  const localStyles = useThemeValue(makeLocalStyles);
   const keyboardContext = useAssetFormKeyboard();
   const strongBorderColor = useStrongBorderColor();
   const urlInputRef = React.useRef<TextInput>(null);
@@ -110,9 +118,13 @@ function LinkInputField({
     <View style={localStyles.linkWrap}>
       <TextInput
         ref={urlInputRef}
-        style={[styles.input, { borderColor: strongBorderColor }, localStyles.inputText]}
+        style={[
+          styles.input,
+          { borderColor: strongBorderColor },
+          localStyles.inputText,
+        ]}
         placeholder="Nhập đường link"
-        placeholderTextColor={C.textMuted}
+        placeholderTextColor={c.textMuted}
         value={url}
         onFocus={() => {
           keyboardContext?.handleInputFocus(urlInputRef.current);
@@ -124,9 +136,13 @@ function LinkInputField({
       />
       <TextInput
         ref={labelInputRef}
-        style={[styles.input, { borderColor: strongBorderColor }, localStyles.inputText]}
+        style={[
+          styles.input,
+          { borderColor: strongBorderColor },
+          localStyles.inputText,
+        ]}
         placeholder="Nhập label"
-        placeholderTextColor={C.textMuted}
+        placeholderTextColor={c.textMuted}
         value={label}
         onFocus={() => {
           keyboardContext?.handleInputFocus(labelInputRef.current);
@@ -163,6 +179,9 @@ export const RenderInputByType = ({
   disableNumberGrouping,
   openEnumReferanceModal,
 }: RenderInputByTypeProps) => {
+  const c = useAppColors();
+  const localStyles = useThemeValue(makeLocalStyles);
+  const pickerFieldTriggerStyles = useStyles(makePickerFieldTriggerStyles);
   const keyboardContext = useAssetFormKeyboard();
   const strongBorderColor = useStrongBorderColor();
   const basicInputRef = React.useRef<TextInput>(null);
@@ -232,7 +251,7 @@ export const RenderInputByType = ({
         keyboardType={keyboardType}
         value={String(value ?? "")}
         placeholder={`Nhập ${f.moTa ?? f.name}`}
-        placeholderTextColor={C.textMuted}
+        placeholderTextColor={c.textMuted}
         onFocus={() => handleInputFocus(basicInputRef.current)}
         onChangeText={(t) => handleChange(f.name, t)}
       />
@@ -262,7 +281,7 @@ export const RenderInputByType = ({
             keyboardType="numeric"
             value={formattedValue}
             placeholder={`Nhập ${f.moTa ?? f.name}`}
-            placeholderTextColor={C.textMuted}
+            placeholderTextColor={c.textMuted}
             onFocus={() => handleInputFocus(numberInputRef.current)}
             onChangeText={(text) => {
               const raw = disableNumberGrouping ? text : unFormatVND(text);
@@ -290,7 +309,7 @@ export const RenderInputByType = ({
           <Switch
             value={!!value}
             onValueChange={(v) => handleChange(f.name, v)}
-            trackColor={{ false: C.borderStrong, true: C.red }}
+            trackColor={{ false: c.borderStrong, true: c.red }}
             thumbColor={value ? "#ffffff" : "#f4f3f4"}
           />
         </View>
@@ -331,7 +350,7 @@ export const RenderInputByType = ({
             multiline
             value={String(value ?? "")}
             placeholder={`Nhập ${f.moTa ?? f.name}`}
-            placeholderTextColor={C.textMuted}
+            placeholderTextColor={c.textMuted}
             onFocus={() => handleInputFocus(textAreaWrapRef.current)}
             onChangeText={(t) => handleChange(f.name, t)}
           />
@@ -356,7 +375,7 @@ export const RenderInputByType = ({
               );
             }}
           >
-            <Ionicons name="image-outline" size={22} color={C.red} />
+            <Ionicons name="image-outline" size={22} color={c.red} />
             <Text style={localStyles.imageButtonText}>Chọn hình</Text>
           </TouchableOpacity>
 
@@ -424,7 +443,7 @@ export const RenderInputByType = ({
           <Ionicons
             name="chevron-down"
             size={20}
-            color={C.textSecondary}
+            color={c.textSecondary}
             style={pickerFieldTriggerStyles.icon}
           />
         </TouchableOpacity>

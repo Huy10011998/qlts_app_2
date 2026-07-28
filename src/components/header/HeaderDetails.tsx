@@ -15,140 +15,141 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import Ionicons from "react-native-vector-icons/Ionicons";
 import Svg, { Path } from "react-native-svg";
 import type { HeaderOptionsProps } from "../../types";
-import { C } from "../../utils/helpers/colors";
+import { AppColors, useStyles } from "../../utils/helpers/colors";
 
-const styles = StyleSheet.create({
-  outer: {
-    backgroundColor: C.red,
-    overflow: "hidden",
-  },
-  decoLarge: {
-    position: "absolute",
-    width: 168,
-    height: 168,
-    borderRadius: 84,
-    backgroundColor: "rgba(255,255,255,0.09)",
-    top: -44,
-    right: -34,
-  },
-  decoMid: {
-    position: "absolute",
-    width: 94,
-    height: 94,
-    borderRadius: 47,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    top: 18,
-    right: 54,
-  },
-  decoSoft: {
-    position: "absolute",
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: "rgba(0,0,0,0.06)",
-    bottom: 18,
-    left: -20,
-  },
-  decoBubbleOne: {
-    position: "absolute",
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: "rgba(255,255,255,0.14)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
-    top: 18,
-    left: 72,
-  },
-  decoBubbleTwo: {
-    position: "absolute",
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: "rgba(255,255,255,0.18)",
-    top: 52,
-    left: 112,
-  },
-  topBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 8,
-    minHeight: 56,
-  },
-  sideSlot: {
-    minWidth: 32,
-    alignItems: "flex-start",
-    justifyContent: "center",
-  },
-  rightSlot: {
-    alignItems: "flex-end",
-  },
-  rightActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  titleWrap: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 12,
-  },
-  titleBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    marginBottom: 4,
-    backgroundColor: "rgba(255,255,255,0.16)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
-  },
-  titleBadgeIcon: {
-    marginRight: 4,
-  },
-  titleBadgeText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: "rgba(255,255,255,0.9)",
-    textTransform: "uppercase",
-    letterSpacing: 0.3,
-  },
-  title: {
-    color: "#fff",
-    fontWeight: "800",
-    fontSize: 18,
-    textAlign: "center",
-  },
-  iconButton: {
-    paddingHorizontal: 5,
-  },
-  qrButtonWrap: {
-    position: "relative",
-  },
-  qrButtonDot: {
-    position: "absolute",
-    top: 1,
-    right: 3,
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    backgroundColor: "#FFD60A",
-    borderWidth: 1,
-    borderColor: C.red,
-  },
-  waveContainer: {
-    height: 20,
-  },
-  headerWave: {
-    position: "absolute",
-    bottom: 0,
-  },
-});
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    outer: {
+      backgroundColor: c.red,
+      overflow: "hidden",
+    },
+    decoLarge: {
+      position: "absolute",
+      width: 168,
+      height: 168,
+      borderRadius: 84,
+      backgroundColor: "rgba(255,255,255,0.09)",
+      top: -44,
+      right: -34,
+    },
+    decoMid: {
+      position: "absolute",
+      width: 94,
+      height: 94,
+      borderRadius: 47,
+      backgroundColor: "rgba(255,255,255,0.08)",
+      top: 18,
+      right: 54,
+    },
+    decoSoft: {
+      position: "absolute",
+      width: 88,
+      height: 88,
+      borderRadius: 44,
+      backgroundColor: "rgba(0,0,0,0.06)",
+      bottom: 18,
+      left: -20,
+    },
+    decoBubbleOne: {
+      position: "absolute",
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      backgroundColor: "rgba(255,255,255,0.14)",
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.18)",
+      top: 18,
+      left: 72,
+    },
+    decoBubbleTwo: {
+      position: "absolute",
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      backgroundColor: "rgba(255,255,255,0.18)",
+      top: 52,
+      left: 112,
+    },
+    topBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingTop: 8,
+      paddingBottom: 8,
+      minHeight: 56,
+    },
+    sideSlot: {
+      minWidth: 32,
+      alignItems: "flex-start",
+      justifyContent: "center",
+    },
+    rightSlot: {
+      alignItems: "flex-end",
+    },
+    rightActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    titleWrap: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 12,
+    },
+    titleBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      borderRadius: 999,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      marginBottom: 4,
+      backgroundColor: "rgba(255,255,255,0.16)",
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.18)",
+    },
+    titleBadgeIcon: {
+      marginRight: 4,
+    },
+    titleBadgeText: {
+      fontSize: 10,
+      fontWeight: "700",
+      color: "rgba(255,255,255,0.9)",
+      textTransform: "uppercase",
+      letterSpacing: 0.3,
+    },
+    title: {
+      color: "#fff",
+      fontWeight: "800",
+      fontSize: 18,
+      textAlign: "center",
+    },
+    iconButton: {
+      paddingHorizontal: 5,
+    },
+    qrButtonWrap: {
+      position: "relative",
+    },
+    qrButtonDot: {
+      position: "absolute",
+      top: 1,
+      right: 3,
+      width: 7,
+      height: 7,
+      borderRadius: 3.5,
+      backgroundColor: "#FFD60A",
+      borderWidth: 1,
+      borderColor: c.red,
+    },
+    waveContainer: {
+      height: 20,
+    },
+    headerWave: {
+      position: "absolute",
+      bottom: 0,
+    },
+  });
 
 export const HeaderDetails = ({
   showBackButton,
@@ -183,6 +184,7 @@ export function HeaderDetailsModalHeader({
   iconName?: React.ComponentProps<typeof Ionicons>["name"];
   rightSlot?: React.ReactNode;
 }) {
+  const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const meta = getHeaderMeta(title);
   const resolvedBadgeLabel = badgeLabel ?? meta.badgeLabel;
@@ -246,6 +248,7 @@ function HeaderDetailsBar({
   showQrScannerButton,
   onQrScannerPress,
 }: NativeStackHeaderProps & HeaderOptionsProps) {
+  const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const title =
     typeof options.title === "string" && options.title.trim()
@@ -345,6 +348,7 @@ function HeaderDetailsBar({
 }
 
 const HeaderWave: React.FC = () => {
+  const styles = useStyles(makeStyles);
   const { width } = useWindowDimensions();
 
   return (

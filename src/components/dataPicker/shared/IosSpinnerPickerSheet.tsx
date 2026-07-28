@@ -1,4 +1,8 @@
-import { C, useSeparatorColor } from "../../../utils/helpers/colors";
+import {
+  AppColors,
+  useSeparatorColor,
+  useStyles,
+} from "../../../utils/helpers/colors";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import BottomSheetModalShell from "../../shared/BottomSheetModalShell";
@@ -16,6 +20,7 @@ export default function IosSpinnerPickerSheet({
   onConfirm,
   visible,
 }: IosSpinnerPickerSheetProps) {
+  const styles = useStyles(makeStyles);
   const separatorColor = useSeparatorColor();
 
   return (
@@ -46,32 +51,33 @@ export default function IosSpinnerPickerSheet({
   );
 }
 
-const styles = StyleSheet.create({
-  pickerContainer: {
-    backgroundColor: C.surface,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    overflow: "hidden",
-  },
-  toolbar: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderColor: C.border,
-  },
-  toolbarText: {
-    fontSize: 18,
-    color: C.red,
-  },
-  toolbarTextBold: {
-    fontWeight: "bold",
-  },
-  pickerBox: {
-    backgroundColor: C.surface,
-    height: 250,
-    width: "100%",
-    alignItems: "center",
-  },
-});
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    pickerContainer: {
+      backgroundColor: c.surface,
+      borderTopLeftRadius: 16,
+      borderTopRightRadius: 16,
+      overflow: "hidden",
+    },
+    toolbar: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderColor: c.border,
+    },
+    toolbarText: {
+      fontSize: 18,
+      color: c.red,
+    },
+    toolbarTextBold: {
+      fontWeight: "bold",
+    },
+    pickerBox: {
+      backgroundColor: c.surface,
+      height: 250,
+      width: "100%",
+      alignItems: "center",
+    },
+  });

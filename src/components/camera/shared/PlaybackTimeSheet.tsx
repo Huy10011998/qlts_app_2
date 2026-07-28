@@ -3,8 +3,8 @@ import { Text, TouchableOpacity, View } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import BottomSheetModalShell from "../../shared/BottomSheetModalShell";
-import { C } from "../../../utils/helpers/colors";
-import { styles } from "../CameraPlayback.styles";
+import { useAppColors, useStyles } from "../../../utils/helpers/colors";
+import { makeStyles } from "../CameraPlayback.styles";
 
 const HOURS = Array.from({ length: 24 }, (_, value) => value);
 const MINUTES_AND_SECONDS = Array.from({ length: 60 }, (_, value) => value);
@@ -23,6 +23,8 @@ export default function PlaybackTimeSheet({
   value,
   visible,
 }: PlaybackTimeSheetProps) {
+  const c = useAppColors();
+  const styles = useStyles(makeStyles);
   const [hour, setHour] = React.useState(0);
   const [minute, setMinute] = React.useState(0);
   const [second, setSecond] = React.useState(0);
@@ -32,8 +34,7 @@ export default function PlaybackTimeSheet({
 
     const now = new Date();
     const initial =
-      value ??
-      now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+      value ?? now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
     setHour(Math.floor(initial / 3600));
     setMinute(Math.floor((initial % 3600) / 60));
     setSecond(initial % 60);
@@ -52,7 +53,7 @@ export default function PlaybackTimeSheet({
           onPress={onClose}
           accessibilityLabel="Quay lại lịch"
         >
-          <Ionicons name="chevron-back" size={28} color={C.text} />
+          <Ionicons name="chevron-back" size={28} color={c.text} />
         </TouchableOpacity>
         <Text style={styles.timeSheetTitle} allowFontScaling={false}>
           Thời gian bắt đầu
@@ -80,7 +81,7 @@ export default function PlaybackTimeSheet({
               key={item}
               label={padTimePart(item)}
               value={item}
-              color={C.text}
+              color={c.text}
             />
           ))}
         </Picker>
@@ -98,7 +99,7 @@ export default function PlaybackTimeSheet({
               key={item}
               label={padTimePart(item)}
               value={item}
-              color={C.text}
+              color={c.text}
             />
           ))}
         </Picker>
@@ -116,7 +117,7 @@ export default function PlaybackTimeSheet({
               key={item}
               label={padTimePart(item)}
               value={item}
-              color={C.text}
+              color={c.text}
             />
           ))}
         </Picker>

@@ -1,4 +1,9 @@
-import { C, useHairlineBorderColor } from "../../../utils/helpers/colors";
+import {
+  AppColors,
+  useAppColors,
+  useHairlineBorderColor,
+  useStyles,
+} from "../../../utils/helpers/colors";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -9,7 +14,7 @@ import {
   getAllZoneIds,
   getCameraItemTheme,
 } from "./cameraMenuHelpers";
-import { CAMERA_MENU_CARD_SHADOW } from "./cameraMenuTheme";
+import { cameraMenuCardShadow } from "./cameraMenuTheme";
 
 const localStyles = StyleSheet.create({
   childWrap: {
@@ -32,10 +37,12 @@ function CameraMenuDropdownItem({
   onToggle,
   rawData,
 }: CameraMenuDropdownItemProps) {
+  const styles = useStyles(makeStyles);
   const navigation = useNavigation<any>();
   const hasChildren = item.children.length > 0;
   const expanded = expandedIds.includes(item.id);
-  const theme = getCameraItemTheme(item, expanded);
+  const c = useAppColors();
+  const theme = getCameraItemTheme(item, expanded, c);
   const hairlineBorderColor = useHairlineBorderColor();
 
   const handleNavigate = () => {
@@ -88,7 +95,11 @@ function CameraMenuDropdownItem({
                 color={theme.color}
               />
             ) : (
-              <Ionicons name={theme.icon as any} size={16} color={theme.color} />
+              <Ionicons
+                name={theme.icon as any}
+                size={16}
+                color={theme.color}
+              />
             )}
           </View>
 
@@ -118,7 +129,7 @@ function CameraMenuDropdownItem({
             />
           </Pressable>
         ) : (
-          <Ionicons name="chevron-forward" size={14} color={C.textMuted} />
+          <Ionicons name="chevron-forward" size={14} color={c.textMuted} />
         )}
       </View>
 
@@ -141,74 +152,75 @@ function CameraMenuDropdownItem({
 const MemoizedCameraMenuDropdownItem = React.memo(CameraMenuDropdownItem);
 export default MemoizedCameraMenuDropdownItem;
 
-const styles = StyleSheet.create({
-  itemWrap: { marginBottom: 6 },
-  itemCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: C.surface,
-    borderRadius: 14,
-    minHeight: 58,
-    paddingVertical: 11,
-    paddingRight: 14,
-    paddingLeft: 16,
-    overflow: "hidden",
-    gap: 10,
-    ...CAMERA_MENU_CARD_SHADOW,
-  },
-  itemCardChild: {
-    backgroundColor: C.surfaceAlt,
-    minHeight: 56,
-    shadowOpacity: 0.03,
-    elevation: 1,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: C.border,
-  },
-  itemMainPressable: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-    gap: 10,
-  },
-  itemPressed: { opacity: 0.75 },
-  accent: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
-    borderTopRightRadius: 2,
-    borderBottomRightRadius: 2,
-  },
-  iconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  label: {
-    flex: 1,
-    fontSize: 13.5,
-    fontWeight: "600",
-    color: C.text,
-    letterSpacing: 0.1,
-    lineHeight: 20,
-    includeFontPadding: false,
-    textAlignVertical: "center",
-  },
-  labelChild: {
-    fontSize: 12.5,
-    fontWeight: "500",
-    color: C.textSecondary,
-    lineHeight: 19,
-  },
-  chevronWrap: {
-    width: 24,
-    height: 24,
-    borderRadius: 7,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    itemWrap: { marginBottom: 6 },
+    itemCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: c.surface,
+      borderRadius: 14,
+      minHeight: 58,
+      paddingVertical: 11,
+      paddingRight: 14,
+      paddingLeft: 16,
+      overflow: "hidden",
+      gap: 10,
+      ...cameraMenuCardShadow(c),
+    },
+    itemCardChild: {
+      backgroundColor: c.surfaceAlt,
+      minHeight: 56,
+      shadowOpacity: 0.03,
+      elevation: 1,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.border,
+    },
+    itemMainPressable: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+      gap: 10,
+    },
+    itemPressed: { opacity: 0.75 },
+    accent: {
+      position: "absolute",
+      left: 0,
+      top: 0,
+      bottom: 0,
+      width: 4,
+      borderTopRightRadius: 2,
+      borderBottomRightRadius: 2,
+    },
+    iconWrap: {
+      width: 34,
+      height: 34,
+      borderRadius: 10,
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+    },
+    label: {
+      flex: 1,
+      fontSize: 13.5,
+      fontWeight: "600",
+      color: c.text,
+      letterSpacing: 0.1,
+      lineHeight: 20,
+      includeFontPadding: false,
+      textAlignVertical: "center",
+    },
+    labelChild: {
+      fontSize: 12.5,
+      fontWeight: "500",
+      color: c.textSecondary,
+      lineHeight: 19,
+    },
+    chevronWrap: {
+      width: 24,
+      height: 24,
+      borderRadius: 7,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+  });

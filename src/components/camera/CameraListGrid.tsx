@@ -31,8 +31,13 @@ import {
   Gesture,
 } from "react-native-gesture-handler";
 import Orientation from "react-native-orientation-locker";
-import { C, useAppColors, useSeparatorColor } from "../../utils/helpers/colors";
-import { styles } from "./CameraListGrid.styles";
+import {
+  C,
+  useAppColors,
+  useSeparatorColor,
+  useStyles,
+} from "../../utils/helpers/colors";
+import { makeStyles } from "./CameraListGrid.styles";
 import { externalFetch } from "../../services/network/externalHttp";
 import Video from "react-native-video";
 import WebView from "react-native-webview";
@@ -53,6 +58,10 @@ import {
   stopCameraWebView,
 } from "./shared/cameraWebViewMessaging";
 import {
+  ANDROID_LIVE_RETRY_BASE_MS,
+  ANDROID_LIVE_RETRY_MAX_MS,
+  ANDROID_LIVE_STALE_AFTER_MS,
+  ANDROID_LIVE_WATCHDOG_INTERVAL_MS,
   CAMERA_LAYOUT_CHOICES,
   GO2RTC_HOST,
   LAYOUT_OPTIONS,
@@ -96,6 +105,8 @@ const CameraCell = React.memo(
     webviewRestartRef: _webviewRestartRef,
     onTokenExpired,
   }: CameraCellProps) => {
+    const c = useAppColors();
+    const styles = useStyles(makeStyles);
     const singleTap = React.useMemo(
       () =>
         Gesture.Tap()
@@ -199,7 +210,7 @@ const CameraCell = React.memo(
           ) : (
             <View style={styles.cellPlaceholder}>
               {!token && !isPaused ? (
-                <ActivityIndicator size="small" color={C.red} />
+                <ActivityIndicator size="small" color={c.red} />
               ) : !isPaused ? (
                 <Text style={styles.cellPlaceholderText}>
                   {isSnapshotActive ? "Đang tải ảnh..." : "Nhấn đúp để xem"}
@@ -251,6 +262,8 @@ const CameraCell = React.memo(
 );
 
 const CameraListGrid: React.FC = () => {
+  const c = useAppColors();
+  const styles = useStyles(makeStyles);
   const colors = useAppColors();
   const separatorColor = useSeparatorColor();
   const route = useRoute<any>();
@@ -329,9 +342,10 @@ const CameraListGrid: React.FC = () => {
   >({});
   const webviewMissCountRef = React.useRef<Record<string, number>>({});
   const lastProgressRef = React.useRef<number>(Date.now());
-  const androidFallbackRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+  const androidRetryRef = React.useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+  const androidErrorCountRef = React.useRef(0);
   const androidWatchdogRef = React.useRef<ReturnType<
     typeof setInterval
   > | null>(null);
@@ -745,9 +759,9 @@ const CameraListGrid: React.FC = () => {
   }, [fetchCameraTokenRef]);
 
   const clearFullscreenPlaybackTimers = React.useCallback(() => {
-    if (androidFallbackRef.current) {
-      clearTimeout(androidFallbackRef.current);
-      androidFallbackRef.current = null;
+    if (androidRetryRef.current) {
+      clearTimeout(androidRetryRef.current);
+      androidRetryRef.current = null;
     }
     if (androidWatchdogRef.current) {
       clearInterval(androidWatchdogRef.current);
@@ -755,41 +769,52 @@ const CameraListGrid: React.FC = () => {
     }
   }, []);
 
-  const startAndroidWatchdog = React.useCallback(() => {
-    if (Platform.OS !== "android") return;
-    if (androidWatchdogRef.current) clearInterval(androidWatchdogRef.current);
-    lastProgressRef.current = Date.now();
-    androidWatchdogRef.current = setInterval(() => {
-      if (Date.now() - lastProgressRef.current > 18000) {
-        if (androidWatchdogRef.current)
-          clearInterval(androidWatchdogRef.current);
-        if (androidFallbackRef.current)
-          clearTimeout(androidFallbackRef.current);
-        setVideoReady(false);
-        setFsVideoKey((k) => k + 1);
-        startAndroidFallbackRef.current?.();
-      }
-    }, 6000);
-  }, []);
-
-  const startAndroidFallbackRef = React.useRef<() => void>(null as any);
-  const startAndroidFallback = React.useCallback(() => {
-    if (Platform.OS !== "android") return;
-    if (androidFallbackRef.current) clearTimeout(androidFallbackRef.current);
-    if (androidWatchdogRef.current) clearInterval(androidWatchdogRef.current);
-    startAndroidWatchdog();
-    androidFallbackRef.current = setTimeout(() => setVideoReady(true), 8000);
-  }, [startAndroidWatchdog]);
-
-  React.useEffect(() => {
-    startAndroidFallbackRef.current = startAndroidFallback;
-  }, [startAndroidFallback]);
-
   const handleAndroidReady = React.useCallback(() => {
-    if (androidFallbackRef.current) clearTimeout(androidFallbackRef.current);
+    if (androidRetryRef.current) {
+      clearTimeout(androidRetryRef.current);
+      androidRetryRef.current = null;
+    }
     lastProgressRef.current = Date.now();
+    androidErrorCountRef.current = 0;
     setVideoReady(true);
   }, []);
+
+  const handleAndroidLoad = React.useCallback(() => {
+    lastProgressRef.current = Date.now();
+    if (androidRetryRef.current) {
+      clearTimeout(androidRetryRef.current);
+      androidRetryRef.current = null;
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (
+      Platform.OS !== "android" ||
+      !isFocused ||
+      !fullscreenCam ||
+      !cameraToken ||
+      isClosingFullscreen
+    )
+      return;
+
+    lastProgressRef.current = Date.now();
+    if (androidWatchdogRef.current) clearInterval(androidWatchdogRef.current);
+    androidWatchdogRef.current = setInterval(() => {
+      if (Date.now() - lastProgressRef.current < ANDROID_LIVE_STALE_AFTER_MS)
+        return;
+
+      lastProgressRef.current = Date.now();
+      setVideoReady(false);
+      setFsVideoKey((key) => key + 1);
+    }, ANDROID_LIVE_WATCHDOG_INTERVAL_MS);
+
+    return () => {
+      if (androidWatchdogRef.current) {
+        clearInterval(androidWatchdogRef.current);
+        androidWatchdogRef.current = null;
+      }
+    };
+  }, [cameraToken, fsVideoKey, fullscreenCam, isClosingFullscreen, isFocused]);
 
   React.useEffect(() => {
     return () => {
@@ -799,7 +824,7 @@ const CameraListGrid: React.FC = () => {
       if (syncTokenTimeoutRef.current)
         clearTimeout(syncTokenTimeoutRef.current);
       clearAndroidLiveStartRetries();
-      if (androidFallbackRef.current) clearTimeout(androidFallbackRef.current);
+      if (androidRetryRef.current) clearTimeout(androidRetryRef.current);
       if (androidWatchdogRef.current) clearInterval(androidWatchdogRef.current);
     };
   }, [clearAndroidLiveStartRetries, stopAllStreams]);
@@ -952,35 +977,47 @@ const CameraListGrid: React.FC = () => {
   const handleCamDoubleTap = React.useCallback(
     (cam: any, idx: number) => {
       clearCloseFullscreenTimeout();
+      clearFullscreenPlaybackTimers();
       isClosingFullscreenRef.current = false;
       setIsClosingFullscreen(false);
-      // ─── KEY CHANGE: Không set isLandscape state nữa, Orientation.lock sẽ
-      // thay đổi screenDims và isLandscape sẽ tự derive đúng ───────────────
-      if (isGridLandscapeFullscreenRef.current) {
-        Orientation.lockToLandscapeLeft();
-      } else {
-        Orientation.lockToPortrait();
+      if (Platform.OS === "android") {
+        StatusBar.setBackgroundColor("#000", false);
+        StatusBar.setBarStyle("light-content");
       }
+      // Đồng bộ CameraList và CameraPlayback: mở fullscreen là xoay ngang
+      // ngay. Khi đóng, closeFullscreen vẫn trả về đúng hướng của grid trước
+      // lúc mở.
+      Orientation.lockToLandscape();
       setPendingThumbUrl(
         getCameraSnapshotUrl(cam.iD_Camera_Ma, thumbTimestamp),
       );
       setActiveIndex(idx);
       setVideoReady(false);
       setFsVideoKey(0);
+      androidErrorCountRef.current = 0;
+      lastProgressRef.current = Date.now();
       fsTranslateX.setValue(0);
       fsSwitchOpacity.setValue(0);
       setIsSwitchingFullscreen(false);
       setFullscreenCam(cam);
-      if (Platform.OS === "android") startAndroidFallback();
     },
     [
       clearCloseFullscreenTimeout,
+      clearFullscreenPlaybackTimers,
       fsSwitchOpacity,
       fsTranslateX,
-      startAndroidFallback,
       thumbTimestamp,
     ],
   );
+
+  React.useEffect(() => {
+    if (Platform.OS !== "android") return;
+    if (fullscreenCam || isClosingFullscreen) {
+      StatusBar.setBackgroundColor("#000", false);
+      return;
+    }
+    StatusBar.setBackgroundColor(C.red, false);
+  }, [fullscreenCam, isClosingFullscreen]);
 
   const switchFullscreenCamera = React.useCallback(
     (nextIndex: number, direction: "next" | "prev") => {
@@ -988,8 +1025,7 @@ const CameraListGrid: React.FC = () => {
       if (!nextCam) return;
 
       stopCameraWebView(fullscreenWebViewRef.current);
-      if (androidFallbackRef.current) clearTimeout(androidFallbackRef.current);
-      if (androidWatchdogRef.current) clearInterval(androidWatchdogRef.current);
+      clearFullscreenPlaybackTimers();
 
       const nextPage = Math.floor(nextIndex / perPage);
       const nextLocalIndex = nextIndex % perPage;
@@ -999,6 +1035,8 @@ const CameraListGrid: React.FC = () => {
       );
       setVideoReady(false);
       setFsVideoKey(0);
+      androidErrorCountRef.current = 0;
+      lastProgressRef.current = Date.now();
       setFullscreenCam(nextCam);
       setActiveIndex(nextLocalIndex);
 
@@ -1012,9 +1050,15 @@ const CameraListGrid: React.FC = () => {
         duration: 240,
         useNativeDriver: true,
       }).start();
-      if (Platform.OS === "android") startAndroidFallback();
     },
-    [cameras, fsTranslateX, perPage, startAndroidFallback, SW, thumbTimestamp],
+    [
+      cameras,
+      clearFullscreenPlaybackTimers,
+      fsTranslateX,
+      perPage,
+      SW,
+      thumbTimestamp,
+    ],
   );
 
   const handleFullscreenSwipe = React.useCallback(
@@ -1257,7 +1301,9 @@ const CameraListGrid: React.FC = () => {
 
   if (tokenErrorMessage) {
     return (
-      <GestureHandlerRootView style={styles.root}>
+      <GestureHandlerRootView
+        style={[styles.root, { backgroundColor: colors.bg }]}
+      >
         <View style={styles.offlineState}>
           <EmptyState
             iconName="cloud-offline-outline"
@@ -1270,11 +1316,16 @@ const CameraListGrid: React.FC = () => {
   }
 
   return (
-    <GestureHandlerRootView style={styles.root} onLayout={handleContentLayout}>
+    <GestureHandlerRootView
+      style={[styles.root, { backgroundColor: colors.bg }]}
+      onLayout={handleContentLayout}
+    >
       <StatusBar
-        hidden={
-          isGridFullscreenMode || fullscreenCam !== null || isClosingFullscreen
+        hidden={isGridFullscreenMode}
+        backgroundColor={
+          fullscreenCam !== null || isClosingFullscreen ? "#000" : c.red
         }
+        barStyle="light-content"
       />
 
       <GestureDetector gesture={swipeGesture}>
@@ -1331,10 +1382,21 @@ const CameraListGrid: React.FC = () => {
           </View>
 
           {!isGridFullscreenMode && !isLandscape && (
-            <View style={styles.paginationRow}>
+            <View
+              style={[
+                styles.paginationRow,
+                { backgroundColor: colors.surface },
+              ]}
+            >
               {visiblePageIndexes.map((i) => (
                 <TouchableOpacity key={i} onPress={() => changePage(i)}>
-                  <View style={[styles.dot, i === page && styles.dotActive]} />
+                  <View
+                    style={[
+                      styles.dot,
+                      { backgroundColor: colors.borderStrong },
+                      i === page && styles.dotActive,
+                    ]}
+                  />
                 </TouchableOpacity>
               ))}
             </View>
@@ -1352,7 +1414,7 @@ const CameraListGrid: React.FC = () => {
               <Ionicons
                 name={isPaused ? "play-outline" : "pause-outline"}
                 size={26}
-                color={C.textSecondary}
+                color={c.textSecondary}
               />
             </TouchableOpacity>
             <TouchableOpacity
@@ -1362,7 +1424,7 @@ const CameraListGrid: React.FC = () => {
               <Ionicons
                 name={isMuted ? "volume-mute-outline" : "volume-medium-outline"}
                 size={26}
-                color={isMuted ? "#e53935" : C.textSecondary}
+                color={isMuted ? "#e53935" : c.textSecondary}
               />
             </TouchableOpacity>
             <TouchableOpacity style={styles.toolBtn}>
@@ -1377,7 +1439,7 @@ const CameraListGrid: React.FC = () => {
               <MaterialCommunityIcons
                 name="view-grid-outline"
                 size={26}
-                color={C.textSecondary}
+                color={c.textSecondary}
               />
             </TouchableOpacity>
             <TouchableOpacity
@@ -1387,7 +1449,7 @@ const CameraListGrid: React.FC = () => {
               <MaterialCommunityIcons
                 name="phone-rotate-landscape"
                 size={26}
-                color={C.textSecondary}
+                color={c.textSecondary}
               />
             </TouchableOpacity>
           </View>
@@ -1401,7 +1463,7 @@ const CameraListGrid: React.FC = () => {
               disabled={!activeCam}
               onPress={openPlayback}
             >
-              <Ionicons name="play" size={16} color={C.onBrand} />
+              <Ionicons name="play" size={16} color={c.onBrand} />
               <Text style={styles.playbackText}>Phát lại</Text>
             </TouchableOpacity>
             <View style={styles.iconGroup}>
@@ -1409,34 +1471,34 @@ const CameraListGrid: React.FC = () => {
                 <Ionicons
                   name="camera-outline"
                   size={24}
-                  color={C.textSecondary}
+                  color={c.textSecondary}
                 />
               </TouchableOpacity>
               <TouchableOpacity style={styles.iconBtn}>
                 <Ionicons
                   name="radio-button-on-outline"
                   size={24}
-                  color={C.textSecondary}
+                  color={c.textSecondary}
                 />
               </TouchableOpacity>
               <TouchableOpacity style={styles.iconBtn}>
                 <Ionicons
                   name="mic-outline"
                   size={24}
-                  color={C.textSecondary}
+                  color={c.textSecondary}
                 />
               </TouchableOpacity>
               <TouchableOpacity style={styles.iconBtn}>
                 <Ionicons
                   name="person-circle-outline"
                   size={24}
-                  color={C.textSecondary}
+                  color={c.textSecondary}
                 />
               </TouchableOpacity>
             </View>
           </View>
           <View style={styles.chevronWrapper}>
-            <Ionicons name="chevron-down" size={20} color={C.textMuted} />
+            <Ionicons name="chevron-down" size={20} color={c.textMuted} />
           </View>
         </View>
       )}
@@ -1445,7 +1507,7 @@ const CameraListGrid: React.FC = () => {
         visible={showLayoutPicker && !isGridFullscreenMode}
         animationType="slide"
         transparent
-        statusBarTranslucent
+        statusBarTranslucent={false}
         supportedOrientations={[
           "portrait",
           "landscape-left",
@@ -1515,7 +1577,7 @@ const CameraListGrid: React.FC = () => {
         visible={fullscreenCam !== null || isClosingFullscreen}
         animationType="fade"
         transparent={false}
-        statusBarTranslucent
+        statusBarTranslucent={false}
         hardwareAccelerated
         supportedOrientations={[
           "portrait",
@@ -1524,6 +1586,12 @@ const CameraListGrid: React.FC = () => {
         ]}
         onRequestClose={closeFullscreen}
       >
+        <StatusBar
+          hidden={false}
+          translucent={false}
+          backgroundColor="#000"
+          barStyle="light-content"
+        />
         <View style={styles.fsContainer}>
           <View
             style={[
@@ -1537,7 +1605,7 @@ const CameraListGrid: React.FC = () => {
               style={styles.fsHeaderBtn}
               onPress={closeFullscreen}
             >
-              <Ionicons name="chevron-down" size={26} color="#fff" />
+              <Ionicons name="chevron-back" size={22} color="#fff" />
             </TouchableOpacity>
             <Text style={styles.fsTitle} numberOfLines={1}>
               {fullscreenCam?.iD_Camera_MoTa ?? "Camera"}
@@ -1602,21 +1670,24 @@ const CameraListGrid: React.FC = () => {
                         maxBufferMs: 3000,
                         bufferForPlaybackMs: 500,
                         bufferForPlaybackAfterRebufferMs: 1000,
+                        backBufferDurationMs: 0,
                       }}
+                      onLoad={handleAndroidLoad}
                       onReadyForDisplay={handleAndroidReady}
                       onProgress={() => {
                         lastProgressRef.current = Date.now();
                       }}
                       onError={() => {
-                        if (androidFallbackRef.current)
-                          clearTimeout(androidFallbackRef.current);
-                        if (androidWatchdogRef.current)
-                          clearInterval(androidWatchdogRef.current);
-                        androidFallbackRef.current = setTimeout(() => {
+                        const attempt = (androidErrorCountRef.current += 1);
+                        setVideoReady(false);
+                        if (androidRetryRef.current)
+                          clearTimeout(androidRetryRef.current);
+                        androidRetryRef.current = setTimeout(() => {
+                          androidRetryRef.current = null;
+                          lastProgressRef.current = Date.now();
                           setVideoReady(false);
                           setFsVideoKey((k) => k + 1);
-                          startAndroidFallback();
-                        }, 5000);
+                        }, Math.min(ANDROID_LIVE_RETRY_MAX_MS, ANDROID_LIVE_RETRY_BASE_MS * 2 ** (attempt - 1)));
                       }}
                     />
                   )}
@@ -1681,7 +1752,6 @@ const CameraListGrid: React.FC = () => {
                           }}
                           style={StyleSheet.absoluteFill}
                           resizeMode="contain"
-                          blurRadius={2}
                         />
                       )}
                       <View style={styles.thumbOverlay} />

@@ -19,9 +19,11 @@ import IsLoading from "../ui/IconLoading";
 import EmptyState from "../ui/EmptyState";
 import BottomSheetModalShell from "../shared/BottomSheetModalShell";
 import {
-  C,
+  AppColors,
+  useAppColors,
   useHairlineBorderColor,
   useSeparatorColor,
+  useStyles,
 } from "../../utils/helpers/colors";
 import { COMPACT_TEXT_MAX_SCALE } from "../../utils/helpers/textScaling";
 
@@ -56,6 +58,8 @@ export default function EnumAndReferencePickerModal({
   total = 0,
   loadedCount,
 }: PropsEnum & ExtraProps) {
+  const styles = useStyles(makeStyles);
+  const c = useAppColors();
   const insets = useSafeAreaInsets();
   const hairlineBorderColor = useHairlineBorderColor();
   const separatorColor = useSeparatorColor();
@@ -100,7 +104,9 @@ export default function EnumAndReferencePickerModal({
     searchText.trim().length > 0 && total === 0 && !isSearching;
   const isEmpty = Boolean(errorMessage) || isSearchEmpty || !hasRealItems;
   const listItems = isEmpty ? [] : orderedItems;
-  const listAnimationKey = `${listItems.length}-${total}-${Boolean(errorMessage)}`;
+  const listAnimationKey = `${listItems.length}-${total}-${Boolean(
+    errorMessage,
+  )}`;
   const hasSearchText = searchText.trim().length > 0;
   const showSearchSpinner = Boolean(isSearching && hasSearchText);
 
@@ -156,12 +162,11 @@ export default function EnumAndReferencePickerModal({
       selectedValue !== null &&
       selectedValue !== undefined &&
       String(selectedValue).trim() !== "";
-    const isSelected =
-      isMulti
-        ? !isEmptyValue && multiSelectedValues.includes(String(item.value))
-        : !isEmptyValue &&
-          hasSelectedValue &&
-          String(item.value) === String(selectedValue);
+    const isSelected = isMulti
+      ? !isEmptyValue && multiSelectedValues.includes(String(item.value))
+      : !isEmptyValue &&
+        hasSelectedValue &&
+        String(item.value) === String(selectedValue);
 
     return (
       <TouchableOpacity
@@ -246,13 +251,15 @@ export default function EnumAndReferencePickerModal({
         </View>
       ) : null}
 
-      <View style={[styles.searchWrapper, { borderColor: hairlineBorderColor }]}>
+      <View
+        style={[styles.searchWrapper, { borderColor: hairlineBorderColor }]}
+      >
         <View style={styles.searchIconWrap}>
-          <Ionicons name="search-outline" size={16} color={C.textSub} />
+          <Ionicons name="search-outline" size={16} color={c.textSub} />
         </View>
         <TextInput
           placeholder="Tìm kiếm..."
-          placeholderTextColor={C.placeholder}
+          placeholderTextColor={c.placeholder}
           value={searchText}
           onChangeText={setSearchText}
           style={styles.searchInput}
@@ -263,7 +270,7 @@ export default function EnumAndReferencePickerModal({
 
         {showSearchSpinner && (
           <View style={styles.spinnerWrap}>
-            <IsLoading size="small" color={C.red} />
+            <IsLoading size="small" color={c.red} />
           </View>
         )}
         {!showSearchSpinner && searchText.length > 0 ? (
@@ -272,7 +279,7 @@ export default function EnumAndReferencePickerModal({
             style={styles.clearButton}
             hitSlop={8}
           >
-            <Ionicons name="close-circle" size={16} color={C.placeholder} />
+            <Ionicons name="close-circle" size={16} color={c.placeholder} />
           </Pressable>
         ) : null}
       </View>
@@ -310,7 +317,9 @@ export default function EnumAndReferencePickerModal({
         ListEmptyComponent={
           <EmptyState
             iconName={errorMessage ? "cloud-offline-outline" : "search-outline"}
-            title={errorMessage ? "Không thể tải dữ liệu" : "Không tìm thấy dữ liệu"}
+            title={
+              errorMessage ? "Không thể tải dữ liệu" : "Không tìm thấy dữ liệu"
+            }
             subtitle={errorMessage || "Thử tìm kiếm với từ khóa khác"}
           />
         }
@@ -320,164 +329,165 @@ export default function EnumAndReferencePickerModal({
   );
 }
 
-const styles = StyleSheet.create({
-  modalContainer: {
-    height: "75%",
-    backgroundColor: C.surface,
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
-  },
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    modalContainer: {
+      height: "75%",
+      backgroundColor: c.surface,
+      paddingHorizontal: 16,
+      paddingTop: 8,
+      borderTopLeftRadius: 18,
+      borderTopRightRadius: 18,
+    },
 
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: C.text,
-    marginBottom: 16,
-    textAlign: "center",
-    paddingHorizontal: 52,
-  },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: c.text,
+      marginBottom: 16,
+      textAlign: "center",
+      paddingHorizontal: 52,
+    },
 
-  closeButton: {
-    top: 10,
-  },
+    closeButton: {
+      top: 10,
+    },
 
-  multiActionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 10,
-  },
+    multiActionRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 10,
+    },
 
-  multiCount: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: C.textMuted,
-  },
+    multiCount: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: c.textMuted,
+    },
 
-  multiDoneButton: {
-    minHeight: 36,
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: C.red,
-  },
+    multiDoneButton: {
+      minHeight: 36,
+      borderRadius: 8,
+      paddingHorizontal: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: c.red,
+    },
 
-  multiDoneText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#fff",
-  },
+    multiDoneText: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: "#fff",
+    },
 
-  searchWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: C.surface,
-    minHeight: 48,
-    paddingHorizontal: 12,
-    borderRadius: 14,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: C.border,
-    marginBottom: 8,
-    shadowColor: C.shadow,
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
+    searchWrapper: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: c.surface,
+      minHeight: 48,
+      paddingHorizontal: 12,
+      borderRadius: 14,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.border,
+      marginBottom: 8,
+      shadowColor: c.shadow,
+      shadowOpacity: 0.06,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 2,
+    },
 
-  searchIconWrap: {
-    marginRight: 8,
-    width: 20,
-    height: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+    searchIconWrap: {
+      marginRight: 8,
+      width: 20,
+      height: 20,
+      alignItems: "center",
+      justifyContent: "center",
+    },
 
-  searchInput: {
-    flex: 1,
-    height: 48,
-    paddingVertical: 0,
-    fontSize: 14,
-    lineHeight: 20,
-    color: C.text,
-    fontWeight: "400",
-    includeFontPadding: false,
-    textAlignVertical: "center",
-  },
+    searchInput: {
+      flex: 1,
+      height: 48,
+      paddingVertical: 0,
+      fontSize: 14,
+      lineHeight: 20,
+      color: c.text,
+      fontWeight: "400",
+      includeFontPadding: false,
+      textAlignVertical: "center",
+    },
 
-  spinnerWrap: {
-    width: 24,
-    height: 24,
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 6,
-  },
+    spinnerWrap: {
+      width: 24,
+      height: 24,
+      alignItems: "center",
+      justifyContent: "center",
+      marginLeft: 6,
+    },
 
-  clearButton: {
-    padding: 4,
-    marginLeft: 4,
-  },
+    clearButton: {
+      padding: 4,
+      marginLeft: 4,
+    },
 
-  list: {
-    flex: 1,
-    minHeight: 0,
-  },
-  footerLoading: {
-    paddingVertical: 16,
-  },
+    list: {
+      flex: 1,
+      minHeight: 0,
+    },
+    footerLoading: {
+      paddingVertical: 16,
+    },
 
-  listContent: {
-    flexGrow: 1,
-  },
-  listContentEmpty: {
-    paddingTop: 0,
-    paddingBottom: 0,
-  },
+    listContent: {
+      flexGrow: 1,
+    },
+    listContentEmpty: {
+      paddingTop: 0,
+      paddingBottom: 0,
+    },
 
-  modalItem: {
-    paddingVertical: 14,
-    paddingHorizontal: 4,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: C.border,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
+    modalItem: {
+      paddingVertical: 14,
+      paddingHorizontal: 4,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderColor: c.border,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
 
-  modalItemText: {
-    fontSize: 15,
-    color: C.text,
-    flex: 1,
-    paddingRight: 12,
-  },
+    modalItemText: {
+      fontSize: 15,
+      color: c.text,
+      flex: 1,
+      paddingRight: 12,
+    },
 
-  modalItemSelected: {
-    backgroundColor: C.greenLight,
-  },
+    modalItemSelected: {
+      backgroundColor: c.greenLight,
+    },
 
-  modalItemTextSelected: {
-    fontWeight: "700",
-    color: C.green,
-  },
+    modalItemTextSelected: {
+      fontWeight: "700",
+      color: c.green,
+    },
 
-  header: {
-    textAlign: "center",
-    fontSize: 14,
-    color: C.text,
-    fontWeight: "600",
-  },
+    header: {
+      textAlign: "center",
+      fontSize: 14,
+      color: c.text,
+      fontWeight: "600",
+    },
 
-  stickyHeader: {
-    backgroundColor: C.surfaceAlt,
-    paddingVertical: 10,
-    zIndex: 10,
-  },
+    stickyHeader: {
+      backgroundColor: c.surfaceAlt,
+      paddingVertical: 10,
+      zIndex: 10,
+    },
 
-  emptyItemText: {
-    color: C.textMuted, // xám nhạt
-    fontStyle: "italic", // nhìn là biết option đặc biệt
-  },
-});
+    emptyItemText: {
+      color: c.textMuted, // xám nhạt
+      fontStyle: "italic", // nhìn là biết option đặc biệt
+    },
+  });

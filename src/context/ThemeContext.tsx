@@ -29,6 +29,15 @@ const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 const isThemePreference = (value: string | null): value is ThemePreference =>
   value === "system" || value === "light" || value === "dark";
 
+/**
+ * Push the preference down to the platform.
+ *
+ * App colors are resolved in JS (see `useAppColors`), so this call is only about
+ * the parts of the UI React Native does not paint: on Android the night mode
+ * used by native dialogs and the window background, on iOS the window's
+ * `overrideUserInterfaceStyle` — which `Appearance.setColorScheme` sets for us,
+ * and which also drives `Alert`, native pickers and the keyboard appearance.
+ */
 const applyThemePreference = (preference: ThemePreference) => {
   if (Platform.OS === "android") {
     NativeModules.ThemePreference?.setPreference(preference);
@@ -53,10 +62,9 @@ export function ThemeProvider({ children }: React.PropsWithChildren) {
           ? storedPreference
           : "system";
 
-        // Apply the persisted appearance before mounting any screen. Android
-        // resolves PlatformColor resources when native views are created; if a
-        // screen mounts first, its values/values-night colors can stay cached
-        // until the user toggles the appearance again.
+        // Apply the persisted appearance before mounting any screen, so the
+        // first frame is already drawn in the appearance the user picked
+        // instead of flashing the device one.
         applyThemePreference(initialPreference);
         setPreferenceState(initialPreference);
         setIsHydrated(true);

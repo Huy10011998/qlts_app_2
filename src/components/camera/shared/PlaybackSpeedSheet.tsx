@@ -8,10 +8,10 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useSeparatorColor } from "../../../utils/helpers/colors";
+import { useSeparatorColor, useStyles } from "../../../utils/helpers/colors";
 // Dùng lại nguyên bộ style sheet của CameraListGrid để hai modal giống nhau
 // tuyệt đối, không nhân đôi định nghĩa.
-import { styles } from "../CameraListGrid.styles";
+import { makeStyles } from "../CameraListGrid.styles";
 import {
   getPlaybackSpeedLabel,
   PLAYBACK_SPEED_OPTIONS,
@@ -31,6 +31,7 @@ export default function PlaybackSpeedSheet({
   selectedSpeed,
   visible,
 }: PlaybackSpeedSheetProps) {
+  const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const separatorColor = useSeparatorColor();
   const screenDims = useWindowDimensions();

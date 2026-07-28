@@ -1,5 +1,5 @@
 import { removeVietnameseTones } from "../../../utils/Helper";
-import { C } from "../../../utils/helpers/colors";
+import { AppColors } from "../../../utils/helpers/colors";
 
 export interface CameraItem {
   id: string;
@@ -8,19 +8,23 @@ export interface CameraItem {
   children: CameraItem[];
 }
 
-export const getCameraItemTheme = (item: CameraItem, expanded: boolean) => {
+export const getCameraItemTheme = (
+  item: CameraItem,
+  expanded: boolean,
+  c: AppColors,
+) => {
   if (item.children.length > 0) {
     return expanded
       ? {
           icon: "folder-open",
           lib: "ionicons" as const,
-          bg: C.redSurface,
+          bg: c.redSurface,
           color: "#E31E24",
         }
       : {
           icon: "folder",
           lib: "ionicons" as const,
-          bg: C.orangeSurface,
+          bg: c.orangeSurface,
           color: "#E67700",
         };
   }
@@ -28,7 +32,7 @@ export const getCameraItemTheme = (item: CameraItem, expanded: boolean) => {
   return {
     icon: "videocam",
     lib: "material" as const,
-    bg: C.indigoSurface,
+    bg: c.indigoSurface,
     color: "#3B5BDB",
   };
 };
@@ -108,7 +112,9 @@ export const filterCameraTree = (data: CameraItem[], searchText: string) => {
 
 export const getAllZoneIds = (zoneId: number, allZones: any[]): number[] => {
   const result = [zoneId];
-  const children = allZones.filter((zone) => zone.iD_VungCameraParent === zoneId);
+  const children = allZones.filter(
+    (zone) => zone.iD_VungCameraParent === zoneId,
+  );
 
   children.forEach((child) => {
     result.push(...getAllZoneIds(child.iD_VungCamera, allZones));

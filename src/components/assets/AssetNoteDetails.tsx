@@ -3,7 +3,7 @@ import { StyleSheet, Dimensions, View, Animated } from "react-native";
 import { WebView } from "react-native-webview";
 import type { CenterTextProps } from "../../types";
 import IsLoading from "../ui/IconLoading";
-import { C } from "../../utils/helpers/colors";
+import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
 import AssetListEmptyState from "./shared/AssetListEmptyState";
 import { useColorScheme } from "../../hooks/useColorScheme";
 
@@ -11,6 +11,8 @@ export default function AssetNoteDetails({
   text,
   loadErrorMessage,
 }: CenterTextProps) {
+  const styles = useStyles(makeStyles);
+  const c = useAppColors();
   const isDark = useColorScheme() === "dark";
   const webTextColor = isDark ? "#E8EEF6" : "#172033";
   const webBackgroundColor = isDark ? "#151F2C" : "#FFFFFF";
@@ -100,31 +102,32 @@ export default function AssetNoteDetails({
       />
       {shouldShowLoader && loading && (
         <Animated.View style={[styles.loadingOverlay, { opacity }]}>
-          <IsLoading size="large" color={C.red} />
+          <IsLoading size="large" color={c.red} />
         </Animated.View>
       )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-  },
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: "center",
+    },
 
-  webview: {
-    flex: 1,
-    width: Dimensions.get("window").width,
-  },
+    webview: {
+      flex: 1,
+      width: Dimensions.get("window").width,
+    },
 
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: C.loadingOverlay,
-  },
-});
+    loadingOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: c.loadingOverlay,
+    },
+  });

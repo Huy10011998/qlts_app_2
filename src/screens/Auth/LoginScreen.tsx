@@ -1,7 +1,9 @@
 import {
   C,
   useAccentBorderColors,
+  useAppColors,
   useHairlineBorderColor,
+  useStyles,
 } from "../../utils/helpers/colors";
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import {
@@ -60,7 +62,7 @@ import {
   checkServerReachability,
   SERVER_UNAVAILABLE_MESSAGE,
 } from "../../services/network/reachability";
-import { styles } from "./LoginScreen.styles";
+import { makeStyles } from "./LoginScreen.styles";
 
 const RED = C.red;
 const COMPANY_FOUNDED_YEAR = 1983;
@@ -69,6 +71,8 @@ const SUPPORT_PHONE = "028 3765 5037";
 const SUPPORT_PHONE_LINK = SUPPORT_PHONE.replace(/\s/g, "");
 
 export default function LoginScreen() {
+  const c = useAppColors();
+  const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const hairlineBorderColor = useHairlineBorderColor();
   const accentBorders = useAccentBorderColors();
@@ -139,8 +143,7 @@ export default function LoginScreen() {
     ? Math.max(insets.bottom, 16) + 24
     : Math.max(insets.bottom, 10) + (isCompactHeight ? 8 : 16);
   const isContentOverflowing =
-    scrollViewportHeight > 0 &&
-    scrollContentHeight > scrollViewportHeight + 1;
+    scrollViewportHeight > 0 && scrollContentHeight > scrollViewportHeight + 1;
 
   useEffect(() => {
     log("LoginScreen mounted, token:", token);
@@ -535,7 +538,9 @@ export default function LoginScreen() {
               onLayout={(event) =>
                 setScrollViewportHeight(event.nativeEvent.layout.height)
               }
-              onContentSizeChange={(_, height) => setScrollContentHeight(height)}
+              onContentSizeChange={(_, height) =>
+                setScrollContentHeight(height)
+              }
             >
               <View
                 style={[
@@ -572,7 +577,7 @@ export default function LoginScreen() {
                 <Ionicons
                   name="person-outline"
                   size={18}
-                  color={isUsernameFocused ? RED : C.placeholder}
+                  color={isUsernameFocused ? RED : c.placeholder}
                   style={styles.inputIcon}
                 />
                 <TextInput
@@ -581,7 +586,7 @@ export default function LoginScreen() {
                     isCompactHeight && styles.textInputCompact,
                   ]}
                   placeholder="Tài khoản"
-                  placeholderTextColor={C.placeholder}
+                  placeholderTextColor={c.placeholder}
                   value={userName}
                   onChangeText={setUserName}
                   onFocus={() => setIsUsernameFocused(true)}
@@ -606,7 +611,7 @@ export default function LoginScreen() {
                 <Ionicons
                   name="lock-closed-outline"
                   size={18}
-                  color={isPasswordFocused ? RED : C.placeholder}
+                  color={isPasswordFocused ? RED : c.placeholder}
                   style={styles.inputIcon}
                 />
                 <TextInput
@@ -617,7 +622,7 @@ export default function LoginScreen() {
                   ]}
                   secureTextEntry={!isPasswordVisible}
                   placeholder="Mật khẩu"
-                  placeholderTextColor={C.placeholder}
+                  placeholderTextColor={c.placeholder}
                   value={userPassword}
                   onChangeText={setUserPassword}
                   onFocus={() => setIsPasswordFocused(true)}
@@ -634,7 +639,7 @@ export default function LoginScreen() {
                   <Ionicons
                     name={isPasswordVisible ? "eye-outline" : "eye-off-outline"}
                     size={20}
-                    color={C.placeholder}
+                    color={c.placeholder}
                   />
                 </TouchableOpacity>
               </View>
@@ -742,29 +747,29 @@ export default function LoginScreen() {
                   ]}
                 >
                   <TouchableOpacity
-                    style={[styles.supportAction, { borderColor: accentBorders.red }]}
+                    style={[
+                      styles.supportAction,
+                      { borderColor: accentBorders.red },
+                    ]}
                     onPress={handleOpenSupportEmail}
                     activeOpacity={0.82}
                   >
                     <Ionicons name="mail-outline" size={15} color="#B91C1C" />
-                    <Text
-                      style={styles.supportActionText}
-                      numberOfLines={2}
-                    >
+                    <Text style={styles.supportActionText} numberOfLines={2}>
                       {SUPPORT_EMAIL}
                     </Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={[styles.supportAction, { borderColor: accentBorders.red }]}
+                    style={[
+                      styles.supportAction,
+                      { borderColor: accentBorders.red },
+                    ]}
                     onPress={handleOpenSupportPhone}
                     activeOpacity={0.82}
                   >
                     <Ionicons name="call-outline" size={15} color="#15803D" />
-                    <Text
-                      style={styles.supportActionText}
-                      numberOfLines={1}
-                    >
+                    <Text style={styles.supportActionText} numberOfLines={1}>
                       {SUPPORT_PHONE}
                     </Text>
                   </TouchableOpacity>
@@ -823,12 +828,17 @@ export default function LoginScreen() {
                   <Ionicons
                     name="shield-checkmark-outline"
                     size={13}
-                    color={C.placeholder}
+                    color={c.placeholder}
                   />
                   <Text style={styles.secureText}>Kết nối bảo mật SSL</Text>
                 </View>
                 {!isNarrowFooter && <View style={styles.footerDot} />}
-                <View style={[styles.versionPill, { borderColor: hairlineBorderColor }]}>
+                <View
+                  style={[
+                    styles.versionPill,
+                    { borderColor: hairlineBorderColor },
+                  ]}
+                >
                   <Text style={styles.versionText}>
                     {appVersionLabel} · Cholimex Food
                   </Text>

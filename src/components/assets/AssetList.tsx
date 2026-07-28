@@ -1,3 +1,4 @@
+import { AppColors, useStyles } from "../../utils/helpers/colors";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
@@ -58,7 +59,7 @@ import {
   getConditionsFromNode,
 } from "./shared/treeHelpers";
 import { BRAND_RED } from "./shared/listTheme";
-import { sharedAssetListStyles } from "./shared/listStyles";
+import { makeSharedAssetListStyles } from "./shared/listStyles";
 
 if (
   Platform.OS === "android" &&
@@ -71,6 +72,7 @@ const { width } = Dimensions.get("window");
 const MENU_WIDTH = width * 0.6;
 
 function AssetListMenuButton({ onPress }: { onPress: () => void }) {
+  const styles = useStyles(makeStyles);
   return (
     <TouchableOpacity onPress={onPress} style={styles.headerButton}>
       <Ionicons name="menu" size={26} color="#fff" />
@@ -79,6 +81,7 @@ function AssetListMenuButton({ onPress }: { onPress: () => void }) {
 }
 
 export default function AssetList() {
+  const styles = useStyles(makeStyles);
   const navigation = useNavigation<StackNavigation<"AssetList">>();
   const {
     nameClass,
@@ -610,28 +613,29 @@ export default function AssetList() {
   );
 }
 
-const styles = StyleSheet.create({
-  listWrap: {
-    flex: 1,
-  },
-  list: {
-    flex: 1,
-  },
-  listContentEmpty: {
-    paddingTop: 0,
-    paddingBottom: 0,
-  },
-  emptyStateRoot: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 32,
-  },
-  menuScrollContent: {
-    paddingBottom: 12,
-  },
-  headerButton: {
-    paddingHorizontal: 5,
-  },
-  ...sharedAssetListStyles,
-});
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    listWrap: {
+      flex: 1,
+    },
+    list: {
+      flex: 1,
+    },
+    listContentEmpty: {
+      paddingTop: 0,
+      paddingBottom: 0,
+    },
+    emptyStateRoot: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 32,
+    },
+    menuScrollContent: {
+      paddingBottom: 12,
+    },
+    headerButton: {
+      paddingHorizontal: 5,
+    },
+    ...makeSharedAssetListStyles(c),
+  });
