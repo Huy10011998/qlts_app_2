@@ -9,6 +9,7 @@ import com.facebook.react.ReactNativeHost
 import com.facebook.react.ReactPackage
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.facebook.react.defaults.DefaultReactNativeHost
+import org.wonday.orientation.OrientationActivityLifecycle
 
 class MainApplication : Application(), ReactApplication {
 
@@ -33,6 +34,10 @@ class MainApplication : Application(), ReactApplication {
 
   override fun onCreate() {
     super.onCreate()
+    // Bắt buộc với react-native-orientation-locker trên Android. Lifecycle
+    // callback giữ Activity hiện tại để các lệnh lockToPortrait/lockToLandscape
+    // vẫn ép được hướng khi người dùng đang khóa tự xoay của thiết bị.
+    registerActivityLifecycleCallbacks(OrientationActivityLifecycle.getInstance())
     ThemePreferenceModule.applyStoredPreference(this)
     loadReactNative(this)
   }

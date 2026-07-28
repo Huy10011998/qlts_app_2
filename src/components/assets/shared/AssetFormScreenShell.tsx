@@ -20,7 +20,11 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import IsLoading from "../../ui/IconLoading";
-import { C, useSeparatorColor } from "../../../utils/helpers/colors";
+import {
+  AppColors,
+  useSeparatorColor,
+  useStyles,
+} from "../../../utils/helpers/colors";
 
 type AssetFormKeyboardContextValue = {
   handleInputFocus: (target: any) => void;
@@ -37,8 +41,7 @@ const KEYBOARD_SCROLL_SETTLE_DELAY = 220;
 const KEYBOARD_SCROLL_FIRST_DELAY = 120;
 const FOCUSED_INPUT_PREFERRED_VISIBLE_RATIO = 0.4;
 
-export const useAssetFormKeyboard = () =>
-  useContext(AssetFormKeyboardContext);
+export const useAssetFormKeyboard = () => useContext(AssetFormKeyboardContext);
 
 type AssetFormScreenShellProps = {
   brandColor: string;
@@ -67,6 +70,7 @@ export default function AssetFormScreenShell({
   loadingOverlayStyle,
   style,
 }: AssetFormScreenShellProps) {
+  const styles = useStyles(makeStyles);
   const separatorColor = useSeparatorColor();
   const insets = useSafeAreaInsets();
   const [footerHeight, setFooterHeight] = useState(0);
@@ -82,9 +86,7 @@ export default function AssetFormScreenShell({
   const bottomSafeArea = Math.max(insets.bottom, 12);
   const footerSpace = footer ? Math.max(footerHeight, 86) : 0;
   const keyboardSpace =
-    keyboardTop > 0
-      ? FOCUSED_INPUT_BOTTOM_GAP + keyboardBottomScrollBuffer
-      : 0;
+    keyboardTop > 0 ? FOCUSED_INPUT_BOTTOM_GAP + keyboardBottomScrollBuffer : 0;
 
   const clearPendingScrolls = useCallback(() => {
     scrollTimeoutsRef.current.forEach(clearTimeout);
@@ -320,22 +322,23 @@ export default function AssetFormScreenShell({
   );
 }
 
-const styles = StyleSheet.create({
-  keyboardRoot: {
-    flex: 1,
-  },
-  scroll: {
-    flex: 1,
-  },
-  footer: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    backgroundColor: C.surface,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: C.border,
-  },
-});
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    keyboardRoot: {
+      flex: 1,
+    },
+    scroll: {
+      flex: 1,
+    },
+    footer: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      paddingHorizontal: 16,
+      paddingTop: 10,
+      backgroundColor: c.surface,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: c.border,
+    },
+  });

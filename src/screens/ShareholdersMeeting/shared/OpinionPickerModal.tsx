@@ -13,7 +13,12 @@ import {
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import EmptyState from "../../../components/ui/EmptyState";
 import IsLoading from "../../../components/ui/IconLoading";
-import { C, useHairlineBorderColor } from "../../../utils/helpers/colors";
+import {
+  AppColors,
+  useAppColors,
+  useHairlineBorderColor,
+  useStyles,
+} from "../../../utils/helpers/colors";
 import BottomSheetModalShell from "../../../components/shared/BottomSheetModalShell";
 import { MeetingOpinion } from "./shareholdersMeetingHelpers";
 
@@ -35,6 +40,7 @@ type OpinionPickerModalProps = {
 };
 
 function OpinionSeparator() {
+  const styles = useStyles(makeStyles);
   return <View style={styles.separator} />;
 }
 
@@ -47,6 +53,8 @@ export default function OpinionPickerModal({
   onClose,
   onSelect,
 }: OpinionPickerModalProps) {
+  const styles = useStyles(makeStyles);
+  const c = useAppColors();
   const hairlineBorderColor = useHairlineBorderColor();
   const [showSearchingIndicator, setShowSearchingIndicator] =
     React.useState(false);
@@ -81,16 +89,17 @@ export default function OpinionPickerModal({
 
       return (
         <TouchableOpacity
-          style={[styles.item, { borderColor: hairlineBorderColor }, isSelected && styles.itemActive]}
+          style={[
+            styles.item,
+            { borderColor: hairlineBorderColor },
+            isSelected && styles.itemActive,
+          ]}
           activeOpacity={0.9}
           onPress={() => onSelect(item.id)}
         >
           <View style={styles.itemTextWrap}>
             <Text
-              style={[
-                styles.itemTitle,
-                isSelected && styles.itemTitleActive,
-              ]}
+              style={[styles.itemTitle, isSelected && styles.itemTitleActive]}
             >
               {title}
             </Text>
@@ -103,12 +112,12 @@ export default function OpinionPickerModal({
           <MaterialCommunityIcons
             name={isSelected ? "radiobox-marked" : "radiobox-blank"}
             size={22}
-            color={isSelected ? C.accent : C.textMuted}
+            color={isSelected ? c.accent : c.textMuted}
           />
         </TouchableOpacity>
       );
     },
-    [onSelect, selectedOpinionId, hairlineBorderColor],
+    [c, hairlineBorderColor, onSelect, selectedOpinionId, styles],
   );
 
   return (
@@ -129,12 +138,12 @@ export default function OpinionPickerModal({
 
       <View style={[styles.searchBox, { borderColor: hairlineBorderColor }]}>
         <View style={styles.searchIconWrap}>
-          <MaterialCommunityIcons name="magnify" size={16} color={C.textSub} />
+          <MaterialCommunityIcons name="magnify" size={16} color={c.textSub} />
         </View>
         <TextInput
           style={styles.searchInput}
           placeholder="Tìm theo mã hoặc tên ý kiến..."
-          placeholderTextColor={C.placeholder}
+          placeholderTextColor={c.placeholder}
           value={searchQuery}
           onChangeText={onChangeSearchQuery}
           clearButtonMode="never"
@@ -142,7 +151,7 @@ export default function OpinionPickerModal({
         />
         {showSearchingIndicator ? (
           <View style={styles.spinnerWrap}>
-            <IsLoading size="small" color={C.red} />
+            <IsLoading size="small" color={c.red} />
           </View>
         ) : null}
         {!showSearchingIndicator && searchQuery.length > 0 ? (
@@ -154,7 +163,7 @@ export default function OpinionPickerModal({
             <MaterialCommunityIcons
               name="close-circle"
               size={16}
-              color={C.placeholder}
+              color={c.placeholder}
             />
           </TouchableOpacity>
         ) : null}
@@ -185,116 +194,117 @@ export default function OpinionPickerModal({
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(15, 25, 35, 0.32)",
-    justifyContent: "flex-end",
-  },
-  sheet: {
-    backgroundColor: C.surface,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 24,
-    height: "75%",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    minHeight: 36,
-    marginBottom: 16,
-  },
-  title: {
-    color: C.textPrimary,
-    fontSize: 16,
-    fontWeight: "700",
-    flex: 1,
-    textAlign: "center",
-    paddingHorizontal: 52,
-  },
-  closeButton: {
-    top: 10,
-  },
-  searchBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: C.border,
-    borderRadius: 14,
-    backgroundColor: C.surface,
-    minHeight: 48,
-    paddingHorizontal: 12,
-    marginBottom: 12,
-    shadowColor: C.shadow,
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  searchIconWrap: {
-    marginRight: 8,
-    width: 20,
-    height: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  searchInput: {
-    flex: 1,
-    color: C.textPrimary,
-    height: 48,
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: "400",
-    paddingVertical: 0,
-    includeFontPadding: false,
-    textAlignVertical: "center",
-  },
-  spinnerWrap: {
-    width: 24,
-    height: 24,
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 6,
-  },
-  clearButton: {
-    padding: 4,
-    marginLeft: 4,
-  },
-  listView: {
-    flex: 1,
-  },
-  list: { flexGrow: 1, paddingBottom: 12 },
-  listEmpty: { paddingBottom: 0 },
-  item: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    backgroundColor: C.surface,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  itemActive: {
-    borderColor: C.accent,
-    backgroundColor: C.accentLight,
-  },
-  itemTextWrap: { flex: 1, paddingRight: 12 },
-  itemTitle: {
-    color: C.textPrimary,
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: "700",
-  },
-  itemTitleActive: { color: C.accent },
-  itemDesc: {
-    color: C.textSecondary,
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 4,
-  },
-  separator: { height: 8 },
-});
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: "rgba(15, 25, 35, 0.32)",
+      justifyContent: "flex-end",
+    },
+    sheet: {
+      backgroundColor: c.surface,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      paddingHorizontal: 16,
+      paddingTop: 10,
+      paddingBottom: 24,
+      height: "75%",
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      minHeight: 36,
+      marginBottom: 16,
+    },
+    title: {
+      color: c.textPrimary,
+      fontSize: 16,
+      fontWeight: "700",
+      flex: 1,
+      textAlign: "center",
+      paddingHorizontal: 52,
+    },
+    closeButton: {
+      top: 10,
+    },
+    searchBox: {
+      flexDirection: "row",
+      alignItems: "center",
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.border,
+      borderRadius: 14,
+      backgroundColor: c.surface,
+      minHeight: 48,
+      paddingHorizontal: 12,
+      marginBottom: 12,
+      shadowColor: c.shadow,
+      shadowOpacity: 0.06,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 2,
+    },
+    searchIconWrap: {
+      marginRight: 8,
+      width: 20,
+      height: 20,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    searchInput: {
+      flex: 1,
+      color: c.textPrimary,
+      height: 48,
+      fontSize: 14,
+      lineHeight: 20,
+      fontWeight: "400",
+      paddingVertical: 0,
+      includeFontPadding: false,
+      textAlignVertical: "center",
+    },
+    spinnerWrap: {
+      width: 24,
+      height: 24,
+      alignItems: "center",
+      justifyContent: "center",
+      marginLeft: 6,
+    },
+    clearButton: {
+      padding: 4,
+      marginLeft: 4,
+    },
+    listView: {
+      flex: 1,
+    },
+    list: { flexGrow: 1, paddingBottom: 12 },
+    listEmpty: { paddingBottom: 0 },
+    item: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: 14,
+      paddingHorizontal: 12,
+      borderRadius: 12,
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    itemActive: {
+      borderColor: c.accent,
+      backgroundColor: c.accentLight,
+    },
+    itemTextWrap: { flex: 1, paddingRight: 12 },
+    itemTitle: {
+      color: c.textPrimary,
+      fontSize: 13,
+      lineHeight: 18,
+      fontWeight: "700",
+    },
+    itemTitleActive: { color: c.accent },
+    itemDesc: {
+      color: c.textSecondary,
+      fontSize: 12,
+      lineHeight: 18,
+      marginTop: 4,
+    },
+    separator: { height: 8 },
+  });

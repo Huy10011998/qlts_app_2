@@ -9,7 +9,7 @@ export const Colors = {
     icon: "#687076",
     tabIconDefault: "#687076",
     tabIconSelected: C.red,
-    placeholderTextColor: C.textSub,
+    placeholderTextColor: "#8A95A3",
     borderColor: "#F3F5F9",
   },
 

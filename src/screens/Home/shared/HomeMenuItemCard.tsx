@@ -11,9 +11,10 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import type { MenuItemCardProps } from "../../../types";
 import { HOME_BRAND_RED } from "./homeTheme";
 import {
-  C,
+  AppColors,
   useAppColors,
   useHairlineBorderColor,
+  useStyles,
 } from "../../../utils/helpers/colors";
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
@@ -45,6 +46,8 @@ export default function HomeMenuItemCard({
   fixedHeight = false,
   homeGroup,
 }: HomeMenuItemCardProps) {
+  const styles = useStyles(makeStyles);
+  const c = useAppColors();
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const colors = useAppColors();
   const hairlineBorderColor = useHairlineBorderColor();
@@ -64,14 +67,14 @@ export default function HomeMenuItemCard({
       ? {
           bg: colors.surface,
           iconBg: colors.blueSurface,
-          color: C.sky,
+          color: c.sky,
           text: colors.text,
           border: colors.border,
         }
       : {
           bg: colors.surface,
           iconBg: colors.pinkSurface,
-          color: C.rose,
+          color: c.rose,
           text: colors.text,
           border: colors.border,
         };
@@ -151,92 +154,93 @@ export default function HomeMenuItemCard({
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    borderRadius: 16,
-    paddingTop: 0,
-    paddingBottom: 8,
-    paddingHorizontal: 8,
-    alignItems: "center",
-    overflow: "hidden",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: C.border,
-    shadowColor: C.shadow,
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
-  },
-  fixedHeightCard: {
-    flex: 1,
-  },
-  accentBar: {
-    height: 3,
-    width: "100%",
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    marginBottom: 8,
-  },
-  iconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 6,
-  },
-  badge: {
-    position: "absolute",
-    top: -3,
-    right: -3,
-    backgroundColor: HOME_BRAND_RED,
-    borderRadius: 9,
-    minWidth: 16,
-    height: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 3,
-    borderWidth: 1.5,
-    borderColor: "white",
-  },
-  badgeText: {
-    color: "white",
-    fontSize: 9,
-    fontWeight: "700",
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: "700",
-    textAlign: "center",
-    lineHeight: 17,
-    width: "100%",
-    includeFontPadding: false,
-    textAlignVertical: "center",
-  },
-  labelWrap: {
-    minHeight: 32,
-    width: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 6,
-  },
-  arrowChip: {
-    width: 20,
-    height: 20,
-    borderRadius: 7,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  pinButton: {
-    position: "absolute",
-    top: 10,
-    right: 10,
-    zIndex: 2,
-    width: 26,
-    height: 26,
-    borderRadius: 9,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    card: {
+      borderRadius: 16,
+      paddingTop: 0,
+      paddingBottom: 8,
+      paddingHorizontal: 8,
+      alignItems: "center",
+      overflow: "hidden",
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.border,
+      shadowColor: c.shadow,
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 3 },
+      elevation: 2,
+    },
+    fixedHeightCard: {
+      flex: 1,
+    },
+    accentBar: {
+      height: 3,
+      width: "100%",
+      borderTopLeftRadius: 16,
+      borderTopRightRadius: 16,
+      marginBottom: 8,
+    },
+    iconWrap: {
+      width: 44,
+      height: 44,
+      borderRadius: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 6,
+    },
+    badge: {
+      position: "absolute",
+      top: -3,
+      right: -3,
+      backgroundColor: HOME_BRAND_RED,
+      borderRadius: 9,
+      minWidth: 16,
+      height: 16,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 3,
+      borderWidth: 1.5,
+      borderColor: "white",
+    },
+    badgeText: {
+      color: "white",
+      fontSize: 9,
+      fontWeight: "700",
+    },
+    label: {
+      fontSize: 13,
+      fontWeight: "700",
+      textAlign: "center",
+      lineHeight: 17,
+      width: "100%",
+      includeFontPadding: false,
+      textAlignVertical: "center",
+    },
+    labelWrap: {
+      minHeight: 32,
+      width: "100%",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 6,
+    },
+    arrowChip: {
+      width: 20,
+      height: 20,
+      borderRadius: 7,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    pinButton: {
+      position: "absolute",
+      top: 10,
+      right: 10,
+      zIndex: 2,
+      width: 26,
+      height: 26,
+      borderRadius: 9,
+      borderWidth: 1,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+  });

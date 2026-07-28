@@ -17,9 +17,11 @@ import { getPreviewAttachFile } from "../../services";
 import IsLoading from "../ui/IconLoading";
 import { error } from "../../utils/Logger";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
-import { C } from "../../utils/helpers/colors";
+import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
 
 export default function FileView({ visible, onClose, params }: ViewerProps) {
+  const styles = useStyles(makeStyles);
+  const c = useAppColors();
   const [fileData, setFileData] = useState<string | null>(null);
   const [fileType, setFileType] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -199,7 +201,7 @@ export default function FileView({ visible, onClose, params }: ViewerProps) {
             style={[styles.loadingOverlay, { opacity: fadeAnim }]}
             pointerEvents="none"
           >
-            <IsLoading size="large" color={C.red} />
+            <IsLoading size="large" color={c.red} />
           </Animated.View>
         )}
       </View>
@@ -207,54 +209,55 @@ export default function FileView({ visible, onClose, params }: ViewerProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.surface },
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.surface },
 
-  header: {
-    paddingTop: Platform.OS === "ios" ? 50 : 20,
-    paddingHorizontal: 16,
-    paddingBottom: 10,
-    backgroundColor: C.red,
-    flexDirection: "row",
-    alignItems: "center",
-  },
+    header: {
+      paddingTop: Platform.OS === "ios" ? 50 : 20,
+      paddingHorizontal: 16,
+      paddingBottom: 10,
+      backgroundColor: c.red,
+      flexDirection: "row",
+      alignItems: "center",
+    },
 
-  title: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-    flexShrink: 1,
-  },
+    title: {
+      color: "#fff",
+      fontSize: 16,
+      fontWeight: "600",
+      flexShrink: 1,
+    },
 
-  closeButton: { padding: 6, borderRadius: 6 },
-  closeText: { color: "#fff", fontWeight: "bold", fontSize: 15 },
+    closeButton: { padding: 6, borderRadius: 6 },
+    closeText: { color: "#fff", fontWeight: "bold", fontSize: 15 },
 
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: C.loadingOverlay,
-  },
-  imageScrollContent: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  imagePreview: {
-    width: "100%",
-    resizeMode: "contain",
-  },
-  webView: {
-    flex: 1,
-  },
-  unsupportedContent: {
-    padding: 16,
-  },
-  stateText: {
-    color: C.text,
-  },
-  titleWrap: {
-    flex: 1,
-    paddingRight: 10,
-  },
-});
+    loadingOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: c.loadingOverlay,
+    },
+    imageScrollContent: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    imagePreview: {
+      width: "100%",
+      resizeMode: "contain",
+    },
+    webView: {
+      flex: 1,
+    },
+    unsupportedContent: {
+      padding: 16,
+    },
+    stateText: {
+      color: c.text,
+    },
+    titleWrap: {
+      flex: 1,
+      paddingRight: 10,
+    },
+  });

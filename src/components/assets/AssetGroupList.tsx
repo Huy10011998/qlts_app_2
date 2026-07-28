@@ -15,7 +15,7 @@ import { TypeProperty } from "../../utils/Enum";
 import IsLoading from "../ui/IconLoading";
 import { fetchImage } from "../../utils/Image";
 import { parseLink } from "../../utils/Link";
-import { C } from "../../utils/helpers/colors";
+import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
 
 export default function AssetGroupList({
   groupedFields,
@@ -26,6 +26,8 @@ export default function AssetGroupList({
   previousItem,
   isFieldChanged,
 }: GroupListProps) {
+  const styles = useStyles(makeStyles);
+  const c = useAppColors();
   const [images, setImages] = useState<Record<string, string>>({});
   const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>(
     {},
@@ -74,7 +76,7 @@ export default function AssetGroupList({
               <Ionicons
                 name={isCollapsed ? "chevron-down" : "chevron-up"}
                 size={26}
-                color={C.red}
+                color={c.red}
               />
             </TouchableOpacity>
 
@@ -157,10 +159,7 @@ export default function AssetGroupList({
                       })()
                     ) : (
                       <Text
-                        style={[
-                          styles.value,
-                          changed && styles.changedValue,
-                        ]}
+                        style={[styles.value, changed && styles.changedValue]}
                       >
                         {changed
                           ? `${prevValue}  ->  ${currentValue}`
@@ -201,82 +200,83 @@ export default function AssetGroupList({
   );
 }
 
-const styles = StyleSheet.create({
-  groupCard: {
-    backgroundColor: C.surface,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: C.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
-  },
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    groupCard: {
+      backgroundColor: c.surface,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 16,
+      shadowColor: c.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 6,
+      elevation: 3,
+    },
 
-  groupHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 4,
-    marginBottom: 12,
-  },
+    groupHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: 4,
+      marginBottom: 12,
+    },
 
-  groupTitle: { fontSize: 16, fontWeight: "700", color: C.red },
+    groupTitle: { fontSize: 16, fontWeight: "700", color: c.red },
 
-  fieldRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-    flexWrap: "wrap",
-  },
+    fieldRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 8,
+      flexWrap: "wrap",
+    },
 
-  label: {
-    fontWeight: "600",
-    color: C.text,
-    fontSize: 14,
-    marginRight: 6,
-  },
+    label: {
+      fontWeight: "600",
+      color: c.text,
+      fontSize: 14,
+      marginRight: 6,
+    },
 
-  value: {
-    fontSize: 14,
-    color: C.text,
-    flexShrink: 1,
-  },
-  changedValue: {
-    color: C.red,
-    fontWeight: "600",
-  },
+    value: {
+      fontSize: 14,
+      color: c.text,
+      flexShrink: 1,
+    },
+    changedValue: {
+      color: c.red,
+      fontWeight: "600",
+    },
 
-  link: {
-    color: C.blue,
-    textDecorationLine: "underline",
-  },
+    link: {
+      color: c.blue,
+      textDecorationLine: "underline",
+    },
 
-  image: {
-    width: 100,
-    height: 100,
-    borderRadius: 8,
-    backgroundColor: C.surfaceAlt,
-  },
+    image: {
+      width: 100,
+      height: 100,
+      borderRadius: 8,
+      backgroundColor: c.surfaceAlt,
+    },
 
-  modalContainer: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.9)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
+    modalContainer: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.9)",
+      justifyContent: "center",
+      alignItems: "center",
+    },
 
-  fullImage: {
-    width: "90%",
-    height: "80%",
-  },
+    fullImage: {
+      width: "90%",
+      height: "80%",
+    },
 
-  closeButton: {
-    position: "absolute",
-    top: 60,
-    right: 5,
-    zIndex: 10,
-    padding: 8,
-  },
-});
+    closeButton: {
+      position: "absolute",
+      top: 60,
+      right: 5,
+      zIndex: 10,
+      padding: 8,
+    },
+  });

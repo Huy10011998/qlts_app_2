@@ -1,4 +1,4 @@
-import { C } from "./colors";
+import { useAppColors } from "./colors";
 
 /**
  * Design tokens: a small, shared scale for spacing, radius and typography so
@@ -40,7 +40,7 @@ export const fontWeight = {
   heavy: "800",
 } as const;
 
-type ElevationLevel = 1 | 2 | 3;
+export type ElevationLevel = 1 | 2 | 3;
 
 const ELEVATION_SPECS: Record<
   ElevationLevel,
@@ -54,9 +54,16 @@ const ELEVATION_SPECS: Record<
 /**
  * Card/surface shadow. Replaces the near-identical `CARD_SHADOW` objects that
  * were copied per feature — they differed only by opacity/radius, now levels.
+ *
+ * The shadow color is a parameter because it is theme-aware: pass `c.shadow`
+ * from inside a `useStyles` factory, or use `useElevation` in a component.
  */
-export const elevation = (level: ElevationLevel = 1) => ({
-  shadowColor: C.shadow,
+export const elevation = (shadowColor: string, level: ElevationLevel = 1) => ({
+  shadowColor,
   shadowOffset: { width: 0, height: 2 },
   ...ELEVATION_SPECS[level],
 });
+
+/** `elevation` for the appearance currently selected in Settings. */
+export const useElevation = (level: ElevationLevel = 1) =>
+  elevation(useAppColors().shadow, level);

@@ -1,7 +1,10 @@
 import {
-  C,
+  AppColors,
   useAccentBorderColors,
+  useAppColors,
   useHairlineBorderColor,
+  useStyles,
+  useThemeValue,
 } from "../../../utils/helpers/colors";
 import React, { useEffect, useState } from "react";
 import {
@@ -13,19 +16,19 @@ import {
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import type { TreeNode } from "../../../types/index";
-import { CARD_SHADOW } from "./listTheme";
+import { cardShadow } from "./listTheme";
 
-const localStyles = {
+const makeLocalStyles = (c: AppColors) => ({
   levelIndent: {
     paddingLeft: 16,
   },
   folderIconWrap: {
-    backgroundColor: C.amberLight,
+    backgroundColor: c.amberLight,
   },
   leafIconWrap: {
-    backgroundColor: C.indigoSurface,
+    backgroundColor: c.indigoSurface,
   },
-};
+});
 
 type AssetTreeNodeItemProps = {
   node: TreeNode;
@@ -42,6 +45,9 @@ export default function AssetTreeNodeItem({
   expandAll = false,
   selectedNode,
 }: AssetTreeNodeItemProps) {
+  const styles = useStyles(makeStyles);
+  const localStyles = useThemeValue(makeLocalStyles);
+  const c = useAppColors();
   const [expanded, setExpanded] = useState(node.expanded || expandAll);
   const hairlineBorderColor = useHairlineBorderColor();
   const accentBorders = useAccentBorderColors();
@@ -72,12 +78,7 @@ export default function AssetTreeNodeItem({
           isSelected && { borderColor: accentBorders.red },
         ]}
       >
-        <View
-          style={[
-            styles.nodeAccent,
-            { backgroundColor: iconColor },
-          ]}
-        />
+        <View style={[styles.nodeAccent, { backgroundColor: iconColor }]} />
 
         <TouchableOpacity
           style={styles.nodeTextWrap}
@@ -87,7 +88,9 @@ export default function AssetTreeNodeItem({
           <View
             style={[
               styles.nodeIconWrap,
-              hasChildren ? localStyles.folderIconWrap : localStyles.leafIconWrap,
+              hasChildren
+                ? localStyles.folderIconWrap
+                : localStyles.leafIconWrap,
             ]}
           >
             <Ionicons
@@ -117,7 +120,7 @@ export default function AssetTreeNodeItem({
             />
           </TouchableOpacity>
         ) : (
-          <Ionicons name="chevron-forward" size={14} color={C.textMuted} />
+          <Ionicons name="chevron-forward" size={14} color={c.textMuted} />
         )}
       </View>
 
@@ -139,80 +142,81 @@ export default function AssetTreeNodeItem({
   );
 }
 
-const styles = StyleSheet.create({
-  nodeWrap: {
-    marginBottom: 6,
-  },
-  nodeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: C.surface,
-    borderRadius: 14,
-    minHeight: 58,
-    paddingVertical: 11,
-    paddingRight: 12,
-    paddingLeft: 16,
-    overflow: "hidden",
-    gap: 10,
-    ...CARD_SHADOW,
-  },
-  nodeRowChild: {
-    backgroundColor: C.surfaceAlt,
-    minHeight: 56,
-    shadowOpacity: 0.03,
-    elevation: 1,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: C.border,
-  },
-  nodeRowSelected: {
-    borderWidth: 1,
-    borderColor: C.redBorder,
-    backgroundColor: C.redSurface,
-  },
-  nodeAccent: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
-    borderTopRightRadius: 2,
-    borderBottomRightRadius: 2,
-  },
-  nodeTextWrap: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  nodeIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  nodeText: {
-    flex: 1,
-    fontSize: 13.5,
-    color: C.text,
-    fontWeight: "600",
-    lineHeight: 20,
-    includeFontPadding: false,
-    textAlignVertical: "center",
-  },
-  nodeTextChild: {
-    fontSize: 12.5,
-    fontWeight: "500",
-    color: C.textSecondary,
-    lineHeight: 19,
-  },
-  nodeChevronWrap: {
-    width: 24,
-    height: 24,
-    borderRadius: 7,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: C.amberLight,
-  },
-});
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    nodeWrap: {
+      marginBottom: 6,
+    },
+    nodeRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: c.surface,
+      borderRadius: 14,
+      minHeight: 58,
+      paddingVertical: 11,
+      paddingRight: 12,
+      paddingLeft: 16,
+      overflow: "hidden",
+      gap: 10,
+      ...cardShadow(c),
+    },
+    nodeRowChild: {
+      backgroundColor: c.surfaceAlt,
+      minHeight: 56,
+      shadowOpacity: 0.03,
+      elevation: 1,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.border,
+    },
+    nodeRowSelected: {
+      borderWidth: 1,
+      borderColor: c.redBorder,
+      backgroundColor: c.redSurface,
+    },
+    nodeAccent: {
+      position: "absolute",
+      left: 0,
+      top: 0,
+      bottom: 0,
+      width: 4,
+      borderTopRightRadius: 2,
+      borderBottomRightRadius: 2,
+    },
+    nodeTextWrap: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    nodeIconWrap: {
+      width: 34,
+      height: 34,
+      borderRadius: 10,
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+    },
+    nodeText: {
+      flex: 1,
+      fontSize: 13.5,
+      color: c.text,
+      fontWeight: "600",
+      lineHeight: 20,
+      includeFontPadding: false,
+      textAlignVertical: "center",
+    },
+    nodeTextChild: {
+      fontSize: 12.5,
+      fontWeight: "500",
+      color: c.textSecondary,
+      lineHeight: 19,
+    },
+    nodeChevronWrap: {
+      width: 24,
+      height: 24,
+      borderRadius: 7,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: c.amberLight,
+    },
+  });

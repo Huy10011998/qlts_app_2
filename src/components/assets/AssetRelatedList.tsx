@@ -1,3 +1,4 @@
+import { AppColors, useStyles } from "../../utils/helpers/colors";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
@@ -14,10 +15,7 @@ import {
   useNavigation,
   useFocusEffect,
 } from "@react-navigation/native";
-import type {
-  AssetDetailsNavigationProp,
-  StackRoute,
-} from "../../types/index";
+import type { AssetDetailsNavigationProp, StackRoute } from "../../types/index";
 import { mapPropertyResponseToPropertyClass } from "../../utils/helpers/propertyClass";
 import ListCardAsset from "../../components/list/ListCardAsset";
 import IsLoading from "../../components/ui/IconLoading";
@@ -37,7 +35,7 @@ import AssetListSearchBar from "./shared/AssetListSearchBar";
 import AssetListSummaryCard from "./shared/AssetListSummaryCard";
 import AssetListEmptyState from "./shared/AssetListEmptyState";
 import { BRAND_RED } from "./shared/listTheme";
-import { sharedAssetListStyles } from "./shared/listStyles";
+import { makeSharedAssetListStyles } from "./shared/listStyles";
 import { useRelatedAssetListData } from "../../hooks/useRelatedAssetListData";
 
 if (
@@ -48,6 +46,7 @@ if (
 }
 
 export default function AssetRelatedList() {
+  const styles = useStyles(makeStyles);
   const route = useRoute<StackRoute<"AssetRelatedList">>();
   const navigation = useNavigation<AssetDetailsNavigationProp>();
   const {
@@ -174,12 +173,7 @@ export default function AssetRelatedList() {
     return null;
   }
 
-  if (
-    isLoading &&
-    !isRefreshingTop &&
-    !isLoadingMore &&
-    !isSearching
-  ) {
+  if (isLoading && !isRefreshingTop && !isLoadingMore && !isSearching) {
     return <IsLoading size="large" color={BRAND_RED} />;
   }
 
@@ -219,7 +213,9 @@ export default function AssetRelatedList() {
 
       <View style={styles.listWrap}>
         <FlatList
-          key={`asset-related-list-${nameClass || "default"}-${listLayoutVersion}`}
+          key={`asset-related-list-${
+            nameClass || "default"
+          }-${listLayoutVersion}`}
           style={styles.list}
           data={data}
           keyExtractor={(item) => String(item.id)}
@@ -283,22 +279,23 @@ export default function AssetRelatedList() {
   );
 }
 
-const styles = StyleSheet.create({
-  listWrap: {
-    flex: 1,
-  },
-  list: {
-    flex: 1,
-  },
-  listContentEmpty: {
-    paddingTop: 0,
-    paddingBottom: 0,
-  },
-  emptyStateRoot: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 32,
-  },
-  ...sharedAssetListStyles,
-});
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    listWrap: {
+      flex: 1,
+    },
+    list: {
+      flex: 1,
+    },
+    listContentEmpty: {
+      paddingTop: 0,
+      paddingBottom: 0,
+    },
+    emptyStateRoot: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 32,
+    },
+    ...makeSharedAssetListStyles(c),
+  });

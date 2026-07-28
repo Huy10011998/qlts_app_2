@@ -18,4 +18,12 @@
         <item name="android:statusBarColor">@color/red</item>
         <item name="android:windowLightStatusBar">false</item>
     </style>
+
+    <!-- KHÔNG override style "Theme.FullScreenDialog" ở đây. Đó là theme nội bộ
+         của React Native cho MỌI <Modal>; resource của app thắng resource của
+         library nên đặt windowBackground khác @android:color/transparent sẽ làm
+         tất cả modal `transparent` (bottom sheet, dialog mờ...) mất nền trong
+         suốt và che hết view phía sau.
+         Vệt đỏ status bar lúc mở fullscreen camera được xử lý ở JS bằng
+         StatusBar.setBackgroundColor("#000") — xem CameraList/CameraListGrid. -->
 </resources>

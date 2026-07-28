@@ -10,8 +10,13 @@ import {
   getApiErrorMessage,
   getApiValidationFieldErrors,
 } from "../src/utils/helpers/api";
-import { elevation, spacing, radius, fontSize } from "../src/utils/helpers/tokens";
-import { C } from "../src/utils/helpers/colors";
+import {
+  elevation,
+  spacing,
+  radius,
+  fontSize,
+} from "../src/utils/helpers/tokens";
+import { APP_COLORS, C } from "../src/utils/helpers/colors";
 import { mapPropertyResponseToPropertyClass } from "../src/utils/helpers/propertyClass";
 
 describe("string helpers", () => {
@@ -66,7 +71,10 @@ describe("api helpers", () => {
 
   it("getApiErrorMessage prefers response message, falls back", () => {
     expect(
-      getApiErrorMessage({ response: { data: { message: "Sai mật khẩu" } } }, "fallback"),
+      getApiErrorMessage(
+        { response: { data: { message: "Sai mật khẩu" } } },
+        "fallback",
+      ),
     ).toBe("Sai mật khẩu");
     expect(
       getApiErrorMessage(
@@ -88,11 +96,28 @@ describe("api helpers", () => {
 
 describe("design tokens", () => {
   it("elevation levels map to the original shadow specs", () => {
-    expect(elevation(1)).toMatchObject({ shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 });
-    expect(elevation(2)).toMatchObject({ shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 });
-    expect(elevation(3)).toMatchObject({ shadowOpacity: 0.07, shadowRadius: 8, elevation: 2 });
-    expect(elevation()).toMatchObject({ shadowOpacity: 0.06, shadowRadius: 6 });
-    expect(elevation(1).shadowOffset).toEqual({ width: 0, height: 2 });
+    const shadow = "#1A2340";
+    expect(elevation(shadow, 1)).toMatchObject({
+      shadowOpacity: 0.06,
+      shadowRadius: 6,
+      elevation: 2,
+    });
+    expect(elevation(shadow, 2)).toMatchObject({
+      shadowOpacity: 0.06,
+      shadowRadius: 8,
+      elevation: 2,
+    });
+    expect(elevation(shadow, 3)).toMatchObject({
+      shadowOpacity: 0.07,
+      shadowRadius: 8,
+      elevation: 2,
+    });
+    expect(elevation(shadow)).toMatchObject({
+      shadowOpacity: 0.06,
+      shadowRadius: 6,
+    });
+    expect(elevation(shadow, 1).shadowOffset).toEqual({ width: 0, height: 2 });
+    expect(elevation(shadow, 1).shadowColor).toBe(shadow);
   });
 
   it("scales expose expected steps", () => {
@@ -108,10 +133,33 @@ describe("color palette", () => {
     expect(C.blue).toBe("#3B82F6");
     expect(C.onBrand).toBe("#FFFFFF");
   });
-  it("exposes the full token set", () => {
-    expect(C).toHaveProperty("bg");
-    expect(C).toHaveProperty("textPrimary");
-    expect(C).toHaveProperty("shadow");
+  it("C only carries brand colors, which are identical in both schemes", () => {
+    // Theme-aware colors are deliberately absent from `C`: they must be read
+    // through useAppColors/useStyles so a screen repaints when the user
+    // switches the appearance in Settings.
+    expect(C).not.toHaveProperty("bg");
+    expect(C).not.toHaveProperty("textPrimary");
+    expect(C).not.toHaveProperty("shadow");
+    expect(APP_COLORS.light.red).toBe(APP_COLORS.dark.red);
+  });
+  it("exposes the full token set per scheme", () => {
+    for (const scheme of ["light", "dark"] as const) {
+      expect(APP_COLORS[scheme]).toHaveProperty("bg");
+      expect(APP_COLORS[scheme]).toHaveProperty("textPrimary");
+      expect(APP_COLORS[scheme]).toHaveProperty("shadow");
+    }
+  });
+  it("resolves every theme-aware token to a distinct value per scheme", () => {
+    // A token that never changes between schemes is a copy/paste slip in the
+    // ADAPTIVE table; the only intentional matches are the brand colors.
+    const brandKeys = Object.keys(C);
+    const unchanged = Object.keys(APP_COLORS.light).filter(
+      (key) =>
+        !brandKeys.includes(key) &&
+        APP_COLORS.light[key as keyof typeof APP_COLORS.light] ===
+          APP_COLORS.dark[key as keyof typeof APP_COLORS.dark],
+    );
+    expect(unchanged).toEqual([]);
   });
 });
 

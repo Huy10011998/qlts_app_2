@@ -1,4 +1,8 @@
-import { C, useSeparatorColor } from "../../utils/helpers/colors";
+import {
+  useAppColors,
+  useSeparatorColor,
+  useStyles,
+} from "../../utils/helpers/colors";
 import React, { type ComponentProps, useEffect, useState } from "react";
 import {
   Alert,
@@ -28,7 +32,7 @@ import {
   type PeriodTab,
   type SolarDateRange,
 } from "./SolarPlantScreen.helpers";
-import { styles } from "./SolarPlantScreen.styles";
+import { makeStyles } from "./SolarPlantScreen.styles";
 import {
   DateCalendarIcon,
   DateChevron,
@@ -64,6 +68,7 @@ export const PeriodHeader: React.FC<PeriodHeaderProps> = ({
   onOpenDatePicker,
   onPreviousRange,
 }) => {
+  const styles = useStyles(makeStyles);
   const separatorColor = useSeparatorColor();
 
   return (
@@ -153,6 +158,8 @@ export const SolarDateRangePicker: React.FC<SolarDateRangePickerProps> = ({
   period,
   visible,
 }) => {
+  const c = useAppColors();
+  const styles = useStyles(makeStyles);
   const separatorColor = useSeparatorColor();
   const [tempRange, setTempRange] = useState<SolarDateRange>(dateRange);
   const [visibleMonth, setVisibleMonth] = useState(
@@ -266,7 +273,7 @@ export const SolarDateRangePicker: React.FC<SolarDateRangePickerProps> = ({
             ]}
           >
             <Text style={styles.calendarSelectedText}>{selectedTitle}</Text>
-            <Ionicons name="pencil-outline" size={28} color={C.text} />
+            <Ionicons name="pencil-outline" size={28} color={c.text} />
           </View>
 
           <View style={styles.calendarMonthRow}>
@@ -296,7 +303,7 @@ export const SolarDateRangePicker: React.FC<SolarDateRangePickerProps> = ({
                   setVisibleMonth((current) => addMonths(current, -1));
                 }}
               >
-                <Ionicons name="chevron-up" size={25} color={C.textMuted} />
+                <Ionicons name="chevron-up" size={25} color={c.textMuted} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
@@ -318,7 +325,7 @@ export const SolarDateRangePicker: React.FC<SolarDateRangePickerProps> = ({
                   setVisibleMonth((current) => addMonths(current, 1));
                 }}
               >
-                <Ionicons name="chevron-down" size={25} color={C.textMuted} />
+                <Ionicons name="chevron-down" size={25} color={c.textMuted} />
               </TouchableOpacity>
             </View>
           </View>

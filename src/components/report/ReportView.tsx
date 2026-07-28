@@ -33,11 +33,12 @@ import { formatDateForBE } from "../../utils/Date";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { useColorScheme } from "../../hooks/useColorScheme";
 import {
-  C,
+  useAppColors,
   useHairlineBorderColor,
   useStrongBorderColor,
+  useStyles,
 } from "../../utils/helpers/colors";
-import { styles } from "./ReportView.styles";
+import { makeStyles } from "./ReportView.styles";
 import {
   parseReportDate,
   getReportFileInfo,
@@ -75,31 +76,31 @@ const ReportView: React.FC<ReportViewProps> = ({
   previewEndpoint,
   onClose,
 }) => {
+  const c = useAppColors();
+  const styles = useStyles(makeStyles);
   const isDark = useColorScheme() === "dark";
   const hairlineBorderColor = useHairlineBorderColor();
   const strongBorderColor = useStrongBorderColor();
   const reportConfig = useMemo(
     () => config ?? createDefaultReportConfig(title),
-    [config, title]
+    [config, title],
   );
   const activeParameters = useMemo(
     () =>
       [...(reportConfig.parameters ?? [])]
         .filter((parameter) => parameter.isActive)
         .sort((a, b) => Number(a.stt) - Number(b.stt)),
-    [reportConfig.parameters]
+    [reportConfig.parameters],
   );
   const parameterFields = useMemo(
     () => activeParameters.map(mapReportParameterToField),
-    [activeParameters]
+    [activeParameters],
   );
   const [parameterValues, setParameterValues] = useState<Record<string, any>>(
-    () => buildInitialParameterValues(activeParameters)
+    () => buildInitialParameterValues(activeParameters),
   );
   const [enumData, setEnumData] = useState<Record<string, any[]>>({});
-  const [referenceData, setReferenceData] = useState<
-    ReferenceDataMap
-  >({});
+  const [referenceData, setReferenceData] = useState<ReferenceDataMap>({});
   const [modalVisible, setModalVisible] = useState(false);
   const [activeEnumField, setActiveEnumField] = useState<Field | null>(null);
   const [referenceErrorMessage, setReferenceErrorMessage] = useState<
@@ -128,7 +129,7 @@ const ReportView: React.FC<ReportViewProps> = ({
   const PAGE_SIZE = 20;
   const reportWebViewSource = useMemo(
     () => ({ html: reportHtml ?? "" }),
-    [reportHtml]
+    [reportHtml],
   );
 
   reportHtmlRef.current = reportHtml;
@@ -137,7 +138,7 @@ const ReportView: React.FC<ReportViewProps> = ({
     parameterFields,
     setEnumData,
     setReferenceData,
-    referenceData
+    referenceData,
   );
 
   useEffect(() => {
@@ -149,7 +150,7 @@ const ReportView: React.FC<ReportViewProps> = ({
     setReportLoadingMessage("Đang tạo báo cáo...");
     const timer = setTimeout(() => {
       setReportLoadingMessage(
-        "Báo cáo đang xử lý, vui lòng chờ thêm vài giây..."
+        "Báo cáo đang xử lý, vui lòng chờ thêm vài giây...",
       );
     }, REPORT_SLOW_LOADING_MS);
 
@@ -168,7 +169,7 @@ const ReportView: React.FC<ReportViewProps> = ({
         setRefHasMore,
       });
     },
-    [parameterFields]
+    [parameterFields],
   );
 
   const loadReferenceModalData = useCallback(
@@ -178,7 +179,7 @@ const ReportView: React.FC<ReportViewProps> = ({
         textSearch = "",
         page = 0,
         append = false,
-      }: { textSearch?: string; page?: number; append?: boolean } = {}
+      }: { textSearch?: string; page?: number; append?: boolean } = {},
     ) => {
       setReferenceErrorMessage(null);
 
@@ -210,14 +211,14 @@ const ReportView: React.FC<ReportViewProps> = ({
           },
         }));
         setReferenceErrorMessage(
-          String(result.errorMessage || "Không thể tải dữ liệu.")
+          String(result.errorMessage || "Không thể tải dữ liệu."),
         );
         return "error";
       }
 
       return result !== false;
     },
-    [parameterValues]
+    [parameterValues],
   );
 
   const openReferenceModal = useCallback(
@@ -235,14 +236,14 @@ const ReportView: React.FC<ReportViewProps> = ({
       setRefHasMore(true);
       setModalVisible(true);
     },
-    [loadReferenceModalData]
+    [loadReferenceModalData],
   );
 
   const modalItems = useModalItems(
     activeEnumField,
     referenceData,
     enumData,
-    parameterValues
+    parameterValues,
   );
 
   const getRequiredLabel = (parameter: ReportConfigParameter) =>
@@ -340,7 +341,7 @@ const ReportView: React.FC<ReportViewProps> = ({
 
       return payload;
     },
-    [activeParameters, parameterValues]
+    [activeParameters, parameterValues],
   );
 
   const loadReport = useCallback(
@@ -356,7 +357,7 @@ const ReportView: React.FC<ReportViewProps> = ({
         const res = await getPreviewBC(
           requestPayload,
           previewEndpoint,
-          REPORT_PREVIEW_TIMEOUT_MS
+          REPORT_PREVIEW_TIMEOUT_MS,
         );
 
         if (!res?.data) {
@@ -406,7 +407,7 @@ const ReportView: React.FC<ReportViewProps> = ({
         }
       }
     },
-    [buildReportPayload, isDark, isMounted, previewEndpoint, showAlertIfActive]
+    [buildReportPayload, isDark, isMounted, previewEndpoint, showAlertIfActive],
   );
 
   useEffect(() => {
@@ -499,7 +500,7 @@ const ReportView: React.FC<ReportViewProps> = ({
       }
 
       const fileName = `${sanitizeShareFileName(
-        title
+        title,
       )}_${formatShareTimestamp()}.${fileInfo.extension}`;
       const filePath = `${RNFS.CachesDirectoryPath}/${fileName}`;
 
@@ -517,7 +518,7 @@ const ReportView: React.FC<ReportViewProps> = ({
       reportConfig.report.name,
       reportPdfBase64,
       title,
-    ]
+    ],
   );
 
   const handleShareReport = useCallback(
@@ -553,7 +554,7 @@ const ReportView: React.FC<ReportViewProps> = ({
         }
       }
     },
-    [isMounted, isSharing, shareReportFile, showAlertIfActive]
+    [isMounted, isSharing, shareReportFile, showAlertIfActive],
   );
 
   const handleWebViewMessage = (event: any) => {
@@ -575,7 +576,7 @@ const ReportView: React.FC<ReportViewProps> = ({
   useEffect(() => {
     const handler = (orientation: string) => {
       setIsLandscape(
-        orientation === "LANDSCAPE-LEFT" || orientation === "LANDSCAPE-RIGHT"
+        orientation === "LANDSCAPE-LEFT" || orientation === "LANDSCAPE-RIGHT",
       );
     };
 
@@ -643,7 +644,7 @@ const ReportView: React.FC<ReportViewProps> = ({
               ]}
               onPress={() => postToReport("zoom_out")}
             >
-              <Ionicons name="remove-outline" size={18} color={C.red} />
+              <Ionicons name="remove-outline" size={18} color={c.red} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -653,7 +654,7 @@ const ReportView: React.FC<ReportViewProps> = ({
               ]}
               onPress={() => postToReport("zoom_in")}
             >
-              <Ionicons name="add-outline" size={18} color={C.red} />
+              <Ionicons name="add-outline" size={18} color={c.red} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -663,7 +664,7 @@ const ReportView: React.FC<ReportViewProps> = ({
               ]}
               onPress={() => postToReport("top")}
             >
-              <Ionicons name="arrow-up-outline" size={18} color={C.red} />
+              <Ionicons name="arrow-up-outline" size={18} color={c.red} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -676,7 +677,7 @@ const ReportView: React.FC<ReportViewProps> = ({
               <MaterialCommunityIcons
                 name="phone-rotate-landscape"
                 size={18}
-                color={C.red}
+                color={c.red}
               />
             </TouchableOpacity>
           </View>
@@ -709,7 +710,7 @@ const ReportView: React.FC<ReportViewProps> = ({
 
           {isReportRendering && !reportError ? (
             <View style={styles.renderOverlay}>
-              <ActivityIndicator color={C.red} />
+              <ActivityIndicator color={c.red} />
               <Text style={styles.renderOverlayText}>
                 Đang hiển thị báo cáo...
               </Text>
@@ -718,7 +719,7 @@ const ReportView: React.FC<ReportViewProps> = ({
 
           {reportError ? (
             <View style={styles.renderOverlay}>
-              <Ionicons name="alert-circle-outline" size={28} color={C.red} />
+              <Ionicons name="alert-circle-outline" size={28} color={c.red} />
               <Text style={styles.renderOverlayText}>{reportError}</Text>
             </View>
           ) : null}
@@ -777,7 +778,7 @@ const ReportView: React.FC<ReportViewProps> = ({
                 onPress={() => handleShareReport(option.key)}
               >
                 <View style={styles.shareOptionIcon}>
-                  <Ionicons name={option.icon} size={20} color={C.red} />
+                  <Ionicons name={option.icon} size={20} color={c.red} />
                 </View>
                 <Text style={styles.shareOptionText} allowFontScaling={false}>
                   {option.label}
@@ -785,7 +786,7 @@ const ReportView: React.FC<ReportViewProps> = ({
                 <Ionicons
                   name="chevron-forward"
                   size={18}
-                  color={C.textMuted}
+                  color={c.textMuted}
                 />
               </TouchableOpacity>
             ))}

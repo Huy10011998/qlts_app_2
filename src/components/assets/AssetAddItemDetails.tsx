@@ -21,7 +21,12 @@ import {
 } from "../../utils/helpers/api";
 import { fetchImage, pickImage } from "../../utils/Image";
 import { isEffectivelyEmptyCodeValue } from "../../utils/helpers/string";
-import { C, useAccentBorderColors } from "../../utils/helpers/colors";
+import {
+  AppColors,
+  useAccentBorderColors,
+  useAppColors,
+  useStyles,
+} from "../../utils/helpers/colors";
 import { checkValidation, insert } from "../../services/data/callApi";
 
 import { useGroupedFields } from "../../hooks/AssetAddItem/useGroupedFields";
@@ -44,19 +49,15 @@ import {
   getRequiredFieldsMessage,
 } from "./shared/assetFormValidation";
 import { createAssetFormBaseStyles } from "./shared/assetFormStyles";
-import {
-  ASSET_FORM_BG,
-  ASSET_FORM_BRAND_RED,
-  ASSET_FORM_CARD_SHADOW,
-} from "./shared/assetFormTheme";
+import { ASSET_FORM_BRAND_RED } from "./shared/assetFormTheme";
 import { REVIEW_NAME_CLASSES_DANHGIA } from "../../constants/reviewNameClasses";
 import { backToAssetList } from "../../navigation/shared/assetNavigationReset";
 
 const BRAND_RED = ASSET_FORM_BRAND_RED;
-const BG = ASSET_FORM_BG;
-const CARD_SHADOW = ASSET_FORM_CARD_SHADOW;
 
 export default function AssetAddItemDetails() {
+  const styles = useStyles(makeStyles);
+  const c = useAppColors();
   const accentBorders = useAccentBorderColors();
   const {
     field,
@@ -352,7 +353,7 @@ export default function AssetAddItemDetails() {
       }
     >
       <AssetFormHeroCard
-        iconBgColor={C.redSurface}
+        iconBgColor={c.redSurface}
         iconColor={BRAND_RED}
         iconName="add-circle-outline"
         styles={styles}
@@ -393,13 +394,10 @@ export default function AssetAddItemDetails() {
   );
 }
 
-const styles = StyleSheet.create({
-  ...createAssetFormBaseStyles({
-    backgroundColor: BG,
-    brandColor: BRAND_RED,
-    cardShadow: CARD_SHADOW,
-  }),
-  heroIconWrap: {
-    backgroundColor: C.redSurface,
-  },
-});
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    ...createAssetFormBaseStyles(c),
+    heroIconWrap: {
+      backgroundColor: c.redSurface,
+    },
+  });

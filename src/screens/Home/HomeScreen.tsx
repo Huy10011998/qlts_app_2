@@ -49,12 +49,13 @@ import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { readStoredAuthUsername } from "../../context/authStorage";
 import {
   C,
-  useAppColors,
   useAccentBorderColors,
+  useAppColors,
   useHairlineBorderColor,
+  useStyles,
 } from "../../utils/helpers/colors";
 import {
-  styles,
+  makeStyles,
   HOME_CONTENT_HORIZONTAL_PADDING,
   HOME_FEATURE_GRID_GAP,
 } from "./HomeScreen.styles";
@@ -109,6 +110,7 @@ function HomeReportCard({
   onTogglePinned,
   showPinButton = false,
 }: HomeReportCardProps) {
+  const styles = useStyles(makeStyles);
   const colors = useAppColors();
   const accentBorders = useAccentBorderColors();
   const scaleAnim = useRef(new Animated.Value(0)).current;
@@ -196,6 +198,8 @@ function HomeReportCard({
 }
 
 const HomeScreen: React.FC = () => {
+  const c = useAppColors();
+  const styles = useStyles(makeStyles);
   const navigation = useNavigation<HomeNavigationProp>();
   const colors = useAppColors();
   const hairlineBorderColor = useHairlineBorderColor();
@@ -816,10 +820,10 @@ const HomeScreen: React.FC = () => {
                   value={String(HOME_CAMERA_SUMMARY.totalCameras)}
                   label="Camera đang quản lý"
                   sub="Cập nhật hôm nay"
-                  subColor={C.emerald}
+                  subColor={c.emerald}
                   iconName="videocam-outline"
-                  iconBg={C.greenLight}
-                  iconColor={C.emerald}
+                  iconBg={c.greenLight}
+                  iconColor={c.emerald}
                 />
               ) : null}
               {canViewAssets ? (

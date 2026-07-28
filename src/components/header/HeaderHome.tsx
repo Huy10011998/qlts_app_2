@@ -14,7 +14,7 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import type { HeaderHomeProps } from "../../types/components.d";
-import { C, useAppColors } from "../../utils/helpers/colors";
+import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
 
 const { width: W } = Dimensions.get("window");
 
@@ -40,24 +40,34 @@ const formatDate = (d: Date) =>
     year: "numeric",
   });
 
-const HeaderWave: React.FC<{ bottomFill: string }> = ({ bottomFill }) => (
-  <Svg width={W} height={36} viewBox={`0 0 ${W} 36`} style={styles.headerWave}>
-    <Path
-      d={`M0,8 C${W * 0.2},32 ${W * 0.4},0 ${W * 0.6},18 C${W * 0.8},36 ${
-        W * 0.9
-      },10 ${W},22 L${W},36 L0,36 Z`}
-      fill="rgba(255,255,255,0.12)"
-    />
-    <Path
-      d={`M0,18 C${W * 0.25},36 ${W * 0.5},10 ${W * 0.75},28 C${
-        W * 0.88
-      },38 ${W},16 ${W},36 L${W},36 L0,36 Z`}
-      fill={bottomFill}
-    />
-  </Svg>
-);
+const HeaderWave: React.FC<{ bottomFill: string }> = ({ bottomFill }) => {
+  const styles = useStyles(makeStyles);
+
+  return (
+    <Svg
+      width={W}
+      height={36}
+      viewBox={`0 0 ${W} 36`}
+      style={styles.headerWave}
+    >
+      <Path
+        d={`M0,8 C${W * 0.2},32 ${W * 0.4},0 ${W * 0.6},18 C${W * 0.8},36 ${
+          W * 0.9
+        },10 ${W},22 L${W},36 L0,36 Z`}
+        fill="rgba(255,255,255,0.12)"
+      />
+      <Path
+        d={`M0,18 C${W * 0.25},36 ${W * 0.5},10 ${W * 0.75},28 C${
+          W * 0.88
+        },38 ${W},16 ${W},36 L${W},36 L0,36 Z`}
+        fill={bottomFill}
+      />
+    </Svg>
+  );
+};
 
 export default function HeaderHome(_props: HeaderHomeProps) {
+  const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const colors = useAppColors();
 
@@ -167,147 +177,148 @@ export default function HeaderHome(_props: HeaderHomeProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  outer: {
-    backgroundColor: C.red,
-    overflow: "hidden",
-  },
-  headerWave: {
-    position: "absolute",
-    bottom: 0,
-  },
-  timeIcon: {
-    marginRight: 4,
-  },
-  waveContainer: {
-    height: 36,
-  },
-  deco1: {
-    position: "absolute",
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    top: -50,
-    right: -40,
-  },
-  deco2: {
-    position: "absolute",
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "rgba(255,255,255,0.06)",
-    top: 30,
-    right: 60,
-  },
-  deco3: {
-    position: "absolute",
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "rgba(0,0,0,0.06)",
-    bottom: 20,
-    left: -20,
-  },
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    outer: {
+      backgroundColor: c.red,
+      overflow: "hidden",
+    },
+    headerWave: {
+      position: "absolute",
+      bottom: 0,
+    },
+    timeIcon: {
+      marginRight: 4,
+    },
+    waveContainer: {
+      height: 36,
+    },
+    deco1: {
+      position: "absolute",
+      width: 160,
+      height: 160,
+      borderRadius: 80,
+      backgroundColor: "rgba(255,255,255,0.08)",
+      top: -50,
+      right: -40,
+    },
+    deco2: {
+      position: "absolute",
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+      backgroundColor: "rgba(255,255,255,0.06)",
+      top: 30,
+      right: 60,
+    },
+    deco3: {
+      position: "absolute",
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: "rgba(0,0,0,0.06)",
+      bottom: 20,
+      left: -20,
+    },
 
-  topBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 2,
-  },
-  logoWrap: {
-    backgroundColor: C.surface,
-    borderRadius: 50,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    shadowColor: C.shadow,
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-    overflow: "hidden",
-  },
-  logo: { width: 90, height: 34 },
-  topActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  iconBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.18)",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.22)",
-  },
-  notifDot: {
-    position: "absolute",
-    top: 7,
-    right: 7,
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: "#FFD60A",
-    borderWidth: 1.5,
-    borderColor: C.red,
-  },
+    topBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingTop: 10,
+      paddingBottom: 2,
+    },
+    logoWrap: {
+      backgroundColor: c.surface,
+      borderRadius: 50,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      shadowColor: c.shadow,
+      shadowOpacity: 0.12,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 3,
+      overflow: "hidden",
+    },
+    logo: { width: 90, height: 34 },
+    topActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    iconBtn: {
+      width: 38,
+      height: 38,
+      borderRadius: 12,
+      backgroundColor: "rgba(255,255,255,0.18)",
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.22)",
+    },
+    notifDot: {
+      position: "absolute",
+      top: 7,
+      right: 7,
+      width: 7,
+      height: 7,
+      borderRadius: 4,
+      backgroundColor: "#FFD60A",
+      borderWidth: 1.5,
+      borderColor: c.red,
+    },
 
-  greetRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 18,
-    marginTop: 14,
-    marginBottom: 3,
-  },
-  greetLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  greetIconWrap: {
-    width: 22,
-    height: 22,
-    borderRadius: 7,
-    backgroundColor: "rgba(255,255,255,0.18)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  greetText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "rgba(255,255,255,0.9)",
-    letterSpacing: 0.2,
-  },
-  timePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.18)",
-    borderRadius: 12,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
-  },
-  timeText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#fff",
-    letterSpacing: 0.5,
-  },
+    greetRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 18,
+      marginTop: 14,
+      marginBottom: 3,
+    },
+    greetLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    greetIconWrap: {
+      width: 22,
+      height: 22,
+      borderRadius: 7,
+      backgroundColor: "rgba(255,255,255,0.18)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    greetText: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: "rgba(255,255,255,0.9)",
+      letterSpacing: 0.2,
+    },
+    timePill: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: "rgba(0,0,0,0.18)",
+      borderRadius: 12,
+      paddingHorizontal: 9,
+      paddingVertical: 4,
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.15)",
+    },
+    timeText: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: "#fff",
+      letterSpacing: 0.5,
+    },
 
-  dateText: {
-    fontSize: 11,
-    color: "rgba(255,255,255,0.65)",
-    fontWeight: "400",
-    paddingHorizontal: 18,
-    marginBottom: 8,
-    letterSpacing: 0.2,
-  },
-});
+    dateText: {
+      fontSize: 11,
+      color: "rgba(255,255,255,0.65)",
+      fontWeight: "400",
+      paddingHorizontal: 18,
+      marginBottom: 8,
+      letterSpacing: 0.2,
+    },
+  });

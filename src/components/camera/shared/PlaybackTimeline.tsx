@@ -1,14 +1,8 @@
 import React from "react";
-import {
-  Animated,
-  FlatList,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Animated, FlatList, Text, TouchableOpacity, View } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { C } from "../../../utils/helpers/colors";
+import { C, useAppColors, useStyles } from "../../../utils/helpers/colors";
 import EmptyState from "../../ui/EmptyState";
 import IsLoading from "../../ui/IconLoading";
 import BottomSheetModalShell from "../../shared/BottomSheetModalShell";
@@ -18,7 +12,7 @@ import {
   type PlaybackClip,
   type PlaybackClipGroup,
 } from "./cameraPlaybackHelpers";
-import { styles, TIMELINE_ROW_HEIGHT } from "../CameraPlayback.styles";
+import { makeStyles, TIMELINE_ROW_HEIGHT } from "../CameraPlayback.styles";
 
 type PlaybackTimelineProps = {
   activeClipId: string | null;
@@ -60,6 +54,7 @@ const TimelineRow = React.memo(function TimelineRow({
   rowHeight: number;
   thumbTimestamp: number;
 }) {
+  const styles = useStyles(makeStyles);
   const isActive = group.id === activeGroupId;
 
   return (
@@ -155,6 +150,7 @@ const ClipCard = React.memo(function ClipCard({
   onSelectGroup: (group: PlaybackClipGroup, clipId?: string) => void;
   thumbTimestamp: number;
 }) {
+  const styles = useStyles(makeStyles);
   return (
     <TouchableOpacity
       style={[
@@ -185,7 +181,7 @@ const ClipCard = React.memo(function ClipCard({
       </Text>
       <Text style={styles.playbackGridDuration} allowFontScaling={false}>
         {`${Math.floor(clip.durationSec / 60)}'${String(
-          clip.durationSec % 60
+          clip.durationSec % 60,
         ).padStart(2, "0")}"`}
       </Text>
       {group.hasPerson ? (
@@ -214,6 +210,7 @@ const ClipGridGroup = React.memo(function ClipGridGroup({
   onSelectGroup: (group: PlaybackClipGroup, clipId?: string) => void;
   thumbTimestamp: number;
 }) {
+  const styles = useStyles(makeStyles);
   return (
     <View style={styles.playbackGridGroup}>
       <View style={styles.playbackGridHourRow}>
@@ -267,18 +264,18 @@ function PlaybackTimeline({
   thumbTimestamp,
   viewMode,
 }: PlaybackTimelineProps) {
+  const c = useAppColors();
+  const styles = useStyles(makeStyles);
   // Sau lần mở đầu tiên, giữ grid mounted và chỉ ẩn đi khi chuyển về timeline.
   // Nhờ vậy thumbnail không bị tạo lại/tải lại mỗi lần đổi giao diện.
-  const [hasOpenedGrid, setHasOpenedGrid] = React.useState(
-    viewMode === "grid"
-  );
+  const [hasOpenedGrid, setHasOpenedGrid] = React.useState(viewMode === "grid");
   const [detailGroup, setDetailGroup] =
     React.useState<PlaybackClipGroup | null>(null);
   const timelineOpacity = React.useRef(
-    new Animated.Value(viewMode === "timeline" ? 1 : 0)
+    new Animated.Value(viewMode === "timeline" ? 1 : 0),
   ).current;
   const gridOpacity = React.useRef(
-    new Animated.Value(viewMode === "grid" ? 1 : 0)
+    new Animated.Value(viewMode === "grid" ? 1 : 0),
   ).current;
 
   React.useEffect(() => {
@@ -414,7 +411,7 @@ function PlaybackTimeline({
                 onPress={onCloseGroup}
                 accessibilityLabel="Đóng danh sách clip"
               >
-                <Ionicons name="close" size={28} color={C.text} />
+                <Ionicons name="close" size={28} color={c.text} />
               </TouchableOpacity>
               <Text style={styles.playbackGroupTitle} allowFontScaling={false}>
                 Tổng cộng {detailGroup.clipCount} clip

@@ -1,8 +1,19 @@
-import { C } from "../../utils/helpers/colors";
+import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
 import React, { useCallback, useEffect, useState } from "react";
-import { View, Text, FlatList, Pressable, StyleSheet, Image } from "react-native";
+import {
+  View,
+  Text,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Image,
+} from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import type { MenuItemResponse, StackNavigation, StackRoute } from "../../types";
+import type {
+  MenuItemResponse,
+  StackNavigation,
+  StackRoute,
+} from "../../types";
 import { getClassReference } from "../../services";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import IsLoading from "../ui/IconLoading";
@@ -10,7 +21,7 @@ import EmptyState from "../ui/EmptyState";
 import { error } from "../../utils/Logger";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { useParams } from "../../hooks/useParams";
-import { BG, BRAND_RED } from "./shared/listTheme";
+import { BRAND_RED } from "./shared/listTheme";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { isNetworkRequestError } from "../../utils/helpers/api";
 import { normalizeIconImageUri } from "../../utils/iconImage";
@@ -20,6 +31,8 @@ export default function AssetDeTailsTab({
 }: {
   nameClassRoot?: string;
 }) {
+  const styles = useStyles(makeStyles);
+  const c = useAppColors();
   const navigation = useNavigation<StackNavigation<"AssetDetails">>();
   const route = useRoute<StackRoute<"AssetDetails">>();
 
@@ -111,7 +124,7 @@ export default function AssetDeTailsTab({
         )}
       </View>
       <Text style={styles.label}>{item.label}</Text>
-      <Ionicons name="chevron-forward" size={14} color={C.textMuted} />
+      <Ionicons name="chevron-forward" size={14} color={c.textMuted} />
     </Pressable>
   );
 
@@ -152,58 +165,59 @@ export default function AssetDeTailsTab({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: BG,
-  },
-  listContent: {
-    flexGrow: 1,
-    paddingHorizontal: 14,
-    paddingTop: 14,
-    paddingBottom: 96,
-  },
-  listContentEmpty: {
-    flexGrow: 1,
-    paddingTop: 0,
-    paddingBottom: 0,
-  },
-  item: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: C.surface,
-    borderRadius: 14,
-    paddingVertical: 11,
-    paddingHorizontal: 14,
-    marginBottom: 8,
-    shadowColor: C.shadow,
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-    gap: 10,
-  },
-  itemPressed: {
-    opacity: 0.75,
-  },
-  iconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: C.redSurface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  iconImage: {
-    width: 24,
-    height: 24,
-    resizeMode: "contain",
-  },
-  label: {
-    flex: 1,
-    fontSize: 13.5,
-    color: C.text,
-    fontWeight: "600",
-    lineHeight: 18,
-  },
-});
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.bg,
+    },
+    listContent: {
+      flexGrow: 1,
+      paddingHorizontal: 14,
+      paddingTop: 14,
+      paddingBottom: 96,
+    },
+    listContentEmpty: {
+      flexGrow: 1,
+      paddingTop: 0,
+      paddingBottom: 0,
+    },
+    item: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: c.surface,
+      borderRadius: 14,
+      paddingVertical: 11,
+      paddingHorizontal: 14,
+      marginBottom: 8,
+      shadowColor: c.shadow,
+      shadowOpacity: 0.06,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 2,
+      gap: 10,
+    },
+    itemPressed: {
+      opacity: 0.75,
+    },
+    iconWrap: {
+      width: 34,
+      height: 34,
+      borderRadius: 10,
+      backgroundColor: c.redSurface,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    iconImage: {
+      width: 24,
+      height: 24,
+      resizeMode: "contain",
+    },
+    label: {
+      flex: 1,
+      fontSize: 13.5,
+      color: c.text,
+      fontWeight: "600",
+      lineHeight: 18,
+    },
+  });

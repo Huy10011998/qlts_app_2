@@ -35,6 +35,7 @@ import {
   useHairlineBorderColor,
   useSeparatorColor,
   useStrongBorderColor,
+  useStyles,
 } from "../../utils/helpers/colors";
 
 import {
@@ -66,7 +67,7 @@ import {
   usePlantWeather,
 } from "./SolarPlantScreen.helpers";
 import { PeriodHeader, SolarDateRangePicker } from "./SolarPlantScreen.date";
-import { styles } from "./SolarPlantScreen.styles";
+import { makeStyles } from "./SolarPlantScreen.styles";
 import {
   AreaChart,
   BarChart,
@@ -114,12 +115,16 @@ const ExpandedMetricRow = ({
 }: {
   label: string;
   value: string;
-}) => (
-  <View style={styles.expandedTooltipMetricRow}>
-    <Text style={styles.expandedTooltipLabel}>{label}</Text>
-    <Text style={styles.expandedTooltipValue}>{value}</Text>
-  </View>
-);
+}) => {
+  const styles = useStyles(makeStyles);
+
+  return (
+    <View style={styles.expandedTooltipMetricRow}>
+      <Text style={styles.expandedTooltipLabel}>{label}</Text>
+      <Text style={styles.expandedTooltipValue}>{value}</Text>
+    </View>
+  );
+};
 
 const ExpandedLegendItem = ({
   dotStyle,
@@ -127,12 +132,16 @@ const ExpandedLegendItem = ({
 }: {
   dotStyle: ComponentProps<typeof View>["style"];
   label: string;
-}) => (
-  <View style={styles.expandedLegendItem}>
-    <View style={[styles.expandedLegendDot, dotStyle]} />
-    <Text style={styles.expandedLegendText}>{label}</Text>
-  </View>
-);
+}) => {
+  const styles = useStyles(makeStyles);
+
+  return (
+    <View style={styles.expandedLegendItem}>
+      <View style={[styles.expandedLegendDot, dotStyle]} />
+      <Text style={styles.expandedLegendText}>{label}</Text>
+    </View>
+  );
+};
 
 const ExpandedChartModal: React.FC<ExpandedChartModalProps> = ({
   activeChart,
@@ -150,6 +159,7 @@ const ExpandedChartModal: React.FC<ExpandedChartModalProps> = ({
   onOpenDatePicker,
   onPreviousRange,
 }) => {
+  const styles = useStyles(makeStyles);
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const hairlineBorderColor = useHairlineBorderColor();
@@ -165,7 +175,7 @@ const ExpandedChartModal: React.FC<ExpandedChartModalProps> = ({
   const bottomSpacing = Math.max(insets.bottom, 16);
   const responsiveChartWidth = Math.max(
     240,
-    Math.min(chartWidth, windowWidth - 36)
+    Math.min(chartWidth, windowWidth - 36),
   );
   const canGoNext = canMoveToNextRange(period, dateRange);
   const [contentViewportHeight, setContentViewportHeight] = useState(0);
@@ -183,7 +193,7 @@ const ExpandedChartModal: React.FC<ExpandedChartModalProps> = ({
           // next-range direction when the current range is Today.
           const isPastCurrentRange = !canGoNext && event.translationX < 0;
           swipeTranslateX.setValue(
-            isPastCurrentRange ? event.translationX * 0.2 : event.translationX
+            isPastCurrentRange ? event.translationX * 0.2 : event.translationX,
           );
         })
         .onEnd((event) => {
@@ -218,7 +228,7 @@ const ExpandedChartModal: React.FC<ExpandedChartModalProps> = ({
       onPreviousRange,
       swipeTranslateX,
       windowWidth,
-    ]
+    ],
   );
   const fallbackChartHeight = isComparative
     ? Math.max(windowHeight - 410 - bottomSpacing, 300)
@@ -243,7 +253,12 @@ const ExpandedChartModal: React.FC<ExpandedChartModalProps> = ({
       <GestureHandlerRootView style={styles.expandedSafe}>
         <HeaderDetailsModalHeader title={title} onBack={onClose} />
         {isComparative ? (
-          <View style={[styles.expandedCompareTabs, { borderColor: hairlineBorderColor }]}>
+          <View
+            style={[
+              styles.expandedCompareTabs,
+              { borderColor: hairlineBorderColor },
+            ]}
+          >
             {(["Month", "Quarter", "Year"] as const).map((mode) => (
               <TouchableOpacity
                 key={mode}
@@ -283,7 +298,7 @@ const ExpandedChartModal: React.FC<ExpandedChartModalProps> = ({
             onLayout={(event) => {
               const nextHeight = Math.round(event.nativeEvent.layout.height);
               setContentViewportHeight((currentHeight) =>
-                currentHeight === nextHeight ? currentHeight : nextHeight
+                currentHeight === nextHeight ? currentHeight : nextHeight,
               );
             }}
             style={[
@@ -376,7 +391,7 @@ const ExpandedChartModal: React.FC<ExpandedChartModalProps> = ({
                           label="To Home"
                           value={`${formatMetric(
                             productionMarkerValue,
-                            2
+                            2,
                           )} MW ${formatMetric(data.toHomePercent)}%`}
                         />
                         <ExpandedMetricRow
@@ -386,7 +401,7 @@ const ExpandedChartModal: React.FC<ExpandedChartModalProps> = ({
                               ? 0
                               : productionMarkerValue *
                                   ((data.toGridPercent ?? 0) / 100),
-                            2
+                            2,
                           )} MW ${formatMetric(data.toGridPercent)}%`}
                         />
                       </>
@@ -396,7 +411,7 @@ const ExpandedChartModal: React.FC<ExpandedChartModalProps> = ({
                           label="Consumption"
                           value={`${formatMetric(
                             consumptionMarkerValue,
-                            2
+                            2,
                           )} MW`}
                         />
                         <ExpandedMetricRow
@@ -404,7 +419,7 @@ const ExpandedChartModal: React.FC<ExpandedChartModalProps> = ({
                           value={`${formatMetric(
                             consumptionMarkerValue *
                               ((data.fromSolarPercent ?? 0) / 100),
-                            2
+                            2,
                           )} MW ${formatMetric(data.fromSolarPercent)}%`}
                         />
                         <ExpandedMetricRow
@@ -412,7 +427,7 @@ const ExpandedChartModal: React.FC<ExpandedChartModalProps> = ({
                           value={`${formatMetric(
                             consumptionMarkerValue *
                               ((data.fromGridPercent ?? 0) / 100),
-                            2
+                            2,
                           )} MW ${formatMetric(data.fromGridPercent)}%`}
                         />
                       </>
@@ -422,7 +437,7 @@ const ExpandedChartModal: React.FC<ExpandedChartModalProps> = ({
                           label="Production"
                           value={`${formatMetric(
                             (data.production ?? 0) / 1000,
-                            2
+                            2,
                           )} MWh`}
                         />
                         <ExpandedMetricRow
@@ -433,7 +448,7 @@ const ExpandedChartModal: React.FC<ExpandedChartModalProps> = ({
                           label="Self Consumption"
                           value={`${formatMetric(
                             (data.selfConsumptionKwh ?? 0) / 1000,
-                            2
+                            2,
                           )} MWh ${formatMetric(data.selfConsumptionPercent)}%`}
                         />
                       </>
@@ -467,13 +482,13 @@ const ExpandedChartModal: React.FC<ExpandedChartModalProps> = ({
                         <ExpandedLegendItem
                           dotStyle={styles.productionDot}
                           label={`To Home (${formatMetric(
-                            data.toHomePercent
+                            data.toHomePercent,
                           )}%)`}
                         />
                         <ExpandedLegendItem
                           dotStyle={styles.toGridDot}
                           label={`To Grid (${formatMetric(
-                            data.toGridPercent
+                            data.toGridPercent,
                           )}%)`}
                         />
                       </>
@@ -482,13 +497,13 @@ const ExpandedChartModal: React.FC<ExpandedChartModalProps> = ({
                         <ExpandedLegendItem
                           dotStyle={styles.fromSolarDot}
                           label={`From Solar (${formatMetric(
-                            data.fromSolarPercent
+                            data.fromSolarPercent,
                           )}%)`}
                         />
                         <ExpandedLegendItem
                           dotStyle={styles.consumptionDot}
                           label={`From Grid (${formatMetric(
-                            data.fromGridPercent
+                            data.fromGridPercent,
                           )}%)`}
                         />
                       </>
@@ -556,6 +571,7 @@ const SolarHeroSection: React.FC<SolarHeroSectionProps> = ({
   screenWidth,
   weather,
 }) => {
+  const styles = useStyles(makeStyles);
   const contentWidth = getSolarContentWidth(screenWidth);
   const visualWidth = Math.min(contentWidth, MAX_SOLAR_CONTENT_WIDTH);
   const visualInset = (contentWidth - visualWidth) / 2;
@@ -672,6 +688,7 @@ const SolarHeroSection: React.FC<SolarHeroSectionProps> = ({
 const EnergyProducedSummary: React.FC<{ data: SolarDashboardData }> = ({
   data,
 }) => {
+  const styles = useStyles(makeStyles);
   const separatorColor = useSeparatorColor();
 
   return (
@@ -686,7 +703,8 @@ const EnergyProducedSummary: React.FC<{ data: SolarDashboardData }> = ({
         <View style={styles.epItem}>
           <Text style={styles.epLabel}>This Month</Text>
           <Text style={styles.epValue}>
-            {formatMetric(data.thisMonth)} <Text style={styles.epUnit}>MWh</Text>
+            {formatMetric(data.thisMonth)}{" "}
+            <Text style={styles.epUnit}>MWh</Text>
           </Text>
         </View>
         <View style={styles.epDivider} />
@@ -709,6 +727,7 @@ const EnergyProducedSummary: React.FC<{ data: SolarDashboardData }> = ({
 };
 
 function SolarPlantMenuButton({ onPress }: { onPress: () => void }) {
+  const styles = useStyles(makeStyles);
   return (
     <TouchableOpacity onPress={onPress} style={styles.headerButton}>
       <Ionicons name="menu" size={26} color="#fff" />
@@ -717,6 +736,7 @@ function SolarPlantMenuButton({ onPress }: { onPress: () => void }) {
 }
 
 const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
+  const styles = useStyles(makeStyles);
   const navigation = useNavigation();
   const { width: screenWidth } = useWindowDimensions();
   const contentWidth = getSolarContentWidth(screenWidth);
@@ -732,13 +752,13 @@ const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
     useState<SolarDateRange>(createTodayDateRange);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [expandedChart, setExpandedChart] = useState<ExpandedChart | null>(
-    null
+    null,
   );
   const dashboardScrollRef = useRef<ScrollView>(null);
   const dashboardScrollOffset = useRef(0);
   const savedDashboardScrollOffset = useRef(0);
   const [selectedNode, setSelectedNode] = useState<TreeNode | null>(
-    SOLAR_PLANT_TREE_DATA[0]
+    SOLAR_PLANT_TREE_DATA[0],
   );
   const shouldInlineMergedLegend = tab !== "Day";
   const weather = usePlantWeather(todayDashboardData.temperature);
@@ -756,12 +776,12 @@ const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
       setSelectedNode(node);
       closeMenu();
     },
-    [closeMenu]
+    [closeMenu],
   );
 
   const renderHeaderRight = useCallback(
     () => <SolarPlantMenuButton onPress={togglePanel} />,
-    [togglePanel]
+    [togglePanel],
   );
 
   const shiftDateRange = useCallback(
@@ -774,28 +794,28 @@ const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
         if (tab === "Month") {
           return getDateRangeForPeriod(
             tab,
-            addMonths(current.fromDate, direction)
+            addMonths(current.fromDate, direction),
           );
         }
 
         if (tab === "Year") {
           return getDateRangeForPeriod(
             tab,
-            new Date(current.fromDate.getFullYear() + direction, 0, 1)
+            new Date(current.fromDate.getFullYear() + direction, 0, 1),
           );
         }
 
         if (tab === "Week") {
           return getDateRangeForPeriod(
             tab,
-            addDays(current.toDate, direction * 7)
+            addDays(current.toDate, direction * 7),
           );
         }
 
         return getDateRangeForPeriod(tab, addDays(current.toDate, direction));
       });
     },
-    [tab]
+    [tab],
   );
 
   const handlePreviousRange = useCallback(() => {
@@ -811,7 +831,7 @@ const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
       setDateRange(nextDateRange);
       setDatePickerVisible(false);
     },
-    []
+    [],
   );
 
   const handleChangePeriodTab = useCallback((nextTab: PeriodTab) => {
@@ -853,7 +873,7 @@ const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
         const response = await callApi<SolarApiResponse>(
           "POST",
           API_ENDPOINTS.GET_SOLAR,
-          buildSolarPayload(meterId, dateRange)
+          buildSolarPayload(meterId, dateRange),
         );
         const usageData = mapChiSoTotalToConsumption(response.data);
 
@@ -1228,7 +1248,7 @@ const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
                     >
                       Self Consumption (
                       {formatMetric(
-                        filteredDashboardData.selfConsumptionPercent
+                        filteredDashboardData.selfConsumptionPercent,
                       )}
                       %)
                     </Text>
@@ -1262,7 +1282,7 @@ const SolarFullScreen: React.FC<Props> = ({ data = DEFAULT_DATA }) => {
                       <Text style={styles.chartLegendTextMuted}>
                         Self Consumption (
                         {formatMetric(
-                          filteredDashboardData.selfConsumptionPercent
+                          filteredDashboardData.selfConsumptionPercent,
                         )}
                         %)
                       </Text>

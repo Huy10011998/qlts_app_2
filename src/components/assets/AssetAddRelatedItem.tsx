@@ -15,7 +15,12 @@ import {
 import { fetchImage, pickImage } from "../../utils/Image";
 import { parseCsv } from "../../utils/helpers/string";
 import { isEffectivelyEmptyCodeValue } from "../../utils/helpers/string";
-import { C, useAccentBorderColors } from "../../utils/helpers/colors";
+import {
+  AppColors,
+  useAccentBorderColors,
+  useAppColors,
+  useStyles,
+} from "../../utils/helpers/colors";
 import { useImageLoader } from "../../hooks/useImageLoader";
 import {
   checkValidation,
@@ -51,11 +56,7 @@ import {
   getRequiredFieldsMessage,
 } from "./shared/assetFormValidation";
 import { createAssetFormBaseStyles } from "./shared/assetFormStyles";
-import {
-  ASSET_FORM_BG,
-  ASSET_FORM_BRAND_RED,
-  ASSET_FORM_CARD_SHADOW,
-} from "./shared/assetFormTheme";
+import { ASSET_FORM_BRAND_RED } from "./shared/assetFormTheme";
 import { REVIEW_NAME_CLASSES_DANHGIA } from "../../constants/reviewNameClasses";
 import {
   backToAssetList,
@@ -63,10 +64,10 @@ import {
 } from "../../navigation/shared/assetNavigationReset";
 
 const BRAND_RED = ASSET_FORM_BRAND_RED;
-const BG = ASSET_FORM_BG;
-const CARD_SHADOW = ASSET_FORM_CARD_SHADOW;
 
 export default function AssetAddRelatedItem() {
+  const styles = useStyles(makeStyles);
+  const c = useAppColors();
   const accentBorders = useAccentBorderColors();
   const {
     field,
@@ -84,11 +85,11 @@ export default function AssetAddRelatedItem() {
   const { can } = usePermission();
   const dispatch = useAppDispatch();
   const isReviewClass = REVIEW_NAME_CLASSES_DANHGIA.includes(
-    (nameClass || "").trim()
+    (nameClass || "").trim(),
   );
 
   const { selectedTreeValue, selectedTreeProperty } = useSelector(
-    (state: RootState) => state.asset
+    (state: RootState) => state.asset,
   );
 
   const navigation = useNavigation<AssetAddRelatedItemNavigationProp>();
@@ -96,9 +97,7 @@ export default function AssetAddRelatedItem() {
   const [formData, setFormData] = useState<Record<string, any>>({});
 
   const [enumData, setEnumData] = useState<Record<string, any[]>>({});
-  const [referenceData, setReferenceData] = useState<
-    ReferenceDataMap
-  >({});
+  const [referenceData, setReferenceData] = useState<ReferenceDataMap>({});
 
   const [modalVisible, setModalVisible] = useState(false);
   const [activeEnumField, setActiveEnumField] = useState<Field | null>(null);
@@ -139,7 +138,7 @@ export default function AssetAddRelatedItem() {
   const { handleChange: baseHandleChange } = useCascadeForm(
     fieldActive,
     setFormData,
-    setReferenceData
+    setReferenceData,
   );
 
   const handleChange = React.useCallback(
@@ -154,7 +153,7 @@ export default function AssetAddRelatedItem() {
 
       baseHandleChange(name, value);
     },
-    [baseHandleChange, validationErrors]
+    [baseHandleChange, validationErrors],
   );
 
   useTreeToForm({
@@ -170,7 +169,7 @@ export default function AssetAddRelatedItem() {
     fieldActive,
     setEnumData,
     setReferenceData,
-    referenceData
+    referenceData,
   );
 
   const parentField = propertyClass?.prentTuDongTang;
@@ -221,7 +220,7 @@ export default function AssetAddRelatedItem() {
     activeEnumField,
     referenceData,
     enumData,
-    formData
+    formData,
   );
   const { isMounted, showAlertIfActive } = useSafeAlert();
 
@@ -252,7 +251,7 @@ export default function AssetAddRelatedItem() {
       expandGroupsWithErrors(requiredErrors);
       Alert.alert(
         "Thiếu thông tin",
-        getRequiredFieldsMessage(fieldActive, requiredErrors)
+        getRequiredFieldsMessage(fieldActive, requiredErrors),
       );
       return;
     }
@@ -352,7 +351,7 @@ export default function AssetAddRelatedItem() {
             },
           },
         ],
-        { cancelable: false }
+        { cancelable: false },
       );
     } catch (err: any) {
       setValidationErrors(getApiValidationFieldErrors(err));
@@ -413,7 +412,7 @@ export default function AssetAddRelatedItem() {
       }
     >
       <AssetFormHeroCard
-        iconBgColor={C.redSurface}
+        iconBgColor={c.redSurface}
         iconColor={BRAND_RED}
         iconName="link-outline"
         styles={styles}
@@ -458,13 +457,10 @@ export default function AssetAddRelatedItem() {
   );
 }
 
-const styles = StyleSheet.create({
-  ...createAssetFormBaseStyles({
-    backgroundColor: BG,
-    brandColor: BRAND_RED,
-    cardShadow: CARD_SHADOW,
-  }),
-  heroIconWrap: {
-    backgroundColor: C.redSurface,
-  },
-});
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    ...createAssetFormBaseStyles(c),
+    heroIconWrap: {
+      backgroundColor: c.redSurface,
+    },
+  });

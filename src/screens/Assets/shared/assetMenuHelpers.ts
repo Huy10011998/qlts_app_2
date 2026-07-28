@@ -2,7 +2,7 @@ import type { Item } from "../../../types/index";
 import { removeVietnameseTones } from "../../../utils/Helper";
 import { normalizeIconImageUri } from "../../../utils/iconImage";
 import { ASSET_MENU_BRAND_RED } from "./assetMenuTheme";
-import { C } from "../../../utils/helpers/colors";
+import { AppColors } from "../../../utils/helpers/colors";
 
 export const isEnabledAssetMenuFlag = (value: Item["isViewWeb"]) =>
   value === true || value === 1 || value === "1" || value === "true";
@@ -14,7 +14,11 @@ export const getAssetMenuMobileRoute = (item: Item) => {
   return configuredView || null;
 };
 
-export const getAssetMenuItemTheme = (item: Item, expanded: boolean) => {
+export const getAssetMenuItemTheme = (
+  item: Item,
+  expanded: boolean,
+  c: AppColors
+) => {
   const iconImageUri = normalizeIconImageUri(item.iconMobile);
 
   if (iconImageUri) {
@@ -22,7 +26,7 @@ export const getAssetMenuItemTheme = (item: Item, expanded: boolean) => {
       icon: "image-outline",
       iconImageUri,
       lib: "ionicons" as const,
-      bg: C.indigoSurface,
+      bg: c.indigoSurface,
       color: "#3B5BDB",
     };
   }
@@ -31,7 +35,7 @@ export const getAssetMenuItemTheme = (item: Item, expanded: boolean) => {
     return {
       icon: "bar-chart",
       lib: "material" as const,
-      bg: C.pinkSurface,
+      bg: c.pinkSurface,
       color: "#E64980",
     };
   }
@@ -40,7 +44,7 @@ export const getAssetMenuItemTheme = (item: Item, expanded: boolean) => {
     return {
       icon: "book",
       lib: "material" as const,
-      bg: C.indigoSurface,
+      bg: c.indigoSurface,
       color: "#3B5BDB",
     };
   }
@@ -49,7 +53,7 @@ export const getAssetMenuItemTheme = (item: Item, expanded: boolean) => {
     return {
       icon: "folder-open",
       lib: "ionicons" as const,
-      bg: C.redSurface,
+      bg: c.redSurface,
       color: ASSET_MENU_BRAND_RED,
     };
   }
@@ -57,7 +61,7 @@ export const getAssetMenuItemTheme = (item: Item, expanded: boolean) => {
   return {
     icon: "folder",
     lib: "ionicons" as const,
-    bg: C.orangeSurface,
+    bg: c.orangeSurface,
     color: "#E67700",
   };
 };

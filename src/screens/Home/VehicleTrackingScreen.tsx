@@ -1,7 +1,9 @@
 import {
-  C,
+  AppColors,
+  useAppColors,
   useHairlineBorderColor,
   useSeparatorColor,
+  useStyles,
 } from "../../utils/helpers/colors";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -111,6 +113,8 @@ const toStopPoint = (item: Stop): StopPoint | null => {
 };
 
 export default function VehicleTrackingScreen() {
+  const styles = useStyles(makeStyles);
+  const c = useAppColors();
   const navigation = useNavigation<HomeNavigationProp>();
   const hairlineBorderColor = useHairlineBorderColor();
   const separatorColor = useSeparatorColor();
@@ -258,7 +262,7 @@ export default function VehicleTrackingScreen() {
   if (loading)
     return (
       <View style={styles.center}>
-        <ActivityIndicator color={C.red} />
+        <ActivityIndicator color={c.red} />
         <Text style={styles.loadingText}>Đang tải phương tiện...</Text>
       </View>
     );
@@ -271,7 +275,7 @@ export default function VehicleTrackingScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={refresh}
-            colors={[C.accent]}
+            colors={[c.accent]}
           />
         }
       >
@@ -280,14 +284,14 @@ export default function VehicleTrackingScreen() {
           style={styles.select}
           onPress={() => setPickerVisible(true)}
         >
-          <Ionicons name="car-outline" size={20} color={C.textSecondary} />
+          <Ionicons name="car-outline" size={20} color={c.textSecondary} />
           <Text
             style={[styles.selectText, !vehicle && styles.placeholderText]}
             numberOfLines={1}
           >
             {vehicle ? vehicleLabel(vehicle) : "Phương tiện"}
           </Text>
-          <Ionicons name="chevron-down" size={18} color={C.textSecondary} />
+          <Ionicons name="chevron-down" size={18} color={c.textSecondary} />
         </TouchableOpacity>
         <View style={styles.dateRow}>
           <View style={styles.dateField}>
@@ -320,7 +324,7 @@ export default function VehicleTrackingScreen() {
         <View style={[styles.list, { borderColor: hairlineBorderColor }]}>
           {stopLoading ? (
             <View style={styles.listState}>
-              <ActivityIndicator color={C.red} />
+              <ActivityIndicator color={c.red} />
             </View>
           ) : loadError ? (
             <EmptyState
@@ -359,7 +363,7 @@ export default function VehicleTrackingScreen() {
                     <Ionicons
                       name="calendar-outline"
                       size={18}
-                      color={C.textSecondary}
+                      color={c.textSecondary}
                     />
                     <Text style={styles.groupDate}>{dateTitle(date)}</Text>
                     <View style={styles.count}>
@@ -368,7 +372,7 @@ export default function VehicleTrackingScreen() {
                     <Ionicons
                       name={opened ? "chevron-up" : "chevron-down"}
                       size={18}
-                      color={C.textSecondary}
+                      color={c.textSecondary}
                     />
                   </TouchableOpacity>
                   {opened
@@ -414,7 +418,7 @@ export default function VehicleTrackingScreen() {
                             <Ionicons
                               name="map-outline"
                               size={20}
-                              color={C.textSecondary}
+                              color={c.textSecondary}
                             />
                           </TouchableOpacity>
                         );
@@ -460,114 +464,115 @@ export default function VehicleTrackingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.surfaceAlt },
-  content: {
-    flexGrow: 1,
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 32,
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: C.surfaceAlt,
-  },
-  loadingText: { marginTop: 9, color: C.textSecondary },
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    root: { flex: 1, backgroundColor: c.surfaceAlt },
+    content: {
+      flexGrow: 1,
+      paddingHorizontal: 16,
+      paddingTop: 8,
+      paddingBottom: 32,
+    },
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: c.surfaceAlt,
+    },
+    loadingText: { marginTop: 9, color: c.textSecondary },
 
-  title: { fontSize: 19, fontWeight: "700", color: C.text },
-  subtitle: { fontSize: 13, color: C.textSecondary, marginTop: 2 },
-  label: { fontSize: 13, fontWeight: "600", color: C.text, marginBottom: 7 },
-  select: {
-    minHeight: 48,
-    borderWidth: 1,
-    borderColor: C.borderStrong,
-    borderRadius: 8,
-    backgroundColor: C.surface,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 12,
-    paddingVertical: 0,
-    marginBottom: 16,
-  },
-  selectText: { flex: 1, marginHorizontal: 10, fontSize: 14, color: C.text },
-  placeholderText: { color: C.textMuted },
-  dateRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
-  dateField: { flex: 1 },
-  actions: { flexDirection: "row", gap: 10, marginBottom: 18 },
-  action: {
-    flex: 1,
-    height: 46,
-    borderRadius: 9,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-  },
-  close: { backgroundColor: "#737373" },
-  mapButton: { backgroundColor: "#1976D2" },
-  actionText: { color: "#FFF", fontSize: 14, fontWeight: "600" },
-  list: {
-    flex: 1,
-    minHeight: 280,
-    borderWidth: 1,
-    borderColor: C.border,
-    borderRadius: 14,
-    backgroundColor: C.surface,
-    overflow: "hidden",
-  },
-  listState: {
-    flex: 1,
-    minHeight: 260,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  group: { borderBottomWidth: 1, borderBottomColor: C.border },
-  groupHeader: {
-    minHeight: 52,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 13,
-    backgroundColor: C.surfaceAlt,
-    gap: 8,
-  },
-  groupDate: {
-    flex: 1,
-    color: C.textSecondary,
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  count: {
-    backgroundColor: C.border,
-    borderRadius: 12,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-  },
-  countText: { fontSize: 11, fontWeight: "700", color: C.textSecondary },
-  stopRow: { flexDirection: "row", paddingHorizontal: 14, paddingTop: 14 },
-  lineCol: { width: 25, alignItems: "center" },
-  dot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    borderWidth: 3,
-    backgroundColor: C.surface,
-  },
-  line: { width: 2, flex: 1, minHeight: 66, backgroundColor: C.border },
-  stopBody: { flex: 1, paddingLeft: 5, paddingBottom: 16 },
-  time: { fontSize: 13, color: C.textMuted },
-  address: { fontSize: 15, fontWeight: "600", color: C.text, marginTop: 6 },
-  duration: {
-    alignSelf: "flex-start",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    marginTop: 8,
-  },
-  durationText: { fontSize: 12, fontWeight: "700" },
-});
+    title: { fontSize: 19, fontWeight: "700", color: c.text },
+    subtitle: { fontSize: 13, color: c.textSecondary, marginTop: 2 },
+    label: { fontSize: 13, fontWeight: "600", color: c.text, marginBottom: 7 },
+    select: {
+      minHeight: 48,
+      borderWidth: 1,
+      borderColor: c.borderStrong,
+      borderRadius: 8,
+      backgroundColor: c.surface,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 12,
+      paddingVertical: 0,
+      marginBottom: 16,
+    },
+    selectText: { flex: 1, marginHorizontal: 10, fontSize: 14, color: c.text },
+    placeholderText: { color: c.textMuted },
+    dateRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
+    dateField: { flex: 1 },
+    actions: { flexDirection: "row", gap: 10, marginBottom: 18 },
+    action: {
+      flex: 1,
+      height: 46,
+      borderRadius: 9,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+    },
+    close: { backgroundColor: "#737373" },
+    mapButton: { backgroundColor: "#1976D2" },
+    actionText: { color: "#FFF", fontSize: 14, fontWeight: "600" },
+    list: {
+      flex: 1,
+      minHeight: 280,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: 14,
+      backgroundColor: c.surface,
+      overflow: "hidden",
+    },
+    listState: {
+      flex: 1,
+      minHeight: 260,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    group: { borderBottomWidth: 1, borderBottomColor: c.border },
+    groupHeader: {
+      minHeight: 52,
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 13,
+      backgroundColor: c.surfaceAlt,
+      gap: 8,
+    },
+    groupDate: {
+      flex: 1,
+      color: c.textSecondary,
+      fontSize: 13,
+      fontWeight: "700",
+    },
+    count: {
+      backgroundColor: c.border,
+      borderRadius: 12,
+      paddingHorizontal: 9,
+      paddingVertical: 4,
+    },
+    countText: { fontSize: 11, fontWeight: "700", color: c.textSecondary },
+    stopRow: { flexDirection: "row", paddingHorizontal: 14, paddingTop: 14 },
+    lineCol: { width: 25, alignItems: "center" },
+    dot: {
+      width: 14,
+      height: 14,
+      borderRadius: 7,
+      borderWidth: 3,
+      backgroundColor: c.surface,
+    },
+    line: { width: 2, flex: 1, minHeight: 66, backgroundColor: c.border },
+    stopBody: { flex: 1, paddingLeft: 5, paddingBottom: 16 },
+    time: { fontSize: 13, color: c.textMuted },
+    address: { fontSize: 15, fontWeight: "600", color: c.text, marginTop: 6 },
+    duration: {
+      alignSelf: "flex-start",
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      borderRadius: 12,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      marginTop: 8,
+    },
+    durationText: { fontSize: 12, fontWeight: "700" },
+  });

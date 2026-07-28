@@ -12,7 +12,12 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import type { BottomBarProps } from "../../types/index";
 import { usePermission } from "../../hooks/usePermission";
 import { useParams } from "../../hooks/useParams";
-import { C, useHairlineBorderColor } from "../../utils/helpers/colors";
+import {
+  AppColors,
+  useAppColors,
+  useHairlineBorderColor,
+  useStyles,
+} from "../../utils/helpers/colors";
 
 const SHELL_INSET = 12;
 
@@ -21,6 +26,8 @@ export default function BottomBarDetails({
   activeTab,
   onTabPress,
 }: BottomBarProps) {
+  const styles = useStyles(makeStyles);
+  const c = useAppColors();
   const { width: screenWidth } = useWindowDimensions();
   const BAR_WIDTH = screenWidth - SHELL_INSET * 2;
   const { nameClass } = useParams();
@@ -104,11 +111,13 @@ export default function BottomBarDetails({
               onPress={() => handlePress(tab.key, tab.label, i)}
               activeOpacity={0.8}
             >
-              <View style={[styles.iconWrap, isActive && styles.iconWrapActive]}>
+              <View
+                style={[styles.iconWrap, isActive && styles.iconWrapActive]}
+              >
                 <Ionicons
                   name={tab.icon}
                   size={20}
-                  color={isActive ? C.red : C.textSub}
+                  color={isActive ? c.red : c.textSub}
                 />
               </View>
               <Text
@@ -129,58 +138,59 @@ export default function BottomBarDetails({
   );
 }
 
-const styles = StyleSheet.create({
-  shell: {
-    position: "absolute",
-    left: SHELL_INSET,
-    right: SHELL_INSET,
-    bottom: 10,
-  },
-  bottomBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: C.surface,
-    height: 74,
-    borderRadius: 22,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: C.border,
-    shadowColor: C.shadow,
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-    overflow: "hidden",
-  },
-  bottomItem: {
-    alignItems: "center",
-    justifyContent: "center",
-    height: "100%",
-    flexShrink: 0,
-  },
-  iconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: C.surfaceAlt,
-    marginBottom: 4,
-  },
-  iconWrapActive: {
-    backgroundColor: C.redSurface,
-  },
-  bottomLabel: {
-    fontSize: 11.5,
-    fontWeight: "600",
-    color: C.textSub,
-  },
-  bottomLabelActive: { fontWeight: "700", color: C.red },
-  underline: {
-    position: "absolute",
-    top: 0,
-    height: 3,
-    backgroundColor: C.red,
-    borderBottomLeftRadius: 3,
-    borderBottomRightRadius: 3,
-  },
-});
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    shell: {
+      position: "absolute",
+      left: SHELL_INSET,
+      right: SHELL_INSET,
+      bottom: 10,
+    },
+    bottomBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: c.surface,
+      height: 74,
+      borderRadius: 22,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.border,
+      shadowColor: c.shadow,
+      shadowOpacity: 0.1,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 6,
+      overflow: "hidden",
+    },
+    bottomItem: {
+      alignItems: "center",
+      justifyContent: "center",
+      height: "100%",
+      flexShrink: 0,
+    },
+    iconWrap: {
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: c.surfaceAlt,
+      marginBottom: 4,
+    },
+    iconWrapActive: {
+      backgroundColor: c.redSurface,
+    },
+    bottomLabel: {
+      fontSize: 11.5,
+      fontWeight: "600",
+      color: c.textSub,
+    },
+    bottomLabelActive: { fontWeight: "700", color: c.red },
+    underline: {
+      position: "absolute",
+      top: 0,
+      height: 3,
+      backgroundColor: c.red,
+      borderBottomLeftRadius: 3,
+      borderBottomRightRadius: 3,
+    },
+  });

@@ -1,14 +1,15 @@
 import {
-  C,
   useAccentBorderColors,
+  useAppColors,
   useHairlineBorderColor,
+  useStyles,
 } from "../../../utils/helpers/colors";
 import React from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import IsLoading from "../../ui/IconLoading";
 import { BRAND_RED } from "./listTheme";
-import { sharedAssetListStyles as styles } from "./listStyles";
+import { makeSharedAssetListStyles } from "./listStyles";
 
 type AssetListSearchBarProps = {
   placeholder: string;
@@ -29,6 +30,8 @@ export default function AssetListSearchBar({
   badgeText,
   summaryText,
 }: AssetListSearchBarProps) {
+  const c = useAppColors();
+  const styles = useStyles(makeSharedAssetListStyles);
   const hairlineBorderColor = useHairlineBorderColor();
   const accentBorders = useAccentBorderColors();
 
@@ -36,11 +39,11 @@ export default function AssetListSearchBar({
     <View style={styles.searchWrap}>
       <View style={[styles.searchBox, { borderColor: hairlineBorderColor }]}>
         <View style={styles.searchIconWrap}>
-          <Ionicons name="search-outline" size={16} color={C.textSub} />
+          <Ionicons name="search-outline" size={16} color={c.textSub} />
         </View>
         <TextInput
           placeholder={placeholder}
-          placeholderTextColor={C.placeholder}
+          placeholderTextColor={c.placeholder}
           value={value}
           onChangeText={onChangeText}
           style={styles.searchInput}
@@ -54,7 +57,7 @@ export default function AssetListSearchBar({
         )}
         {!isSearching && value.length > 0 && (
           <Pressable onPress={onClear} style={styles.clearButton}>
-            <Ionicons name="close-circle" size={16} color={C.placeholder} />
+            <Ionicons name="close-circle" size={16} color={c.placeholder} />
           </Pressable>
         )}
       </View>
@@ -69,7 +72,11 @@ export default function AssetListSearchBar({
             {badgeText}
           </Text>
         </View>
-        <Text style={styles.summaryMeta} numberOfLines={1} allowFontScaling={false}>
+        <Text
+          style={styles.summaryMeta}
+          numberOfLines={1}
+          allowFontScaling={false}
+        >
           {summaryText}
         </Text>
       </View>

@@ -54,8 +54,8 @@ function AssetMenuDropdownItem({
   const route = useRoute<StackRoute<"Asset">>();
   const hasChildren = item.children?.length > 0;
   const expanded = expandedIds.includes(item.id);
-  const theme = getAssetMenuItemTheme(item, expanded);
   const colors = useAppColors();
+  const theme = getAssetMenuItemTheme(item, expanded, colors);
   const hairlineBorderColor = useHairlineBorderColor();
   const themeBackground = theme.iconImageUri
     ? colors.indigoSurface

@@ -1,3 +1,4 @@
+import { AppColors, useStyles } from "../../utils/helpers/colors";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
@@ -14,10 +15,7 @@ import {
   useNavigation,
   useFocusEffect,
 } from "@react-navigation/native";
-import type {
-  QrReviewNavigationProp,
-  StackRoute,
-} from "../../types/index";
+import type { QrReviewNavigationProp, StackRoute } from "../../types/index";
 import { mapPropertyResponseToPropertyClass } from "../../utils/helpers/propertyClass";
 import ListCardAsset from "../list/ListCardAsset";
 import IsLoading from "../ui/IconLoading";
@@ -38,7 +36,7 @@ import AssetListSearchBar from "../assets/shared/AssetListSearchBar";
 import AssetListSummaryCard from "../assets/shared/AssetListSummaryCard";
 import AssetListEmptyState from "../assets/shared/AssetListEmptyState";
 import { BRAND_RED } from "../assets/shared/listTheme";
-import { sharedAssetListStyles } from "../assets/shared/listStyles";
+import { makeSharedAssetListStyles } from "../assets/shared/listStyles";
 
 if (
   Platform.OS === "android" &&
@@ -48,14 +46,11 @@ if (
 }
 
 export default function QrReview() {
+  const styles = useStyles(makeStyles);
   const route = useRoute<StackRoute<"QrReview">>();
   const navigation = useNavigation<QrReviewNavigationProp>();
-  const {
-    nameClass,
-    idRoot,
-    propertyReference,
-    nameClassRoot,
-  } = route.params ?? {};
+  const { nameClass, idRoot, propertyReference, nameClassRoot } =
+    route.params ?? {};
   const hasRequiredParams = !!nameClass && !!idRoot && !!propertyReference;
 
   const conditions = useMemo(
@@ -167,12 +162,7 @@ export default function QrReview() {
     return null;
   }
 
-  if (
-    isLoading &&
-    !isRefreshingTop &&
-    !isLoadingMore &&
-    !isSearching
-  ) {
+  if (isLoading && !isRefreshingTop && !isLoadingMore && !isSearching) {
     return <IsLoading size="large" color={BRAND_RED} />;
   }
 
@@ -272,22 +262,23 @@ export default function QrReview() {
   );
 }
 
-const styles = StyleSheet.create({
-  listWrap: {
-    flex: 1,
-  },
-  list: {
-    flex: 1,
-  },
-  listContentEmpty: {
-    paddingTop: 0,
-    paddingBottom: 0,
-  },
-  emptyStateRoot: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 32,
-  },
-  ...sharedAssetListStyles,
-});
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    listWrap: {
+      flex: 1,
+    },
+    list: {
+      flex: 1,
+    },
+    listContentEmpty: {
+      paddingTop: 0,
+      paddingBottom: 0,
+    },
+    emptyStateRoot: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 32,
+    },
+    ...makeSharedAssetListStyles(c),
+  });

@@ -1,4 +1,8 @@
-import { C, useAccentBorderColors } from "../../../utils/helpers/colors";
+import {
+  AppColors,
+  useAccentBorderColors,
+  useStyles,
+} from "../../../utils/helpers/colors";
 import React from "react";
 import {
   StyleProp,
@@ -31,6 +35,7 @@ export default function AssetFormActionButton({
   variant = "primary",
   style,
 }: AssetFormActionButtonProps) {
+  const styles = useStyles(makeStyles);
   const accentBorders = useAccentBorderColors();
   const isPrimary = variant === "primary";
   const iconColor = isPrimary ? "#fff" : brandColor;
@@ -69,30 +74,31 @@ export default function AssetFormActionButton({
   );
 }
 
-const styles = StyleSheet.create({
-  button: {
-    paddingVertical: 10,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: 8,
-  },
-  secondaryButton: {
-    backgroundColor: C.surface,
-    borderWidth: 1,
-    borderColor: C.redBorder,
-  },
-  primaryButton: {},
-  primaryButtonDisabled: {
-    backgroundColor: C.borderStrong,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  primaryLabel: {
-    color: "#fff",
-  },
-  secondaryLabel: {},
-});
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    button: {
+      paddingVertical: 10,
+      borderRadius: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      flexDirection: "row",
+      gap: 8,
+    },
+    secondaryButton: {
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.redBorder,
+    },
+    primaryButton: {},
+    primaryButtonDisabled: {
+      backgroundColor: c.borderStrong,
+    },
+    label: {
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    primaryLabel: {
+      color: "#fff",
+    },
+    secondaryLabel: {},
+  });

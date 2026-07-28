@@ -27,13 +27,18 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import Orientation from "react-native-orientation-locker";
-import { C, useHairlineBorderColor } from "../../utils/helpers/colors";
+import {
+  useAppColors,
+  useHairlineBorderColor,
+  useStyles,
+} from "../../utils/helpers/colors";
 import { spacing } from "../../utils/helpers/tokens";
 import EmptyState from "../ui/EmptyState";
 import IsLoading from "../ui/IconLoading";
 import PlaybackDateSheet from "./shared/PlaybackDateSheet";
 import PlaybackSpeedSheet from "./shared/PlaybackSpeedSheet";
 import PlaybackTimeline from "./shared/PlaybackTimeline";
+import CameraStatusChip from "./shared/CameraStatusChip";
 import { useCameraViewToken } from "./shared/useCameraViewToken";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { buildCameraFullscreenHTML } from "./shared/cameraStreamHtml";
@@ -44,7 +49,14 @@ import {
   startCameraWebView,
   stopCameraWebView,
 } from "./shared/cameraWebViewMessaging";
-import { GO2RTC_HOST } from "./shared/cameraStreamConfig";
+import {
+  ANDROID_LIVE_ERROR_NOTICE_AFTER,
+  ANDROID_LIVE_RETRY_BASE_MS,
+  ANDROID_LIVE_RETRY_MAX_MS,
+  ANDROID_LIVE_STALE_AFTER_MS,
+  ANDROID_LIVE_WATCHDOG_INTERVAL_MS,
+  GO2RTC_HOST,
+} from "./shared/cameraStreamConfig";
 import { getCameraHlsUrl } from "./shared/cameraStreamUtils";
 import {
   addDays,
@@ -74,8 +86,8 @@ import {
 } from "../../services/data/playbackApi";
 import { warn } from "../../utils/Logger";
 import {
+  makeStyles,
   PLAYER_ASPECT_RATIO,
-  styles,
   TIMELINE_READING_OFFSET,
   TIMELINE_ROW_HEIGHT,
   TIMELINE_TOP_MARGIN,
@@ -90,18 +102,16 @@ const LIVE_RETURN_SCROLL_THRESHOLD = 24;
 const TIMELINE_SCALE_STEP = 0.25;
 const TIMELINE_SCALE_MIN = 0.5;
 const TIMELINE_SCALE_MAX = 2;
-const ANDROID_LIVE_WATCHDOG_INTERVAL_MS = 6000;
-const ANDROID_LIVE_STALE_AFTER_MS = 18000;
 /**
  * Camera chết/mất mạng thì onError bắn liên tục. Giãn dần thời gian thử lại để
  * không remount player mỗi 2s vô hạn (tốn pin, tốn data), và sau vài lần liên
  * tiếp thì nói cho người dùng biết thay vì để spinner xoay mãi.
  */
-const LIVE_RETRY_BASE_MS = 2000;
-const LIVE_RETRY_MAX_MS = 15000;
-const LIVE_ERROR_NOTICE_AFTER = 3;
 
 const CameraPlayback: React.FC = () => {
+  const c = useAppColors();
+  const styles = useStyles(makeStyles);
+  const colors = useAppColors();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
@@ -112,13 +122,13 @@ const CameraPlayback: React.FC = () => {
   const { camera } = route.params ?? {};
 
   const [selectedDate, setSelectedDate] = React.useState(() =>
-    startOfDay(new Date())
+    startOfDay(new Date()),
   );
   const [selectedStartTimeSec, setSelectedStartTimeSec] = React.useState<
     number | null
   >(null);
   const [pendingSeekSec, setPendingSeekSec] = React.useState<number | null>(
-    null
+    null,
   );
   const [activeGroupId, setActiveGroupId] = React.useState<string | null>(null);
   const [activeClipId, setActiveClipId] = React.useState<string | null>(null);
@@ -130,12 +140,12 @@ const CameraPlayback: React.FC = () => {
   const [isClipEnded, setIsClipEnded] = React.useState(false);
   const [positionSec, setPositionSec] = React.useState(0);
   const [speed, setSpeed] = React.useState<PlaybackSpeed>(
-    DEFAULT_PLAYBACK_SPEED
+    DEFAULT_PLAYBACK_SPEED,
   );
   const [isSpeedSheetVisible, setIsSpeedSheetVisible] = React.useState(false);
   const [isDateSheetVisible, setIsDateSheetVisible] = React.useState(false);
   const [viewMode, setViewMode] = React.useState<"timeline" | "grid">(
-    "timeline"
+    "timeline",
   );
   const [isFullscreen, setIsFullscreen] = React.useState(false);
   const [timelineScale, setTimelineScale] = React.useState(1);
@@ -151,7 +161,7 @@ const CameraPlayback: React.FC = () => {
   const [recordingDays, setRecordingDays] = React.useState<number[]>([]);
   const [isRecordingsLoading, setIsRecordingsLoading] = React.useState(true);
   const [recordingsError, setRecordingsError] = React.useState<string | null>(
-    null
+    null,
   );
   const [loadedRecordingsDayStartMs, setLoadedRecordingsDayStartMs] =
     React.useState<number | null>(null);
@@ -175,13 +185,15 @@ const CameraPlayback: React.FC = () => {
   const playbackStartMsRef = React.useRef<number | null>(null);
   const currentPositionRef = React.useRef(0);
   const webSocketRef = React.useRef<WebSocket | null>(null);
-  const pingTimerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+  const pingTimerRef = React.useRef<ReturnType<typeof setInterval> | null>(
+    null,
+  );
   const timelineSeekTimerRef = React.useRef<ReturnType<
     typeof setTimeout
   > | null>(null);
-  const liveRetryTimerRef = React.useRef<ReturnType<
-    typeof setTimeout
-  > | null>(null);
+  const liveRetryTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const isTimelineDraggingRef = React.useRef(false);
   const timelineDragGenerationRef = React.useRef(0);
   const timelineMomentumGenerationRef = React.useRef<number | null>(null);
@@ -201,7 +213,7 @@ const CameraPlayback: React.FC = () => {
   const handleAppActive = React.useCallback(() => setIsAppActive(true), []);
   const handleAppBackground = React.useCallback(
     () => setIsAppActive(false),
-    []
+    [],
   );
 
   const {
@@ -225,7 +237,7 @@ const CameraPlayback: React.FC = () => {
       return () => {
         clearTokenRefreshTimer();
       };
-    }, [clearTokenRefreshTimer, fetchCameraTokenRef])
+    }, [clearTokenRefreshTimer, fetchCameraTokenRef]),
   );
 
   // Suy ra từ đồng hồ live thay vì chốt lúc mount: nếu app mở qua nửa đêm thì
@@ -235,21 +247,20 @@ const CameraPlayback: React.FC = () => {
   const today = React.useMemo(() => new Date(todayMs), [todayMs]);
   const { dayStartMs, dayEndMs } = React.useMemo(
     () => getPlaybackDayRange(selectedDate),
-    [selectedDate]
+    [selectedDate],
   );
   const clipGroups = React.useMemo(
     () => buildPlaybackClipGroups(recordings, dayStartMs),
-    [dayStartMs, recordings]
+    [dayStartMs, recordings],
   );
 
   const activeGroup = React.useMemo(
     () => clipGroups.find((group) => group.id === activeGroupId) ?? null,
-    [activeGroupId, clipGroups]
+    [activeGroupId, clipGroups],
   );
   const activeClip = React.useMemo(
-    () =>
-      activeGroup?.clips.find((clip) => clip.id === activeClipId) ?? null,
-    [activeClipId, activeGroup]
+    () => activeGroup?.clips.find((clip) => clip.id === activeClipId) ?? null,
+    [activeClipId, activeGroup],
   );
 
   React.useEffect(() => {
@@ -324,7 +335,7 @@ const CameraPlayback: React.FC = () => {
         setIsConnecting(false);
       }
     },
-    [closePlaybackSocket]
+    [closePlaybackSocket],
   );
 
   const openPlaybackSocket = React.useCallback(
@@ -345,10 +356,9 @@ const CameraPlayback: React.FC = () => {
           socket.send(
             String(
               Math.round(
-                playbackStartMsRef.current +
-                  currentPositionRef.current * 1000
-              )
-            )
+                playbackStartMsRef.current + currentPositionRef.current * 1000,
+              ),
+            ),
           );
         };
 
@@ -356,10 +366,7 @@ const CameraPlayback: React.FC = () => {
           sendPosition();
           const positionIntervalMs =
             playbackSpeed >= 4 ? 500 : playbackSpeed >= 2 ? 1000 : 2000;
-          pingTimerRef.current = setInterval(
-            sendPosition,
-            positionIntervalMs
-          );
+          pingTimerRef.current = setInterval(sendPosition, positionIntervalMs);
         };
         socket.onclose = () => {
           if (pingTimerRef.current) clearInterval(pingTimerRef.current);
@@ -370,7 +377,7 @@ const CameraPlayback: React.FC = () => {
         warn("Playback WebSocket error:", error);
       }
     },
-    [closePlaybackSocket]
+    [closePlaybackSocket],
   );
 
   // Chỉ reset lựa chọn/player khi đổi camera hoặc đổi ngày. Refresh token
@@ -402,7 +409,7 @@ const CameraPlayback: React.FC = () => {
       camera.iD_Camera_Ma,
       cameraToken,
       dayStartMs,
-      dayEndMs
+      dayEndMs,
     )
       .then((nextRecordings) => {
         if (!cancelled) {
@@ -417,7 +424,7 @@ const CameraPlayback: React.FC = () => {
         setRecordingsError(
           error instanceof Error
             ? error.message
-            : "Không thể tải danh sách bản ghi."
+            : "Không thể tải danh sách bản ghi.",
         );
       })
       .finally(() => {
@@ -458,7 +465,7 @@ const CameraPlayback: React.FC = () => {
           camera.iD_Camera_Ma,
           cameraToken,
           range.dayStartMs,
-          range.dayEndMs
+          range.dayEndMs,
         );
         if (!cancelled) setRecordings(nextRecordings);
       } catch {
@@ -486,11 +493,10 @@ const CameraPlayback: React.FC = () => {
     () => () => {
       if (timelineSeekTimerRef.current)
         clearTimeout(timelineSeekTimerRef.current);
-      if (liveRetryTimerRef.current)
-        clearTimeout(liveRetryTimerRef.current);
+      if (liveRetryTimerRef.current) clearTimeout(liveRetryTimerRef.current);
       stopCurrentSession(false);
     },
-    [stopCurrentSession]
+    [stopCurrentSession],
   );
 
   /* ── Nút trên video: hiện vài giây rồi tự ẩn ─────────────────────── */
@@ -501,7 +507,7 @@ const CameraPlayback: React.FC = () => {
 
     const timer = setTimeout(
       () => setAreControlsVisible(false),
-      CONTROLS_AUTO_HIDE_MS
+      CONTROLS_AUTO_HIDE_MS,
     );
 
     return () => clearTimeout(timer);
@@ -524,8 +530,8 @@ const CameraPlayback: React.FC = () => {
       () => () => {
         stopCurrentSession();
       },
-      [stopCurrentSession]
-    )
+      [stopCurrentSession],
+    ),
   );
 
   /* ── Toàn màn hình = khoá ngang ──────────────────────────────────── */
@@ -552,7 +558,7 @@ const CameraPlayback: React.FC = () => {
         Orientation.lockToPortrait();
         setIsFullscreen(false);
         return true;
-      }
+      },
     );
 
     return () => subscription.remove();
@@ -595,7 +601,7 @@ const CameraPlayback: React.FC = () => {
             camera.iD_Camera_Ma,
             cameraToken,
             fromMs,
-            playbackEndMs
+            playbackEndMs,
           );
 
           if (requestId !== startRequestIdRef.current) {
@@ -610,7 +616,7 @@ const CameraPlayback: React.FC = () => {
         } catch (error) {
           if (attempt < 2) {
             await new Promise<void>((resolve) =>
-              setTimeout(() => resolve(), PLAYBACK_START_RETRY_MS)
+              setTimeout(() => resolve(), PLAYBACK_START_RETRY_MS),
             );
             continue;
           }
@@ -619,7 +625,7 @@ const CameraPlayback: React.FC = () => {
           setPlaybackError(
             error instanceof Error
               ? error.message
-              : "Không thể bắt đầu phát bản ghi."
+              : "Không thể bắt đầu phát bản ghi.",
           );
           setIsConnecting(false);
           setPlaybackSession(null);
@@ -634,7 +640,7 @@ const CameraPlayback: React.FC = () => {
       openPlaybackSocket,
       speed,
       stopCurrentSession,
-    ]
+    ],
   );
 
   const handleNetworkOffline = React.useCallback(() => {
@@ -645,7 +651,7 @@ const CameraPlayback: React.FC = () => {
         mode: "playback",
         fromMs: Math.min(
           playbackStartMs + currentPositionRef.current * 1000,
-          Math.max(playbackStartMs, clipEndMs - 1000)
+          Math.max(playbackStartMs, clipEndMs - 1000),
         ),
         endMs: clipEndMs,
       };
@@ -675,12 +681,7 @@ const CameraPlayback: React.FC = () => {
   });
 
   React.useEffect(() => {
-    if (
-      networkReconnectNonce === 0 ||
-      !cameraToken ||
-      !isScreenVisible
-    )
-      return;
+    if (networkReconnectNonce === 0 || !cameraToken || !isScreenVisible) return;
 
     const intent = reconnectIntentRef.current;
     if (!intent) return;
@@ -705,12 +706,7 @@ const CameraPlayback: React.FC = () => {
     postCameraWebViewToken(liveWebViewRef.current, cameraToken);
     startCameraWebView(liveWebViewRef.current);
     resumeCameraWebView(liveWebViewRef.current);
-  }, [
-    cameraToken,
-    isScreenVisible,
-    networkReconnectNonce,
-    startFrom,
-  ]);
+  }, [cameraToken, isScreenVisible, networkReconnectNonce, startFrom]);
 
   React.useEffect(() => {
     if (
@@ -737,13 +733,7 @@ const CameraPlayback: React.FC = () => {
     }, ANDROID_LIVE_WATCHDOG_INTERVAL_MS);
 
     return () => clearInterval(watchdog);
-  }, [
-    cameraToken,
-    isPaused,
-    isScreenVisible,
-    liveVideoKey,
-    playbackSession,
-  ]);
+  }, [cameraToken, isPaused, isScreenVisible, liveVideoKey, playbackSession]);
 
   const handleSelectGroup = React.useCallback(
     (group: PlaybackClipGroup, clipId?: string) => {
@@ -758,11 +748,11 @@ const CameraPlayback: React.FC = () => {
       const rawTimelineOffset = getTimelineOffsetForSec(
         clipGroups,
         clip.startSec,
-        rowHeight
+        rowHeight,
       );
       const scrollOffset = Math.max(
         0,
-        rawTimelineOffset - TIMELINE_READING_OFFSET + TIMELINE_TOP_MARGIN
+        rawTimelineOffset - TIMELINE_READING_OFFSET + TIMELINE_TOP_MARGIN,
       );
 
       if (timelineSeekTimerRef.current) {
@@ -790,7 +780,7 @@ const CameraPlayback: React.FC = () => {
         });
       }
     },
-    [clipGroups, startFrom, timelineScale, viewMode]
+    [clipGroups, startFrom, timelineScale, viewMode],
   );
 
   const getProgressRatioFromEvent = React.useCallback(
@@ -799,14 +789,14 @@ const CameraPlayback: React.FC = () => {
       if (width <= 0) return 0;
       return Math.min(1, Math.max(0, event.nativeEvent.locationX / width));
     },
-    []
+    [],
   );
 
   const handleProgressSeekMove = React.useCallback(
     (event: GestureResponderEvent) => {
       setProgressPreviewRatio(getProgressRatioFromEvent(event));
     },
-    [getProgressRatioFromEvent]
+    [getProgressRatioFromEvent],
   );
 
   const handleProgressSeekRelease = React.useCallback(
@@ -818,7 +808,7 @@ const CameraPlayback: React.FC = () => {
       // Không seek đúng endMs vì đó là biên ngoài của đoạn ghi.
       const seekableDurationMs = Math.max(
         0,
-        activeClip.endMs - activeClip.startMs - 1000
+        activeClip.endMs - activeClip.startMs - 1000,
       );
       const targetMs =
         activeClip.startMs + Math.round(seekableDurationMs * ratio);
@@ -831,7 +821,7 @@ const CameraPlayback: React.FC = () => {
       keepControlsVisible,
       playbackSession,
       startFrom,
-    ]
+    ],
   );
 
   // Thoát chế độ tua: bỏ bản ghi đang chọn, đưa timeline về mốc mới nhất và
@@ -881,7 +871,7 @@ const CameraPlayback: React.FC = () => {
       if (currentSession)
         openPlaybackSocket(currentSession.sessionId, nextSpeed);
     },
-    [openPlaybackSocket]
+    [openPlaybackSocket],
   );
 
   const handleChangeDate = React.useCallback((amount: number) => {
@@ -911,7 +901,7 @@ const CameraPlayback: React.FC = () => {
 
       setPendingSeekSec(startTimeSec);
     },
-    []
+    [],
   );
 
   const loadRecordingDays = React.useCallback(
@@ -922,11 +912,11 @@ const CameraPlayback: React.FC = () => {
         camera.iD_Camera_Ma,
         cameraToken,
         month.getFullYear(),
-        month.getMonth() + 1
+        month.getMonth() + 1,
       );
       setRecordingDays(days);
     },
-    [camera?.iD_Camera_Ma, cameraToken]
+    [camera?.iD_Camera_Ma, cameraToken],
   );
 
   const handleOpenDateSheet = React.useCallback(() => {
@@ -951,12 +941,9 @@ const CameraPlayback: React.FC = () => {
     });
   }, [timelineOffsetY, viewMode]);
 
-  const handleOpenGroup = React.useCallback(
-    (group: PlaybackClipGroup) => {
-      setOpenedGroupId(group.id);
-    },
-    []
-  );
+  const handleOpenGroup = React.useCallback((group: PlaybackClipGroup) => {
+    setOpenedGroupId(group.id);
+  }, []);
 
   const handleCloseGroup = React.useCallback(() => {
     setOpenedGroupId(null);
@@ -969,20 +956,22 @@ const CameraPlayback: React.FC = () => {
 
       viewOffsetsRef.current[viewMode] = nextOffset;
     },
-    [viewMode]
+    [viewMode],
   );
 
   const findClipAtMs = React.useCallback(
-    (targetMs: number): { clip: PlaybackClip; group: PlaybackClipGroup } | null => {
+    (
+      targetMs: number,
+    ): { clip: PlaybackClip; group: PlaybackClipGroup } | null => {
       for (const group of clipGroups) {
         const clip = group.clips.find(
-          (item) => targetMs >= item.startMs && targetMs <= item.endMs
+          (item) => targetMs >= item.startMs && targetMs <= item.endMs,
         );
         if (clip) return { clip, group };
       }
       return null;
     },
-    [clipGroups]
+    [clipGroups],
   );
 
   const commitTimelineSeek = React.useCallback(
@@ -993,7 +982,7 @@ const CameraPlayback: React.FC = () => {
       const targetSec = getScrubSecAtOffset(
         clipGroups,
         offsetY + TIMELINE_READING_OFFSET - TIMELINE_TOP_MARGIN,
-        rowHeight
+        rowHeight,
       );
       if (targetSec === null) return;
 
@@ -1012,9 +1001,9 @@ const CameraPlayback: React.FC = () => {
       startFrom(
         Math.max(
           target.clip.startMs,
-          Math.min(targetMs, target.clip.endMs - 1000)
+          Math.min(targetMs, target.clip.endMs - 1000),
         ),
-        target.clip.endMs
+        target.clip.endMs,
       ).catch(() => {});
       keepControlsVisible();
     },
@@ -1026,7 +1015,7 @@ const CameraPlayback: React.FC = () => {
       startFrom,
       timelineScale,
       viewMode,
-    ]
+    ],
   );
 
   const handleTimelineScrollBeginDrag = React.useCallback(() => {
@@ -1054,12 +1043,11 @@ const CameraPlayback: React.FC = () => {
         commitTimelineSeek(offsetY);
       }, 120);
     },
-    [commitTimelineSeek]
+    [commitTimelineSeek],
   );
 
   const handleTimelineMomentumBegin = React.useCallback(() => {
-    timelineMomentumGenerationRef.current =
-      timelineDragGenerationRef.current;
+    timelineMomentumGenerationRef.current = timelineDragGenerationRef.current;
     if (timelineSeekTimerRef.current) {
       clearTimeout(timelineSeekTimerRef.current);
       timelineSeekTimerRef.current = null;
@@ -1079,20 +1067,17 @@ const CameraPlayback: React.FC = () => {
       isTimelineDraggingRef.current = false;
       commitTimelineSeek(event.nativeEvent.contentOffset.y);
     },
-    [commitTimelineSeek]
+    [commitTimelineSeek],
   );
 
   const handleZoom = React.useCallback((amount: number) => {
     setTimelineScale((prev) =>
-      Math.min(TIMELINE_SCALE_MAX, Math.max(TIMELINE_SCALE_MIN, prev + amount))
+      Math.min(TIMELINE_SCALE_MAX, Math.max(TIMELINE_SCALE_MIN, prev + amount)),
     );
   }, []);
 
   React.useEffect(() => {
-    if (
-      pendingSeekSec === null ||
-      loadedRecordingsDayStartMs !== dayStartMs
-    )
+    if (pendingSeekSec === null || loadedRecordingsDayStartMs !== dayStartMs)
       return;
 
     if (clipGroups.length === 0) {
@@ -1105,11 +1090,11 @@ const CameraPlayback: React.FC = () => {
     const rawTimelineOffset = getTimelineOffsetForSec(
       clipGroups,
       pendingSeekSec,
-      rowHeight
+      rowHeight,
     );
     const scrollOffset = Math.max(
       0,
-      rawTimelineOffset - TIMELINE_READING_OFFSET + TIMELINE_TOP_MARGIN
+      rawTimelineOffset - TIMELINE_READING_OFFSET + TIMELINE_TOP_MARGIN,
     );
     const targetMs = dayStartMs + pendingSeekSec * 1000;
     const target = findClipAtMs(targetMs);
@@ -1125,9 +1110,9 @@ const CameraPlayback: React.FC = () => {
       startFrom(
         Math.max(
           target.clip.startMs,
-          Math.min(targetMs, target.clip.endMs - 1000)
+          Math.min(targetMs, target.clip.endMs - 1000),
         ),
-        target.clip.endMs
+        target.clip.endMs,
       ).catch(() => {});
     } else {
       setPlaybackError("Không có bản ghi tại thời điểm này.");
@@ -1151,7 +1136,7 @@ const CameraPlayback: React.FC = () => {
 
   if (!camera) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, { backgroundColor: colors.bg }]}>
         <EmptyState
           iconName="videocam-off-outline"
           title="Không có camera"
@@ -1163,7 +1148,7 @@ const CameraPlayback: React.FC = () => {
 
   if (tokenErrorMessage) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, { backgroundColor: colors.bg }]}>
         <EmptyState
           iconName="cloud-offline-outline"
           title="Không thể tải dữ liệu Camera"
@@ -1178,20 +1163,19 @@ const CameraPlayback: React.FC = () => {
   // Bottom sheet group bắt đầu sát dưới player để không che progress/loading.
   const groupSheetHeight = Math.max(
     320,
-    screenDims.height - insets.top - playerHeight
+    screenDims.height - insets.top - playerHeight,
   );
   const timelineRowHeight = Math.round(TIMELINE_ROW_HEIGHT * timelineScale);
   // Thời gian tại vạch đọc — cuộn xuống thì lùi dần về quá khứ.
   const scrubSec = getScrubSecAtOffset(
     clipGroups,
     timelineOffsetY + TIMELINE_READING_OFFSET - TIMELINE_TOP_MARGIN,
-    timelineRowHeight
+    timelineRowHeight,
   );
   // Đang tua khi đã chọn một bản ghi, hoặc đã cuộn timeline rời khỏi mốc mới nhất.
   const isSeeking =
     Boolean(activeGroup) ||
-    (viewMode === "timeline" &&
-      timelineOffsetY > LIVE_RETURN_SCROLL_THRESHOLD);
+    (viewMode === "timeline" && timelineOffsetY > LIVE_RETURN_SCROLL_THRESHOLD);
   const isSelectedToday = selectedDate.getTime() === today.getTime();
   const playbackClockSec =
     playbackSession && playbackStartMsRef.current !== null
@@ -1214,7 +1198,7 @@ const CameraPlayback: React.FC = () => {
   const cameraTitle = camera.iD_Camera_MoTa || camera.iD_Camera_Ma || "Camera";
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: colors.bg }]}>
       <StatusBar
         barStyle="light-content"
         backgroundColor="#000"
@@ -1260,44 +1244,29 @@ const CameraPlayback: React.FC = () => {
                 backBufferDurationMs: 90000,
               }}
               onLoad={() => {
-                if (
-                  sessionRef.current?.sessionId !==
-                  playbackSession.sessionId
-                )
+                if (sessionRef.current?.sessionId !== playbackSession.sessionId)
                   return;
                 setIsVideoReady(true);
                 setIsConnecting(false);
               }}
               onReadyForDisplay={() => {
-                if (
-                  sessionRef.current?.sessionId ===
-                  playbackSession.sessionId
-                )
+                if (sessionRef.current?.sessionId === playbackSession.sessionId)
                   setIsVideoReady(true);
               }}
               onProgress={({ currentTime }) => {
-                if (
-                  sessionRef.current?.sessionId !==
-                  playbackSession.sessionId
-                )
+                if (sessionRef.current?.sessionId !== playbackSession.sessionId)
                   return;
                 currentPositionRef.current = currentTime;
                 setPositionSec(currentTime);
               }}
               onEnd={() => {
-                if (
-                  sessionRef.current?.sessionId !==
-                  playbackSession.sessionId
-                )
+                if (sessionRef.current?.sessionId !== playbackSession.sessionId)
                   return;
                 setIsPaused(true);
                 setIsClipEnded(true);
               }}
               onError={(error) => {
-                if (
-                  sessionRef.current?.sessionId !==
-                  playbackSession.sessionId
-                )
+                if (sessionRef.current?.sessionId !== playbackSession.sessionId)
                   return;
                 warn("Playback video error:", error);
                 if (playbackStartMsRef.current !== null) {
@@ -1340,13 +1309,10 @@ const CameraPlayback: React.FC = () => {
               }}
               onLoad={() => {
                 lastLiveProgressAtRef.current = Date.now();
-                liveErrorCountRef.current = 0;
                 if (liveRetryTimerRef.current) {
                   clearTimeout(liveRetryTimerRef.current);
                   liveRetryTimerRef.current = null;
                 }
-                setIsVideoReady(true);
-                setPlaybackError(null);
               }}
               onReadyForDisplay={() => {
                 lastLiveProgressAtRef.current = Date.now();
@@ -1362,24 +1328,18 @@ const CameraPlayback: React.FC = () => {
                 const attempt = (liveErrorCountRef.current += 1);
                 setIsVideoReady(false);
                 setPlaybackError(
-                  attempt >= LIVE_ERROR_NOTICE_AFTER
+                  attempt >= ANDROID_LIVE_ERROR_NOTICE_AFTER
                     ? "Không thể phát camera trực tiếp. Đang thử lại..."
-                    : null
+                    : null,
                 );
 
                 if (liveRetryTimerRef.current)
                   clearTimeout(liveRetryTimerRef.current);
-                liveRetryTimerRef.current = setTimeout(
-                  () => {
-                    liveRetryTimerRef.current = null;
-                    lastLiveProgressAtRef.current = Date.now();
-                    setLiveVideoKey((value) => value + 1);
-                  },
-                  Math.min(
-                    LIVE_RETRY_MAX_MS,
-                    LIVE_RETRY_BASE_MS * 2 ** (attempt - 1)
-                  )
-                );
+                liveRetryTimerRef.current = setTimeout(() => {
+                  liveRetryTimerRef.current = null;
+                  lastLiveProgressAtRef.current = Date.now();
+                  setLiveVideoKey((value) => value + 1);
+                }, Math.min(ANDROID_LIVE_RETRY_MAX_MS, ANDROID_LIVE_RETRY_BASE_MS * 2 ** (attempt - 1)));
               }}
             />
           ) : (
@@ -1478,21 +1438,16 @@ const CameraPlayback: React.FC = () => {
               {/* Nhãn trạng thái: đang xem trực tiếp hay đang xem lại. Chỉ
                   mốc giờ, không kèm tên camera — OSD của đầu ghi thường in
                   chữ ở góc trên-trái khung hình. */}
-              <View style={styles.statusChip}>
-                <View
-                  style={[
-                    styles.statusChipDot,
-                    isSeeking && styles.statusChipDotIdle,
-                  ]}
-                />
-                <Text style={styles.statusChipText} allowFontScaling={false}>
-                  {isSeeking
+              <CameraStatusChip
+                isLive={!isSeeking}
+                label={
+                  isSeeking
                     ? displayedTimelineSec === null
                       ? "XEM LẠI"
                       : formatClock(displayedTimelineSec)
-                    : "TRỰC TIẾP"}
-                </Text>
-              </View>
+                    : "TRỰC TIẾP"
+                }
+              />
             </View>
           ) : null}
 
@@ -1516,9 +1471,7 @@ const CameraPlayback: React.FC = () => {
                   }
                 >
                   <Ionicons
-                    name={
-                      isClipEnded ? "refresh" : isPaused ? "play" : "pause"
-                    }
+                    name={isClipEnded ? "refresh" : isPaused ? "play" : "pause"}
                     size={22}
                     color="#fff"
                   />
@@ -1527,7 +1480,7 @@ const CameraPlayback: React.FC = () => {
                 {showPlaybackControls && activeClip ? (
                   <Text style={styles.playerClock} allowFontScaling={false}>
                     {`${formatElapsed(
-                      playbackOffsetSec + positionSec
+                      playbackOffsetSec + positionSec,
                     )} / ${formatElapsed(activeClip.durationSec)}`}
                   </Text>
                 ) : null}
@@ -1581,8 +1534,7 @@ const CameraPlayback: React.FC = () => {
             <View
               style={styles.progressScrubber}
               onLayout={(event) => {
-                progressTrackWidthRef.current =
-                  event.nativeEvent.layout.width;
+                progressTrackWidthRef.current = event.nativeEvent.layout.width;
               }}
               onStartShouldSetResponder={() =>
                 Boolean(activeClip && playbackSession && !isConnecting)
@@ -1649,7 +1601,7 @@ const CameraPlayback: React.FC = () => {
                 <Ionicons
                   name="chevron-back"
                   size={18}
-                  color={C.textSecondary}
+                  color={c.textSecondary}
                 />
               </TouchableOpacity>
               <TouchableOpacity
@@ -1661,7 +1613,7 @@ const CameraPlayback: React.FC = () => {
                 <Text style={styles.datePillText} allowFontScaling={false}>
                   {getPlaybackDateLabel(selectedDate, today)}
                 </Text>
-                <Ionicons name="funnel-outline" size={14} color={C.textSub} />
+                <Ionicons name="funnel-outline" size={14} color={c.textSub} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
@@ -1676,7 +1628,7 @@ const CameraPlayback: React.FC = () => {
                 <Ionicons
                   name="chevron-forward"
                   size={18}
-                  color={C.textSecondary}
+                  color={c.textSecondary}
                 />
               </TouchableOpacity>
             </View>
@@ -1700,14 +1652,14 @@ const CameraPlayback: React.FC = () => {
                     : "timeline-outline"
                 }
                 size={22}
-                color={viewMode === "grid" ? C.red : C.textSecondary}
+                color={viewMode === "grid" ? c.red : c.textSecondary}
               />
             </TouchableOpacity>
           </View>
 
           {playbackError ? (
             <View style={styles.playbackStatus}>
-              <Ionicons name="alert-circle-outline" size={18} color={C.red} />
+              <Ionicons name="alert-circle-outline" size={18} color={c.red} />
               <Text style={styles.playbackStatusText}>{playbackError}</Text>
             </View>
           ) : null}
@@ -1736,9 +1688,7 @@ const CameraPlayback: React.FC = () => {
                 cameraCode={camera.iD_Camera_Ma}
                 cameraId={camera.iD_Camera}
                 cameraToken={cameraToken}
-                emptySubtitle={
-                  "Chưa có bản ghi nào trong ngày đã chọn."
-                }
+                emptySubtitle={"Chưa có bản ghi nào trong ngày đã chọn."}
                 errorMessage={recordingsError}
                 groups={clipGroups}
                 groupSheetHeight={groupSheetHeight}
@@ -1792,7 +1742,7 @@ const CameraPlayback: React.FC = () => {
                   disabled={timelineScale >= TIMELINE_SCALE_MAX}
                   accessibilityLabel="Giãn timeline"
                 >
-                  <Ionicons name="add" size={22} color={C.textSecondary} />
+                  <Ionicons name="add" size={22} color={c.textSecondary} />
                 </TouchableOpacity>
                 <View style={styles.zoomDivider} />
                 <TouchableOpacity
@@ -1805,7 +1755,7 @@ const CameraPlayback: React.FC = () => {
                   disabled={timelineScale <= TIMELINE_SCALE_MIN}
                   accessibilityLabel="Thu timeline"
                 >
-                  <Ionicons name="remove" size={22} color={C.textSecondary} />
+                  <Ionicons name="remove" size={22} color={c.textSecondary} />
                 </TouchableOpacity>
               </View>
             ) : null}
@@ -1824,7 +1774,7 @@ const CameraPlayback: React.FC = () => {
                   activeOpacity={0.85}
                   accessibilityLabel="Quay lại xem trực tiếp"
                 >
-                  <Ionicons name="play-circle" size={20} color={C.onBrand} />
+                  <Ionicons name="play-circle" size={20} color={c.onBrand} />
                   <Text style={styles.liveButtonText} allowFontScaling={false}>
                     Xem trực tiếp
                   </Text>

@@ -13,7 +13,7 @@ import { TypeProperty } from "../../utils/Enum";
 import { convertToResizePath, fetchImage } from "../../utils/Image";
 import { getFieldValue } from "../../utils/fields/GetFieldValue";
 import { parseLink } from "../../utils/Link";
-import { C } from "../../utils/helpers/colors";
+import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
 import { normalizeIconImageUri } from "../../utils/iconImage";
 
 function ListCardAsset({
@@ -22,6 +22,8 @@ function ListCardAsset({
   icon,
   onPress = () => {},
 }: CardItemProps) {
+  const styles = useStyles(makeStyles);
+  const c = useAppColors();
   const iconImageUri = normalizeIconImageUri(icon);
   const imageFields = useMemo(
     () => fields.filter((f) => f.typeProperty === TypeProperty.Image),
@@ -53,7 +55,7 @@ function ListCardAsset({
           <Ionicons
             name={icon || "document-text-outline"}
             size={26}
-            color={C.red}
+            color={c.red}
           />
         )}
       </View>
@@ -113,59 +115,60 @@ function ListCardAsset({
 
 export default memo(ListCardAsset);
 
-const styles = StyleSheet.create({
-  card: {
-    flexDirection: "row",
-    backgroundColor: C.surface,
-    marginHorizontal: 12,
-    marginVertical: 6,
-    padding: 16,
-    borderRadius: 16,
-    elevation: 3,
-  },
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    card: {
+      flexDirection: "row",
+      backgroundColor: c.surface,
+      marginHorizontal: 12,
+      marginVertical: 6,
+      padding: 16,
+      borderRadius: 16,
+      elevation: 3,
+    },
 
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: C.blueSurface,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 16,
-  },
-  avatarImage: {
-    width: 30,
-    height: 30,
-    resizeMode: "contain",
-  },
+    avatar: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: c.blueSurface,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 16,
+    },
+    avatarImage: {
+      width: 30,
+      height: 30,
+      resizeMode: "contain",
+    },
 
-  info: { flex: 1 },
+    info: { flex: 1 },
 
-  block: {
-    marginBottom: 6,
-  },
+    block: {
+      marginBottom: 6,
+    },
 
-  bodyImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    marginTop: 4,
-    resizeMode: "cover",
-  },
+    bodyImage: {
+      width: 80,
+      height: 80,
+      borderRadius: 8,
+      marginTop: 4,
+      resizeMode: "cover",
+    },
 
-  text: {
-    fontSize: 14,
-    color: C.text,
-    marginBottom: 2,
-  },
+    text: {
+      fontSize: 14,
+      color: c.text,
+      marginBottom: 2,
+    },
 
-  label: {
-    fontWeight: "bold",
-    color: C.text,
-  },
+    label: {
+      fontWeight: "bold",
+      color: c.text,
+    },
 
-  link: {
-    color: "#1D4ED8",
-    textDecorationLine: "underline",
-  },
-});
+    link: {
+      color: "#1D4ED8",
+      textDecorationLine: "underline",
+    },
+  });

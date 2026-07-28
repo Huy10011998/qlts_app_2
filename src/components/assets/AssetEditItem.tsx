@@ -16,7 +16,12 @@ import {
   isEffectivelyEmptyCodeValue,
   parseCsv,
 } from "../../utils/helpers/string";
-import { C, useAccentBorderColors } from "../../utils/helpers/colors";
+import {
+  AppColors,
+  useAccentBorderColors,
+  useAppColors,
+  useStyles,
+} from "../../utils/helpers/colors";
 import { useParams } from "../../hooks/useParams";
 import { fetchImage, pickImage } from "../../utils/Image";
 import { fetchReferenceByFieldWithParent } from "../../utils/cascade/FetchReferenceByFieldWithParent";
@@ -51,15 +56,9 @@ import {
   getRequiredFieldsMessage,
 } from "./shared/assetFormValidation";
 import { createAssetFormBaseStyles } from "./shared/assetFormStyles";
-import {
-  ASSET_FORM_BG,
-  ASSET_FORM_BRAND_RED,
-  ASSET_FORM_CARD_SHADOW,
-} from "./shared/assetFormTheme";
+import { ASSET_FORM_BRAND_RED } from "./shared/assetFormTheme";
 
 const BRAND_RED = ASSET_FORM_BRAND_RED;
-const BG = ASSET_FORM_BG;
-const CARD_SHADOW = ASSET_FORM_CARD_SHADOW;
 
 const normalizeComparableValue = (value: any) => {
   if (value === undefined || value === "") return null;
@@ -106,8 +105,7 @@ const buildUpdateEntity = (
   const entity: Record<string, any> = baseValues ? { ...baseValues } : {};
 
   fields.forEach((field) => {
-    const valueSource =
-      field.isReadOnly && baseValues ? baseValues : values;
+    const valueSource = field.isReadOnly && baseValues ? baseValues : values;
     const matchedKey = getMatchedKey(valueSource, field.name);
     const value = matchedKey
       ? valueSource[matchedKey]
@@ -123,7 +121,10 @@ const buildUpdateEntity = (
   return entity;
 };
 
-const areUpdateValuesEqual = (a: Record<string, any>, b: Record<string, any>) => {
+const areUpdateValuesEqual = (
+  a: Record<string, any>,
+  b: Record<string, any>,
+) => {
   const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
 
   for (const key of keys) {
@@ -136,19 +137,19 @@ const areUpdateValuesEqual = (a: Record<string, any>, b: Record<string, any>) =>
 };
 
 export default function AssetEditItem() {
+  const styles = useStyles(makeStyles);
+  const c = useAppColors();
   const accentBorders = useAccentBorderColors();
   const { item, field, nameClass } = useParams();
   const navigation = useNavigation<AssetEditItemNavigationProp>();
   const dispatch = useAppDispatch();
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [originalItem, setOriginalItem] = useState<Record<string, any>>(
-    item ? { ...item } : {}
+    item ? { ...item } : {},
   );
 
   const [enumData, setEnumData] = useState<Record<string, any[]>>({});
-  const [referenceData, setReferenceData] = useState<
-    ReferenceDataMap
-  >({});
+  const [referenceData, setReferenceData] = useState<ReferenceDataMap>({});
   const [modalVisible, setModalVisible] = useState(false);
   const [activeEnumField, setActiveEnumField] = useState<Field | null>(null);
   const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>(
@@ -264,7 +265,7 @@ export default function AssetEditItem() {
     fieldActive,
     setEnumData,
     setReferenceData,
-    referenceData
+    referenceData,
   );
 
   useEffect(() => {
@@ -279,7 +280,7 @@ export default function AssetEditItem() {
             f.referenceName!,
             f.name,
             parentValues,
-            setReferenceData
+            setReferenceData,
           );
         }
       }
@@ -332,7 +333,7 @@ export default function AssetEditItem() {
     activeEnumField,
     referenceData,
     enumData,
-    formData
+    formData,
   );
   const { showAlertIfActive } = useSafeAlert();
 
@@ -354,7 +355,7 @@ export default function AssetEditItem() {
         expandGroupsWithErrors(requiredErrors);
         Alert.alert(
           "Thiếu thông tin",
-          getRequiredFieldsMessage(fieldActive, requiredErrors)
+          getRequiredFieldsMessage(fieldActive, requiredErrors),
         );
         return;
       }
@@ -410,7 +411,7 @@ export default function AssetEditItem() {
       setValidationErrors(getApiValidationFieldErrors(err));
       showAlertIfActive(
         "Lỗi",
-        getApiErrorMessage(err, "Không thể cập nhật dữ liệu!")
+        getApiErrorMessage(err, "Không thể cập nhật dữ liệu!"),
       );
     }
   };
@@ -462,7 +463,7 @@ export default function AssetEditItem() {
       }
     >
       <AssetFormHeroCard
-        iconBgColor={C.indigoSurface}
+        iconBgColor={c.indigoSurface}
         iconColor="#3B5BDB"
         iconName="create-outline"
         styles={styles}
@@ -499,13 +500,10 @@ export default function AssetEditItem() {
   );
 }
 
-const styles = StyleSheet.create({
-  ...createAssetFormBaseStyles({
-    backgroundColor: BG,
-    brandColor: BRAND_RED,
-    cardShadow: CARD_SHADOW,
-  }),
-  heroIconWrap: {
-    backgroundColor: C.indigoSurface,
-  },
-});
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    ...createAssetFormBaseStyles(c),
+    heroIconWrap: {
+      backgroundColor: c.indigoSurface,
+    },
+  });

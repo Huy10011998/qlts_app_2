@@ -2,8 +2,11 @@ import React from "react";
 import { Text, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { BRAND_RED } from "./listTheme";
-import { sharedAssetListStyles as styles } from "./listStyles";
-import { useHairlineBorderColor } from "../../../utils/helpers/colors";
+import { makeSharedAssetListStyles } from "./listStyles";
+import {
+  useHairlineBorderColor,
+  useStyles,
+} from "../../../utils/helpers/colors";
 
 type AssetListSummaryCardProps = {
   iconName: string;
@@ -16,6 +19,7 @@ export default function AssetListSummaryCard({
   title,
   subtitle,
 }: AssetListSummaryCardProps) {
+  const styles = useStyles(makeSharedAssetListStyles);
   const hairlineBorderColor = useHairlineBorderColor();
 
   return (
@@ -32,7 +36,11 @@ export default function AssetListSummaryCard({
           >
             {title}
           </Text>
-          <Text style={styles.filterCardSub} numberOfLines={1} allowFontScaling={false}>
+          <Text
+            style={styles.filterCardSub}
+            numberOfLines={1}
+            allowFontScaling={false}
+          >
             {subtitle}
           </Text>
         </View>

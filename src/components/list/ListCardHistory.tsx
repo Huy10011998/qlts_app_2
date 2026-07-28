@@ -3,10 +3,16 @@ import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
 import type { CardItemProps } from "../../types";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { formatDate } from "../../utils/Date";
-import { C } from "../../utils/helpers/colors";
+import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
 import { normalizeIconImageUri } from "../../utils/iconImage";
 
-export default function ListCardHistory({ item, icon, onPress }: CardItemProps) {
+export default function ListCardHistory({
+  item,
+  icon,
+  onPress,
+}: CardItemProps) {
+  const styles = useStyles(makeStyles);
+  const c = useAppColors();
   const ngayTaoCapNhat = item?.log_StartDate;
   const iconImageUri = normalizeIconImageUri(icon);
 
@@ -16,7 +22,7 @@ export default function ListCardHistory({ item, icon, onPress }: CardItemProps) 
         {iconImageUri ? (
           <Image source={{ uri: iconImageUri }} style={styles.avatarImage} />
         ) : (
-          <Ionicons name="time-outline" size={26} color={C.red} />
+          <Ionicons name="time-outline" size={26} color={c.red} />
         )}
       </View>
 
@@ -35,37 +41,38 @@ export default function ListCardHistory({ item, icon, onPress }: CardItemProps) 
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    flexDirection: "row",
-    backgroundColor: C.surface,
-    marginHorizontal: 12,
-    marginVertical: 6,
-    padding: 16,
-    borderRadius: 16,
-    shadowColor: C.shadow,
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 6,
-    elevation: 3,
-  },
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    card: {
+      flexDirection: "row",
+      backgroundColor: c.surface,
+      marginHorizontal: 12,
+      marginVertical: 6,
+      padding: 16,
+      borderRadius: 16,
+      shadowColor: c.shadow,
+      shadowOpacity: 0.08,
+      shadowOffset: { width: 0, height: 2 },
+      shadowRadius: 6,
+      elevation: 3,
+    },
 
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: C.blueSurface,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 16,
-  },
-  avatarImage: {
-    width: 30,
-    height: 30,
-    resizeMode: "contain",
-  },
+    avatar: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: c.blueSurface,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 16,
+    },
+    avatarImage: {
+      width: 30,
+      height: 30,
+      resizeMode: "contain",
+    },
 
-  info: { flex: 1 },
-  text: { fontSize: 14, color: C.text, marginBottom: 4, paddingTop: 5 },
-  label: { fontWeight: "bold", color: C.text, fontSize: 14 },
-});
+    info: { flex: 1 },
+    text: { fontSize: 14, color: c.text, marginBottom: 4, paddingTop: 5 },
+    label: { fontWeight: "bold", color: c.text, fontSize: 14 },
+  });

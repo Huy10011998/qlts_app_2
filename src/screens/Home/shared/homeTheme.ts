@@ -1,46 +1,51 @@
-import { C } from "../../../utils/helpers/colors";
+import { AppColors, C } from "../../../utils/helpers/colors";
 
 export const HOME_BRAND_RED = C.red;
-export const HOME_BG = C.bg;
 
-export const HOME_CARD_THEME: Record<
-  string,
-  { bg: string; iconBg: string; color: string; accent: string }
-> = {
+type HomeCardTheme = {
+  bg: string;
+  iconBg: string;
+  color: string;
+  accent: string;
+};
+
+export const makeHomeCardTheme = (
+  c: AppColors,
+): Record<string, HomeCardTheme> => ({
   TaiSan: {
-    bg: C.surface,
-    iconBg: C.redIconSurface,
-    color: C.redLight,
+    bg: c.surface,
+    iconBg: c.redIconSurface,
+    color: c.redLight,
     accent: "#FF6B6B",
   },
   NoiDia: {
-    bg: C.surface,
-    iconBg: C.tealSurface,
-    color: C.emerald,
+    bg: c.surface,
+    iconBg: c.tealSurface,
+    color: c.emerald,
     accent: "#14B8A6",
   },
   BHLD: {
-    bg: C.surface,
-    iconBg: C.orangeSurface,
-    color: C.amber,
+    bg: c.surface,
+    iconBg: c.orangeSurface,
+    color: c.amber,
     accent: "#F97316",
   },
   Camera: {
-    bg: C.surface,
-    iconBg: C.indigoSurface,
-    color: C.blue,
+    bg: c.surface,
+    iconBg: c.indigoSurface,
+    color: c.blue,
     accent: "#748FFC",
   },
   DHCD: {
-    bg: C.surface,
-    iconBg: C.violetSurface,
-    color: C.violet,
+    bg: c.surface,
+    iconBg: c.violetSurface,
+    color: c.violet,
     accent: "#8B5CF6",
   },
   default: {
-    bg: C.surface,
-    iconBg: C.orangeSurface,
-    color: C.amber,
+    bg: c.surface,
+    iconBg: c.orangeSurface,
+    color: c.amber,
     accent: "#FFA94D",
   },
-};
+});

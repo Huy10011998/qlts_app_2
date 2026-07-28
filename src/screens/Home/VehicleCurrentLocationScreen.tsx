@@ -25,7 +25,12 @@ import { error, log } from "../../utils/Logger";
 import { VEHICLE_MAP_CONTROL_CSS } from "./shared/vehicleMapControlStyles";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { useForegroundWebViewRemount } from "./shared/useForegroundWebViewRemount";
-import { C, useStrongBorderColor } from "../../utils/helpers/colors";
+import {
+  AppColors,
+  useAppColors,
+  useStrongBorderColor,
+  useStyles,
+} from "../../utils/helpers/colors";
 
 type Vehicle = Record<string, unknown> & { id?: string | number };
 type VehicleListResponse = { data?: { items?: Vehicle[] } };
@@ -97,7 +102,7 @@ const trackingIdOf = (item: Vehicle | null) =>
     : "";
 
 const normalizeLocation = (
-  response: CurrentLocationResponse
+  response: CurrentLocationResponse,
 ): CurrentLocation | null => {
   const raw =
     response && typeof response === "object" && "data" in response
@@ -141,16 +146,18 @@ const formatLocationTime = (value?: string | null) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return `${String(date.getHours()).padStart(2, "0")}:${String(
-    date.getMinutes()
+    date.getMinutes(),
   ).padStart(2, "0")}:${String(date.getSeconds()).padStart(2, "0")} ${String(
-    date.getDate()
+    date.getDate(),
   ).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(
     2,
-    "0"
+    "0",
   )}/${date.getFullYear()}`;
 };
 
 export default function VehicleCurrentLocationScreen() {
+  const styles = useStyles(makeStyles);
+  const c = useAppColors();
   const isFocused = useIsFocused();
   const strongBorderColor = useStrongBorderColor();
   const webViewRef = useRef<WebView>(null);
@@ -177,7 +184,7 @@ export default function VehicleCurrentLocationScreen() {
       }))
       .filter(
         (item) =>
-          !keyword || item.text.toLocaleLowerCase("vi").includes(keyword)
+          !keyword || item.text.toLocaleLowerCase("vi").includes(keyword),
       );
     return keyword
       ? filtered
@@ -192,7 +199,7 @@ export default function VehicleCurrentLocationScreen() {
     try {
       const response = await getPhuongTien<VehicleListResponse>();
       setVehicles(
-        Array.isArray(response?.data?.items) ? response.data.items : []
+        Array.isArray(response?.data?.items) ? response.data.items : [],
       );
       setLoadError(false);
     } catch (exception) {
@@ -217,7 +224,7 @@ export default function VehicleCurrentLocationScreen() {
       try {
         const response =
           await getPhuongTienCurrentLocation<CurrentLocationResponse>(
-            trackingId
+            trackingId,
           );
         if (requestVersion !== requestVersionRef.current) return;
         const nextLocation = normalizeLocation(response);
@@ -236,7 +243,7 @@ export default function VehicleCurrentLocationScreen() {
         }
       }
     },
-    [trackingId]
+    [trackingId],
   );
 
   useEffect(() => {
@@ -267,7 +274,7 @@ export default function VehicleCurrentLocationScreen() {
         networkAvailableRef.current = false;
         setLoadError(true);
       },
-    }
+    },
   );
 
   const pushLocationToMap = useCallback(() => {
@@ -276,7 +283,7 @@ export default function VehicleCurrentLocationScreen() {
       `window.updateVehicleLocation(${JSON.stringify({
         ...location,
         dateTime: formatLocationTime(location.dateTime),
-      })});true;`
+      })});true;`,
     );
   }, [location]);
 
@@ -287,7 +294,7 @@ export default function VehicleCurrentLocationScreen() {
   if (vehiclesLoading) {
     return (
       <View style={styles.centerState}>
-        <ActivityIndicator color={C.red} />
+        <ActivityIndicator color={c.red} />
         <Text style={styles.loadingText}>Đang tải phương tiện...</Text>
       </View>
     );
@@ -301,7 +308,7 @@ export default function VehicleCurrentLocationScreen() {
           style={styles.select}
           onPress={() => setPickerVisible(true)}
         >
-          <Ionicons name="car-outline" size={20} color={C.textSecondary} />
+          <Ionicons name="car-outline" size={20} color={c.textSecondary} />
           <Text
             style={[
               styles.selectText,
@@ -311,7 +318,7 @@ export default function VehicleCurrentLocationScreen() {
           >
             {selectedVehicle ? vehicleLabel(selectedVehicle) : "Phương tiện"}
           </Text>
-          <Ionicons name="chevron-down" size={18} color={C.textSecondary} />
+          <Ionicons name="chevron-down" size={18} color={c.textSecondary} />
         </TouchableOpacity>
       </View>
 
@@ -335,7 +342,7 @@ export default function VehicleCurrentLocationScreen() {
         </View>
       ) : locationLoading ? (
         <View style={styles.flexState}>
-          <ActivityIndicator color={C.red} />
+          <ActivityIndicator color={c.red} />
           <Text style={styles.loadingText}>Đang tải vị trí hiện tại...</Text>
         </View>
       ) : !location ? (
@@ -384,7 +391,7 @@ export default function VehicleCurrentLocationScreen() {
             <Text style={styles.infoValue}>{location.address || "-"}</Text>
 
             <View style={styles.liveRow}>
-              <Ionicons name="sync-outline" size={16} color={C.green} />
+              <Ionicons name="sync-outline" size={16} color={c.green} />
               <Text style={styles.liveText}>Tự động cập nhật mỗi 5 giây</Text>
             </View>
           </View>
@@ -424,7 +431,7 @@ export default function VehicleCurrentLocationScreen() {
           } else {
             const index = vehicles.findIndex(
               (item, itemIndex) =>
-                String(item.id ?? itemIndex) === String(value)
+                String(item.id ?? itemIndex) === String(value),
             );
             if (index >= 0) setSelectedVehicle(vehicles[index]);
           }
@@ -436,71 +443,77 @@ export default function VehicleCurrentLocationScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.surfaceAlt },
-  centerState: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: C.surfaceAlt,
-  },
-  flexState: { flex: 1, alignItems: "center", justifyContent: "center" },
-  loadingText: { color: C.textSecondary, fontSize: 13, marginTop: 9 },
-  filterWrap: { paddingHorizontal: 16, paddingTop: 8 },
-  label: { color: C.text, fontSize: 13, fontWeight: "600", marginBottom: 7 },
-  select: {
-    minHeight: 48,
-    borderWidth: 1,
-    borderColor: C.borderStrong,
-    borderRadius: 8,
-    backgroundColor: C.surface,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 12,
-    paddingVertical: 0,
-    marginBottom: 12,
-  },
-  selectText: { flex: 1, color: C.text, fontSize: 14, marginHorizontal: 10 },
-  placeholderText: { color: C.textMuted },
-  infoCard: {
-    marginHorizontal: 16,
-    marginBottom: 10,
-    padding: 13,
-    borderWidth: 1,
-    borderColor: C.borderStrong,
-    borderRadius: 12,
-    backgroundColor: C.surface,
-  },
-  vehicleHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  vehicleName: { flexShrink: 1, color: C.text, fontSize: 16, fontWeight: "700" },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 10,
-  },
-  statusBadgeText: { color: C.onBrand, fontSize: 12, fontWeight: "600" },
-  infoLabel: {
-    color: C.red,
-    fontSize: 11,
-    fontWeight: "700",
-    marginTop: 9,
-  },
-  infoValue: { color: C.text, fontSize: 13, lineHeight: 18, marginTop: 2 },
-  liveRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 11,
-  },
-  liveText: {
-    color: C.green,
-    fontSize: 12,
-    fontWeight: "600",
-    marginLeft: 7,
-  },
-  map: { flex: 1, backgroundColor: C.border },
-});
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    root: { flex: 1, backgroundColor: c.surfaceAlt },
+    centerState: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: c.surfaceAlt,
+    },
+    flexState: { flex: 1, alignItems: "center", justifyContent: "center" },
+    loadingText: { color: c.textSecondary, fontSize: 13, marginTop: 9 },
+    filterWrap: { paddingHorizontal: 16, paddingTop: 8 },
+    label: { color: c.text, fontSize: 13, fontWeight: "600", marginBottom: 7 },
+    select: {
+      minHeight: 48,
+      borderWidth: 1,
+      borderColor: c.borderStrong,
+      borderRadius: 8,
+      backgroundColor: c.surface,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 12,
+      paddingVertical: 0,
+      marginBottom: 12,
+    },
+    selectText: { flex: 1, color: c.text, fontSize: 14, marginHorizontal: 10 },
+    placeholderText: { color: c.textMuted },
+    infoCard: {
+      marginHorizontal: 16,
+      marginBottom: 10,
+      padding: 13,
+      borderWidth: 1,
+      borderColor: c.borderStrong,
+      borderRadius: 12,
+      backgroundColor: c.surface,
+    },
+    vehicleHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    vehicleName: {
+      flexShrink: 1,
+      color: c.text,
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    statusBadge: {
+      paddingHorizontal: 10,
+      paddingVertical: 3,
+      borderRadius: 10,
+    },
+    statusBadgeText: { color: c.onBrand, fontSize: 12, fontWeight: "600" },
+    infoLabel: {
+      color: c.red,
+      fontSize: 11,
+      fontWeight: "700",
+      marginTop: 9,
+    },
+    infoValue: { color: c.text, fontSize: 13, lineHeight: 18, marginTop: 2 },
+    liveRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: 11,
+    },
+    liveText: {
+      color: c.green,
+      fontSize: 12,
+      fontWeight: "600",
+      marginLeft: 7,
+    },
+    map: { flex: 1, backgroundColor: c.border },
+  });

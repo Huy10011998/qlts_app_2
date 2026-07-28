@@ -23,7 +23,7 @@ import IsLoading from "../../components/ui/IconLoading";
 import EmptyState from "../../components/ui/EmptyState";
 import { getVungCamera } from "../../services/data/callApi";
 import { error } from "../../utils/Logger";
-import { C } from "../../utils/helpers/colors";
+import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import CameraMenuDropdownItem from "./shared/CameraMenuDropdownItem";
@@ -33,10 +33,7 @@ import {
   CameraItem,
   filterCameraTree,
 } from "./shared/cameraMenuHelpers";
-import {
-  CAMERA_MENU_BG,
-  CAMERA_MENU_BRAND_RED,
-} from "./shared/cameraMenuTheme";
+import { CAMERA_MENU_BRAND_RED } from "./shared/cameraMenuTheme";
 
 if (
   Platform.OS === "android" &&
@@ -46,6 +43,8 @@ if (
 }
 
 export default function CameraScreen() {
+  const styles = useStyles(makeStyles);
+  const c = useAppColors();
   const isFocused = useIsFocused();
   const { canView, loaded } = usePermission();
   const hasViewPermission = loaded && canView("Camera");
@@ -75,7 +74,9 @@ export default function CameraScreen() {
 
       try {
         const response: any = await getVungCamera();
-        const nextData = Array.isArray(response?.data) ? [...response.data] : [];
+        const nextData = Array.isArray(response?.data)
+          ? [...response.data]
+          : [];
 
         setRawData(nextData);
         setData(buildCameraTree(nextData));
@@ -83,7 +84,7 @@ export default function CameraScreen() {
       } catch (e) {
         error("API error:", e);
         setLoadErrorMessage(
-          "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại."
+          "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại.",
         );
       } finally {
         fetchingRef.current = false;
@@ -93,7 +94,7 @@ export default function CameraScreen() {
         }
       }
     },
-    [isMounted]
+    [isMounted],
   );
 
   const refreshTop = async () => {
@@ -125,15 +126,15 @@ export default function CameraScreen() {
       refetchOnAppResume: false,
       onOffline: () => {
         setLoadErrorMessage(
-          "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại."
+          "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại.",
         );
       },
-    }
+    },
   );
 
   const { filteredTree, autoExpand } = useMemo(
     () => filterCameraTree(data, debouncedSearch),
-    [debouncedSearch, data]
+    [debouncedSearch, data],
   );
 
   useEffect(() => {
@@ -148,7 +149,7 @@ export default function CameraScreen() {
     }
 
     setExpandedIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
   };
 
@@ -234,7 +235,7 @@ export default function CameraScreen() {
             <RefreshControl
               refreshing={isRefreshingTop}
               onRefresh={refreshTop}
-              colors={[C.red]}
+              colors={[c.red]}
               tintColor={CAMERA_MENU_BRAND_RED}
               progressViewOffset={50}
             />
@@ -258,24 +259,25 @@ export default function CameraScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: CAMERA_MENU_BG,
-  },
-  listContent: {
-    flexGrow: 1,
-    paddingHorizontal: 14,
-    paddingTop: 4,
-    paddingBottom: 24,
-  },
-  listContentEmpty: {
-    paddingTop: 0,
-    paddingBottom: 0,
-  },
-  centerState: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 32,
-  },
-});
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.bg,
+    },
+    listContent: {
+      flexGrow: 1,
+      paddingHorizontal: 14,
+      paddingTop: 4,
+      paddingBottom: 24,
+    },
+    listContentEmpty: {
+      paddingTop: 0,
+      paddingBottom: 0,
+    },
+    centerState: {
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 32,
+    },
+  });
