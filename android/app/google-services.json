@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "557212653738",
-    "project_id": "qlts-2",
-    "storage_bucket": "qlts-2.firebasestorage.app"
+    "project_number": "658864459072",
+    "project_id": "qlts-2fe12",
+    "storage_bucket": "qlts-2fe12.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:557212653738:android:7d8e5684fd0b8d530d98d3",
+        "mobilesdk_app_id": "1:658864459072:android:a71d861eb29ffedad8bea5",
         "android_client_info": {
           "package_name": "com.qlts_app_2"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAaUBsupHG_fquZNmMSNls5x94BvkoIDCE"
+          "current_key": "AIzaSyDghXIYbrv7C8SKvlGUl9uXf4p5pbBtGS4"
         }
       ],
       "services": {

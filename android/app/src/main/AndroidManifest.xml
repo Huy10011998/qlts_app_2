@@ -18,8 +18,22 @@
     android:roundIcon="@mipmap/ic_launcher_round"
     android:allowBackup="false"
     android:supportsRtl="true"
-    android:usesCleartextTraffic="true" 
+    android:usesCleartextTraffic="true"
     >
+
+    <!-- FCM: khi app ở background/quit, notification do OS tự dựng (không qua JS)
+         nên channel/icon/màu phải khai báo ở đây. channel id phải trùng
+         DEFAULT_CHANNEL_ID trong src/services/notifications/constants.ts, và
+         channel đó được tạo bằng notifee lúc app khởi động. -->
+    <meta-data
+        android:name="com.google.firebase.messaging.default_notification_channel_id"
+        android:value="qlts_default" />
+    <meta-data
+        android:name="com.google.firebase.messaging.default_notification_icon"
+        android:resource="@drawable/ic_notification" />
+    <meta-data
+        android:name="com.google.firebase.messaging.default_notification_color"
+        android:resource="@color/notification_color" />
 
     <activity
         android:name=".MainActivity"

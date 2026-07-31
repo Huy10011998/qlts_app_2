@@ -53,4 +53,22 @@ export const API_ENDPOINTS = {
   GET_PHUONG_TIEN_HANH_TRINH_GPS: `${BASE_URL}/PhuongTien_HanhTrinh_GPS/get-list`,
   GET_PHUONG_TIEN_TRACKING: `${BASE_URL}/PhuongTien_Tracking/get-list`,
   GET_PHUONG_TIEN_CURRENT_LOCATION: `${BASE_URL}/PhuongTien/vi-tri-hien-tai`,
+
+  // PUSH NOTIFICATION
+  // ⚠️ Đường dẫn tạm — BE chưa xong. Sửa lại đúng path rồi bật
+  // PUSH_NOTIFICATION_API_READY bên dưới.
+  REGISTER_DEVICE_TOKEN: `${BASE_URL}/Notification/register-device`,
+  UNREGISTER_DEVICE_TOKEN: `${BASE_URL}/Notification/unregister-device`,
 };
+
+/**
+ * Công tắc cho phần gọi API đăng ký device token.
+ *
+ * Đang false vì BE chưa có endpoint: toàn bộ luồng nhận & hiển thị thông báo vẫn
+ * chạy đầy đủ (xin quyền, lấy FCM token, hiển thị, bấm để điều hướng), chỉ riêng
+ * bước gửi token lên server bị bỏ qua và ghi log. Nhờ vậy app không bị spam lỗi
+ * 404 trong lúc chờ BE.
+ *
+ * Khi BE xong: sửa 2 path ở trên cho đúng rồi đổi cờ này thành true.
+ */
+export const PUSH_NOTIFICATION_API_READY = false;

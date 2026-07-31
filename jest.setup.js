@@ -23,31 +23,71 @@ jest.mock('react-native-device-info', () => ({
     getBuildNumber: jest.fn(() => '1'),
     getDeviceId: jest.fn(() => 'test-device'),
     getUniqueId: jest.fn(async () => 'test-unique-id'),
+    getModel: jest.fn(() => 'test-model'),
+    getSystemVersion: jest.fn(() => '17.0'),
   },
 }));
 
-jest.mock('@react-native-firebase/messaging', () => ({
-  __esModule: true,
-  default: () => ({
+// App dùng modular API của @react-native-firebase/messaging (v22+), nên mock phải
+// export các hàm rời chứ không chỉ default namespaced instance.
+jest.mock('@react-native-firebase/messaging', () => {
+  const messagingInstance = {
     onMessage: jest.fn(() => jest.fn()),
     onNotificationOpenedApp: jest.fn(() => jest.fn()),
     getInitialNotification: jest.fn(async () => null),
     requestPermission: jest.fn(async () => 1),
     getToken: jest.fn(async () => 'test-token'),
     setBackgroundMessageHandler: jest.fn(),
-  }),
-}));
+  };
+
+  return {
+    __esModule: true,
+    default: () => messagingInstance,
+    AuthorizationStatus: {
+      NOT_DETERMINED: -1,
+      DENIED: 0,
+      AUTHORIZED: 1,
+      PROVISIONAL: 2,
+      EPHEMERAL: 3,
+    },
+    getMessaging: jest.fn(() => messagingInstance),
+    getToken: jest.fn(async () => 'test-token'),
+    getAPNSToken: jest.fn(async () => 'test-apns-token'),
+    onMessage: jest.fn(() => jest.fn()),
+    onNotificationOpenedApp: jest.fn(() => jest.fn()),
+    onTokenRefresh: jest.fn(() => jest.fn()),
+    getInitialNotification: jest.fn(async () => null),
+    requestPermission: jest.fn(async () => 1),
+    hasPermission: jest.fn(async () => 1),
+    setBackgroundMessageHandler: jest.fn(),
+    registerDeviceForRemoteMessages: jest.fn(async () => {}),
+    isDeviceRegisteredForRemoteMessages: jest.fn(() => true),
+  };
+});
 
 jest.mock('@notifee/react-native', () => ({
   __esModule: true,
   default: {
     createChannel: jest.fn(async () => 'channel'),
+    createChannels: jest.fn(async () => {}),
     displayNotification: jest.fn(async () => {}),
     onForegroundEvent: jest.fn(() => jest.fn()),
-    requestPermission: jest.fn(async () => ({})),
+    onBackgroundEvent: jest.fn(),
+    getInitialNotification: jest.fn(async () => null),
+    requestPermission: jest.fn(async () => ({ authorizationStatus: 1 })),
+    getNotificationSettings: jest.fn(async () => ({ authorizationStatus: 1 })),
+    openNotificationSettings: jest.fn(async () => {}),
+    setBadgeCount: jest.fn(async () => {}),
   },
-  AndroidImportance: { HIGH: 4 },
-  EventType: { PRESS: 1 },
+  AndroidImportance: { NONE: 0, MIN: 1, LOW: 2, DEFAULT: 3, HIGH: 4 },
+  AndroidVisibility: { SECRET: -1, PRIVATE: 0, PUBLIC: 1 },
+  AuthorizationStatus: {
+    NOT_DETERMINED: -1,
+    DENIED: 0,
+    AUTHORIZED: 1,
+    PROVISIONAL: 2,
+  },
+  EventType: { UNKNOWN: -1, DISMISSED: 0, PRESS: 1, ACTION_PRESS: 2 },
 }));
 
 jest.mock('react-native-vision-camera', () => ({

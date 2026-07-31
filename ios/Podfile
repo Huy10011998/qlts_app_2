@@ -25,7 +25,9 @@ platform :ios, min_ios_version_supported
 prepare_react_native_project!
 
 use_frameworks! :linkage => :static
-# $RNFirebaseAsStaticFramework = true
+# Bắt buộc khi dùng use_frameworks! — nếu không, các pod Firebase được build
+# thành dynamic framework và app crash khi load ở runtime.
+$RNFirebaseAsStaticFramework = true
 
 setup_permissions([
   'AppTrackingTransparency',

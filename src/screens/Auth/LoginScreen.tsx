@@ -81,6 +81,7 @@ export default function LoginScreen() {
     width: windowWidth,
     fontScale,
   } = useWindowDimensions();
+  const usernameRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
   const appVersionLabel = `v${DeviceInfo.getVersion()}`;
   const companyAge = new Date().getFullYear() - COMPANY_FOUNDED_YEAR;
@@ -316,9 +317,17 @@ export default function LoginScreen() {
     [setIosAuthenticated, syncSession],
   );
 
+  // Blur trực tiếp hai input rồi mới đóng keyboard: sau khi chọn mật khẩu gợi ý
+  // của iOS Password AutoFill, Keyboard.dismiss() một mình không luôn nhả focus.
+  const dismissKeyboardBeforeEnteringApp = useCallback(() => {
+    usernameRef.current?.blur();
+    passwordRef.current?.blur();
+    Keyboard.dismiss();
+  }, []);
+
   const handlePressLogin = async () => {
     if (isLoading) return;
-    Keyboard.dismiss();
+    dismissKeyboardBeforeEnteringApp();
     setIsLoading(true);
     try {
       hardResetApi();
@@ -383,6 +392,7 @@ export default function LoginScreen() {
     if (Platform.OS !== "ios") return;
     if (isFaceIdRunning.current) return;
     isFaceIdRunning.current = true;
+    dismissKeyboardBeforeEnteringApp();
     setIsLoading(true);
     try {
       const reachability = await checkServerReachability();
@@ -581,6 +591,7 @@ export default function LoginScreen() {
                   style={styles.inputIcon}
                 />
                 <TextInput
+                  ref={usernameRef}
                   style={[
                     styles.textInput,
                     isCompactHeight && styles.textInputCompact,
@@ -593,6 +604,12 @@ export default function LoginScreen() {
                   onBlur={() => setIsUsernameFocused(false)}
                   autoCapitalize="none"
                   autoCorrect={false}
+                  // Khai báo rõ cho AutoFill của iOS/Android thay vì để hệ điều
+                  // hành tự đoán theo heuristic — đoán thì hành vi focus và
+                  // keyboard sau khi chọn gợi ý không ổn định.
+                  textContentType="username"
+                  autoComplete="username"
+                  importantForAutofill="yes"
                   returnKeyType="next"
                   // Nhảy xuống ô mật khẩu khi bấm Next
                   onSubmitEditing={() => passwordRef.current?.focus()}
@@ -629,6 +646,9 @@ export default function LoginScreen() {
                   onBlur={() => setIsPasswordFocused(false)}
                   autoCapitalize="none"
                   autoCorrect={false}
+                  textContentType="password"
+                  autoComplete="password"
+                  importantForAutofill="yes"
                   returnKeyType="done"
                   onSubmitEditing={handlePressLogin}
                 />

@@ -30,13 +30,18 @@ export type PlaybackClipGroup = {
   /** Epoch millisecond thật do API playback trả về. */
   startMs: number;
   endMs: number;
-  /** Vị trí (0..1) các vạch đã ghi trên rail của nhóm. */
-  tickOffsets: number[];
+  /**
+   * Các đoạn có bản ghi trên rail của hàng, theo tỷ lệ 0..1 tính từ mép trên
+   * hàng (mép trên là mốc mới nhất, xuống dưới là về quá khứ). Vẽ đúng tỷ lệ nên
+   * đọc được ngay chỗ nào ghi liên tục, chỗ nào mất — khác với kiểu rắc chấm
+   * trước đây, số chấm chỉ tỷ lệ thô với mức phủ.
+   */
+  coverageSegments: Array<{ from: number; to: number }>;
 };
 
-// Native player phải bỏ quá nhiều frame ở 8X/16X, đặc biệt với camera FPS
-// thấp/GOP dài. Giới hạn 4X cho trải nghiệm mobile ổn định hơn.
-export const PLAYBACK_SPEED_OPTIONS = [4, 2, 1, 0.5] as const;
+// Native player phải bỏ quá nhiều frame khi tua nhanh, đặc biệt với camera FPS
+// thấp/GOP dài. Giới hạn 2X cho trải nghiệm mobile ổn định hơn.
+export const PLAYBACK_SPEED_OPTIONS = [2, 1, 0.5] as const;
 
 export type PlaybackSpeed = (typeof PLAYBACK_SPEED_OPTIONS)[number];
 
@@ -144,12 +149,14 @@ const MOCK_GROUP_SEEDS: Array<{ clipCount: number; time: string }> = [
   { time: "07:48:36", clipCount: 5 },
 ];
 
-const buildTickOffsets = (groupIndex: number, clipCount: number) => {
-  const tickCount = Math.min(14, Math.max(4, clipCount * 2));
+const buildMockCoverage = (groupIndex: number, clipCount: number) => {
+  const segmentCount = Math.min(6, Math.max(2, clipCount));
 
-  return Array.from({ length: tickCount }, (_, tickIndex) =>
-    seededUnit(groupIndex * 17 + tickIndex * 7 + 3),
-  ).sort((a, b) => a - b);
+  return Array.from({ length: segmentCount }, (_, index) => {
+    const from = seededUnit(groupIndex * 17 + index * 7 + 3) * 0.85;
+    const length = 0.05 + seededUnit(groupIndex * 11 + index * 5 + 1) * 0.1;
+    return { from, to: Math.min(1, from + length) };
+  }).sort((a, b) => a.from - b.from);
 };
 
 /**
@@ -190,7 +197,7 @@ export const buildMockClipGroups = (
       clips,
       durationSec: clipCount * SECONDS_PER_CLIP,
       hasPerson: true,
-      tickOffsets: buildTickOffsets(index + dayOffset, clipCount),
+      coverageSegments: buildMockCoverage(index + dayOffset, clipCount),
     };
   });
 };
@@ -273,7 +280,7 @@ export const buildPlaybackClipGroups = (
         clips: sortedClips,
         durationSec,
         hasPerson: false,
-        tickOffsets: [],
+        coverageSegments: [],
       };
     });
 
@@ -283,36 +290,38 @@ export const buildPlaybackClipGroups = (
       groups[groupIndex + 1]?.startSec ??
       Math.min(...group.clips.map((clip) => clip.startSec));
     const rowSpanSec = Math.max(1, upperSec - lowerSec);
-    const tickOffsets = group.clips.flatMap((clip) => {
+    const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
+
+    const coverageSegments = group.clips.flatMap((clip) => {
       const clipEndSec = Math.round((clip.endMs - dayStartMs) / 1000);
       const visibleStartSec = Math.max(lowerSec, clip.startSec);
       const visibleEndSec = Math.min(upperSec, clipEndSec);
       if (visibleEndSec <= visibleStartSec) return [];
 
-      // Số chấm tỷ lệ với phần row thực sự có recording. Một đoạn phủ cả
-      // hàng sẽ có 14 chấm; đoạn ngắn vẫn có tối thiểu một chấm nhìn thấy.
-      const coverageRatio =
-        (visibleEndSec - visibleStartSec) / rowSpanSec;
-      const tickCount = Math.min(
-        14,
-        Math.max(1, Math.ceil(coverageRatio * 14))
-      );
-
-      return Array.from({ length: tickCount }, (_, tickIndex) => {
-        const sampleSec =
-          visibleEndSec -
-          ((tickIndex + 0.5) / tickCount) *
-            (visibleEndSec - visibleStartSec);
-        return Math.min(
-          1,
-          Math.max(0, (upperSec - sampleSec) / rowSpanSec)
-        );
-      });
+      // Thời gian giảm dần khi đi xuống, nên mốc MUỘN hơn cho offset nhỏ hơn.
+      return [
+        {
+          from: clamp01((upperSec - visibleEndSec) / rowSpanSec),
+          to: clamp01((upperSec - visibleStartSec) / rowSpanSec),
+        },
+      ];
     });
 
-    return { ...group, tickOffsets };
+    return { ...group, coverageSegments };
   });
 };
+
+/**
+ * Mốc thời gian ở mép dưới của một row: chính là anchor trên của row kế tiếp,
+ * còn row cuối (giờ sớm nhất) thì lấy mốc bắt đầu bản ghi sớm nhất trong giờ đó
+ * — nhờ vậy cuộn hết timeline là đọc được đúng thời điểm đầu tiên của ngày.
+ */
+export const getRowLowerSec = (
+  groups: PlaybackClipGroup[],
+  index: number
+): number =>
+  groups[index + 1]?.startSec ??
+  Math.min(...groups[index].clips.map((clip) => clip.startSec));
 
 export const getTotalClipCount = (groups: PlaybackClipGroup[]) =>
   groups.reduce((total, group) => total + group.clipCount, 0);
@@ -334,12 +343,10 @@ export const getScrubSecAtOffset = (
   const rawIndex = Math.max(0, offsetY) / rowHeight;
   const index = Math.min(groups.length - 1, Math.floor(rawIndex));
   const current = groups[index];
-  const next = groups[index + 1];
-
-  if (!next) return current.startSec;
+  const lowerSec = getRowLowerSec(groups, index);
 
   const fraction = Math.min(1, Math.max(0, rawIndex - index));
-  return current.startSec + (next.startSec - current.startSec) * fraction;
+  return current.startSec + (lowerSec - current.startSec) * fraction;
 };
 
 /**
@@ -354,17 +361,17 @@ export const getTimelineOffsetForSec = (
   if (groups.length === 0 || rowHeight <= 0) return 0;
   if (targetSec >= groups[0].startSec) return 0;
 
-  for (let index = 0; index < groups.length - 1; index += 1) {
+  for (let index = 0; index < groups.length; index += 1) {
     const current = groups[index];
-    const next = groups[index + 1];
+    const lowerSec = getRowLowerSec(groups, index);
 
-    if (targetSec <= current.startSec && targetSec >= next.startSec) {
-      const range = current.startSec - next.startSec;
+    if (targetSec <= current.startSec && targetSec >= lowerSec) {
+      const range = current.startSec - lowerSec;
       const fraction =
         range > 0 ? (current.startSec - targetSec) / range : 0;
       return (index + fraction) * rowHeight;
     }
   }
 
-  return (groups.length - 1) * rowHeight;
+  return groups.length * rowHeight;
 };

@@ -64,6 +64,13 @@ import {
   openAppPermissionSettings,
   requestCameraPermission,
 } from "../../services/cameraPermission";
+import {
+  AppNotificationPermissionStatus,
+  checkNotificationPermission,
+  getNotificationPermissionLabel,
+  openNotificationSettings,
+  requestNotificationPermission,
+} from "../../services/notifications";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import {
   ANDROID_STORE_URL,
@@ -110,12 +117,18 @@ const SettingScreen = () => {
     });
   const [cameraPermissionStatus, setCameraPermissionStatus] =
     useState<AppCameraPermissionStatus>("unknown");
+  const [notificationPermissionStatus, setNotificationPermissionStatus] =
+    useState<AppNotificationPermissionStatus>("unknown");
   const [
     isUpdatingLocalNetworkPermission,
     setIsUpdatingLocalNetworkPermission,
   ] = useState(false);
   const [isUpdatingCameraPermission, setIsUpdatingCameraPermission] =
     useState(false);
+  const [
+    isUpdatingNotificationPermission,
+    setIsUpdatingNotificationPermission,
+  ] = useState(false);
 
   const navigation = useNavigation<StackNavigation<"Profile">>();
   const { logout, logoutReason } = useAuth();
@@ -178,17 +191,22 @@ const SettingScreen = () => {
   const refreshPermissionState = useCallback(
     async (probeLocalNetwork = false) => {
       try {
-        const [nextCameraPermissionStatus, nextLocalNetworkState] =
-          await Promise.all([
-            checkCameraPermission().catch(() => "unknown" as const),
-            (probeLocalNetwork
-              ? refreshStoredLocalNetworkPermission()
-              : readStoredLocalNetworkPermission()
-            ).catch(() => LOCAL_NETWORK_FALLBACK_STATE),
-          ]);
+        const [
+          nextCameraPermissionStatus,
+          nextNotificationPermissionStatus,
+          nextLocalNetworkState,
+        ] = await Promise.all([
+          checkCameraPermission().catch(() => "unknown" as const),
+          checkNotificationPermission().catch(() => "unknown" as const),
+          (probeLocalNetwork
+            ? refreshStoredLocalNetworkPermission()
+            : readStoredLocalNetworkPermission()
+          ).catch(() => LOCAL_NETWORK_FALLBACK_STATE),
+        ]);
 
         if (!canUpdateScreen()) return;
         setCameraPermissionStatus(nextCameraPermissionStatus);
+        setNotificationPermissionStatus(nextNotificationPermissionStatus);
         setLocalNetworkState(nextLocalNetworkState);
       } catch {
         // Permission status is auxiliary; keep the previous values if refresh fails.
@@ -429,6 +447,9 @@ const SettingScreen = () => {
     localNetworkState.status,
   );
   const cameraStatusLabel = getCameraPermissionLabel(cameraPermissionStatus);
+  const notificationStatusLabel = getNotificationPermissionLabel(
+    notificationPermissionStatus,
+  );
   const localNetworkStatusBackground =
     localNetworkState.status === "granted"
       ? colors.greenLight
@@ -560,6 +581,83 @@ const SettingScreen = () => {
       }
     },
     [isUpdatingCameraPermission],
+  );
+
+  const handleToggleNotificationPermission = useCallback(
+    async (value: boolean) => {
+      if (isUpdatingNotificationPermission) return;
+
+      if (!value) {
+        Alert.alert(
+          "Quyền thông báo",
+          "Hệ điều hành không cho tắt trực tiếp quyền thông báo trong app. Bạn có thể mở Cài đặt để thay đổi quyền này.",
+          [
+            { text: "Để sau", style: "cancel" },
+            {
+              text: "Mở Cài đặt",
+              onPress: () => {
+                openNotificationSettings();
+              },
+            },
+          ],
+        );
+        return;
+      }
+
+      // Đã bị chặn thì gọi dialog hệ thống cũng không hiện gì (iOS chỉ hiện đúng
+      // một lần trong đời app) → dẫn user vào Cài đặt luôn.
+      if (notificationPermissionStatus === "blocked") {
+        Alert.alert(
+          "Quyền thông báo",
+          "Thông báo đang bị chặn. Vui lòng mở Cài đặt để cấp lại quyền.",
+          [
+            { text: "Đóng", style: "cancel" },
+            {
+              text: "Mở Cài đặt",
+              onPress: () => {
+                openNotificationSettings();
+              },
+            },
+          ],
+        );
+        return;
+      }
+
+      setIsUpdatingNotificationPermission(true);
+      try {
+        const nextStatus = await requestNotificationPermission();
+        setNotificationPermissionStatus(nextStatus);
+
+        if (nextStatus === "blocked") {
+          Alert.alert(
+            "Quyền thông báo",
+            "Thông báo đang bị chặn. Vui lòng mở Cài đặt để cấp lại quyền.",
+            [
+              { text: "Đóng", style: "cancel" },
+              {
+                text: "Mở Cài đặt",
+                onPress: () => {
+                  openNotificationSettings();
+                },
+              },
+            ],
+          );
+          return;
+        }
+
+        if (nextStatus !== "granted") {
+          Alert.alert(
+            "Quyền thông báo",
+            "Chưa thể bật quyền thông báo trên thiết bị này.",
+          );
+        }
+      } catch {
+        Alert.alert("Lỗi", "Chưa thể cập nhật quyền thông báo lúc này.");
+      } finally {
+        if (isMountedRef.current) setIsUpdatingNotificationPermission(false);
+      }
+    },
+    [isUpdatingNotificationPermission, notificationPermissionStatus],
   );
 
   const closeModal = () => {
@@ -771,6 +869,16 @@ const SettingScreen = () => {
               }`}
               value={cameraPermissionStatus === "granted"}
               onValueChange={handleToggleCameraPermission}
+            />
+            <SettingSwitchRow
+              iconName="notifications-outline"
+              iconBg={C.amber}
+              label="Quyền thông báo"
+              sublabel={`Nhận thông báo từ hệ thống • ${notificationStatusLabel}${
+                isUpdatingNotificationPermission ? " • Đang cập nhật..." : ""
+              }`}
+              value={notificationPermissionStatus === "granted"}
+              onValueChange={handleToggleNotificationPermission}
             />
             <SettingRowItem
               iconName="log-out-outline"

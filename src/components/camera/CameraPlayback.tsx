@@ -1,5 +1,6 @@
 import React from "react";
 import {
+  Animated,
   BackHandler,
   Platform,
   Pressable,
@@ -14,7 +15,7 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from "react-native";
-import Video from "react-native-video";
+import Video, { type VideoRef } from "react-native-video";
 import WebView from "react-native-webview";
 import LinearGradient from "react-native-linear-gradient";
 import {
@@ -99,6 +100,65 @@ const PLAYBACK_START_RETRY_MS = 700;
 const LIVE_RECORDINGS_REFRESH_MS = 30000;
 /** Cuộn timeline quá mức này thì coi như đang tua, hiện nút xem trực tiếp. */
 const LIVE_RETURN_SCROLL_THRESHOLD = 24;
+/**
+ * Nhịp báo tiến trình của player. Mặc định 250ms làm badge nhảy từng nấc; 200ms
+ * đủ mượt cho badge (chỉ hiện tới giây) và cho timeline bám theo — timeline trôi
+ * ~0.05px/giây nên dày hơn nữa không thấy khác, chỉ tốn render.
+ */
+const PLAYBACK_PROGRESS_INTERVAL_MS = 200;
+/**
+ * Áp tốc độ tua luôn theo hai bước: về 1 rồi mới lên giá trị thật sau khoảng này.
+ * Đúng thao tác "chọn X1 rồi chọn X2" mà tay người dùng phải làm — vì
+ * RCTVideo.setRate chỉ đi đường an toàn (hoãn rồi applyModifiers) khi rate hiện
+ * tại khác 1; đường trực tiếp bị AVPlayer bỏ qua lúc vừa seek/vừa gom buffer.
+ */
+const PLAYBACK_RATE_REAPPLY_MS = 140;
+/** Giãn nhịp giữa hai lần ép lại tốc độ, tránh dồn vào một chuỗi stall. */
+const PLAYBACK_RATE_REAPPLY_THROTTLE_MS = 1000;
+/**
+ * Số lần ép lại liên tiếp trước khi bỏ — reset ngay khi đo được đúng tốc độ.
+ * Vài lần đầu có thể rơi vào pha buffer nên vẫn trượt, cần dư một chút.
+ */
+const PLAYBACK_RATE_MAX_RETRY = 5;
+/** Áp lại tốc độ sau khi seek trong phiên: chờ player seek xong đã. */
+const PLAYBACK_RATE_AFTER_SEEK_MS = 400;
+/**
+ * Không có API đọc rate thật (VideoRef không có getter, onPlaybackRateChange thì
+ * im lặng khi lệnh bị nuốt). Nên tự đo: mỗi cửa sổ này so thời gian media chạy
+ * được với thời gian thực, ra đúng tốc độ người dùng đang thấy.
+ */
+const PLAYBACK_RATE_CHECK_WINDOW_MS = 1200;
+/** Sai số cho phép khi so tốc độ đo được với tốc độ mong muốn. */
+const PLAYBACK_RATE_TOLERANCE = 0.25;
+/**
+ * Chừa mép khi seek trong phiên đang chạy: sát cuối phần đã publish thì player
+ * phải chờ segment mới, thà mở phiên mới từ đúng mốc đó.
+ */
+const PLAYBACK_SEEK_EDGE_MARGIN_SEC = 3;
+/** Kênh báo playhead đứt thì tự nối lại, giãn dần. */
+const PLAYBACK_SOCKET_RETRY_BASE_MS = 1000;
+const PLAYBACK_SOCKET_RETRY_MAX_MS = 8000;
+const PLAYBACK_SOCKET_MAX_RETRY = 6;
+/**
+ * Player lỗi giữa phiên thì tự mở lại phiên từ đúng vị trí đang xem trước, hết
+ * số lần này mới bỏ về xem trực tiếp kèm thông báo.
+ */
+const PLAYBACK_ERROR_MAX_RETRY = 2;
+const PLAYBACK_ERROR_RETRY_BASE_MS = 800;
+/** Cách lần lỗi trước quá lâu thì tính là sự cố mới, hạn mức thử được mở lại. */
+const PLAYBACK_ERROR_RETRY_RESET_MS = 30000;
+/**
+ * Với "hôm nay", phiên chỉ chạy tới thời điểm mở phiên. Playhead tới gần mép này
+ * là đã bắt kịp hiện tại — chuyển sang xem trực tiếp thay vì để gateway đóng
+ * phiên rồi player bắn lỗi 404.
+ */
+const PLAYBACK_CAUGHT_UP_LEAD_SEC = 10;
+const PLAYBACK_CAUGHT_UP_MIN_PLAYED_SEC = 3;
+/**
+ * Mang mốc giờ sang "hôm nay" thì lùi lại chừng này giây so với hiện tại: sát
+ * mép live thường chưa có bản ghi, seek vào đó là báo không có dữ liệu.
+ */
+const PLAYBACK_CARRY_LIVE_MARGIN_SEC = 30;
 const TIMELINE_SCALE_STEP = 0.25;
 const TIMELINE_SCALE_MIN = 0.5;
 const TIMELINE_SCALE_MAX = 2;
@@ -153,6 +213,7 @@ const CameraPlayback: React.FC = () => {
   const [controlsNonce, setControlsNonce] = React.useState(0);
   const [timelineOffsetY, setTimelineOffsetY] = React.useState(0);
   const [isVideoReady, setIsVideoReady] = React.useState(false);
+  const [appliedRate, setAppliedRate] = React.useState<number>(1);
   const [isAppActive, setIsAppActive] = React.useState(true);
   const [liveNowMs, setLiveNowMs] = React.useState(() => Date.now());
   const [recordings, setRecordings] = React.useState<
@@ -169,11 +230,16 @@ const CameraPlayback: React.FC = () => {
   const [playbackSession, setPlaybackSession] =
     React.useState<PlaybackSession | null>(null);
   const [playbackError, setPlaybackError] = React.useState<string | null>(null);
-  const [progressPreviewRatio, setProgressPreviewRatio] = React.useState<
-    number | null
-  >(null);
+  // Chỉ là cờ để đổi kích thước núm; vị trí núm/thanh đầy do Animated.Value lo,
+  // nên kéo tua không kéo theo một lượt render toàn màn hình mỗi frame.
+  const [isProgressScrubbing, setIsProgressScrubbing] = React.useState(false);
+  const [progressTrackWidth, setProgressTrackWidth] = React.useState(0);
+  const [scrollAreaHeight, setScrollAreaHeight] = React.useState(0);
+  const [isTimelineScrubbing, setIsTimelineScrubbing] = React.useState(false);
   const [liveVideoKey, setLiveVideoKey] = React.useState(0);
   const [networkReconnectNonce, setNetworkReconnectNonce] = React.useState(0);
+  const [liveFallbackNoticeNonce, setLiveFallbackNoticeNonce] =
+    React.useState(0);
 
   const liveWebViewRef = React.useRef<WebView>(null);
   const timelineScrollRef = React.useRef<ScrollView>(null);
@@ -198,13 +264,49 @@ const CameraPlayback: React.FC = () => {
   const timelineDragGenerationRef = React.useRef(0);
   const timelineMomentumGenerationRef = React.useRef<number | null>(null);
   const startRequestIdRef = React.useRef(0);
+  const progressScrubberRef = React.useRef<View>(null);
   const progressTrackWidthRef = React.useRef(0);
+  // Toạ độ tuyệt đối của thanh tua: dùng pageX thay cho locationX vì locationX
+  // đổi gốc khi ngón tay đi qua núm/thanh con, đúng lúc kéo thì nhảy giật.
+  const progressTrackPageXRef = React.useRef(0);
+  const progressAnim = React.useRef(new Animated.Value(0)).current;
+  const isProgressScrubbingRef = React.useRef(false);
+  const playbackVideoRef = React.useRef<VideoRef>(null);
+  // Độ dài đã có thể seek của phiên hiện tại (giây, tính từ mốc mở phiên).
+  const seekableDurationRef = React.useRef(0);
+  const hasPlaybackProgressRef = React.useRef(false);
+  // Số lần đã ép lại tốc độ trong phiên hiện tại — chặn vòng lặp nếu player cứ
+  // báo về 1X (ví dụ stream không cho phát nhanh).
+  const rateRetryCountRef = React.useRef(0);
+  const lastRateApplyAtRef = React.useRef(0);
+  const rateApplyTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const socketRetryTimerRef = React.useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
+  const playbackRetryTimerRef = React.useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
+  /** Số lần đã tự phát lại sau lỗi player, trong cùng một mạch lỗi. */
+  const playbackRetryCountRef = React.useRef(0);
+  const lastPlaybackErrorAtRef = React.useRef(0);
+  /** Mép cuối của phiên đang chạy — dùng để biết khi nào đã bắt kịp hiện tại. */
+  const sessionEndMsRef = React.useRef<number | null>(null);
+  /** Thông báo cần hiện lại sau khi bỏ về trực tiếp (xem returnToLiveView). */
+  const liveFallbackNoticeRef = React.useRef<string | null>(null);
+  // Mốc đo tốc độ thật: cặp (thời gian media, thời gian thực) của lần đo trước.
+  const rateSampleRef = React.useRef<{ mediaSec: number; atMs: number } | null>(
+    null,
+  );
   const lastLiveProgressAtRef = React.useRef(Date.now());
   const liveErrorCountRef = React.useRef(0);
   const activeClipRef = React.useRef<PlaybackClip | null>(null);
   const reconnectIntentRef = React.useRef<
     | { mode: "live" }
-    | { mode: "playback"; fromMs: number; endMs: number }
+    // Không giữ endMs: mép cuối phải tính lại lúc mở phiên (với "hôm nay" nó là
+    // "bây giờ"), giữ giá trị cũ thì phiên phục hồi có thể mở với mép đã qua.
+    | { mode: "playback"; fromMs: number }
     | null
   >(null);
 
@@ -216,11 +318,11 @@ const CameraPlayback: React.FC = () => {
     [],
   );
 
+  // Không lấy thumbTimestamp: màn playback không còn dùng ảnh snapshot nữa.
   const {
     cameraToken,
     clearTokenRefreshTimer,
     fetchCameraTokenRef,
-    thumbTimestamp,
     tokenErrorMessage,
   } = useCameraViewToken({
     isFocused,
@@ -245,7 +347,11 @@ const CameraPlayback: React.FC = () => {
   // Vẫn là useMemo theo mốc ms nên identity chỉ đổi mỗi lần sang ngày mới.
   const todayMs = startOfDay(new Date(liveNowMs)).getTime();
   const today = React.useMemo(() => new Date(todayMs), [todayMs]);
-  const { dayStartMs, dayEndMs } = React.useMemo(
+  // Chỉ lấy dayStartMs ở đây. Mép cuối ("bây giờ" với hôm nay) luôn phải tính
+  // tại thời điểm dùng — xem startFrom và handleNetworkOffline — vì một giá trị
+  // memo sẽ đóng băng trong lúc playback (liveNowMs ngừng tick) và phiên mở với
+  // mép đã qua sẽ bị gateway đóng ngay.
+  const { dayStartMs } = React.useMemo(
     () => getPlaybackDayRange(selectedDate),
     [selectedDate],
   );
@@ -299,12 +405,79 @@ const CameraPlayback: React.FC = () => {
     postCameraWebViewToken(liveWebViewRef.current, cameraToken);
   }, [cameraToken, playbackSession]);
 
+  // Thanh tua trải hết bề ngang khung hình nên trùng vùng vuốt-back của iOS, và
+  // native-stack giành cử chỉ trước khi responder của thanh tua nhận được touch
+  // — kéo tua là thoát màn hình. Tắt vuốt-back khi đang xem lại; nút back trên
+  // khung hình và back cứng Android vẫn hoạt động bình thường.
+  React.useEffect(() => {
+    navigation.setOptions({ gestureEnabled: !playbackSession });
+  }, [navigation, playbackSession]);
+
+  /**
+   * Áp tốc độ tua theo hai bước 1 → giá trị thật. Đây là con đường duy nhất
+   * chắc chắn ăn: RCTVideo.setRate chỉ hoãn-rồi-applyModifiers (đường an toàn)
+   * khi rate hiện tại khác 1, còn đường trực tiếp thì AVPlayer bỏ qua nếu đang
+   * seek hoặc đang gom buffer. Chính vì vậy tay người dùng phải chọn X1 rồi X2
+   * mới ăn — ở đây làm thay cho họ.
+   */
+  const applyPlaybackRate = React.useCallback(
+    (target: number, delayMs = 0) => {
+      if (rateApplyTimerRef.current) clearTimeout(rateApplyTimerRef.current);
+      rateApplyTimerRef.current = null;
+      // Phép đo cũ không còn ý nghĩa sau khi đổi tốc độ.
+      rateSampleRef.current = null;
+      lastRateApplyAtRef.current = Date.now();
+
+      const run = () => {
+        setAppliedRate(1);
+        if (target === 1) return;
+        rateApplyTimerRef.current = setTimeout(() => {
+          rateApplyTimerRef.current = null;
+          setAppliedRate(target);
+        }, PLAYBACK_RATE_REAPPLY_MS);
+      };
+
+      if (delayMs <= 0) {
+        run();
+        return;
+      }
+
+      rateApplyTimerRef.current = setTimeout(() => {
+        rateApplyTimerRef.current = null;
+        run();
+      }, delayMs);
+    },
+    [],
+  );
+
+  React.useEffect(
+    () => () => {
+      if (rateApplyTimerRef.current) clearTimeout(rateApplyTimerRef.current);
+      if (playbackRetryTimerRef.current)
+        clearTimeout(playbackRetryTimerRef.current);
+    },
+    [],
+  );
+
+  const clearPlaybackRetryTimer = React.useCallback(() => {
+    if (playbackRetryTimerRef.current) {
+      clearTimeout(playbackRetryTimerRef.current);
+      playbackRetryTimerRef.current = null;
+    }
+  }, []);
+
   const closePlaybackSocket = React.useCallback(() => {
     if (pingTimerRef.current) {
       clearInterval(pingTimerRef.current);
       pingTimerRef.current = null;
     }
+    if (socketRetryTimerRef.current) {
+      clearTimeout(socketRetryTimerRef.current);
+      socketRetryTimerRef.current = null;
+    }
     if (webSocketRef.current) {
+      // Gỡ handler trước khi close: đóng chủ động thì không được kích hoạt
+      // nhánh tự kết nối lại.
       webSocketRef.current.onclose = null;
       webSocketRef.current.onerror = null;
       webSocketRef.current.close();
@@ -316,6 +489,7 @@ const CameraPlayback: React.FC = () => {
     (resetPlayer = true) => {
       startRequestIdRef.current += 1;
       closePlaybackSocket();
+      clearPlaybackRetryTimer();
 
       const currentSession = sessionRef.current;
       const wasPlayingBack =
@@ -329,18 +503,45 @@ const CameraPlayback: React.FC = () => {
         playbackStartMsRef.current = null;
         currentPositionRef.current = 0;
         setPositionSec(0);
-        setProgressPreviewRatio(null);
+        isProgressScrubbingRef.current = false;
+        setIsProgressScrubbing(false);
+        hasPlaybackProgressRef.current = false;
         setIsClipEnded(false);
         if (wasPlayingBack) setIsVideoReady(false);
         setIsConnecting(false);
       }
     },
-    [closePlaybackSocket],
+    [clearPlaybackRetryTimer, closePlaybackSocket],
   );
 
+  /**
+   * Kênh báo playhead cho gateway. Trước đây đứt là thôi luôn: ping timer bị dọn
+   * và không ai mở lại, server ngừng cấp segment nên player treo rồi bắn onError
+   * — đúng kiểu "để tự chạy một lúc là đứng". Giờ đứt thì tự nối lại có backoff,
+   * miễn phiên vẫn là phiên đang xem.
+   */
   const openPlaybackSocket = React.useCallback(
-    (sessionId: string, playbackSpeed: PlaybackSpeed) => {
+    (sessionId: string, playbackSpeed: PlaybackSpeed, retryCount = 0) => {
       closePlaybackSocket();
+
+      const scheduleRetry = () => {
+        if (sessionRef.current?.sessionId !== sessionId) return;
+        if (retryCount >= PLAYBACK_SOCKET_MAX_RETRY) return;
+
+        const delayMs = Math.min(
+          PLAYBACK_SOCKET_RETRY_MAX_MS,
+          PLAYBACK_SOCKET_RETRY_BASE_MS * 2 ** retryCount,
+        );
+        socketRetryTimerRef.current = setTimeout(() => {
+          socketRetryTimerRef.current = null;
+          if (sessionRef.current?.sessionId !== sessionId) return;
+          openPlaybackSocketRef.current?.(
+            sessionId,
+            playbackSpeed,
+            retryCount + 1,
+          );
+        }, delayMs);
+      };
 
       try {
         const socket = new WebSocket(getPlaybackWebSocketUrl(sessionId));
@@ -364,21 +565,30 @@ const CameraPlayback: React.FC = () => {
 
         socket.onopen = () => {
           sendPosition();
-          const positionIntervalMs =
-            playbackSpeed >= 4 ? 500 : playbackSpeed >= 2 ? 1000 : 2000;
+          const positionIntervalMs = playbackSpeed >= 2 ? 1000 : 2000;
           pingTimerRef.current = setInterval(sendPosition, positionIntervalMs);
         };
         socket.onclose = () => {
           if (pingTimerRef.current) clearInterval(pingTimerRef.current);
           pingTimerRef.current = null;
+          if (webSocketRef.current === socket) webSocketRef.current = null;
+          scheduleRetry();
         };
         socket.onerror = socket.onclose;
       } catch (error) {
         warn("Playback WebSocket error:", error);
+        scheduleRetry();
       }
     },
     [closePlaybackSocket],
   );
+
+  // openPlaybackSocket tự gọi lại chính nó khi retry — đi qua ref để không phải
+  // khai báo đệ quy trong useCallback.
+  const openPlaybackSocketRef = React.useRef(openPlaybackSocket);
+  React.useEffect(() => {
+    openPlaybackSocketRef.current = openPlaybackSocket;
+  }, [openPlaybackSocket]);
 
   // Chỉ reset lựa chọn/player khi đổi camera hoặc đổi ngày. Refresh token
   // (đặc biệt sau khi có mạng lại) không được xoá mốc playback đang xem.
@@ -393,6 +603,7 @@ const CameraPlayback: React.FC = () => {
     setRecordingsError(null);
     setIsRecordingsLoading(true);
     setLoadedRecordingsDayStartMs(null);
+    setIsTimelineScrubbing(false);
     setTimelineOffsetY(0);
     viewOffsetsRef.current = { timeline: 0, grid: 0 };
     timelineScrollRef.current?.scrollTo({ y: 0, animated: false });
@@ -405,11 +616,17 @@ const CameraPlayback: React.FC = () => {
     setRecordingsError(null);
     setIsRecordingsLoading(true);
 
+    // Mép cuối tính trong effect, KHÔNG lấy từ dayEndMs memo: dayEndMs của "hôm
+    // nay" được làm tươi mỗi phút, để nó trong deps là cứ mỗi phút lại tải lại
+    // toàn bộ danh sách bản ghi và dựng lại clipGroups — mọi hàng timeline
+    // re-render theo, nặng vô ích.
+    const range = getPlaybackDayRange(selectedDate);
+
     getPlaybackRecordings(
       camera.iD_Camera_Ma,
       cameraToken,
-      dayStartMs,
-      dayEndMs,
+      range.dayStartMs,
+      range.dayEndMs,
     )
       .then((nextRecordings) => {
         if (!cancelled) {
@@ -437,9 +654,9 @@ const CameraPlayback: React.FC = () => {
   }, [
     camera?.iD_Camera_Ma,
     cameraToken,
-    dayEndMs,
     dayStartMs,
     networkReconnectNonce,
+    selectedDate,
   ]);
 
   // Đoạn ghi hiện tại tiếp tục dài ra khi đang xem live. Tải lại nhẹ theo
@@ -576,19 +793,144 @@ const CameraPlayback: React.FC = () => {
     });
   }, []);
 
+  /**
+   * Phiên hiện tại đã stream từ mốc mở phiên tới hết ngày, nên phần lớn thao tác
+   * tua rơi vào vùng player đã có sẵn. Seek thẳng trong phiên đó thì không phải
+   * gọi /Playback/start, không remount player: không loading, và tốc độ tua đang
+   * chọn cũng không bị native đặt lại về 1X.
+   *
+   * Trả về false khi mốc cần tới nằm ngoài vùng seek được (lùi trước lúc mở
+   * phiên, hoặc vượt quá phần đã publish) — lúc đó buộc phải mở phiên mới.
+   */
+  const trySeekWithinSession = React.useCallback(
+    (targetMs: number) => {
+      const startMs = playbackStartMsRef.current;
+      if (!sessionRef.current || startMs === null || !isVideoReady) return false;
+
+      const offsetSec = (targetMs - startMs) / 1000;
+      const seekableSec = seekableDurationRef.current;
+      if (offsetSec < 0 || !Number.isFinite(seekableSec)) return false;
+      if (offsetSec > seekableSec - PLAYBACK_SEEK_EDGE_MARGIN_SEC) return false;
+
+      playbackVideoRef.current?.seek(offsetSec);
+      currentPositionRef.current = offsetSec;
+      setPositionSec(offsetSec);
+      setIsClipEnded(false);
+      setIsPaused(false);
+      setPlaybackError(null);
+      // Seek xong AVPlayer resume ở 1X, nên áp lại tốc độ — chờ seek settle đã,
+      // ép ngay lúc đang seek thì lệnh cũng bị bỏ qua.
+      rateRetryCountRef.current = 0;
+      if (speed !== 1) applyPlaybackRate(speed, PLAYBACK_RATE_AFTER_SEEK_MS);
+      return true;
+    },
+    [applyPlaybackRate, isVideoReady, speed],
+  );
+
+  /**
+   * Đưa cả màn hình về trạng thái xem trực tiếp: bỏ bản ghi đang chọn, đóng
+   * phiên, cuộn timeline về mốc mới nhất (nhờ vậy nút "Xem trực tiếp" tự ẩn vì
+   * isSeeking không còn đúng), và đưa ngày về hôm nay — trực tiếp là stream của
+   * hôm nay, để lịch/timeline ở ngày cũ thì khung hình và phần dưới nói hai
+   * chuyện khác nhau.
+   *
+   * `notice` dành cho nhánh bỏ cuộc vì lỗi: đổi ngày kích hoạt effect reset theo
+   * ngày, mà effect đó xoá playbackError, nên thông báo phải được đặt lại sau
+   * khi reset xong (xem effect ngay dưới).
+   */
+  const returnToLiveView = React.useCallback(
+    (options?: { keepReconnectIntent?: boolean; notice?: string }) => {
+      // Hủy seek đang chờ từ onScrollEndDrag/onMomentumScrollEnd. Nếu không,
+      // callback cuộn có thể chạy sau thao tác này và tạo lại playback session.
+      if (timelineSeekTimerRef.current) {
+        clearTimeout(timelineSeekTimerRef.current);
+        timelineSeekTimerRef.current = null;
+      }
+      timelineDragGenerationRef.current += 1;
+      timelineMomentumGenerationRef.current = null;
+      isTimelineDraggingRef.current = false;
+      if (!options?.keepReconnectIntent) reconnectIntentRef.current = null;
+      setIsTimelineScrubbing(false);
+
+      stopCurrentSession();
+      setActiveGroupId(null);
+      setActiveClipId(null);
+      setOpenedGroupId(null);
+      setPositionSec(0);
+      setIsPaused(false);
+      setIsConnecting(false);
+      setTimelineOffsetY(0);
+      viewOffsetsRef.current.timeline = 0;
+      timelineScrollRef.current?.scrollTo({ y: 0, animated: true });
+      keepControlsVisible();
+
+      // startOfDay(new Date()) thay vì state `today`: liveNowMs ngừng tick
+      // trong lúc playback nên state đó có thể đã cũ.
+      const todayDate = startOfDay(new Date());
+      setSelectedStartTimeSec(null);
+      setPendingSeekSec(null);
+      setSelectedDate((prev) =>
+        prev.getTime() === todayDate.getTime() ? prev : todayDate,
+      );
+
+      liveFallbackNoticeRef.current = options?.notice ?? null;
+      setLiveFallbackNoticeNonce((value) => value + 1);
+    },
+    [keepControlsVisible, stopCurrentSession],
+  );
+
+  // Chạy sau effect reset-theo-ngày (khai báo sau nên thứ tự flush là vậy), nhờ
+  // đó thông báo lỗi không bị lần reset đó xoá mất.
+  React.useEffect(() => {
+    if (liveFallbackNoticeNonce === 0) return;
+    const notice = liveFallbackNoticeRef.current;
+    liveFallbackNoticeRef.current = null;
+    if (notice) setPlaybackError(notice);
+  }, [liveFallbackNoticeNonce]);
+
   const startFrom = React.useCallback(
-    async (fromMs: number, playbackEndMs = dayEndMs) => {
+    async (fromMs: number, playbackEndMs?: number) => {
       if (!cameraToken || !camera?.iD_Camera_Ma) return;
+
+      // Mép cuối phải tính lại tại đây chứ không dùng dayEndMs đã memo: với
+      // "hôm nay" mép đó là "bây giờ", mà liveNowMs ngừng tick trong lúc
+      // playback nên giá trị memo đóng băng ở thời điểm mở màn hình. Phiên mở
+      // với mép cũ sẽ bị gateway đóng đúng lúc playhead chạm tới → onError.
+      const sessionEndMs =
+        playbackEndMs ?? getPlaybackDayRange(selectedDate).dayEndMs;
+      sessionEndMsRef.current = sessionEndMs;
 
       // Không chặn theo isConnecting: nếu server trả session mà player không
       // bao giờ phát onLoad/onError thì cờ đó treo mãi và mọi lần chọn bản ghi
       // sau đó bị bỏ qua. startRequestIdRef + stopCurrentSession đã đảm bảo
       // yêu cầu cũ bị vô hiệu và phiên cũ được dọn.
-      stopCurrentSession();
+      //
+      // resetPlayer = false: giữ player cũ mounted để khung hình đứng lại ở
+      // frame cuối (kèm spinner) trong lúc chờ /Playback/start, thay vì nháy
+      // đen. Mọi callback của phiên cũ đã bị vô hiệu vì sessionRef về null.
+      stopCurrentSession(false);
       const requestId = ++startRequestIdRef.current;
       playbackStartMsRef.current = fromMs;
       currentPositionRef.current = 0;
       setPositionSec(0);
+      hasPlaybackProgressRef.current = false;
+      rateRetryCountRef.current = 0;
+      lastRateApplyAtRef.current = 0;
+      rateSampleRef.current = null;
+      seekableDurationRef.current = 0;
+      // Đặt núm đúng mốc vừa chọn ngay lập tức; chờ onProgress đầu tiên thì
+      // thanh tua nháy về đầu một nhịp.
+      const startedClip = activeClipRef.current;
+      progressAnim.setValue(
+        startedClip &&
+          fromMs >= startedClip.startMs &&
+          fromMs <= startedClip.endMs
+          ? Math.min(
+              1,
+              (fromMs - startedClip.startMs) / 1000 / startedClip.durationSec,
+            )
+          : 0,
+      );
       setIsPaused(false);
       setIsClipEnded(false);
       setIsVideoReady(false);
@@ -601,7 +943,7 @@ const CameraPlayback: React.FC = () => {
             camera.iD_Camera_Ma,
             cameraToken,
             fromMs,
-            playbackEndMs,
+            sessionEndMs,
           );
 
           if (requestId !== startRequestIdRef.current) {
@@ -622,22 +964,30 @@ const CameraPlayback: React.FC = () => {
           }
 
           if (requestId !== startRequestIdRef.current) return;
-          setPlaybackError(
-            error instanceof Error
-              ? error.message
-              : "Không thể bắt đầu phát bản ghi.",
-          );
-          setIsConnecting(false);
           setPlaybackSession(null);
           sessionRef.current = null;
+          playbackStartMsRef.current = null;
+          // Mở phiên thất bại: đưa cả màn hình về trực tiếp (bỏ bản ghi đang
+          // chọn, cuộn timeline về mốc mới nhất, ẩn nút "Xem trực tiếp", đưa
+          // ngày về hôm nay) kèm thông báo lỗi, thay vì treo spinner với một
+          // bản ghi không bao giờ phát được.
+          returnToLiveView({
+            keepReconnectIntent: true,
+            notice:
+              error instanceof Error
+                ? error.message
+                : "Không thể bắt đầu phát bản ghi.",
+          });
         }
       }
     },
     [
       camera?.iD_Camera_Ma,
       cameraToken,
-      dayEndMs,
       openPlaybackSocket,
+      progressAnim,
+      returnToLiveView,
+      selectedDate,
       speed,
       stopCurrentSession,
     ],
@@ -646,14 +996,13 @@ const CameraPlayback: React.FC = () => {
   const handleNetworkOffline = React.useCallback(() => {
     const playbackStartMs = playbackStartMsRef.current;
     if (playbackStartMs !== null) {
-      const clipEndMs = activeClipRef.current?.endMs ?? dayEndMs;
+      const { dayEndMs } = getPlaybackDayRange(selectedDate);
       reconnectIntentRef.current = {
         mode: "playback",
         fromMs: Math.min(
           playbackStartMs + currentPositionRef.current * 1000,
-          Math.max(playbackStartMs, clipEndMs - 1000),
+          Math.max(playbackStartMs, dayEndMs - 1000),
         ),
-        endMs: clipEndMs,
       };
     } else if (!reconnectIntentRef.current) {
       reconnectIntentRef.current = { mode: "live" };
@@ -663,7 +1012,7 @@ const CameraPlayback: React.FC = () => {
     stopCurrentSession();
     setIsVideoReady(false);
     setPlaybackError(null);
-  }, [dayEndMs, stopCurrentSession]);
+  }, [selectedDate, stopCurrentSession]);
 
   const handleNetworkReconnect = React.useCallback(async () => {
     // Token hook cũng lắng nghe reconnect. Request bên trong hook được gộp nên
@@ -690,7 +1039,7 @@ const CameraPlayback: React.FC = () => {
     setIsVideoReady(false);
 
     if (intent.mode === "playback") {
-      startFrom(intent.fromMs, intent.endMs).catch(() => {});
+      startFrom(intent.fromMs).catch(() => {});
       return;
     }
 
@@ -769,7 +1118,10 @@ const CameraPlayback: React.FC = () => {
       setActiveClipId(clip.id);
       setOpenedGroupId(null);
       reconnectIntentRef.current = null;
-      startFrom(clip.startMs, clip.endMs).catch(() => {});
+      // Không cắt phiên ở mép clip: đầu ghi phát tiếp sang bản ghi kế trong
+      // cùng một phiên nên hết clip là chạy luôn, không phải dựng session mới.
+      if (!trySeekWithinSession(clip.startMs))
+        startFrom(clip.startMs).catch(() => {});
 
       if (viewMode === "timeline") {
         requestAnimationFrame(() => {
@@ -780,29 +1132,43 @@ const CameraPlayback: React.FC = () => {
         });
       }
     },
-    [clipGroups, startFrom, timelineScale, viewMode],
+    [clipGroups, startFrom, timelineScale, trySeekWithinSession, viewMode],
   );
 
   const getProgressRatioFromEvent = React.useCallback(
     (event: GestureResponderEvent) => {
       const width = progressTrackWidthRef.current;
       if (width <= 0) return 0;
-      return Math.min(1, Math.max(0, event.nativeEvent.locationX / width));
+      const offsetX = event.nativeEvent.pageX - progressTrackPageXRef.current;
+      return Math.min(1, Math.max(0, offsetX / width));
     },
     [],
   );
 
+  const handleProgressSeekGrant = React.useCallback(
+    (event: GestureResponderEvent) => {
+      isProgressScrubbingRef.current = true;
+      setIsProgressScrubbing(true);
+      progressAnim.setValue(getProgressRatioFromEvent(event));
+    },
+    [getProgressRatioFromEvent, progressAnim],
+  );
+
+  // Mỗi frame kéo chỉ đẩy giá trị vào Animated.Value: không setState nên không
+  // render lại cây view, núm bám sát ngón tay.
   const handleProgressSeekMove = React.useCallback(
     (event: GestureResponderEvent) => {
-      setProgressPreviewRatio(getProgressRatioFromEvent(event));
+      progressAnim.setValue(getProgressRatioFromEvent(event));
     },
-    [getProgressRatioFromEvent],
+    [getProgressRatioFromEvent, progressAnim],
   );
 
   const handleProgressSeekRelease = React.useCallback(
     (event: GestureResponderEvent) => {
       const ratio = getProgressRatioFromEvent(event);
-      setProgressPreviewRatio(null);
+      progressAnim.setValue(ratio);
+      isProgressScrubbingRef.current = false;
+      setIsProgressScrubbing(false);
       if (!activeClip || !playbackSession) return;
 
       // Không seek đúng endMs vì đó là biên ngoài của đoạn ghi.
@@ -812,7 +1178,7 @@ const CameraPlayback: React.FC = () => {
       );
       const targetMs =
         activeClip.startMs + Math.round(seekableDurationMs * ratio);
-      startFrom(targetMs, activeClip.endMs).catch(() => {});
+      if (!trySeekWithinSession(targetMs)) startFrom(targetMs).catch(() => {});
       keepControlsVisible();
     },
     [
@@ -820,42 +1186,28 @@ const CameraPlayback: React.FC = () => {
       getProgressRatioFromEvent,
       keepControlsVisible,
       playbackSession,
+      progressAnim,
       startFrom,
+      trySeekWithinSession,
     ],
   );
+
+  const handleProgressSeekTerminate = React.useCallback(() => {
+    isProgressScrubbingRef.current = false;
+    setIsProgressScrubbing(false);
+  }, []);
 
   // Thoát chế độ tua: bỏ bản ghi đang chọn, đưa timeline về mốc mới nhất và
   // cho stream chạy lại.
   const handleBackToLive = React.useCallback(() => {
-    // Hủy seek đang chờ từ onScrollEndDrag/onMomentumScrollEnd. Nếu không,
-    // callback cuộn có thể chạy sau thao tác này và tạo lại playback session.
-    if (timelineSeekTimerRef.current) {
-      clearTimeout(timelineSeekTimerRef.current);
-      timelineSeekTimerRef.current = null;
-    }
-    timelineDragGenerationRef.current += 1;
-    timelineMomentumGenerationRef.current = null;
-    isTimelineDraggingRef.current = false;
-    reconnectIntentRef.current = null;
-
-    stopCurrentSession();
-    setActiveGroupId(null);
-    setActiveClipId(null);
-    setOpenedGroupId(null);
-    setPositionSec(0);
-    setIsPaused(false);
-    setIsConnecting(false);
+    returnToLiveView();
     setPlaybackError(null);
-    setTimelineOffsetY(0);
-    viewOffsetsRef.current.timeline = 0;
-    timelineScrollRef.current?.scrollTo({ y: 0, animated: true });
-    keepControlsVisible();
-  }, [keepControlsVisible, stopCurrentSession]);
+  }, [returnToLiveView]);
 
   const handleTogglePause = React.useCallback(() => {
     // Đã phát hết bản ghi: bấm play là phát lại clip từ đầu.
     if (isClipEnded && activeClip) {
-      startFrom(activeClip.startMs, activeClip.endMs).catch(() => {});
+      startFrom(activeClip.startMs).catch(() => {});
       return;
     }
 
@@ -866,42 +1218,93 @@ const CameraPlayback: React.FC = () => {
     (nextSpeed: PlaybackSpeed) => {
       setSpeed(nextSpeed);
       setIsSpeedSheetVisible(false);
+      rateRetryCountRef.current = 0;
+      applyPlaybackRate(nextSpeed);
 
       const currentSession = sessionRef.current;
       if (currentSession)
         openPlaybackSocket(currentSession.sessionId, nextSpeed);
     },
-    [openPlaybackSocket],
+    [applyPlaybackRate, openPlaybackSocket],
   );
 
-  const handleChangeDate = React.useCallback((amount: number) => {
-    // Giờ bắt đầu chỉ thuộc về ngày đã chọn trong lịch; đổi ngày bằng mũi tên
-    // thì bỏ nó đi, nếu không sheet lịch mở lại vẫn hiện giờ cũ của ngày khác.
-    setSelectedStartTimeSec(null);
-    setSelectedDate((prev) => {
-      const next = startOfDay(addDays(prev, amount));
+  /**
+   * Đổi ngày thì mở ngày mới ở đúng mốc giờ đang xem: đang xem lại thì lấy mốc
+   * của bản ghi đang phát, đang xem trực tiếp thì lấy giờ hiện tại. Ví dụ 9:30
+   * ngày 31/07 bấm lùi một ngày là mở 9:30 ngày 30/07 — người dùng so cùng một
+   * thời điểm giữa các ngày, chứ không phải mở lại từ mốc mới nhất.
+   *
+   * Trả về false khi không suy ra được mốc hợp lệ; lúc đó ngày mới mở ở mốc mới
+   * nhất như cũ.
+   */
+  const carryPlaybackTimeToDate = React.useCallback(
+    (nextDate: Date) => {
+      const startMs = playbackStartMsRef.current;
+      const secOfDay =
+        startMs !== null
+          ? (startMs + currentPositionRef.current * 1000 - dayStartMs) / 1000
+          : (Date.now() - startOfDay(new Date()).getTime()) / 1000;
+      if (!Number.isFinite(secOfDay) || secOfDay < 0) return false;
+
+      // Sang "hôm nay" thì mốc mang theo có thể vượt quá hiện tại (ví dụ đang
+      // xem 23:00 của hôm qua) — chặn lại trước hiện tại một chút cho chắc là
+      // vẫn nằm trong vùng đã ghi.
+      const todayStartMs = startOfDay(new Date()).getTime();
+      const maxSecOfDay =
+        startOfDay(nextDate).getTime() === todayStartMs
+          ? (Date.now() - todayStartMs) / 1000 - PLAYBACK_CARRY_LIVE_MARGIN_SEC
+          : 24 * 60 * 60 - 1;
+      if (maxSecOfDay <= 0) return false;
+
+      setPendingSeekSec(Math.round(Math.max(0, Math.min(secOfDay, maxSecOfDay))));
+      return true;
+    },
+    [dayStartMs],
+  );
+
+  const handleChangeDate = React.useCallback(
+    (amount: number) => {
+      const next = startOfDay(addDays(selectedDate, amount));
       // Không cho chọn ngày ở tương lai.
-      return next.getTime() > startOfDay(new Date()).getTime() ? prev : next;
-    });
-  }, []);
+      if (next.getTime() > startOfDay(new Date()).getTime()) return;
+
+      // Giờ bắt đầu chỉ thuộc về ngày đã chọn trong lịch; đổi ngày bằng mũi tên
+      // thì bỏ nó đi, nếu không sheet lịch mở lại vẫn hiện giờ cũ của ngày khác.
+      setSelectedStartTimeSec(null);
+      carryPlaybackTimeToDate(next);
+      setSelectedDate(next);
+    },
+    [carryPlaybackTimeToDate, selectedDate],
+  );
 
   const handleConfirmDate = React.useCallback(
     (date: Date, startTimeSec: number | null) => {
-      setSelectedDate(startOfDay(date));
+      const nextDate = startOfDay(date);
+      const isSameDay = nextDate.getTime() === selectedDate.getTime();
+      setSelectedDate(nextDate);
       setSelectedStartTimeSec(startTimeSec);
       setIsDateSheetVisible(false);
       setOpenedGroupId(null);
 
-      if (startTimeSec === null) {
-        setTimelineOffsetY(0);
-        viewOffsetsRef.current = { timeline: 0, grid: 0 };
-        timelineScrollRef.current?.scrollTo({ y: 0, animated: false });
+      // Chọn giờ cụ thể trong lịch thì giờ đó thắng.
+      if (startTimeSec !== null) {
+        setPendingSeekSec(startTimeSec);
         return;
       }
 
-      setPendingSeekSec(startTimeSec);
+      // Xác nhận lại đúng ngày đang xem mà không chọn giờ: không làm gì. Nếu vẫn
+      // mang mốc sang thì đang xem trực tiếp sẽ bị kéo vào playback, còn đang
+      // xem lại thì phải dựng lại phiên ở đúng chỗ cũ — cả hai đều vô ích.
+      if (isSameDay) return;
+
+      // Đổi ngày: mang mốc đang xem sang ngày mới.
+      if (carryPlaybackTimeToDate(nextDate)) return;
+
+      setTimelineOffsetY(0);
+      viewOffsetsRef.current = { timeline: 0, grid: 0 };
+      timelineScrollRef.current?.scrollTo({ y: 0, animated: false });
     },
-    [],
+    [carryPlaybackTimeToDate, selectedDate],
   );
 
   const loadRecordingDays = React.useCallback(
@@ -974,8 +1377,26 @@ const CameraPlayback: React.FC = () => {
     [clipGroups],
   );
 
+  /** Bản ghi kế tiếp theo chiều tiến của thời gian (hàng phía trên timeline). */
+  const findNextClipAfterMs = React.useCallback(
+    (
+      targetMs: number,
+    ): { clip: PlaybackClip; group: PlaybackClipGroup } | null => {
+      let next: { clip: PlaybackClip; group: PlaybackClipGroup } | null = null;
+      for (const group of clipGroups) {
+        for (const clip of group.clips) {
+          if (clip.startMs <= targetMs) continue;
+          if (!next || clip.startMs < next.clip.startMs) next = { clip, group };
+        }
+      }
+      return next;
+    },
+    [clipGroups],
+  );
+
   const commitTimelineSeek = React.useCallback(
     (offsetY: number) => {
+      setIsTimelineScrubbing(false);
       if (viewMode !== "timeline" || clipGroups.length === 0) return;
 
       const rowHeight = Math.round(TIMELINE_ROW_HEIGHT * timelineScale);
@@ -998,13 +1419,11 @@ const CameraPlayback: React.FC = () => {
       setActiveGroupId(target.group.id);
       setActiveClipId(target.clip.id);
       setOpenedGroupId(null);
-      startFrom(
-        Math.max(
-          target.clip.startMs,
-          Math.min(targetMs, target.clip.endMs - 1000),
-        ),
-        target.clip.endMs,
-      ).catch(() => {});
+      const seekMs = Math.max(
+        target.clip.startMs,
+        Math.min(targetMs, target.clip.endMs - 1000),
+      );
+      if (!trySeekWithinSession(seekMs)) startFrom(seekMs).catch(() => {});
       keepControlsVisible();
     },
     [
@@ -1014,11 +1433,15 @@ const CameraPlayback: React.FC = () => {
       keepControlsVisible,
       startFrom,
       timelineScale,
+      trySeekWithinSession,
       viewMode,
     ],
   );
 
   const handleTimelineScrollBeginDrag = React.useCallback(() => {
+    // Đang tự tay cuộn: badge phải đọc theo vạch, không dính vào đồng hồ của
+    // clip đang phát — nếu không thì cuộn cỡ nào con số cũng đứng yên.
+    setIsTimelineScrubbing(true);
     timelineDragGenerationRef.current += 1;
     timelineMomentumGenerationRef.current = null;
     isTimelineDraggingRef.current = true;
@@ -1081,8 +1504,9 @@ const CameraPlayback: React.FC = () => {
       return;
 
     if (clipGroups.length === 0) {
+      // EmptyState của timeline đã báo "Không có bản ghi" rồi, không hiện thêm
+      // banner lỗi cùng nghĩa.
       setPendingSeekSec(null);
-      setPlaybackError("Ngày này không có bản ghi.");
       return;
     }
 
@@ -1112,7 +1536,6 @@ const CameraPlayback: React.FC = () => {
           target.clip.startMs,
           Math.min(targetMs, target.clip.endMs - 1000),
         ),
-        target.clip.endMs,
       ).catch(() => {});
     } else {
       setPlaybackError("Không có bản ghi tại thời điểm này.");
@@ -1132,6 +1555,68 @@ const CameraPlayback: React.FC = () => {
     pendingSeekSec,
     startFrom,
     timelineScale,
+  ]);
+
+  // Một phiên chạy xuyên nhiều bản ghi, nên bản ghi "đang phát" phải suy ra từ
+  // mốc thời gian hiện tại chứ không phải từ lúc bấm chọn: qua mép clip là đổi
+  // highlight hàng và đổi mốc của thanh tua sang bản ghi mới.
+  React.useEffect(() => {
+    const playbackStartMs = playbackStartMsRef.current;
+    if (!playbackSession || playbackStartMs === null) return;
+
+    const current = findClipAtMs(playbackStartMs + positionSec * 1000);
+    // Đang ở khoảng trống giữa hai bản ghi: giữ nguyên bản ghi cũ cho tới khi
+    // đầu ghi đưa được hình của bản ghi kế tiếp.
+    if (!current) return;
+    if (current.clip.id !== activeClipId) setActiveClipId(current.clip.id);
+    if (current.group.id !== activeGroupId) setActiveGroupId(current.group.id);
+  }, [
+    activeClipId,
+    activeGroupId,
+    findClipAtMs,
+    playbackSession,
+    positionSec,
+  ]);
+
+  // Vạch đọc là "chỗ đang phát": kéo timeline theo mốc phát để hàng nằm tại
+  // vạch luôn khớp badge — cả khi tự phát lẫn sau khi seek bằng thanh tiến
+  // trình trên khung hình. Nhường quyền cuộn cho ngón tay và cho sheet clip.
+  React.useEffect(() => {
+    const playbackStartMs = playbackStartMsRef.current;
+    if (viewMode !== "timeline" || clipGroups.length === 0) return;
+    if (!playbackSession || playbackStartMs === null) return;
+    if (isTimelineScrubbing || isTimelineDraggingRef.current) return;
+    if (openedGroupId) return;
+    // Cuộn tới chỗ trống ("không có bản ghi tại thời điểm này") thì phiên cũ
+    // vẫn đang phát — giữ nguyên vị trí người dùng vừa chọn, đừng kéo về.
+    if (playbackError) return;
+
+    const rowHeight = Math.round(TIMELINE_ROW_HEIGHT * timelineScale);
+    const clockSec = (playbackStartMs - dayStartMs) / 1000 + positionSec;
+    const target = Math.max(
+      0,
+      getTimelineOffsetForSec(clipGroups, clockSec, rowHeight) -
+        TIMELINE_READING_OFFSET +
+        TIMELINE_TOP_MARGIN,
+    );
+    // Bám sát từng tick tiến trình, không animate và không giãn nhịp: cuộn có
+    // animation sẽ bị tick sau đè lên giữa đường nên vừa trễ vừa rung. Ngưỡng
+    // dưới-pixel chỉ để bỏ qua các tick không làm gì.
+    if (Math.abs(target - timelineOffsetY) < 0.1) return;
+
+    viewOffsetsRef.current.timeline = target;
+    timelineScrollRef.current?.scrollTo({ y: target, animated: false });
+  }, [
+    clipGroups,
+    dayStartMs,
+    isTimelineScrubbing,
+    openedGroupId,
+    playbackError,
+    playbackSession,
+    positionSec,
+    timelineOffsetY,
+    timelineScale,
+    viewMode,
   ]);
 
   if (!camera) {
@@ -1166,6 +1651,15 @@ const CameraPlayback: React.FC = () => {
     screenDims.height - insets.top - playerHeight,
   );
   const timelineRowHeight = Math.round(TIMELINE_ROW_HEIGHT * timelineScale);
+  const baseScrollPadBottom = insets.bottom + spacing.lg;
+  // Vạch đọc nằm sát đỉnh vùng cuộn, nên nếu chỉ chừa padding thường thì hàng
+  // cũ nhất dừng lại ở đáy màn hình và không bao giờ trôi lên tới vạch. Đoạn
+  // rail kéo thêm này bù đúng phần thiếu: cuộn hết đường là mép dưới hàng cuối
+  // trùng vạch đọc, tức đọc được mốc bản ghi sớm nhất của ngày.
+  const timelineRailTailHeight = Math.max(
+    0,
+    scrollAreaHeight - TIMELINE_TOP_MARGIN - baseScrollPadBottom,
+  );
   // Thời gian tại vạch đọc — cuộn xuống thì lùi dần về quá khứ.
   const scrubSec = getScrubSecAtOffset(
     clipGroups,
@@ -1183,18 +1677,37 @@ const CameraPlayback: React.FC = () => {
       : null;
   const liveClockSec = Math.max(0, (liveNowMs - dayStartMs) / 1000);
   const displayedTimelineSec =
-    playbackClockSec ??
-    (!isSeeking && isSelectedToday ? liveClockSec : scrubSec);
+    isTimelineScrubbing && viewMode === "timeline"
+      ? scrubSec ?? playbackClockSec
+      : playbackClockSec ??
+        (!isSeeking && isSelectedToday ? liveClockSec : scrubSec);
   // Tạm dừng thì mở đầy đủ điều khiển + thanh tiến trình như app tham chiếu.
   const showPlaybackControls = Boolean(activeClip && playbackSession);
-  const playbackOffsetSec =
+  // Đang xem lại nhưng phiên vừa bị đóng để mở phiên mới (đổi mốc, tự sang bản
+  // ghi kế, chờ mạng lại). Không được rơi về luồng trực tiếp trong lúc này:
+  // phần dưới vẫn là xem lại, mà khung hình lại chiếu live thì lệch hẳn.
+  const isPlaybackPending =
+    !playbackSession && (isConnecting || Boolean(activeClip));
+  // Phiên có thể đã chạy sang bản ghi khác so với lúc bấm chọn, nên vị trí
+  // trong clip phải tính từ mốc thời gian hiện tại trừ đầu clip đang phát.
+  const clipElapsedSec =
     activeClip && playbackStartMsRef.current !== null
-      ? Math.max(0, (playbackStartMsRef.current - activeClip.startMs) / 1000)
+      ? Math.min(
+          activeClip.durationSec,
+          Math.max(
+            0,
+            (playbackStartMsRef.current + positionSec * 1000 -
+              activeClip.startMs) /
+              1000,
+          ),
+        )
       : 0;
-  const progressRatio = activeClip
-    ? Math.min(1, (playbackOffsetSec + positionSec) / activeClip.durationSec)
-    : 0;
-  const visualProgressRatio = progressPreviewRatio ?? progressRatio;
+  // Tỷ lệ 0..1 → px trên thanh tua. Không phải hook nên đặt được ở đây, sau các
+  // nhánh return sớm phía trên.
+  const progressWidthRange = {
+    inputRange: [0, 1],
+    outputRange: [0, progressTrackWidth],
+  };
   const cameraTitle = camera.iD_Camera_MoTa || camera.iD_Camera_Ma || "Camera";
 
   return (
@@ -1222,19 +1735,31 @@ const CameraPlayback: React.FC = () => {
         >
           {!cameraToken ? null : playbackSession ? (
             <Video
-              key={`playback-${playbackSession.sessionId}`}
+              // Key CỐ ĐỊNH, không gắn sessionId: đổi phiên chỉ đổi prop source
+              // nên native player được giữ nguyên. Trước đây key theo sessionId
+              // làm mỗi lần đổi mốc là tháo/dựng lại một AVPlayer — vừa nháy đen
+              // vừa là chỗ dễ crash khi tháo player đang nạp dở.
+              key="playback"
+              ref={playbackVideoRef}
               source={{ uri: resolvePlaybackHlsUrl(playbackSession.hlsUrl) }}
               style={StyleSheet.absoluteFill}
               resizeMode="contain"
               muted
               paused={!isScreenVisible || isPaused || isConnecting}
-              rate={speed}
+              rate={appliedRate}
               repeat={false}
               controls={false}
+              progressUpdateInterval={PLAYBACK_PROGRESS_INTERVAL_MS}
               disableFocus
               useTextureView
               hideShutterView
-              automaticallyWaitsToMinimizeStalling
+              // false có chủ ý: react-native-video chỉ dùng
+              // playImmediately(atRate:) ở nhánh này (RCTVideo.setPaused), tức
+              // tốc độ tua được áp nguyên tử cùng lệnh play. Nhánh true là
+              // play() rồi mới gán rate, và AVPlayer bỏ qua lần gán đó khi vừa
+              // seek/vừa gom buffer — chính là lỗi chọn x2 không ăn, phải chọn
+              // x1 rồi x2 lại mới được.
+              automaticallyWaitsToMinimizeStalling={false}
               preferredForwardBufferDuration={30}
               bufferConfig={{
                 minBufferMs: 10000,
@@ -1253,15 +1778,120 @@ const CameraPlayback: React.FC = () => {
                 if (sessionRef.current?.sessionId === playbackSession.sessionId)
                   setIsVideoReady(true);
               }}
-              onProgress={({ currentTime }) => {
+              onProgress={({ currentTime, seekableDuration }) => {
                 if (sessionRef.current?.sessionId !== playbackSession.sessionId)
                   return;
                 currentPositionRef.current = currentTime;
+                // Vùng đã seek được của phiên — dùng để quyết định tua bằng
+                // seek trong phiên hay phải mở phiên mới.
+                if (Number.isFinite(seekableDuration))
+                  seekableDurationRef.current = seekableDuration;
+                // Phiên mới bắt đầu chạy: áp tốc độ đã chọn. Phiên mount với
+                // rate = tốc độ đó rồi, nhưng lệnh lúc mount hay bị AVPlayer bỏ
+                // qua, nên áp lại bằng đường hai bước cho chắc.
+                if (!hasPlaybackProgressRef.current) {
+                  hasPlaybackProgressRef.current = true;
+                  if (speed !== 1) applyPlaybackRate(speed);
+                }
+                // Đang kéo thì ngón tay là chủ: không đẩy núm về mốc đang phát,
+                // và cũng không setState để lúc kéo không có render nào chen
+                // vào giữa các frame.
+                if (isProgressScrubbingRef.current) return;
                 setPositionSec(currentTime);
+
+                // Phiên của "hôm nay" chỉ chạy tới thời điểm mở phiên. Playhead
+                // tới sát mép đó tức đã bắt kịp hiện tại — sang xem trực tiếp,
+                // thay vì phát tới hết rồi bị gateway đóng phiên và ăn onError.
+                const sessionEndMs = sessionEndMsRef.current;
+                const playbackStartMs = playbackStartMsRef.current;
+                if (
+                  isSelectedToday &&
+                  sessionEndMs !== null &&
+                  playbackStartMs !== null &&
+                  // Đã phát được một đoạn: chọn đúng mốc sát hiện tại thì để nó
+                  // chạy chứ đừng đẩy về live ngay khi vừa bấm.
+                  currentTime >= PLAYBACK_CAUGHT_UP_MIN_PLAYED_SEC &&
+                  sessionEndMs - (playbackStartMs + currentTime * 1000) <=
+                    PLAYBACK_CAUGHT_UP_LEAD_SEC * 1000
+                ) {
+                  handleBackToLive();
+                  return;
+                }
+
+                // Đo tốc độ thật = thời gian media chạy được / thời gian thực.
+                // Không có API đọc rate, và onPlaybackRateChange im lặng đúng
+                // lúc lệnh bị nuốt, nên đây là cách duy nhất biết được sự thật.
+                if (isPaused) {
+                  rateSampleRef.current = null;
+                } else {
+                  const now = Date.now();
+                  const sample = rateSampleRef.current;
+                  if (!sample) {
+                    rateSampleRef.current = { mediaSec: currentTime, atMs: now };
+                  } else if (
+                    now - sample.atMs >=
+                    PLAYBACK_RATE_CHECK_WINDOW_MS
+                  ) {
+                    const effective =
+                      (currentTime - sample.mediaSec) /
+                      ((now - sample.atMs) / 1000);
+                    rateSampleRef.current = { mediaSec: currentTime, atMs: now };
+
+                    if (
+                      Math.abs(effective - speed) <=
+                      speed * PLAYBACK_RATE_TOLERANCE
+                    ) {
+                      // Đúng tốc độ — mở lại hạn mức cho lần stall sau.
+                      rateRetryCountRef.current = 0;
+                    } else if (
+                      // Chạy trơn nhưng ở 1X: lệnh rate đã bị nuốt, ép lại.
+                      Math.abs(effective - 1) <= PLAYBACK_RATE_TOLERANCE &&
+                      rateRetryCountRef.current < PLAYBACK_RATE_MAX_RETRY &&
+                      now - lastRateApplyAtRef.current >=
+                        PLAYBACK_RATE_REAPPLY_THROTTLE_MS
+                    ) {
+                      rateRetryCountRef.current += 1;
+                      applyPlaybackRate(speed);
+                    }
+                    // Còn lại là chạy chậm hơn cả 1X, tức đói buffer (gateway
+                    // cấp dữ liệu theo thời gian thực) — ép rate không giải
+                    // quyết được, để yên cho player tự gom.
+                  }
+                }
+
+                const clip = activeClipRef.current;
+                const startMs = playbackStartMsRef.current;
+                if (!clip || startMs === null) return;
+                const elapsedSec =
+                  (startMs + currentTime * 1000 - clip.startMs) / 1000;
+                progressAnim.setValue(
+                  Math.min(1, Math.max(0, elapsedSec / clip.durationSec)),
+                );
               }}
               onEnd={() => {
                 if (sessionRef.current?.sessionId !== playbackSession.sessionId)
                   return;
+
+                // Phiên chạy tới hết ngày nên onEnd chỉ nổ khi đầu ghi thật sự
+                // dừng ở mép một bản ghi. Còn bản ghi sau thì mở phiên mới từ
+                // đó, người dùng không phải bấm gì; hết hẳn mới dừng và cho
+                // phát lại. Không tự nhảy khi màn hình đang ẩn hoặc đang tạm
+                // dừng để không âm thầm tải tiếp.
+                const startMs = playbackStartMsRef.current;
+                const next =
+                  startMs === null || !isScreenVisible || isPaused
+                    ? null
+                    : findNextClipAfterMs(
+                        startMs + currentPositionRef.current * 1000,
+                      );
+
+                if (next) {
+                  setActiveGroupId(next.group.id);
+                  setActiveClipId(next.clip.id);
+                  startFrom(next.clip.startMs).catch(() => {});
+                  return;
+                }
+
                 setIsPaused(true);
                 setIsClipEnded(true);
               }}
@@ -1269,21 +1899,66 @@ const CameraPlayback: React.FC = () => {
                 if (sessionRef.current?.sessionId !== playbackSession.sessionId)
                   return;
                 warn("Playback video error:", error);
-                if (playbackStartMsRef.current !== null) {
+
+                // Lỗi cách lần trước đủ lâu thì coi là sự cố mới, mở lại hạn
+                // mức thử. Nhờ vậy không bao giờ có vòng lặp load → lỗi → thử
+                // lại vô hạn, mà cũng không mất khả năng phục hồi về sau.
+                const errorAt = Date.now();
+                if (
+                  errorAt - lastPlaybackErrorAtRef.current >
+                  PLAYBACK_ERROR_RETRY_RESET_MS
+                )
+                  playbackRetryCountRef.current = 0;
+                lastPlaybackErrorAtRef.current = errorAt;
+
+                const startMs = playbackStartMsRef.current;
+                const resumeMs =
+                  startMs === null
+                    ? null
+                    : startMs + currentPositionRef.current * 1000;
+
+                // Lỗi giữa phiên thường là phiên bị server đóng hoặc mạng chớp,
+                // không phải bản ghi hỏng. Tự mở lại phiên từ đúng vị trí đang
+                // xem trước đã — khung hình giữ frame cuối kèm spinner nên
+                // người dùng chỉ thấy một nhịp chờ, không bị đẩy về trực tiếp.
+                if (
+                  resumeMs !== null &&
+                  isScreenVisible &&
+                  playbackRetryCountRef.current < PLAYBACK_ERROR_MAX_RETRY
+                ) {
+                  const attempt = (playbackRetryCountRef.current += 1);
+                  stopCurrentSession(false);
+                  setIsConnecting(true);
+                  if (playbackRetryTimerRef.current)
+                    clearTimeout(playbackRetryTimerRef.current);
+                  playbackRetryTimerRef.current = setTimeout(() => {
+                    playbackRetryTimerRef.current = null;
+                    startFrom(resumeMs).catch(() => {});
+                  }, PLAYBACK_ERROR_RETRY_BASE_MS * attempt);
+                  return;
+                }
+
+                // Thử hết vẫn không được: về xem trực tiếp kèm thông báo. Ý
+                // định phát lại vẫn nằm trong reconnectIntentRef cho trường hợp
+                // có mạng trở lại.
+                if (resumeMs !== null) {
                   reconnectIntentRef.current = {
                     mode: "playback",
-                    fromMs:
-                      playbackStartMsRef.current +
-                      currentPositionRef.current * 1000,
-                    endMs: activeClipRef.current?.endMs ?? dayEndMs,
+                    fromMs: resumeMs,
                   };
                 }
-                stopCurrentSession();
-                setIsConnecting(false);
-                setPlaybackError("Không thể phát bản ghi.");
+                // Bỏ cuộc: đưa cả màn hình về trực tiếp cho khớp với khung
+                // hình — bỏ bản ghi đang chọn, cuộn timeline về mốc mới nhất
+                // nên nút "Xem trực tiếp" tự ẩn. Giữ lại reconnect intent để
+                // khi có mạng lại thì phát tiếp đúng chỗ.
+                returnToLiveView({
+                  keepReconnectIntent: true,
+                  notice: "Không thể phát bản ghi.",
+                });
               }}
             />
-          ) : Platform.OS === "android" ? (
+
+            ) : isPlaybackPending ? null : Platform.OS === "android" ? (
             <Video
               key={`live-${camera.iD_Camera}-${liveVideoKey}`}
               source={{
@@ -1479,9 +2154,9 @@ const CameraPlayback: React.FC = () => {
 
                 {showPlaybackControls && activeClip ? (
                   <Text style={styles.playerClock} allowFontScaling={false}>
-                    {`${formatElapsed(
-                      playbackOffsetSec + positionSec,
-                    )} / ${formatElapsed(activeClip.durationSec)}`}
+                    {`${formatElapsed(clipElapsedSec)} / ${formatElapsed(
+                      activeClip.durationSec,
+                    )}`}
                   </Text>
                 ) : null}
               </View>
@@ -1532,9 +2207,17 @@ const CameraPlayback: React.FC = () => {
 
           {showPlaybackControls ? (
             <View
+              ref={progressScrubberRef}
               style={styles.progressScrubber}
               onLayout={(event) => {
-                progressTrackWidthRef.current = event.nativeEvent.layout.width;
+                const { width } = event.nativeEvent.layout;
+                progressTrackWidthRef.current = width;
+                setProgressTrackWidth(width);
+                // Cần toạ độ theo cửa sổ để quy đổi pageX; layout.x chỉ là vị
+                // trí so với view cha.
+                progressScrubberRef.current?.measureInWindow((pageX) => {
+                  progressTrackPageXRef.current = pageX;
+                });
               }}
               onStartShouldSetResponder={() =>
                 Boolean(activeClip && playbackSession && !isConnecting)
@@ -1542,27 +2225,33 @@ const CameraPlayback: React.FC = () => {
               onMoveShouldSetResponder={() =>
                 Boolean(activeClip && playbackSession && !isConnecting)
               }
-              onResponderGrant={handleProgressSeekMove}
+              onResponderGrant={handleProgressSeekGrant}
               onResponderMove={handleProgressSeekMove}
               onResponderRelease={handleProgressSeekRelease}
-              onResponderTerminate={() => setProgressPreviewRatio(null)}
+              onResponderTerminate={handleProgressSeekTerminate}
               accessibilityLabel="Tua vị trí phát"
             >
               <View style={styles.progressTrackWrap}>
                 <View style={styles.progressTrack}>
-                  <View
+                  <Animated.View
                     style={[
                       styles.progressFill,
-                      { width: `${visualProgressRatio * 100}%` },
+                      { width: progressAnim.interpolate(progressWidthRange) },
                     ]}
                   />
-                  <View
+                  <Animated.View
                     style={[
                       styles.progressHandle,
                       // Núm to hơn trong lúc kéo để thấy rõ đang tua.
-                      progressPreviewRatio !== null &&
-                        styles.progressHandleActive,
-                      { left: `${visualProgressRatio * 100}%` },
+                      isProgressScrubbing && styles.progressHandleActive,
+                      {
+                        transform: [
+                          {
+                            translateX:
+                              progressAnim.interpolate(progressWidthRange),
+                          },
+                        ],
+                      },
                     ]}
                   />
                 </View>
@@ -1666,13 +2355,21 @@ const CameraPlayback: React.FC = () => {
 
           {/* Bọc riêng vùng cuộn để nút zoom canh giữa theo đúng vùng này,
               không tính cả chiều cao player. */}
-          <View style={styles.scrollArea}>
+          <View
+            style={styles.scrollArea}
+            onLayout={(event) => {
+              const { height } = event.nativeEvent.layout;
+              setScrollAreaHeight((prev) =>
+                Math.abs(prev - height) > 1 ? height : prev,
+              );
+            }}
+          >
             <ScrollView
               ref={timelineScrollRef}
               contentContainerStyle={[
                 styles.scrollContent,
                 // Không còn thanh chức năng ở đáy nên timeline tự chừa safe area.
-                { paddingBottom: insets.bottom + spacing.lg },
+                { paddingBottom: baseScrollPadBottom },
               ]}
               showsVerticalScrollIndicator={false}
               onScroll={handleTimelineScroll}
@@ -1685,9 +2382,6 @@ const CameraPlayback: React.FC = () => {
               <PlaybackTimeline
                 activeClipId={activeClipId}
                 activeGroupId={activeGroupId}
-                cameraCode={camera.iD_Camera_Ma}
-                cameraId={camera.iD_Camera}
-                cameraToken={cameraToken}
                 emptySubtitle={"Chưa có bản ghi nào trong ngày đã chọn."}
                 errorMessage={recordingsError}
                 groups={clipGroups}
@@ -1697,13 +2391,19 @@ const CameraPlayback: React.FC = () => {
                 onSelectGroup={handleSelectGroup}
                 openedGroupId={openedGroupId}
                 isLoading={isRecordingsLoading}
+                playheadSec={playbackSession ? playbackClockSec : null}
+                railTailHeight={timelineRailTailHeight}
                 scale={timelineScale}
-                thumbTimestamp={thumbTimestamp}
                 viewMode={viewMode}
               />
             </ScrollView>
 
-            {viewMode !== "timeline" || displayedTimelineSec === null ? null : (
+            {/* Timeline rỗng (đang tải/lỗi/không có bản ghi) thì không vẽ vạch
+                scrub + badge giờ: không có gì để scrub tới, mà lớp này lại đè
+                lên placeholder. */}
+            {viewMode !== "timeline" ||
+            displayedTimelineSec === null ||
+            clipGroups.length === 0 ? null : (
               <>
                 <View style={styles.scrubLine} pointerEvents="none" />
                 <View style={styles.scrubBadgeWrap} pointerEvents="none">

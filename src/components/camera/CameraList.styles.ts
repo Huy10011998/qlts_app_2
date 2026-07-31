@@ -58,6 +58,8 @@ export const makeStyles = (c: AppColors) =>
     },
     previewLoadingBackground: {
       backgroundColor: "#111",
+      alignItems: "center",
+      justifyContent: "center",
     },
     previewLoading: {
       ...StyleSheet.absoluteFillObject,

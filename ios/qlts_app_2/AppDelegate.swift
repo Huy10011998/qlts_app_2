@@ -2,6 +2,7 @@ import UIKit
 import React
 import React_RCTAppDelegate
 import ReactAppDependencyProvider
+import FirebaseCore
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -14,6 +15,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
   ) -> Bool {
+    // Firebase phải được configure TRƯỚC khi React Native khởi động, nếu không
+    // native module @react-native-firebase/messaging sẽ không có default app và
+    // mọi lời gọi getToken()/requestPermission() từ JS sẽ throw.
+    // Guard nil để không configure 2 lần (configure lần 2 sẽ raise exception).
+    if FirebaseApp.app() == nil {
+      FirebaseApp.configure()
+    }
+
     Orientation.setOrientation(.portrait)
 
     let delegate = ReactNativeDelegate()
