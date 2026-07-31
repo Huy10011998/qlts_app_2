@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, type ViewStyle } from "react-native";
+import { Keyboard, Platform, StyleSheet, type ViewStyle } from "react-native";
 import {
   BottomTabBar,
   BottomTabBarProps,
@@ -114,6 +114,15 @@ export default function Tabs() {
   const colors = useAppColors();
   const hairlineBorderColor = useHairlineBorderColor();
   const colorScheme = useColorScheme();
+
+  // Tabs có thể được mount ngay khi keyboard (hoặc thanh gợi ý của iOS Password
+  // AutoFill) còn mở, ví dụ ngay sau khi đăng nhập. Đóng keyboard một lần tại
+  // đây để trạng thái ban đầu của app luôn sạch, bất kể vào app từ đường nào
+  // (mật khẩu, FaceID, hay khôi phục phiên).
+  React.useEffect(() => {
+    Keyboard.dismiss();
+  }, []);
+
   const renderTabBar = React.useCallback(
     (props: BottomTabBarProps) => (
       <ThemeAwareTabBar
@@ -136,7 +145,16 @@ export default function Tabs() {
       tabBar={renderTabBar}
       screenOptions={{
         headerShown: false,
-        tabBarHideOnKeyboard: true,
+        // Theo convention của từng nền tảng:
+        // - iOS: UITabBar không bao giờ ẩn theo keyboard, keyboard chỉ đè lên.
+        //   Bật hide-on-keyboard ở đây còn gây bug: khi Tabs được mount đúng lúc
+        //   iOS Password AutoFill vẫn giữ keyboard (đăng nhập bằng mật khẩu gợi
+        //   ý), animation ẩn có thể giữ thanh tab ở ngoài màn hình cho tới khi
+        //   đổi tab.
+        // - Android: manifest dùng adjustResize nên cửa sổ co lại và thanh tab
+        //   bị đẩy lên nằm trên bàn phím; Material yêu cầu ẩn bottom nav trong
+        //   trường hợp này.
+        tabBarHideOnKeyboard: Platform.OS !== "ios",
         lazy: false,
         tabBarAllowFontScaling: false,
         tabBarLabelStyle: tabBarStyles.label,
@@ -162,8 +180,7 @@ export default function Tabs() {
               : undefined,
             tabBarIcon: HomeTabIcon,
             // Give Home a concrete tab bar style (like the last known-good 2.20
-            // build) so the hide-on-keyboard animation can't leave it stuck
-            // off-screen after login. Do NOT freeze Home on blur: freezing kept
+            // build). Do NOT freeze Home on blur: freezing kept
             // the descriptor holding the previous theme's background color, so
             // switching dark->light from the Settings tab left this bar dark.
             // Without freeze the style re-evaluates and stays theme-correct.

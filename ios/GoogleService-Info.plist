@@ -3,17 +3,17 @@
 <plist version="1.0">
 <dict>
 	<key>API_KEY</key>
-	<string>AIzaSyDO7yQXDPPOKSA_6rAC5SeOcM6Tb5GxNuM</string>
+	<string>AIzaSyBXDm5GTDJW-Y_0K_Wb0AAEorqmNwAIaEs</string>
 	<key>GCM_SENDER_ID</key>
-	<string>557212653738</string>
+	<string>658864459072</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>org.reactjs.native.example.qlts-app-2</string>
+	<string>com.cholimexfood.appqlts2.1</string>
 	<key>PROJECT_ID</key>
-	<string>qlts-2</string>
+	<string>qlts-2fe12</string>
 	<key>STORAGE_BUCKET</key>
-	<string>qlts-2.firebasestorage.app</string>
+	<string>qlts-2fe12.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:557212653738:ios:2a998f7640cc2e6d0d98d3</string>
+	<string>1:658864459072:ios:b29446d8aea6f645d8bea5</string>
 </dict>
 </plist>

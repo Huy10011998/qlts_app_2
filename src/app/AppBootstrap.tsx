@@ -4,6 +4,7 @@ import { useBootstrapAuthRefs } from "./bootstrap/useBootstrapAuthRefs";
 import { useAppUpdateChecker } from "./bootstrap/useAppUpdateChecker";
 import { usePermissionReloader } from "./bootstrap/usePermissionReloader";
 import { useAppLifecycle } from "./bootstrap/useAppLifecycle";
+import { usePushNotifications } from "./bootstrap/usePushNotifications";
 
 export default function AppBootstrap() {
   const { isAuthenticated, authReady, iosAuthenticated } =
@@ -35,6 +36,12 @@ export default function AppBootstrap() {
     safeReloadRef,
     checkAppUpdateRef,
     retryTimer,
+  });
+
+  usePushNotifications({
+    isAuthenticated,
+    authReady,
+    iosAuthenticated,
   });
 
   return null;

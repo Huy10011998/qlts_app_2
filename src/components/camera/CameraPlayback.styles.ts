@@ -5,7 +5,7 @@ import { CAMERA_FULLSCREEN_EDGE_INSET } from "./shared/cameraStreamConfig";
 
 export const PLAYER_ASPECT_RATIO = 16 / 9;
 export const TIMELINE_ROW_HEIGHT = 168;
-export const TIMELINE_RAIL_WIDTH = 4;
+export const TIMELINE_RAIL_WIDTH = 6;
 // Đủ chỗ cho badge HH:mm:ss (88px) và vẫn chừa khoảng cách với mép màn hình.
 export const TIMELINE_LABEL_WIDTH = 92;
 /** Vạch đọc: badge thời gian nằm cố định ở đây, nội dung cuộn qua nó. */
@@ -79,9 +79,13 @@ export const makeStyles = (c: AppColors) =>
       alignItems: "center",
       justifyContent: "center",
     },
+    // Không tô đen đục: lúc đổi mốc/tự phục hồi thì phía dưới vẫn còn frame cuối
+    // của bản ghi đang xem, tô đen là mất luôn nó. Nền playerFrame đã là đen nên
+    // lần vào đầu tiên (chưa có frame nào) vẫn tối như trước; lớp mờ này chỉ để
+    // spinner đọc được trên cảnh sáng.
     playerLoading: {
       ...StyleSheet.absoluteFillObject,
-      backgroundColor: "#000",
+      backgroundColor: "rgba(0,0,0,0.35)",
       alignItems: "center",
       justifyContent: "center",
       zIndex: 2,
@@ -165,6 +169,9 @@ export const makeStyles = (c: AppColors) =>
     progressHandle: {
       position: "absolute",
       top: -5,
+      // Vị trí do translateX điều khiển (mượt hơn left theo %), nên phải neo
+      // left: 0 để gốc dịch chuyển luôn là mép trái thanh tua.
+      left: 0,
       marginLeft: -6.5,
       width: 13,
       height: 13,
@@ -460,9 +467,12 @@ export const makeStyles = (c: AppColors) =>
       position: "relative",
     },
     timelineRow: { flexDirection: "row", height: TIMELINE_ROW_HEIGHT },
+    // Canh xuống mép dưới hàng: đó mới là mốc h:00 (trong một hàng thời gian
+    // giảm dần từ trên xuống). Xem thêm chú thích ở TimelineRow.
     timelineLabelCol: {
       width: TIMELINE_LABEL_WIDTH,
       alignItems: "flex-end",
+      justifyContent: "flex-end",
       paddingRight: 10,
     },
     timelineLabel: {
@@ -534,12 +544,13 @@ export const makeStyles = (c: AppColors) =>
       zIndex: 21,
       elevation: 11,
     },
+    // Tick ranh giới giờ, nằm ngay trên nhãn.
     timelineLabelDash: {
       width: 10,
       height: 2,
       borderRadius: 1,
       backgroundColor: c.borderStrong,
-      marginTop: 6,
+      marginBottom: 6,
     },
     timelineRailCol: {
       width: TIMELINE_RAIL_WIDTH,
@@ -551,17 +562,30 @@ export const makeStyles = (c: AppColors) =>
       borderColor: c.borderStrong,
       overflow: "hidden",
     },
-    timelineTick: {
+    // Đoạn có bản ghi, vẽ đúng tỷ lệ vị trí trong hàng: nhìn dọc rail là thấy
+    // ngay chỗ nào ghi liên tục, chỗ nào mất. Trước đây là các chấm rắc đều, số
+    // chấm chỉ tỷ lệ thô với mức phủ nên không đọc được gì.
+    timelineCoverage: {
       position: "absolute",
       left: -1,
       right: -1,
-      height: 5,
       borderRadius: 3,
       backgroundColor: c.redLight,
-      opacity: 0.75,
+      opacity: 0.8,
     },
     // Nhóm đang chọn dùng đỏ đậm hơn để vẫn nổi so với các nhóm còn lại.
-    timelineTickActive: { backgroundColor: c.red, opacity: 1 },
+    timelineCoverageActive: { backgroundColor: c.red, opacity: 1 },
+    // Mốc đang phát trong hàng.
+    timelinePlayhead: {
+      position: "absolute",
+      left: -4,
+      right: -4,
+      height: 3,
+      marginTop: -1.5,
+      borderRadius: 2,
+      backgroundColor: c.text,
+      zIndex: 2,
+    },
     timelineClipCol: {
       flex: 1,
       paddingLeft: 14,
@@ -569,76 +593,74 @@ export const makeStyles = (c: AppColors) =>
       alignItems: "flex-start",
       gap: spacing.sm,
     },
-    clipCardWrap: { paddingTop: 3 },
-    clipCardStack: {
-      position: "absolute",
-      top: -4,
-      left: 10,
-      right: 10,
-      height: 10,
+    /* ── Thẻ bản ghi trên timeline ──────────────────────────────────────
+       Không dùng ảnh snapshot: go2rtc chỉ chụp được frame HIỆN TẠI nên mọi thẻ
+       đều giống nhau và nói sai về mốc thời gian, lại tốn một request mỗi thẻ.
+       Chỗ đó giờ là dải phủ đọc từ chính clip của nhóm. */
+    // Cao cố định, canh giữa theo chiều dọc: hàng cao theo mức zoom
+    // (TIMELINE_ROW_HEIGHT × scale) nên thẻ không được co giãn theo.
+    clipCard: {
+      alignSelf: "center",
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      height: 58,
+      paddingHorizontal: 10,
       borderRadius: radius.md,
+      backgroundColor: c.surfaceAlt,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.border,
+    },
+    clipCardActive: {
+      borderWidth: 1.5,
+      borderColor: c.red,
+      backgroundColor: c.redSurface,
+    },
+    clipPlayCircle: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
       backgroundColor: c.surface,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: c.borderStrong,
-    },
-    clipCard: {
-      width: 156,
-      height: 94,
-      borderRadius: radius.md,
-      overflow: "hidden",
-      backgroundColor: "#111",
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: "rgba(255,255,255,0.18)",
-      ...elevation(c.shadow, 3),
-    },
-    clipCardActive: {
-      borderWidth: 2,
-      borderColor: c.red,
-      shadowColor: c.red,
-      shadowOpacity: 0.35,
-      shadowRadius: 10,
-    },
-    // Lớp tối nhẹ ở đáy card để chữ/nút trắng luôn tách khỏi ảnh thumbnail.
-    clipCardScrim: {
-      position: "absolute",
-      left: 0,
-      right: 0,
-      bottom: 0,
-      height: 46,
-      zIndex: 1,
-    },
-    clipCountText: {
-      position: "absolute",
-      top: 6,
-      left: 6,
-      color: "#fff",
-      fontSize: 11.5,
-      fontWeight: "800",
-      letterSpacing: 0.2,
-      zIndex: 2,
-      overflow: "hidden",
-      backgroundColor: "rgba(0,0,0,0.5)",
-      borderRadius: radius.pill,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-    },
-    clipPlayBtn: {
-      ...StyleSheet.absoluteFillObject,
-      alignItems: "flex-end",
-      justifyContent: "flex-end",
-      padding: spacing.sm,
-      zIndex: 2,
-    },
-    clipPlayCircle: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      backgroundColor: "rgba(0,0,0,0.5)",
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: "rgba(255,255,255,0.35)",
       alignItems: "center",
       justifyContent: "center",
     },
+    clipPlayCircleActive: { backgroundColor: c.red, borderColor: c.red },
+    clipCardBody: { flex: 1, gap: 3 },
+    clipCardTime: {
+      color: c.text,
+      fontSize: 13.5,
+      fontWeight: "700",
+      letterSpacing: 0.2,
+      fontVariant: ["tabular-nums"],
+    },
+    clipCardTimeActive: { color: c.red },
+    clipCardMeta: {
+      color: c.textSub,
+      fontSize: 11.5,
+      fontWeight: "600",
+      fontVariant: ["tabular-nums"],
+    },
+    // Trục 60 phút của giờ đó; đoạn tô là khoảng có bản ghi. Chỉ còn dùng cho ô
+    // trong chế độ lưới — hàng timeline đã có rail vẽ đúng tỷ lệ.
+    clipCoverageTrack: {
+      width: "100%",
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: c.border,
+      overflow: "hidden",
+    },
+    clipCoverageFill: {
+      position: "absolute",
+      top: 0,
+      bottom: 0,
+      minWidth: 2,
+      borderRadius: 2,
+      backgroundColor: c.redLight,
+    },
+    clipCoverageFillActive: { backgroundColor: c.red },
+
     personChip: {
       width: 32,
       height: 32,
@@ -711,66 +733,62 @@ export const makeStyles = (c: AppColors) =>
       gap: spacing.sm,
       marginBottom: spacing.sm,
     },
+    // Ô lưới cũng bỏ ảnh snapshot: giờ + dải phủ + thời lượng + nút phát. Ô thấp
+    // hơn ảnh 16:9 nên mỗi màn nhìn được nhiều bản ghi hơn.
     playbackGridCard: {
       flexBasis: "31%",
       flexGrow: 1,
       maxWidth: "32%",
-      aspectRatio: 1.55,
+      justifyContent: "space-between",
+      gap: 6,
+      padding: 8,
       borderRadius: radius.md,
-      overflow: "hidden",
-      backgroundColor: "#111",
+      backgroundColor: c.surfaceAlt,
       borderWidth: StyleSheet.hairlineWidth,
-      borderColor: "rgba(255,255,255,0.16)",
+      borderColor: c.border,
     },
     playbackGridCardActive: {
-      borderWidth: 2,
+      borderWidth: 1.5,
       borderColor: c.red,
-      shadowColor: c.red,
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
+      backgroundColor: c.redSurface,
     },
-    // Cùng vai trò clipCardScrim nhưng ở đỉnh card, nơi đặt giờ và thời lượng.
-    playbackGridScrim: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      height: 32,
-      zIndex: 1,
+    playbackGridTopRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 4,
+    },
+    playbackGridBottomRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 4,
     },
     playbackGridTime: {
-      position: "absolute",
-      top: 5,
-      left: 7,
-      color: "#fff",
-      fontSize: 12,
+      color: c.text,
+      fontSize: 12.5,
       fontWeight: "800",
       letterSpacing: 0.2,
-      zIndex: 2,
       fontVariant: ["tabular-nums"],
     },
+    playbackGridTimeActive: { color: c.red },
     playbackGridDuration: {
-      position: "absolute",
-      top: 5,
-      right: 7,
-      color: "rgba(255,255,255,0.88)",
+      color: c.textSub,
       fontSize: 11.5,
       fontWeight: "700",
-      zIndex: 2,
       fontVariant: ["tabular-nums"],
     },
-    playbackGridEventIcon: {
-      position: "absolute",
-      right: 5,
-      bottom: 5,
+    playbackGridPlay: {
       width: 24,
       height: 24,
-      borderRadius: 6,
-      backgroundColor: "rgba(0,0,0,0.48)",
+      borderRadius: 12,
+      backgroundColor: c.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.borderStrong,
       alignItems: "center",
       justifyContent: "center",
-      zIndex: 2,
     },
+
     playbackGroupDetail: {
       flex: 1,
       paddingTop: spacing.xl,

@@ -41,7 +41,7 @@ describe("camera playback helpers", () => {
   describe("speed labels", () => {
     it("marks 1x as the normal speed", () => {
       expect(getPlaybackSpeedLabel(1)).toBe("1 lần (Tốc độ bình thường)");
-      expect(getPlaybackSpeedLabel(4)).toBe("4 lần");
+      expect(getPlaybackSpeedLabel(2)).toBe("2 lần");
       expect(getPlaybackSpeedLabel(0.5)).toBe("0.5 lần");
     });
     it("badge is compact", () => {
@@ -110,6 +110,36 @@ describe("camera playback helpers", () => {
     });
   });
 
+  describe("coverage segments", () => {
+    it("maps recordings to proportional segments, newest at the top", () => {
+      const dayStartMs = new Date(2026, 6, 23).getTime();
+      const at = (hour: number, minute: number) =>
+        dayStartMs + hour * 3_600_000 + minute * 60_000;
+
+      // Giờ 9 có hai đoạn: 09:10–09:25 và 09:30–09:45; giờ 10 có 10:00–10:15.
+      const groups = buildPlaybackClipGroups(
+        [
+          { startMs: at(9, 10), endMs: at(9, 25) },
+          { startMs: at(9, 30), endMs: at(9, 45) },
+          { startMs: at(10, 0), endMs: at(10, 15) },
+        ],
+        dayStartMs
+      );
+
+      const hourNine = groups.find((group) => group.hour === 9)!;
+      // Hàng giờ 9 trải từ 09:45 (mép trên) tới 09:10 (mép dưới) = 2100 giây.
+      const span = hourNine.startSec - 9 * 3600 - 10 * 60;
+      expect(span).toBe(2100);
+
+      const [first, second] = hourNine.coverageSegments;
+      // Đoạn muộn hơn (09:30–09:45) phải nằm trên: from = 0.
+      expect(first.from).toBeCloseTo(0, 5);
+      expect(first.to).toBeCloseTo(900 / span, 5);
+      // Đoạn sớm hơn (09:10–09:25) chạm mép dưới: to = 1.
+      expect(second.to).toBeCloseTo(1, 5);
+    });
+  });
+
   describe("buildMockClipGroups", () => {
     it("is deterministic for the same day", () => {
       expect(buildMockClipGroups(-2)).toEqual(buildMockClipGroups(-2));
@@ -122,10 +152,11 @@ describe("camera playback helpers", () => {
       groups.forEach((group, index) => {
         expect(group.clipCount).toBeGreaterThan(0);
         expect(group.durationSec).toBe(group.clipCount * 15);
-        expect(group.tickOffsets.length).toBeGreaterThanOrEqual(4);
-        group.tickOffsets.forEach((offset) => {
-          expect(offset).toBeGreaterThanOrEqual(0);
-          expect(offset).toBeLessThanOrEqual(1);
+        expect(group.coverageSegments.length).toBeGreaterThanOrEqual(2);
+        group.coverageSegments.forEach((segment) => {
+          expect(segment.from).toBeGreaterThanOrEqual(0);
+          expect(segment.to).toBeLessThanOrEqual(1);
+          expect(segment.to).toBeGreaterThan(segment.from);
         });
         if (index > 0) {
           expect(group.startSec).toBeLessThan(groups[index - 1].startSec);
@@ -149,9 +180,27 @@ describe("camera playback helpers", () => {
     it("getScrubSecAtOffset clamps outside the timeline", () => {
       const groups = buildMockClipGroups(0);
       const last = groups[groups.length - 1];
+      // Cuối timeline là mốc bắt đầu bản ghi sớm nhất, không phải anchor trên
+      // của hàng cuối — người dùng phải cuộn được về đúng đầu playback.
+      const earliestSec = Math.min(...last.clips.map((clip) => clip.startSec));
 
       expect(getScrubSecAtOffset(groups, -500, 168)).toBe(groups[0].startSec);
-      expect(getScrubSecAtOffset(groups, 999999, 168)).toBe(last.startSec);
+      expect(getScrubSecAtOffset(groups, 999999, 168)).toBe(earliestSec);
+      expect(earliestSec).toBeLessThan(last.startSec);
+    });
+
+    it("maps the earliest recording second to the end of the timeline", () => {
+      const groups = buildMockClipGroups(0);
+      const rowHeight = 168;
+      const last = groups[groups.length - 1];
+      const earliestSec = Math.min(...last.clips.map((clip) => clip.startSec));
+
+      expect(getTimelineOffsetForSec(groups, earliestSec, rowHeight)).toBe(
+        groups.length * rowHeight
+      );
+      expect(getTimelineOffsetForSec(groups, 0, rowHeight)).toBe(
+        groups.length * rowHeight
+      );
     });
 
     it("getScrubSecAtOffset returns null without recordings", () => {

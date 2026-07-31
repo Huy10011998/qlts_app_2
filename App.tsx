@@ -5,7 +5,6 @@ import {
   DarkTheme,
   DefaultTheme,
   NavigationContainer,
-  useNavigationContainerRef,
 } from "@react-navigation/native";
 import Orientation from "react-native-orientation-locker";
 import RootNavigator from "./src/navigation/RootNavigator";
@@ -18,6 +17,7 @@ import { useColorScheme } from "./src/hooks/useColorScheme";
 import { Colors } from "./src/constants/Colors";
 import { C } from "./src/utils/helpers/colors";
 import { ThemeProvider } from "./src/context/ThemeContext";
+import { navigationRef } from "./src/navigation/navigationService";
 
 const LANDSCAPE_ALLOWED_ROUTES = new Set([
   "CameraList",
@@ -30,7 +30,8 @@ configureTextScalingDefaults();
 function AppContent() {
   const colorScheme = useColorScheme() ?? "light";
   const isDark = colorScheme === "dark";
-  const navigationRef = useNavigationContainerRef();
+  // navigationRef ở cấp module (navigationService) thay cho useNavigationContainerRef
+  // để handler push notification — chạy ngoài cây React — cũng điều hướng được.
   const routeNameRef = React.useRef<string | undefined>(undefined);
 
   const syncOrientationWithRoute = React.useCallback(() => {
@@ -47,7 +48,7 @@ function AppContent() {
     }
 
     Orientation.lockToPortrait();
-  }, [navigationRef]);
+  }, []);
 
   React.useEffect(() => {
     Orientation.lockToPortrait();
