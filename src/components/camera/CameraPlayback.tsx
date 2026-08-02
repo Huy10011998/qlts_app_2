@@ -159,6 +159,12 @@ const PLAYBACK_CAUGHT_UP_MIN_PLAYED_SEC = 3;
  * mép live thường chưa có bản ghi, seek vào đó là báo không có dữ liệu.
  */
 const PLAYBACK_CARRY_LIVE_MARGIN_SEC = 30;
+/**
+ * Toàn màn hình: thanh tua phải nằm trên vùng cử chỉ home indicator, và hàng nút
+ * phải nằm trên thanh tua. Cộng thêm safe area thật của thiết bị.
+ */
+const FULLSCREEN_SCRUBBER_LIFT = 8;
+const FULLSCREEN_CONTROLS_LIFT = 50;
 const TIMELINE_SCALE_STEP = 0.25;
 const TIMELINE_SCALE_MIN = 0.5;
 const TIMELINE_SCALE_MAX = 2;
@@ -2131,6 +2137,9 @@ const CameraPlayback: React.FC = () => {
               style={[
                 styles.playerControls,
                 isFullscreen && styles.playerControlsFullscreen,
+                isFullscreen && {
+                  bottom: insets.bottom + FULLSCREEN_CONTROLS_LIFT,
+                },
               ]}
             >
               <View style={styles.playerControlGroup}>
@@ -2208,7 +2217,13 @@ const CameraPlayback: React.FC = () => {
           {showPlaybackControls ? (
             <View
               ref={progressScrubberRef}
-              style={styles.progressScrubber}
+              style={[
+                styles.progressScrubber,
+                isFullscreen && styles.progressScrubberFullscreen,
+                isFullscreen && {
+                  bottom: insets.bottom + FULLSCREEN_SCRUBBER_LIFT,
+                },
+              ]}
               onLayout={(event) => {
                 const { width } = event.nativeEvent.layout;
                 progressTrackWidthRef.current = width;
