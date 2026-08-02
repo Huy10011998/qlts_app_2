@@ -103,10 +103,9 @@ export const makeStyles = (c: AppColors) =>
       paddingHorizontal: spacing.md,
       zIndex: 4,
     },
-    playerControlsFullscreen: {
-      bottom: CAMERA_FULLSCREEN_EDGE_INSET,
-      paddingHorizontal: spacing.lg,
-    },
+    // Toàn màn hình: bottom do component tính theo safe area (xem CameraPlayback)
+    // vì phải nằm trên thanh tua, mà thanh tua lại phải nằm trên home indicator.
+    playerControlsFullscreen: { paddingHorizontal: spacing.lg },
     // Các nút gom vào một "viên thuốc" kính mờ thay vì nhiều tròn đen rời rạc.
     playerControlGroup: {
       flexDirection: "row",
@@ -147,6 +146,19 @@ export const makeStyles = (c: AppColors) =>
       // track dính sát mép dưới.
       paddingBottom: 3,
       zIndex: 5,
+    },
+    /**
+     * Toàn màn hình phải nhấc thanh tua khỏi mép dưới: dải ~20pt sát đáy là vùng
+     * cử chỉ home indicator của iOS, hệ thống ưu tiên nhận trước nên kéo tua ở đó
+     * là bị vuốt đổi app. Thụt hai bên cho thẳng hàng với nút phía trên và tránh
+     * góc màn hình; cao hơn một chút vì ngón tay ở landscape khó nhắm hơn.
+     * `bottom` do component gán theo safe area thật.
+     */
+    progressScrubberFullscreen: {
+      left: spacing.lg,
+      right: spacing.lg,
+      height: 34,
+      paddingBottom: 6,
     },
     // Chiều cao đủ để chứa cả núm tròn, nên không cần offset âm (playerFrame
     // overflow hidden sẽ cắt mất).
