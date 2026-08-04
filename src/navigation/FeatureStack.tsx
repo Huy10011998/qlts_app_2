@@ -2,23 +2,19 @@ import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import type { RootStackParamList } from "../types/index";
-import HeaderHome from "../components/header/HeaderHome";
-import { HOME_SCREEN_COMPONENT } from "./shared/homeStackConfig";
+import FeaturesScreen from "../screens/Home/FeaturesScreen";
+import { headerWithoutBack } from "./shared/navigationOptions";
 import { renderSharedStackScreens } from "./shared/sharedStackScreens";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-function renderHomeHeader() {
-  return <HeaderHome />;
-}
-
-export default function HomeStack() {
+export default function FeatureStack() {
   return (
     <Stack.Navigator>
       <Stack.Screen
-        name="Home"
-        component={HOME_SCREEN_COMPONENT}
-        options={{ header: renderHomeHeader }}
+        name="Features"
+        component={FeaturesScreen}
+        options={{ title: "Chức năng", ...headerWithoutBack }}
       />
 
       {renderSharedStackScreens(Stack)}

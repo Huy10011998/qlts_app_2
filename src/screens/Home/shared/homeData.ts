@@ -1,4 +1,7 @@
-import { HOME_BRAND_RED } from "./homeTheme";
+import type {
+  TaiSanDashboardDeptRaw,
+  TaiSanDashboardRaw,
+} from "../../../services/data/dashboardApi";
 
 export const HOME_MEETING_INFO = {
   meetingId: "meeting-2026",
@@ -9,31 +12,230 @@ export const HOME_MEETING_INFO = {
   totalShareholders: 220,
 };
 
-export const HOME_ASSET_SUMMARY = {
-  totalAssets: 1766,
+/**
+ * Mỗi khối mới có thể mang theo `viewPermission` riêng. Payload nói gì thì theo
+ * đó; không nói thì Trang chủ dùng mã mặc định trong
+ * `HOME_BLOCK_VIEW_PERMISSIONS` (xem `canViewBlock`).
+ */
+type HomeDashboardBlock<T> = T & { viewPermission?: string };
+
+/**
+ * Mã quyền mặc định của các khối số liệu không đi kèm một chức năng nào trong
+ * GET_VIEW_ACTIVE, nên không mượn được `viewPermission` từ menu.
+ *
+ * API dashboard chỉ đòi token đăng nhập, nhưng đây là số liệu TOÀN CÔNG TY
+ * (tiêu thụ điện/nước/hơi, điểm danh từng bộ phận) — app vẫn tự chặn theo quyền
+ * chứ không mở cho mọi tài khoản. Tài khoản `Group.1` vẫn thấy hết như mọi chỗ.
+ */
+export const HOME_BLOCK_VIEW_PERMISSIONS = {
+  attendance: "DiemDanh",
+  utilities: "TieuThu",
+} as const;
+
+/** Một loại thiết bị trong khối CƠ CẤU THIẾT BỊ CNTT. */
+export type HomeDashboardItCategory = {
+  key: string;
+  label: string;
+  value: number;
 };
 
-export const HOME_CAMERA_SUMMARY = {
-  totalCameras: 520,
+/** Một đại lượng tiêu thụ, chia theo hai nhà máy. */
+export type HomeDashboardUtility = {
+  key: string;
+  label: string;
+  iconName: string;
+  unit: string;
+  /** Số lẻ khi hiển thị. Tất cả đại lượng hiện tại đều làm tròn về số nguyên. */
+  decimals?: number;
+  /** Vĩnh Lộc. null = kỳ đó chưa chốt chỉ số, KHÁC 0. */
+  vinhLoc: number | null;
+  /** Bến Lức. */
+  benLuc: number | null;
+  /** VL + BL, null khi cả hai đều null. */
+  total: number | null;
 };
 
-export const HOME_RECENT_ACTIVITIES = [
+/** Một dòng trong khối điểm danh, tương ứng một bộ phận Bravo8. */
+export type HomeDashboardDepartment = {
+  /** Khoá cho list — deptCode rỗng (nhân viên chưa gán bộ phận) vẫn cần khoá. */
+  key: string;
+  /** null/rỗng nghĩa là nhân viên chưa được gán bộ phận. */
+  code: string | null;
+  name: string;
+  total: number;
+  checkedIn: number;
+  notCheckedIn: number;
+};
+
+export type HomeDashboardPayload = {
+  /** Kỳ tiêu thụ = THÁNG TRƯỚC, do SQL tự quyết. In đúng số nhận được. */
+  period: { month: number; year: number };
+  /** Đếm thiết bị — nhóm này server luôn có số. */
+  devices: {
+    machines: number;
+    /** Tổng 7 loại CNTT, KHÔNG gồm camera. */
+    it: number;
+    camera: number;
+  };
+  itStructure: HomeDashboardBlock<{
+    total: number;
+    /** Đã sắp giảm dần theo số lượng. */
+    items: HomeDashboardItCategory[];
+  }>;
+  utilities: HomeDashboardBlock<{
+    items: HomeDashboardUtility[];
+  }>;
+  attendance: HomeDashboardBlock<{
+    /** null = không kết nối được hệ thống nhân sự Bravo8. */
+    total: number | null;
+    checkedIn: number | null;
+    notCheckedIn: number | null;
+    /** Giữ NGUYÊN thứ tự nhận được (đã sắp theo sttPrintRep). */
+    departments: HomeDashboardDepartment[];
+  }>;
+  /** ISO string — giờ SERVER lúc chạy proc, không phải giờ máy điện thoại. */
+  updatedAt: string;
+};
+
+const IT_CATEGORY_LABELS: {
+  key: string;
+  label: string;
+  field: keyof TaiSanDashboardRaw;
+}[] = [
+  { key: "may-tinh", label: "Máy tính", field: "sL_MayTinh" },
+  { key: "thiet-bi-mang", label: "Thiết bị mạng", field: "sL_ThietBiMang" },
+  { key: "may-in", label: "Máy in", field: "sL_MayIn" },
   {
-    text: "Camera khu A phát hiện chuyển động",
-    time: "14:22",
-    dot: HOME_BRAND_RED,
-    viewPermission: "Camera",
+    key: "thiet-bi-cntt",
+    label: "Thiết bị CNTT khác",
+    field: "sL_ThietBiCNTT",
   },
+  { key: "dien-thoai", label: "Điện thoại", field: "sL_DienThoai" },
   {
-    text: "Tài sản #TB-0041 được cập nhật",
-    time: "11:05",
-    dot: "#3B5BDB",
-    viewPermission: "TaiSan",
+    key: "may-quet-ma-vach",
+    label: "Máy quét mã vạch",
+    field: "sL_MayQuetMaVach",
   },
-  {
-    text: "Xác nhận đăng ký cổ đông #245",
-    time: "Hôm qua",
-    dot: "#D1D5DB",
-    viewPermission: "DHCD",
-  },
+  { key: "server", label: "Server", field: "sL_Server" },
 ];
+
+const toNumber = (value: unknown) =>
+  typeof value === "number" && Number.isFinite(value) ? value : 0;
+
+/** null KHÁC 0: chỉ giữ số thật, mọi thứ khác về null để view hiện "—". */
+const toNullableNumber = (value: unknown) =>
+  typeof value === "number" && Number.isFinite(value) ? value : null;
+
+const sumUtility = (vinhLoc: number | null, benLuc: number | null) => {
+  if (vinhLoc == null && benLuc == null) return null;
+
+  return (vinhLoc ?? 0) + (benLuc ?? 0);
+};
+
+const mapDepartment = (
+  dept: TaiSanDashboardDeptRaw,
+  index: number,
+): HomeDashboardDepartment => {
+  const code = dept.deptCode?.trim() ? dept.deptCode.trim() : null;
+
+  return {
+    // deptCode có thể rỗng (dòng "chưa gán bộ phận") nên phải kèm index để khoá
+    // luôn duy nhất.
+    key: `${code ?? "khong-bo-phan"}-${index}`,
+    code,
+    // Bỏ dòng này là tổng theo bộ phận thiếu người so với tổng công ty.
+    name: code ? dept.tenBoPhan?.trim() || code : "Chưa gán bộ phận",
+    total: toNumber(dept.tongNhanVien),
+    checkedIn: toNumber(dept.daDiemDanh),
+    notCheckedIn: toNumber(dept.chuaDiemDanh),
+  };
+};
+
+/**
+ * Đổi response thô của `get-dashboard-taisan` thành payload mà Trang chủ dựng
+ * view. Mọi quy tắc riêng của dashboard nằm gọn ở đây:
+ *
+ *  · nhóm `sL_*` luôn có số  -> đưa về 0 nếu payload lạ, không để null.
+ *  · tiêu thụ & điểm danh    -> giữ null để view hiện "—" (null KHÁC 0).
+ *  · thang/nam               -> in đúng số nhận được, KHÔNG trừ thêm 1 tháng.
+ *  · mảng bộ phận            -> giữ nguyên thứ tự server đã sắp theo sttPrintRep.
+ */
+export const mapTaiSanDashboard = (
+  raw: TaiSanDashboardRaw,
+): HomeDashboardPayload => {
+  const itTotal = toNumber(raw.sL_CNTT);
+  const dienVL = toNullableNumber(raw.dien_TieuThu_VL);
+  const dienBL = toNullableNumber(raw.dien_TieuThu_BL);
+  const nuocVL = toNullableNumber(raw.nuoc_TieuThu_VL);
+  const nuocBL = toNullableNumber(raw.nuoc_TieuThu_BL);
+  const hoiVL = toNullableNumber(raw.hoi_TieuThu_VL);
+  const hoiBL = toNullableNumber(raw.hoi_TieuThu_BL);
+  const solarVL = toNullableNumber(raw.solar_TieuThu_VL);
+  const solarBL = toNullableNumber(raw.solar_TieuThu_BL);
+
+  return {
+    period: { month: toNumber(raw.thang), year: toNumber(raw.nam) },
+    devices: {
+      machines: toNumber(raw.sL_MayMoc),
+      it: itTotal,
+      camera: toNumber(raw.sL_Camera),
+    },
+    itStructure: {
+      total: itTotal,
+      // Sắp giảm dần: danh sách trên điện thoại đọc theo tỷ trọng, không theo
+      // thứ tự khai báo. Server không sắp sẵn nhóm này.
+      items: IT_CATEGORY_LABELS.map(({ key, label, field }) => ({
+        key,
+        label,
+        value: toNumber(raw[field]),
+      })).sort((left, right) => right.value - left.value),
+    },
+    utilities: {
+      items: [
+        {
+          key: "electricity",
+          label: "Điện",
+          iconName: "flash-outline",
+          unit: "kWh",
+          vinhLoc: dienVL,
+          benLuc: dienBL,
+          total: sumUtility(dienVL, dienBL),
+        },
+        {
+          key: "water",
+          label: "Nước",
+          iconName: "water-outline",
+          unit: "m³",
+          vinhLoc: nuocVL,
+          benLuc: nuocBL,
+          total: sumUtility(nuocVL, nuocBL),
+        },
+        {
+          key: "steam",
+          label: "Hơi",
+          iconName: "thermometer-outline",
+          unit: "tấn",
+          vinhLoc: hoiVL,
+          benLuc: hoiBL,
+          total: sumUtility(hoiVL, hoiBL),
+        },
+        {
+          key: "solar",
+          label: "Điện mặt trời",
+          iconName: "sunny-outline",
+          unit: "kWh",
+          vinhLoc: solarVL,
+          benLuc: solarBL,
+          total: sumUtility(solarVL, solarBL),
+        },
+      ],
+    },
+    attendance: {
+      total: toNullableNumber(raw.tongNhanVien),
+      checkedIn: toNullableNumber(raw.daDiemDanh),
+      notCheckedIn: toNullableNumber(raw.chuaDiemDanh),
+      departments: (raw.diemDanh_BoPhan ?? []).map(mapDepartment),
+    },
+    updatedAt: raw.ngayCapNhat,
+  };
+};
