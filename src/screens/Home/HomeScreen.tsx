@@ -1,15 +1,6 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Animated,
-  GestureResponderEvent,
   RefreshControl,
   ScrollView,
   Text,
@@ -26,179 +17,52 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import type { HomeNavigationProp } from "../../types";
 import { usePermission } from "../../hooks/usePermission";
 import HomeMenuItemCard from "./shared/HomeMenuItemCard";
-import HomeStatCard from "./shared/HomeStatCard";
-import HomeQuickAction from "./shared/HomeQuickAction";
 import HomeSectionTitle from "./shared/HomeSectionTitle";
-import HomeRecentActivities from "./shared/HomeRecentActivities";
+import HomeStatTiles, { type HomeStatTile } from "./shared/HomeStatTiles";
+import HomeUtilityCard, {
+  type HomeUtilityRow,
+} from "./shared/HomeUtilityCard";
+import HomeAttendanceCard from "./shared/HomeAttendanceCard";
+import HomeItStructureCard from "./shared/HomeItStructureCard";
+import HomeCustomizeSheet, {
+  buildHomeCustomizeSections,
+} from "./shared/HomeCustomizeSheet";
+import HomeBlockOrderSheet from "./shared/HomeBlockOrderSheet";
+import type { HomeReorderItem } from "./shared/HomeReorderList";
+import {
+  HOME_BLOCK_META,
+  isHomeBlockKey,
+  type HomeBlockKey,
+} from "./shared/homeBlockOrder";
 import { HOME_BRAND_RED } from "./shared/homeTheme";
 import {
-  HOME_ASSET_SUMMARY,
-  HOME_CAMERA_SUMMARY,
-  HOME_RECENT_ACTIVITIES,
-} from "./shared/homeData";
-import {
-  DEFAULT_HOME_FEATURE_IDS,
-  normalizeHomeFeatureId,
-  useHomeMenuItems,
-} from "./shared/useHomeMenuItems";
+  formatHomeCount,
+  formatHomeNumber,
+  formatHomePeriodLabel,
+  HOME_NO_DATA,
+} from "./shared/homeFormat";
+import { HOME_BLOCK_VIEW_PERMISSIONS } from "./shared/homeData";
+import { useHomeDashboard } from "./shared/useHomeDashboard";
+import { useHomeMenuContext } from "./shared/HomeMenuProvider";
+import { useHomeMenuItems } from "./shared/useHomeMenuItems";
+import { createReportActions } from "./shared/homeMenuHelpers";
 import EmptyState from "../../components/ui/EmptyState";
-import BottomSheetModalShell from "../../components/shared/BottomSheetModalShell";
 import { useAppDispatch } from "../../store/hooks";
 import { reloadPermissions } from "../../store/PermissionActions";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
-import { readStoredAuthUsername } from "../../context/authStorage";
 import {
-  C,
-  useAccentBorderColors,
   useAppColors,
   useHairlineBorderColor,
   useStyles,
 } from "../../utils/helpers/colors";
 import {
   makeStyles,
+  getHomeShortcutCardWidth,
   HOME_CONTENT_HORIZONTAL_PADDING,
   HOME_FEATURE_GRID_GAP,
 } from "./HomeScreen.styles";
 
-const HOME_FEATURE_PINNED_IDS_KEY = "@home:pinnedFeatureIds";
-const HOME_FEATURE_PINNED_IDS_USER_KEY = `${HOME_FEATURE_PINNED_IDS_KEY}:user`;
-const HOME_FEATURE_PINNED_IDS_MIGRATED_KEY = `${HOME_FEATURE_PINNED_IDS_KEY}:view-active-migrated`;
-const HOME_REPORT_PINNED_IDS_KEY = "@home:pinnedReportIds";
-const HOME_REPORT_PINNED_IDS_USER_KEY = `${HOME_REPORT_PINNED_IDS_KEY}:user`;
-const HOME_FEATURE_COLUMNS = 4;
-const HOME_REPORT_COLUMNS = 3;
-
-const getHomeFeaturePinnedIdsKey = (userName: string | null) => {
-  const normalizedUserName = userName?.trim().toLowerCase();
-
-  if (!normalizedUserName) return HOME_FEATURE_PINNED_IDS_KEY;
-
-  return `${HOME_FEATURE_PINNED_IDS_USER_KEY}:${encodeURIComponent(
-    normalizedUserName
-  )}`;
-};
-
-const getHomeFeaturePinnedIdsMigratedKey = (pinnedIdsKey: string) =>
-  `${HOME_FEATURE_PINNED_IDS_MIGRATED_KEY}:${pinnedIdsKey}`;
-
-const getHomeReportPinnedIdsKey = (userName: string | null) => {
-  const normalizedUserName = userName?.trim().toLowerCase();
-
-  if (!normalizedUserName) return HOME_REPORT_PINNED_IDS_KEY;
-
-  return `${HOME_REPORT_PINNED_IDS_USER_KEY}:${encodeURIComponent(
-    normalizedUserName
-  )}`;
-};
-
-type HomeReportCardProps = {
-  index?: number;
-  isPinned?: boolean;
-  label: string;
-  onPress?: () => void;
-  onTogglePinned?: () => void;
-  showPinButton?: boolean;
-};
-
-const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
-
-function HomeReportCard({
-  index = 0,
-  isPinned = false,
-  label,
-  onPress,
-  onTogglePinned,
-  showPinButton = false,
-}: HomeReportCardProps) {
-  const styles = useStyles(makeStyles);
-  const colors = useAppColors();
-  const accentBorders = useAccentBorderColors();
-  const scaleAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-      delay: index * 80,
-      tension: 55,
-      friction: 7,
-    }).start();
-  }, [index, scaleAnim]);
-
-  const handleTogglePinned = (event: GestureResponderEvent) => {
-    event.stopPropagation();
-    onTogglePinned?.();
-  };
-
-  return (
-    <AnimatedTouchable
-      style={[
-        styles.reportCard,
-        {
-          backgroundColor: colors.surface,
-          borderColor: accentBorders.violet,
-          shadowColor: colors.shadow,
-          transform: [{ scale: scaleAnim }],
-        },
-      ]}
-      activeOpacity={0.76}
-      onPress={onPress}
-    >
-      {showPinButton ? (
-        <TouchableOpacity
-          style={[
-            styles.reportPinButton,
-            {
-              backgroundColor: colors.violetSurface,
-              borderColor: accentBorders.violet,
-            },
-            isPinned && styles.reportPinButtonActive,
-          ]}
-          activeOpacity={0.76}
-          onPress={handleTogglePinned}
-          hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
-        >
-          <Ionicons
-            name={isPinned ? "checkmark" : "add"}
-            size={14}
-            color={isPinned ? "#fff" : "#7048E8"}
-          />
-        </TouchableOpacity>
-      ) : null}
-
-      <View
-        style={[
-          styles.reportIconWrap,
-          { backgroundColor: colors.violetSurface },
-        ]}
-      >
-        <Ionicons name="document-text-outline" size={21} color="#7048E8" />
-      </View>
-
-      <View style={styles.reportTextWrap}>
-        <Text
-          style={[styles.reportTitle, { color: colors.text }]}
-          allowFontScaling={false}
-          numberOfLines={2}
-        >
-          {label}
-        </Text>
-      </View>
-
-      <View
-        style={[
-          styles.reportArrowWrap,
-          { backgroundColor: colors.violetSurface },
-        ]}
-      >
-        <Ionicons name="arrow-forward" size={12} color="#7048E8" />
-      </View>
-    </AnimatedTouchable>
-  );
-}
-
 const HomeScreen: React.FC = () => {
-  const c = useAppColors();
   const styles = useStyles(makeStyles);
   const navigation = useNavigation<HomeNavigationProp>();
   const colors = useAppColors();
@@ -214,128 +78,32 @@ const HomeScreen: React.FC = () => {
     hasMenuLoadError,
     isMenuLoading,
     openReportScreen,
-    openScanScreen,
-    openSettingScreen,
+    pinnedFeatureIds,
+    togglePinnedFeature,
   } = useHomeMenuItems(navigation, tabsNavigation);
+  const {
+    dashboard,
+    hasDashboardError,
+    isDashboardLoading,
+    isDashboardStale,
+    refreshDashboard,
+    updatedAtLabel,
+  } = useHomeDashboard();
+  // Thứ tự khối và bảng sắp xếp lấy thẳng từ provider: nút mở bảng nằm trên
+  // header do navigator dựng, không đi qua HomeScreen.
+  const {
+    blockOrder,
+    closeBlockOrderSheet,
+    isBlockOrderSheetVisible,
+    moveBlock,
+  } = useHomeMenuContext();
   const [hasLoadError, setHasLoadError] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isFeatureListVisible, setIsFeatureListVisible] = useState(false);
-  const [isVehicleListVisible, setIsVehicleListVisible] = useState(false);
-  const [isReportListVisible, setIsReportListVisible] = useState(false);
-  const [pinnedFeatureIds, setPinnedFeatureIds] = useState<string[]>(
-    DEFAULT_HOME_FEATURE_IDS
-  );
-  const [pinnedReportIds, setPinnedReportIds] = useState<string[]>([]);
-  const [hasPinnedReportPreference, setHasPinnedReportPreference] =
-    useState(false);
-  const [pinnedFeatureIdsKey, setPinnedFeatureIdsKey] = useState(
-    HOME_FEATURE_PINNED_IDS_KEY
-  );
-  const [pinnedReportIdsKey, setPinnedReportIdsKey] = useState(
-    HOME_REPORT_PINNED_IDS_KEY
-  );
-
-  useEffect(() => {
-    let isActive = true;
-
-    const loadPinnedFeatureIds = async () => {
-      try {
-        const storedUserName = await readStoredAuthUsername();
-        const nextPinnedFeatureIdsKey =
-          getHomeFeaturePinnedIdsKey(storedUserName);
-        const nextPinnedReportIdsKey =
-          getHomeReportPinnedIdsKey(storedUserName);
-        const migratedKey = getHomeFeaturePinnedIdsMigratedKey(
-          nextPinnedFeatureIdsKey
-        );
-        const hasMigrated = await AsyncStorage.getItem(migratedKey);
-        const rawValue = await AsyncStorage.getItem(nextPinnedFeatureIdsKey);
-        const rawReportValue = await AsyncStorage.getItem(
-          nextPinnedReportIdsKey
-        );
-        const parsedValue = rawValue ? JSON.parse(rawValue) : null;
-        const parsedReportValue = rawReportValue
-          ? JSON.parse(rawReportValue)
-          : null;
-
-        if (isActive) {
-          setPinnedReportIdsKey(nextPinnedReportIdsKey);
-
-          if (Array.isArray(parsedReportValue)) {
-            setHasPinnedReportPreference(true);
-            setPinnedReportIds(
-              parsedReportValue.filter(
-                (id): id is string => typeof id === "string"
-              )
-            );
-          }
-        }
-
-        if (isActive && Array.isArray(parsedValue)) {
-          const nextPinnedFeatureIds = parsedValue
-            .filter((id): id is string => typeof id === "string")
-            .map((id) => (hasMigrated ? id : normalizeHomeFeatureId(id)));
-
-          setPinnedFeatureIdsKey(nextPinnedFeatureIdsKey);
-          setPinnedFeatureIds(nextPinnedFeatureIds);
-
-          if (!hasMigrated) {
-            await AsyncStorage.multiSet([
-              [nextPinnedFeatureIdsKey, JSON.stringify(nextPinnedFeatureIds)],
-              [migratedKey, "true"],
-            ]);
-          }
-        } else if (isActive) {
-          setPinnedFeatureIdsKey(nextPinnedFeatureIdsKey);
-          await AsyncStorage.setItem(migratedKey, "true");
-        }
-      } catch {
-        if (isActive) {
-          setPinnedFeatureIds(DEFAULT_HOME_FEATURE_IDS);
-          setPinnedReportIds([]);
-          setHasPinnedReportPreference(false);
-        }
-      }
-    };
-
-    loadPinnedFeatureIds();
-
-    return () => {
-      isActive = false;
-    };
-  }, []);
-
-  const persistPinnedFeatureIds = useCallback(
-    (nextIds: string[]) => {
-      AsyncStorage.setItem(pinnedFeatureIdsKey, JSON.stringify(nextIds)).catch(
-        () => undefined
-      );
-    },
-    [pinnedFeatureIdsKey]
-  );
-
-  const persistPinnedReportIds = useCallback(
-    (nextIds: string[]) => {
-      AsyncStorage.setItem(pinnedReportIdsKey, JSON.stringify(nextIds)).catch(
-        () => undefined
-      );
-    },
-    [pinnedReportIdsKey]
-  );
-
-  const togglePinnedFeature = useCallback(
-    (featureId: string) => {
-      setPinnedFeatureIds((currentIds) => {
-        const isPinned = currentIds.includes(featureId);
-        const nextIds = isPinned
-          ? currentIds.filter((id) => id !== featureId)
-          : [...currentIds, featureId];
-
-        persistPinnedFeatureIds(nextIds);
-        return nextIds;
-      });
-    },
-    [persistPinnedFeatureIds]
+  const [isCustomizeVisible, setIsCustomizeVisible] = useState(false);
+  const openCustomizeSheet = useCallback(() => setIsCustomizeVisible(true), []);
+  const closeCustomizeSheet = useCallback(
+    () => setIsCustomizeVisible(false),
+    []
   );
 
   const loadPermissions = useCallback(
@@ -391,12 +159,15 @@ const HomeScreen: React.FC = () => {
 
   const refreshHomeData = useCallback(async () => {
     setIsRefreshing(true);
+    // Dashboard nằm cùng lượt kéo-để-làm-mới nhưng lỗi của nó không được gộp
+    // vào `hasLoadError` — hook tự giữ lỗi bên trong.
     await Promise.all([
       loadPermissions({ isRefresh: true }),
       fetchHomeMenuItems(),
+      refreshDashboard(),
     ]);
     setIsRefreshing(false);
-  }, [fetchHomeMenuItems, loadPermissions]);
+  }, [fetchHomeMenuItems, loadPermissions, refreshDashboard]);
 
   const visibleMenuItems = useMemo(() => {
     if (!loaded) return [];
@@ -404,174 +175,272 @@ const HomeScreen: React.FC = () => {
       item.viewPermission ? canView(item.viewPermission) : true
     );
   }, [canView, loaded, menuItems]);
-  const visibleVehicleItems = useMemo(
-    () => visibleMenuItems.filter((item) => item.homeGroup === "vehicle"),
-    [visibleMenuItems]
-  );
+  // Phải lọc bỏ nhóm phương tiện y như tab Chức năng: chức năng phương tiện cũng
+  // mang `groupMenuId: 2`, nên nếu để nguyên thì Trang chủ sinh ra những id
+  // `report:` mà tab Chức năng không bao giờ hiện — ghim không tới được.
   const visibleFeatureItems = useMemo(
     () => visibleMenuItems.filter((item) => item.homeGroup !== "vehicle"),
     [visibleMenuItems]
   );
-  const pinnedMenuItems = useMemo(() => {
-    const visibleMenuItemsById = new Map(
-      visibleFeatureItems.map((item) => [item.id, item])
-    );
-
-    return pinnedFeatureIds
-      .map((id) => visibleMenuItemsById.get(id))
-      .filter((item): item is (typeof visibleMenuItems)[number] => !!item);
-  }, [pinnedFeatureIds, visibleFeatureItems]);
-  const pinnedMenuRows = useMemo(() => {
-    const rows: (typeof pinnedMenuItems)[] = [];
-
-    for (let i = 0; i < pinnedMenuItems.length; i += HOME_FEATURE_COLUMNS) {
-      rows.push(pinnedMenuItems.slice(i, i + HOME_FEATURE_COLUMNS));
-    }
-
-    return rows;
-  }, [pinnedMenuItems]);
-  const pinnedVehicleItems = useMemo(() => {
-    const visibleVehicleItemsById = new Map(
-      visibleVehicleItems.map((item) => [item.id, item])
-    );
-
-    return pinnedFeatureIds
-      .map((id) => visibleVehicleItemsById.get(id))
-      .filter((item): item is (typeof visibleVehicleItems)[number] => !!item);
-  }, [pinnedFeatureIds, visibleVehicleItems]);
-  const pinnedVehicleRows = useMemo(() => {
-    const rows: (typeof pinnedVehicleItems)[] = [];
-
-    for (let i = 0; i < pinnedVehicleItems.length; i += HOME_FEATURE_COLUMNS) {
-      rows.push(pinnedVehicleItems.slice(i, i + HOME_FEATURE_COLUMNS));
-    }
-
-    return rows;
-  }, [pinnedVehicleItems]);
-  const hasNoViewFeatures = visibleFeatureItems.length === 0;
-  const hasNoPinnedFeatures =
-    !hasNoViewFeatures && pinnedMenuItems.length === 0;
-  const hasNoPinnedVehicles =
-    visibleVehicleItems.length > 0 && pinnedVehicleItems.length === 0;
-  const isInitialMenuLoading = isMenuLoading && menuItems.length === 0;
-  const canViewAllFeatures = visibleFeatureItems.length > 0;
-  const canViewAssets = loaded && canView("TaiSan");
-  const canViewCamera = loaded && canView("Camera");
-  const visibleRecentActivities = useMemo(() => {
-    if (!loaded) return [];
-    return HOME_RECENT_ACTIVITIES.filter((item) =>
-      item.viewPermission ? canView(item.viewPermission) : true
-    );
-  }, [canView, loaded]);
-  const hasOverviewStats = canViewCamera || canViewAssets;
-  const hasRecentActivities = visibleRecentActivities.length > 0;
-  const homeContentWidth = windowWidth - HOME_CONTENT_HORIZONTAL_PADDING * 2;
-  const homeFeatureCardWidth =
-    (homeContentWidth -
-      HOME_FEATURE_GRID_GAP * Math.max(HOME_FEATURE_COLUMNS - 1, 0)) /
-    HOME_FEATURE_COLUMNS;
-  const homeReportCardWidth =
-    (homeContentWidth -
-      HOME_FEATURE_GRID_GAP * Math.max(HOME_REPORT_COLUMNS - 1, 0)) /
-    HOME_REPORT_COLUMNS;
-  const quickActions = useMemo(
-    () => [
-      {
-        iconName: "qr-code-outline",
-        label: "Quét QR",
-        bg: colors.indigoSurface,
-        color: C.blue,
-        onPress: openScanScreen,
-      },
-      {
-        iconName: "notifications-outline",
-        label: "Thông báo",
-        bg: colors.redSurface,
-        color: HOME_BRAND_RED,
-      },
-      {
-        iconName: "settings-outline",
-        label: "Cài đặt",
-        bg: colors.greenLight,
-        color: C.emerald,
-        onPress: openSettingScreen,
-      },
-    ],
-    [
-      colors.greenLight,
-      colors.indigoSurface,
-      colors.redSurface,
-      openScanScreen,
-      openSettingScreen,
-    ]
+  const visibleVehicleItems = useMemo(
+    () => visibleMenuItems.filter((item) => item.homeGroup === "vehicle"),
+    [visibleMenuItems]
   );
   const reportActions = useMemo(
-    () =>
-      visibleFeatureItems
-        .filter((item) => typeof item.groupMenuId === "number")
-        .map((item) => ({
-          ...item,
-          iconName: "document-text-outline",
-          onPress: () =>
-            openReportScreen({
-              groupMenuId: item.groupMenuId,
-              titleHeader: item.label,
-              viewPermission: item.viewPermission,
-            }),
-        })),
+    () => createReportActions(visibleFeatureItems, openReportScreen),
     [openReportScreen, visibleFeatureItems]
   );
-  const togglePinnedReport = useCallback(
-    (reportId: string) => {
-      setPinnedReportIds((currentIds) => {
-        const currentVisibleIds = hasPinnedReportPreference
-          ? currentIds
-          : reportActions
-              .slice(0, HOME_REPORT_COLUMNS)
-              .map((report) => report.id);
-        const isPinned = currentVisibleIds.includes(reportId);
-        const nextIds = isPinned
-          ? currentVisibleIds.filter((id) => id !== reportId)
-          : [...currentVisibleIds, reportId];
-
-        setHasPinnedReportPreference(true);
-        persistPinnedReportIds(nextIds);
-        return nextIds;
-      });
-    },
-    [hasPinnedReportPreference, persistPinnedReportIds, reportActions]
+  // Bảng Tuỳ chỉnh phải thấy đủ ba nhóm y như tab Chức năng — ghim từ Trang chủ
+  // mà thiếu nhóm nào thì user vẫn phải sang tab kia, đúng thứ mà nút này định bỏ.
+  const customizeSections = useMemo(
+    () =>
+      buildHomeCustomizeSections({
+        featureItems: visibleFeatureItems,
+        reportItems: reportActions,
+        vehicleItems: visibleVehicleItems,
+      }),
+    [reportActions, visibleFeatureItems, visibleVehicleItems]
   );
-  const pinnedReportActions = useMemo(() => {
-    const reportActionsById = new Map(
-      reportActions.map((item) => [item.id, item])
-    );
-    const visibleReportIds = hasPinnedReportPreference
-      ? pinnedReportIds
-      : reportActions.slice(0, HOME_REPORT_COLUMNS).map((item) => item.id);
+  // Hàng shortcut lấy đúng thứ tự user đã ghim, không phân biệt chức năng, phương
+  // tiện hay báo cáo — tab Chức năng mới là chỗ chia nhóm. Báo cáo mang id có
+  // tiền tố `report:` nên nằm chung một danh sách ghim mà không đụng id chức năng.
+  const shortcutItems = useMemo(() => {
+    const candidatesById = new Map<
+      string,
+      (typeof visibleMenuItems)[number] | (typeof reportActions)[number]
+    >();
 
-    return visibleReportIds
-      .map((id) => reportActionsById.get(id))
-      .filter((item): item is (typeof reportActions)[number] => !!item);
-  }, [hasPinnedReportPreference, pinnedReportIds, reportActions]);
-  // Show every report the user pinned, laid out row by row like the other two
-  // home groups (features/vehicles) instead of a single capped row.
-  const pinnedReportRows = useMemo(() => {
-    const rows: (typeof pinnedReportActions)[] = [];
+    [...visibleMenuItems, ...reportActions].forEach((item) => {
+      candidatesById.set(item.id, item);
+    });
 
-    for (let i = 0; i < pinnedReportActions.length; i += HOME_REPORT_COLUMNS) {
-      rows.push(pinnedReportActions.slice(i, i + HOME_REPORT_COLUMNS));
+    return pinnedFeatureIds
+      .map((id) => candidatesById.get(id))
+      .filter((item): item is NonNullable<typeof item> => !!item);
+  }, [pinnedFeatureIds, reportActions, visibleMenuItems]);
+  const hasNoViewFeatures = visibleMenuItems.length === 0;
+  const hasNoShortcuts = !hasNoViewFeatures && shortcutItems.length === 0;
+  const isInitialMenuLoading = isMenuLoading && menuItems.length === 0;
+  const canViewAssets = loaded && canView("TaiSan");
+  const canViewCamera = loaded && canView("Camera");
+  // Một chỉ số / một dòng hoạt động chỉ hữu ích khi bấm được. Thay vì hard-code
+  // route, tra lại chính chức năng có cùng viewPermission và dùng luôn onPress
+  // của nó — quyền và tham số điều hướng đã đúng sẵn.
+  const menuItemByPermission = useMemo(() => {
+    const itemsByPermission = new Map<
+      string,
+      (typeof visibleMenuItems)[number]
+    >();
+
+    visibleMenuItems.forEach((item) => {
+      if (item.viewPermission && !itemsByPermission.has(item.viewPermission)) {
+        itemsByPermission.set(item.viewPermission, item);
+      }
+    });
+
+    return itemsByPermission;
+  }, [visibleMenuItems]);
+  // Quyền của một khối số liệu: payload khai `viewPermission` thì theo đó, không
+  // khai thì lấy mã mặc định của khối trong HOME_BLOCK_VIEW_PERMISSIONS.
+  const canViewBlock = useCallback(
+    (viewPermission?: string, fallbackPermission?: string) => {
+      const permission = viewPermission ?? fallbackPermission;
+
+      return loaded && (permission ? canView(permission) : true);
+    },
+    [canView, loaded]
+  );
+  const canViewAttendance = canViewBlock(
+    dashboard?.attendance?.viewPermission,
+    HOME_BLOCK_VIEW_PERMISSIONS.attendance
+  );
+  const statTiles = useMemo<HomeStatTile[]>(() => {
+    if (!dashboard) return [];
+
+    const tiles: HomeStatTile[] = [];
+    const { attendance, devices } = dashboard;
+
+    if (canViewAssets) {
+      tiles.push({
+        key: "device-machines",
+        iconName: "cube-outline",
+        iconBg: colors.redIconSurface,
+        iconColor: colors.redLight,
+        label: "Thiết bị máy móc đang quản lý",
+        value: formatHomeNumber(devices.machines),
+        onPress: menuItemByPermission.get("TaiSan")?.onPress,
+      });
+
+      tiles.push({
+        key: "device-it",
+        iconName: "hardware-chip-outline",
+        iconBg: colors.indigoSurface,
+        iconColor: colors.blue,
+        label: "Thiết bị CNTT đang sử dụng",
+        value: formatHomeNumber(devices.it),
+        // Camera đếm riêng ở ô dưới, tổng CNTT của API không gồm camera — ghi rõ
+        // để không ai cộng hai ô lại rồi thắc mắc lệch số.
+        sub: "Chưa gồm camera",
+        onPress: menuItemByPermission.get("TaiSan")?.onPress,
+      });
     }
 
-    return rows;
-  }, [pinnedReportActions]);
-  const visiblePinnedReportIds = useMemo(
-    () => new Set(pinnedReportActions.map((item) => item.id)),
-    [pinnedReportActions]
+    if (canViewCamera) {
+      tiles.push({
+        key: "device-camera",
+        iconName: "videocam-outline",
+        iconBg: colors.blueSurface,
+        iconColor: colors.sky,
+        label: "Camera đang hoạt động",
+        value: formatHomeNumber(devices.camera),
+        onPress: menuItemByPermission.get("Camera")?.onPress,
+      });
+    }
+
+    if (canViewAttendance) {
+      // Ô này LUÔN là số toàn công ty, không đổi theo combobox bộ phận ở khối
+      // điểm danh bên dưới.
+      tiles.push({
+        key: "attendance-today",
+        iconName: "people-outline",
+        iconBg: colors.violetSurface,
+        iconColor: colors.violet,
+        label: "Đã điểm danh hôm nay",
+        value:
+          attendance.total == null
+            ? HOME_NO_DATA
+            : `${formatHomeCount(attendance.checkedIn)} / ${formatHomeNumber(
+                attendance.total
+              )}`,
+        sub: attendance.total == null ? undefined : "người",
+      });
+    }
+
+    return tiles;
+  }, [
+    canViewAssets,
+    canViewAttendance,
+    canViewCamera,
+    colors,
+    dashboard,
+    menuItemByPermission,
+  ]);
+  const canViewItStructure = canViewBlock(
+    dashboard?.itStructure?.viewPermission,
+    // Cơ cấu thiết bị CNTT là số của chính module tài sản, không có mã quyền
+    // riêng nên đi theo quyền xem tài sản.
+    "TaiSan"
   );
-  const hasNoPinnedReports =
-    hasPinnedReportPreference &&
-    reportActions.length > 0 &&
-    pinnedReportActions.length === 0;
+  const itStructure = useMemo(() => {
+    if (!canViewItStructure) return null;
+    if (!dashboard?.itStructure?.items?.length) return null;
+
+    return dashboard.itStructure;
+  }, [canViewItStructure, dashboard]);
+  // Tính riêng khỏi `utilityRows` vì khung chờ (skeleton) cũng phải theo quyền:
+  // lần mở app đầu tiên chưa có cache, nếu chỉ chặn ở phần dữ liệu thì tài khoản
+  // không được xem vẫn thấy khung "ĐIỆN · NƯỚC · HƠI" nhá lên rồi mất.
+  const canViewUtilities = canViewBlock(
+    dashboard?.utilities?.viewPermission,
+    HOME_BLOCK_VIEW_PERMISSIONS.utilities
+  );
+  const utilityRows = useMemo<HomeUtilityRow[]>(() => {
+    // Payload trong cache có thể là của bản app cũ, chưa có khối này.
+    if (!dashboard?.utilities?.items?.length) return [];
+    if (!canViewUtilities) return [];
+
+    const iconThemeByKey: Record<
+      string,
+      { iconBg: string; iconColor: string }
+    > = {
+      electricity: { iconBg: colors.amberLight, iconColor: colors.amber },
+      water: { iconBg: colors.blueSurface, iconColor: colors.sky },
+      steam: { iconBg: colors.redSurface, iconColor: colors.rose },
+      solar: { iconBg: colors.orangeSurface, iconColor: colors.violet },
+    };
+
+    return dashboard.utilities.items.map((item) => ({
+      ...item,
+      iconBg: iconThemeByKey[item.key]?.iconBg ?? colors.slateLight,
+      iconColor: iconThemeByKey[item.key]?.iconColor ?? colors.slate,
+    }));
+  }, [canViewUtilities, colors, dashboard]);
+  const utilityPeriodLabel = dashboard
+    ? formatHomePeriodLabel(dashboard.period.month, dashboard.period.year)
+    : "";
+  const attendance = useMemo(() => {
+    if (!canViewAttendance) return null;
+    if (!dashboard?.attendance) return null;
+
+    return dashboard.attendance;
+  }, [canViewAttendance, dashboard]);
+  // Lần đầu chưa có gì trong cache thì mới dựng skeleton. Đang có số mà làm mới
+  // thì giữ nguyên số cũ — nhảy sang skeleton rồi nhảy về làm cả trang giật.
+  const isFirstDashboardLoad = isDashboardLoading && !dashboard;
+  // API dashboard chết mà không còn gì trong cache thì phải nói ra, kèm nút thử
+  // lại — nếu không cả trang chỉ còn hàng shortcut và user không biết là hôm nay
+  // không có số liệu hay app hỏng.
+  const hasDashboardLoadFailure = hasDashboardError && !dashboard;
+  // Khung chờ và thẻ lỗi của lưới số liệu cũng phải theo quyền: cả bốn ô đều đã
+  // lọc theo quyền, nhưng lúc chưa có dữ liệu thì `statTiles` rỗng vì lý do khác,
+  // nên nếu chỉ dựa vào nó thì tài khoản không được xem ô nào vẫn thấy tiêu đề
+  // "SỐ LIỆU TOÀN CÔNG TY" kèm skeleton, rồi mất — hoặc tệ hơn là kèm thẻ "Chưa
+  // tải được số liệu" với nút Thử lại không bao giờ hiện ra được gì.
+  const canViewAnyStat =
+    canViewAssets || canViewCamera || canViewAttendance;
+  const hasStatSection =
+    statTiles.length > 0 ||
+    (canViewAnyStat && (isFirstDashboardLoad || hasDashboardLoadFailure));
+  const hasUtilitySection =
+    utilityRows.length > 0 || (canViewUtilities && isFirstDashboardLoad);
+  const hasItStructureSection =
+    itStructure !== null || (canViewItStructure && isFirstDashboardLoad);
+  const homeContentWidth = windowWidth - HOME_CONTENT_HORIZONTAL_PADDING * 2;
+  const shortcutCardWidth = getHomeShortcutCardWidth(
+    homeContentWidth,
+    shortcutItems.length,
+  );
+  // Thứ tự user đã lưu, lọc còn lại đúng những khối đang hiện. Khối bị ẩn vì
+  // thiếu quyền / chưa có dữ liệu vẫn nằm trong `blockOrder` để lần sau hiện lại
+  // đúng chỗ cũ.
+  const visibleBlockKeys = useMemo<HomeBlockKey[]>(() => {
+    const isBlockVisible: Record<HomeBlockKey, boolean> = {
+      stats: hasStatSection,
+      // Truy cập nhanh luôn có mặt: không quyền thì hiện thẻ giải thích, chưa
+      // ghim thì hiện lời mời ghim.
+      shortcuts: true,
+      itStructure: hasItStructureSection,
+      attendance: attendance !== null,
+      utilities: hasUtilitySection,
+    };
+
+    return blockOrder.filter((key) => isBlockVisible[key]);
+  }, [
+    attendance,
+    blockOrder,
+    hasItStructureSection,
+    hasStatSection,
+    hasUtilitySection,
+  ]);
+  const handleMoveBlock = useCallback(
+    ({
+      fromIndex,
+      toIndex,
+      keys,
+    }: {
+      fromIndex: number;
+      toIndex: number;
+      keys: string[];
+    }) => {
+      const visibleKeys = keys.filter(isHomeBlockKey);
+
+      // Lọc mà mất phần tử là chỉ số đã lệch — thà bỏ lượt kéo còn hơn lưu sai.
+      if (visibleKeys.length !== keys.length) return;
+
+      moveBlock({ visibleKeys, fromIndex, toIndex });
+    },
+    [moveBlock]
+  );
 
   if (hasLoadError || hasMenuLoadError) {
     return (
@@ -606,25 +475,93 @@ const HomeScreen: React.FC = () => {
     );
   }
 
-  return (
-    <View style={[styles.root, { backgroundColor: colors.bg }]}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={refreshHomeData}
-            colors={[HOME_BRAND_RED]}
-            tintColor={HOME_BRAND_RED}
-          />
+  // Mỗi khối là một hàm dựng, nhận sẵn tay nắm kéo thả để gắn vào dòng tiêu đề.
+  // Thứ tự hiển thị do `visibleBlockKeys` quyết định, không còn nằm trong JSX.
+  const blockNodes: Record<HomeBlockKey, React.ReactNode> = {
+    stats: (
+      <>
+      {/* Còn giữ số cũ vì lượt gọi mới nhất thất bại thì phải ghi rõ ở
+          đây — lưới số liệu không có chỗ nào khác để báo. */}
+      <HomeSectionTitle
+        label="SỐ LIỆU TOÀN CÔNG TY"
+        // Giờ SERVER lúc chạy proc, không phải giờ máy — người xem cần biết
+        // đang xem số cũ hay số mới.
+        note={
+          updatedAtLabel
+            ? `${
+                isDashboardStale ? "Số cũ · s" : "S"
+              }ố liệu lúc ${updatedAtLabel}`
+            : undefined
         }
-      >
+      />
+      {hasDashboardLoadFailure ? (
+        <View
+          style={[
+            styles.overviewErrorCard,
+            {
+              backgroundColor: colors.surface,
+              borderColor: hairlineBorderColor,
+              shadowColor: colors.shadow,
+            },
+          ]}
+        >
+          <Ionicons
+            name="cloud-offline-outline"
+            size={18}
+            color={colors.textMuted}
+          />
+          <Text
+            style={[
+              styles.overviewErrorText,
+              { color: colors.textSecondary },
+            ]}
+            allowFontScaling={false}
+          >
+            Không lấy được số liệu dashboard. Vui lòng thử lại.
+          </Text>
+          <TouchableOpacity
+            onPress={refreshDashboard}
+            activeOpacity={0.7}
+          >
+            <Text
+              style={[
+                styles.overviewErrorAction,
+                { color: HOME_BRAND_RED },
+              ]}
+              allowFontScaling={false}
+            >
+              Thử lại
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <HomeStatTiles
+          tiles={statTiles}
+          isLoading={isFirstDashboardLoad}
+        />
+      )}
+      </>
+    ),
+    shortcuts: (
+      <>
+        {/* Không có "Xem tất cả": chức năng và phương tiện giờ ở hai tab riêng,
+            một link chỉ dẫn về tab Chức năng là hứa sai. Thanh tab đã là đường
+            đi tới danh mục đầy đủ. */}
         <HomeSectionTitle
-          label="CHỨC NĂNG"
-          action={canViewAllFeatures ? "Xem tất cả" : undefined}
-          onAction={() => setIsFeatureListVisible(true)}
+          label="TRUY CẬP NHANH"
+          // Đếm theo `shortcutItems` chứ không phải `pinnedFeatureIds`: danh sách
+          // ghim có thể còn id của chức năng user đã bị thu quyền hoặc API không
+          // trả về nữa. Đếm theo id sẽ ra con số không khớp số card đang hiện.
+          note={
+            shortcutItems.length > 0
+              ? `Đã ghim ${shortcutItems.length} mục`
+              : undefined
+          }
+          // Không có chức năng nào khả dụng thì bảng tuỳ chỉnh cũng rỗng — ẩn nút
+          // đi thay vì mở ra một danh sách trắng.
+          action={hasNoViewFeatures ? undefined : "Tuỳ chỉnh"}
+          actionIconName="options-outline"
+          onAction={openCustomizeSheet}
         />
         {hasNoViewFeatures ? (
           <View
@@ -644,8 +581,8 @@ const HomeScreen: React.FC = () => {
               fullHeight={false}
             />
           </View>
-        ) : hasNoPinnedFeatures ? (
-          <View
+        ) : hasNoShortcuts ? (
+          <TouchableOpacity
             style={[
               styles.noPermissionCard,
               {
@@ -654,317 +591,127 @@ const HomeScreen: React.FC = () => {
                 shadowColor: colors.shadow,
               },
             ]}
+            activeOpacity={0.78}
+            onPress={openCustomizeSheet}
           >
             <EmptyState
               iconName="add-circle-outline"
-              title="Chưa chọn chức năng hiển thị"
-              subtitle="Bấm Xem tất cả rồi chọn dấu + để đưa chức năng ra Trang chủ."
+              title="Chưa ghim chức năng nào"
+              subtitle="Bấm vào đây hoặc nút Tuỳ chỉnh để chọn chức năng, báo cáo hiện ra Trang chủ."
               fullHeight={false}
             />
-          </View>
+          </TouchableOpacity>
         ) : (
-          <View style={styles.grid}>
-            {pinnedMenuRows.map((rowItems, rowIndex) => (
-              <View key={`feature-row-${rowIndex}`} style={styles.gridRow}>
-                {rowItems.map((item, itemIndex) => (
-                  <View
-                    key={item.id}
-                    style={[
-                      styles.homeGridItem,
-                      { width: homeFeatureCardWidth },
-                    ]}
-                  >
-                    <HomeMenuItemCard
-                      {...item}
-                      index={rowIndex * HOME_FEATURE_COLUMNS + itemIndex}
-                      fixedHeight
-                    />
-                  </View>
-                ))}
+          <ScrollView
+            style={styles.shortcutRow}
+            contentContainerStyle={styles.shortcutRowContent}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            decelerationRate="fast"
+            snapToInterval={shortcutCardWidth + HOME_FEATURE_GRID_GAP}
+            snapToAlignment="start"
+          >
+            {shortcutItems.map((item, index) => (
+              <View
+                key={item.id}
+                style={[styles.shortcutCard, { width: shortcutCardWidth }]}
+              >
+                <HomeMenuItemCard {...item} index={index} fixedHeight />
               </View>
             ))}
-          </View>
+          </ScrollView>
         )}
+      </>
+    ),
+    itStructure: (
+      <>
+      <HomeSectionTitle
+        label="CƠ CẤU THIẾT BỊ CNTT"
+        note={
+          itStructure
+            ? `${formatHomeNumber(itStructure.total)} thiết bị`
+            : undefined
+        }
+      />
+      <HomeItStructureCard
+        items={itStructure?.items ?? []}
+        total={itStructure?.total ?? 0}
+        isLoading={isFirstDashboardLoad}
+      />
+      </>
+    ),
+    attendance: (
+      <>
+      <HomeSectionTitle
+        label="ĐIỂM DANH NHÂN SỰ HÔM NAY"
+      />
+      <HomeAttendanceCard
+        total={attendance?.total ?? null}
+        checkedIn={attendance?.checkedIn ?? null}
+        notCheckedIn={attendance?.notCheckedIn ?? null}
+        departments={attendance?.departments ?? []}
+        isLoading={isFirstDashboardLoad}
+      />
+      </>
+    ),
+    utilities: (
+      <>
+      {/* Kỳ tiêu thụ là THÁNG TRƯỚC và do SQL tự quyết — tiêu đề phải ghi
+          rõ tháng nhận được, không tự trừ thêm một tháng. */}
+      <HomeSectionTitle
+        label={
+          utilityPeriodLabel
+            ? `TIÊU THỤ ${utilityPeriodLabel.toUpperCase()}`
+            : "TIÊU THỤ ĐIỆN · NƯỚC · HƠI"
+        }
+      />
+      <HomeUtilityCard
+        rows={utilityRows}
+        periodLabel={utilityPeriodLabel || undefined}
+        isLoading={isFirstDashboardLoad}
+      />
+      </>
+    ),
+  };
+  const reorderItems: HomeReorderItem[] = visibleBlockKeys.map((key) => ({
+    key,
+    ...HOME_BLOCK_META[key],
+  }));
 
-        {visibleVehicleItems.length > 0 ? (
-          <>
-            <HomeSectionTitle
-              label="PHƯƠNG TIỆN"
-              action="Xem tất cả"
-              onAction={() => setIsVehicleListVisible(true)}
-            />
-            {hasNoPinnedVehicles ? (
-              <View
-                style={[
-                  styles.noPermissionCard,
-                  {
-                    backgroundColor: colors.surface,
-                    borderColor: hairlineBorderColor,
-                    shadowColor: colors.shadow,
-                  },
-                ]}
-              >
-                <EmptyState
-                  iconName="add-circle-outline"
-                  title="Chưa chọn chức năng phương tiện"
-                  subtitle="Bấm Xem tất cả rồi chọn dấu + để đưa chức năng ra Trang chủ."
-                  fullHeight={false}
-                />
-              </View>
-            ) : (
-              <View style={styles.grid}>
-                {pinnedVehicleRows.map((rowItems, rowIndex) => (
-                  <View key={`vehicle-row-${rowIndex}`} style={styles.gridRow}>
-                    {rowItems.map((item, itemIndex) => (
-                      <View
-                        key={item.id}
-                        style={[
-                          styles.homeGridItem,
-                          { width: homeFeatureCardWidth },
-                        ]}
-                      >
-                        <HomeMenuItemCard
-                          {...item}
-                          index={rowIndex * HOME_FEATURE_COLUMNS + itemIndex}
-                          fixedHeight
-                        />
-                      </View>
-                    ))}
-                  </View>
-                ))}
-              </View>
-            )}
-          </>
-        ) : null}
-
-        {reportActions.length > 0 ? (
-          <>
-            <HomeSectionTitle
-              label="BÁO CÁO"
-              action="Xem tất cả"
-              onAction={() => setIsReportListVisible(true)}
-            />
-            {hasNoPinnedReports ? (
-              <View
-                style={[
-                  styles.noPermissionCard,
-                  {
-                    backgroundColor: colors.surface,
-                    borderColor: hairlineBorderColor,
-                    shadowColor: colors.shadow,
-                  },
-                ]}
-              >
-                <EmptyState
-                  iconName="add-circle-outline"
-                  title="Chưa chọn báo cáo hiển thị"
-                  subtitle="Bấm Xem tất cả rồi chọn dấu + để đưa báo cáo ra Trang chủ."
-                  fullHeight={false}
-                />
-              </View>
-            ) : (
-              <View style={styles.grid}>
-                {pinnedReportRows.map((rowItems, rowIndex) => (
-                  <View key={`report-row-${rowIndex}`} style={styles.gridRow}>
-                    {rowItems.map((item, itemIndex) => (
-                      <View
-                        key={`report-${item.id}`}
-                        style={[
-                          styles.reportGridItem,
-                          { width: homeReportCardWidth },
-                        ]}
-                      >
-                        <HomeReportCard
-                          index={rowIndex * HOME_REPORT_COLUMNS + itemIndex}
-                          label={item.label}
-                          onPress={item.onPress}
-                        />
-                      </View>
-                    ))}
-                  </View>
-                ))}
-              </View>
-            )}
-          </>
-        ) : null}
-
-        <HomeSectionTitle label="THAO TÁC NHANH" />
-        <View
-          style={[
-            styles.qaCard,
-            {
-              backgroundColor: colors.surface,
-              borderColor: hairlineBorderColor,
-              shadowColor: colors.shadow,
-            },
-          ]}
-        >
-          {quickActions.map((action, index) => (
-            <React.Fragment key={action.label}>
-              {index > 0 ? (
-                <View
-                  style={[styles.qaDivider, { backgroundColor: colors.border }]}
-                />
-              ) : null}
-              <HomeQuickAction {...action} />
-            </React.Fragment>
-          ))}
-        </View>
-
-        {hasOverviewStats ? (
-          <>
-            <HomeSectionTitle label="TỔNG QUAN" />
-            <View style={styles.statsRow}>
-              {canViewCamera ? (
-                <HomeStatCard
-                  value={String(HOME_CAMERA_SUMMARY.totalCameras)}
-                  label="Camera đang quản lý"
-                  sub="Cập nhật hôm nay"
-                  subColor={c.emerald}
-                  iconName="videocam-outline"
-                  iconBg={c.greenLight}
-                  iconColor={c.emerald}
-                />
-              ) : null}
-              {canViewAssets ? (
-                <HomeStatCard
-                  value={String(HOME_ASSET_SUMMARY.totalAssets)}
-                  label="Tài sản đang quản lý"
-                  sub="Cập nhật hôm nay"
-                  subColor={colors.textMuted}
-                  iconName="cube-outline"
-                  iconBg={colors.redIconSurface}
-                  iconColor={HOME_BRAND_RED}
-                  trend="neutral"
-                />
-              ) : null}
-            </View>
-          </>
-        ) : null}
-        {hasRecentActivities ? (
-          <>
-            <HomeSectionTitle label="HOẠT ĐỘNG GẦN ĐÂY" action="Xem tất cả" />
-            <HomeRecentActivities items={visibleRecentActivities} />
-          </>
-        ) : null}
+  return (
+    <View style={[styles.root, { backgroundColor: colors.bg }]}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={refreshHomeData}
+            colors={[HOME_BRAND_RED]}
+            tintColor={HOME_BRAND_RED}
+          />
+        }
+      >
+        {visibleBlockKeys.map((key) => (
+          <React.Fragment key={key}>{blockNodes[key]}</React.Fragment>
+        ))}
       </ScrollView>
-      <BottomSheetModalShell
-        visible={isFeatureListVisible}
-        onClose={() => setIsFeatureListVisible(false)}
-        closeOnBackdropPress
-        showCloseButton
-        showHandle
-        sheetStyle={styles.featureSheet}
-      >
-        <Text
-          style={[styles.featureSheetTitle, { color: colors.text }]}
-          allowFontScaling={false}
-        >
-          Tất cả chức năng
-        </Text>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.featureSheetContent}
-        >
-          <View style={styles.featureGrid}>
-            {visibleFeatureItems.map((item, index) => (
-              <View key={item.id} style={styles.featureGridItem}>
-                <HomeMenuItemCard
-                  {...item}
-                  index={index}
-                  showPinButton
-                  isPinned={pinnedFeatureIds.includes(item.id)}
-                  onTogglePinned={() => togglePinnedFeature(item.id)}
-                  onPress={() => {
-                    setIsFeatureListVisible(false);
-                    requestAnimationFrame(() => item.onPress?.());
-                  }}
-                />
-              </View>
-            ))}
-          </View>
-        </ScrollView>
-      </BottomSheetModalShell>
-      <BottomSheetModalShell
-        visible={isVehicleListVisible}
-        onClose={() => setIsVehicleListVisible(false)}
-        closeOnBackdropPress
-        showCloseButton
-        showHandle
-        sheetStyle={styles.featureSheet}
-      >
-        <Text
-          style={[styles.featureSheetTitle, { color: colors.text }]}
-          allowFontScaling={false}
-        >
-          Tất cả chức năng phương tiện
-        </Text>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.featureSheetContent}
-        >
-          <View style={styles.featureGrid}>
-            {visibleVehicleItems.map((item, index) => (
-              <View key={item.id} style={styles.featureGridItem}>
-                <HomeMenuItemCard
-                  {...item}
-                  index={index}
-                  showPinButton
-                  isPinned={pinnedFeatureIds.includes(item.id)}
-                  onTogglePinned={() => togglePinnedFeature(item.id)}
-                  onPress={() => {
-                    setIsVehicleListVisible(false);
-                    requestAnimationFrame(() => item.onPress?.());
-                  }}
-                />
-              </View>
-            ))}
-          </View>
-        </ScrollView>
-      </BottomSheetModalShell>
-      <BottomSheetModalShell
-        visible={isReportListVisible}
-        onClose={() => setIsReportListVisible(false)}
-        closeOnBackdropPress
-        showCloseButton
-        showHandle
-        sheetStyle={styles.featureSheet}
-      >
-        <Text
-          style={[styles.featureSheetTitle, { color: colors.text }]}
-          allowFontScaling={false}
-        >
-          Tất cả báo cáo
-        </Text>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.featureSheetContent}
-        >
-          <View style={styles.reportSheetGrid}>
-            {reportActions.map((item, itemIndex) => (
-              <View
-                key={`report-sheet-${item.id}`}
-                style={[
-                  styles.reportSheetGridItem,
-                  { width: homeReportCardWidth },
-                ]}
-              >
-                <HomeReportCard
-                  index={itemIndex}
-                  isPinned={visiblePinnedReportIds.has(item.id)}
-                  label={item.label}
-                  showPinButton
-                  onTogglePinned={() => togglePinnedReport(item.id)}
-                  onPress={() => {
-                    setIsReportListVisible(false);
-                    requestAnimationFrame(() => item.onPress?.());
-                  }}
-                />
-              </View>
-            ))}
-          </View>
-        </ScrollView>
-      </BottomSheetModalShell>
+
+      <HomeBlockOrderSheet
+        visible={isBlockOrderSheetVisible}
+        items={reorderItems}
+        onMove={handleMoveBlock}
+        onClose={closeBlockOrderSheet}
+      />
+
+      <HomeCustomizeSheet
+        visible={isCustomizeVisible}
+        sections={customizeSections}
+        pinnedIds={pinnedFeatureIds}
+        onTogglePinned={togglePinnedFeature}
+        onClose={closeCustomizeSheet}
+      />
     </View>
   );
 };

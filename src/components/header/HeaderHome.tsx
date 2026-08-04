@@ -13,6 +13,7 @@ import {
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
+import { useHomeMenuContext } from "../../screens/Home/shared/HomeMenuProvider";
 import type { HeaderHomeProps } from "../../types/components.d";
 import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
 
@@ -70,6 +71,7 @@ export default function HeaderHome(_props: HeaderHomeProps) {
   const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const colors = useAppColors();
+  const { openBlockOrderSheet } = useHomeMenuContext();
 
   const [now, setNow] = useState(new Date());
   const greeting = getGreeting(now);
@@ -129,6 +131,18 @@ export default function HeaderHome(_props: HeaderHomeProps) {
         </TouchableOpacity>
 
         <View style={styles.topActions}>
+          {/* Sắp xếp khối đặt cạnh chuông vì đây là hành động của cả trang, và
+              header là chỗ duy nhất không trôi theo thứ tự khối. */}
+          <TouchableOpacity
+            style={styles.iconBtn}
+            activeOpacity={0.75}
+            onPress={openBlockOrderSheet}
+            accessibilityRole="button"
+            accessibilityLabel="Sắp xếp Trang chủ"
+          >
+            <Ionicons name="swap-vertical-outline" size={20} color="#fff" />
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.iconBtn}
             activeOpacity={0.75}

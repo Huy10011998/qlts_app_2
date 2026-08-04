@@ -1,20 +1,28 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { API_ENDPOINTS } from "../../../config";
-import { callApi } from "../../../services/data/callApi";
+import { useCallback, useMemo } from "react";
 import type {
-  GetViewActiveResponse,
   HomeNavigationProp,
   Item,
   MenuItemComponent,
   ViewActiveItem,
 } from "../../../types";
 import { HOME_MEETING_INFO } from "./homeData";
-import { error, log } from "../../../utils/Logger";
+import { useHomeMenuContext } from "./HomeMenuProvider";
+import {
+  STATIC_VIEW_ORDER_NUMBERS,
+  VEHICLE_CURRENT_LOCATION_FEATURE_ID,
+  VEHICLE_JOURNEY_FEATURE_ID,
+  VEHICLE_TRACKING_FEATURE_ID,
+  getViewIconName,
+  getViewMenuItemId,
+  getViewOrderNumber,
+} from "./homeMenuHelpers";
+
+export { DEFAULT_HOME_FEATURE_IDS, normalizeHomeFeatureId } from "./homeMenuHelpers";
 
 export interface HomeMenuItem extends MenuItemComponent {
   description?: string;
   groupMenuId?: number;
-  homeGroup?: "vehicle";
+  homeGroup?: "vehicle" | "report";
   iconName: string;
   id: string;
   viewPermission?: string;
@@ -24,93 +32,29 @@ type ParentNavigation = {
   navigate: (screen: string, params?: any) => void;
 };
 
-const FALLBACK_ICON_NAME = "apps-outline";
-const VEHICLE_JOURNEY_MOBILE_VIEW = "VehicleJourney";
-const VEHICLE_JOURNEY_FEATURE_ID = "hanh-trinh-phuong-tien-mobile";
-const VEHICLE_TRACKING_MOBILE_VIEW = "VehicleTracking";
-const VEHICLE_TRACKING_FEATURE_ID = "tracking-phuong-tien-mobile";
-const VEHICLE_CURRENT_LOCATION_MOBILE_VIEW = "VehicleCurrentLocation";
-const VEHICLE_CURRENT_LOCATION_FEATURE_ID =
-  "vi-tri-hien-tai-phuong-tien-mobile";
-
-const STATIC_VIEW_ORDER_NUMBERS = new Set([3, 4]);
-
-const LEGACY_PINNED_FEATURE_ID_MAP: Record<string, string> = {
-  "1": "2",
-  "2": "5",
-  "3": "6",
-  "4": "3",
-  "5": "4",
-};
-
-export const DEFAULT_HOME_FEATURE_IDS = [
-  "2",
-  "5",
-  "6",
-  "3",
-  VEHICLE_JOURNEY_FEATURE_ID,
-  VEHICLE_TRACKING_FEATURE_ID,
-  VEHICLE_CURRENT_LOCATION_FEATURE_ID,
-];
-
-export const normalizeHomeFeatureId = (id: string) =>
-  LEGACY_PINNED_FEATURE_ID_MAP[id] ?? id;
-
-const IMAGE_ICON_PATTERN = /\.(png|jpe?g|gif|webp|svg)$/i;
-
-const getViewIconName = (item: ViewActiveItem) => {
-  const iconName = item.iconMobile?.trim();
-
-  if (
-    !iconName ||
-    iconName.includes("/") ||
-    /^https?:\/\//i.test(iconName) ||
-    IMAGE_ICON_PATTERN.test(iconName)
-  ) {
-    return FALLBACK_ICON_NAME;
-  }
-
-  return iconName;
-};
-
-const getViewOrderNumber = (item: ViewActiveItem) =>
-  Number(item.stt ?? item.id);
-
-const getViewMenuItemId = (item: ViewActiveItem) =>
-  String(getViewOrderNumber(item));
-
-const isEnabledFlag = (value: Item["isViewWeb"]) =>
-  value === true || value === 1 || value === "1" || value === "true";
-
-const hasVehicleJourneyMobileView = (item: Item) =>
-  Number(item.iD_GroupMenu) === 2 &&
-  isEnabledFlag(item.isViewWeb) &&
-  item.viewWebMobile?.trim() === VEHICLE_JOURNEY_MOBILE_VIEW;
-
-const hasVehicleTrackingMobileView = (item: Item) =>
-  Number(item.iD_GroupMenu) === 2 &&
-  isEnabledFlag(item.isViewWeb) &&
-  item.viewWebMobile?.trim() === VEHICLE_TRACKING_MOBILE_VIEW;
-
-const hasVehicleCurrentLocationMobileView = (item: Item) =>
-  Number(item.iD_GroupMenu) === 2 &&
-  isEnabledFlag(item.isViewWeb) &&
-  item.viewWebMobile?.trim() === VEHICLE_CURRENT_LOCATION_MOBILE_VIEW;
-
+/**
+ * Dựng danh sách chức năng đã gắn sẵn hành vi điều hướng.
+ *
+ * Dữ liệu thô (GET_VIEW_ACTIVE / GET_MENU_ACTIVE) nằm ở `HomeMenuProvider` vì cả
+ * Trang chủ lẫn tab Chức năng đều cần. Hook này chỉ lo phần không chia sẻ được:
+ * `onPress` phải bind vào đúng navigator của màn đang gọi, để chức năng mở ra
+ * trong stack của tab đó chứ không nhảy tab.
+ */
 export function useHomeMenuItems(
   navigation: HomeNavigationProp,
   tabsNavigation?: ParentNavigation | null,
 ) {
-  const [apiViews, setApiViews] = useState<ViewActiveItem[]>([]);
-  const [vehicleJourneyMenuItem, setVehicleJourneyMenuItem] =
-    useState<Item | null>(null);
-  const [vehicleTrackingMenuItem, setVehicleTrackingMenuItem] =
-    useState<Item | null>(null);
-  const [vehicleCurrentLocationMenuItem, setVehicleCurrentLocationMenuItem] =
-    useState<Item | null>(null);
-  const [isMenuLoading, setIsMenuLoading] = useState(true);
-  const [hasMenuLoadError, setHasMenuLoadError] = useState(false);
-  const fetchingRef = useRef(false);
+  const {
+    apiViews,
+    fetchHomeMenuItems,
+    hasMenuLoadError,
+    isMenuLoading,
+    pinnedFeatureIds,
+    togglePinnedFeature,
+    vehicleCurrentLocationMenuItem,
+    vehicleJourneyMenuItem,
+    vehicleTrackingMenuItem,
+  } = useHomeMenuContext();
 
   const openMeetingScreen = useCallback(
     () => navigation.navigate("ShareholdersMeeting", HOME_MEETING_INFO),
@@ -124,6 +68,11 @@ export function useHomeMenuItems(
 
   const openScanScreen = useCallback(
     () => tabsNavigation?.navigate("ScanTab", { screen: "Scan" }),
+    [tabsNavigation],
+  );
+
+  const openFeatureTab = useCallback(
+    () => tabsNavigation?.navigate("FeatureTab"),
     [tabsNavigation],
   );
 
@@ -145,68 +94,6 @@ export function useHomeMenuItems(
     () => tabsNavigation?.navigate("SettingTab"),
     [tabsNavigation],
   );
-
-  const fetchHomeMenuItems = useCallback(async () => {
-    if (fetchingRef.current) return;
-
-    fetchingRef.current = true;
-    setIsMenuLoading(true);
-
-    try {
-      const [response, menuResponse] = (await Promise.all([
-        callApi("POST", API_ENDPOINTS.GET_VIEW_ACTIVE, {}),
-        callApi("POST", API_ENDPOINTS.GET_MENU_ACTIVE, {}),
-      ])) as [GetViewActiveResponse, { data?: Item[] }];
-
-      if (!Array.isArray(response?.data)) throw new Error("Invalid data");
-
-      setApiViews(
-        response.data
-          .filter(
-            (item) => getViewOrderNumber(item) !== 1 && item.isActive !== false,
-          )
-          .sort((a, b) => getViewOrderNumber(a) - getViewOrderNumber(b)),
-      );
-      const groupTwoMenuItems = Array.isArray(menuResponse?.data)
-        ? menuResponse.data.filter((item) => Number(item.iD_GroupMenu) === 2)
-        : [];
-      const vehicleJourneyItem =
-        groupTwoMenuItems.find(hasVehicleJourneyMobileView) ?? null;
-      const vehicleTrackingItem =
-        groupTwoMenuItems.find(hasVehicleTrackingMobileView) ?? null;
-      const vehicleCurrentLocationItem =
-        groupTwoMenuItems.find(hasVehicleCurrentLocationMobileView) ?? null;
-
-      log("[HomeMenu] GET_MENU_ACTIVE itemGroup = 2", groupTwoMenuItems);
-      log(
-        "[HomeMenu] VehicleJourney matched item",
-        vehicleJourneyItem,
-      );
-      log(
-        "[HomeMenu] VehicleTracking matched item",
-        vehicleTrackingItem,
-      );
-      log(
-        "[HomeMenu] VehicleCurrentLocation matched item",
-        vehicleCurrentLocationItem,
-      );
-
-      setVehicleJourneyMenuItem(vehicleJourneyItem);
-      setVehicleTrackingMenuItem(vehicleTrackingItem);
-      setVehicleCurrentLocationMenuItem(vehicleCurrentLocationItem);
-      setHasMenuLoadError(false);
-    } catch (e) {
-      error("GET_VIEW_ACTIVE error:", e);
-      setHasMenuLoadError(true);
-    } finally {
-      fetchingRef.current = false;
-      setIsMenuLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchHomeMenuItems();
-  }, [fetchHomeMenuItems]);
 
   const createStaticMenuItem = useCallback(
     (view: ViewActiveItem): HomeMenuItem => {
@@ -268,8 +155,8 @@ export function useHomeMenuItems(
         homeGroup: "vehicle",
         iconName: "navigate-circle-outline",
         viewPermission: assetView?.ma,
-      description: "Theo dõi hành trình phương tiện",
-      onPress: () => navigation.navigate("VehicleJourney"),
+        description: "Theo dõi hành trình phương tiện",
+        onPress: () => navigation.navigate("VehicleJourney"),
       };
     },
     [apiViews, navigation],
@@ -312,11 +199,11 @@ export function useHomeMenuItems(
   const menuItems = useMemo<HomeMenuItem[]>(
     () => [
       {
-        id: "solar-plant-demo",
-        label: "Cholimex Solar Plant",
+        id: "solar-dashboard",
+        label: "Điện mặt trời",
         iconName: "sunny-outline",
-        viewPermission: "SOLAR_PLANT",
-        description: "Giám sát năng lượng",
+        viewPermission: "Solar_Dashboard",
+        description: "Giám sát sản lượng và tiêu thụ",
         onPress: openSolarPlantScreen,
       },
       ...apiViews.map((view) =>
@@ -357,9 +244,12 @@ export function useHomeMenuItems(
     fetchHomeMenuItems,
     hasMenuLoadError,
     isMenuLoading,
+    openFeatureTab,
     openMeetingScreen,
     openReportScreen,
     openScanScreen,
     openSettingScreen,
+    pinnedFeatureIds,
+    togglePinnedFeature,
   };
 }

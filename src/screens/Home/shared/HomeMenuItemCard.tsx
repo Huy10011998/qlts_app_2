@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import {
   Animated,
-  GestureResponderEvent,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -27,11 +26,8 @@ const localStyles = StyleSheet.create({
 type HomeMenuItemCardProps = MenuItemCardProps & {
   viewPermission?: string;
   description?: string;
-  isPinned?: boolean;
-  onTogglePinned?: () => void;
-  showPinButton?: boolean;
   fixedHeight?: boolean;
-  homeGroup?: "vehicle";
+  homeGroup?: "vehicle" | "report";
 };
 
 export default function HomeMenuItemCard({
@@ -40,9 +36,6 @@ export default function HomeMenuItemCard({
   notificationCount,
   index,
   onPress,
-  isPinned = false,
-  onTogglePinned,
-  showPinButton = false,
   fixedHeight = false,
   homeGroup,
 }: HomeMenuItemCardProps) {
@@ -62,25 +55,20 @@ export default function HomeMenuItemCard({
     }).start();
   }, [index, scaleAnim]);
 
-  const theme =
-    homeGroup === "vehicle"
-      ? {
-          bg: colors.surface,
-          iconBg: colors.blueSurface,
-          color: c.sky,
-          text: colors.text,
-          border: colors.border,
-        }
-      : {
-          bg: colors.surface,
-          iconBg: colors.pinkSurface,
-          color: c.rose,
-          text: colors.text,
-          border: colors.border,
-        };
-  const handleTogglePinned = (event: GestureResponderEvent) => {
-    event.stopPropagation();
-    onTogglePinned?.();
+  // Báo cáo ghim ra Trang chủ dùng chung hình dạng card với chức năng (cùng
+  // 4 cột, cùng chiều cao) để không phá lưới; chỉ màu nhấn tím và icon tài liệu
+  // cho biết đó là báo cáo.
+  const accentByGroup = {
+    vehicle: { iconBg: colors.blueSurface, color: c.sky },
+    report: { iconBg: colors.violetSurface, color: c.violet },
+    feature: { iconBg: colors.pinkSurface, color: c.rose },
+  };
+  const accent = accentByGroup[homeGroup ?? "feature"];
+  const theme = {
+    bg: colors.surface,
+    iconBg: accent.iconBg,
+    color: accent.color,
+    text: colors.text,
   };
 
   return (
@@ -103,27 +91,6 @@ export default function HomeMenuItemCard({
         ]}
       >
         <View style={[styles.accentBar, { backgroundColor: theme.color }]} />
-        {showPinButton ? (
-          <TouchableOpacity
-            style={[
-              styles.pinButton,
-              {
-                backgroundColor: isPinned ? theme.color : theme.iconBg,
-                borderColor: isPinned ? theme.color : theme.border,
-              },
-            ]}
-            activeOpacity={0.76}
-            onPress={handleTogglePinned}
-            hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
-          >
-            <Ionicons
-              name={isPinned ? "checkmark" : "add"}
-              size={14}
-              color={isPinned ? "#fff" : theme.color}
-            />
-          </TouchableOpacity>
-        ) : null}
-
         <View style={[styles.iconWrap, { backgroundColor: theme.iconBg }]}>
           <Ionicons name={iconName} color={theme.color} size={22} />
           {notificationCount ? (
@@ -144,10 +111,6 @@ export default function HomeMenuItemCard({
           >
             {label}
           </Text>
-        </View>
-
-        <View style={[styles.arrowChip, { backgroundColor: theme.iconBg }]}>
-          <Ionicons name="arrow-forward" size={10} color={theme.color} />
         </View>
       </View>
     </AnimatedTouchable>
@@ -218,28 +181,8 @@ const makeStyles = (c: AppColors) =>
       textAlignVertical: "center",
     },
     labelWrap: {
-      minHeight: 32,
+      minHeight: 34,
       width: "100%",
-      alignItems: "center",
-      justifyContent: "center",
-      marginBottom: 6,
-    },
-    arrowChip: {
-      width: 20,
-      height: 20,
-      borderRadius: 7,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    pinButton: {
-      position: "absolute",
-      top: 10,
-      right: 10,
-      zIndex: 2,
-      width: 26,
-      height: 26,
-      borderRadius: 9,
-      borderWidth: 1,
       alignItems: "center",
       justifyContent: "center",
     },

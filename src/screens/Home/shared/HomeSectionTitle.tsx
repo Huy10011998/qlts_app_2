@@ -1,5 +1,6 @@
 import React from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import Ionicons from "react-native-vector-icons/Ionicons";
 import { HOME_BRAND_RED } from "./homeTheme";
 import {
   AppColors,
@@ -10,13 +11,19 @@ import {
 type HomeSectionTitleProps = {
   label: string;
   action?: string;
+  /** Icon Ionicons đứng trước chữ của nút hành động. */
+  actionIconName?: string;
   onAction?: () => void;
+  /** Chú thích phụ, ví dụ "Cập nhật 09:12". Hiển thị mờ, không bấm được. */
+  note?: string;
 };
 
 export default function HomeSectionTitle({
   label,
   action,
+  actionIconName,
   onAction,
+  note,
 }: HomeSectionTitleProps) {
   const styles = useStyles(makeStyles);
   const colors = useAppColors();
@@ -38,8 +45,27 @@ export default function HomeSectionTitle({
       >
         {label}
       </Text>
+      {note ? (
+        <Text
+          style={[styles.note, { color: colors.textMuted }]}
+          allowFontScaling={false}
+          numberOfLines={1}
+        >
+          {note}
+        </Text>
+      ) : null}
       {action ? (
-        <TouchableOpacity onPress={handleActionPress}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={handleActionPress}
+          activeOpacity={0.7}
+          hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel={action}
+        >
+          {actionIconName ? (
+            <Ionicons name={actionIconName} size={13} color={HOME_BRAND_RED} />
+          ) : null}
           <Text style={styles.action} allowFontScaling={false}>
             {action}
           </Text>
@@ -71,6 +97,20 @@ const makeStyles = (c: AppColors) =>
       fontWeight: "700",
       color: c.textSecondary,
       letterSpacing: 0.5,
+    },
+    note: {
+      fontSize: 11,
+      color: c.textMuted,
+      fontWeight: "600",
+      marginLeft: 8,
+      flexShrink: 0,
+    },
+    actionButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      marginLeft: 8,
+      flexShrink: 0,
     },
     action: {
       fontSize: 11,

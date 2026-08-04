@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import {
   AppColors,
@@ -20,6 +20,8 @@ const makeTrendStyles = (c: AppColors) =>
 
 type HomeStatCardProps = {
   value: string;
+  /** Đơn vị đứng cạnh con số, ví dụ "MWh". */
+  unit?: string;
   label: string;
   sub?: string;
   subColor?: string;
@@ -27,10 +29,12 @@ type HomeStatCardProps = {
   iconBg: string;
   iconColor: string;
   trend?: "up" | "down" | "neutral";
+  onPress?: () => void;
 };
 
 export default function HomeStatCard({
   value,
+  unit,
   label,
   sub,
   subColor,
@@ -38,14 +42,16 @@ export default function HomeStatCard({
   iconBg,
   iconColor,
   trend,
+  onPress,
 }: HomeStatCardProps) {
   const trendStyles = useStyles(makeTrendStyles);
   const styles = useStyles(makeStyles);
   const c = useAppColors();
   const hairlineBorderColor = useHairlineBorderColor();
   const resolvedSubColor = subColor ?? c.textMuted;
+  const Wrapper: React.ComponentType<any> = onPress ? TouchableOpacity : View;
   return (
-    <View
+    <Wrapper
       style={[
         styles.card,
         {
@@ -54,6 +60,10 @@ export default function HomeStatCard({
           shadowColor: c.shadow,
         },
       ]}
+      activeOpacity={0.78}
+      onPress={onPress}
+      accessibilityRole={onPress ? "button" : undefined}
+      accessibilityLabel={`${label}: ${value} ${unit ?? ""}`}
     >
       <View style={styles.top}>
         <View style={styles.titleWrap}>
@@ -79,24 +89,36 @@ export default function HomeStatCard({
           </View>
         ) : null}
       </View>
-      <Text
-        style={[styles.value, { color: iconColor }]}
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.72}
-        allowFontScaling={false}
-      >
-        {value}
-      </Text>
+      <View style={styles.valueRow}>
+        <Text
+          style={[styles.value, { color: iconColor }]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.72}
+          allowFontScaling={false}
+        >
+          {value}
+        </Text>
+        {unit ? (
+          <Text
+            style={[styles.unit, { color: iconColor }]}
+            numberOfLines={1}
+            allowFontScaling={false}
+          >
+            {unit}
+          </Text>
+        ) : null}
+      </View>
       {sub ? (
         <Text
           style={[styles.sub, { color: resolvedSubColor }]}
+          numberOfLines={2}
           allowFontScaling={false}
         >
           {sub}
         </Text>
       ) : null}
-    </View>
+    </Wrapper>
   );
 }
 
@@ -142,10 +164,22 @@ const makeStyles = (c: AppColors) =>
       alignItems: "center",
       justifyContent: "center",
     },
+    valueRow: {
+      flexDirection: "row",
+      alignItems: "baseline",
+      gap: 4,
+      maxWidth: "100%",
+    },
     value: {
       fontSize: 24,
       fontWeight: "800",
       letterSpacing: -0.5,
+      flexShrink: 1,
+    },
+    unit: {
+      fontSize: 12,
+      fontWeight: "700",
+      flexShrink: 0,
     },
     label: {
       fontSize: 13,

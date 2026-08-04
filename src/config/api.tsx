@@ -18,6 +18,9 @@ export const API_ENDPOINTS = {
   GET_CATEGORY_ENUM: `${BASE_URL}/Common/get-category-enum`,
   GET_CATEGORY: `${BASE_URL}/Common/get-category`,
 
+  // DASHBOARD TRANG CHỦ — một lượt gọi dựng cả 4 khối số liệu, không tham số.
+  GET_DASHBOARD_TAISAN: `${BASE_URL}/Common/get-dashboard-taisan`,
+
   // PERMISSION
   GET_PERMISSION: `${BASE_URL}/Common/get-permission`,
 
@@ -44,8 +47,16 @@ export const API_ENDPOINTS = {
   // GET_CONFIG_REPORT
   GET_CONFIG_REPORT: `${BASE_URL}/Common/get-config`,
 
-  // GET_SOLAR
-  GET_SOLAR: `${BASE_URL}/TieuThu_Solar/get-solar`,
+  // SOLAR DASHBOARD — toàn bộ nhóm này yêu cầu quyền Solar_Dashboard.
+  // Tất cả đều POST, response chung dạng { message, data }; data == null là
+  // thất bại và message đã là câu tiếng Việt viết sẵn cho người dùng đọc.
+  GET_LIST_SOLAR: `${BASE_URL}/TieuThu_Solar/get-list-solar`,
+  SOLAR_POWER_FLOW: `${BASE_URL}/TieuThu_Solar/dashboard-power-flow`,
+  SOLAR_OVERVIEW: `${BASE_URL}/TieuThu_Solar/dashboard-overview`,
+  SOLAR_ENERGY_DETAILS: `${BASE_URL}/TieuThu_Solar/dashboard-energy-details`,
+  SOLAR_POWER_DETAILS: `${BASE_URL}/TieuThu_Solar/dashboard-power-details`,
+  SOLAR_ENERGY: `${BASE_URL}/TieuThu_Solar/dashboard-energy`,
+  SOLAR_ENV_BENEFITS: `${BASE_URL}/TieuThu_Solar/dashboard-env-benefits`,
 
   // GET PHUONG TIEN
   GET_PHUONG_TIEN: `${BASE_URL}/PhuongTien/get-list`,

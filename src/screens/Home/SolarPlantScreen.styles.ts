@@ -1,5 +1,10 @@
-import { AppColors } from "../../utils/helpers/colors";
+import { AppColors, C } from "../../utils/helpers/colors";
 import { StyleSheet } from "react-native";
+
+import {
+  COMPARE_CURRENT_YEAR_COLOR,
+  COMPARE_PREVIOUS_YEAR_COLOR,
+} from "./SolarPlantScreen.helpers";
 
 export const makeStyles = (c: AppColors) =>
   StyleSheet.create({
@@ -7,6 +12,22 @@ export const makeStyles = (c: AppColors) =>
     scroll: { flex: 1 },
     headerButton: {
       paddingHorizontal: 5,
+    },
+    offlineBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      backgroundColor: c.redSurface,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.redBorder,
+    },
+    offlineText: {
+      flex: 1,
+      color: C.redDeep,
+      fontSize: 12,
+      lineHeight: 17,
     },
     menuScrollContent: {
       paddingBottom: 12,
@@ -51,6 +72,19 @@ export const makeStyles = (c: AppColors) =>
     // Hero visual
     heroVisual: {
       position: "relative",
+    },
+    // Ảnh nhà máy thật nằm dưới, lớp SVG (mũi tên, tấm pin, tủ điện) vẽ đè lên.
+    // Vị trí và kích thước do `SceneView` tính, vì chúng bám theo toạ độ của
+    // hình nhà xưởng mà ảnh thay thế.
+    scenePhotoWrap: {
+      position: "relative",
+    },
+    scenePhoto: {
+      position: "absolute",
+    },
+    scenePhotoScrim: {
+      position: "absolute",
+      backgroundColor: "rgba(255,255,255,0.16)",
     },
     sceneWrap: {
       position: "absolute",
@@ -136,28 +170,30 @@ export const makeStyles = (c: AppColors) =>
       elevation: 4,
       alignItems: "center",
     },
+    // Năm tab dài ngắn khác nhau ("Hôm nay" 7 ký tự, "Kỳ hoá đơn" 10) nên KHÔNG
+    // chia đều bề ngang: chia đều thì tab dài nhất quyết định cỡ chữ của cả
+    // hàng. Mỗi tab rộng theo nội dung, khoảng trống thừa rải đều giữa chúng.
     tabBar: {
       width: "100%",
       flexDirection: "row",
+      justifyContent: "space-between",
       backgroundColor: c.surfaceAlt,
-      paddingHorizontal: 8,
+      paddingHorizontal: 6,
       paddingVertical: 8,
       alignItems: "center",
+      gap: 2,
     },
-    tabItem: { flex: 1, minWidth: 0, alignItems: "center" },
-    tabActiveChip: {
-      backgroundColor: "#4285f4",
+    tabItem: { flexShrink: 1, minWidth: 0, alignItems: "center" },
+    tabChip: {
       borderRadius: 18,
-      paddingHorizontal: 10,
+      paddingHorizontal: 9,
       paddingVertical: 6,
+      alignItems: "center",
+      justifyContent: "center",
     },
-    tabActiveText: {
-      color: "white",
-      fontWeight: "600",
-      fontSize: 13,
-      textAlign: "center",
-    },
+    tabChipActive: { backgroundColor: "#4285f4" },
     tabText: { color: c.textSecondary, fontSize: 13, textAlign: "center" },
+    tabTextActive: { color: "white", fontWeight: "600" },
 
     dateNav: {
       width: "100%",
@@ -317,6 +353,13 @@ export const makeStyles = (c: AppColors) =>
     calendarDayMuted: {
       color: c.placeholder,
     },
+    // Ngày tương lai: chưa có số liệu nên không cho chọn.
+    calendarDayDisabled: {
+      opacity: 0.35,
+    },
+    calendarDayDisabledText: {
+      color: c.textMuted,
+    },
     calendarDaySelectedText: {
       color: "#fff",
     },
@@ -430,8 +473,9 @@ export const makeStyles = (c: AppColors) =>
     balanceToGridDot: { backgroundColor: "#42b0e8" },
     balanceFromSolarDot: { backgroundColor: "#42b0e8" },
     balanceFromGridDot: { backgroundColor: "#f5a623" },
-    year2025Dot: { backgroundColor: "#42b0e8" },
-    year2026Dot: { backgroundColor: "#4e5ab5" },
+    // Bám theo BarChart: năm trước xanh da trời, năm nay tím.
+    year2025Dot: { backgroundColor: COMPARE_PREVIOUS_YEAR_COLOR },
+    year2026Dot: { backgroundColor: COMPARE_CURRENT_YEAR_COLOR },
     legendLabel: {
       fontSize: 13,
       color: c.textSecondary,
@@ -448,16 +492,19 @@ export const makeStyles = (c: AppColors) =>
     selfConsumptionRow: { marginTop: 12 },
     selfText: { fontSize: 13, color: c.textSecondary },
     selfBold: { fontWeight: "700", color: c.text },
-    productionDot: { backgroundColor: "#04b850" },
-    productionRing: { borderColor: "#04b850" },
-    consumptionDot: { backgroundColor: "#ff9800" },
-    consumptionRing: { borderColor: "#ff9800" },
-    toGridDot: { backgroundColor: "#16b8cc" },
-    toGridRing: { borderColor: "#16b8cc" },
-    fromSolarDot: { backgroundColor: "#2e86de" },
-    fromSolarRing: { borderColor: "#2e86de" },
-    selfDot: { backgroundColor: "#2e86de" },
-    selfRing: { borderColor: "#2e86de" },
+    // Màu chú giải của biểu đồ phải khớp nét vẽ trong AreaChart/BarChart.
+    // Bảng màu chung (đã qua kiểm tra mù màu): #2a78d6 sản xuất,
+    // #eb6834 tiêu thụ & lưới điện, #1baf7a tự dùng.
+    productionDot: { backgroundColor: "#2a78d6" },
+    productionRing: { borderColor: "#2a78d6" },
+    consumptionDot: { backgroundColor: "#eb6834" },
+    consumptionRing: { borderColor: "#eb6834" },
+    toGridDot: { backgroundColor: "#eb6834" },
+    toGridRing: { borderColor: "#eb6834" },
+    fromSolarDot: { backgroundColor: "#1baf7a" },
+    fromSolarRing: { borderColor: "#1baf7a" },
+    selfDot: { backgroundColor: "#1baf7a" },
+    selfRing: { borderColor: "#1baf7a" },
 
     // Chart
     chartHeaderRow: {
@@ -469,6 +516,14 @@ export const makeStyles = (c: AppColors) =>
     },
     chartTitle: {
       flex: 1,
+      fontSize: 15,
+      fontWeight: "700",
+      color: c.text,
+    },
+    // Tổng của cả kỳ, đứng cạnh nút phóng to. `flexShrink` để tiêu đề bên trái
+    // không bị đẩy mất chữ khi số dài (ví dụ "1.234,56 MWh").
+    chartHeaderTotal: {
+      flexShrink: 0,
       fontSize: 15,
       fontWeight: "700",
       color: c.text,
@@ -631,92 +686,142 @@ export const makeStyles = (c: AppColors) =>
       paddingTop: 14,
       paddingBottom: 14,
     },
-    expandedTitle: {
-      fontSize: 20,
-      lineHeight: 25,
-      color: c.text,
-      marginBottom: 22,
+
+    // ─── Trạng thái tải / lỗi của từng khối ─────────────────────────────────
+    // Mỗi khối tự lo trạng thái của mình: skeleton cho lần đầu, vạch mảnh khi
+    // làm mới (số cũ giữ nguyên), hộp đỏ nhạt khi lỗi.
+    blockShell: {
+      position: "relative",
     },
-    expandedMetricSummary: {
-      flexDirection: "row",
-      alignItems: "baseline",
-      justifyContent: "space-between",
-      gap: 16,
-      marginBottom: 22,
+    refreshBar: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 2,
+      overflow: "hidden",
+      backgroundColor: c.border,
     },
-    expandedMetricName: {
+    refreshBarFill: {
+      width: "40%",
+      height: 2,
+    },
+    refreshBarGradient: {
       flex: 1,
-      color: c.text,
-      fontSize: 28,
-      lineHeight: 36,
     },
-    expandedMetricTotal: {
-      flexShrink: 1,
-      color: c.text,
-      fontSize: 28,
-      lineHeight: 36,
-      textAlign: "right",
-    },
-    expandedTooltipCard: {
-      width: "100%",
-      maxWidth: 430,
-      alignSelf: "center",
-      borderWidth: 1,
-      borderColor: c.borderStrong,
-      borderRadius: 6,
-      backgroundColor: c.blueSurface,
-      paddingHorizontal: 16,
+    blockErrorBox: {
+      backgroundColor: c.redSurface,
+      borderColor: c.redBorder,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderRadius: 8,
+      paddingHorizontal: 12,
       paddingVertical: 10,
-      marginBottom: 4,
+      marginTop: 10,
     },
-    expandedTooltipDate: {
-      color: c.textMuted,
-      fontSize: 16,
-      lineHeight: 22,
-      marginBottom: 14,
+    blockErrorText: {
+      color: C.redDeep,
+      fontSize: 13,
+      lineHeight: 18,
     },
-    expandedTooltipMetricRow: {
-      flexDirection: "row",
+    // Khung chờ của biểu đồ. Chiều cao do phía gọi truyền vào cho khớp đúng chỗ
+    // biểu đồ sẽ chiếm, nên lúc dữ liệu về trang không bị đẩy xuống.
+    chartSkeleton: {
+      position: "relative",
       alignItems: "center",
-      gap: 12,
-    },
-    expandedTooltipLabel: {
-      flex: 1,
-      color: c.textMuted,
-      fontSize: 18,
-      lineHeight: 25,
-    },
-    expandedTooltipValue: {
-      flexShrink: 1,
-      color: c.textMuted,
-      fontSize: 18,
-      lineHeight: 25,
-      textAlign: "right",
-    },
-    expandedLegendRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      flexWrap: "wrap",
-      gap: 18,
+      justifyContent: "center",
       marginTop: 8,
-      paddingHorizontal: 8,
     },
-    expandedLegendItem: {
+    chartSkeletonText: {
+      position: "absolute",
+      color: c.textMuted,
+      fontSize: 13,
+    },
+    chartSkeletonSpinner: {
+      position: "absolute",
+    },
+    // Chỗ đặt vạch làm mới trong modal biểu đồ toàn màn: cao đúng 2px nên bật/tắt
+    // không làm nội dung bên dưới nhích lên xuống.
+    expandedRefreshHost: {
+      position: "relative",
+      height: 2,
+    },
+    // ─── Trạng thái toàn màn (bước lấy danh sách site) ──────────────────────
+    // Dùng chính nền của khối hero để vào màn đã ra ngay "màn điện mặt trời",
+    // thay vì một spinner trơ trên nền xám chung của app.
+    fullScreenState: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 32,
+      backgroundColor: c.solarHero,
+    },
+    fullScreenBadge: {
+      width: 104,
+      height: 104,
+      borderRadius: 52,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: c.loadingOverlay,
+      marginBottom: 22,
+    },
+    fullScreenSpinner: {
+      marginBottom: 14,
+      height: 24,
+    },
+    fullScreenStateText: {
+      color: c.text,
+      fontSize: 15,
+      fontWeight: "500",
+      lineHeight: 22,
+      textAlign: "center",
+    },
+    fullScreenRetryButton: {
+      backgroundColor: "#2a78d6",
+      borderRadius: 22,
+      paddingHorizontal: 26,
+      paddingVertical: 11,
+      marginTop: 20,
+    },
+    fullScreenRetryText: {
+      color: "#fff",
+      fontSize: 14,
+      fontWeight: "600",
+    },
+
+    // ─── Khối 1: dòng năng lượng ────────────────────────────────────────────
+    flowStatusText: {
+      fontSize: 12,
+      color: c.textSecondary,
+      textAlign: "center",
+      marginTop: 2,
+    },
+    // Viên nền cho dòng tổng kết dưới ảnh nhà máy: chữ đặt thẳng lên ảnh thì
+    // chìm, mà đẩy xuống hẳn nền khối thì lại dính sát mép ảnh.
+    flowSummaryPill: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 10,
+      alignSelf: "center",
+      justifyContent: "center",
+      gap: 7,
       maxWidth: "100%",
+      marginHorizontal: 18,
+      // Khung cảnh nhà máy tràn xuống 4px dưới đáy vùng của nó (`sceneWrap` có
+      // `bottom: -4`), nên phải cộng thêm 4 vào lề trên thì khoảng hở nhìn thấy
+      // ở trên mới bằng ở dưới.
+      marginTop: 12 + 4,
+      marginBottom: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 7,
+      borderRadius: 999,
+      backgroundColor: c.surface,
     },
-    expandedLegendDot: {
-      width: 18,
-      height: 18,
-      borderRadius: 9,
-    },
-    expandedLegendText: {
-      color: c.textMuted,
-      fontSize: 17,
-      lineHeight: 23,
-      fontWeight: "600",
+    flowSummaryText: {
       flexShrink: 1,
+      fontSize: 13,
+      lineHeight: 18,
+      color: c.textSecondary,
+      // Xuống 2 dòng trên máy hẹp thì cả hai dòng vẫn cân giữa viên nền.
+      textAlign: "center",
     },
+    flowSummaryValue: { color: c.text, fontWeight: "700" },
   });

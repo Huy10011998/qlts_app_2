@@ -9,6 +9,7 @@ import {
   Modal,
   Text as NativeText,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
@@ -22,10 +23,12 @@ import {
   getYearGridStart,
   getYearGridYears,
   isDateInRange,
+  isFutureDate,
   isFutureDateRange,
   isFutureMonth,
   isFutureYear,
   isSameDate,
+  PERIOD_TAB_LABELS,
   PERIOD_TABS,
   startOfDay,
   startOfMonth,
@@ -44,6 +47,20 @@ type SolarTextProps = ComponentProps<typeof NativeText>;
 const Text: React.FC<SolarTextProps> = (props) => (
   <NativeText {...props} allowFontScaling={false} />
 );
+
+/**
+ * Cỡ chữ của hàng 5 tab kỳ, chọn theo bề ngang màn hình.
+ *
+ * Tính một lần cho cả hàng thay vì để mỗi nhãn tự co (`adjustsFontSizeToFit`):
+ * để tự co thì chỉ nhãn dài mới nhỏ lại, cả hàng thành mỗi chữ một cỡ. Vẫn giữ
+ * `adjustsFontSizeToFit` làm lưới an toàn cho máy hẹp bất thường.
+ */
+export const getPeriodTabFontSize = (screenWidth: number) => {
+  if (screenWidth >= 400) return 13;
+  if (screenWidth >= 360) return 12;
+
+  return 11;
+};
 
 type PeriodHeaderProps = {
   activeTab: PeriodTab;
@@ -70,6 +87,8 @@ export const PeriodHeader: React.FC<PeriodHeaderProps> = ({
 }) => {
   const styles = useStyles(makeStyles);
   const separatorColor = useSeparatorColor();
+  const { width: screenWidth } = useWindowDimensions();
+  const tabFontSize = getPeriodTabFontSize(screenWidth);
 
   return (
     <View style={styles.stickyPeriodHeader}>
@@ -80,13 +99,29 @@ export const PeriodHeader: React.FC<PeriodHeaderProps> = ({
             onPress={() => onChangeTab(tab)}
             style={styles.tabItem}
           >
-            {activeTab === tab ? (
-              <View style={styles.tabActiveChip}>
-                <Text style={styles.tabActiveText}>{tab}</Text>
-              </View>
-            ) : (
-              <Text style={styles.tabText}>{tab}</Text>
-            )}
+            {/* Tab thường và tab đang chọn dùng CHUNG một lớp đệm, chỉ khác nền.
+                Trước đây chỉ tab đang chọn mới có đệm nên riêng nó hụt mất 20px
+                bề ngang, đủ để "Tháng này" xuống dòng trong khi các tab khác thì
+                không. */}
+            <View
+              style={[
+                styles.tabChip,
+                activeTab === tab && styles.tabChipActive,
+              ]}
+            >
+              <Text
+                adjustsFontSizeToFit
+                minimumFontScale={0.75}
+                numberOfLines={1}
+                style={[
+                  styles.tabText,
+                  { fontSize: tabFontSize },
+                  activeTab === tab && styles.tabTextActive,
+                ]}
+              >
+                {PERIOD_TAB_LABELS[tab]}
+              </Text>
+            </View>
           </TouchableOpacity>
         ))}
       </View>
@@ -190,6 +225,10 @@ export const SolarDateRangePicker: React.FC<SolarDateRangePickerProps> = ({
   };
 
   const handleSelectDate = (date: Date) => {
+    // Không có số liệu cho ngày chưa tới; chặn ngay ở lịch thay vì để API trả về
+    // khoảng trống.
+    if (isFutureDate(date)) return;
+
     setTempRange(getDateRangeForPeriod(period, date));
   };
 
@@ -207,42 +246,36 @@ export const SolarDateRangePicker: React.FC<SolarDateRangePickerProps> = ({
     setTempRange(getDateRangeForPeriod(period, new Date(year, 0, 1)));
   };
 
-  const monthLabel = visibleMonth.toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
+  const monthLabel = `Tháng ${
+    visibleMonth.getMonth() + 1
+  }/${visibleMonth.getFullYear()}`;
   const selectedTitle =
     period === "Month" || period === "Billing"
-      ? tempRange.fromDate.toLocaleDateString("en-US", {
-          month: "short",
-          year: "numeric",
-        })
+      ? `Tháng ${
+          tempRange.fromDate.getMonth() + 1
+        }/${tempRange.fromDate.getFullYear()}`
       : period === "Year"
       ? String(tempRange.fromDate.getFullYear())
       : isSameDate(tempRange.fromDate, tempRange.toDate)
-      ? tempRange.fromDate.toLocaleDateString("en-US", {
-          weekday: "short",
-          month: "short",
-          day: "numeric",
-        })
+      ? formatDisplayDate(tempRange.fromDate)
       : `${formatDisplayDate(tempRange.fromDate)} - ${formatDisplayDate(
           tempRange.toDate
         )}`;
   const calendarDates = getCalendarDates(visibleMonth);
-  const weekDays = ["S", "M", "T", "W", "T", "F", "S"];
+  const weekDays = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
   const monthNames = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
+    "Th 1",
+    "Th 2",
+    "Th 3",
+    "Th 4",
+    "Th 5",
+    "Th 6",
+    "Th 7",
+    "Th 8",
+    "Th 9",
+    "Th 10",
+    "Th 11",
+    "Th 12",
   ];
   const yearGridYears = getYearGridYears(visibleYear);
   const isMonthPicker = period === "Month" || period === "Billing";
@@ -265,7 +298,7 @@ export const SolarDateRangePicker: React.FC<SolarDateRangePickerProps> = ({
     >
       <View style={styles.calendarOverlay}>
         <View style={styles.calendarDialog}>
-          <Text style={styles.calendarTitle}>Select date</Text>
+          <Text style={styles.calendarTitle}>Chọn ngày</Text>
           <View
             style={[
               styles.calendarSelectedRow,
@@ -420,6 +453,7 @@ export const SolarDateRangePicker: React.FC<SolarDateRangePickerProps> = ({
                   const isEnd = isSameDate(date, tempRange.toDate);
                   const isSelected = isStart || isEnd;
                   const isInRange = isDateInRange(date, tempRange);
+                  const isDisabled = isFutureDate(date);
 
                   return (
                     <TouchableOpacity
@@ -429,12 +463,14 @@ export const SolarDateRangePicker: React.FC<SolarDateRangePickerProps> = ({
                         isInRange && styles.calendarDayInRange,
                       ]}
                       activeOpacity={0.75}
+                      disabled={isDisabled}
                       onPress={() => handleSelectDate(date)}
                     >
                       <View
                         style={[
                           styles.calendarDayCircle,
                           isSelected && styles.calendarDaySelected,
+                          isDisabled && styles.calendarDayDisabled,
                         ]}
                       >
                         <Text
@@ -442,6 +478,7 @@ export const SolarDateRangePicker: React.FC<SolarDateRangePickerProps> = ({
                             styles.calendarDayText,
                             !isCurrentMonth && styles.calendarDayMuted,
                             isSelected && styles.calendarDaySelectedText,
+                            isDisabled && styles.calendarDayDisabledText,
                           ]}
                         >
                           {date.getDate()}
@@ -459,13 +496,13 @@ export const SolarDateRangePicker: React.FC<SolarDateRangePickerProps> = ({
               onPress={onCancel}
               style={styles.calendarActionBtn}
             >
-              <Text style={styles.calendarActionText}>Cancel</Text>
+              <Text style={styles.calendarActionText}>Huỷ</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleConfirm}
               style={styles.calendarActionBtn}
             >
-              <Text style={styles.calendarActionText}>OK</Text>
+              <Text style={styles.calendarActionText}>Đồng ý</Text>
             </TouchableOpacity>
           </View>
         </View>

@@ -100,7 +100,9 @@ export type ShareholdersMeetingScannerParams = {
 
 export type TabsParamList = {
   HomeTab: undefined;
+  FeatureTab: undefined;
   ScanTab: NavigatorScreenParams<ScanTabParamList>;
+  CameraTab: undefined;
   SettingTab: undefined;
 };
 
@@ -114,6 +116,8 @@ export type RootStackParamList = {
   /** ================= ROOT ================= */
   Tabs: NavigatorScreenParams<TabsParamList> | undefined;
   Home: undefined;
+  /** Màn danh mục đầy đủ của tab Chức năng. */
+  Features: undefined;
   HomeTab: NavigatorScreenParams<HomeTabParamList>;
   /** ================= SETTINGS ================= */
   Settings: undefined;

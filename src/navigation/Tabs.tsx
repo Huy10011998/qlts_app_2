@@ -8,10 +8,13 @@ import {
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getFocusedRouteNameFromRoute } from "@react-navigation/native";
-import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import HomeStack from "./HomeStack";
+import FeatureStack from "./FeatureStack";
+import CameraStack from "./CameraStack";
 import SettingStack from "./SettingStack";
 import ScanStack from "./ScanStack";
+import ScanTabButton from "./shared/ScanTabButton";
+import { HomeMenuProvider } from "../screens/Home/shared/HomeMenuProvider";
 import {
   TAB_ACTIVE_COLOR,
   TAB_INVERTED_BG,
@@ -42,12 +45,8 @@ function ThemeAwareTabBar({
     activeDescriptor?.options.tabBarStyle,
   ) as ViewStyle | undefined;
   const isTabBarHidden = activeTabBarStyle?.display === "none";
-  // Trust the background color the screen's own `options` already resolved
-  // instead of re-deriving the focused route here. Re-deriving used a different
-  // fallback than the screens do (route.state isn't hydrated yet right after
-  // login), so the inverted tint colors could be applied while this override
-  // reset the background to `colors.surface` — white text on a white tab bar.
-  const usesInvertedStyle = activeTabBarStyle?.backgroundColor === TAB_INVERTED_BG;
+  const usesInvertedStyle =
+    activeTabBarStyle?.backgroundColor === TAB_INVERTED_BG;
 
   const descriptors = activeDescriptor
     ? {
@@ -56,9 +55,6 @@ function ThemeAwareTabBar({
           ...activeDescriptor,
           options: {
             ...activeDescriptor.options,
-            // Descriptors for a blurred tab can retain the previous theme on
-            // Android. Override the active descriptor with concrete colors so
-            // returning to CameraList cannot reuse a dark tab bar.
             tabBarStyle: isTabBarHidden
               ? activeDescriptor.options.tabBarStyle
               : createTabBarStyle({
@@ -82,8 +78,12 @@ function HomeTabIcon({ color }: { color: string }) {
   return <Ionicons name="home" size={24} color={color} />;
 }
 
-function ScanTabIcon({ color }: { color: string }) {
-  return <MaterialCommunityIcons name="qrcode-scan" size={24} color={color} />;
+function FeatureTabIcon({ color }: { color: string }) {
+  return <Ionicons name="grid" size={22} color={color} />;
+}
+
+function CameraTabIcon({ color }: { color: string }) {
+  return <Ionicons name="videocam" size={24} color={color} />;
 }
 
 function SettingTabIcon({ color }: { color: string }) {
@@ -115,13 +115,34 @@ export default function Tabs() {
   const hairlineBorderColor = useHairlineBorderColor();
   const colorScheme = useColorScheme();
 
-  // Tabs có thể được mount ngay khi keyboard (hoặc thanh gợi ý của iOS Password
-  // AutoFill) còn mở, ví dụ ngay sau khi đăng nhập. Đóng keyboard một lần tại
-  // đây để trạng thái ban đầu của app luôn sạch, bất kể vào app từ đường nào
-  // (mật khẩu, FaceID, hay khôi phục phiên).
   React.useEffect(() => {
     Keyboard.dismiss();
   }, []);
+  const getMeetingScannerAwareOptions = React.useCallback(
+    (
+      route: any,
+      title: string,
+      tabBarIcon: (props: { color: string }) => React.ReactElement,
+    ) => {
+      const routeName = getDeepFocusedRouteName(route) ?? "";
+      const isMeetingScanner = routeName === "ShareholdersMeetingScanner";
+
+      return {
+        title,
+        tabBarIcon,
+        tabBarActiveTintColor: isMeetingScanner ? "#fff" : TAB_ACTIVE_COLOR,
+        tabBarInactiveTintColor: isMeetingScanner
+          ? TAB_INVERTED_INACTIVE_COLOR
+          : undefined,
+        tabBarStyle: createTabBarStyle({
+          bottomInset: insets.bottom,
+          backgroundColor: isMeetingScanner ? TAB_INVERTED_BG : colors.surface,
+          borderTopColor: isMeetingScanner ? "#000" : hairlineBorderColor,
+        }),
+      };
+    },
+    [colors.surface, hairlineBorderColor, insets.bottom],
+  );
 
   const renderTabBar = React.useCallback(
     (props: BottomTabBarProps) => (
@@ -137,97 +158,77 @@ export default function Tabs() {
   );
 
   return (
-    <Tab.Navigator
-      // Rebuild only the visual tab bar when the appearance changes. Remounting
-      // the entire navigator here used to recreate every nested native stack;
-      // on Android that could leave CameraList with a stale horizontal screen
-      // transform when returning from Settings.
-      tabBar={renderTabBar}
-      screenOptions={{
-        headerShown: false,
-        // Theo convention của từng nền tảng:
-        // - iOS: UITabBar không bao giờ ẩn theo keyboard, keyboard chỉ đè lên.
-        //   Bật hide-on-keyboard ở đây còn gây bug: khi Tabs được mount đúng lúc
-        //   iOS Password AutoFill vẫn giữ keyboard (đăng nhập bằng mật khẩu gợi
-        //   ý), animation ẩn có thể giữ thanh tab ở ngoài màn hình cho tới khi
-        //   đổi tab.
-        // - Android: manifest dùng adjustResize nên cửa sổ co lại và thanh tab
-        //   bị đẩy lên nằm trên bàn phím; Material yêu cầu ẩn bottom nav trong
-        //   trường hợp này.
-        tabBarHideOnKeyboard: Platform.OS !== "ios",
-        lazy: false,
-        tabBarAllowFontScaling: false,
-        tabBarLabelStyle: tabBarStyles.label,
-        tabBarActiveTintColor: TAB_ACTIVE_COLOR,
-        tabBarStyle: createTabBarStyle({
-          bottomInset: insets.bottom,
-          backgroundColor: colors.surface,
-          borderTopColor: hairlineBorderColor,
-        }),
-      }}
-    >
-      <Tab.Screen
-        name="HomeTab"
-        component={HomeStack}
-        options={({ route }) => {
-          const routeName = getDeepFocusedRouteName(route) ?? "Home";
-          const isMeetingScanner = routeName === "ShareholdersMeetingScanner";
-          return {
-            title: "Trang chủ",
-            tabBarActiveTintColor: isMeetingScanner ? "#fff" : TAB_ACTIVE_COLOR,
-            tabBarInactiveTintColor: isMeetingScanner
-              ? TAB_INVERTED_INACTIVE_COLOR
-              : undefined,
-            tabBarIcon: HomeTabIcon,
-            // Give Home a concrete tab bar style (like the last known-good 2.20
-            // build). Do NOT freeze Home on blur: freezing kept
-            // the descriptor holding the previous theme's background color, so
-            // switching dark->light from the Settings tab left this bar dark.
-            // Without freeze the style re-evaluates and stays theme-correct.
-            tabBarStyle: createTabBarStyle({
-              bottomInset: insets.bottom,
-              backgroundColor: isMeetingScanner
-                ? TAB_INVERTED_BG
-                : colors.surface,
-              borderTopColor: isMeetingScanner ? "#000" : hairlineBorderColor,
-            }),
-          };
+    <HomeMenuProvider>
+      <Tab.Navigator
+        tabBar={renderTabBar}
+        screenOptions={{
+          headerShown: false,
+          tabBarHideOnKeyboard: Platform.OS !== "ios",
+          lazy: false,
+          tabBarAllowFontScaling: false,
+          tabBarLabelStyle: tabBarStyles.label,
+          tabBarActiveTintColor: TAB_ACTIVE_COLOR,
+          tabBarStyle: createTabBarStyle({
+            bottomInset: insets.bottom,
+            backgroundColor: colors.surface,
+            borderTopColor: hairlineBorderColor,
+          }),
         }}
-      />
+      >
+        <Tab.Screen
+          name="HomeTab"
+          component={HomeStack}
+          options={({ route }) =>
+            getMeetingScannerAwareOptions(route, "Trang chủ", HomeTabIcon)
+          }
+        />
 
-      <Tab.Screen
-        name="ScanTab"
-        component={ScanStack}
-        options={({ route }) => {
-          const routeName = getFocusedRouteNameFromRoute(route) ?? "Scan";
-          const isScanScreen = routeName === "Scan";
+        <Tab.Screen
+          name="FeatureTab"
+          component={FeatureStack}
+          options={({ route }) =>
+            getMeetingScannerAwareOptions(route, "Chức năng", FeatureTabIcon)
+          }
+        />
 
-          return {
-            title: "Quét QR",
-            tabBarActiveTintColor: isScanScreen ? "#fff" : TAB_ACTIVE_COLOR,
-            tabBarInactiveTintColor: isScanScreen
-              ? TAB_INVERTED_INACTIVE_COLOR
-              : undefined,
-            tabBarIcon: ScanTabIcon,
-            // Same as Home: keep a concrete, theme-aware tab bar style on every
-            // route so the hide-on-keyboard animation can't strand it off-screen.
-            tabBarStyle: createTabBarStyle({
-              bottomInset: insets.bottom,
-              backgroundColor: isScanScreen ? TAB_INVERTED_BG : colors.surface,
-              borderTopColor: isScanScreen ? "#000" : hairlineBorderColor,
-            }),
-          };
-        }}
-      />
+        <Tab.Screen
+          name="ScanTab"
+          component={ScanStack}
+          options={({ route }) => {
+            const routeName = getFocusedRouteNameFromRoute(route) ?? "Scan";
+            const isScanScreen = routeName === "Scan";
 
-      <Tab.Screen
-        name="SettingTab"
-        component={SettingStack}
-        options={{
-          title: "Cài đặt",
-          tabBarIcon: SettingTabIcon,
-        }}
-      />
-    </Tab.Navigator>
+            return {
+              title: "Quét QR",
+              tabBarButton: ScanTabButton,
+              tabBarStyle: createTabBarStyle({
+                bottomInset: insets.bottom,
+                backgroundColor: isScanScreen
+                  ? TAB_INVERTED_BG
+                  : colors.surface,
+                borderTopColor: isScanScreen ? "#000" : hairlineBorderColor,
+              }),
+            };
+          }}
+        />
+
+        <Tab.Screen
+          name="CameraTab"
+          component={CameraStack}
+          options={({ route }) =>
+            getMeetingScannerAwareOptions(route, "Camera", CameraTabIcon)
+          }
+        />
+
+        <Tab.Screen
+          name="SettingTab"
+          component={SettingStack}
+          options={{
+            title: "Cài đặt",
+            tabBarIcon: SettingTabIcon,
+          }}
+        />
+      </Tab.Navigator>
+    </HomeMenuProvider>
   );
 }

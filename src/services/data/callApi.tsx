@@ -12,3 +12,5 @@ export * from "./dhcdApi";
 export * from "./cameraApi";
 export * from "./playbackApi";
 export * from "./reportApi";
+export * from "./solarApi";
+export * from "./dashboardApi";

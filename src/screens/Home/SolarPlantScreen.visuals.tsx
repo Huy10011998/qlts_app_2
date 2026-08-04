@@ -1,6 +1,22 @@
-import { useStyles } from "../../utils/helpers/colors";
-import React, { type ComponentProps } from "react";
-import { Text as NativeText, View } from "react-native";
+import { useAppColors, useStyles } from "../../utils/helpers/colors";
+import React, {
+  type ComponentProps,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react";
+import {
+  ActivityIndicator,
+  Animated,
+  Easing,
+  Image,
+  Text as NativeText,
+  View,
+  type ImageSourcePropType,
+  type StyleProp,
+  type ViewStyle,
+} from "react-native";
 import Svg, {
   Rect,
   Circle,
@@ -17,10 +33,15 @@ import Svg, {
 
 import {
   CHART_WIDTH,
+  COMPARE_CURRENT_YEAR_COLOR,
+  COMPARE_PREVIOUS_YEAR_COLOR,
+  formatVnNumber,
   isRainWeatherCode,
   isStormWeatherCode,
+  roundTo,
   SCREEN_WIDTH,
-  type SolarDashboardData,
+  type EnergyBarBucket,
+  type SolarComparativeBucket,
 } from "./SolarPlantScreen.helpers";
 import { makeStyles } from "./SolarPlantScreen.styles";
 
@@ -220,9 +241,16 @@ export const DateSkipIcon: React.FC<{ muted?: boolean }> = ({ muted }) => (
 
 // ─── Factory + Tower scene ────────────────────────────────────────────────────
 
-export const SceneView: React.FC<{ width?: number }> = ({
-  width = SCREEN_WIDTH,
-}) => {
+export const SceneView: React.FC<{
+  /**
+   * Ảnh nhà máy thật, thay cho hình nhà xưởng vẽ bằng SVG. Các lớp còn lại (tấm
+   * pin, tủ điện, 3 mũi tên, cột điện, hàng cây) vẫn vẽ đè lên trên vì chúng
+   * biểu diễn dòng năng lượng chứ không phải trang trí.
+   */
+  plantImage?: ImageSourcePropType | null;
+  width?: number;
+}> = ({ plantImage, width = SCREEN_WIDTH }) => {
+  const styles = useStyles(makeStyles);
   const W = width;
   const H = 145;
   const VIEW_H = 180;
@@ -262,7 +290,8 @@ export const SceneView: React.FC<{ width?: number }> = ({
       };
     },
   ).filter((segment) => segment.x1 > segment.x2);
-  return (
+
+  const scene = (
     <Svg
       width={W}
       height={H}
@@ -280,60 +309,67 @@ export const SceneView: React.FC<{ width?: number }> = ({
         </LinearGradient>
       </Defs>
 
-      {/* ── Factory body ── */}
-      <Rect
-        x={factoryX}
-        y={factoryY}
-        width={factoryW}
-        height={factoryH}
-        fill="#edf1f8"
-      />
-      <Rect
-        x={factoryX}
-        y={factoryY}
-        width={leftWallW}
-        height={factoryH}
-        fill="#b9d8f5"
-      />
-      <Polygon
-        points={`${factoryX},${factoryY} ${
-          factoryX + leftWallW
-        },${factoryY} ${factoryX},${factoryY + factoryH}`}
-        fill="#8ebcf1"
-        opacity={0.55}
-      />
-      <Polygon
-        points={`${factoryX},${factoryY} ${factoryX + W * 0.06},${
-          factoryY - 15
-        } ${factoryX + leftWallW},${factoryY - 15} ${
-          factoryX + leftWallW
-        },${factoryY}`}
-        fill="#1b2f67"
-      />
-      <Polygon
-        points={`${factoryX + leftWallW},${factoryY} ${factoryX + W * 0.38},${
-          factoryY - 15
-        } ${factoryX + factoryW},${factoryY - 15} ${
-          factoryX + factoryW
-        },${factoryY}`}
-        fill="#192b5f"
-      />
-      <Polygon
-        points={`${factoryX + leftWallW - 10},${factoryY} ${
-          factoryX + leftWallW + 26
-        },${factoryY - 15} ${factoryX + leftWallW + 26},${factoryY + 22} ${
-          factoryX + leftWallW
-        },${factoryY + 22}`}
-        fill="#f7f8ff"
-      />
-      <Line
-        x1={factoryX}
-        y1={factoryY + factoryH}
-        x2={factoryX + factoryW}
-        y2={factoryY + factoryH}
-        stroke="#6e7f99"
-        strokeWidth={2}
-      />
+      {/* ── Factory body ──
+          Bỏ hẳn khi có ảnh nhà máy thật: ảnh nằm dưới SVG này và chính là
+          nền của khối, vẽ thêm nhà xưởng lên trên nữa thì chồng hai cái. */}
+      {plantImage ? null : (
+        <G>
+          <Rect
+            x={factoryX}
+            y={factoryY}
+            width={factoryW}
+            height={factoryH}
+            fill="#edf1f8"
+          />
+          <Rect
+            x={factoryX}
+            y={factoryY}
+            width={leftWallW}
+            height={factoryH}
+            fill="#b9d8f5"
+          />
+          <Polygon
+            points={`${factoryX},${factoryY} ${
+              factoryX + leftWallW
+            },${factoryY} ${factoryX},${factoryY + factoryH}`}
+            fill="#8ebcf1"
+            opacity={0.55}
+          />
+          <Polygon
+            points={`${factoryX},${factoryY} ${factoryX + W * 0.06},${
+              factoryY - 15
+            } ${factoryX + leftWallW},${factoryY - 15} ${
+              factoryX + leftWallW
+            },${factoryY}`}
+            fill="#1b2f67"
+          />
+          <Polygon
+            points={`${factoryX + leftWallW},${factoryY} ${factoryX + W * 0.38},${
+              factoryY - 15
+            } ${factoryX + factoryW},${factoryY - 15} ${
+              factoryX + factoryW
+            },${factoryY}`}
+            fill="#192b5f"
+          />
+          <Polygon
+            points={`${factoryX + leftWallW - 10},${factoryY} ${
+              factoryX + leftWallW + 26
+            },${factoryY - 15} ${factoryX + leftWallW + 26},${factoryY + 22} ${
+              factoryX + leftWallW
+            },${factoryY + 22}`}
+            fill="#f7f8ff"
+          />
+          <Line
+            x1={factoryX}
+            y1={factoryY + factoryH}
+            x2={factoryX + factoryW}
+            y2={factoryY + factoryH}
+            stroke="#6e7f99"
+            strokeWidth={2}
+          />
+        </G>
+      )}
+
       {/* solar panels on factory wall */}
       {panelRows.map((rowOffset) => (
         <G key={rowOffset}>
@@ -481,26 +517,31 @@ export const SceneView: React.FC<{ width?: number }> = ({
       />
       <Circle cx={W * 0.82} cy={98} r={2} fill="#7a9ab0" />
       <Circle cx={W * 0.92} cy={98} r={2} fill="#7a9ab0" />
-
-      {/* ── Trees ── */}
-      {[W * 0.04, W * 0.09, W * 0.15, W * 0.2, W * 0.74, W * 0.78].map(
-        (x, i) => {
-          const h = 22 + (i % 3) * 8;
-          return (
-            <Rect
-              key={i}
-              x={x - 5}
-              y={170 - h}
-              width={10}
-              height={h}
-              rx={5}
-              fill={i % 2 === 0 ? "#4aaa5a" : "#5aba68"}
-              opacity={0.9}
-            />
-          );
-        },
-      )}
     </Svg>
+  );
+
+  if (!plantImage) return scene;
+
+  /**
+   * Ảnh trải hết khối chứ không bó vào đúng khung nhà xưởng cũ: bó lại thì ảnh
+   * chỉ còn ~200×80 nên chi tiết nhà máy nhỏ đến mức không nhìn ra gì.
+   */
+  const photoRect = { height: H, left: 0, top: 0, width: W };
+
+  return (
+    <View style={[styles.scenePhotoWrap, { height: H, width: W }]}>
+      {/* `cover` để ảnh không bị bóp méo: khung là dải ngang dẹt còn ảnh nhà máy
+          gần vuông đôi — thà cắt trên dưới. */}
+      <Image
+        resizeMode="cover"
+        source={plantImage}
+        style={[styles.scenePhoto, photoRect]}
+      />
+      {/* Lớp trắng mỏng: tấm pin và mũi tên vẽ đè lên ảnh chụp thật, không có
+          lớp này thì chúng chìm vào chỗ ảnh nhiều chi tiết. */}
+      <View style={[styles.scenePhotoScrim, photoRect]} />
+      {scene}
+    </View>
   );
 };
 
@@ -569,9 +610,193 @@ export const StatBubble: React.FC<{
   );
 };
 
+// ─── Chuyển cảnh dùng chung cho biểu đồ ──────────────────────────────────────
+
+/** Thời lượng chung cho mọi chuyển cảnh của biểu đồ, để cả màn cùng một nhịp. */
+const CHART_TRANSITION_MS = 340;
+
+/**
+ * Mờ dần + nhấc nhẹ mỗi khi biểu đồ đổi sang bộ dữ liệu khác (đổi kỳ, đổi ngày,
+ * đổi kiểu biểu đồ). Không có bước này thì path SVG bị thay tức thì, mắt đọc ra
+ * là "nhảy" chứ không phải "đổi".
+ *
+ * `animationKey` chỉ nên chứa những gì người dùng CHỦ ĐỘNG đổi — không đưa giá
+ * trị dữ liệu vào, không thì mỗi lượt tự tải lại 5 phút biểu đồ lại chớp một cái
+ * dù số gần như y nguyên.
+ */
+export const ChartTransition: React.FC<{
+  animationKey: string;
+  children: React.ReactNode;
+}> = ({ animationKey, children }) => {
+  const progress = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    progress.setValue(0);
+
+    const animation = Animated.timing(progress, {
+      toValue: 1,
+      duration: CHART_TRANSITION_MS,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    });
+
+    animation.start();
+    return () => animation.stop();
+  }, [animationKey, progress]);
+
+  return (
+    <Animated.View
+      style={{
+        opacity: progress,
+        transform: [
+          {
+            translateY: progress.interpolate({
+              inputRange: [0, 1],
+              outputRange: [10, 0],
+            }),
+          },
+        ],
+      }}
+    >
+      {children}
+    </Animated.View>
+  );
+};
+
+/**
+ * Khung chờ của biểu đồ: giữ ĐÚNG chiều cao mà biểu đồ sẽ chiếm, nên lúc dữ liệu
+ * về không có cú đẩy trang xuống. Vẽ sẵn lưới trục mờ để người dùng nhận ra "chỗ
+ * này là biểu đồ" thay vì một dòng chữ trơ.
+ */
+export const ChartSkeleton: React.FC<{
+  height: number;
+  /** Đang tải thì hiện vòng xoay; đứng im với `message` khi thật sự không có dữ liệu. */
+  isLoading?: boolean;
+  message: string;
+  width: number;
+}> = ({ height, isLoading, message, width }) => {
+  const styles = useStyles(makeStyles);
+  const colors = useAppColors();
+  const gridRowCount = 5;
+  const axisY = height - 28;
+
+  return (
+    <View style={[styles.chartSkeleton, { height, width }]}>
+      <Svg width={width} height={height}>
+        {Array.from({ length: gridRowCount }, (_, row) => {
+          const y = 16 + ((axisY - 16) / (gridRowCount - 1)) * row;
+
+          return (
+            <Line
+              key={row}
+              x1={40}
+              y1={y}
+              x2={width - 8}
+              y2={y}
+              stroke="#e0e0e0"
+              strokeWidth={0.8}
+            />
+          );
+        })}
+        <Line
+          x1={40}
+          y1={axisY}
+          x2={width - 8}
+          y2={axisY}
+          stroke="#ccc"
+          strokeWidth={1}
+        />
+      </Svg>
+      {/* Đang tải: vòng xoay, không chữ — đổi kỳ (Tuần này/Tháng này) chỉ mất
+          một nhịp ngắn, một dòng chữ hiện rồi tắt ngay đọc như nhấp nháy. */}
+      {isLoading ? (
+        <ActivityIndicator
+          color={colors.textMuted}
+          size="small"
+          style={styles.chartSkeletonSpinner}
+        />
+      ) : (
+        <NativeText
+          allowFontScaling={false}
+          style={styles.chartSkeletonText}
+        >
+          {message}
+        </NativeText>
+      )}
+    </View>
+  );
+};
+
+// ─── Thanh tỉ trọng (Cân bằng năng lượng) ────────────────────────────────────
+
+const AnimatedBarSegment: React.FC<{
+  fillStyle: StyleProp<ViewStyle>;
+  /** Phần chiếm của đoạn này trong thanh, 0..1. */
+  share: number;
+}> = ({ fillStyle, share }) => {
+  const styles = useStyles(makeStyles);
+  const grow = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Chiều rộng % không chạy được trên native driver, nhưng đây là 2 view mỗi
+    // thanh nên không đáng lo.
+    const animation = Animated.timing(grow, {
+      toValue: share,
+      duration: CHART_TRANSITION_MS + 180,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    });
+
+    animation.start();
+    return () => animation.stop();
+  }, [grow, share]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.barFill,
+        fillStyle,
+        {
+          width: grow.interpolate({
+            inputRange: [0, 1],
+            outputRange: ["0%", "100%"],
+          }),
+        },
+      ]}
+    />
+  );
+};
+
+/**
+ * Thanh tỉ trọng hai đoạn. Trước đây hai đoạn dùng `flex` theo phần trăm nên
+ * chúng luôn phủ kín thanh; giữ đúng cách chia đó bằng cách quy về tỉ lệ trên
+ * tổng hai phần.
+ */
+export const BalanceBar: React.FC<{
+  segments: { fillStyle: StyleProp<ViewStyle>; percent?: number | null }[];
+}> = ({ segments }) => {
+  const styles = useStyles(makeStyles);
+  const shares = segments.map((segment) => Math.max(segment.percent ?? 0, 0));
+  const total = shares.reduce((sum, share) => sum + share, 0);
+
+  return (
+    <View style={styles.barTrack}>
+      {segments.map((segment, index) => (
+        <AnimatedBarSegment
+          key={index}
+          fillStyle={segment.fillStyle}
+          share={total > 0 ? shares[index] / total : 0}
+        />
+      ))}
+    </View>
+  );
+};
+
 // ─── Donut chart ──────────────────────────────────────────────────────────────
 
-export const DonutChart: React.FC<{
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
+const DonutChartBase: React.FC<{
   primaryColor: string;
   secondaryColor: string;
   primaryPct: number;
@@ -582,8 +807,24 @@ export const DonutChart: React.FC<{
   const cy = size / 2;
   const strokeW = 10;
   const circ = 2 * Math.PI * r;
-  const primary = (primaryPct / 100) * circ;
-  const secondary = circ - primary;
+  // Cung được vẽ bằng dashoffset (dashArray cố định) để chạy được animation;
+  // điểm bắt đầu đưa về 12 giờ bằng rotation thay cho offset 1/4 vòng như trước.
+  const primary =
+    (Math.min(Math.max(primaryPct, 0), 100) / 100) * circ;
+  const dashOffset = useRef(new Animated.Value(circ)).current;
+
+  useEffect(() => {
+    const animation = Animated.timing(dashOffset, {
+      toValue: circ - primary,
+      duration: CHART_TRANSITION_MS + 180,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    });
+
+    animation.start();
+    return () => animation.stop();
+  }, [circ, dashOffset, primary]);
+
   return (
     <Svg width={size} height={size}>
       <Circle
@@ -594,178 +835,420 @@ export const DonutChart: React.FC<{
         strokeWidth={strokeW}
         fill="none"
       />
-      <Circle
-        cx={cx}
-        cy={cy}
-        r={r}
-        stroke={primaryColor}
-        strokeWidth={strokeW}
-        fill="none"
-        strokeDasharray={`${primary} ${secondary}`}
-        strokeDashoffset={circ * 0.25}
-        strokeLinecap="round"
-      />
+      <G rotation={-90} originX={cx} originY={cy}>
+        <AnimatedCircle
+          cx={cx}
+          cy={cy}
+          r={r}
+          stroke={primaryColor}
+          strokeWidth={strokeW}
+          fill="none"
+          strokeDasharray={`${circ} ${circ}`}
+          strokeDashoffset={dashOffset}
+          strokeLinecap="round"
+        />
+      </G>
     </Svg>
   );
 };
 
-// ─── Area chart (Production & Consumption) ───────────────────────────────────
+export const DonutChart = React.memo(DonutChartBase);
 
-export const AreaChart: React.FC<{
-  productionData: number[];
-  consumptionData: number[];
+
+// ─── Thang đo dùng chung cho 2 biểu đồ ───────────────────────────────────────
+
+/**
+ * Mốc trục Y "tròn số" suy ra từ giá trị lớn nhất thật của dữ liệu. Không thể
+ * cố định mốc như bản mock: công suất một nhà máy có thể là vài trăm kW, mốc
+ * cứng sẽ vô nghĩa hoặc cắt mất đỉnh biểu đồ.
+ */
+/**
+ * Bước tròn mặc định: chỉ 1 - 5 - 10 (nhân lũy thừa 10) và nhắm 3 khoảng, để mốc
+ * rơi vào dãy 0,5 - 1 - 1,5 như thiết kế thay vì 0,2 - 0,4 - 0,6 - 0,8.
+ */
+const NICE_STEP_CANDIDATES = [0.5, 1, 5, 10];
+
+const buildNiceTicks = (
+  maxValue: number,
+  tickCount = 3,
+  candidates = NICE_STEP_CANDIDATES
+) => {
+  if (!Number.isFinite(maxValue) || maxValue <= 0) return [0, 1];
+
+  const rawStep = maxValue / tickCount;
+  const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const normalized = rawStep / magnitude;
+  const chosen = candidates.findIndex((candidate) => normalized <= candidate);
+  let niceStep = candidates[chosen < 0 ? candidates.length - 1 : chosen] *
+    magnitude;
+
+  // Bước quá to thì cả trục chỉ còn một khoảng (đỉnh 4,9 mà bước 5 -> chỉ có
+  // mốc 0 và 5), lùi một nấc để vẫn còn đường kẻ ở giữa.
+  if (maxValue / niceStep <= 1 && chosen > 0) {
+    niceStep = candidates[chosen - 1] * magnitude;
+  }
+
+  // Mốc cuối phải >= đỉnh dữ liệu, nếu không thang đo cắt mất phần trên biểu đồ
+  // (ví dụ đỉnh 0,50 với bước 0,2 phải lên tới 0,6 chứ không dừng ở 0,4).
+  const stepCount = Math.max(
+    Math.ceil(roundTo(maxValue / niceStep, 6)),
+    1
+  );
+
+  const ticks: number[] = [];
+  for (let index = 0; index <= stepCount; index += 1) {
+    ticks.push(roundTo(index * niceStep, 6));
+  }
+
+  return ticks;
+};
+
+/** Số lẻ của nhãn trục: bước nhỏ thì cần thêm chữ số mới phân biệt được mốc. */
+const tickDigits = (step: number) => {
+  if (step >= 10) return 0;
+  if (step >= 1) return 1;
+  return 2;
+};
+
+/**
+ * Nhãn trục Y. Cắt số 0 vô nghĩa ở cuối để mốc đọc gọn: 0,50 -> 0,5 và 1,00 -> 1,
+ * thay vì cả cột nhãn đều có đuôi ",00".
+ */
+const formatTick = (value: number, step: number) => {
+  const formatted = formatVnNumber(value, tickDigits(step));
+
+  return formatted.includes(",")
+    ? formatted.replace(/,?0+$/, "")
+    : formatted;
+};
+
+/**
+ * Màu các chuỗi của biểu đồ vùng, khớp với chấm chú giải trong
+ * `SolarPlantScreen.styles.ts`: Sản xuất xanh dương, Tiêu thụ cam, phần điện mặt
+ * trời trong Tiêu thụ ("Từ mặt trời" / "Tự dùng") xanh lá.
+ */
+const PRODUCTION_SERIES_COLOR = "#2a78d6";
+const SOLAR_SERIES_COLOR = "#1baf7a";
+
+/** Lề trục của biểu đồ vùng; dùng lại ở ngoài để đặt viên nhãn đúng mốc. */
+const AREA_PAD_L = 40;
+const AREA_PAD_R = 8;
+
+/**
+ * Hoành độ của mốc đang xem trên biểu đồ vùng. Viên nhãn ("14:00 0,46 MW") nằm
+ * ngoài Svg nên phải tính lại cùng công thức, nếu không nó lệch khỏi đường kẻ dọc.
+ */
+export const areaChartMarkerX = (
+  width: number,
+  index: number,
+  axisCount: number
+) => {
+  const plotWidth = width - AREA_PAD_L - AREA_PAD_R;
+
+  return axisCount > 1
+    ? AREA_PAD_L + (index / (axisCount - 1)) * plotWidth
+    : AREA_PAD_L + plotWidth / 2;
+};
+
+type ChartPoint = { index: number; value: number };
+
+/**
+ * Cắt chuỗi thành các đoạn liên tục, bỏ qua điểm trống. Chuỗi Consumption có
+ * thể thiếu số ở một vài mốc và tài liệu yêu cầu để trống chứ không ép về 0, nên
+ * biểu đồ phải tự ngắt đoạn thay vì tụt xuống đáy.
+ */
+const buildSegments = (
+  data: (number | null | undefined)[],
+  endIndex: number
+): ChartPoint[][] => {
+  const segments: ChartPoint[][] = [];
+  let current: ChartPoint[] = [];
+
+  data.slice(0, endIndex + 1).forEach((value, index) => {
+    if (value == null || !Number.isFinite(value)) {
+      if (current.length) segments.push(current);
+      current = [];
+      return;
+    }
+
+    current.push({ index, value });
+  });
+
+  if (current.length) segments.push(current);
+  return segments;
+};
+
+// ─── Area chart (Công suất trong ngày) ───────────────────────────────────────
+
+const AreaChartBase: React.FC<{
+  /** Giá trị đã quy về đơn vị hiển thị (kW). */
+  productionData: (number | null)[];
+  consumptionData: (number | null)[];
+  selfData?: (number | null)[];
   variant?: "merged" | "production" | "consumption";
   markerIndex?: number;
-  tooltipValue?: number;
-  showReferenceLine?: boolean;
+  /** Nhãn trục X suy từ mốc thời gian thật: 6 - Trưa - 18. */
+  xLabels?: { label: string; idx: number }[];
+  /**
+   * Số mốc của cả trục (cả ngày), có thể lớn hơn số mốc đã có dữ liệu. Trục trải
+   * hết 24 giờ, phần chưa tới để trống — không kéo dữ liệu cho đầy chiều ngang.
+   */
+  domainCount?: number;
+  /** Đường kẻ ngang tham chiếu (đỉnh ngày hôm trước), cùng đơn vị với chuỗi. */
+  referenceValue?: number | null;
+  referenceLabel?: string;
+  unitLabel?: string;
   width?: number;
   height?: number;
 }> = ({
   productionData,
   consumptionData,
+  selfData,
   variant = "merged",
-  markerIndex = 8,
-  tooltipValue,
-  showReferenceLine = false,
+  markerIndex,
+  xLabels,
+  domainCount,
+  referenceValue,
+  referenceLabel,
+  unitLabel = "kW",
   width = CHART_WIDTH,
   height = 180,
 }) => {
-  const padL = 32;
-  const padR = 8;
+  const padL = AREA_PAD_L;
+  const padR = AREA_PAD_R;
   const padT = 16;
   const padB = 28;
   const W = width - padL - padR;
   const H = height - padT - padB;
-  const max = Math.max(...productionData, ...consumptionData, 1.6);
-  const N = productionData.length;
   const isMerged = variant === "merged";
   const isProduction = variant === "production";
+  const isConsumption = variant === "consumption";
+
+  const pointCount = Math.max(
+    productionData.length,
+    consumptionData.length,
+    selfData?.length ?? 0
+  );
+  const endIndex = pointCount - 1;
+  // Bề rộng trục tính theo cả ngày; dữ liệu tới đâu thì vẽ tới đó.
+  const axisCount = Math.max(domainCount ?? 0, pointCount);
+
+  const visibleSeries: (number | null)[][] = isProduction
+    ? [productionData]
+    : isConsumption
+    ? [consumptionData, productionData]
+    : [productionData, consumptionData, ...(selfData ? [selfData] : [])];
+
+  const hasReference =
+    referenceValue != null && Number.isFinite(referenceValue) &&
+    referenceValue > 0;
+
+  const maxValue = visibleSeries
+    .flat()
+    .reduce<number>(
+      (max, value) =>
+        value != null && Number.isFinite(value) && value > max ? value : max,
+      // Đỉnh hôm trước phải nằm trong thang đo, không thì đường kẻ bị đẩy ra
+      // ngoài khung và không thấy đâu cả.
+      hasReference ? (referenceValue as number) : 0
+    );
+
+  const yTicks = buildNiceTicks(maxValue);
+  const tickStep = yTicks.length > 1 ? yTicks[1] - yTicks[0] : 1;
+  const axisMax = yTicks[yTicks.length - 1] || 1;
+
+  const px = useCallback(
+    (index: number) =>
+      axisCount > 1 ? padL + (index / (axisCount - 1)) * W : padL + W / 2,
+    [axisCount, W],
+  );
+  const py = useCallback(
+    (value: number) => padT + H - (value / axisMax) * H,
+    [axisMax, H],
+  );
+
+  /**
+   * Chuỗi path là phần đắt nhất của biểu đồ (mỗi chuỗi ~288 điểm). Màn hình cha
+   * render lại khá thường xuyên (đổi tab, mỗi khối tải xong) nên giữ lại kết quả
+   * để không dựng lại path khi dữ liệu không đổi.
+   */
+  const paths = useMemo(() => {
+    const linePath = (data: (number | null)[]) =>
+      buildSegments(data, endIndex)
+        .map((segment) =>
+          segment
+            .map(
+              (point, position) =>
+                `${position === 0 ? "M" : "L"}${px(point.index)},${py(
+                  point.value,
+                )}`
+            )
+            .join(" ")
+        )
+        .join(" ");
+
+    const areaPath = (data: (number | null)[]) =>
+      buildSegments(data, endIndex)
+        .map((segment) => {
+          const first = segment[0];
+          const last = segment[segment.length - 1];
+          const line = segment
+            .map(
+              (point, position) =>
+                `${position === 0 ? "M" : "L"}${px(point.index)},${py(
+                  point.value,
+                )}`
+            )
+            .join(" ");
+
+          return `${line} L${px(last.index)},${padT + H} L${px(first.index)},${
+            padT + H
+          } Z`;
+        })
+        .join(" ");
+
+    return {
+      consumptionArea: areaPath(consumptionData),
+      consumptionLine: linePath(consumptionData),
+      productionArea: areaPath(productionData),
+      productionLine: linePath(productionData),
+      selfLine: selfData?.length ? linePath(selfData) : "",
+    };
+  }, [H, consumptionData, endIndex, productionData, px, py, selfData]);
+
   const markerValue =
-    tooltipValue ??
-    (isProduction ? productionData[markerIndex] : consumptionData[markerIndex]);
-
-  const px = (i: number) => padL + (i / (N - 1)) * W;
-  const py = (v: number) => padT + H - (v / max) * H;
-  const endIndex = markerIndex;
-  const getSeriesValue = (
-    dataSet: number[],
-    index: number,
-    isActive: boolean,
-  ) => (isActive && index === markerIndex ? markerValue : dataSet[index]);
-  const linePath = (dataSet: number[], isActive = false) =>
-    dataSet
-      .slice(0, endIndex + 1)
-      .map((_, i) => {
-        const value = getSeriesValue(dataSet, i, isActive);
-        return `${i === 0 ? "M" : "L"}${px(i)},${py(value)}`;
-      })
-      .join(" ");
-  const areaPath = (dataSet: number[], isActive = false) =>
-    `${linePath(dataSet, isActive)} L${px(endIndex)},${padT + H} L${px(0)},${
-      padT + H
-    } Z`;
-
-  const prodPath = areaPath(productionData, isProduction || isMerged);
-  const conPath = areaPath(consumptionData, variant === "consumption");
-
-  const yTicks = [0, 0.4, 0.8, 1.2, 1.6];
-  const xLabels = [
-    { label: "6", idx: 6 },
-    { label: "Noon", idx: 12 },
-    { label: "18", idx: 18 },
-  ];
+    markerIndex == null
+      ? null
+      : isConsumption
+      ? consumptionData[markerIndex]
+      : productionData[markerIndex];
+  const resolvedLabels =
+    xLabels?.length
+      ? xLabels
+      : axisCount > 1
+      ? [
+          { label: "6", idx: Math.round((axisCount - 1) * 0.25) },
+          { label: "Trưa", idx: Math.round((axisCount - 1) * 0.5) },
+          { label: "18", idx: Math.round((axisCount - 1) * 0.75) },
+        ]
+      : [];
 
   return (
     <Svg width={width} height={height}>
       {/* grid lines */}
-      {yTicks.map((v) => (
-        <G key={v}>
+      {yTicks.map((value) => (
+        <G key={value}>
           <Line
             x1={padL}
-            y1={py(v)}
+            y1={py(value)}
             x2={padL + W}
-            y2={py(v)}
+            y2={py(value)}
             stroke="#e0e0e0"
             strokeWidth={0.8}
           />
-          <SvgText
-            x={padL - 4}
-            y={py(v) + 4}
-            fontSize={9}
-            fill="#aaa"
-            textAnchor="end"
-          >
-            {v}
-          </SvgText>
+          {/* Mốc 0 nằm ngay trên đường trục X, chỗ đó dành cho đơn vị. */}
+          {value > 0 ? (
+            <SvgText
+              x={padL - 4}
+              y={py(value) + 4}
+              fontSize={9}
+              fill="#aaa"
+              textAnchor="end"
+            >
+              {formatTick(value, tickStep)}
+            </SvgText>
+          ) : null}
         </G>
       ))}
-      {showReferenceLine ? (
+
+      {hasReference ? (
         <>
           <Line
             x1={padL}
-            y1={py(isProduction ? 0.68 : 1.55)}
+            y1={py(referenceValue as number)}
             x2={padL + W}
-            y2={py(isProduction ? 0.68 : 1.55)}
+            y2={py(referenceValue as number)}
             stroke="#8a8a8a"
             strokeWidth={1}
             strokeDasharray="6 7"
           />
-          <SvgText
-            x={padL + 2}
-            y={py(isProduction ? 0.68 : 1.55) + 4}
-            fontSize={11}
-            fontWeight="600"
-            fill="#777"
-          >
-            -Yesterday's high-
-          </SvgText>
+          {referenceLabel ? (
+            <SvgText
+              x={padL + 2}
+              y={py(referenceValue as number) + 4}
+              fontSize={11}
+              fontWeight="600"
+              fill="#777"
+            >
+              {`-${referenceLabel}-`}
+            </SvgText>
+          ) : null}
         </>
       ) : null}
-      {isMerged || variant === "consumption" ? (
+
+      {isMerged || isConsumption ? (
         <>
-          <Path d={conPath} fill={isMerged ? "#ff8a3040" : "#ff8a304f"} />
           <Path
-            d={linePath(consumptionData, variant === "consumption")}
+            d={paths.consumptionArea}
+            fill={isMerged ? "#eb683440" : "#eb68344f"}
+          />
+          <Path
+            d={paths.consumptionLine}
             fill="none"
-            stroke="#ff9800"
+            stroke="#eb6834"
             strokeWidth={1.5}
           />
         </>
       ) : null}
-      {isMerged || isProduction ? (
+
+      {/* Ở biểu đồ Tiêu thụ, chuỗi Sản xuất chính là phần "Từ mặt trời" nên phải
+          vẽ bằng đúng màu của chấm chú giải đó (xanh lá), không phải màu xanh
+          dương của biểu đồ Sản xuất. */}
+      {isMerged || isProduction || isConsumption ? (
         <>
-          <Path d={prodPath} fill={isMerged ? "#2e86de78" : "#13c96045"} />
           <Path
-            d={linePath(productionData, isProduction || isMerged)}
+            d={paths.productionArea}
+            fill={
+              isConsumption
+                ? `${SOLAR_SERIES_COLOR}70`
+                : isProduction
+                ? `${PRODUCTION_SERIES_COLOR}45`
+                : `${PRODUCTION_SERIES_COLOR}78`
+            }
+          />
+          <Path
+            d={paths.productionLine}
             fill="none"
-            stroke={isMerged ? "#1684ff" : "#04b850"}
+            stroke={isConsumption ? SOLAR_SERIES_COLOR : PRODUCTION_SERIES_COLOR}
             strokeWidth={1.5}
           />
         </>
       ) : null}
-      {variant === "consumption" ? (
-        <>
-          <Path d={prodPath} fill="#2e86de78" />
-          <Path
-            d={linePath(productionData)}
-            fill="none"
-            stroke="#2e86de"
-            strokeWidth={1.5}
-          />
-        </>
+
+      {/* Tự dùng gần như trùng khít Sản xuất ở nhà máy không bán điện, nên vẽ
+          nét đứt để không mất hẳn một đường. */}
+      {isMerged && selfData?.length ? (
+        <Path
+          d={paths.selfLine}
+          fill="none"
+          stroke={SOLAR_SERIES_COLOR}
+          strokeWidth={1.5}
+          strokeDasharray="5 4"
+        />
       ) : null}
-      {/* x axis */}
+
+      {/* x axis — đậm hơn đường kẻ ngang để tách hẳn phần biểu đồ với nhãn giờ */}
       <Line
         x1={padL}
         y1={padT + H}
         x2={padL + W}
         y2={padT + H}
-        stroke="#ccc"
-        strokeWidth={1}
+        stroke="#8a8a8a"
+        strokeWidth={1.5}
       />
-      {xLabels.map(({ label, idx }) => (
+      {resolvedLabels.map(({ label, idx }) => (
         <SvgText
-          key={label}
+          key={`${label}-${idx}`}
           x={px(idx)}
           y={padT + H + 14}
           fontSize={10}
@@ -775,52 +1258,330 @@ export const AreaChart: React.FC<{
           {label}
         </SvgText>
       ))}
-      <SvgText x={padL - 2} y={padT + H + 14} fontSize={9} fill="#aaa">
-        MW
+      {/* Đơn vị nằm ở chân trục Y, đúng chỗ mốc 0 — không còn đè nhãn giờ vì
+          trục X chỉ ghi 6 - Trưa - 18. */}
+      <SvgText
+        x={padL - 4}
+        y={padT + H + 4}
+        fontSize={9}
+        fill="#aaa"
+        textAnchor="end"
+      >
+        {unitLabel}
       </SvgText>
-      <Line
-        x1={px(markerIndex)}
-        y1={padT}
-        x2={px(markerIndex)}
-        y2={padT + H}
-        stroke="#333"
-        strokeWidth={2}
-      />
-      <Circle
-        cx={px(markerIndex)}
-        cy={py(markerValue)}
-        r={5}
-        fill="white"
-        stroke={isProduction || isMerged ? "#04b850" : "#333"}
-        strokeWidth={2}
-      />
+
+      {markerIndex != null && markerIndex >= 0 && markerIndex <= endIndex ? (
+        <>
+          <Line
+            x1={px(markerIndex)}
+            y1={padT}
+            x2={px(markerIndex)}
+            y2={padT + H}
+            stroke="#333"
+            strokeWidth={2}
+          />
+          {markerValue != null && Number.isFinite(markerValue) ? (
+            <Circle
+              cx={px(markerIndex)}
+              cy={py(markerValue)}
+              r={5}
+              fill="white"
+              stroke={isConsumption ? "#eb6834" : PRODUCTION_SERIES_COLOR}
+              strokeWidth={2}
+            />
+          ) : null}
+        </>
+      ) : null}
     </Svg>
   );
 };
 
-// ─── Bar chart (Comparative Production) ──────────────────────────────────────
+export const AreaChart = React.memo(AreaChartBase);
 
-export const BarChart: React.FC<{
-  data: SolarDashboardData["comparativeData"];
+// ─── Bar chart năng lượng (kỳ Tuần / Tháng / Năm) ────────────────────────────
+
+/**
+ * Biểu đồ cột điện năng theo mốc. Mỗi mốc có thể có nhiều cột đứng cạnh nhau,
+ * mỗi cột xếp tầng nhiều đoạn, thêm một cột hẹp vẽ đè (Tự dùng nằm trong Tiêu
+ * thụ) — đúng bố cục của app nhà cung cấp.
+ */
+const EnergyBarChartBase: React.FC<{
+  buckets: EnergyBarBucket[];
+  /** Mốc mới nhất còn số liệu: tô đậm + kẻ dọc, giống mốc hiện tại ở kỳ Ngày. */
+  markerIndex?: number;
+  unitLabel?: string;
   width?: number;
   height?: number;
-}> = ({ data, width = CHART_WIDTH, height = 180 }) => {
-  const padL = 40;
+}> = ({
+  buckets,
+  markerIndex = -1,
+  unitLabel = "MWh",
+  width = CHART_WIDTH,
+  height = 180,
+}) => {
+  const padL = 44;
+  const padR = 8;
+  const padT = 16;
+  const padB = 30;
+  const W = width - padL - padR;
+  const H = height - padT - padB;
+  const bucketCount = Math.max(buckets.length, 1);
+  const columnCount = Math.max(buckets[0]?.columns.length ?? 1, 1);
+
+  const { axisMax, barWidth, columnGap, slotWidth, tickStep, yTicks } = useMemo(
+    () => {
+      const stackTotal = (values: number[]) =>
+        values.reduce((sum, value) => sum + Math.max(value, 0), 0);
+
+      const peak = buckets.reduce(
+        (max, bucket) =>
+          bucket.columns.reduce(
+            (columnMax, column) =>
+              Math.max(
+                columnMax,
+                stackTotal(column.stack.map((segment) => segment.value)),
+                column.overlay?.value ?? 0
+              ),
+            max
+          ),
+        0
+      );
+
+      const ticks = buildNiceTicks(peak);
+      const slot = W / bucketCount;
+      const gap = columnCount > 1 ? Math.min(2, slot * 0.08) : 0;
+
+      return {
+        axisMax: ticks[ticks.length - 1] || 1,
+        // Chừa 28% mỗi ô làm khoảng trống giữa hai mốc, không thì cột dính liền
+        // thành một dải đặc ở kỳ Tháng (31 mốc).
+        barWidth: Math.max(
+          (slot * 0.72 - gap * (columnCount - 1)) / columnCount,
+          1.5
+        ),
+        columnGap: gap,
+        slotWidth: slot,
+        tickStep: ticks.length > 1 ? ticks[1] - ticks[0] : 1,
+        yTicks: ticks,
+      };
+    },
+    [W, bucketCount, buckets, columnCount]
+  );
+
+  const py = (value: number) => padT + H - (value / axisMax) * H;
+  const groupWidth = barWidth * columnCount + columnGap * (columnCount - 1);
+  // Nhãn trục X: giãn ra cho tối đa ~16 nhãn, quá số đó thì các nhãn đè nhau.
+  const labelStep = Math.ceil(bucketCount / 16);
+
+  return (
+    <Svg width={width} height={height}>
+      {yTicks.map((value) => (
+        <G key={value}>
+          <Line
+            x1={padL}
+            y1={py(value)}
+            x2={padL + W}
+            y2={py(value)}
+            stroke="#e8e8e8"
+            strokeWidth={0.8}
+          />
+          {/* Chỗ mốc 0 để dành cho đơn vị, giống biểu đồ vùng. */}
+          {value > 0 ? (
+            <SvgText
+              x={padL - 4}
+              y={py(value) + 4}
+              fontSize={9}
+              fill="#bbb"
+              textAnchor="end"
+            >
+              {formatTick(value, tickStep)}
+            </SvgText>
+          ) : null}
+        </G>
+      ))}
+
+      {buckets.map((bucket, bucketIndex) => {
+        const groupLeft =
+          padL + (bucketIndex + 0.5) * slotWidth - groupWidth / 2;
+        const isMarker = bucketIndex === markerIndex;
+
+        // Dựng hình khối trước rồi mới vẽ: mốc đang xem cần vẽ đúng các khối đó
+        // lần thứ hai bằng lớp tối, nên phải có sẵn toạ độ.
+        const rects: {
+          fill: string;
+          height: number;
+          width: number;
+          x: number;
+          y: number;
+        }[] = [];
+
+        bucket.columns.forEach((column, columnIndex) => {
+          const x = groupLeft + columnIndex * (barWidth + columnGap);
+          let baseline = padT + H;
+
+          column.stack.forEach((segment) => {
+            if (!(segment.value > 0)) return;
+
+            // Xếp tầng từ dưới lên: mỗi đoạn đứng trên đoạn trước.
+            const barHeight = (segment.value / axisMax) * H;
+            baseline -= barHeight;
+
+            rects.push({
+              fill: segment.color,
+              height: barHeight,
+              width: barWidth,
+              x,
+              y: baseline,
+            });
+          });
+
+          if (column.overlay && column.overlay.value > 0) {
+            const overlayHeight = (column.overlay.value / axisMax) * H;
+
+            rects.push({
+              fill: column.overlay.color,
+              height: overlayHeight,
+              // Hẹp hơn cột nền để vẫn thấy được phần cột nằm dưới.
+              width: Math.max(barWidth * 0.58, 1.5),
+              x,
+              y: padT + H - overlayHeight,
+            });
+          }
+        });
+
+        return (
+          <G key={`${bucket.label}-${bucketIndex}`}>
+            {rects.map((rect, rectIndex) => (
+              <Rect
+                key={rectIndex}
+                x={rect.x}
+                y={rect.y}
+                width={rect.width}
+                height={rect.height}
+                rx={1.5}
+                fill={rect.fill}
+              />
+            ))}
+            {isMarker
+              ? rects.map((rect, rectIndex) => (
+                  <Rect
+                    key={`marker-${rectIndex}`}
+                    x={rect.x}
+                    y={rect.y}
+                    width={rect.width}
+                    height={rect.height}
+                    rx={1.5}
+                    fill="#00000038"
+                  />
+                ))
+              : null}
+          </G>
+        );
+      })}
+
+      <Line
+        x1={padL}
+        y1={padT + H}
+        x2={padL + W}
+        y2={padT + H}
+        stroke="#8a8a8a"
+        strokeWidth={1.5}
+      />
+
+      {markerIndex >= 0 && markerIndex < buckets.length ? (
+        <Line
+          x1={padL + (markerIndex + 0.5) * slotWidth}
+          y1={padT}
+          x2={padL + (markerIndex + 0.5) * slotWidth}
+          y2={padT + H}
+          stroke="#333"
+          strokeWidth={1.5}
+        />
+      ) : null}
+
+      {buckets.map((bucket, bucketIndex) =>
+        bucketIndex % labelStep === 0 && bucket.label ? (
+          <SvgText
+            key={`label-${bucketIndex}`}
+            x={padL + (bucketIndex + 0.5) * slotWidth}
+            y={padT + H + 15}
+            fontSize={9}
+            fill="#aaa"
+            textAnchor="middle"
+          >
+            {bucket.label}
+          </SvgText>
+        ) : null
+      )}
+
+      {/* Đơn vị ở chân trục Y, cùng chỗ với biểu đồ vùng — xem chú thích ở đó. */}
+      <SvgText
+        x={padL - 4}
+        y={padT + H + 4}
+        fontSize={9}
+        fill="#bbb"
+        textAnchor="end"
+      >
+        {unitLabel}
+      </SvgText>
+    </Svg>
+  );
+};
+
+export const EnergyBarChart = React.memo(EnergyBarChartBase);
+
+// ─── Bar chart (So sánh sản lượng) ───────────────────────────────────────────
+
+const BarChartBase: React.FC<{
+  data: SolarComparativeBucket[];
+  /**
+   * Nhãn hai năm. Ở chế độ "Cả năm" chỉ có MỘT mốc nên nhãn dưới mỗi cột là năm
+   * của chính cột đó, chứ ghi "Cả năm" ở giữa thì không biết cột nào là năm nào.
+   */
+  previousLabel?: string;
+  currentLabel?: string;
+  unitLabel?: string;
+  width?: number;
+  height?: number;
+}> = ({
+  data,
+  previousLabel,
+  currentLabel,
+  unitLabel = "MWh",
+  width = CHART_WIDTH,
+  height = 180,
+}) => {
+  const padL = 44;
   const padR = 8;
   const padT = 16;
   const padB = 32;
   const W = width - padL - padR;
   const H = height - padT - padB;
-  const max = Math.max(...data.flatMap((d) => [d.year2025, d.year2026]), 120);
-  const barW = (W / data.length) * 0.35;
-  const yTicks = [30, 60, 90, 120];
+  const bucketCount = Math.max(data.length, 1);
+  const maxValue = data.reduce(
+    (max, bucket) => Math.max(max, bucket.previous, bucket.current),
+    0
+  );
+  // Cột cao nhất chạm đỉnh khung, đường kẻ ngang chỉ vẽ ở các mốc nằm dưới nó —
+  // bước 1-2-5-10 để mốc không quá thưa (670 -> 200/400/600, không phải 500).
+  const rawTicks = buildNiceTicks(maxValue, 4, [1, 2, 5, 10]);
+  const tickStep = rawTicks.length > 1 ? rawTicks[1] - rawTicks[0] : 1;
+  const axisMax = maxValue > 0 ? maxValue : 1;
+  const yTicks = rawTicks.filter((value) => value < axisMax * 0.995);
+  const slotWidth = W / bucketCount;
+  // Một mốc duy nhất: hai cột dạt ra hai đầu trục như app nhà cung cấp.
+  const isSingleBucket = data.length === 1;
+  const barW = Math.max(
+    isSingleBucket ? W * 0.3 : slotWidth * 0.32,
+    2
+  );
 
   return (
     <Svg width={width} height={height}>
-      {yTicks.map((v) => {
-        const y = padT + H - (v / max) * H;
+      {yTicks.map((value) => {
+        const y = padT + H - (value / axisMax) * H;
         return (
-          <G key={v}>
+          <G key={value}>
             <Line
               x1={padL}
               y1={y}
@@ -829,53 +1590,79 @@ export const BarChart: React.FC<{
               stroke="#e8e8e8"
               strokeWidth={0.8}
             />
-            <SvgText
-              x={padL - 4}
-              y={y + 4}
-              fontSize={9}
-              fill="#bbb"
-              textAnchor="end"
-            >
-              {v}
-            </SvgText>
+            {/* Chỗ mốc 0 để dành cho đơn vị, giống hai biểu đồ còn lại. */}
+            {value > 0 ? (
+              <SvgText
+                x={padL - 4}
+                y={y + 4}
+                fontSize={9}
+                fill="#bbb"
+                textAnchor="end"
+              >
+                {formatTick(value, tickStep)}
+              </SvgText>
+            ) : null}
           </G>
         );
       })}
-      {data.map((d, i) => {
-        const cx = padL + (i + 0.5) * (W / data.length);
-        const y25 = padT + H - (d.year2025 / max) * H;
-        const y26 = padT + H - (d.year2026 / max) * H;
+      {data.map((bucket, index) => {
+        const cx = padL + (index + 0.5) * slotWidth;
+        const yPrevious = padT + H - (bucket.previous / axisMax) * H;
+        const yCurrent = padT + H - (bucket.current / axisMax) * H;
+        const xPrevious = isSingleBucket ? padL : cx - barW - 1;
+        const xCurrent = isSingleBucket ? padL + W - barW : cx + 1;
+
         return (
-          <G key={d.month}>
-            {d.year2025 > 0 && (
+          <G key={bucket.label}>
+            {bucket.previous > 0 && (
               <Rect
-                x={cx - barW - 1}
-                y={y25}
+                x={xPrevious}
+                y={yPrevious}
                 width={barW}
-                height={padT + H - y25}
+                height={padT + H - yPrevious}
                 rx={2}
-                fill="#42b0e8"
+                fill={COMPARE_PREVIOUS_YEAR_COLOR}
               />
             )}
-            {d.year2026 > 0 && (
+            {bucket.current > 0 && (
               <Rect
-                x={cx + 1}
-                y={y26}
+                x={xCurrent}
+                y={yCurrent}
                 width={barW}
-                height={padT + H - y26}
+                height={padT + H - yCurrent}
                 rx={2}
-                fill="#4e5ab5"
+                fill={COMPARE_CURRENT_YEAR_COLOR}
               />
             )}
-            <SvgText
-              x={cx}
-              y={padT + H + 18}
-              fontSize={9}
-              fill="#aaa"
-              textAnchor="middle"
-            >
-              {d.month}
-            </SvgText>
+            {isSingleBucket && (previousLabel || currentLabel) ? (
+              [
+                { label: previousLabel, x: xPrevious + barW / 2 },
+                { label: currentLabel, x: xCurrent + barW / 2 },
+              ].map(({ label, x }) =>
+                label ? (
+                  <SvgText
+                    key={label}
+                    x={x}
+                    y={padT + H + 18}
+                    fontSize={9}
+                    fill="#aaa"
+                    textAnchor="middle"
+                  >
+                    {label}
+                  </SvgText>
+                ) : null
+              )
+            ) : (
+              <SvgText
+                x={cx}
+                y={padT + H + 18}
+                fontSize={9}
+                fill="#aaa"
+                textAnchor="middle"
+              >
+                {bucket.label}
+              </SvgText>
+            )}
           </G>
         );
       })}
@@ -884,18 +1671,21 @@ export const BarChart: React.FC<{
         y1={padT + H}
         x2={padL + W}
         y2={padT + H}
-        stroke="#ddd"
-        strokeWidth={1}
+        stroke="#8a8a8a"
+        strokeWidth={1.5}
       />
+      {/* Đơn vị ở chân trục Y cho khớp với hai biểu đồ còn lại của màn. */}
       <SvgText
-        x={padL - 8}
-        y={padT + H + 8}
+        x={padL - 4}
+        y={padT + H + 4}
         fontSize={9}
-        fill="#9fb0c8"
+        fill="#bbb"
         textAnchor="end"
       >
-        MWh
+        {unitLabel}
       </SvgText>
     </Svg>
   );
 };
+
+export const BarChart = React.memo(BarChartBase);
