@@ -7,14 +7,13 @@ import {
   StatusBar,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import EmptyState from "../../components/ui/EmptyState";
-import IsLoading from "../../components/ui/IconLoading";
+import SearchBar from "../../components/ui/SearchBar";
 import {
   AppColors,
   useAccentBorderColors,
@@ -300,47 +299,13 @@ const ShareholdersMeetingScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
 
-          <View
-            style={[
-              attStyles.searchContainer,
-              { borderColor: hairlineBorderColor },
-            ]}
-          >
-            <View style={attStyles.searchIconWrap}>
-              <MaterialCommunityIcons
-                name="magnify"
-                size={16}
-                color={c.textSub}
-              />
-            </View>
-            <TextInput
-              style={attStyles.searchInput}
-              placeholder="Tìm theo tên hoặc mã cổ đông..."
-              placeholderTextColor={c.placeholder}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              clearButtonMode="never"
-              returnKeyType="search"
-            />
-            {isSearching ? (
-              <View style={attStyles.spinnerWrapper}>
-                <IsLoading size="small" color={c.red} />
-              </View>
-            ) : null}
-            {!isSearching && searchQuery.length > 0 ? (
-              <TouchableOpacity
-                onPress={() => setSearchQuery("")}
-                style={attStyles.clearButton}
-                hitSlop={8}
-              >
-                <MaterialCommunityIcons
-                  name="close-circle"
-                  size={16}
-                  color={c.placeholder}
-                />
-              </TouchableOpacity>
-            ) : null}
-          </View>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Tìm theo tên hoặc mã cổ đông..."
+            isSearching={isSearching}
+            style={attStyles.searchSpacing}
+          />
 
           <FlatList
             style={attStyles.flatList}
@@ -730,51 +695,9 @@ const makeAttStyles = (c: AppColors) =>
       marginHorizontal: 16,
       marginBottom: 12,
     },
-    searchContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: c.surface,
+    searchSpacing: {
       marginHorizontal: 16,
-      borderRadius: 14,
-      minHeight: 48,
-      paddingHorizontal: 12,
       marginBottom: 12,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border,
-      shadowColor: c.shadow,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.06,
-      shadowRadius: 8,
-      elevation: 2,
-    },
-    searchIconWrap: {
-      marginRight: 8,
-      width: 20,
-      height: 20,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    searchInput: {
-      flex: 1,
-      color: c.textPrimary,
-      height: 48,
-      paddingVertical: 0,
-      fontSize: 14,
-      lineHeight: 20,
-      fontWeight: "400",
-      includeFontPadding: false,
-      textAlignVertical: "center",
-    },
-    spinnerWrapper: {
-      width: 24,
-      height: 24,
-      alignItems: "center",
-      justifyContent: "center",
-      marginLeft: 6,
-    },
-    clearButton: {
-      padding: 4,
-      marginLeft: 4,
     },
     flatList: { flex: 1, backgroundColor: c.bg },
     list: { flexGrow: 1, paddingHorizontal: 16, paddingBottom: 20 },

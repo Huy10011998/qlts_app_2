@@ -4,10 +4,10 @@ import {
   AppColors,
   C,
   useAppColors,
-  useHairlineBorderColor,
   useSeparatorColor,
   useStyles,
 } from "../../../utils/helpers/colors";
+import HomeAssetPageCard from "./HomeAssetPageCard";
 import type { HomeDashboardItCategory } from "./homeData";
 import {
   formatHomeNumber,
@@ -41,6 +41,9 @@ const BAR_COLORS = [
  *
  * Mỗi dòng: tên · số lượng · thanh tỷ trọng · %. Đã sắp giảm dần từ mapper nên
  * hai mục lớn nhất nằm trên cùng, đọc được ngay là chúng chiếm gần 3/4.
+ *
+ * Đây là TRANG 3 của khu cuộn ngang CƠ CẤU TÀI SẢN, nguồn số là endpoint
+ * `get-dashboard-taisan` — khác nguồn với hai trang máy móc.
  */
 export default function HomeItStructureCard({
   items,
@@ -49,119 +52,115 @@ export default function HomeItStructureCard({
 }: HomeItStructureCardProps) {
   const styles = useStyles(makeStyles);
   const colors = useAppColors();
-  const hairlineBorderColor = useHairlineBorderColor();
   const separatorColor = useSeparatorColor();
   // Thanh dài nhất canh theo mục lớn nhất chứ không theo tổng: tỷ trọng lớn nhất
   // chỉ ~43% nên nếu chia cho tổng thì mọi thanh đều ngắn hơn nửa card.
   const maxValue = items.reduce((max, item) => Math.max(max, item.value), 0);
 
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: colors.surface,
-          borderColor: hairlineBorderColor,
-          shadowColor: colors.shadow,
-        },
-      ]}
+    <HomeAssetPageCard
+      title="Cơ cấu thiết bị CNTT"
+      note={items.length > 0 ? `${formatHomeNumber(total)} thiết bị` : undefined}
     >
-      {isLoading && items.length === 0
-        ? Array.from({ length: 4 }).map((_, index) => (
-            <View key={`it-skeleton-${index}`} style={styles.row}>
-              <View
-                style={[
-                  styles.skeletonLabel,
-                  { backgroundColor: colors.border },
-                ]}
-              />
-              <View
-                style={[styles.track, { backgroundColor: colors.surfaceAlt }]}
-              />
-            </View>
-          ))
-        : items.map((item, index) => {
-            const percent = getHomeRatioPercent(item.value, total);
-            const barColor = BAR_COLORS[index % BAR_COLORS.length];
-
-            return (
-              <View key={item.key} style={styles.row}>
-                <View style={styles.headRow}>
-                  <Text
-                    style={[styles.label, { color: colors.textSecondary }]}
-                    numberOfLines={1}
-                    allowFontScaling={false}
-                  >
-                    {item.label}
-                  </Text>
-                  <Text
-                    style={[styles.value, { color: colors.text }]}
-                    allowFontScaling={false}
-                  >
-                    {formatHomeNumber(item.value)}
-                  </Text>
-                  <Text
-                    style={[styles.percent, { color: colors.textMuted }]}
-                    allowFontScaling={false}
-                  >
-                    {formatHomePercent(percent)}
-                  </Text>
-                </View>
-
+      {/* Danh sách nhận phần chiều cao dôi ra; dòng tổng cộng và ghi chú nằm sát
+          đáy card, giống hai trang máy móc. */}
+      <View style={styles.list}>
+        {isLoading && items.length === 0
+          ? Array.from({ length: 4 }).map((_, index) => (
+              <View key={`it-skeleton-${index}`} style={styles.row}>
+                <View
+                  style={[
+                    styles.skeletonLabel,
+                    { backgroundColor: colors.border },
+                  ]}
+                />
                 <View
                   style={[styles.track, { backgroundColor: colors.surfaceAlt }]}
-                >
-                  <View
-                    style={[
-                      styles.trackFill,
-                      {
-                        backgroundColor: barColor,
-                        width: `${
-                          maxValue > 0 ? (item.value / maxValue) * 100 : 0
-                        }%`,
-                      },
-                    ]}
-                  />
-                </View>
+                />
               </View>
-            );
+            ))
+          : items.map((item, index) => {
+              const percent = getHomeRatioPercent(item.value, total);
+              const barColor = BAR_COLORS[index % BAR_COLORS.length];
+
+              return (
+                <View key={item.key} style={styles.row}>
+                  <View style={styles.headRow}>
+                    <Text
+                      style={[styles.label, { color: colors.textSecondary }]}
+                      numberOfLines={1}
+                      allowFontScaling={false}
+                    >
+                      {item.label}
+                    </Text>
+                    <Text
+                      style={[styles.value, { color: colors.text }]}
+                      allowFontScaling={false}
+                    >
+                      {formatHomeNumber(item.value)}
+                    </Text>
+                    <Text
+                      style={[styles.percent, { color: colors.textMuted }]}
+                      allowFontScaling={false}
+                    >
+                      {formatHomePercent(percent)}
+                    </Text>
+                  </View>
+
+                  <View
+                    style={[styles.track, { backgroundColor: colors.surfaceAlt }]}
+                  >
+                    <View
+                      style={[
+                        styles.trackFill,
+                        {
+                          backgroundColor: barColor,
+                          width: `${
+                            maxValue > 0 ? (item.value / maxValue) * 100 : 0
+                          }%`,
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+              );
           })}
+      </View>
 
       {items.length > 0 ? (
-        <View style={[styles.footer, { borderTopColor: separatorColor }]}>
+        <>
+          <View style={[styles.footer, { borderTopColor: separatorColor }]}>
+            <Text
+              style={[styles.footerLabel, { color: colors.textSecondary }]}
+              allowFontScaling={false}
+            >
+              Tổng cộng
+            </Text>
+            <Text
+              style={[styles.footerValue, { color: colors.text }]}
+              allowFontScaling={false}
+            >
+              {formatHomeNumber(total)}
+            </Text>
+          </View>
+          {/* Tổng của API không gồm camera, phải ghi ra để không ai cộng ô camera
+              ở trên vào rồi thắc mắc lệch số. */}
           <Text
-            style={[styles.footerLabel, { color: colors.textSecondary }]}
+            style={[styles.note, { color: colors.textMuted }]}
             allowFontScaling={false}
           >
-            Tổng cộng
+            Không tính Camera — camera được theo dõi riêng ở ô số phía trên.
           </Text>
-          <Text
-            style={[styles.footerValue, { color: colors.text }]}
-            allowFontScaling={false}
-          >
-            {formatHomeNumber(total)}
-          </Text>
-        </View>
+        </>
       ) : null}
-    </View>
+    </HomeAssetPageCard>
   );
 }
 
 const makeStyles = (c: AppColors) =>
   StyleSheet.create({
-    card: {
-      backgroundColor: c.surface,
-      borderRadius: 18,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      marginBottom: 14,
-      shadowColor: c.shadow,
-      shadowOpacity: 0.07,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 3 },
-      elevation: 2,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border,
+    list: {
+      flexGrow: 1,
     },
     row: {
       paddingVertical: 6,
@@ -233,5 +232,12 @@ const makeStyles = (c: AppColors) =>
       letterSpacing: -0.3,
       includeFontPadding: false,
       color: c.text,
+    },
+    note: {
+      fontSize: 10.5,
+      lineHeight: 14,
+      marginTop: 7,
+      fontWeight: "600",
+      color: c.textMuted,
     },
   });

@@ -20,6 +20,9 @@ export const API_ENDPOINTS = {
 
   // DASHBOARD TRANG CHỦ — một lượt gọi dựng cả 4 khối số liệu, không tham số.
   GET_DASHBOARD_TAISAN: `${BASE_URL}/Common/get-dashboard-taisan`,
+  // Hai card máy móc (cơ cấu theo đơn vị + 12 tháng luỹ kế). Gọi ĐỘC LẬP với
+  // endpoint trên: lỗi ở đây chỉ được làm trống hai card đó, không phải cả màn.
+  GET_DASHBOARD_MAYMOC: `${BASE_URL}/MayMoc/dashboard`,
 
   // PERMISSION
   GET_PERMISSION: `${BASE_URL}/Common/get-permission`,

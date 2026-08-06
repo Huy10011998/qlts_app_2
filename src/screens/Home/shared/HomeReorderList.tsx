@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
+  Easing,
   PanResponder,
   StyleSheet,
   Text,
@@ -28,6 +29,12 @@ const ROW_GAP = 8;
 const ROW_PITCH = ROW_HEIGHT + ROW_GAP;
 /** Thời gian các hàng còn lại nhường chỗ. */
 const SHIFT_DURATION = 150;
+/** Hàng đang kéo bay về đúng ô sau khi buông. */
+const SETTLE_DURATION = 200;
+/** Nhấc hàng lên / đặt xuống (scale). */
+const LIFT_DURATION = 120;
+/** Thứ tự đổi từ bên ngoài (nạp từ storage, đổi quyền...) thì trượt tới chỗ mới. */
+const REORDER_DURATION = 220;
 
 const HAPTIC_OPTIONS = {
   enableVibrateFallback: false,
@@ -76,8 +83,12 @@ type DragState = {
  * thẻ đi xa. Ở đây mỗi khối rút lại thành một hàng cao {@link ROW_HEIGHT}pt, năm
  * hàng nằm gọn trong một màn — thấy hết thứ tự, kéo một nhịp là tới.
  *
- * Hàng đều nhau nên không cần đo `onLayout`: mọi phép tính chỉ dựa trên
- * {@link ROW_PITCH}.
+ * Cách định vị (quan trọng): hàng **không** xếp bằng flex mà nằm tuyệt đối, thứ tự
+ * render giữ nguyên từ lúc mount, vị trí trên màn hoàn toàn do `translateY` quyết
+ * định. Nhờ vậy lúc chốt thứ tự mới, cái duy nhất đổi là con số vị trí — không có
+ * offset nào phải reset về 0, nên không còn cú "nhảy" giữa frame animation cuối và
+ * frame React commit thứ tự (hai thứ này chạy trên hai luồng, không bao giờ khớp
+ * frame với nhau).
  */
 export default function HomeReorderList({
   items,
@@ -93,44 +104,109 @@ export default function HomeReorderList({
   itemsRef.current = items;
   onMoveRef.current = onMove;
 
-  const translatesRef = useRef(new Map<string, Animated.Value>());
+  /** Toạ độ y tuyệt đối của từng hàng. */
+  const positionsRef = useRef(new Map<string, Animated.Value>());
+  /**
+   * Chỗ mà mỗi hàng *đang* đứng theo cách hiểu của JS. Cần bản sao bằng số vì
+   * `Animated.Value` không cho đọc giá trị công khai, mà lượt đồng bộ sau khi chốt
+   * thứ tự phải biết hàng đã ở đúng ô chưa để khỏi animate lại từ đầu.
+   */
+  const restingRef = useRef(new Map<string, number>());
   const dragRef = useRef<DragState>({
     isActive: false,
     keys: [],
     fromIndex: -1,
     toIndex: -1,
   });
+  /** 0 = nằm yên, 1 = đang được nhấc lên; hàng active lấy scale từ đây. */
+  const liftRef = useRef(new Animated.Value(0));
+  /**
+   * Đang chạy animation "bay về ô" sau khi buông. Trong lúc này thứ tự dữ liệu
+   * chưa chốt nên bỏ qua cú kéo mới, tránh chụp danh sách sai chỉ số.
+   */
+  const isSettlingRef = useRef(false);
 
-  const getTranslate = useCallback((key: string) => {
-    const existing = translatesRef.current.get(key);
+  const getPosition = useCallback((key: string, initialY: number) => {
+    const existing = positionsRef.current.get(key);
 
     if (existing) return existing;
 
-    const created = new Animated.Value(0);
-    translatesRef.current.set(key, created);
+    const created = new Animated.Value(initialY);
+
+    positionsRef.current.set(key, created);
+    restingRef.current.set(key, initialY);
 
     return created;
   }, []);
 
-  const resetTranslates = useCallback(() => {
-    translatesRef.current.forEach((value) => {
-      value.stopAnimation();
-      value.setValue(0);
-    });
-  }, []);
+  /** Đưa một hàng tới ô của nó, có hoặc không animation. */
+  const settleTo = useCallback(
+    (key: string, y: number, duration: number) => {
+      const position = getPosition(key, y);
+
+      restingRef.current.set(key, y);
+
+      if (duration <= 0) {
+        position.stopAnimation();
+        position.setValue(y);
+
+        return;
+      }
+
+      Animated.timing(position, {
+        toValue: y,
+        duration,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    },
+    [getPosition]
+  );
+
+  /**
+   * Thứ tự render cố định: hàng mới thêm vào cuối, hàng mất thì bỏ. Danh sách này
+   * chỉ quyết định thứ tự trong cây view, không liên quan tới thứ tự hiển thị.
+   */
+  const renderOrderRef = useRef<string[]>([]);
+  const renderItems = useMemo(() => {
+    const itemByKey = new Map(items.map((item) => [item.key, item]));
+    const kept = renderOrderRef.current.filter((key) => itemByKey.has(key));
+    const keptSet = new Set(kept);
+    const added = items
+      .map((item) => item.key)
+      .filter((key) => !keptSet.has(key));
+
+    renderOrderRef.current = [...kept, ...added];
+
+    return renderOrderRef.current.map((key) => itemByKey.get(key)!);
+  }, [items]);
+
+  const indexByKey = useMemo(
+    () => new Map(items.map((item, index) => [item.key, index])),
+    [items]
+  );
 
   const orderKey = items.map((item) => item.key).join("|");
 
-  // Không kéo thì mọi hàng phải nằm đúng ô của nó. Đặt thành effect nên dù có
-  // animation nào rơi rớt lại, lượt render kế tiếp cũng dọn.
+  // Thứ tự đổi mà không phải do kéo (nạp từ storage, khối ẩn/hiện): trượt các hàng
+  // lệch chỗ về ô mới. Sau một cú kéo thì mọi hàng đã đứng đúng chỗ nên effect này
+  // không làm gì — đó chính là lý do việc chốt thứ tự nhìn không thấy gì xảy ra.
   useEffect(() => {
-    if (activeKey) return;
+    if (dragRef.current.isActive || isSettlingRef.current) return;
 
-    resetTranslates();
-  }, [activeKey, orderKey, resetTranslates]);
+    itemsRef.current.forEach((item, index) => {
+      const targetY = index * ROW_PITCH;
+
+      if (restingRef.current.get(item.key) === targetY) return;
+
+      settleTo(item.key, targetY, REORDER_DURATION);
+    });
+  }, [orderKey, settleTo]);
 
   const handleDragStart = useCallback(
     (index: number) => {
+      if (isSettlingRef.current) return;
+
       const keys = itemsRef.current.map((item) => item.key);
 
       dragRef.current = {
@@ -140,11 +216,17 @@ export default function HomeReorderList({
         toIndex: index,
       };
 
-      resetTranslates();
       setActiveKey(keys[index]);
+      liftRef.current.setValue(0);
+      Animated.timing(liftRef.current, {
+        toValue: 1,
+        duration: LIFT_DURATION,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }).start();
       tapHaptic("impactLight");
     },
-    [resetTranslates]
+    []
   );
 
   const handleDragMove = useCallback(
@@ -155,8 +237,11 @@ export default function HomeReorderList({
 
       const heights = drag.keys.map(() => ROW_PITCH);
       const offsets = buildBlockOffsets(heights);
+      const movedKey = drag.keys[drag.fromIndex];
 
-      getTranslate(drag.keys[drag.fromIndex]).setValue(dy);
+      getPosition(movedKey, drag.fromIndex * ROW_PITCH).setValue(
+        drag.fromIndex * ROW_PITCH + dy
+      );
 
       const targetIndex = resolveDropIndex({
         offsets,
@@ -171,20 +256,18 @@ export default function HomeReorderList({
       drag.keys.forEach((key, index) => {
         if (index === drag.fromIndex) return;
 
-        Animated.timing(getTranslate(key), {
-          toValue: getBlockShift({
-            index,
-            fromIndex: drag.fromIndex,
-            toIndex: targetIndex,
-            movedHeight: ROW_PITCH,
-          }),
-          duration: SHIFT_DURATION,
-          useNativeDriver: true,
-        }).start();
+        const shift = getBlockShift({
+          index,
+          fromIndex: drag.fromIndex,
+          toIndex: targetIndex,
+          movedHeight: ROW_PITCH,
+        });
+
+        settleTo(key, index * ROW_PITCH + shift, SHIFT_DURATION);
       });
       tapHaptic("selection");
     },
-    [getTranslate]
+    [getPosition, settleTo]
   );
 
   const handleDragEnd = useCallback(() => {
@@ -194,40 +277,70 @@ export default function HomeReorderList({
 
     drag.isActive = false;
 
-    // Chốt thứ tự và trả mọi offset về 0 trong cùng một lượt render: hàng chỉ cao
-    // 54pt nên khoảng "nhích" vào chỗ tối đa là nửa hàng, đổi lại không bao giờ
-    // có quãng mà thứ tự dữ liệu và vị trí trên màn hình nói hai chuyện khác nhau.
-    resetTranslates();
-    setActiveKey(null);
+    const movedKey = drag.keys[drag.fromIndex];
+    const move =
+      drag.toIndex === drag.fromIndex
+        ? null
+        : {
+            fromIndex: drag.fromIndex,
+            toIndex: drag.toIndex,
+            keys: drag.keys,
+          };
 
-    if (drag.toIndex !== drag.fromIndex) {
-      onMoveRef.current({
-        fromIndex: drag.fromIndex,
-        toIndex: drag.toIndex,
-        keys: drag.keys,
-      });
-    }
-  }, [resetTranslates]);
+    // Ngón tay buông ở đâu thì hàng còn đang lệch chỗ đó: cho nó bay tiếp vào ô
+    // đích. Các hàng khác đã nhường chỗ xong từ lúc kéo nên không phải làm gì.
+    isSettlingRef.current = true;
+    restingRef.current.set(movedKey, drag.toIndex * ROW_PITCH);
+    Animated.parallel([
+      Animated.timing(getPosition(movedKey, drag.fromIndex * ROW_PITCH), {
+        toValue: drag.toIndex * ROW_PITCH,
+        duration: SETTLE_DURATION,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(liftRef.current, {
+        toValue: 0,
+        duration: SETTLE_DURATION,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      isSettlingRef.current = false;
+      setActiveKey(null);
+
+      if (move) onMoveRef.current(move);
+    });
+  }, [getPosition]);
 
   return (
-    <View style={styles.list}>
-      {items.map((item, index) => (
-        <ReorderRow
-          key={item.key}
-          colors={colors}
-          borderColor={hairlineBorderColor}
-          iconName={item.iconName}
-          index={index}
-          isActive={item.key === activeKey}
-          label={item.label}
-          onDragEnd={handleDragEnd}
-          onDragMove={handleDragMove}
-          onDragStart={handleDragStart}
-          position={index + 1}
-          styles={styles}
-          translateY={getTranslate(item.key)}
-        />
-      ))}
+    <View
+      style={[
+        styles.list,
+        { height: Math.max(0, items.length * ROW_PITCH - ROW_GAP) },
+      ]}
+    >
+      {renderItems.map((item) => {
+        const index = indexByKey.get(item.key) ?? 0;
+
+        return (
+          <ReorderRow
+            key={item.key}
+            colors={colors}
+            borderColor={hairlineBorderColor}
+            iconName={item.iconName}
+            index={index}
+            isActive={item.key === activeKey}
+            label={item.label}
+            lift={liftRef.current}
+            onDragEnd={handleDragEnd}
+            onDragMove={handleDragMove}
+            onDragStart={handleDragStart}
+            position={index + 1}
+            styles={styles}
+            translateY={getPosition(item.key, index * ROW_PITCH)}
+          />
+        );
+      })}
     </View>
   );
 }
@@ -239,6 +352,7 @@ type ReorderRowProps = {
   index: number;
   isActive: boolean;
   label: string;
+  lift: Animated.Value;
   onDragEnd: () => void;
   onDragMove: (dy: number) => void;
   onDragStart: (index: number) => void;
@@ -258,6 +372,7 @@ function ReorderRow({
   index,
   isActive,
   label,
+  lift,
   onDragEnd,
   onDragMove,
   onDragStart,
@@ -280,6 +395,16 @@ function ReorderRow({
     [index, onDragEnd, onDragMove, onDragStart]
   );
 
+  // Chỉ hàng đang kéo mới ăn theo `lift`; lúc buông nó về đúng 1 nên khi hàng thôi
+  // active cũng không có cú giật cỡ hàng.
+  const scale = useMemo(
+    () =>
+      isActive
+        ? lift.interpolate({ inputRange: [0, 1], outputRange: [1, 1.02] })
+        : 1,
+    [isActive, lift]
+  );
+
   return (
     <Animated.View
       {...panResponder.panHandlers}
@@ -292,7 +417,7 @@ function ReorderRow({
           borderColor: isActive ? HOME_BRAND_RED : borderColor,
         },
         isActive && [styles.rowActive, { shadowColor: colors.shadow }],
-        { transform: [{ translateY }, { scale: isActive ? 1.02 : 1 }] },
+        { transform: [{ translateY }, { scale }] },
       ]}
     >
       <View style={[styles.rowIcon, { backgroundColor: colors.redIconSurface }]}>
@@ -323,9 +448,13 @@ function ReorderRow({
 const makeStyles = (c: AppColors) =>
   StyleSheet.create({
     list: {
-      gap: ROW_GAP,
+      position: "relative",
     },
     row: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      top: 0,
       height: ROW_HEIGHT,
       flexDirection: "row",
       alignItems: "center",

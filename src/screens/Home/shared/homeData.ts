@@ -1,4 +1,7 @@
 import type {
+  MayMocDashboardMonthRaw,
+  MayMocDashboardRaw,
+  MayMocDashboardUnitRaw,
   TaiSanDashboardDeptRaw,
   TaiSanDashboardRaw,
 } from "../../../services/data/dashboardApi";
@@ -12,25 +15,7 @@ export const HOME_MEETING_INFO = {
   totalShareholders: 220,
 };
 
-/**
- * Mỗi khối mới có thể mang theo `viewPermission` riêng. Payload nói gì thì theo
- * đó; không nói thì Trang chủ dùng mã mặc định trong
- * `HOME_BLOCK_VIEW_PERMISSIONS` (xem `canViewBlock`).
- */
 type HomeDashboardBlock<T> = T & { viewPermission?: string };
-
-/**
- * Mã quyền mặc định của các khối số liệu không đi kèm một chức năng nào trong
- * GET_VIEW_ACTIVE, nên không mượn được `viewPermission` từ menu.
- *
- * API dashboard chỉ đòi token đăng nhập, nhưng đây là số liệu TOÀN CÔNG TY
- * (tiêu thụ điện/nước/hơi, điểm danh từng bộ phận) — app vẫn tự chặn theo quyền
- * chứ không mở cho mọi tài khoản. Tài khoản `Group.1` vẫn thấy hết như mọi chỗ.
- */
-export const HOME_BLOCK_VIEW_PERMISSIONS = {
-  attendance: "DiemDanh",
-  utilities: "TieuThu",
-} as const;
 
 /** Một loại thiết bị trong khối CƠ CẤU THIẾT BỊ CNTT. */
 export type HomeDashboardItCategory = {
@@ -97,6 +82,46 @@ export type HomeDashboardPayload = {
   updatedAt: string;
 };
 
+/** Một đơn vị (xưởng/phòng/kho) trong khối CƠ CẤU MÁY MÓC. */
+export type HomeMachineUnit = {
+  key: string;
+  name: string;
+  quantity: number;
+  /** VND. View mới chia 1 tỷ khi hiển thị. */
+  value: number;
+};
+
+/** Một mốc tháng của biểu đồ tăng trưởng luỹ kế. */
+export type HomeMachineGrowthPoint = {
+  key: string;
+  /** "MM/yyyy" — dùng cho tooltip. */
+  label: string;
+  /** "MM/yy" — dùng cho trục hoành. */
+  shortLabel: string;
+  /** Phát sinh trong tháng đó. */
+  quantity: number;
+  value: number;
+  /** Luỹ kế server tính sẵn (đã gồm số dư đầu kỳ) — KHÔNG tự cộng dồn lại. */
+  cumulativeQuantity: number;
+  cumulativeValue: number;
+};
+
+export type HomeMachineDashboardPayload = {
+  /** Chỉ đếm máy đã gán vị trí — KHÁC `devices.machines`, đừng ép về một số. */
+  totalQuantity: number;
+  /** VND. */
+  totalValue: number;
+  /** Giữ NGUYÊN thứ tự nhận được (server đã sắp giảm dần theo số lượng). */
+  units: HomeMachineUnit[];
+  /** 12 mốc, giữ nguyên thứ tự cũ -> mới. */
+  growth: HomeMachineGrowthPoint[];
+  /**
+   * Mã tiền tệ không lấy được tỷ giá. Có phần tử nghĩa là TỔNG GIÁ TRỊ đang
+   * thiếu phần tài sản ghi theo các loại tiền đó (số lượng vẫn đúng).
+   */
+  missingRateCurrencies: string[];
+};
+
 const IT_CATEGORY_LABELS: {
   key: string;
   label: string;
@@ -151,15 +176,66 @@ const mapDepartment = (
   };
 };
 
-/**
- * Đổi response thô của `get-dashboard-taisan` thành payload mà Trang chủ dựng
- * view. Mọi quy tắc riêng của dashboard nằm gọn ở đây:
- *
- *  · nhóm `sL_*` luôn có số  -> đưa về 0 nếu payload lạ, không để null.
- *  · tiêu thụ & điểm danh    -> giữ null để view hiện "—" (null KHÁC 0).
- *  · thang/nam               -> in đúng số nhận được, KHÔNG trừ thêm 1 tháng.
- *  · mảng bộ phận            -> giữ nguyên thứ tự server đã sắp theo sttPrintRep.
- */
+const mapMachineUnit = (
+  unit: MayMocDashboardUnitRaw,
+  index: number,
+): HomeMachineUnit => {
+  const name = unit.tenDonVi?.trim();
+
+  return {
+    // Hai site trùng tên hiển thị đã được server gộp làm một dòng, nhưng khoá
+    // vẫn kèm index để list không bao giờ trùng key.
+    key: `${name || "khong-don-vi"}-${index}`,
+    name: name || "Chưa gán đơn vị",
+    quantity: toNumber(unit.soLuong),
+    value: toNumber(unit.giaTri),
+  };
+};
+
+/** Nhãn dự phòng khi server không trả `nhan`/`nhanNgan`. */
+const buildMonthLabels = (month: number, year: number) => {
+  const paddedMonth = String(month).padStart(2, "0");
+
+  return {
+    label: `${paddedMonth}/${year}`,
+    shortLabel: `${paddedMonth}/${String(year).slice(-2)}`,
+  };
+};
+
+const mapGrowthPoint = (
+  point: MayMocDashboardMonthRaw,
+  index: number,
+): HomeMachineGrowthPoint => {
+  const month = toNumber(point.thang);
+  const year = toNumber(point.nam);
+  const fallback = buildMonthLabels(month, year);
+
+  return {
+    key: `${year}-${month}-${index}`,
+    label: point.nhan?.trim() || fallback.label,
+    shortLabel: point.nhanNgan?.trim() || fallback.shortLabel,
+    quantity: toNumber(point.soLuong),
+    value: toNumber(point.giaTri),
+    // Luỹ kế của server đã gồm số dư đầu kỳ (máy có ngày trước cửa sổ 12 tháng
+    // và máy chưa ghi ngày sử dụng/ngày nhận). Tự cộng lại từ `soLuong` sẽ ra
+    // đường thấp hơn hẳn và trông như mất dữ liệu.
+    cumulativeQuantity: toNumber(point.soLuong_LuyKe),
+    cumulativeValue: toNumber(point.giaTri_LuyKe),
+  };
+};
+
+export const mapMayMocDashboard = (
+  raw: MayMocDashboardRaw,
+): HomeMachineDashboardPayload => ({
+  totalQuantity: toNumber(raw.tongSoLuong),
+  totalValue: toNumber(raw.tongGiaTri),
+  units: (raw.coCau_DonVi ?? []).map(mapMachineUnit),
+  growth: (raw.tangTruong_Thang ?? []).map(mapGrowthPoint),
+  missingRateCurrencies: (raw.tienTe_KhongQuyDoiDuoc ?? [])
+    .map((currency) => (typeof currency === "string" ? currency.trim() : ""))
+    .filter((currency) => currency.length > 0),
+});
+
 export const mapTaiSanDashboard = (
   raw: TaiSanDashboardRaw,
 ): HomeDashboardPayload => {

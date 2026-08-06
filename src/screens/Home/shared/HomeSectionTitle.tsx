@@ -23,7 +23,6 @@ export default function HomeSectionTitle({
   action,
   actionIconName,
   onAction,
-  note,
 }: HomeSectionTitleProps) {
   const styles = useStyles(makeStyles);
   const colors = useAppColors();
@@ -32,7 +31,7 @@ export default function HomeSectionTitle({
     (() => {
       Alert.alert(
         "Thông báo",
-        "Chức năng sẽ được triển khai trong thời gian sắp tới."
+        "Chức năng sẽ được triển khai trong thời gian sắp tới.",
       );
     });
 
@@ -45,15 +44,7 @@ export default function HomeSectionTitle({
       >
         {label}
       </Text>
-      {note ? (
-        <Text
-          style={[styles.note, { color: colors.textMuted }]}
-          allowFontScaling={false}
-          numberOfLines={1}
-        >
-          {note}
-        </Text>
-      ) : null}
+
       {action ? (
         <TouchableOpacity
           style={styles.actionButton}
@@ -98,13 +89,7 @@ const makeStyles = (c: AppColors) =>
       color: c.textSecondary,
       letterSpacing: 0.5,
     },
-    note: {
-      fontSize: 11,
-      color: c.textMuted,
-      fontWeight: "600",
-      marginLeft: 8,
-      flexShrink: 0,
-    },
+
     actionButton: {
       flexDirection: "row",
       alignItems: "center",

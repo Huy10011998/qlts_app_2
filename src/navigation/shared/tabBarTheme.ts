@@ -25,7 +25,7 @@ export const createTabBarStyle = ({
   borderTopColor,
 }: TabBarStyleParams) => ({
   backgroundColor,
-  borderTopWidth: StyleSheet.hairlineWidth,
+  borderTopWidth: 1,
   borderTopColor,
   height: TAB_HEIGHT + bottomInset,
   paddingBottom: bottomInset,

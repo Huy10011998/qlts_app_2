@@ -3,8 +3,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import type { RootStackParamList } from "../types/index";
 import HeaderHome from "../components/header/HeaderHome";
-import { HOME_SCREEN_COMPONENT } from "./shared/homeStackConfig";
-import { renderSharedStackScreens } from "./shared/sharedStackScreens";
+import HomeScreen from "../screens/Home/HomeScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -17,11 +16,9 @@ export default function HomeStack() {
     <Stack.Navigator>
       <Stack.Screen
         name="Home"
-        component={HOME_SCREEN_COMPONENT}
+        component={HomeScreen}
         options={{ header: renderHomeHeader }}
       />
-
-      {renderSharedStackScreens(Stack)}
     </Stack.Navigator>
   );
 }

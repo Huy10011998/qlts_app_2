@@ -235,19 +235,22 @@ describe("pushRoutes", () => {
     expect(navigateSpy).toHaveBeenCalledWith("CameraPlayback", { id: 1 });
   });
 
-  it("navigate lồng nhau cho màn hình trong HomeTab", () => {
+  it("navigate phẳng cho màn chi tiết đã tách khỏi Tabs", () => {
     expect(navigateToPushRoute("Asset", { groupMenuId: 5 })).toBe(true);
-    expect(navigateSpy).toHaveBeenCalledWith("Tabs", {
-      screen: "HomeTab",
-      params: { screen: "Asset", params: { groupMenuId: 5 } },
-    });
+    expect(navigateSpy).toHaveBeenCalledWith("Asset", { groupMenuId: 5 });
   });
 
-  it("navigate lồng nhau cho màn hình trong SettingTab", () => {
-    expect(navigateToPushRoute("Profile")).toBe(true);
+  it("navigate lồng nhau cho màn gốc của tab", () => {
+    expect(navigateToPushRoute("Home")).toBe(true);
+    expect(navigateSpy).toHaveBeenCalledWith("Tabs", {
+      screen: "HomeTab",
+      params: { screen: "Home", params: undefined },
+    });
+
+    expect(navigateToPushRoute("Setting")).toBe(true);
     expect(navigateSpy).toHaveBeenCalledWith("Tabs", {
       screen: "SettingTab",
-      params: { screen: "Profile", params: undefined },
+      params: { screen: "Setting", params: undefined },
     });
   });
 

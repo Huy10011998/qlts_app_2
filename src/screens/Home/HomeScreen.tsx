@@ -1,4 +1,10 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   RefreshControl,
@@ -7,6 +13,8 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from "react-native";
 import {
   useFocusEffect,
@@ -23,7 +31,7 @@ import HomeUtilityCard, {
   type HomeUtilityRow,
 } from "./shared/HomeUtilityCard";
 import HomeAttendanceCard from "./shared/HomeAttendanceCard";
-import HomeItStructureCard from "./shared/HomeItStructureCard";
+import HomeAssetStructurePager from "./shared/HomeAssetStructurePager";
 import HomeCustomizeSheet, {
   buildHomeCustomizeSections,
 } from "./shared/HomeCustomizeSheet";
@@ -41,7 +49,6 @@ import {
   formatHomePeriodLabel,
   HOME_NO_DATA,
 } from "./shared/homeFormat";
-import { HOME_BLOCK_VIEW_PERMISSIONS } from "./shared/homeData";
 import { useHomeDashboard } from "./shared/useHomeDashboard";
 import { useHomeMenuContext } from "./shared/HomeMenuProvider";
 import { useHomeMenuItems } from "./shared/useHomeMenuItems";
@@ -58,9 +65,15 @@ import {
 import {
   makeStyles,
   getHomeShortcutCardWidth,
+  getHomeShortcutPagerHeight,
   HOME_CONTENT_HORIZONTAL_PADDING,
-  HOME_FEATURE_GRID_GAP,
 } from "./HomeScreen.styles";
+import {
+  chunkHomeShortcutPages,
+  getHomeShortcutPageCount,
+  HOME_SHORTCUT_PAGE_SIZE,
+  getHomeShortcutVisiblePageIndexes,
+} from "./shared/homeShortcutPages";
 
 const HomeScreen: React.FC = () => {
   const styles = useStyles(makeStyles);
@@ -77,6 +90,7 @@ const HomeScreen: React.FC = () => {
     fetchHomeMenuItems,
     hasMenuLoadError,
     isMenuLoading,
+    openFeatureTab,
     openReportScreen,
     pinnedFeatureIds,
     togglePinnedFeature,
@@ -88,6 +102,10 @@ const HomeScreen: React.FC = () => {
     isDashboardStale,
     refreshDashboard,
     updatedAtLabel,
+    machine,
+    hasMachineError,
+    isMachineLoading,
+    refreshMachineDashboard,
   } = useHomeDashboard();
   // Thứ tự khối và bảng sắp xếp lấy thẳng từ provider: nút mở bảng nằm trên
   // header do navigator dựng, không đi qua HomeScreen.
@@ -96,10 +114,13 @@ const HomeScreen: React.FC = () => {
     closeBlockOrderSheet,
     isBlockOrderSheetVisible,
     moveBlock,
+    registerHomeRefresh,
   } = useHomeMenuContext();
   const [hasLoadError, setHasLoadError] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCustomizeVisible, setIsCustomizeVisible] = useState(false);
+  const [shortcutPage, setShortcutPage] = useState(0);
+  const shortcutPagerRef = useRef<ScrollView>(null);
   const openCustomizeSheet = useCallback(() => setIsCustomizeVisible(true), []);
   const closeCustomizeSheet = useCallback(
     () => setIsCustomizeVisible(false),
@@ -169,6 +190,13 @@ const HomeScreen: React.FC = () => {
     setIsRefreshing(false);
   }, [fetchHomeMenuItems, loadPermissions, refreshDashboard]);
 
+  // Nút làm mới trên header dùng đúng lượt làm mới của kéo-để-tải-lại, nên vòng
+  // xoay của RefreshControl cũng chạy theo — không có hai đường tải khác nhau.
+  useEffect(
+    () => registerHomeRefresh(refreshHomeData),
+    [refreshHomeData, registerHomeRefresh]
+  );
+
   const visibleMenuItems = useMemo(() => {
     if (!loaded) return [];
     return menuItems.filter((item) =>
@@ -221,8 +249,6 @@ const HomeScreen: React.FC = () => {
   const hasNoViewFeatures = visibleMenuItems.length === 0;
   const hasNoShortcuts = !hasNoViewFeatures && shortcutItems.length === 0;
   const isInitialMenuLoading = isMenuLoading && menuItems.length === 0;
-  const canViewAssets = loaded && canView("TaiSan");
-  const canViewCamera = loaded && canView("Camera");
   // Một chỉ số / một dòng hoạt động chỉ hữu ích khi bấm được. Thay vì hard-code
   // route, tra lại chính chức năng có cùng viewPermission và dùng luôn onPress
   // của nó — quyền và tham số điều hướng đã đúng sẵn.
@@ -240,62 +266,59 @@ const HomeScreen: React.FC = () => {
 
     return itemsByPermission;
   }, [visibleMenuItems]);
-  // Quyền của một khối số liệu: payload khai `viewPermission` thì theo đó, không
-  // khai thì lấy mã mặc định của khối trong HOME_BLOCK_VIEW_PERMISSIONS.
+  // Số liệu Trang chủ KHÔNG chặn theo quyền phía app: chỉ là số tổng hợp, muốn
+  // xem chi tiết thì vẫn phải vào chức năng — chỗ đó đã chặn quyền sẵn. Chỉ khi
+  // BE khai `viewPermission` cho khối thì mới chặn theo đúng mã đó.
   const canViewBlock = useCallback(
-    (viewPermission?: string, fallbackPermission?: string) => {
-      const permission = viewPermission ?? fallbackPermission;
+    (viewPermission?: string) => {
+      if (!viewPermission) return true;
 
-      return loaded && (permission ? canView(permission) : true);
+      return loaded && canView(viewPermission);
     },
     [canView, loaded]
   );
-  const canViewAttendance = canViewBlock(
-    dashboard?.attendance?.viewPermission,
-    HOME_BLOCK_VIEW_PERMISSIONS.attendance
-  );
+  const canViewAttendance = canViewBlock(dashboard?.attendance?.viewPermission);
   const statTiles = useMemo<HomeStatTile[]>(() => {
     if (!dashboard) return [];
 
     const tiles: HomeStatTile[] = [];
     const { attendance, devices } = dashboard;
 
-    if (canViewAssets) {
-      tiles.push({
-        key: "device-machines",
-        iconName: "cube-outline",
-        iconBg: colors.redIconSurface,
-        iconColor: colors.redLight,
-        label: "Thiết bị máy móc đang quản lý",
-        value: formatHomeNumber(devices.machines),
-        onPress: menuItemByPermission.get("TaiSan")?.onPress,
-      });
+    // Số nào API trả thì hiện. Tài khoản không có quyền tài sản / camera chỉ là
+    // ô không bấm được (`menuItemByPermission` không có chức năng tương ứng),
+    // chứ không mất số.
+    tiles.push({
+      key: "device-machines",
+      iconName: "cube-outline",
+      iconBg: colors.redIconSurface,
+      iconColor: colors.redLight,
+      label: "Thiết bị máy móc đang quản lý",
+      value: formatHomeNumber(devices.machines),
+      onPress: menuItemByPermission.get("TaiSan")?.onPress,
+    });
 
-      tiles.push({
-        key: "device-it",
-        iconName: "hardware-chip-outline",
-        iconBg: colors.indigoSurface,
-        iconColor: colors.blue,
-        label: "Thiết bị CNTT đang sử dụng",
-        value: formatHomeNumber(devices.it),
-        // Camera đếm riêng ở ô dưới, tổng CNTT của API không gồm camera — ghi rõ
-        // để không ai cộng hai ô lại rồi thắc mắc lệch số.
-        sub: "Chưa gồm camera",
-        onPress: menuItemByPermission.get("TaiSan")?.onPress,
-      });
-    }
+    tiles.push({
+      key: "device-it",
+      iconName: "hardware-chip-outline",
+      iconBg: colors.indigoSurface,
+      iconColor: colors.blue,
+      label: "Thiết bị CNTT đang sử dụng",
+      value: formatHomeNumber(devices.it),
+      // Camera đếm riêng ở ô dưới, tổng CNTT của API không gồm camera — ghi rõ
+      // để không ai cộng hai ô lại rồi thắc mắc lệch số.
+      sub: "Chưa gồm camera",
+      onPress: menuItemByPermission.get("TaiSan")?.onPress,
+    });
 
-    if (canViewCamera) {
-      tiles.push({
-        key: "device-camera",
-        iconName: "videocam-outline",
-        iconBg: colors.blueSurface,
-        iconColor: colors.sky,
-        label: "Camera đang hoạt động",
-        value: formatHomeNumber(devices.camera),
-        onPress: menuItemByPermission.get("Camera")?.onPress,
-      });
-    }
+    tiles.push({
+      key: "device-camera",
+      iconName: "videocam-outline",
+      iconBg: colors.blueSurface,
+      iconColor: colors.sky,
+      label: "Camera đang hoạt động",
+      value: formatHomeNumber(devices.camera),
+      onPress: menuItemByPermission.get("Camera")?.onPress,
+    });
 
     if (canViewAttendance) {
       // Ô này LUÔN là số toàn công ty, không đổi theo combobox bộ phận ở khối
@@ -317,19 +340,9 @@ const HomeScreen: React.FC = () => {
     }
 
     return tiles;
-  }, [
-    canViewAssets,
-    canViewAttendance,
-    canViewCamera,
-    colors,
-    dashboard,
-    menuItemByPermission,
-  ]);
+  }, [canViewAttendance, colors, dashboard, menuItemByPermission]);
   const canViewItStructure = canViewBlock(
-    dashboard?.itStructure?.viewPermission,
-    // Cơ cấu thiết bị CNTT là số của chính module tài sản, không có mã quyền
-    // riêng nên đi theo quyền xem tài sản.
-    "TaiSan"
+    dashboard?.itStructure?.viewPermission
   );
   const itStructure = useMemo(() => {
     if (!canViewItStructure) return null;
@@ -339,11 +352,9 @@ const HomeScreen: React.FC = () => {
   }, [canViewItStructure, dashboard]);
   // Tính riêng khỏi `utilityRows` vì khung chờ (skeleton) cũng phải theo quyền:
   // lần mở app đầu tiên chưa có cache, nếu chỉ chặn ở phần dữ liệu thì tài khoản
-  // không được xem vẫn thấy khung "ĐIỆN · NƯỚC · HƠI" nhá lên rồi mất.
-  const canViewUtilities = canViewBlock(
-    dashboard?.utilities?.viewPermission,
-    HOME_BLOCK_VIEW_PERMISSIONS.utilities
-  );
+  // không được xem vẫn thấy khung "ĐIỆN · NƯỚC · HƠI" nhá lên rồi mất — chỉ xảy
+  // ra khi BE khai `viewPermission` cho khối này.
+  const canViewUtilities = canViewBlock(dashboard?.utilities?.viewPermission);
   const utilityRows = useMemo<HomeUtilityRow[]>(() => {
     // Payload trong cache có thể là của bản app cũ, chưa có khối này.
     if (!dashboard?.utilities?.items?.length) return [];
@@ -381,24 +392,74 @@ const HomeScreen: React.FC = () => {
   // lại — nếu không cả trang chỉ còn hàng shortcut và user không biết là hôm nay
   // không có số liệu hay app hỏng.
   const hasDashboardLoadFailure = hasDashboardError && !dashboard;
-  // Khung chờ và thẻ lỗi của lưới số liệu cũng phải theo quyền: cả bốn ô đều đã
-  // lọc theo quyền, nhưng lúc chưa có dữ liệu thì `statTiles` rỗng vì lý do khác,
-  // nên nếu chỉ dựa vào nó thì tài khoản không được xem ô nào vẫn thấy tiêu đề
-  // "SỐ LIỆU TOÀN CÔNG TY" kèm skeleton, rồi mất — hoặc tệ hơn là kèm thẻ "Chưa
-  // tải được số liệu" với nút Thử lại không bao giờ hiện ra được gì.
-  const canViewAnyStat =
-    canViewAssets || canViewCamera || canViewAttendance;
+  // Ba ô đếm thiết bị luôn hiện nên lưới số liệu luôn có phần để hiện; lúc chưa
+  // có dữ liệu thì `statTiles` rỗng vì lý do khác, vẫn phải dựng khung chờ / thẻ
+  // lỗi kèm nút Thử lại.
   const hasStatSection =
-    statTiles.length > 0 ||
-    (canViewAnyStat && (isFirstDashboardLoad || hasDashboardLoadFailure));
+    statTiles.length > 0 || isFirstDashboardLoad || hasDashboardLoadFailure;
   const hasUtilitySection =
     utilityRows.length > 0 || (canViewUtilities && isFirstDashboardLoad);
   const hasItStructureSection =
     itStructure !== null || (canViewItStructure && isFirstDashboardLoad);
+  // Hai card máy móc có nguồn riêng nên lượt tải đầu cũng riêng: endpoint kia đã
+  // có cache mà endpoint này chưa về thì trang 1-2 mới là phần đang chờ.
+  const isFirstMachineLoad = isMachineLoading && !machine;
+  // Khu cuộn ngang luôn giữ đủ ba trang, chỉ cần MỘT trong ba có gì để hiện.
+  const hasAssetStructureSection =
+    hasItStructureSection ||
+    machine !== null ||
+    hasMachineError ||
+    isFirstMachineLoad;
   const homeContentWidth = windowWidth - HOME_CONTENT_HORIZONTAL_PADDING * 2;
-  const shortcutCardWidth = getHomeShortcutCardWidth(
-    homeContentWidth,
-    shortcutItems.length,
+  const shortcutCardWidth = getHomeShortcutCardWidth(homeContentWidth);
+  const shortcutPagerHeight = getHomeShortcutPagerHeight(shortcutItems.length);
+  const shortcutPages = useMemo(
+    () => chunkHomeShortcutPages(shortcutItems),
+    [shortcutItems],
+  );
+  const shortcutPageCount = getHomeShortcutPageCount(shortcutItems.length);
+  const shortcutVisiblePageIndexes = getHomeShortcutVisiblePageIndexes(
+    shortcutPage,
+    shortcutPageCount,
+  );
+  // Bỏ ghim làm số trang co lại: trang đang xem có thể không còn tồn tại, phải
+  // kéo cả state và vị trí cuộn về trang cuối cùng còn lại.
+  useEffect(() => {
+    if (shortcutPageCount === 0) {
+      if (shortcutPage !== 0) setShortcutPage(0);
+      return;
+    }
+
+    if (shortcutPage < shortcutPageCount) return;
+
+    const lastPage = shortcutPageCount - 1;
+    setShortcutPage(lastPage);
+    shortcutPagerRef.current?.scrollTo({
+      x: lastPage * homeContentWidth,
+      animated: false,
+    });
+  }, [homeContentWidth, shortcutPage, shortcutPageCount]);
+  const handleShortcutPagerScrollEnd = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (homeContentWidth <= 0) return;
+
+      const nextPage = Math.round(
+        event.nativeEvent.contentOffset.x / homeContentWidth,
+      );
+
+      setShortcutPage((current) => (current === nextPage ? current : nextPage));
+    },
+    [homeContentWidth],
+  );
+  const goToShortcutPage = useCallback(
+    (page: number) => {
+      setShortcutPage(page);
+      shortcutPagerRef.current?.scrollTo({
+        x: page * homeContentWidth,
+        animated: true,
+      });
+    },
+    [homeContentWidth],
   );
   // Thứ tự user đã lưu, lọc còn lại đúng những khối đang hiện. Khối bị ẩn vì
   // thiếu quyền / chưa có dữ liệu vẫn nằm trong `blockOrder` để lần sau hiện lại
@@ -409,7 +470,7 @@ const HomeScreen: React.FC = () => {
       // Truy cập nhanh luôn có mặt: không quyền thì hiện thẻ giải thích, chưa
       // ghim thì hiện lời mời ghim.
       shortcuts: true,
-      itStructure: hasItStructureSection,
+      assetStructure: hasAssetStructureSection,
       attendance: attendance !== null,
       utilities: hasUtilitySection,
     };
@@ -418,7 +479,7 @@ const HomeScreen: React.FC = () => {
   }, [
     attendance,
     blockOrder,
-    hasItStructureSection,
+    hasAssetStructureSection,
     hasStatSection,
     hasUtilitySection,
   ]);
@@ -544,9 +605,9 @@ const HomeScreen: React.FC = () => {
     ),
     shortcuts: (
       <>
-        {/* Không có "Xem tất cả": chức năng và phương tiện giờ ở hai tab riêng,
-            một link chỉ dẫn về tab Chức năng là hứa sai. Thanh tab đã là đường
-            đi tới danh mục đầy đủ. */}
+        {/* "Xem tất cả" nằm ở hàng dưới lưới cùng với chấm trang, không nằm trên
+            dòng tiêu đề — chỗ đó đã có "Tuỳ chỉnh". Nó dẫn sang tab Chức năng,
+            nơi có đủ chức năng · phương tiện · báo cáo. */}
         <HomeSectionTitle
           label="TRUY CẬP NHANH"
           // Đếm theo `shortcutItems` chứ không phải `pinnedFeatureIds`: danh sách
@@ -602,43 +663,102 @@ const HomeScreen: React.FC = () => {
             />
           </TouchableOpacity>
         ) : (
-          <ScrollView
-            style={styles.shortcutRow}
-            contentContainerStyle={styles.shortcutRowContent}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            decelerationRate="fast"
-            snapToInterval={shortcutCardWidth + HOME_FEATURE_GRID_GAP}
-            snapToAlignment="start"
-          >
-            {shortcutItems.map((item, index) => (
-              <View
-                key={item.id}
-                style={[styles.shortcutCard, { width: shortcutCardWidth }]}
-              >
-                <HomeMenuItemCard {...item} index={index} fixedHeight />
+          <>
+            <ScrollView
+              ref={shortcutPagerRef}
+              style={[styles.shortcutPager, { height: shortcutPagerHeight }]}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              decelerationRate="fast"
+              onMomentumScrollEnd={handleShortcutPagerScrollEnd}
+              scrollEventThrottle={16}
+            >
+              {shortcutPages.map((page, pageIndex) => (
+                <View
+                  key={`shortcut-page-${pageIndex}`}
+                  style={[styles.shortcutPage, { width: homeContentWidth }]}
+                >
+                  {page.map((item, indexInPage) => (
+                    <View
+                      key={item.id}
+                      style={[
+                        styles.shortcutCard,
+                        { width: shortcutCardWidth },
+                      ]}
+                    >
+                      <HomeMenuItemCard
+                        {...item}
+                        index={
+                          pageIndex * HOME_SHORTCUT_PAGE_SIZE + indexInPage
+                        }
+                        fixedHeight
+                      />
+                    </View>
+                  ))}
+                </View>
+              ))}
+            </ScrollView>
+            <View style={styles.shortcutFooter}>
+              {/* Nhiều hơn một trang mới có gì để chỉ; một trang thì hàng này
+                  chỉ còn "Xem tất cả" nằm bên phải. */}
+              <View style={styles.shortcutDots}>
+                {shortcutPageCount > 1
+                  ? shortcutVisiblePageIndexes.map((pageIndex) => (
+                      <TouchableOpacity
+                        key={`shortcut-dot-${pageIndex}`}
+                        onPress={() => goToShortcutPage(pageIndex)}
+                        activeOpacity={0.7}
+                        hitSlop={{ top: 8, right: 4, bottom: 8, left: 4 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Trang ${pageIndex + 1}`}
+                      >
+                        <View
+                          style={[
+                            styles.shortcutDot,
+                            pageIndex === shortcutPage &&
+                              styles.shortcutDotActive,
+                          ]}
+                        />
+                      </TouchableOpacity>
+                    ))
+                  : null}
               </View>
-            ))}
-          </ScrollView>
+              <TouchableOpacity
+                style={styles.shortcutViewAll}
+                onPress={openFeatureTab}
+                activeOpacity={0.7}
+                hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Xem tất cả"
+              >
+                <Text style={styles.shortcutViewAllText} allowFontScaling={false}>
+                  Xem tất cả
+                </Text>
+                <Ionicons
+                  name="chevron-forward"
+                  size={13}
+                  color={HOME_BRAND_RED}
+                />
+              </TouchableOpacity>
+            </View>
+          </>
         )}
       </>
     ),
-    itStructure: (
-      <>
-      <HomeSectionTitle
-        label="CƠ CẤU THIẾT BỊ CNTT"
-        note={
-          itStructure
-            ? `${formatHomeNumber(itStructure.total)} thiết bị`
-            : undefined
-        }
+    // Khu cuộn ngang cố tình KHÔNG có tiêu đề chung: mỗi trang tự mang tiêu đề
+    // của nó, vuốt sang trang khác mà tiêu đề không đổi thì người xem đọc nhầm số.
+    assetStructure: (
+      <HomeAssetStructurePager
+        pageWidth={homeContentWidth}
+        itStructure={itStructure}
+        machine={machine}
+        isDashboardLoading={isFirstDashboardLoad}
+        isMachineLoading={isFirstMachineLoad}
+        hasMachineError={hasMachineError}
+        onRetryMachine={refreshMachineDashboard}
+        resetToken={dashboard?.updatedAt ?? ""}
       />
-      <HomeItStructureCard
-        items={itStructure?.items ?? []}
-        total={itStructure?.total ?? 0}
-        isLoading={isFirstDashboardLoad}
-      />
-      </>
     ),
     attendance: (
       <>

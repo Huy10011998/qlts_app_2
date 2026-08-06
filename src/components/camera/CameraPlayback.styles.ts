@@ -8,16 +8,24 @@ export const TIMELINE_ROW_HEIGHT = 168;
 export const TIMELINE_RAIL_WIDTH = 6;
 // Đủ chỗ cho badge HH:mm:ss (88px) và vẫn chừa khoảng cách với mép màn hình.
 export const TIMELINE_LABEL_WIDTH = 92;
-/** Vạch đọc: badge thời gian nằm cố định ở đây, nội dung cuộn qua nó. */
-export const TIMELINE_READING_OFFSET = 56;
+/** Cố định để vạch đọc canh đúng tâm badge thời gian. */
+const SCRUB_BADGE_HEIGHT = 24;
+
+/**
+ * Vạch đọc: badge thời gian nằm cố định ở đây, nội dung cuộn qua nó.
+ *
+ * Đây là mốc DUY NHẤT dùng cho cả hai phía — nơi vẽ vạch đỏ và nơi quy đổi
+ * offset ↔ giờ. Trước đây vạch được vẽ ở tâm badge còn phép quy đổi lại lấy mép
+ * trên badge: con số hiển thị luôn ứng với điểm cao hơn vạch nửa badge, nên
+ * nhãn h:00 rơi phía trên vạch trong khi badge đã báo qua h:00 (12px ≈ 5 phút ở
+ * mức zoom mặc định), và seek theo timeline cũng lệch chừng đó.
+ */
+export const TIMELINE_READING_OFFSET = 56 + SCRUB_BADGE_HEIGHT / 2;
 /**
  * Hàng đầu tiên phải bắt đầu đúng tại vạch đọc. Nếu margin nhỏ hơn offset,
  * phần chênh lệch sẽ bị hiểu nhầm là người dùng đã cuộn timeline xuống.
  */
 export const TIMELINE_TOP_MARGIN = TIMELINE_READING_OFFSET;
-
-/** Cố định để vạch đọc canh đúng tâm badge thời gian. */
-const SCRUB_BADGE_HEIGHT = 24;
 
 const ZOOM_BTN_SIZE = 40;
 /** 2 nút zoom trong cùng một viên capsule — dùng để canh giữa cột. */
@@ -502,7 +510,8 @@ export const makeStyles = (c: AppColors) =>
       position: "absolute",
       left: spacing.md,
       width: TIMELINE_LABEL_WIDTH,
-      top: TIMELINE_READING_OFFSET,
+      // Tâm badge phải trùng vạch đọc, nên mép trên lùi lên nửa badge.
+      top: TIMELINE_READING_OFFSET - SCRUB_BADGE_HEIGHT / 2,
       alignItems: "flex-end",
       zIndex: 20,
       elevation: 10,
@@ -513,7 +522,7 @@ export const makeStyles = (c: AppColors) =>
       position: "absolute",
       left: spacing.md + TIMELINE_LABEL_WIDTH,
       right: spacing.md,
-      top: TIMELINE_READING_OFFSET + SCRUB_BADGE_HEIGHT / 2,
+      top: TIMELINE_READING_OFFSET,
       height: 1,
       backgroundColor: c.red,
       opacity: 0.28,

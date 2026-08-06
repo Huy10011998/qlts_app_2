@@ -60,6 +60,18 @@ export const getHomeRatioPercent = (
 export const formatHomePercent = (percent: number | null) =>
   percent == null ? HOME_NO_DATA : `${formatHomeDecimal(percent, 1)}%`;
 
+/** API trả tiền theo đồng; dashboard luôn hiển thị theo tỷ. */
+export const HOME_BILLION = 1_000_000_000;
+
+/**
+ * Số tiền VND của API đổi sang "tỷ", một số lẻ.
+ *
+ * Để nguyên số đồng thì cột toàn số 12 chữ số, trên màn hình điện thoại là vỡ
+ * layout — nên đơn vị "tỷ" phải ghi ở tiêu đề cột / nhãn đi kèm.
+ */
+export const formatHomeBillion = (value: number) =>
+  formatHomeDecimal(value / HOME_BILLION, 1);
+
 /** Nhãn kỳ tiêu thụ, in đúng thang/nam server trả về. */
 export const formatHomePeriodLabel = (month: number, year: number) =>
   month > 0 && year > 0 ? `Tháng ${month}/${year}` : "";
