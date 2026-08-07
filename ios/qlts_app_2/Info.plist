@@ -3,9 +3,20 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>en</string>
+	<string>vi</string>
 	<key>CFBundleDisplayName</key>
 	<string>Cholimex Food</string>
+	<!--
+		Khai báo app hỗ trợ tiếng Việt để UI của hệ thống (nút Retake / Use Photo
+		của trình chụp ảnh, nút mặc định của hộp thoại quyền...) hiện tiếng Việt.
+		App không có thư mục .lproj nào nên iOS chỉ dựa vào khoá này; thiếu nó thì
+		app bị coi là English-only và hệ thống luôn trả tiếng Anh.
+	-->
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>vi</string>
+		<string>en</string>
+	</array>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -70,6 +81,10 @@
 	<string>Ứng dụng cần quyền truy cập thư viện media theo cấu hình quyền của hệ thống.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Ứng dụng cần sử dụng vị trí khi đang mở để hỗ trợ các chức năng liên quan đến địa điểm.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Ứng dụng cần sử dụng vị trí để hỗ trợ các chức năng liên quan đến địa điểm, kể cả khi chạy nền.</string>
+	<key>NSLocationUsageDescription</key>
+	<string>Ứng dụng cần sử dụng vị trí để hỗ trợ các chức năng liên quan đến địa điểm.</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UIAppFonts</key>
