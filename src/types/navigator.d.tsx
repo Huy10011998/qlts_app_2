@@ -326,9 +326,15 @@ export type RootStackParamList = {
   TrungChuyenTuLanh: undefined;
   /** Lịch sử trung chuyển của một tủ + nút (+) tạo yêu cầu mới. */
   TrungChuyenTuLanhLichSu: { fridge: FridgeSummary };
-  /** Bước [1]: tủ vào từ màn lịch sử đã có sẵn, cho quét thêm tủ khác. */
+  /**
+   * Bước [1]: tủ vào từ màn lịch sử đã có sẵn, cho quét thêm tủ khác.
+   *
+   * ⚠️ ĐANG TẮT, chờ tương lai — route không còn đăng ký trong AppNavigator.
+   * Luồng hiện tại chỉ chuyển đúng con tủ mở từ màn chi tiết nên đi thẳng từ
+   * lịch sử sang [2]. Giữ type ở đây để màn cũ vẫn biên dịch được.
+   */
   TrungChuyenTuLanhChonTu: { fridges: FridgeSummary[] };
-  /** Bước [2]: chọn nhà phân phối. */
+  /** Bước [2]: chọn nhà phân phối. Luồng hiện tại `fridges` luôn đúng 1 phần tử. */
   TrungChuyenTuLanhChonNhaPhanPhoi: { fridges: FridgeSummary[] };
   /** Bước [3]: chọn khách hàng của NPP đã chọn. */
   TrungChuyenTuLanhChonKhachHang: {

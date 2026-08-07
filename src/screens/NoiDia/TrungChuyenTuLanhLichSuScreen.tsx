@@ -200,35 +200,44 @@ export default function TrungChuyenTuLanhLichSuScreen() {
 
               {isExpanded ? (
                 <View style={styles.cardBody}>
-                  {getTransferRows(item).map((row) => {
+                  {getTransferRows(item).map((row, index, all) => {
                     const isChanged = row.from !== row.to;
+                    // Kẻ ngăn giữa các cấp, cấp cuối bỏ để không thừa một
+                    // đường sát dòng "Người thực hiện".
+                    const isLast = index === all.length - 1;
 
                     return (
-                      <View key={row.label} style={styles.transferRow}>
-                        <Text style={styles.transferLabel}>{row.label}</Text>
-                        <Text
-                          style={[
-                            styles.transferValue,
-                            isChanged && styles.transferValueChanged,
-                          ]}
-                          numberOfLines={2}
-                        >
-                          {row.from}
-                        </Text>
-                        <Ionicons
-                          name="arrow-forward"
-                          size={13}
-                          color={c.textMuted}
-                        />
-                        <Text
-                          style={[
-                            styles.transferValue,
-                            isChanged && styles.transferValueChanged,
-                          ]}
-                          numberOfLines={2}
-                        >
-                          {row.to}
-                        </Text>
+                      <View
+                        key={row.label}
+                        style={[
+                          styles.transferRow,
+                          !isLast && styles.transferRowDivider,
+                        ]}
+                      >
+                        <View style={styles.transferLine}>
+                          <Text style={styles.transferLabel}>{row.label}</Text>
+                          <Text style={styles.transferValue}>{row.from}</Text>
+                        </View>
+
+                        {isChanged ? (
+                          <View style={styles.transferLine}>
+                            <View style={styles.transferArrowSlot}>
+                              <Ionicons
+                                name="arrow-forward"
+                                size={13}
+                                color={c.red}
+                              />
+                            </View>
+                            <Text
+                              style={[
+                                styles.transferValue,
+                                styles.transferValueChanged,
+                              ]}
+                            >
+                              {row.to}
+                            </Text>
+                          </View>
+                        ) : null}
                       </View>
                     );
                   })}
@@ -249,8 +258,12 @@ export default function TrungChuyenTuLanhLichSuScreen() {
       <AddActionFab
         variant="extended"
         label="Trung chuyển"
+        // Đi thẳng sang chọn NPP: luồng này chỉ chuyển đúng con tủ đã mở, id
+        // lấy từ màn chi tiết bên ngoài. Bước quét thêm tủ (ChonTu) đang tắt.
         onPress={() =>
-          navigation.navigate("TrungChuyenTuLanhChonTu", { fridges: [fridge] })
+          navigation.navigate("TrungChuyenTuLanhChonNhaPhanPhoi", {
+            fridges: [fridge],
+          })
         }
       />
     </ScreenContainer>
@@ -290,10 +303,31 @@ const makeStyles = (c: AppColors) =>
       borderTopColor: c.border,
       gap: 7,
     },
+    /**
+     * Một cấp vị trí, xếp DỌC: dòng trên là hiện tại, dòng dưới có mũi tên là
+     * giá trị mới. Chia đôi bề ngang thì tên NPP / khách hàng bị bó vào nửa
+     * màn và xuống bốn năm dòng.
+     */
     transferRow: {
+      paddingVertical: 3,
+      gap: 2,
+    },
+    transferRowDivider: {
+      // `c.border` (#F3F5F9) gần như trùng nền thẻ nên nhìn không ra kẻ; dùng
+      // `borderStrong` và bỏ hairline để thấy rõ trên cả light lẫn dark.
+      borderBottomWidth: 1,
+      borderBottomColor: c.borderStrong,
+    },
+    transferLine: {
       flexDirection: "row",
-      alignItems: "center",
+      alignItems: "flex-start",
       gap: 6,
+    },
+    /** Mũi tên nằm đúng cột nhãn của dòng trên, dồn sát phải về phía giá trị. */
+    transferArrowSlot: {
+      width: 84,
+      alignItems: "flex-end",
+      paddingRight: 2,
     },
     transferLabel: {
       width: 84,

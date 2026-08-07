@@ -263,29 +263,44 @@ export default function TrungChuyenTuLanhXacNhanScreen() {
 
         <View style={styles.card}>
           <View style={styles.tableHead}>
-            <Text style={styles.tableHeadLabel} />
-            <Text style={styles.tableHeadText}>TỪ (hiện tại)</Text>
-            <Text style={styles.tableHeadText}>ĐẾN (mới)</Text>
+            <Text style={styles.tableHeadText}>Vị trí sau khi chuyển</Text>
           </View>
 
-          {rows.map((row) => {
+          {/*
+            Mỗi cấp xếp DỌC chứ không phải hai cột: dòng trên là hiện tại, dòng
+            dưới có mũi tên là giá trị mới. Chia đôi bề ngang thì tên NPP / khách
+            hàng bị bó vào nửa màn, xuống bốn năm dòng hoặc bị cắt — mà đây là
+            màn cuối trước khi gửi, đọc nhầm là chuyển nhầm.
+
+            Cấp nào không đổi thì chỉ hiện một dòng: lặp lại y hệt hai lần chỉ
+            làm loãng, mắt phải tự dò xem có khác gì không.
+          */}
+          {rows.map((row, index) => {
             const isChanged = row.from !== row.to;
+            // Kẻ ngăn giữa các cấp. Cấp cuối không kẻ, tránh đường thừa sát
+            // mép thẻ.
+            const isLast = index === rows.length - 1;
 
             return (
-              <View key={row.label} style={styles.tableRow}>
-                <Text style={styles.tableLabel}>{row.label}</Text>
-                <Text
-                  style={[styles.tableValue, isChanged && styles.tableChanged]}
-                  numberOfLines={2}
-                >
-                  {row.from}
-                </Text>
-                <Text
-                  style={[styles.tableValue, isChanged && styles.tableChanged]}
-                  numberOfLines={2}
-                >
-                  {row.to}
-                </Text>
+              <View
+                key={row.label}
+                style={[styles.tableRow, !isLast && styles.tableRowDivider]}
+              >
+                <View style={styles.tableLine}>
+                  <Text style={styles.tableLabel}>{row.label}</Text>
+                  <Text style={styles.tableValue}>{row.from}</Text>
+                </View>
+
+                {isChanged ? (
+                  <View style={styles.tableLine}>
+                    <View style={styles.tableArrowSlot}>
+                      <Ionicons name="arrow-forward" size={14} color={c.red} />
+                    </View>
+                    <Text style={[styles.tableValue, styles.tableChanged]}>
+                      {row.to}
+                    </Text>
+                  </View>
+                ) : null}
               </View>
             );
           })}
@@ -350,9 +365,6 @@ const makeStyles = (c: AppColors) =>
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: c.border,
     },
-    tableHeadLabel: {
-      width: 78,
-    },
     tableHeadText: {
       flex: 1,
       fontSize: 11.5,
@@ -360,11 +372,22 @@ const makeStyles = (c: AppColors) =>
       color: c.textSub,
       textTransform: "uppercase",
     },
+    /** Một cấp vị trí: xếp dọc, dòng hiện tại rồi tới dòng mới. */
     tableRow: {
+      paddingVertical: 6,
+      gap: 3,
+    },
+    /** Một dòng trong cấp đó: cột nhãn cố định + giá trị chiếm hết phần còn lại. */
+    tableLine: {
       flexDirection: "row",
       alignItems: "flex-start",
       gap: 8,
-      paddingVertical: 6,
+    },
+    tableRowDivider: {
+      // `c.border` (#F3F5F9) gần như trùng nền thẻ nên nhìn không ra kẻ; dùng
+      // `borderStrong` và bỏ hairline để thấy rõ trên cả light lẫn dark.
+      borderBottomWidth: 1,
+      borderBottomColor: c.borderStrong,
     },
     tableLabel: {
       width: 78,
@@ -375,6 +398,15 @@ const makeStyles = (c: AppColors) =>
       flex: 1,
       fontSize: 13,
       color: c.textSecondary,
+    },
+    /**
+     * Mũi tên nằm đúng cột nhãn của dòng trên, dồn sát phải để chỉ thẳng vào
+     * giá trị mới.
+     */
+    tableArrowSlot: {
+      width: 78,
+      alignItems: "flex-end",
+      paddingRight: 2,
     },
     tableChanged: {
       fontWeight: "700",

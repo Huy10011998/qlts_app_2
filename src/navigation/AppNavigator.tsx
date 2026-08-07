@@ -31,7 +31,9 @@ import XacNhanViTriTuLanhResultScreen from "../screens/NoiDia/XacNhanViTriTuLanh
 import XacNhanViTriTuLanhLichSuScreen from "../screens/NoiDia/XacNhanViTriTuLanhLichSuScreen";
 import TrungChuyenTuLanhScreen from "../screens/NoiDia/TrungChuyenTuLanhScreen";
 import TrungChuyenTuLanhLichSuScreen from "../screens/NoiDia/TrungChuyenTuLanhLichSuScreen";
-import TrungChuyenTuLanhChonTuScreen from "../screens/NoiDia/TrungChuyenTuLanhChonTuScreen";
+// Màn quét thêm tủ đang tắt (xem chỗ đăng ký route bên dưới), giữ import dạng
+// comment để bật lại là thấy ngay.
+// import TrungChuyenTuLanhChonTuScreen from "../screens/NoiDia/TrungChuyenTuLanhChonTuScreen";
 import TrungChuyenTuLanhChonNhaPhanPhoiScreen from "../screens/NoiDia/TrungChuyenTuLanhChonNhaPhanPhoiScreen";
 import TrungChuyenTuLanhChonKhachHangScreen from "../screens/NoiDia/TrungChuyenTuLanhChonKhachHangScreen";
 import TrungChuyenTuLanhXacNhanScreen from "../screens/NoiDia/TrungChuyenTuLanhXacNhanScreen";
@@ -286,10 +288,18 @@ export default function AppNavigator() {
           ...headerWithBack,
         }}
       />
-      <Stack.Screen
-        name="TrungChuyenTuLanhChonTu"
-        component={TrungChuyenTuLanhChonTuScreen}
-      />
+      {/*
+        Bước quét thêm tủ để chuyển nhiều con một lượt — TẮT, chờ tương lai.
+        Hiện luồng trung chuyển chỉ chạy cho đúng con tủ mở từ màn chi tiết, nên
+        màn lịch sử đi thẳng sang "Chọn nhà phân phối". Màn và type route vẫn giữ
+        nguyên trong repo, muốn bật lại thì bỏ comment ở đây và trỏ nút (+) của
+        TrungChuyenTuLanhLichSuScreen về "TrungChuyenTuLanhChonTu".
+
+        <Stack.Screen
+          name="TrungChuyenTuLanhChonTu"
+          component={TrungChuyenTuLanhChonTuScreen}
+        />
+      */}
       <Stack.Screen
         name="TrungChuyenTuLanhChonNhaPhanPhoi"
         component={TrungChuyenTuLanhChonNhaPhanPhoiScreen}
