@@ -2,6 +2,8 @@ import axios from "axios";
 import { Buffer } from "buffer";
 
 import { API_ENDPOINTS } from "../../config/index";
+import { getMatchedKey } from "../../utils/Helper";
+import { warn } from "../../utils/Logger";
 import { api, callApi } from "./httpClient";
 
 /**
@@ -32,6 +34,15 @@ export type XacNhanViTriTuLanhItem = {
   serialNumber?: string | null;
   /** Người thực hiện xác nhận (chỉ có ở API lịch sử). */
   log_ID_User_MoTa?: string | null;
+
+  /** Toạ độ đăng ký của khách hàng đang giữ tủ (chỉ có ở API lịch sử). */
+  noiDia_KhachHang_LAT?: string | null;
+  noiDia_KhachHang_LNG?: string | null;
+  /**
+   * Khoảng cách (mét) từ chỗ chụp ảnh tới toạ độ khách hàng — server tự tính.
+   * `null` khi thiếu một trong hai toạ độ, không phải là 0.
+   */
+  khoangCachMet?: number | null;
 };
 
 /** Ảnh gửi lên: đúng shape `react-native-image-picker` trả về sau khi chụp. */
@@ -204,6 +215,49 @@ export const getTrungChuyenKhachHang = async (idNhaPhanPhoi: number) =>
     API_ENDPOINTS.TRUNG_CHUYEN_TU_LANH_KHACH_HANG,
     { ID_NoiDia_NhaPhanPhoi: idNhaPhanPhoi },
   );
+
+export const KHACH_HANG_NAME_CLASS = "NoiDia_KhachHang";
+
+/**
+ * Ba cấp vị trí của một khách hàng, đọc từ chính record khách hàng.
+ *
+ * `get-list-khach-hang` chỉ trả id/mã/tên nên màn xác nhận trung chuyển không
+ * có gì để hiện ở cột "ĐẾN". Bản thân record thì có đủ (lưới "Danh sách Khách
+ * hàng" trên web hiện đúng ba cột này), nên lấy qua API chi tiết dùng chung.
+ *
+ * Trả `null` khi không đọc được — chỉ ảnh hưởng phần hiển thị, không được chặn
+ * luồng gửi.
+ */
+export const getKhachHangLocation = async (id: number) => {
+  try {
+    const response = await callApi<any>(
+      "POST",
+      `/${KHACH_HANG_NAME_CLASS}/get-details`,
+      { id },
+    );
+
+    const raw = response?.data;
+    const item = Array.isArray(raw) ? raw[0] : raw;
+    if (!item || typeof item !== "object") return null;
+
+    const read = (name: string) => {
+      const key = getMatchedKey(item, name);
+      const value = key ? item[key] : undefined;
+
+      return value === null || value === undefined ? "" : String(value).trim();
+    };
+
+    return {
+      mien: read("id_NoiDia_Mien_MoTa"),
+      vungMien: read("id_NoiDia_VungMien_MoTa"),
+      khuVuc: read("id_NoiDia_KhuVuc_MoTa"),
+      nhaPhanPhoi: read("id_NoiDia_NhaPhanPhoi_MoTa"),
+    };
+  } catch (e) {
+    warn("[NoiDia] Không đọc được vị trí khách hàng", e);
+    return null;
+  }
+};
 
 /** `data` của API trung chuyển: số tủ đã cập nhật, hoặc mã lỗi âm. */
 export const TRUNG_CHUYEN_LOCKED = -10;

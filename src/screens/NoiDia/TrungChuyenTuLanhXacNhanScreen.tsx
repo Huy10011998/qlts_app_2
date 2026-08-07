@@ -1,20 +1,21 @@
-import React, { useCallback, useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { StyleSheet, Text, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import type { StackNavigation, StackRoute } from "../../types/index";
 import ScreenContainer from "../shared/ScreenContainer";
+import { createAssetFormHeaderSubmitRight } from "../../components/assets/shared/AssetFormHeaderSubmitButton";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import {
+  getKhachHangLocation,
   getNoiDiaErrorMessage,
   TRUNG_CHUYEN_LOCKED,
   trungChuyenTuLanh,
@@ -24,6 +25,8 @@ import { error } from "../../utils/Logger";
 import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
 import type { FridgeSummary } from "./shared/fridgeLookup";
 import { displayValue, EMPTY_VALUE } from "./shared/noiDiaFormat";
+import NoiDiaFormScroll from "./shared/NoiDiaFormScroll";
+import NoiDiaNoteCard from "./shared/NoiDiaNoteCard";
 
 const MULTIPLE_LOCATIONS = "Nhiều vị trí";
 
@@ -56,40 +59,89 @@ export default function TrungChuyenTuLanhXacNhanScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   /**
+   * Vị trí thật của khách hàng mới, đọc từ record khách hàng vì
+   * `get-list-khach-hang` chỉ trả id/mã/tên. Tải nền: bảng hiện ngay bằng dữ
+   * liệu đã có, ba cấp trên thay bằng giá trị thật khi API trả về.
+   */
+  const [khachHangLocation, setKhachHangLocation] = useState<Awaited<
+    ReturnType<typeof getKhachHangLocation>
+  > | null>(null);
+
+  useEffect(() => {
+    let isActive = true;
+
+    getKhachHangLocation(khachHang.id).then((location) => {
+      if (isActive) setKhachHangLocation(location);
+    });
+
+    return () => {
+      isActive = false;
+    };
+  }, [khachHang.id]);
+
+  /**
    * Cột "ĐẾN" lấy từ khách hàng đã chọn, không phải user tự nhập. Khách hàng
    * nào thiếu cấp nào thì lấy của NPP — server cũng suy vị trí theo đúng thứ tự
    * ưu tiên này.
+   *
+   * Thứ tự ưu tiên: record khách hàng (chính xác nhất) → dữ liệu kèm trong
+   * danh sách → của NPP. Cùng lắm mới suy từ cột TỪ khi NPP không đổi, vì cùng
+   * một NPP thì ba cấp trên chắc chắn giữ nguyên. Tất cả chỉ để hiển thị —
+   * dữ liệu lưu vẫn do server suy từ khách hàng.
    */
-  const rows = useMemo(
-    () => [
+  const rows = useMemo(() => {
+    const nppFrom = getCurrentValue(fridges, (fridge) => fridge.nhaPhanPhoi);
+    const nppTo =
+      [nhaPhanPhoi.ma, nhaPhanPhoi.ten].filter(Boolean).join(" - ") ||
+      EMPTY_VALUE;
+    const keepsNpp = nppTo !== EMPTY_VALUE && nppTo === nppFrom;
+
+    const inherited = (from: string, value?: string | null) => {
+      const known = displayValue(value);
+      if (known !== EMPTY_VALUE) return known;
+
+      return keepsNpp ? from : EMPTY_VALUE;
+    };
+
+    const mienFrom = getCurrentValue(fridges, (fridge) => fridge.mien);
+    const vungMienFrom = getCurrentValue(fridges, (fridge) => fridge.vungMien);
+    const khuVucFrom = getCurrentValue(fridges, (fridge) => fridge.khuVuc);
+
+    return [
       {
         label: "Miền",
-        from: getCurrentValue(fridges, (fridge) => fridge.mien),
-        to: displayValue(
-          khachHang.id_NoiDia_Mien_MoTa ?? nhaPhanPhoi.id_NoiDia_Mien_MoTa,
+        from: mienFrom,
+        to: inherited(
+          mienFrom,
+          khachHangLocation?.mien ||
+            khachHang.id_NoiDia_Mien_MoTa ||
+            nhaPhanPhoi.id_NoiDia_Mien_MoTa,
         ),
       },
       {
         label: "Vùng miền",
-        from: getCurrentValue(fridges, (fridge) => fridge.vungMien),
-        to: displayValue(
-          khachHang.id_NoiDia_VungMien_MoTa ??
+        from: vungMienFrom,
+        to: inherited(
+          vungMienFrom,
+          khachHangLocation?.vungMien ||
+            khachHang.id_NoiDia_VungMien_MoTa ||
             nhaPhanPhoi.id_NoiDia_VungMien_MoTa,
         ),
       },
       {
         label: "Khu vực",
-        from: getCurrentValue(fridges, (fridge) => fridge.khuVuc),
-        to: displayValue(
-          khachHang.id_NoiDia_KhuVuc_MoTa ?? nhaPhanPhoi.id_NoiDia_KhuVuc_MoTa,
+        from: khuVucFrom,
+        to: inherited(
+          khuVucFrom,
+          khachHangLocation?.khuVuc ||
+            khachHang.id_NoiDia_KhuVuc_MoTa ||
+            nhaPhanPhoi.id_NoiDia_KhuVuc_MoTa,
         ),
       },
       {
         label: "NPP",
-        from: getCurrentValue(fridges, (fridge) => fridge.nhaPhanPhoi),
-        to:
-          [nhaPhanPhoi.ma, nhaPhanPhoi.ten].filter(Boolean).join(" - ") ||
-          EMPTY_VALUE,
+        from: nppFrom,
+        to: nppTo,
       },
       {
         label: "Khách hàng",
@@ -98,9 +150,14 @@ export default function TrungChuyenTuLanhXacNhanScreen() {
           [khachHang.ma, khachHang.ten].filter(Boolean).join(" - ") ||
           EMPTY_VALUE,
       },
-    ],
-    [fridges, khachHang, nhaPhanPhoi],
-  );
+    ];
+  }, [fridges, khachHang, khachHangLocation, nhaPhanPhoi]);
+
+  // Đổi NPP mà API không trả ba cấp trên thì cột ĐẾN đành để trống — nói rõ là
+  // server sẽ tự điền, tránh user tưởng vị trí sắp bị xoá.
+  const hasUnknownTarget = rows
+    .slice(0, 3)
+    .some((row) => row.to === EMPTY_VALUE);
 
   const handleSubmit = useCallback(async () => {
     if (isSubmitting) return;
@@ -169,12 +226,26 @@ export default function TrungChuyenTuLanhXacNhanScreen() {
     showAlertIfActive,
   ]);
 
+  // Nút gửi nằm ở header như mọi form tài sản. Giữ handler trong ref để
+  // `setOptions` chỉ chạy lại khi trạng thái gửi đổi, không phải sau mỗi ký tự
+  // ghi chú.
+  const handleSubmitRef = useRef(handleSubmit);
+  handleSubmitRef.current = handleSubmit;
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: createAssetFormHeaderSubmitRight({
+        disabled: isSubmitting,
+        iconName: isSubmitting ? "hourglass-outline" : "swap-horizontal",
+        label: isSubmitting ? "Đang gửi" : "Chuyển",
+        onPress: () => handleSubmitRef.current(),
+      }),
+    });
+  }, [isSubmitting, navigation]);
+
   return (
     <ScreenContainer>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-      >
+      <NoiDiaFormScroll contentContainerStyle={styles.content}>
         <Text style={styles.heading}>
           Chuyển {fridges.length} tủ lạnh
         </Text>
@@ -218,39 +289,25 @@ export default function TrungChuyenTuLanhXacNhanScreen() {
               </View>
             );
           })}
+
+          {hasUnknownTarget ? (
+            <Text style={styles.tableNote}>
+              Miền / Vùng miền / Khu vực do hệ thống xác định theo khách hàng
+              mới sau khi gửi.
+            </Text>
+          ) : null}
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Ghi chú</Text>
-          <TextInput
-            style={styles.notesInput}
-            value={notes}
-            onChangeText={setNotes}
-            placeholder="Nhập ghi chú (không bắt buộc)"
-            placeholderTextColor={c.placeholder}
-            multiline
-            editable={!isSubmitting}
-          />
-        </View>
+        <NoiDiaNoteCard
+          value={notes}
+          onChangeText={setNotes}
+          editable={!isSubmitting}
+        />
 
         <Text style={styles.warning}>
           Gửi là áp dụng ngay, không có bước chờ duyệt.
         </Text>
-      </ScrollView>
-
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.submitButton, isSubmitting && styles.submitDisabled]}
-          disabled={isSubmitting}
-          onPress={handleSubmit}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.submitText}>XÁC NHẬN TRUNG CHUYỂN</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+      </NoiDiaFormScroll>
     </ScreenContainer>
   );
 }
@@ -273,12 +330,6 @@ const makeStyles = (c: AppColors) =>
       padding: 14,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: c.border,
-    },
-    cardTitle: {
-      fontSize: 14,
-      fontWeight: "700",
-      color: c.red,
-      marginBottom: 10,
     },
     fridgeRow: {
       flexDirection: "row",
@@ -329,45 +380,16 @@ const makeStyles = (c: AppColors) =>
       fontWeight: "700",
       color: c.text,
     },
-    notesInput: {
-      minHeight: 70,
-      borderRadius: 10,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.borderStrong,
-      backgroundColor: c.input,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      fontSize: 14,
-      color: c.text,
-      textAlignVertical: "top",
+    tableNote: {
+      marginTop: 8,
+      fontSize: 12,
+      fontStyle: "italic",
+      color: c.textSub,
     },
     warning: {
       fontSize: 12.5,
       fontStyle: "italic",
       color: c.textSub,
       textAlign: "center",
-    },
-    footer: {
-      paddingHorizontal: 16,
-      paddingTop: 10,
-      paddingBottom: 16,
-      backgroundColor: c.surface,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: c.border,
-    },
-    submitButton: {
-      alignItems: "center",
-      justifyContent: "center",
-      paddingVertical: 14,
-      borderRadius: 12,
-      backgroundColor: c.red,
-    },
-    submitDisabled: {
-      backgroundColor: c.slateBorder,
-    },
-    submitText: {
-      fontSize: 15,
-      fontWeight: "800",
-      color: "#fff",
     },
   });

@@ -1,7 +1,9 @@
 import {
   displayValue,
   EMPTY_VALUE,
+  formatKhoangCach,
   formatNoiDiaDateTime,
+  isKhoangCachXa,
   toThumbnailPath,
 } from "../src/screens/NoiDia/shared/noiDiaFormat";
 import {
@@ -45,6 +47,45 @@ describe("formatNoiDiaDateTime", () => {
 
   it("trả dấu gạch khi ngày không hợp lệ", () => {
     expect(formatNoiDiaDateTime("khong-phai-ngay")).toBe(EMPTY_VALUE);
+  });
+});
+
+describe("formatKhoangCach", () => {
+  it("dưới 1 km thì hiện số mét đã làm tròn", () => {
+    expect(formatKhoangCach(0)).toBe("0 m");
+    expect(formatKhoangCach(123.6)).toBe("124 m");
+    expect(formatKhoangCach(999)).toBe("999 m");
+  });
+
+  it("từ 1 km trở lên thì đổi sang km, một chữ số thập phân", () => {
+    expect(formatKhoangCach(1000)).toBe("1,0 km");
+    expect(formatKhoangCach(1234)).toBe("1,2 km");
+  });
+
+  it("trả null khi server không tính được, để màn gọi ẩn dòng đi", () => {
+    expect(formatKhoangCach(null)).toBeNull();
+    expect(formatKhoangCach(undefined)).toBeNull();
+  });
+
+  it("0 mét là giá trị thật, không phải thiếu dữ liệu", () => {
+    expect(formatKhoangCach(0)).not.toBeNull();
+  });
+});
+
+describe("isKhoangCachXa", () => {
+  it("chỉ cảnh báo khi vượt hẳn mốc 100 m", () => {
+    expect(isKhoangCachXa(100)).toBe(false);
+    expect(isKhoangCachXa(101)).toBe(true);
+  });
+
+  it("không cảnh báo khi ở gần", () => {
+    expect(isKhoangCachXa(0)).toBe(false);
+    expect(isKhoangCachXa(99.4)).toBe(false);
+  });
+
+  it("thiếu dữ liệu thì không cảnh báo, tránh báo động giả", () => {
+    expect(isKhoangCachXa(null)).toBe(false);
+    expect(isKhoangCachXa(undefined)).toBe(false);
   });
 });
 

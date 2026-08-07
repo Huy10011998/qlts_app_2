@@ -7,10 +7,8 @@ import React, {
   useState,
 } from "react";
 import {
-  ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   useWindowDimensions,
   View,
@@ -51,6 +49,8 @@ import PhotoWatermark, {
   type WatermarkLines,
 } from "./shared/PhotoWatermark";
 import { EMPTY_VALUE, formatNoiDiaDateTime } from "./shared/noiDiaFormat";
+import NoiDiaFormScroll from "./shared/NoiDiaFormScroll";
+import NoiDiaNoteCard from "./shared/NoiDiaNoteCard";
 
 /**
  * Ảnh gửi lên chỉ để web xem lại, không cần độ phân giải gốc. Ảnh 4-8MB rất dễ
@@ -264,6 +264,7 @@ export default function XacNhanViTriTuLanhScreen() {
 
   const canSubmit = Boolean(fridge && photo?.uri) && !isSubmitting;
 
+
   // Nút gửi nằm ở header như mọi form tài sản. Giữ handler trong ref để
   // `setOptions` chỉ chạy lại khi trạng thái bật/tắt đổi, chứ không phải sau
   // mỗi ký tự ghi chú.
@@ -297,10 +298,7 @@ export default function XacNhanViTriTuLanhScreen() {
 
   return (
     <ScreenContainer>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-      >
+      <NoiDiaFormScroll contentContainerStyle={styles.content}>
         <View style={styles.card}>
           <Text style={styles.fridgeLabel}>{fridge.label}</Text>
           <Text style={styles.fridgeSerial}>
@@ -365,18 +363,11 @@ export default function XacNhanViTriTuLanhScreen() {
           </Text>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Ghi chú</Text>
-          <TextInput
-            style={styles.noteInput}
-            value={note}
-            onChangeText={setNote}
-            placeholder="Nhập ghi chú (không bắt buộc)"
-            placeholderTextColor={c.placeholder}
-            multiline
-            editable={!isSubmitting}
-          />
-
+        <NoiDiaNoteCard
+          value={note}
+          onChangeText={setNote}
+          editable={!isSubmitting}
+        >
           <View style={styles.metaRow}>
             <Ionicons name="location-outline" size={16} color={c.textSub} />
             <Text style={styles.metaText}>
@@ -399,8 +390,8 @@ export default function XacNhanViTriTuLanhScreen() {
               {formatNoiDiaDateTime(capturedAt)}
             </Text>
           </View>
-        </View>
-      </ScrollView>
+        </NoiDiaNoteCard>
+      </NoiDiaFormScroll>
 
       {/*
         Bản full-size để ViewShot chụp: ViewShot chụp đúng bằng layout của view
@@ -526,19 +517,6 @@ const makeStyles = (c: AppColors) =>
       fontSize: 14,
       fontWeight: "600",
       color: c.red,
-    },
-    noteInput: {
-      minHeight: 76,
-      borderRadius: 10,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.borderStrong,
-      backgroundColor: c.input,
-      paddingHorizontal: 12,
-      paddingTop: 10,
-      paddingBottom: 10,
-      fontSize: 14,
-      color: c.text,
-      textAlignVertical: "top",
     },
     metaRow: {
       flexDirection: "row",

@@ -3,6 +3,7 @@ import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import SearchBar from "../../../components/ui/SearchBar";
+import { removeVietnameseTones } from "../../../utils/Helper";
 import IsLoading from "../../../components/ui/IconLoading";
 import EmptyState from "../../../components/ui/EmptyState";
 import { AppColors, useAppColors, useStyles } from "../../../utils/helpers/colors";
@@ -46,18 +47,29 @@ export default function NoiDiaPickerList<T>({
   const c = useAppColors();
   const [searchText, setSearchText] = useState("");
 
+  // Bỏ dấu sẵn một lần cho mỗi dòng: gõ "Minh Thien" phải ra "Minh Thiên A",
+  // người dùng ngoài hiện trường hiếm khi gõ đủ dấu.
   const rows = useMemo(
-    () => items.map((item) => ({ source: item, ...toPickerItem(item) })),
+    () =>
+      items.map((item) => {
+        const pickerItem = toPickerItem(item);
+
+        return {
+          source: item,
+          ...pickerItem,
+          searchKey: removeVietnameseTones(
+            `${pickerItem.title} ${pickerItem.subtitle ?? ""}`,
+          ),
+        };
+      }),
     [items, toPickerItem],
   );
 
   const filteredRows = useMemo(() => {
-    const keyword = searchText.trim().toLowerCase();
+    const keyword = removeVietnameseTones(searchText.trim());
     if (!keyword) return rows;
 
-    return rows.filter((row) =>
-      `${row.title} ${row.subtitle ?? ""}`.toLowerCase().includes(keyword),
-    );
+    return rows.filter((row) => row.searchKey.includes(keyword));
   }, [rows, searchText]);
 
   if (isLoading) return <IsLoading size="large" color={c.red} />;

@@ -64,6 +64,11 @@ export const makeNoiDiaListStyles = (c: AppColors) =>
       fontWeight: "bold",
       color: c.text,
     },
+    /** Giá trị cần người duyệt để ý — hiện tại là khoảng cách vượt mốc. */
+    textDanger: {
+      color: c.red,
+      fontWeight: "700",
+    },
     meta: {
       marginTop: 3,
       fontSize: 12,
@@ -87,23 +92,24 @@ export const makeNoiDiaListStyles = (c: AppColors) =>
       marginLeft: 8,
     },
 
-    /** Dải chân thẻ: người thực hiện bên trái, hành động phụ bên phải. */
+    /**
+     * Chân thẻ xếp dọc: tên nhân viên tiếng Việt hay dài quá một dòng, ép chung
+     * hàng với nút "xem bản đồ" là cắt mất tên. Nút xuống dòng riêng, sát phải.
+     */
     footerRow: {
       marginTop: 8,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: 10,
     },
     footerText: {
-      flex: 1,
       fontSize: 12,
       color: c.textSub,
     },
     footerAction: {
+      alignSelf: "flex-end",
       flexDirection: "row",
       alignItems: "center",
       gap: 3,
+      marginTop: 4,
+      paddingVertical: 2,
     },
     footerActionText: {
       fontSize: 12,

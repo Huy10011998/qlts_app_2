@@ -29,6 +29,39 @@ export const displayValue = (raw?: string | number | null) => {
 };
 
 /**
+ * Quá mốc này thì coi là chụp xa điểm khách hàng, hiện đỏ để người duyệt để ý.
+ *
+ * Đây là mốc nghiệp vụ do phía mình đặt, KHÔNG có trong tài liệu BE — server
+ * vẫn nhận bình thường, không chặn gì. Đổi mốc thì sửa đúng chỗ này.
+ */
+export const KHOANG_CACH_CANH_BAO_MET = 100;
+
+/** Khoảng cách có vượt mốc cảnh báo không. Thiếu dữ liệu thì không cảnh báo. */
+export const isKhoangCachXa = (met?: number | null) =>
+  met !== null &&
+  met !== undefined &&
+  Number.isFinite(met) &&
+  met > KHOANG_CACH_CANH_BAO_MET;
+
+/**
+ * Khoảng cách từ chỗ chụp ảnh tới toạ độ khách hàng, do server tính sẵn.
+ *
+ * `null`/`undefined` nghĩa là thiếu một trong hai toạ độ nên không tính được —
+ * khác hẳn với 0 mét, nên phải trả về `null` để màn gọi ẩn dòng đi thay vì hiện
+ * "0 m" như thể chụp đúng ngay tại chỗ.
+ */
+export const formatKhoangCach = (met?: number | null) => {
+  if (met === null || met === undefined || !Number.isFinite(met)) return null;
+
+  const rounded = Math.max(Math.round(met), 0);
+
+  if (rounded < 1000) return `${rounded} m`;
+
+  // Trên 1 km thì số mét lẻ vô nghĩa, một chữ số thập phân là đủ.
+  return `${(rounded / 1000).toFixed(1).replace(".", ",")} km`;
+};
+
+/**
  * Đường dẫn thumbnail 40x40 suy ra từ `filePath` gốc: thêm "_resize" vào TÊN
  * FOLDER cuối và vào TÊN FILE.
  *

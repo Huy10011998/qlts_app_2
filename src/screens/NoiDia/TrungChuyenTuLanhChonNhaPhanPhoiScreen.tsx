@@ -11,7 +11,6 @@ import { isNetworkRequestError } from "../../utils/helpers/api";
 import { error } from "../../utils/Logger";
 import NoiDiaPickerList from "./shared/NoiDiaPickerList";
 import { loadNhaPhanPhoi } from "./shared/nhaPhanPhoiCache";
-import { displayValue } from "./shared/noiDiaFormat";
 
 /** Bước [2]: chọn NPP — danh sách khách hàng ở bước sau phụ thuộc lựa chọn này. */
 export default function TrungChuyenTuLanhChonNhaPhanPhoiScreen() {
@@ -77,11 +76,17 @@ export default function TrungChuyenTuLanhChonNhaPhanPhoiScreen() {
         toPickerItem={(item) => ({
           id: item.id,
           title: [item.ma, item.ten].filter(Boolean).join(" - ") || `#${item.id}`,
-          subtitle: [
-            displayValue(item.id_NoiDia_Mien_MoTa),
-            displayValue(item.id_NoiDia_VungMien_MoTa),
-            displayValue(item.id_NoiDia_KhuVuc_MoTa),
-          ].join(" / "),
+          // BE có NPP không kèm miền / vùng / khu vực; ghép cứng thì ra dòng
+          // "— / — / —" chẳng nói lên gì, thà bỏ hẳn dòng phụ.
+          subtitle:
+            [
+              item.id_NoiDia_Mien_MoTa,
+              item.id_NoiDia_VungMien_MoTa,
+              item.id_NoiDia_KhuVuc_MoTa,
+            ]
+              .map((value) => value?.trim())
+              .filter(Boolean)
+              .join(" / ") || undefined,
         })}
       />
     </ScreenContainer>

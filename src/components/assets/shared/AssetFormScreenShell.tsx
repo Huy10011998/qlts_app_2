@@ -262,13 +262,24 @@ export default function AssetFormScreenShell({
 
   return (
     <AssetFormKeyboardContext.Provider value={keyboardContextValue}>
+      {/*
+        iOS: KHÔNG dùng `KeyboardAvoidingView` nữa. Nó co nhỏ vùng cuộn lại,
+        vùng nhìn hẹp đi mà vẫn không đẩy field đang gõ lên. Thay bằng
+        `automaticallyAdjustKeyboardInsets` bên dưới — UIKit chèn contentInset
+        đúng bằng chiều cao bàn phím, vùng cuộn giữ nguyên cỡ và field đang gõ
+        được lộ ra. `behavior` để trống thì KeyboardAvoidingView chỉ còn là một
+        View bọc ngoài.
+
+        Android: giữ nguyên `behavior="height"` như cũ, chưa test nên không đổi.
+      */}
       <KeyboardAvoidingView
         style={[styles.keyboardRoot, style]}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? undefined : "height"}
         keyboardVerticalOffset={0}
       >
         <ScrollView
           ref={scrollRef}
+          automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
           style={styles.scroll}
           contentContainerStyle={[
             contentContainerStyle,

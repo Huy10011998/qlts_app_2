@@ -42,7 +42,9 @@ import { makeNoiDiaListStyles } from "./shared/noiDiaListStyles";
 import {
   displayValue,
   EMPTY_VALUE,
+  formatKhoangCach,
   formatNoiDiaDateTime,
+  isKhoangCachXa,
 } from "./shared/noiDiaFormat";
 
 /** Mở app bản đồ mặc định của máy tại toạ độ đã ghi nhận. */
@@ -325,6 +327,8 @@ export default function XacNhanViTriTuLanhLichSuScreen() {
         }
         renderItem={({ item }) => {
           const hasCoordinates = Boolean(item.lat && item.lng);
+          const khoangCach = formatKhoangCach(item.khoangCachMet);
+          const isXa = isKhoangCachXa(item.khoangCachMet);
 
           return (
             <View style={styles.card}>
@@ -344,6 +348,14 @@ export default function XacNhanViTriTuLanhLichSuScreen() {
                   <Text style={styles.label}>Seri: </Text>
                   {displayValue(item.serialNumber)}
                 </Text>
+                {khoangCach ? (
+                  <Text style={styles.text} numberOfLines={1}>
+                    <Text style={styles.label}>Cách khách hàng: </Text>
+                    <Text style={isXa ? styles.textDanger : undefined}>
+                      {khoangCach}
+                    </Text>
+                  </Text>
+                ) : null}
                 {item.ghiChu?.trim() ? (
                   <Text style={styles.note} numberOfLines={3}>
                     “{item.ghiChu.trim()}”
@@ -351,7 +363,7 @@ export default function XacNhanViTriTuLanhLichSuScreen() {
                 ) : null}
 
                 <View style={styles.footerRow}>
-                  <Text style={styles.footerText} numberOfLines={1}>
+                  <Text style={styles.footerText}>
                     NV: {displayValue(item.log_ID_User_MoTa)}
                   </Text>
 
@@ -371,7 +383,9 @@ export default function XacNhanViTriTuLanhLichSuScreen() {
                       <Text style={styles.footerActionText}>xem bản đồ</Text>
                     </TouchableOpacity>
                   ) : (
-                    <Text style={styles.meta}>{EMPTY_VALUE} toạ độ</Text>
+                    <Text style={[styles.meta, styles.footerAction]}>
+                      {EMPTY_VALUE} toạ độ
+                    </Text>
                   )}
                 </View>
               </View>
