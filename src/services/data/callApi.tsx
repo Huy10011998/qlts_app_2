@@ -14,3 +14,4 @@ export * from "./playbackApi";
 export * from "./reportApi";
 export * from "./solarApi";
 export * from "./dashboardApi";
+export * from "./noiDiaApi";

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   View,
   StyleSheet,
@@ -35,6 +35,10 @@ import {
 } from "../../utils/helpers/colors";
 import AssetListEmptyState from "../assets/shared/AssetListEmptyState";
 import { REVIEW_NAME_CLASSES } from "../../constants/reviewNameClasses";
+import {
+  FRIDGE_NAME_CLASS,
+  toFridgeSummary,
+} from "../../screens/NoiDia/shared/fridgeLookup";
 
 const { width } = Dimensions.get("window");
 const MENU_WIDTH = width * 0.6;
@@ -82,6 +86,14 @@ export default function QrDetails({ children }: QrDetailsProps) {
     (state: RootState) => state.asset.shouldRefreshDetails,
   );
   const { isMounted, showAlertIfActive } = useSafeAlert();
+
+  // Trung chuyển là nghiệp vụ riêng của tủ lạnh nội địa, không phải thao tác
+  // chung cho mọi loại tài sản quét được.
+  const fridge = useMemo(
+    () =>
+      nameClass === FRIDGE_NAME_CLASS && item ? toFridgeSummary(item) : null,
+    [item, nameClass],
+  );
 
   const renderHeaderRight = useCallback(
     () => <QrDetailsMenuButton onPress={toggleMenu} />,
@@ -206,12 +218,29 @@ export default function QrDetails({ children }: QrDetailsProps) {
             <Text style={styles.menuItemText}>Thanh lý</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.menuItem, { borderBottomColor: separatorColor }]}
-            onPress={() => log("Trung chuyển")}
-          >
-            <Text style={styles.menuItemText}>Trung chuyển</Text>
-          </TouchableOpacity>
+          {fridge ? (
+            <>
+              <TouchableOpacity
+                style={[styles.menuItem, { borderBottomColor: separatorColor }]}
+                onPress={() => {
+                  closeMenu();
+                  navigation.navigate("XacNhanViTriTuLanhLichSu", { fridge });
+                }}
+              >
+                <Text style={styles.menuItemText}>Xác nhận vị trí</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.menuItem, { borderBottomColor: separatorColor }]}
+                onPress={() => {
+                  closeMenu();
+                  navigation.navigate("TrungChuyenTuLanhLichSu", { fridge });
+                }}
+              >
+                <Text style={styles.menuItemText}>Trung chuyển</Text>
+              </TouchableOpacity>
+            </>
+          ) : null}
 
           {REVIEW_NAME_CLASSES.includes(nameClass || "") ? (
             <TouchableOpacity

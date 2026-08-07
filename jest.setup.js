@@ -152,3 +152,19 @@ jest.mock('react-native-video', () => 'Video');
 jest.mock('react-native-gesture-handler', () =>
   require('react-native-gesture-handler/jestSetup'),
 );
+
+jest.mock('@react-native-community/geolocation', () => ({
+  __esModule: true,
+  default: {
+    requestAuthorization: jest.fn(),
+    getCurrentPosition: jest.fn(),
+    watchPosition: jest.fn(),
+    clearWatch: jest.fn(),
+  },
+}));
+
+jest.mock('react-native-view-shot', () => ({
+  __esModule: true,
+  default: 'ViewShot',
+  captureRef: jest.fn(async () => 'file:///tmp/capture.jpg'),
+}));

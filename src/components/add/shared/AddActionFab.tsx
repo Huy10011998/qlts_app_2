@@ -18,12 +18,18 @@ type AddActionFabProps = {
   label?: string;
   onPress: () => void;
   variant?: "icon" | "extended";
+  /**
+   * Icon Ionicons trong nút. Mặc định dấu cộng — đổi khi hành động chính của
+   * màn không phải "thêm một bản ghi" (vd chụp ảnh xác nhận, quét mã QR).
+   */
+  iconName?: string;
 };
 
 function AddActionFabComponent({
   label = "Thêm mới",
   onPress,
   variant = "icon",
+  iconName = "add",
 }: AddActionFabProps) {
   const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
@@ -62,14 +68,14 @@ function AddActionFabComponent({
       {isExtended ? (
         <>
           <View style={styles.iconWrap}>
-            <Ionicons name="add" size={22} color="#fff" />
+            <Ionicons name={iconName} size={22} color="#fff" />
           </View>
           <Text style={styles.label} allowFontScaling={false}>
             {label}
           </Text>
         </>
       ) : (
-        <Ionicons name="add" size={34} color="#fff" />
+        <Ionicons name={iconName} size={34} color="#fff" />
       )}
     </TouchableOpacity>
   );

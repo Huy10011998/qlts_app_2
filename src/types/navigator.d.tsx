@@ -1,5 +1,10 @@
 import { RouteProp, NavigatorScreenParams } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type {
+  KhachHangItem,
+  NhaPhanPhoiItem,
+} from "../services/data/noiDiaApi";
+import type { FridgeSummary } from "../screens/NoiDia/shared/fridgeLookup";
 
 // =====================================================
 // COMMON TYPES
@@ -295,6 +300,46 @@ export type RootStackParamList = {
     groupMenuId?: number;
     viewPermission?: string;
     assetTitleHeader?: string;
+  };
+
+  /** ================= NỘI ĐỊA — TỦ LẠNH ================= */
+  /** Bước [2]: chụp ảnh tại chỗ + ghi chú + toạ độ rồi gửi. */
+  XacNhanViTriTuLanhForm: { fridge: FridgeSummary };
+  /** Bước [3]: màn kết quả sau khi gửi thành công. */
+  XacNhanViTriTuLanhResult: { fridge: FridgeSummary };
+  /**
+   * Cửa vào chức năng xác nhận vị trí: lịch sử của MỘT tủ + nút thêm lượt mới.
+   * Mở từ menu ☰ trên header màn chi tiết, giống hệt lối vào trung chuyển.
+   */
+  XacNhanViTriTuLanhLichSu: { fridge: FridgeSummary };
+
+  /**
+   * Cửa vào chức năng trung chuyển từ menu Nội địa: chọn tủ trước đã.
+   *
+   * API lịch sử trung chuyển bắt buộc `ID_NoiDia_TuLanh` (bỏ trống là trả mảng
+   * rỗng), nên không có màn "toàn bộ lượt chuyển" như web — phải chọn tủ rồi
+   * mới xem được lịch sử của nó. Màn này chỉ tra cứu theo mã/seri; muốn quét
+   * tem thì dùng tab Quét (QrDetails → menu → Trung chuyển).
+   *
+   * Tên route PHẢI trùng `View Web Mobile` khai báo trên Config hệ thống.
+   */
+  TrungChuyenTuLanh: undefined;
+  /** Lịch sử trung chuyển của một tủ + nút (+) tạo yêu cầu mới. */
+  TrungChuyenTuLanhLichSu: { fridge: FridgeSummary };
+  /** Bước [1]: tủ vào từ màn lịch sử đã có sẵn, cho quét thêm tủ khác. */
+  TrungChuyenTuLanhChonTu: { fridges: FridgeSummary[] };
+  /** Bước [2]: chọn nhà phân phối. */
+  TrungChuyenTuLanhChonNhaPhanPhoi: { fridges: FridgeSummary[] };
+  /** Bước [3]: chọn khách hàng của NPP đã chọn. */
+  TrungChuyenTuLanhChonKhachHang: {
+    fridges: FridgeSummary[];
+    nhaPhanPhoi: NhaPhanPhoiItem;
+  };
+  /** Bước [4]: đối chiếu "TỪ → ĐẾN" rồi gửi. */
+  TrungChuyenTuLanhXacNhan: {
+    fridges: FridgeSummary[];
+    nhaPhanPhoi: NhaPhanPhoiItem;
+    khachHang: KhachHangItem;
   };
 
   /** ================= SHAREHOLDERS MEETING ================= */

@@ -26,6 +26,15 @@ import AssetAddItemScreen from "../screens/Assets/AssetAddItemScreen";
 import AssetEditItemScreen from "../screens/Assets/AssetEditItemScreen";
 import AssetCloneItemScreen from "../screens/Assets/AssetCloneItemScreen";
 import AssetAddRelatedItem from "../components/assets/AssetAddRelatedItem";
+import XacNhanViTriTuLanhScreen from "../screens/NoiDia/XacNhanViTriTuLanhScreen";
+import XacNhanViTriTuLanhResultScreen from "../screens/NoiDia/XacNhanViTriTuLanhResultScreen";
+import XacNhanViTriTuLanhLichSuScreen from "../screens/NoiDia/XacNhanViTriTuLanhLichSuScreen";
+import TrungChuyenTuLanhScreen from "../screens/NoiDia/TrungChuyenTuLanhScreen";
+import TrungChuyenTuLanhLichSuScreen from "../screens/NoiDia/TrungChuyenTuLanhLichSuScreen";
+import TrungChuyenTuLanhChonTuScreen from "../screens/NoiDia/TrungChuyenTuLanhChonTuScreen";
+import TrungChuyenTuLanhChonNhaPhanPhoiScreen from "../screens/NoiDia/TrungChuyenTuLanhChonNhaPhanPhoiScreen";
+import TrungChuyenTuLanhChonKhachHangScreen from "../screens/NoiDia/TrungChuyenTuLanhChonKhachHangScreen";
+import TrungChuyenTuLanhXacNhanScreen from "../screens/NoiDia/TrungChuyenTuLanhXacNhanScreen";
 import AppearanceScreen from "../screens/Settings/AppearanceScreen";
 import ProfileScreen from "../screens/Profile/ProfileScreen";
 
@@ -229,6 +238,86 @@ export default function AppNavigator() {
           ...headerWithBack,
         })}
       />
+      {/* NỘI ĐỊA — XÁC NHẬN VỊ TRÍ TỦ LẠNH */}
+      <Stack.Screen
+        name="XacNhanViTriTuLanhForm"
+        component={XacNhanViTriTuLanhScreen}
+        options={{
+          headerShown: true,
+          title: "Xác nhận vị trí",
+          ...headerWithBack,
+        }}
+      />
+      <Stack.Screen
+        name="XacNhanViTriTuLanhResult"
+        component={XacNhanViTriTuLanhResultScreen}
+        options={{
+          headerShown: true,
+          title: "Kết quả xác nhận",
+          ...headerWithBack,
+        }}
+      />
+      <Stack.Screen
+        name="XacNhanViTriTuLanhLichSu"
+        component={XacNhanViTriTuLanhLichSuScreen}
+        options={{
+          headerShown: true,
+          title: "Lịch sử xác nhận",
+          ...headerWithBack,
+        }}
+      />
+
+      {/* NỘI ĐỊA — TRUNG CHUYỂN TỦ LẠNH */}
+      <Stack.Screen
+        name="TrungChuyenTuLanh"
+        component={TrungChuyenTuLanhScreen}
+        options={{
+          headerShown: true,
+          title: "Trung chuyển tủ lạnh",
+          ...headerWithBack,
+        }}
+      />
+      <Stack.Screen
+        name="TrungChuyenTuLanhLichSu"
+        component={TrungChuyenTuLanhLichSuScreen}
+        options={{
+          headerShown: true,
+          title: "Lịch sử trung chuyển",
+          ...headerWithBack,
+        }}
+      />
+      <Stack.Screen
+        name="TrungChuyenTuLanhChonTu"
+        component={TrungChuyenTuLanhChonTuScreen}
+      />
+      <Stack.Screen
+        name="TrungChuyenTuLanhChonNhaPhanPhoi"
+        component={TrungChuyenTuLanhChonNhaPhanPhoiScreen}
+        options={{
+          headerShown: true,
+          title: "Chọn nhà phân phối",
+          ...headerWithBack,
+        }}
+      />
+      <Stack.Screen
+        name="TrungChuyenTuLanhChonKhachHang"
+        component={TrungChuyenTuLanhChonKhachHangScreen}
+        options={{
+          headerShown: true,
+          title: "Chọn khách hàng",
+          ...headerWithBack,
+        }}
+      />
+      <Stack.Screen
+        name="TrungChuyenTuLanhXacNhan"
+        component={TrungChuyenTuLanhXacNhanScreen}
+        options={{
+          headerShown: true,
+          title: "Xác nhận trung chuyển",
+          ...headerWithBack,
+        }}
+      />
+
       <Stack.Screen
         name="Appearance"
         component={AppearanceScreen}

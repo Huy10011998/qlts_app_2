@@ -68,6 +68,17 @@ export const API_ENDPOINTS = {
   GET_PHUONG_TIEN_TRACKING: `${BASE_URL}/PhuongTien_Tracking/get-list`,
   GET_PHUONG_TIEN_CURRENT_LOCATION: `${BASE_URL}/PhuongTien/vi-tri-hien-tai`,
 
+  // NỘI ĐỊA — TỦ LẠNH
+  // Hai nhóm dưới đây dùng chung quy ước { message, data }: `data` là kết quả,
+  // `message` là câu tiếng Việt viết sẵn cho user. Lỗi 400 → hiện thẳng
+  // `message`; lỗi 403 KHÔNG có body (xem `getNoiDiaErrorMessage`).
+  XAC_NHAN_VI_TRI_TU_LANH: `${BASE_URL}/XacNhanViTri_TuLanh/xac-nhan`,
+  XAC_NHAN_VI_TRI_TU_LANH_LICH_SU: `${BASE_URL}/XacNhanViTri_TuLanh/get-list-lich-su`,
+  TRUNG_CHUYEN_TU_LANH_LICH_SU: `${BASE_URL}/TrungChuyen_TuLanh/get-list-lich-su`,
+  TRUNG_CHUYEN_TU_LANH_NHA_PHAN_PHOI: `${BASE_URL}/TrungChuyen_TuLanh/get-list-nha-phan-phoi`,
+  TRUNG_CHUYEN_TU_LANH_KHACH_HANG: `${BASE_URL}/TrungChuyen_TuLanh/get-list-khach-hang`,
+  TRUNG_CHUYEN_TU_LANH: `${BASE_URL}/TrungChuyen_TuLanh/trung-chuyen`,
+
   // PUSH NOTIFICATION
   // ⚠️ Đường dẫn tạm — BE chưa xong. Sửa lại đúng path rồi bật
   // PUSH_NOTIFICATION_API_READY bên dưới.
