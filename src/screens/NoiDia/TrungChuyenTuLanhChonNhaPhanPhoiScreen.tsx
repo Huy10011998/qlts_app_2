@@ -71,7 +71,13 @@ export default function TrungChuyenTuLanhChonNhaPhanPhoiScreen() {
         errorMessage={errorMessage}
         emptyTitle="Không có nhà phân phối nào"
         searchPlaceholder="Tìm nhà phân phối"
-        contextLabel={`Trung chuyển ${fridges.length} tủ lạnh`}
+        // Luồng hiện tại chỉ có đúng một tủ, nên nói tên tủ cụ thể hữu ích hơn
+        // là đếm số lượng. Vẫn đỡ được trường hợp bật lại bước quét nhiều tủ.
+        contextLabel={
+          fridges.length === 1
+            ? `Trung chuyển: ${fridges[0].serialNumber || fridges[0].label}`
+            : `Trung chuyển ${fridges.length} tủ lạnh`
+        }
         onSelect={handleSelect}
         toPickerItem={(item) => ({
           id: item.id,

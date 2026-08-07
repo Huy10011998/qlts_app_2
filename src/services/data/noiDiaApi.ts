@@ -20,6 +20,39 @@ export type NoiDiaResponse<T> = {
   data: T | null;
 };
 
+/**
+ * BE serialize các cột `ID_...` thành `iD_...` (i thường, D hoa) chứ không phải
+ * `id_...` — ví dụ `iD_NoiDia_KhachHang_MoTa`. Lệch đúng một ký tự nên mọi field
+ * vị trí đọc ra `undefined` và bảng hiện toàn dấu gạch.
+ *
+ * Thêm bí danh `id_...` cho từng key thay vì đổi tên: giữ luôn key gốc nên nếu
+ * BE sửa lại cho đúng thì cũng không hỏng, và không phải rải `getMatchedKey`
+ * khắp các màn.
+ */
+export const withIdAliases = <T,>(row: T): T => {
+  if (!row || typeof row !== "object") return row;
+
+  const source = row as Record<string, unknown>;
+  const aliased: Record<string, unknown> = { ...source };
+
+  Object.keys(source).forEach((key) => {
+    if (!/^iD(?=[_A-Z])/.test(key)) return;
+
+    const canonical = `id${key.slice(2)}`;
+    if (!(canonical in aliased)) aliased[canonical] = source[key];
+  });
+
+  return aliased as T;
+};
+
+/** Áp `withIdAliases` cho `data` của một response dạng mảng. */
+const normalizeNoiDiaRows = <T,>(
+  response: NoiDiaResponse<T[]>,
+): NoiDiaResponse<T[]> => ({
+  ...response,
+  data: Array.isArray(response?.data) ? response.data.map(withIdAliases) : null,
+});
+
 /** Một lượt xác nhận vị trí (bảng XacNhanViTri_TuLanh). */
 export type XacNhanViTriTuLanhItem = {
   id: number;
@@ -124,16 +157,18 @@ export const getXacNhanViTriTuLanhLichSu = async ({
   timKiem,
   top,
 }: XacNhanViTriLichSuFilter = {}) =>
-  callApi<NoiDiaResponse<XacNhanViTriTuLanhItem[]>>(
-    "POST",
-    API_ENDPOINTS.XAC_NHAN_VI_TRI_TU_LANH_LICH_SU,
-    {
-      ID_NoiDia_TuLanh: idNoiDiaTuLanh,
-      TuNgay: tuNgay,
-      DenNgay: denNgay,
-      TimKiem: timKiem,
-      Top: top,
-    },
+  normalizeNoiDiaRows(
+    await callApi<NoiDiaResponse<XacNhanViTriTuLanhItem[]>>(
+      "POST",
+      API_ENDPOINTS.XAC_NHAN_VI_TRI_TU_LANH_LICH_SU,
+      {
+        ID_NoiDia_TuLanh: idNoiDiaTuLanh,
+        TuNgay: tuNgay,
+        DenNgay: denNgay,
+        TimKiem: timKiem,
+        Top: top,
+      },
+    ),
   );
 
 /** Một lần trung chuyển: 5 cấp vị trí cũ + 5 cấp mới (hậu tố `_Moi`). */
@@ -170,10 +205,12 @@ export const getTrungChuyenTuLanhLichSu = async (
   idNoiDiaTuLanh: number,
   top?: number,
 ) =>
-  callApi<NoiDiaResponse<TrungChuyenTuLanhItem[]>>(
-    "POST",
-    API_ENDPOINTS.TRUNG_CHUYEN_TU_LANH_LICH_SU,
-    { ID_NoiDia_TuLanh: idNoiDiaTuLanh, Top: top },
+  normalizeNoiDiaRows(
+    await callApi<NoiDiaResponse<TrungChuyenTuLanhItem[]>>(
+      "POST",
+      API_ENDPOINTS.TRUNG_CHUYEN_TU_LANH_LICH_SU,
+      { ID_NoiDia_TuLanh: idNoiDiaTuLanh, Top: top },
+    ),
   );
 
 export type NhaPhanPhoiItem = {
@@ -197,10 +234,12 @@ export type KhachHangItem = {
 
 /** Danh sách NPP đang hoạt động, đã sắp theo tên. Cỡ trăm dòng → nên cache. */
 export const getTrungChuyenNhaPhanPhoi = async () =>
-  callApi<NoiDiaResponse<NhaPhanPhoiItem[]>>(
-    "POST",
-    API_ENDPOINTS.TRUNG_CHUYEN_TU_LANH_NHA_PHAN_PHOI,
-    {},
+  normalizeNoiDiaRows(
+    await callApi<NoiDiaResponse<NhaPhanPhoiItem[]>>(
+      "POST",
+      API_ENDPOINTS.TRUNG_CHUYEN_TU_LANH_NHA_PHAN_PHOI,
+      {},
+    ),
   );
 
 /**
@@ -210,10 +249,12 @@ export const getTrungChuyenNhaPhanPhoi = async () =>
  * ⚠️ Một NPP có thể hơn 1.000 khách hàng → màn gọi phải có ô tìm kiếm.
  */
 export const getTrungChuyenKhachHang = async (idNhaPhanPhoi: number) =>
-  callApi<NoiDiaResponse<KhachHangItem[]>>(
-    "POST",
-    API_ENDPOINTS.TRUNG_CHUYEN_TU_LANH_KHACH_HANG,
-    { ID_NoiDia_NhaPhanPhoi: idNhaPhanPhoi },
+  normalizeNoiDiaRows(
+    await callApi<NoiDiaResponse<KhachHangItem[]>>(
+      "POST",
+      API_ENDPOINTS.TRUNG_CHUYEN_TU_LANH_KHACH_HANG,
+      { ID_NoiDia_NhaPhanPhoi: idNhaPhanPhoi },
+    ),
   );
 
 export const KHACH_HANG_NAME_CLASS = "NoiDia_KhachHang";

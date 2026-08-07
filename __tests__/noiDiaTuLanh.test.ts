@@ -10,6 +10,7 @@ import {
   parseFridgeQr,
   toFridgeSummary,
 } from "../src/screens/NoiDia/shared/fridgeLookup";
+import { withIdAliases } from "../src/services/data/noiDiaApi";
 
 describe("toThumbnailPath", () => {
   it("thêm _resize vào tên folder cuối và tên file, giữ nguyên dấu phân cách", () => {
@@ -47,6 +48,47 @@ describe("formatNoiDiaDateTime", () => {
 
   it("trả dấu gạch khi ngày không hợp lệ", () => {
     expect(formatNoiDiaDateTime("khong-phai-ngay")).toBe(EMPTY_VALUE);
+  });
+});
+
+describe("withIdAliases", () => {
+  it("thêm bí danh id_ cho key iD_ mà BE trả về", () => {
+    const row = withIdAliases({
+      iD_NoiDia_KhachHang_MoTa: "5 Thu",
+      iD_NoiDia_KhachHang_Moi_MoTa: "Kim Ngân",
+      iD_NoiDia_TuLanh: 4,
+    } as any);
+
+    expect(row.id_NoiDia_KhachHang_MoTa).toBe("5 Thu");
+    expect(row.id_NoiDia_KhachHang_Moi_MoTa).toBe("Kim Ngân");
+    expect(row.id_NoiDia_TuLanh).toBe(4);
+  });
+
+  it("giữ nguyên key gốc, để BE sửa lại đúng cũng không hỏng", () => {
+    const row = withIdAliases({ iD_NoiDia_Mien_MoTa: "Hồ Chí Minh" } as any);
+
+    expect(row.iD_NoiDia_Mien_MoTa).toBe("Hồ Chí Minh");
+  });
+
+  it("không ghi đè khi BE đã trả sẵn key đúng", () => {
+    const row = withIdAliases({
+      iD_NoiDia_Mien_MoTa: "cũ",
+      id_NoiDia_Mien_MoTa: "đúng",
+    } as any);
+
+    expect(row.id_NoiDia_Mien_MoTa).toBe("đúng");
+  });
+
+  it("không đụng tới các key khác", () => {
+    const row = withIdAliases({
+      serialNumber: "E88101A2G000083",
+      log_ID_User_MoTa: "Nguyễn Minh Khoa",
+      iDs: [],
+    } as any);
+
+    expect(row.serialNumber).toBe("E88101A2G000083");
+    expect(row.log_ID_User_MoTa).toBe("Nguyễn Minh Khoa");
+    expect(Object.keys(row)).not.toContain("ids");
   });
 });
 
