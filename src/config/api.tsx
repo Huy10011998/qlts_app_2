@@ -20,6 +20,9 @@ export const API_ENDPOINTS = {
 
   // DASHBOARD TRANG CHỦ — một lượt gọi dựng cả 4 khối số liệu, không tham số.
   GET_DASHBOARD_TAISAN: `${BASE_URL}/Common/get-dashboard-taisan`,
+  // Hai card máy móc (cơ cấu theo đơn vị + 12 tháng luỹ kế). Gọi ĐỘC LẬP với
+  // endpoint trên: lỗi ở đây chỉ được làm trống hai card đó, không phải cả màn.
+  GET_DASHBOARD_MAYMOC: `${BASE_URL}/MayMoc/dashboard`,
 
   // PERMISSION
   GET_PERMISSION: `${BASE_URL}/Common/get-permission`,
@@ -64,6 +67,17 @@ export const API_ENDPOINTS = {
   GET_PHUONG_TIEN_HANH_TRINH_GPS: `${BASE_URL}/PhuongTien_HanhTrinh_GPS/get-list`,
   GET_PHUONG_TIEN_TRACKING: `${BASE_URL}/PhuongTien_Tracking/get-list`,
   GET_PHUONG_TIEN_CURRENT_LOCATION: `${BASE_URL}/PhuongTien/vi-tri-hien-tai`,
+
+  // NỘI ĐỊA — TỦ LẠNH
+  // Hai nhóm dưới đây dùng chung quy ước { message, data }: `data` là kết quả,
+  // `message` là câu tiếng Việt viết sẵn cho user. Lỗi 400 → hiện thẳng
+  // `message`; lỗi 403 KHÔNG có body (xem `getNoiDiaErrorMessage`).
+  XAC_NHAN_VI_TRI_TU_LANH: `${BASE_URL}/XacNhanViTri_TuLanh/xac-nhan`,
+  XAC_NHAN_VI_TRI_TU_LANH_LICH_SU: `${BASE_URL}/XacNhanViTri_TuLanh/get-list-lich-su`,
+  TRUNG_CHUYEN_TU_LANH_LICH_SU: `${BASE_URL}/TrungChuyen_TuLanh/get-list-lich-su`,
+  TRUNG_CHUYEN_TU_LANH_NHA_PHAN_PHOI: `${BASE_URL}/TrungChuyen_TuLanh/get-list-nha-phan-phoi`,
+  TRUNG_CHUYEN_TU_LANH_KHACH_HANG: `${BASE_URL}/TrungChuyen_TuLanh/get-list-khach-hang`,
+  TRUNG_CHUYEN_TU_LANH: `${BASE_URL}/TrungChuyen_TuLanh/trung-chuyen`,
 
   // PUSH NOTIFICATION
   // ⚠️ Đường dẫn tạm — BE chưa xong. Sửa lại đúng path rồi bật

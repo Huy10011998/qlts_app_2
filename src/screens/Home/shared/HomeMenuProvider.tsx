@@ -50,6 +50,8 @@ type HomeMenuContextValue = {
   fetchHomeMenuItems: () => Promise<void>;
   hasMenuLoadError: boolean;
   isBlockOrderSheetVisible: boolean;
+  /** Lượt làm mới do nút trên header bấm — để nút tự quay trong lúc chờ. */
+  isHomeRefreshing: boolean;
   isMenuLoading: boolean;
   moveBlock: (args: {
     visibleKeys: HomeBlockKey[];
@@ -58,6 +60,13 @@ type HomeMenuContextValue = {
   }) => void;
   openBlockOrderSheet: () => void;
   pinnedFeatureIds: string[];
+  /**
+   * HomeScreen đăng ký hàm làm mới của chính nó ở đây; trả về hàm bỏ đăng ký.
+   * Nút làm mới nằm trên header (do navigator dựng) nên không gọi trực tiếp được.
+   */
+  registerHomeRefresh: (refresh: () => Promise<void>) => () => void;
+  /** Chạy lượt làm mới mà HomeScreen đã đăng ký. */
+  refreshHome: () => Promise<void>;
   togglePinnedFeature: (featureId: string) => void;
   vehicleCurrentLocationMenuItem: Item | null;
   vehicleJourneyMenuItem: Item | null;
@@ -105,6 +114,34 @@ export function HomeMenuProvider({ children }: React.PropsWithChildren) {
     () => setIsBlockOrderSheetVisible(false),
     []
   );
+
+  // Nút làm mới cũng ở header như nút sắp xếp, nhưng việc làm mới thì nằm trong
+  // HomeScreen (permission + menu + dashboard) — nên header gọi qua chỗ đăng ký này.
+  const homeRefreshRef = useRef<(() => Promise<void>) | null>(null);
+  const [isHomeRefreshing, setIsHomeRefreshing] = useState(false);
+  const registerHomeRefresh = useCallback((refresh: () => Promise<void>) => {
+    homeRefreshRef.current = refresh;
+
+    return () => {
+      if (homeRefreshRef.current === refresh) {
+        homeRefreshRef.current = null;
+      }
+    };
+  }, []);
+  const refreshHome = useCallback(async () => {
+    const refresh = homeRefreshRef.current;
+
+    // Bấm liên tục thì bỏ qua: lượt đang chạy đã gọi đúng những API đó rồi.
+    if (!refresh || isHomeRefreshing) return;
+
+    setIsHomeRefreshing(true);
+
+    try {
+      await refresh();
+    } finally {
+      setIsHomeRefreshing(false);
+    }
+  }, [isHomeRefreshing]);
 
   const fetchHomeMenuItems = useCallback(async () => {
     if (fetchingRef.current) return;
@@ -238,10 +275,13 @@ export function HomeMenuProvider({ children }: React.PropsWithChildren) {
       fetchHomeMenuItems,
       hasMenuLoadError,
       isBlockOrderSheetVisible,
+      isHomeRefreshing,
       isMenuLoading,
       moveBlock,
       openBlockOrderSheet,
       pinnedFeatureIds,
+      refreshHome,
+      registerHomeRefresh,
       togglePinnedFeature,
       vehicleCurrentLocationMenuItem,
       vehicleJourneyMenuItem,
@@ -254,10 +294,13 @@ export function HomeMenuProvider({ children }: React.PropsWithChildren) {
       fetchHomeMenuItems,
       hasMenuLoadError,
       isBlockOrderSheetVisible,
+      isHomeRefreshing,
       isMenuLoading,
       moveBlock,
       openBlockOrderSheet,
       pinnedFeatureIds,
+      refreshHome,
+      registerHomeRefresh,
       togglePinnedFeature,
       vehicleCurrentLocationMenuItem,
       vehicleJourneyMenuItem,

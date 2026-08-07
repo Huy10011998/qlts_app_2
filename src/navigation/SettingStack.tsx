@@ -1,9 +1,6 @@
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import SettingScreen from "../screens/Settings/SettingScreen";
-import ProfileScreen from "../screens/Profile/ProfileScreen";
-import AppearanceScreen from "../screens/Settings/AppearanceScreen";
-import { headerWithBack } from "./shared/navigationOptions";
 
 const Stack = createNativeStackNavigator();
 
@@ -15,24 +12,6 @@ export default function SettingStack() {
         name="Setting"
         component={SettingScreen}
         options={{ headerShown: false }}
-      />
-
-      {/* ProfileScreen dùng header chuẩn với back button */}
-      <Stack.Screen
-        name="Profile"
-        component={ProfileScreen}
-        options={{
-          title: "Hồ sơ cá nhân",
-          ...headerWithBack,
-        }}
-      />
-      <Stack.Screen
-        name="Appearance"
-        component={AppearanceScreen}
-        options={{
-          title: "Hiển thị",
-          ...headerWithBack,
-        }}
       />
     </Stack.Navigator>
   );

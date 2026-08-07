@@ -13,6 +13,11 @@ export const makeStyles = (c: AppColors) =>
     headerButton: {
       paddingHorizontal: 5,
     },
+    headerActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 2,
+    },
     offlineBar: {
       flexDirection: "row",
       alignItems: "center",
@@ -626,7 +631,9 @@ export const makeStyles = (c: AppColors) =>
     // Environmental
     envRow: { flexDirection: "row", marginTop: 12 },
     envItem: { flex: 1, alignItems: "center", gap: 4 },
+    envValueRow: { flexDirection: "row", alignItems: "baseline", gap: 5 },
     envValue: { fontSize: 30, fontWeight: "700", color: c.text },
+    envUnit: { fontSize: 14, color: c.textSecondary },
     envLabel: {
       fontSize: 12,
       color: c.textMuted,

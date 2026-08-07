@@ -4,10 +4,8 @@ import {
   Text,
   LayoutAnimation,
   Platform,
-  Pressable,
   TouchableOpacity,
   StyleSheet,
-  TextInput,
   FlatList,
   UIManager,
 } from "react-native";
@@ -16,12 +14,11 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import type { PropsEnum } from "../../types/components.d";
 import { useDebounce } from "../../hooks/useDebounce";
 import IsLoading from "../ui/IconLoading";
+import SearchBar from "../ui/SearchBar";
 import EmptyState from "../ui/EmptyState";
 import BottomSheetModalShell from "../shared/BottomSheetModalShell";
 import {
   AppColors,
-  useAppColors,
-  useHairlineBorderColor,
   useSeparatorColor,
   useStyles,
 } from "../../utils/helpers/colors";
@@ -59,9 +56,7 @@ export default function EnumAndReferencePickerModal({
   loadedCount,
 }: PropsEnum & ExtraProps) {
   const styles = useStyles(makeStyles);
-  const c = useAppColors();
   const insets = useSafeAreaInsets();
-  const hairlineBorderColor = useHairlineBorderColor();
   const separatorColor = useSeparatorColor();
   const [searchText, setSearchText] = useState("");
   const [multiSelectedValues, setMultiSelectedValues] = useState<string[]>([]);
@@ -251,38 +246,15 @@ export default function EnumAndReferencePickerModal({
         </View>
       ) : null}
 
-      <View
-        style={[styles.searchWrapper, { borderColor: hairlineBorderColor }]}
-      >
-        <View style={styles.searchIconWrap}>
-          <Ionicons name="search-outline" size={16} color={c.textSub} />
-        </View>
-        <TextInput
-          placeholder="Tìm kiếm..."
-          placeholderTextColor={c.placeholder}
-          value={searchText}
-          onChangeText={setSearchText}
-          style={styles.searchInput}
-          clearButtonMode="never"
-          returnKeyType="search"
-          maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
-        />
-
-        {showSearchSpinner && (
-          <View style={styles.spinnerWrap}>
-            <IsLoading size="small" color={c.red} />
-          </View>
-        )}
-        {!showSearchSpinner && searchText.length > 0 ? (
-          <Pressable
-            onPress={handleClearSearch}
-            style={styles.clearButton}
-            hitSlop={8}
-          >
-            <Ionicons name="close-circle" size={16} color={c.placeholder} />
-          </Pressable>
-        ) : null}
-      </View>
+      <SearchBar
+        value={searchText}
+        onChangeText={setSearchText}
+        placeholder="Tìm kiếm..."
+        onClear={handleClearSearch}
+        isSearching={showSearchSpinner}
+        style={styles.searchSpacing}
+        maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
+      />
 
       {!isEmpty ? (
         <View style={styles.stickyHeader}>
@@ -381,54 +353,8 @@ const makeStyles = (c: AppColors) =>
       color: "#fff",
     },
 
-    searchWrapper: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: c.surface,
-      minHeight: 48,
-      paddingHorizontal: 12,
-      borderRadius: 14,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border,
+    searchSpacing: {
       marginBottom: 8,
-      shadowColor: c.shadow,
-      shadowOpacity: 0.06,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 2 },
-      elevation: 2,
-    },
-
-    searchIconWrap: {
-      marginRight: 8,
-      width: 20,
-      height: 20,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-
-    searchInput: {
-      flex: 1,
-      height: 48,
-      paddingVertical: 0,
-      fontSize: 14,
-      lineHeight: 20,
-      color: c.text,
-      fontWeight: "400",
-      includeFontPadding: false,
-      textAlignVertical: "center",
-    },
-
-    spinnerWrap: {
-      width: 24,
-      height: 24,
-      alignItems: "center",
-      justifyContent: "center",
-      marginLeft: 6,
-    },
-
-    clearButton: {
-      padding: 4,
-      marginLeft: 4,
     },
 
     list: {

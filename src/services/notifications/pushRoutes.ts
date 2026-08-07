@@ -14,33 +14,32 @@ import { log, warn } from "../../utils/Logger";
 type PushRouteContainer = "root" | "homeTab" | "settingTab";
 
 const PUSH_ROUTES: Record<string, PushRouteContainer> = {
-  // Màn hình nằm trực tiếp trên RootStack (AppNavigator)
+  // Màn hình nằm trực tiếp trên RootStack (AppNavigator). Tab bar chỉ còn ở
+  // màn gốc của mỗi tab, nên mọi màn chi tiết đều ở đây.
+  Asset: "root",
+  AssetList: "root",
+  AssetDetails: "root",
+  AssetRelatedList: "root",
+  AssetRelatedDetails: "root",
+  AssetHistoryDetail: "root",
+  Report: "root",
+  Camera: "root",
+  CameraList: "root",
+  CameraListGrid: "root",
   CameraPlayback: "root",
+  VehicleJourney: "root",
+  VehicleTracking: "root",
   VehicleJourneyMap: "root",
   VehicleTrackingMap: "root",
   VehicleCurrentLocation: "root",
+  SolarPlant: "root",
+  ShareholdersMeeting: "root",
+  Profile: "root",
+  Appearance: "root",
 
-  // Màn hình trong HomeStack (Tabs → HomeTab)
+  // Màn gốc của tab — phải đi qua Tabs mới chọn đúng tab.
   Home: "homeTab",
-  Asset: "homeTab",
-  AssetList: "homeTab",
-  AssetDetails: "homeTab",
-  AssetRelatedList: "homeTab",
-  AssetRelatedDetails: "homeTab",
-  AssetHistoryDetail: "homeTab",
-  Report: "homeTab",
-  Camera: "homeTab",
-  CameraList: "homeTab",
-  CameraListGrid: "homeTab",
-  VehicleJourney: "homeTab",
-  VehicleTracking: "homeTab",
-  SolarPlant: "homeTab",
-  ShareholdersMeeting: "homeTab",
-
-  // Màn hình trong SettingStack (Tabs → SettingTab)
   Setting: "settingTab",
-  Profile: "settingTab",
-  Appearance: "settingTab",
 };
 
 const TAB_BY_CONTAINER: Record<

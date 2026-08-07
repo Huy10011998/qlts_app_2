@@ -1,6 +1,11 @@
 import { StyleSheet } from "react-native";
 import { AppColors } from "../../utils/helpers/colors";
 import { HOME_REPORT_CARD_MIN_HEIGHT } from "./shared/HomeReportCard";
+import { HOME_BRAND_RED } from "./shared/homeTheme";
+import {
+  HOME_SHORTCUT_COLUMNS,
+  getHomeShortcutRowCount,
+} from "./shared/homeShortcutPages";
 
 // Layout constants shared between the screen grid math and these styles.
 export const HOME_CONTENT_HORIZONTAL_PADDING = 16;
@@ -11,23 +16,21 @@ export const HOME_FEATURE_GRID_GAP = 10;
 // chức năng đầu tiên ra khỏi màn hình.
 export const HOME_FEATURE_CARD_HEIGHT = 106;
 
-export const HOME_SHORTCUT_VISIBLE_CARDS = 4;
-// Khi ghim quá 4, card thu nhỏ để card thứ 5 hở ra một phần. Cuộn ngang mà không
-// thấy gì bên phải thì user không biết là còn nữa — chính điểm yếu của cuộn ngang.
-// Vừa đúng 4 thì giữ nguyên bề rộng cũ để hàng lấp kín, không chừa khoảng trống.
-const HOME_SHORTCUT_PEEK_CARDS = 4.35;
+// Truy cập nhanh giờ chia trang, không cuộn tự do nữa: mỗi trang rộng đúng bề
+// ngang nội dung và lấp kín một hàng card, nên không còn phải chừa phần hở ra để
+// báo "còn nữa" — hàng chấm tròn ở dưới đã nói điều đó.
+export const getHomeShortcutCardWidth = (contentWidth: number) =>
+  (contentWidth -
+    HOME_FEATURE_GRID_GAP * (HOME_SHORTCUT_COLUMNS - 1)) /
+  HOME_SHORTCUT_COLUMNS;
 
-export const getHomeShortcutCardWidth = (
-  contentWidth: number,
-  itemCount: number,
-) => {
-  const visibleCards =
-    itemCount > HOME_SHORTCUT_VISIBLE_CARDS
-      ? HOME_SHORTCUT_PEEK_CARDS
-      : HOME_SHORTCUT_VISIBLE_CARDS;
+export const getHomeShortcutPagerHeight = (itemCount: number) => {
+  const rows = getHomeShortcutRowCount(itemCount);
+
+  if (rows <= 0) return 0;
 
   return (
-    (contentWidth - HOME_FEATURE_GRID_GAP * (visibleCards - 1)) / visibleCards
+    rows * HOME_FEATURE_CARD_HEIGHT + (rows - 1) * HOME_FEATURE_GRID_GAP
   );
 };
 
@@ -64,18 +67,57 @@ export const makeStyles = (c: AppColors) =>
       height: HOME_FEATURE_CARD_HEIGHT,
     },
 
-    // Hàng shortcut tràn ra sát hai mép màn hình: card cuộn khuất dưới mép thật
-    // thay vì bị cắt ở lề 16pt của nội dung, nên phần hở ra trông có chủ đích.
-    shortcutRow: {
-      marginHorizontal: -HOME_CONTENT_HORIZONTAL_PADDING,
-      marginBottom: 14,
+    // Trang shortcut rộng đúng bề ngang nội dung nên `pagingEnabled` snap đúng
+    // từng trang — không cần snapToInterval và không tràn ra ngoài lề 16pt.
+    shortcutPager: {
+      alignSelf: "stretch",
     },
-    shortcutRowContent: {
-      paddingHorizontal: HOME_CONTENT_HORIZONTAL_PADDING,
+    shortcutPage: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      alignContent: "flex-start",
       gap: HOME_FEATURE_GRID_GAP,
     },
     shortcutCard: {
       height: HOME_FEATURE_CARD_HEIGHT,
+    },
+    // Chấm tròn bên trái, "Xem tất cả" bên phải, cùng một hàng dưới lưới.
+    shortcutFooter: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      minHeight: 28,
+      marginTop: 6,
+      marginBottom: 14,
+    },
+    shortcutDots: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      flexShrink: 1,
+    },
+    shortcutDot: {
+      width: 7,
+      height: 7,
+      borderRadius: 4,
+      backgroundColor: c.borderStrong,
+    },
+    shortcutDotActive: {
+      width: 22,
+      height: 7,
+      borderRadius: 4,
+      backgroundColor: HOME_BRAND_RED,
+    },
+    shortcutViewAll: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      flexShrink: 0,
+    },
+    shortcutViewAllText: {
+      fontSize: 11,
+      fontWeight: "600",
+      color: HOME_BRAND_RED,
     },
     noPermissionCard: {
       backgroundColor: c.surface,

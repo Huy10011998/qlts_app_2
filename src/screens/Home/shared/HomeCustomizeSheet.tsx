@@ -3,7 +3,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -11,6 +10,7 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 
 import BottomSheetModalShell from "../../../components/shared/BottomSheetModalShell";
 import EmptyState from "../../../components/ui/EmptyState";
+import SearchBar from "../../../components/ui/SearchBar";
 import {
   AppColors,
   useAppColors,
@@ -174,23 +174,14 @@ export default function HomeCustomizeSheet({
         </Text>
       </View>
 
-      <View style={[styles.searchBox, { backgroundColor: colors.surfaceAlt }]}>
-        <Ionicons name="search" size={16} color={colors.textSub} />
-        <TextInput
-          style={[styles.searchInput, { color: colors.text }]}
-          placeholder="Tìm chức năng, báo cáo..."
-          placeholderTextColor={colors.placeholder}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          returnKeyType="search"
-          allowFontScaling={false}
-        />
-        {searchQuery.length > 0 ? (
-          <TouchableOpacity onPress={() => setSearchQuery("")} hitSlop={8}>
-            <Ionicons name="close-circle" size={16} color={colors.textSub} />
-          </TouchableOpacity>
-        ) : null}
-      </View>
+      <SearchBar
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        placeholder="Tìm chức năng, báo cáo..."
+        variant="plain"
+        style={styles.searchSpacing}
+        allowFontScaling={false}
+      />
 
       <ScrollView
         style={styles.listView}
@@ -399,22 +390,8 @@ const makeStyles = (c: AppColors) =>
       textAlign: "center",
       marginTop: 3,
     },
-    searchBox: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-      borderRadius: 12,
-      paddingHorizontal: 12,
-      height: 42,
+    searchSpacing: {
       marginBottom: 16,
-    },
-    searchInput: {
-      flex: 1,
-      height: 42,
-      fontSize: 14,
-      paddingVertical: 0,
-      includeFontPadding: false,
-      textAlignVertical: "center",
     },
     listView: { flex: 1 },
     listContent: { paddingBottom: 20 },

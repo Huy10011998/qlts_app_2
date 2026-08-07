@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  Animated,
   AppState,
+  Easing,
   View,
   Image,
   TouchableOpacity,
@@ -71,9 +73,11 @@ export default function HeaderHome(_props: HeaderHomeProps) {
   const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const colors = useAppColors();
-  const { openBlockOrderSheet } = useHomeMenuContext();
+  const { isHomeRefreshing, openBlockOrderSheet, refreshHome } =
+    useHomeMenuContext();
 
   const [now, setNow] = useState(new Date());
+  const spin = useRef(new Animated.Value(0)).current;
   const greeting = getGreeting(now);
   const showComingSoonAlert = () => {
     Alert.alert(
@@ -101,6 +105,42 @@ export default function HeaderHome(_props: HeaderHomeProps) {
       appStateSubscription.remove();
     };
   }, []);
+
+  // Quay hết một vòng rồi mới dừng: cắt giữa vòng thì icon đứng nghiêng, nhìn như
+  // bị treo. Vòng cuối chạy nốt trong lúc `isHomeRefreshing` đã về false.
+  useEffect(() => {
+    if (!isHomeRefreshing) return;
+
+    let isActive = true;
+    const spinOnce = () => {
+      spin.setValue(0);
+      Animated.timing(spin, {
+        toValue: 1,
+        duration: 900,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished && isActive) spinOnce();
+      });
+    };
+
+    spinOnce();
+
+    return () => {
+      isActive = false;
+    };
+  }, [isHomeRefreshing, spin]);
+
+  const spinStyle = {
+    transform: [
+      {
+        rotate: spin.interpolate({
+          inputRange: [0, 1],
+          outputRange: ["0deg", "360deg"],
+        }),
+      },
+    ],
+  };
 
   return (
     <View style={[styles.outer, { paddingTop: insets.top }]}>
@@ -131,6 +171,22 @@ export default function HeaderHome(_props: HeaderHomeProps) {
         </TouchableOpacity>
 
         <View style={styles.topActions}>
+          {/* Làm mới cả trang: dùng chung lượt tải với kéo-để-làm-mới, tiện cho
+              người dùng một tay hoặc khi trang đang cuộn giữa. */}
+          <TouchableOpacity
+            style={styles.iconBtn}
+            activeOpacity={0.75}
+            onPress={refreshHome}
+            disabled={isHomeRefreshing}
+            accessibilityRole="button"
+            accessibilityLabel="Làm mới Trang chủ"
+            accessibilityState={{ busy: isHomeRefreshing }}
+          >
+            <Animated.View style={isHomeRefreshing ? spinStyle : undefined}>
+              <Ionicons name="refresh-outline" size={20} color="#fff" />
+            </Animated.View>
+          </TouchableOpacity>
+
           {/* Sắp xếp khối đặt cạnh chuông vì đây là hành động của cả trang, và
               header là chỗ duy nhất không trôi theo thứ tự khối. */}
           <TouchableOpacity

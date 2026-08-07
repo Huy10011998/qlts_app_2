@@ -63,6 +63,7 @@ import {
   formatPowerMw,
   getDateRangeForPeriod,
   getSolarContentWidth,
+  hasNumber,
   MAX_SOLAR_CONTENT_WIDTH,
   isCurrentPeriodRange,
   NO_VALUE,
@@ -1208,13 +1209,81 @@ const EnergyProducedSummary: React.FC<{
 
 // ─── Nút header ──────────────────────────────────────────────────────────────
 
-function SolarPlantMenuButton({ onPress }: { onPress: () => void }) {
+function SolarPlantHeaderActions({
+  isRefreshing,
+  onOpenMenu,
+  onRefresh,
+}: {
+  isRefreshing: boolean;
+  onOpenMenu: () => void;
+  onRefresh: () => void;
+}) {
   const styles = useStyles(makeStyles);
+  const spin = useRef(new Animated.Value(0)).current;
+
+  // Quay hết một vòng rồi mới dừng: cắt giữa vòng thì icon đứng nghiêng, nhìn như
+  // bị treo. Vòng cuối chạy nốt sau khi `isRefreshing` đã về false.
+  useEffect(() => {
+    if (!isRefreshing) return;
+
+    let isActive = true;
+    const spinOnce = () => {
+      spin.setValue(0);
+      Animated.timing(spin, {
+        toValue: 1,
+        duration: 900,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished && isActive) spinOnce();
+      });
+    };
+
+    spinOnce();
+
+    return () => {
+      isActive = false;
+    };
+  }, [isRefreshing, spin]);
 
   return (
-    <TouchableOpacity onPress={onPress} style={styles.headerButton}>
-      <Ionicons name="menu" size={26} color="#fff" />
-    </TouchableOpacity>
+    <View style={styles.headerActions}>
+      <TouchableOpacity
+        onPress={onRefresh}
+        style={styles.headerButton}
+        disabled={isRefreshing}
+        accessibilityRole="button"
+        accessibilityLabel="Làm mới dữ liệu nhà máy"
+        accessibilityState={{ busy: isRefreshing }}
+      >
+        <Animated.View
+          style={
+            isRefreshing
+              ? {
+                  transform: [
+                    {
+                      rotate: spin.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ["0deg", "360deg"],
+                      }),
+                    },
+                  ],
+                }
+              : undefined
+          }
+        >
+          <Ionicons name="refresh-outline" size={22} color="#fff" />
+        </Animated.View>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={onOpenMenu}
+        style={styles.headerButton}
+        accessibilityRole="button"
+        accessibilityLabel="Chọn nhà máy"
+      >
+        <Ionicons name="menu" size={26} color="#fff" />
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -1300,11 +1369,6 @@ const SolarFullScreen: React.FC = () => {
     [closeMenu, selectSite],
   );
 
-  const renderHeaderRight = useCallback(
-    () => <SolarPlantMenuButton onPress={togglePanel} />,
-    [togglePanel],
-  );
-
   /**
    * Kéo-để-tải-lại là thao tác chủ động nên gọi thẳng `refresh`, bỏ qua chốt
    * giãn nhịp 5 phút của các lượt tải lại tự động.
@@ -1318,6 +1382,19 @@ const SolarFullScreen: React.FC = () => {
       setIsPullRefreshing(false);
     }
   }, [refresh]);
+
+  // Nút làm mới trên header dùng đúng lượt tải của kéo-để-làm-mới, nên vòng xoay
+  // của `RefreshControl` cũng chạy theo và không có hai đường tải song song.
+  const renderHeaderRight = useCallback(
+    () => (
+      <SolarPlantHeaderActions
+        isRefreshing={isPullRefreshing}
+        onOpenMenu={togglePanel}
+        onRefresh={handlePullRefresh}
+      />
+    ),
+    [handlePullRefresh, isPullRefreshing, togglePanel],
+  );
 
   const shiftDateRange = useCallback(
     (direction: -1 | 1) => {
@@ -2084,6 +2161,11 @@ const EnvBenefitsRow: React.FC<{ data: SolarEnvBenefitsView | null }> = ({
   data,
 }) => {
   const styles = useStyles(makeStyles);
+  /** Kg → tấn, km → triệu km để con số hiển thị ngắn gọn. */
+  const co2Tons = hasNumber(data?.co2Kg) ? data!.co2Kg! / 1_000 : null;
+  const kmMillions = hasNumber(data?.kmDriven)
+    ? data!.kmDriven! / 1_000_000
+    : null;
 
   return (
     <View style={styles.envRow}>
@@ -2098,8 +2180,11 @@ const EnvBenefitsRow: React.FC<{ data: SolarEnvBenefitsView | null }> = ({
           <Ellipse cx={52} cy={10} rx={5} ry={9} fill="#dce8f0" opacity={0.7} />
           <Ellipse cx={58} cy={8} rx={4} ry={6} fill="#e8f2f8" opacity={0.6} />
         </Svg>
-        <Text style={styles.envValue}>{formatCount(data?.co2Kg)}</Text>
-        <Text style={styles.envLabel}>Kg CO₂ tránh{"\n"}phát thải</Text>
+        <View style={styles.envValueRow}>
+          <Text style={styles.envValue}>{formatCount(co2Tons)}</Text>
+          <Text style={styles.envUnit}>tấn</Text>
+        </View>
+        <Text style={styles.envLabel}>CO₂ tránh{"\n"}phát thải</Text>
       </View>
       <View style={styles.envItem}>
         {/* car + trees icon */}
@@ -2115,9 +2200,12 @@ const EnvBenefitsRow: React.FC<{ data: SolarEnvBenefitsView | null }> = ({
           <Rect x={70} y={28} width={8} height={28} rx={2} fill="#4aaa5a" />
           <Ellipse cx={74} cy={26} rx={8} ry={8} fill="#3a9a4a" />
         </Svg>
-        <Text style={styles.envValue}>{formatCount(data?.kmDriven)}</Text>
+        <View style={styles.envValueRow}>
+          <Text style={styles.envValue}>{formatCount(kmMillions, 2)}</Text>
+          <Text style={styles.envUnit}>triệu km</Text>
+        </View>
         {/* Dấu * cho người xem biết đây là số quy đổi, nhà cung cấp không trả. */}
-        <Text style={styles.envLabel}>km lái xe bằng{"\n"}điện mặt trời *</Text>
+        <Text style={styles.envLabel}>lái xe bằng{"\n"}điện mặt trời *</Text>
       </View>
     </View>
   );

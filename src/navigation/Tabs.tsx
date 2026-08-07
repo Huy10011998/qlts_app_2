@@ -18,11 +18,10 @@ import { HomeMenuProvider } from "../screens/Home/shared/HomeMenuProvider";
 import {
   TAB_ACTIVE_COLOR,
   TAB_INVERTED_BG,
-  TAB_INVERTED_INACTIVE_COLOR,
   createTabBarStyle,
   tabBarStyles,
 } from "./shared/tabBarTheme";
-import { useAppColors, useHairlineBorderColor } from "../utils/helpers/colors";
+import { useAppColors, useStrongBorderColor } from "../utils/helpers/colors";
 import { useColorScheme } from "../hooks/useColorScheme";
 
 const Tab = createBottomTabNavigator();
@@ -90,71 +89,26 @@ function SettingTabIcon({ color }: { color: string }) {
   return <Ionicons name="settings" size={24} color={color} />;
 }
 
-function getDeepFocusedRouteName(route: any): string | undefined {
-  const directFocusedRouteName = getFocusedRouteNameFromRoute(route);
-  const nestedState = route.state;
-
-  if (!nestedState || !("routes" in nestedState)) {
-    return directFocusedRouteName ?? route.name;
-  }
-
-  const nestedRoute = nestedState.routes[nestedState.index ?? 0];
-
-  if (!nestedRoute) {
-    return directFocusedRouteName ?? route.name;
-  }
-
-  return (
-    getDeepFocusedRouteName(nestedRoute) ?? directFocusedRouteName ?? route.name
-  );
-}
-
 export default function Tabs() {
   const insets = useSafeAreaInsets();
   const colors = useAppColors();
-  const hairlineBorderColor = useHairlineBorderColor();
+  const tabBorderColor = useStrongBorderColor();
   const colorScheme = useColorScheme();
 
   React.useEffect(() => {
     Keyboard.dismiss();
   }, []);
-  const getMeetingScannerAwareOptions = React.useCallback(
-    (
-      route: any,
-      title: string,
-      tabBarIcon: (props: { color: string }) => React.ReactElement,
-    ) => {
-      const routeName = getDeepFocusedRouteName(route) ?? "";
-      const isMeetingScanner = routeName === "ShareholdersMeetingScanner";
-
-      return {
-        title,
-        tabBarIcon,
-        tabBarActiveTintColor: isMeetingScanner ? "#fff" : TAB_ACTIVE_COLOR,
-        tabBarInactiveTintColor: isMeetingScanner
-          ? TAB_INVERTED_INACTIVE_COLOR
-          : undefined,
-        tabBarStyle: createTabBarStyle({
-          bottomInset: insets.bottom,
-          backgroundColor: isMeetingScanner ? TAB_INVERTED_BG : colors.surface,
-          borderTopColor: isMeetingScanner ? "#000" : hairlineBorderColor,
-        }),
-      };
-    },
-    [colors.surface, hairlineBorderColor, insets.bottom],
-  );
-
   const renderTabBar = React.useCallback(
     (props: BottomTabBarProps) => (
       <ThemeAwareTabBar
         {...props}
         backgroundColor={colors.surface}
-        borderTopColor={hairlineBorderColor}
+        borderTopColor={tabBorderColor}
         bottomInset={insets.bottom}
         colorScheme={colorScheme}
       />
     ),
-    [colorScheme, colors.surface, hairlineBorderColor, insets.bottom],
+    [colorScheme, colors.surface, tabBorderColor, insets.bottom],
   );
 
   return (
@@ -171,24 +125,20 @@ export default function Tabs() {
           tabBarStyle: createTabBarStyle({
             bottomInset: insets.bottom,
             backgroundColor: colors.surface,
-            borderTopColor: hairlineBorderColor,
+            borderTopColor: tabBorderColor,
           }),
         }}
       >
         <Tab.Screen
           name="HomeTab"
           component={HomeStack}
-          options={({ route }) =>
-            getMeetingScannerAwareOptions(route, "Trang chủ", HomeTabIcon)
-          }
+          options={{ title: "Trang chủ", tabBarIcon: HomeTabIcon }}
         />
 
         <Tab.Screen
           name="FeatureTab"
           component={FeatureStack}
-          options={({ route }) =>
-            getMeetingScannerAwareOptions(route, "Chức năng", FeatureTabIcon)
-          }
+          options={{ title: "Chức năng", tabBarIcon: FeatureTabIcon }}
         />
 
         <Tab.Screen
@@ -206,7 +156,7 @@ export default function Tabs() {
                 backgroundColor: isScanScreen
                   ? TAB_INVERTED_BG
                   : colors.surface,
-                borderTopColor: isScanScreen ? "#000" : hairlineBorderColor,
+                borderTopColor: isScanScreen ? "#000" : tabBorderColor,
               }),
             };
           }}
@@ -215,9 +165,7 @@ export default function Tabs() {
         <Tab.Screen
           name="CameraTab"
           component={CameraStack}
-          options={({ route }) =>
-            getMeetingScannerAwareOptions(route, "Camera", CameraTabIcon)
-          }
+          options={{ title: "Camera", tabBarIcon: CameraTabIcon }}
         />
 
         <Tab.Screen

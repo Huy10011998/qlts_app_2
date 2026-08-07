@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   StyleSheet,
@@ -61,6 +61,7 @@ export default function VehicleTrackingMapScreen() {
     setMapLoading(true)
   );
   const route = useRoute<StackRoute<"VehicleTrackingMap">>();
+  const webViewRef = useRef<WebView>(null);
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
   const html = useMemo(
@@ -73,19 +74,27 @@ export default function VehicleTrackingMapScreen() {
     return () => Orientation.lockToPortrait();
   }, []);
 
+  // Xoay chỉ đổi khung layout, WebView giữ nguyên (không remount, không tải lại
+  // Leaflet/tile). Bảo Leaflet đo lại khung mới là đủ.
+  useEffect(() => {
+    webViewRef.current?.injectJavaScript(
+      "window.dispatchEvent(new Event('resize'));true;"
+    );
+  }, [width, height]);
+
   const toggleOrientation = () => {
-    Orientation.unlockAllOrientations();
-    setTimeout(() => {
-      isLandscape
-        ? Orientation.lockToPortrait()
-        : Orientation.lockToLandscapeLeft();
-    }, 100);
+    if (isLandscape) {
+      Orientation.lockToPortrait();
+    } else {
+      Orientation.lockToLandscape();
+    }
   };
 
   return (
     <View style={styles.root}>
       <WebView
-        key={`${width}-${height}-${renderKey}`}
+        ref={webViewRef}
+        key={renderKey}
         originWhitelist={["*"]}
         source={{ html }}
         style={styles.map}

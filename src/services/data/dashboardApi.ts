@@ -5,6 +5,9 @@ import { callApi } from "./httpClient";
 export const DASHBOARD_TAISAN_ERROR_MESSAGE =
   "Không lấy được số liệu dashboard. Vui lòng thử lại.";
 
+export const DASHBOARD_MAYMOC_ERROR_MESSAGE =
+  "Chưa lấy được số liệu máy móc.";
+
 /**
  * Dữ liệu thô của `POST /Common/get-dashboard-taisan`.
  *
@@ -57,9 +60,56 @@ export type TaiSanDashboardDeptRaw = {
   chuaDiemDanh: number;
 };
 
+/**
+ * Dữ liệu thô của `POST /MayMoc/dashboard`.
+ *
+ * Ở đây không có nhóm field "kỳ dị" như `sL_*` bên trên, cứ camelCase bình
+ * thường. Mọi số tiền server đã quy đổi HẾT về VND theo tỷ giá Vietcombank nên
+ * không có field loại tiền — app không quy đổi gì thêm.
+ */
+export type MayMocDashboardRaw = {
+  /** Chỉ đếm máy ĐÃ GÁN VỊ TRÍ nên <= sL_MayMoc của endpoint kia. */
+  tongSoLuong: number;
+  /** VND, cỡ trăm tỷ — giữ nguyên kiểu number 64-bit của JS. */
+  tongGiaTri: number;
+  /** Đã sắp giảm dần theo soLuong sẵn. */
+  coCau_DonVi: MayMocDashboardUnitRaw[] | null;
+  /** 12 phần tử, đã sắp từ cũ -> mới. */
+  tangTruong_Thang: MayMocDashboardMonthRaw[] | null;
+  /** Mã tiền tệ không lấy được tỷ giá; rỗng là bình thường. */
+  tienTe_KhongQuyDoiDuoc: string[] | null;
+};
+
+export type MayMocDashboardUnitRaw = {
+  tenDonVi: string | null;
+  soLuong: number;
+  /** VND = đơn giá × số lượng. */
+  giaTri: number;
+};
+
+export type MayMocDashboardMonthRaw = {
+  nam: number;
+  thang: number;
+  /** Phát sinh trong tháng đó. */
+  soLuong: number;
+  giaTri: number;
+  /** Luỹ kế đến hết tháng đó — server tính sẵn, app CHỈ VẼ. */
+  soLuong_LuyKe: number;
+  giaTri_LuyKe: number;
+  /** "MM/yyyy" — dùng cho tooltip. */
+  nhan: string | null;
+  /** "MM/yy" — dùng cho trục hoành. */
+  nhanNgan: string | null;
+};
+
 type DashboardEnvelope = {
   message?: string | null;
   data?: TaiSanDashboardRaw | null;
+};
+
+type MayMocDashboardEnvelope = {
+  message?: string | null;
+  data?: MayMocDashboardRaw | null;
 };
 
 /**
@@ -91,6 +141,37 @@ export const fetchTaiSanDashboard = async (): Promise<TaiSanDashboardRaw> => {
   if (envelope?.data == null) {
     throw new Error(
       envelope?.message?.trim() || DASHBOARD_TAISAN_ERROR_MESSAGE,
+    );
+  }
+
+  return envelope.data;
+};
+
+/**
+ * Số liệu hai card máy móc. Mỗi lượt gọi quét toàn bộ bảng MayMoc và gọi ra
+ * Vietcombank lấy tỷ giá, nên cũng chỉ gọi khi mở màn hình / khi người dùng làm
+ * mới — và gọi SONG SONG, độc lập với `fetchTaiSanDashboard`.
+ */
+export const fetchMayMocDashboard = async (): Promise<MayMocDashboardRaw> => {
+  let envelope: MayMocDashboardEnvelope;
+
+  try {
+    envelope = await callApi<MayMocDashboardEnvelope>(
+      "POST",
+      API_ENDPOINTS.GET_DASHBOARD_MAYMOC,
+      {},
+    );
+  } catch (error) {
+    throw new Error(
+      getApiErrorMessage(error, DASHBOARD_MAYMOC_ERROR_MESSAGE).trim() ||
+        DASHBOARD_MAYMOC_ERROR_MESSAGE,
+    );
+  }
+
+  // Endpoint này không trả nửa vời: hỏng thì cả cục data = null.
+  if (envelope?.data == null) {
+    throw new Error(
+      envelope?.message?.trim() || DASHBOARD_MAYMOC_ERROR_MESSAGE,
     );
   }
 

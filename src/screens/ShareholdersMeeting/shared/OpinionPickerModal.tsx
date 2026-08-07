@@ -5,14 +5,13 @@ import {
   Platform,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   UIManager,
   View,
 } from "react-native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import EmptyState from "../../../components/ui/EmptyState";
-import IsLoading from "../../../components/ui/IconLoading";
+import SearchBar from "../../../components/ui/SearchBar";
 import {
   AppColors,
   useAppColors,
@@ -136,38 +135,13 @@ export default function OpinionPickerModal({
         <Text style={styles.title}>Chọn ý kiến</Text>
       </View>
 
-      <View style={[styles.searchBox, { borderColor: hairlineBorderColor }]}>
-        <View style={styles.searchIconWrap}>
-          <MaterialCommunityIcons name="magnify" size={16} color={c.textSub} />
-        </View>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Tìm theo mã hoặc tên ý kiến..."
-          placeholderTextColor={c.placeholder}
-          value={searchQuery}
-          onChangeText={onChangeSearchQuery}
-          clearButtonMode="never"
-          returnKeyType="search"
-        />
-        {showSearchingIndicator ? (
-          <View style={styles.spinnerWrap}>
-            <IsLoading size="small" color={c.red} />
-          </View>
-        ) : null}
-        {!showSearchingIndicator && searchQuery.length > 0 ? (
-          <TouchableOpacity
-            onPress={() => onChangeSearchQuery("")}
-            style={styles.clearButton}
-            hitSlop={8}
-          >
-            <MaterialCommunityIcons
-              name="close-circle"
-              size={16}
-              color={c.placeholder}
-            />
-          </TouchableOpacity>
-        ) : null}
-      </View>
+      <SearchBar
+        value={searchQuery}
+        onChangeText={onChangeSearchQuery}
+        placeholder="Tìm theo mã hoặc tên ý kiến..."
+        isSearching={showSearchingIndicator}
+        style={styles.searchSpacing}
+      />
 
       <FlatList
         style={styles.listView}
@@ -227,50 +201,8 @@ const makeStyles = (c: AppColors) =>
     closeButton: {
       top: 10,
     },
-    searchBox: {
-      flexDirection: "row",
-      alignItems: "center",
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border,
-      borderRadius: 14,
-      backgroundColor: c.surface,
-      minHeight: 48,
-      paddingHorizontal: 12,
+    searchSpacing: {
       marginBottom: 12,
-      shadowColor: c.shadow,
-      shadowOpacity: 0.06,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 2 },
-      elevation: 2,
-    },
-    searchIconWrap: {
-      marginRight: 8,
-      width: 20,
-      height: 20,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    searchInput: {
-      flex: 1,
-      color: c.textPrimary,
-      height: 48,
-      fontSize: 14,
-      lineHeight: 20,
-      fontWeight: "400",
-      paddingVertical: 0,
-      includeFontPadding: false,
-      textAlignVertical: "center",
-    },
-    spinnerWrap: {
-      width: 24,
-      height: 24,
-      alignItems: "center",
-      justifyContent: "center",
-      marginLeft: 6,
-    },
-    clearButton: {
-      padding: 4,
-      marginLeft: 4,
     },
     listView: {
       flex: 1,
