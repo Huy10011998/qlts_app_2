@@ -11,6 +11,8 @@ export type WatermarkLines = {
   coordinates: string;
   /** Tên tủ đang xác nhận. */
   fridge: string;
+  /** Tài khoản đang chụp; rỗng thì ẩn dòng này. */
+  account?: string;
 };
 
 /**
@@ -97,6 +99,18 @@ export default function PhotoWatermark({
         >
           {lines.fridge}
         </Text>
+        {lines.account ? (
+          <Text
+            allowFontScaling={false}
+            numberOfLines={1}
+            style={[
+              styles.detail,
+              { fontSize: unit * 3.4, marginTop: unit * 0.4 },
+            ]}
+          >
+            {lines.account}
+          </Text>
+        ) : null}
       </View>
     </View>
   );

@@ -7,18 +7,24 @@ import {
 
 type SettingSectionGroupProps = {
   title?: string;
+  /**
+   * Thu hẹp khoảng cách phía trên. Dùng cho nhóm đầu tiên: phần đáy sóng đỏ đã
+   * là nền xám nên khoảng trắng trên nhãn bị cộng dồn, nhìn hở hơn các nhóm sau.
+   */
+  tightTop?: boolean;
   children: React.ReactNode;
 };
 
 export default function SettingSectionGroup({
   title,
+  tightTop,
   children,
 }: SettingSectionGroupProps) {
   const colors = useAppColors();
   const hairlineBorderColor = useHairlineBorderColor();
 
   return (
-    <View style={styles.group}>
+    <View style={[styles.group, tightTop && styles.groupTightTop]}>
       {title ? (
         <View style={styles.titleRow}>
           <View
@@ -50,6 +56,11 @@ const styles = StyleSheet.create({
   group: {
     marginHorizontal: 16,
     marginTop: 22,
+  },
+  groupTightTop: {
+    // Âm để nhãn ăn vào phần đáy sóng — chỗ đó sóng đã tô nền xám nên không đè
+    // lên mảng đỏ.
+    marginTop: -10,
   },
   titleRow: {
     flexDirection: "row",
