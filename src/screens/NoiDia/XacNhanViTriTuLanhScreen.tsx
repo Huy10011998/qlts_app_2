@@ -48,6 +48,7 @@ import PhotoWatermark, {
   getWatermarkFrame,
   type WatermarkLines,
 } from "./shared/PhotoWatermark";
+import { useWatermarkAccountName } from "./shared/useWatermarkAccountName";
 import { EMPTY_VALUE, formatNoiDiaDateTime } from "./shared/noiDiaFormat";
 import NoiDiaFormScroll from "./shared/NoiDiaFormScroll";
 import NoiDiaNoteCard from "./shared/NoiDiaNoteCard";
@@ -96,6 +97,8 @@ export default function XacNhanViTriTuLanhScreen() {
     [photo?.height, photo?.width],
   );
 
+  const accountName = useWatermarkAccountName();
+
   const watermarkLines = useMemo<WatermarkLines>(
     () => ({
       timestamp: formatNoiDiaDateTime(capturedAt),
@@ -103,8 +106,9 @@ export default function XacNhanViTriTuLanhScreen() {
         ? `${coordinates.lat}, ${coordinates.lng}`
         : "Không lấy được toạ độ",
       fridge: fridge?.label ?? "",
+      account: accountName ? `Người chụp: ${accountName}` : "",
     }),
-    [capturedAt, coordinates, fridge?.label],
+    [accountName, capturedAt, coordinates, fridge?.label],
   );
 
   const loadCoordinates = useCallback(async () => {

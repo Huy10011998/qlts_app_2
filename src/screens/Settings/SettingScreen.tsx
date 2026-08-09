@@ -813,7 +813,7 @@ const SettingScreen = () => {
         </LinearGradient>
 
         <View style={[styles.greyZone, { backgroundColor: colors.bg }]}>
-          <SettingSectionGroup title="TÀI KHOẢN">
+          <SettingSectionGroup title="TÀI KHOẢN" tightTop>
             <SettingRowItem
               iconName="person-outline"
               iconBg={C.blue}
