@@ -82,15 +82,29 @@ beforeEach(() => {
 
 describe("bề rộng mục trên thanh chuyển mục", () => {
   // Tổng lệch một chút là thanh tràn ra ngoài hoặc hở một khoảng trống.
-  it("tổng bề rộng các mục đúng bằng chỗ khả dụng", () => {
+  it("tổng bề rộng các mục cộng các khe đúng bằng chỗ khả dụng", () => {
     const contentWidth = 354;
-    const { activeWidth, inactiveWidth } = computeTabWidths({
+    const { activeWidth, inactiveWidth, gap } = computeTabWidths({
       contentWidth,
       tabCount: 5,
       activeLabelLength: "Thông tin".length,
     });
 
-    expect(activeWidth + inactiveWidth * 4).toBeCloseTo(contentWidth);
+    expect(activeWidth + inactiveWidth * 4 + gap * 4).toBeCloseTo(contentWidth);
+  });
+
+  // Khe cạnh pill hẹp hơn các khe khác là lỗi mắt thấy được.
+  it("mọi khe giữa các mục bằng nhau, kể cả khe cạnh pill", () => {
+    const contentWidth = 354;
+    const { activeWidth, inactiveWidth, gap } = computeTabWidths({
+      contentWidth,
+      tabCount: 5,
+      activeLabelLength: "Tệp".length,
+    });
+
+    // Bố cục `space-between`: mép trái mục i cách mép phải mục i-1 đúng `gap`.
+    expect(gap).toBeGreaterThan(0);
+    expect(activeWidth + inactiveWidth * 4 + gap * 4).toBeCloseTo(contentWidth);
   });
 
   it("nhãn dài cũng không cho pill chiếm quá nửa thanh", () => {
@@ -183,6 +197,31 @@ describe("thanh chuyển mục trên đầu màn chi tiết", () => {
 
     expect(dots).toHaveLength(1);
     expect(badgeNumbers).toContain(7);
+  });
+
+  // Số nhiều chữ số làm badge nở ra; neo mép phải thì nó nở vào phía icon, còn
+  // neo mép trái thì nó bò ra ngoài ô và bị cắt mất.
+  it("badge nhiều chữ số neo mép phải và chốt ở 99+", async () => {
+    const tree = await mount(
+      <DetailSectionTabs
+        tabs={[TABS[0], TABS[1], { ...TABS[2], badge: 1000 }]}
+        activeTab="list"
+        onTabPress={jest.fn()}
+      />,
+    );
+
+    const badges = findByStyle(tree, (s) => s.height === 16 && s.minWidth === 16);
+    const badgeTexts = tree.root
+      .findAllByType(Text)
+      .flatMap((node) => node.props.children)
+      .filter((child) => typeof child === "string");
+
+    expect(badges).toHaveLength(1);
+    expect(badges[0].props.style).toEqual(
+      expect.objectContaining({ right: expect.any(Number) }),
+    );
+    expect(badges[0].props.style.left).toBeUndefined();
+    expect(badgeTexts).toContain("99+");
   });
 
   // Đang xem mục đó rồi thì badge không còn để nhắc gì nữa.

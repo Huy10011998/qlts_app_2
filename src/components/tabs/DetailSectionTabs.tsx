@@ -28,14 +28,8 @@ const ITEM_HEIGHT = 38;
 const ICON_SIZE = 20;
 const LABEL_GAP = 6;
 const PILL_PADDING = 12;
-/**
- * Bề rộng trung bình một ký tự nhãn ở cỡ 12 đậm. Đo chữ thật thì phải chờ layout
- * rồi mới biết bề rộng pill, tức pill sẽ giật một nhịp; ước lượng rồi cho nhãn
- * `numberOfLines={1}` trong khung `overflow: hidden` an toàn hơn — nhãn dài quá
- * thì bị cắt gọn chứ không phá vỡ bố cục.
- */
+
 const CHAR_WIDTH = 6.8;
-/** Pill không được chiếm quá nửa thanh, kẻo các mục còn lại hết chỗ bấm. */
 const MAX_PILL_RATIO = 0.55;
 const EXPAND_DURATION = 220;
 
@@ -52,10 +46,6 @@ const tapHaptic = () => {
   }
 };
 
-/**
- * Bề rộng mục đang chọn (nở ra, có nhãn) và bề rộng các mục còn lại (chỉ icon).
- * Tổng luôn đúng bằng bề rộng khả dụng nên thanh không bao giờ tràn hay hở.
- */
 export const computeTabWidths = ({
   contentWidth,
   tabCount,
@@ -73,26 +63,21 @@ export const computeTabWidths = ({
     Math.floor(contentWidth * MAX_PILL_RATIO),
   );
 
+  if (tabCount <= 1) {
+    return { activeWidth, inactiveWidth: contentWidth, gap: 0 };
+  }
+
+  const rest = contentWidth - activeWidth;
+  // Màn quá hẹp thì thu ô icon lại cho vừa, chấp nhận hết khe hở.
+  const inactiveWidth = Math.min(ITEM_HEIGHT, rest / (tabCount - 1));
+
   return {
     activeWidth,
-    inactiveWidth:
-      tabCount > 1 ? (contentWidth - activeWidth) / (tabCount - 1) : contentWidth,
+    inactiveWidth,
+    gap: (rest - inactiveWidth * (tabCount - 1)) / (tabCount - 1),
   };
 };
 
-/**
- * Thanh chuyển mục của màn chi tiết, đặt ngay dưới header.
- *
- * Nằm trong luồng chứ không nổi tuyệt đối ở đáy: ở trên đầu thì mắt gặp nó ngay
- * khi mở màn, không phải cuộn xuống mới biết bản ghi có mấy mục, và nội dung
- * không cần chừa chỗ trống ở đáy.
- *
- * Mục đang chọn nở thành viên thuốc đỏ có icon + nhãn nằm ngang, các mục còn lại
- * thu về chỉ còn icon. Nhờ vậy nhãn của mục đang xem đọc được ở cỡ chữ tử tế,
- * thay vì nhồi 5 nhãn 11px cạnh nhau. Mục không có nhãn hiện vẫn giữ
- * `accessibilityLabel` để trình đọc màn hình đọc được, và badge cho biết mục nào
- * có nội dung.
- */
 export default function DetailSectionTabs({
   tabs,
   activeTab,
@@ -169,7 +154,9 @@ export default function DetailSectionTabs({
           return (
             <Animated.View
               key={tab.key}
-              style={{ width: widthOf(tab.key, isActive ? activeWidth : inactiveWidth) }}
+              style={{
+                width: widthOf(tab.key, isActive ? activeWidth : inactiveWidth),
+              }}
             >
               <TouchableOpacity
                 style={[styles.item, isActive && styles.itemActive]}
@@ -208,10 +195,6 @@ export default function DetailSectionTabs({
   );
 }
 
-/**
- * "dot" = có nội dung nhưng không đếm được (ghi chú là một khối text, không phải
- * danh sách); số = đếm được (số tệp đính kèm).
- */
 function TabBadge({
   badge,
   styles,
@@ -241,6 +224,7 @@ const makeStyles = (c: AppColors) =>
     bar: {
       flexDirection: "row",
       alignItems: "center",
+      justifyContent: "space-between",
       backgroundColor: c.surface,
       height: SECTION_TABS_HEIGHT,
       paddingHorizontal: BAR_PADDING,
@@ -259,11 +243,12 @@ const makeStyles = (c: AppColors) =>
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
-      // Nhãn bị cắt gọn trong lúc pill đang nở, trông như chữ được hé ra.
-      overflow: "hidden",
     },
     itemActive: {
       backgroundColor: c.red,
+      // Chỉ cắt gọn ở mục đang chọn: nhãn bị xén trong lúc pill nở, trông như chữ
+      // được hé ra. Mục còn lại phải để tràn, kẻo badge nhô ra khỏi ô bị cắt mất.
+      overflow: "hidden",
     },
     iconWrap: {
       width: ICON_SIZE,
@@ -280,7 +265,12 @@ const makeStyles = (c: AppColors) =>
     badge: {
       position: "absolute",
       top: -6,
-      left: ICON_SIZE - 6,
+      /**
+       * Neo mép phải chứ không neo mép trái: badge rộng ra theo số chữ số (1 → 99+),
+       * neo trái thì nó bò ra ngoài ô 38px và bị mép ô cắt mất; neo phải thì nó nở
+       * ngược vào phía icon, mép phải luôn đứng yên cách mép ô 3px.
+       */
+      right: -5,
       minWidth: 16,
       height: 16,
       borderRadius: 8,
@@ -297,7 +287,7 @@ const makeStyles = (c: AppColors) =>
     badgeDot: {
       position: "absolute",
       top: -2,
-      left: ICON_SIZE - 4,
+      right: -3,
       width: 7,
       height: 7,
       borderRadius: 4,

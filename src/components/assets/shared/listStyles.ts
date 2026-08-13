@@ -1,6 +1,7 @@
 import { StyleSheet } from "react-native";
 import { BRAND_RED, cardShadow } from "./listTheme";
 import { AppColors } from "../../../utils/helpers/colors";
+import { ADD_FAB_CLEARANCE } from "../../add/shared/AddActionFab";
 
 export const makeSharedAssetListStyles = (c: AppColors) =>
   StyleSheet.create({
@@ -45,6 +46,13 @@ export const makeSharedAssetListStyles = (c: AppColors) =>
     listContent: {
       flexGrow: 1,
       paddingBottom: 24,
+    },
+    /**
+     * Chỉ áp khi màn thật sự render FAB — áp vô điều kiện thì màn không có nút
+     * bị hở một khoảng trắng ở đáy.
+     */
+    listContentWithFab: {
+      paddingBottom: ADD_FAB_CLEARANCE,
     },
     stickyHeader: {
       backgroundColor: c.bg,
