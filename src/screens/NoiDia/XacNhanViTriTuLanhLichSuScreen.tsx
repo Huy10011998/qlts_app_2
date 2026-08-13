@@ -20,6 +20,7 @@ import ScreenContainer from "../shared/ScreenContainer";
 import IsLoading from "../../components/ui/IconLoading";
 import AssetListEmptyState from "../../components/assets/shared/AssetListEmptyState";
 import FridgeSummaryHeader from "./shared/FridgeSummaryHeader";
+import CapNhatToaDoKhachHangBanner from "./shared/CapNhatToaDoKhachHangBanner";
 import AddActionFab from "../../components/add/shared/AddActionFab";
 import { makeSharedAssetListStyles } from "../../components/assets/shared/listStyles";
 import { BRAND_RED } from "../../components/assets/shared/listTheme";
@@ -30,6 +31,9 @@ import {
   NOI_DIA_LICH_SU_TOP,
   type XacNhanViTriTuLanhItem,
 } from "../../services/data/callApi";
+import { useNoiDiaTuLanhPermissions } from "./shared/useNoiDiaTuLanhPermissions";
+import { useReloadPermissions } from "../../hooks/useReloadPermissions";
+import { useReloadPermissionsOnFocus } from "../../hooks/useReloadPermissionsOnFocus";
 import { isNetworkRequestError } from "../../utils/helpers/api";
 import { error } from "../../utils/Logger";
 import {
@@ -76,6 +80,14 @@ const toApiDate = (value: string) => {
  * phải để thêm lượt mới. Tủ luôn biết trước nên không có bước quét ở đây.
  */
 export default function XacNhanViTriTuLanhLichSuScreen() {
+  // Banner cập nhật toạ độ và nút xác nhận ẩn/hiện theo quyền, mà quyền chỉ nằm
+  // trong store — không tự mới lại. Nạp lại mỗi lần màn được focus, cùng cách
+  // các màn chi tiết tài sản đang làm.
+  useReloadPermissionsOnFocus();
+
+  const reloadPerms = useReloadPermissions();
+  const { canXemXacNhanViTri, canThemXacNhanViTri, loaded } =
+    useNoiDiaTuLanhPermissions();
   const styles = useStyles(makeNoiDiaListStyles);
   const sharedStyles = useStyles(makeSharedAssetListStyles);
   const hairlineBorderColor = useHairlineBorderColor();
@@ -113,6 +125,10 @@ export default function XacNhanViTriTuLanhLichSuScreen() {
   );
 
   const fetchHistory = useCallback(async () => {
+    // Không có quyền xem thì đừng gọi API cho ăn 403 — màn dưới hiện trạng thái
+    // "không có quyền" thay cho danh sách.
+    if (!canXemXacNhanViTri) return;
+
     try {
       const response = await getXacNhanViTriTuLanhLichSu(filter);
 
@@ -128,7 +144,7 @@ export default function XacNhanViTriTuLanhLichSuScreen() {
           : getNoiDiaErrorMessage(e, "Không tải được lịch sử xác nhận."),
       );
     }
-  }, [filter]);
+  }, [canXemXacNhanViTri, filter]);
 
   useEffect(() => {
     let isActive = true;
@@ -164,9 +180,11 @@ export default function XacNhanViTriTuLanhLichSuScreen() {
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    await fetchHistory();
+    // Kéo reload soi lại cả quyền, không riêng danh sách: quyền vừa được cấp
+    // trên web thì phải thấy ngay ở đây, khỏi phải back ra vào lại.
+    await Promise.all([fetchHistory(), reloadPerms()]);
     setIsRefreshing(false);
-  }, [fetchHistory]);
+  }, [fetchHistory, reloadPerms]);
 
   const applyDateFilter = useCallback(() => {
     setAppliedFromDate(fromDate);
@@ -181,7 +199,27 @@ export default function XacNhanViTriTuLanhLichSuScreen() {
     setAppliedToDate("");
   }, []);
 
-  if (isInitialLoading) return <IsLoading size="large" color={BRAND_RED} />;
+  // Chờ cả quyền: `loaded` false thì `can()` trả false, render sớm là nháy màn
+  // "không có quyền" rồi mới ra danh sách.
+  if (!loaded || isInitialLoading)
+    return <IsLoading size="large" color={BRAND_RED} />;
+
+  if (!canXemXacNhanViTri) {
+    return (
+      <ScreenContainer>
+        <FridgeSummaryHeader
+          ma={fridge.ma}
+          ten={fridge.ten}
+          serialNumber={fridge.serialNumber}
+        />
+        <AssetListEmptyState
+          iconName="lock-closed-outline"
+          title="Bạn không có quyền truy cập"
+          subtitle="Tài khoản hiện tại không có quyền xem lịch sử xác nhận vị trí tủ lạnh."
+        />
+      </ScreenContainer>
+    );
+  }
 
   const hasDateFilter = Boolean(appliedFromDate || appliedToDate);
   const dateSummary = hasDateFilter
@@ -190,17 +228,31 @@ export default function XacNhanViTriTuLanhLichSuScreen() {
   const hasPendingDateChange =
     fromDate !== appliedFromDate || toDate !== appliedToDate;
 
-  return (
-    <ScreenContainer>
+  // Thẻ tủ + cảnh báo + bộ lọc cuộn theo danh sách thay vì đóng đinh trên đầu:
+  // ba khối này chiếm gần nửa màn, để cố định thì phần còn lại chỉ hiện được hai
+  // lượt. Người dùng chỉ cần chúng lúc mới vào màn.
+  const listHeader = (
+    <>
       <FridgeSummaryHeader
         ma={fridge.ma}
         ten={fridge.ten}
         serialNumber={items[0]?.serialNumber || fridge.serialNumber}
       />
 
+      {/* API lịch sử trả lượt mới nhất trước, nên items[0] là lượt gần nhất. */}
+      <CapNhatToaDoKhachHangBanner
+        idKhachHang={fridge.idKhachHang}
+        khachHang={fridge.khachHang}
+        khoangCachMet={items[0]?.khoangCachMet}
+        hasHistory={items.length > 0}
+      />
+
       <View style={sharedStyles.stickyHeader}>
         <TouchableOpacity
-          style={[sharedStyles.filterCard, { borderColor: hairlineBorderColor }]}
+          style={[
+            sharedStyles.filterCard,
+            { borderColor: hairlineBorderColor },
+          ]}
           onPress={() => setIsFilterOpen((prev) => !prev)}
           activeOpacity={0.8}
         >
@@ -278,15 +330,18 @@ export default function XacNhanViTriTuLanhLichSuScreen() {
           </>
         ) : null}
       </View>
+    </>
+  );
 
+  return (
+    <ScreenContainer>
       <FlatList
         data={items}
+        ListHeaderComponent={listHeader}
         keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={[
-          styles.listContent,
-          styles.listContentWithFab,
-          !items.length && styles.emptyRoot,
-        ]}
+        // Không dùng emptyRoot ở đây: header nằm trong danh sách nên căn giữa
+        // theo chiều dọc sẽ đẩy luôn cả thẻ tủ xuống giữa màn.
+        contentContainerStyle={[styles.listContent, styles.listContentWithFab]}
         initialNumToRender={10}
         windowSize={5}
         refreshControl={
@@ -314,14 +369,16 @@ export default function XacNhanViTriTuLanhLichSuScreen() {
               loadErrorMessage
                 ? "Không thể tải lịch sử xác nhận"
                 : hasDateFilter
-                  ? "Không có lượt xác nhận trong khoảng này"
-                  : "Chưa có lượt xác nhận nào"
+                ? "Không có lượt xác nhận trong khoảng này"
+                : "Chưa có lượt xác nhận nào"
             }
             subtitle={
               loadErrorMessage ??
               (hasDateFilter
                 ? "Thử mở rộng khoảng thời gian."
-                : "Bấm nút bên dưới để chụp ảnh xác nhận tủ này.")
+                : canThemXacNhanViTri
+                  ? "Bấm nút bên dưới để chụp ảnh xác nhận tủ này."
+                  : "Tủ này chưa được xác nhận vị trí lần nào.")
             }
           />
         }
@@ -358,7 +415,8 @@ export default function XacNhanViTriTuLanhLichSuScreen() {
                 ) : null}
                 {item.ghiChu?.trim() ? (
                   <Text style={styles.note} numberOfLines={3}>
-                    “{item.ghiChu.trim()}”
+                    <Text style={styles.noteLabel}>Ghi chú: </Text>
+                    {item.ghiChu.trim()}
                   </Text>
                 ) : null}
 
@@ -380,7 +438,7 @@ export default function XacNhanViTriTuLanhLichSuScreen() {
                       }
                     >
                       <Ionicons name="location" size={14} color={BRAND_RED} />
-                      <Text style={styles.footerActionText}>xem bản đồ</Text>
+                      <Text style={styles.footerActionText}>Xem bản đồ</Text>
                     </TouchableOpacity>
                   ) : (
                     <Text style={[styles.meta, styles.footerAction]}>
@@ -394,12 +452,16 @@ export default function XacNhanViTriTuLanhLichSuScreen() {
         }}
       />
 
-      <AddActionFab
-        variant="extended"
-        iconName="camera"
-        label="Xác nhận"
-        onPress={() => navigation.navigate("XacNhanViTriTuLanhForm", { fridge })}
-      />
+      {canThemXacNhanViTri ? (
+        <AddActionFab
+          variant="extended"
+          iconName="camera"
+          label="Xác nhận"
+          onPress={() =>
+            navigation.navigate("XacNhanViTriTuLanhForm", { fridge })
+          }
+        />
+      ) : null}
 
       <NoiDiaPhotoViewer
         filePath={previewPath}

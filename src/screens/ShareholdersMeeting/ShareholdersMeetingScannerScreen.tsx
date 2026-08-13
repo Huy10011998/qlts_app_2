@@ -27,10 +27,13 @@ import {
   useCodeScanner,
 } from "react-native-vision-camera";
 import {
+  DHCD_DIEM_DANH_NAME_CLASS,
+  DHCD_Y_KIEN_NAME_CLASS,
   diemDanhDhcd,
   getCodongDhcd,
   luuYKienCoDongDhcd,
 } from "../../services/data/callApi";
+import { usePermission } from "../../hooks/usePermission";
 import type {
   RootStackParamList,
   Shareholder,
@@ -95,6 +98,13 @@ export default function ShareholdersMeetingScannerScreen() {
     startInitTimeoutTimer,
     cameraActive,
   } = useQrScannerController({ enabled: true });
+
+  // Quét ở màn này luôn là để ghi, nên đọc đúng quyền ghi của chế độ đang quét.
+  const { can } = usePermission();
+  const canWrite =
+    scanMode === "voting"
+      ? can(DHCD_Y_KIEN_NAME_CLASS, "Insert")
+      : can(DHCD_DIEM_DANH_NAME_CLASS, "Insert");
 
   const expectedQrPrefix = useMemo(() => "DaiHoiCoDong_CoDong", []);
 
@@ -238,6 +248,19 @@ export default function ShareholdersMeetingScannerScreen() {
               onPress: resumeScanner,
             },
           ],
+        );
+        return;
+      }
+
+      // Chốt quyền lần nữa ngay trước khi ghi: màn gọi đã chặn từ nút quét,
+      // nhưng quyền có thể bị thu hồi trong lúc màn quét đang mở.
+      if (!canWrite) {
+        Alert.alert(
+          "Không có quyền",
+          scanMode === "attendance"
+            ? "Tài khoản hiện tại không có quyền điểm danh cổ đông."
+            : "Tài khoản hiện tại không có quyền ghi ý kiến cổ đông.",
+          [{ text: "OK", onPress: () => navigation.goBack() }],
         );
         return;
       }

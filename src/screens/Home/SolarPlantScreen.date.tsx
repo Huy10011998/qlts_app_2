@@ -292,6 +292,7 @@ export const SolarDateRangePicker: React.FC<SolarDateRangePickerProps> = ({
   return (
     <Modal
       transparent
+      statusBarTranslucent
       visible={visible}
       animationType="fade"
       onRequestClose={onCancel}

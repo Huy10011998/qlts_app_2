@@ -21,6 +21,12 @@ export type FridgeSummary = {
   khuVuc: string;
   nhaPhanPhoi: string;
   khachHang: string;
+  /**
+   * Id khách hàng đang giữ tủ — cần để cập nhật mốc toạ độ khách hàng ngay từ
+   * màn lịch sử xác nhận vị trí. `0` khi record không có, phía gọi phải tự ẩn
+   * thao tác.
+   */
+  idKhachHang: number;
 };
 
 const readField = (raw: Record<string, any>, name: string) => {
@@ -49,6 +55,7 @@ export const toFridgeSummary = (raw: any): FridgeSummary | null => {
 
   const ma = readField(item, "ma");
   const ten = readField(item, "ten");
+  const idKhachHang = Number(readField(item, "id_NoiDia_KhachHang"));
 
   return {
     id,
@@ -61,6 +68,8 @@ export const toFridgeSummary = (raw: any): FridgeSummary | null => {
     khuVuc: readField(item, "id_NoiDia_KhuVuc_MoTa"),
     nhaPhanPhoi: readField(item, "id_NoiDia_NhaPhanPhoi_MoTa"),
     khachHang: readField(item, "id_NoiDia_KhachHang_MoTa"),
+    idKhachHang:
+      Number.isFinite(idKhachHang) && idKhachHang > 0 ? idKhachHang : 0,
   };
 };
 

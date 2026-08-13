@@ -874,7 +874,7 @@ const CameraList: React.FC = () => {
         visible={showLayoutModal}
         animationType="slide"
         transparent
-        statusBarTranslucent={false}
+        statusBarTranslucent
         supportedOrientations={[
           "portrait",
           "landscape-left",

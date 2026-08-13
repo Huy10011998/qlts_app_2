@@ -210,7 +210,6 @@ export default function EnumAndReferencePickerModal({
   return (
     <BottomSheetModalShell
       visible={visible}
-      animationType="slide"
       closeOnBackdropPress
       onClose={onClose}
       statusBarTranslucent

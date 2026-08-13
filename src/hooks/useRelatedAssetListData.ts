@@ -8,6 +8,7 @@ import {
 import type { Field, PropertyResponse } from "../types/index";
 import { error } from "../utils/Logger";
 import { useNetworkAwareReload } from "./useNetworkAwareReload";
+import { useReloadPermissions } from "./useReloadPermissions";
 import { isAuthExpiredError } from "../services/data/callApi";
 import { isNetworkRequestError } from "../utils/helpers/api";
 
@@ -45,6 +46,8 @@ export function useRelatedAssetListData({
   const [isRefreshingTop, setIsRefreshingTop] = useState(false);
   const [total, setTotal] = useState(0);
   const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
+
+  const reloadPerms = useReloadPermissions();
 
   const skipRef = useRef(0);
   const isFetchingRef = useRef(false);
@@ -223,7 +226,9 @@ export function useRelatedAssetListData({
     setIsRefreshingTop(true);
     skipRef.current = 0;
 
-    await fetchData(false, { isRefresh: true });
+    // Nạp lại quyền cùng lượt: màn gọi ẩn/hiện nút thêm mới theo quyền, kéo
+    // reload phải đủ để thấy quyền vừa được cấp, khỏi phải ra vào lại màn.
+    await Promise.all([fetchData(false, { isRefresh: true }), reloadPerms()]);
   };
 
   const handleLoadMore = () => {

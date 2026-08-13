@@ -10,8 +10,11 @@ import { useIsFocused, useNavigation } from "@react-navigation/native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useNetworkAwareReload } from "../../../hooks/useNetworkAwareReload";
 import { usePermission } from "../../../hooks/usePermission";
+import { useReloadPermissions } from "../../../hooks/useReloadPermissions";
 import { useDebounce } from "../../../hooks/useDebounce";
 import {
+  DHCD_DIEM_DANH_NAME_CLASS,
+  DHCD_Y_KIEN_NAME_CLASS,
   diemDanhDhcd,
   getActiveDhcd,
   getCodongDhcd,
@@ -89,6 +92,7 @@ export function useShareholdersMeetingController() {
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused();
   const { can, loaded } = usePermission();
+  const reloadPerms = useReloadPermissions();
 
   const [activeTab, setActiveTab] = useState<"attendance" | "voting">(
     "attendance",
@@ -222,13 +226,27 @@ export function useShareholdersMeetingController() {
   );
 
   const canViewAttendance = useMemo(
-    () => can("DaiHoiCoDong_CoDong_DiemDanh", "Read"),
+    () => can(DHCD_DIEM_DANH_NAME_CLASS, "Read"),
     [can],
   );
   const canViewVoting = useMemo(
-    () => can("DaiHoiCoDong_CoDong_YKien", "Read"),
+    () => can(DHCD_Y_KIEN_NAME_CLASS, "Read"),
     [can],
   );
+
+  // Quyền GHI, tách khỏi quyền xem: người theo dõi tiến độ đại hội chỉ được
+  // xem, không được điểm danh hộ hay ghi ý kiến cổ đông.
+  const canDiemDanh = useMemo(
+    () => can(DHCD_DIEM_DANH_NAME_CLASS, "Insert"),
+    [can],
+  );
+  const canHuyDiemDanh = useMemo(
+    () => can(DHCD_DIEM_DANH_NAME_CLASS, "Delete"),
+    [can],
+  );
+  const canGhiYKien = useMemo(() => can(DHCD_Y_KIEN_NAME_CLASS, "Insert"), [
+    can,
+  ]);
   const hasAnyViewPermission = canViewAttendance || canViewVoting;
   const isMeetingLocked = useMemo(
     () =>
@@ -251,9 +269,23 @@ export function useShareholdersMeetingController() {
     }
   }, [activeTab, canViewAttendance, canViewVoting, loaded]);
 
+  // Quét QR là để GHI (điểm danh / ghi ý kiến), nên quyền ghi của đúng tab
+  // đang mở mới cho vào màn quét.
+  const canScan = activeTab === "voting" ? canGhiYKien : canDiemDanh;
+
   const openScanner = useCallback(() => {
     if (!activeMeeting?.id) {
       Alert.alert("Thông báo", "Chưa có đại hội cổ đông đang hoạt động.");
+      return;
+    }
+
+    if (!canScan) {
+      Alert.alert(
+        "Không có quyền",
+        activeTab === "voting"
+          ? "Tài khoản hiện tại không có quyền ghi ý kiến cổ đông."
+          : "Tài khoản hiện tại không có quyền điểm danh cổ đông.",
+      );
       return;
     }
 
@@ -290,6 +322,7 @@ export function useShareholdersMeetingController() {
   }, [
     activeMeeting?.id,
     activeTab,
+    canScan,
     isMeetingLocked,
     navigation,
     selectedOpinion,
@@ -315,11 +348,13 @@ export function useShareholdersMeetingController() {
 
     try {
       setIsRefreshingAttendance(true);
-      await reloadShareholders();
+      // Nạp lại quyền cùng lượt: hai tab điểm danh / biểu quyết ẩn hiện theo
+      // quyền, kéo reload phải đủ để thấy quyền vừa được cấp.
+      await Promise.all([reloadShareholders(), reloadPerms()]);
     } finally {
       setIsRefreshingAttendance(false);
     }
-  }, [activeMeeting?.id, reloadShareholders]);
+  }, [activeMeeting?.id, reloadPerms, reloadShareholders]);
 
   const loadMeetingData = useCallback(async (options?: { silent?: boolean }) => {
     if (!loaded) return;
@@ -514,6 +549,15 @@ export function useShareholdersMeetingController() {
         return;
       }
 
+      if (!canDiemDanh) {
+        Alert.alert(
+          "Không có quyền",
+          "Tài khoản hiện tại không có quyền điểm danh cổ đông.",
+        );
+        options?.onComplete?.();
+        return;
+      }
+
       Alert.alert(
         "Xác nhận điểm danh",
         `Xác nhận điểm danh cổ đông ${shareholderId}?`,
@@ -547,7 +591,7 @@ export function useShareholdersMeetingController() {
         ],
       );
     },
-    [shareholders, syncShareholderAttendance],
+    [canDiemDanh, shareholders, syncShareholderAttendance],
   );
 
   const handleUndoCheckIn = useCallback(
@@ -558,6 +602,14 @@ export function useShareholdersMeetingController() {
         Alert.alert(
           "Cổ đông đã khóa",
           `Cổ đông ${shareholderId} đã khóa, bạn chỉ có thể xem thông tin.`,
+        );
+        return;
+      }
+
+      if (!canHuyDiemDanh) {
+        Alert.alert(
+          "Không có quyền",
+          "Tài khoản hiện tại không có quyền huỷ điểm danh cổ đông.",
         );
         return;
       }
@@ -585,7 +637,7 @@ export function useShareholdersMeetingController() {
         ],
       );
     },
-    [shareholders, syncShareholderAttendance],
+    [canHuyDiemDanh, shareholders, syncShareholderAttendance],
   );
 
   const { attendanceRate, pendingCount, presentCount } = useMemo(
@@ -612,6 +664,9 @@ export function useShareholdersMeetingController() {
     activeTab,
     attendanceFilter,
     attendanceRate,
+    canDiemDanh,
+    canGhiYKien,
+    canHuyDiemDanh,
     canViewAttendance,
     canViewVoting,
     filteredOpinions,

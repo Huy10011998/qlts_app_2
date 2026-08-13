@@ -4,7 +4,7 @@ import AssetDetails from "../../components/assets/AssetDetails";
 import ScreenContainer from "../shared/ScreenContainer";
 import { useReloadPermissionsOnFocus } from "../../hooks/useReloadPermissionsOnFocus";
 import AssetDetailsContent from "./shared/AssetDetailsContent";
-import FridgeHeaderMenu from "../NoiDia/shared/FridgeHeaderMenu";
+import AssetDetailHeaderActions from "../../components/assets/detailActions/AssetDetailHeaderActions";
 
 export default function AssetDetailsScreen() {
   useReloadPermissionsOnFocus();
@@ -24,6 +24,8 @@ export default function AssetDetailsScreen() {
           nameClass,
           fieldActive,
           loadErrorMessage,
+          refreshDetails,
+          isRefreshing,
         }) => (
           <>
             <AssetDetailsContent
@@ -37,11 +39,17 @@ export default function AssetDetailsScreen() {
               nameClass={nameClass}
               fieldActive={fieldActive}
               tabs={TAB_ITEMS ?? []}
-              contentPaddingBottom={94}
               loadErrorMessage={loadErrorMessage}
+              onRefresh={refreshDetails}
+              isRefreshing={isRefreshing}
             />
             {/* Sau nội dung: panel menu dùng absoluteFill, đặt trước sẽ bị phủ. */}
-            <FridgeHeaderMenu nameClass={nameClass} item={item} />
+            <AssetDetailHeaderActions
+              item={item}
+              nameClass={nameClass}
+              fieldActive={fieldActive}
+              loadErrorMessage={loadErrorMessage}
+            />
           </>
         )}
       </AssetDetails>

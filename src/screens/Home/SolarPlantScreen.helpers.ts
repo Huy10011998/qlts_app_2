@@ -984,7 +984,7 @@ const mapPowerDetails = (
     }
   });
 
-  kept.forEach((date, index) => {
+  kept.forEach((date) => {
     // Ban đêm bằng 0 là đúng với hai chuỗi này.
     production.push((productionByDate.get(date) ?? 0) * factor);
     selfConsumption.push((selfByDate.get(date) ?? 0) * factor);

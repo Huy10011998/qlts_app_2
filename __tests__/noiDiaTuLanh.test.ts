@@ -170,6 +170,7 @@ describe("toFridgeSummary", () => {
         id_NoiDia_VungMien_MoTa: "Miền Tây 1",
         id_NoiDia_KhuVuc_MoTa: "Bến Lức",
         id_NoiDia_NhaPhanPhoi_MoTa: "NPP Minh Thiên A",
+        iD_NoiDia_KhachHang: 14127,
         id_NoiDia_KhachHang_MoTa: "SÁU SÁNH",
       }),
     ).toMatchObject({
@@ -177,7 +178,12 @@ describe("toFridgeSummary", () => {
       label: "TL0001 - TỦ ĐÔNG SANAKY 280L",
       serialNumber: "31582SO26070000670",
       khachHang: "SÁU SÁNH",
+      idKhachHang: 14127,
     });
+  });
+
+  it("không đọc được id khách hàng thì trả 0 để phía gọi ẩn thao tác toạ độ", () => {
+    expect(toFridgeSummary({ id: 7, ma: "A" })?.idKhachHang).toBe(0);
   });
 
   it("nhận cả mảng một phần tử như get-details trả về", () => {

@@ -6,15 +6,12 @@ import {
 } from "../../../utils/helpers/colors";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { useNavigation } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
-import {
-  CameraItem,
-  getAllZoneIds,
-  getCameraItemTheme,
-} from "./cameraMenuHelpers";
+import { CameraItem, getCameraItemTheme } from "./cameraMenuHelpers";
 import { cameraMenuCardShadow } from "./cameraMenuTheme";
+import { splitHighlight } from "../../../utils/helpers/string";
+import type { CameraZoneTarget } from "./useOpenCameraZone";
 
 const localStyles = StyleSheet.create({
   childWrap: {
@@ -25,9 +22,11 @@ const localStyles = StyleSheet.create({
 type CameraMenuDropdownItemProps = {
   item: CameraItem;
   level?: number;
-  expandedIds: string[];
+  /** Nhận cả number vì tập gập/mở dùng chung với cây tài sản (id có thể là số). */
+  expandedIds: (string | number)[];
   onToggle: (id: string) => void;
-  rawData: any[];
+  onOpenZone: (target: CameraZoneTarget) => void;
+  searchText: string;
 };
 
 function CameraMenuDropdownItem({
@@ -35,39 +34,16 @@ function CameraMenuDropdownItem({
   level = 0,
   expandedIds,
   onToggle,
-  rawData,
+  onOpenZone,
+  searchText,
 }: CameraMenuDropdownItemProps) {
   const styles = useStyles(makeStyles);
-  const navigation = useNavigation<any>();
-  const hasChildren = item.children.length > 0;
+  const childCount = item.children.length;
+  const hasChildren = childCount > 0;
   const expanded = expandedIds.includes(item.id);
   const c = useAppColors();
   const theme = getCameraItemTheme(item, expanded, c);
   const hairlineBorderColor = useHairlineBorderColor();
-
-  const handleNavigate = () => {
-    const zoneId = Number(item.id);
-    const zoneIds = getAllZoneIds(zoneId, rawData);
-
-    const cameras = rawData
-      .filter(
-        (camera) =>
-          camera.iD_Camera != null &&
-          camera.iD_Camera_Ma != null &&
-          zoneIds.includes(camera.iD_VungCamera),
-      )
-      .map((camera) => ({
-        iD_Camera: camera.iD_Camera,
-        iD_Camera_MoTa: camera.iD_Camera_MoTa,
-        iD_Camera_Ma: camera.iD_Camera_Ma,
-      }));
-
-    navigation.navigate("CameraList", {
-      zoneId,
-      zoneName: item.label,
-      cameras,
-    });
-  };
 
   return (
     <View style={[styles.itemWrap, level > 0 && localStyles.childWrap]}>
@@ -85,7 +61,7 @@ function CameraMenuDropdownItem({
             styles.itemMainPressable,
             pressed && styles.itemPressed,
           ]}
-          onPress={handleNavigate}
+          onPress={() => onOpenZone({ id: item.id, label: item.label })}
         >
           <View style={[styles.iconWrap, { backgroundColor: theme.bg }]}>
             {theme.lib === "material" ? (
@@ -108,26 +84,48 @@ function CameraMenuDropdownItem({
             numberOfLines={2}
             allowFontScaling={false}
           >
-            {item.label}
+            {splitHighlight(item.label, searchText).map((segment, index) =>
+              segment.match ? (
+                <Text
+                  key={index}
+                  style={[styles.labelMatch, { backgroundColor: c.amberLight }]}
+                >
+                  {segment.text}
+                </Text>
+              ) : (
+                segment.text
+              ),
+            )}
           </Text>
         </Pressable>
 
         {hasChildren ? (
-          <Pressable
-            onPress={() => onToggle(item.id)}
-            hitSlop={10}
-            style={({ pressed }) => [
-              styles.chevronWrap,
-              { backgroundColor: theme.bg },
-              pressed && styles.itemPressed,
-            ]}
-          >
-            <Ionicons
-              name={expanded ? "chevron-up" : "chevron-down"}
-              size={13}
-              color={theme.color}
-            />
-          </Pressable>
+          <>
+            {/* Số khu vực con lấy ngay từ cây, không tốn thêm request nào. */}
+            <View style={[styles.countBadge, { backgroundColor: theme.bg }]}>
+              <Text
+                style={[styles.countText, { color: theme.color }]}
+                allowFontScaling={false}
+              >
+                {childCount}
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => onToggle(item.id)}
+              hitSlop={10}
+              style={({ pressed }) => [
+                styles.chevronWrap,
+                { backgroundColor: theme.bg },
+                pressed && styles.itemPressed,
+              ]}
+            >
+              <Ionicons
+                name={expanded ? "chevron-up" : "chevron-down"}
+                size={13}
+                color={theme.color}
+              />
+            </Pressable>
+          </>
         ) : (
           <Ionicons name="chevron-forward" size={14} color={c.textMuted} />
         )}
@@ -141,7 +139,8 @@ function CameraMenuDropdownItem({
               level={level + 1}
               expandedIds={expandedIds}
               onToggle={onToggle}
-              rawData={rawData}
+              onOpenZone={onOpenZone}
+              searchText={searchText}
             />
           ))
         : null}
@@ -215,6 +214,22 @@ const makeStyles = (c: AppColors) =>
       fontWeight: "500",
       color: c.textSecondary,
       lineHeight: 19,
+    },
+    labelMatch: {
+      fontWeight: "800",
+    },
+    countBadge: {
+      minWidth: 22,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 7,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 6,
+    },
+    countText: {
+      fontSize: 11,
+      fontWeight: "800",
     },
     chevronWrap: {
       width: 24,

@@ -41,7 +41,7 @@ import type {
 import { error, log } from "../../utils/Logger";
 import { removeVietnameseTones } from "../../utils/Helper";
 import { useParams } from "../../hooks/useParams";
-import AssetMenuSearchBar from "../Assets/shared/AssetMenuSearchBar";
+import MenuTreeSearchBar from "../../components/menuTree/MenuTreeSearchBar";
 import { buildAssetMenuTree } from "../Assets/shared/assetMenuHelpers";
 import { ASSET_MENU_BRAND_RED } from "../Assets/shared/assetMenuTheme";
 
@@ -454,7 +454,7 @@ export default function ReportScreen() {
       style={[s.container, { backgroundColor: colors.bg }]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <AssetMenuSearchBar
+      <MenuTreeSearchBar
         value={search}
         onChangeText={setSearch}
         isSearching={isSearching}

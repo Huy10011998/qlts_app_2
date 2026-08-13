@@ -87,6 +87,12 @@ export const makeNoiDiaListStyles = (c: AppColors) =>
       fontStyle: "italic",
       color: c.textSecondary,
     },
+    /** Nhãn "Ghi chú:" đứng trước nội dung — chỉ nhãn đứng thẳng, chữ vẫn nghiêng. */
+    noteLabel: {
+      fontStyle: "normal",
+      fontWeight: "bold",
+      color: c.text,
+    },
     chevron: {
       alignSelf: "center",
       marginLeft: 8,

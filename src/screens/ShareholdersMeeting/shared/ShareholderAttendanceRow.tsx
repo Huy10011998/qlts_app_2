@@ -15,6 +15,8 @@ export default function ShareholderAttendanceRow({
   onCheckIn,
   onUndoCheckIn,
   isSubmitting = false,
+  canCheckIn = true,
+  canUndoCheckIn = true,
 }: ShareholderRowProps) {
   const styles = useStyles(makeStyles);
   const cfg = useThemeValue(makeStatusConfig)[item.status];
@@ -55,20 +57,24 @@ export default function ShareholderAttendanceRow({
           >
             <Text style={styles.lockBadgeText}>Đã khóa</Text>
           </View>
-        ) : item.status === "pending" ? (
-          <TouchableOpacity
-            style={[
-              styles.checkInBtn,
-              isSubmitting && styles.actionBtnDisabled,
-            ]}
-            onPress={() => onCheckIn(item.id, item.shareholderId)}
-            disabled={isSubmitting}
-          >
-            <Text style={styles.checkInBtnText}>
-              {isSubmitting ? "Đang xử lý..." : "Điểm danh"}
-            </Text>
-          </TouchableOpacity>
-        ) : (
+        ) : /* Thiếu quyền ghi thì dòng chỉ còn nhãn trạng thái — đủ để theo dõi
+              tiến độ đại hội mà không bấm được gì. */
+        item.status === "pending" ? (
+          canCheckIn ? (
+            <TouchableOpacity
+              style={[
+                styles.checkInBtn,
+                isSubmitting && styles.actionBtnDisabled,
+              ]}
+              onPress={() => onCheckIn(item.id, item.shareholderId)}
+              disabled={isSubmitting}
+            >
+              <Text style={styles.checkInBtnText}>
+                {isSubmitting ? "Đang xử lý..." : "Điểm danh"}
+              </Text>
+            </TouchableOpacity>
+          ) : null
+        ) : canUndoCheckIn ? (
           <TouchableOpacity
             style={[
               styles.undoCheckInBtn,
@@ -82,7 +88,7 @@ export default function ShareholderAttendanceRow({
               {isSubmitting ? "Đang xử lý..." : "Huỷ điểm danh"}
             </Text>
           </TouchableOpacity>
-        )}
+        ) : null}
       </View>
     </View>
   );

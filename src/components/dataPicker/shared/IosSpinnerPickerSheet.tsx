@@ -26,7 +26,6 @@ export default function IosSpinnerPickerSheet({
   return (
     <BottomSheetModalShell
       visible={visible}
-      animationType="slide"
       onClose={onCancel}
       sheetStyle={styles.pickerContainer}
     >

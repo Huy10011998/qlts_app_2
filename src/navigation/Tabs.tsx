@@ -5,7 +5,6 @@ import {
   BottomTabBarProps,
   createBottomTabNavigator,
 } from "@react-navigation/bottom-tabs";
-import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getFocusedRouteNameFromRoute } from "@react-navigation/native";
 import HomeStack from "./HomeStack";
@@ -14,12 +13,14 @@ import CameraStack from "./CameraStack";
 import SettingStack from "./SettingStack";
 import ScanStack from "./ScanStack";
 import ScanTabButton from "./shared/ScanTabButton";
+import TabBarBackground from "./shared/TabBarBackground";
+import { createTabBarButton } from "./shared/TabBarItemButton";
 import { HomeMenuProvider } from "../screens/Home/shared/HomeMenuProvider";
 import {
-  TAB_ACTIVE_COLOR,
+  INVERTED_TAB_BAR_MARKER,
   TAB_INVERTED_BG,
+  TabBarInvertedProvider,
   createTabBarStyle,
-  tabBarStyles,
 } from "./shared/tabBarTheme";
 import { useAppColors, useStrongBorderColor } from "../utils/helpers/colors";
 import { useColorScheme } from "../hooks/useColorScheme";
@@ -45,49 +46,64 @@ function ThemeAwareTabBar({
   ) as ViewStyle | undefined;
   const isTabBarHidden = activeTabBarStyle?.display === "none";
   const usesInvertedStyle =
-    activeTabBarStyle?.backgroundColor === TAB_INVERTED_BG;
+    activeDescriptor?.options.tabBarBackground === INVERTED_TAB_BAR_MARKER;
 
-  const descriptors = activeDescriptor
-    ? {
-        ...props.descriptors,
-        [activeRoute.key]: {
-          ...activeDescriptor,
-          options: {
-            ...activeDescriptor.options,
-            tabBarStyle: isTabBarHidden
-              ? activeDescriptor.options.tabBarStyle
-              : createTabBarStyle({
-                  bottomInset,
-                  backgroundColor: usesInvertedStyle
-                    ? TAB_INVERTED_BG
-                    : backgroundColor,
-                  borderTopColor: usesInvertedStyle ? "#000" : borderTopColor,
-                }),
+  // Element dựng sẵn: `tabBarBackground` được react-navigation gọi như một
+  // factory, không mount như component.
+  const backgroundElement = (
+    <TabBarBackground
+      backgroundColor={usesInvertedStyle ? TAB_INVERTED_BG : backgroundColor}
+      borderTopColor={usesInvertedStyle ? "#000" : borderTopColor}
+    />
+  );
+  const renderBackground = () => backgroundElement;
+
+  const descriptors =
+    activeDescriptor && !isTabBarHidden
+      ? {
+          ...props.descriptors,
+          [activeRoute.key]: {
+            ...activeDescriptor,
+            options: {
+              ...activeDescriptor.options,
+              tabBarStyle: createTabBarStyle({ bottomInset }),
+              tabBarBackground: renderBackground,
+            },
           },
-        },
-      }
-    : props.descriptors;
+        }
+      : props.descriptors;
 
   return (
-    <BottomTabBar key={colorScheme} {...props} descriptors={descriptors} />
+    <TabBarInvertedProvider value={usesInvertedStyle}>
+      <BottomTabBar key={colorScheme} {...props} descriptors={descriptors} />
+    </TabBarInvertedProvider>
   );
 }
 
-function HomeTabIcon({ color }: { color: string }) {
-  return <Ionicons name="home" size={24} color={color} />;
-}
+const HomeTabButton = createTabBarButton({
+  label: "Trang chủ",
+  icon: "home",
+  iconOutline: "home-outline",
+});
 
-function FeatureTabIcon({ color }: { color: string }) {
-  return <Ionicons name="grid" size={22} color={color} />;
-}
+const FeatureTabButton = createTabBarButton({
+  label: "Chức năng",
+  icon: "grid",
+  iconOutline: "grid-outline",
+  iconSize: 22,
+});
 
-function CameraTabIcon({ color }: { color: string }) {
-  return <Ionicons name="videocam" size={24} color={color} />;
-}
+const CameraTabButton = createTabBarButton({
+  label: "Camera",
+  icon: "videocam",
+  iconOutline: "videocam-outline",
+});
 
-function SettingTabIcon({ color }: { color: string }) {
-  return <Ionicons name="settings" size={24} color={color} />;
-}
+const SettingTabButton = createTabBarButton({
+  label: "Cài đặt",
+  icon: "settings",
+  iconOutline: "settings-outline",
+});
 
 export default function Tabs() {
   const insets = useSafeAreaInsets();
@@ -120,25 +136,23 @@ export default function Tabs() {
           tabBarHideOnKeyboard: Platform.OS !== "ios",
           lazy: false,
           tabBarAllowFontScaling: false,
-          tabBarLabelStyle: tabBarStyles.label,
-          tabBarActiveTintColor: TAB_ACTIVE_COLOR,
-          tabBarStyle: createTabBarStyle({
-            bottomInset: insets.bottom,
-            backgroundColor: colors.surface,
-            borderTopColor: tabBorderColor,
-          }),
+          // Trên tablet react-navigation tự chuyển sang xếp nhãn cạnh icon; các
+          // ô tab ở đây tự vẽ icon + nhãn theo chiều dọc nên phải chốt cứng,
+          // không thì thanh tab đổi hình trên máy màn rộng.
+          tabBarLabelPosition: "below-icon",
+          tabBarStyle: createTabBarStyle({ bottomInset: insets.bottom }),
         }}
       >
         <Tab.Screen
           name="HomeTab"
           component={HomeStack}
-          options={{ title: "Trang chủ", tabBarIcon: HomeTabIcon }}
+          options={{ title: "Trang chủ", tabBarButton: HomeTabButton }}
         />
 
         <Tab.Screen
           name="FeatureTab"
           component={FeatureStack}
-          options={{ title: "Chức năng", tabBarIcon: FeatureTabIcon }}
+          options={{ title: "Chức năng", tabBarButton: FeatureTabButton }}
         />
 
         <Tab.Screen
@@ -151,13 +165,11 @@ export default function Tabs() {
             return {
               title: "Quét QR",
               tabBarButton: ScanTabButton,
-              tabBarStyle: createTabBarStyle({
-                bottomInset: insets.bottom,
-                backgroundColor: isScanScreen
-                  ? TAB_INVERTED_BG
-                  : colors.surface,
-                borderTopColor: isScanScreen ? "#000" : tabBorderColor,
-              }),
+              // Màu nền thật do ThemeAwareTabBar quyết định; đây chỉ là cờ báo
+              // màn quét muốn thanh tab nền tối.
+              tabBarBackground: isScanScreen
+                ? INVERTED_TAB_BAR_MARKER
+                : undefined,
             };
           }}
         />
@@ -165,7 +177,7 @@ export default function Tabs() {
         <Tab.Screen
           name="CameraTab"
           component={CameraStack}
-          options={{ title: "Camera", tabBarIcon: CameraTabIcon }}
+          options={{ title: "Camera", tabBarButton: CameraTabButton }}
         />
 
         <Tab.Screen
@@ -173,7 +185,7 @@ export default function Tabs() {
           component={SettingStack}
           options={{
             title: "Cài đặt",
-            tabBarIcon: SettingTabIcon,
+            tabBarButton: SettingTabButton,
           }}
         />
       </Tab.Navigator>

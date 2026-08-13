@@ -78,6 +78,8 @@ export interface TabContentProps {
   nameClass?: string;
   fieldActive: Field[];
   loadErrorMessage?: string | null;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
   isFieldChanged?: (
     field: Field,
     currentItem: AssetItem,
@@ -106,15 +108,7 @@ export interface GroupListProps {
   ) => boolean;
 }
 
-export interface AssetActionProps {
-  onEdit: () => void;
-  onDelete: () => void;
-  onClone: () => void;
-  showClone?: boolean;
-  nameClass?: string;
-}
-
-export interface BottomBarProps {
+export interface DetailSectionTabsProps {
   tabs: readonly TabItem[];
   activeTab: string;
   onTabPress: (tabKey: string, label: string) => void;
@@ -142,6 +136,8 @@ export interface DetailsProps {
     nameClass: string;
     TAB_ITEMS?: typeof TAB_ITEMS;
     loadErrorMessage?: string | null;
+    refreshDetails: () => Promise<void>;
+    isRefreshing: boolean;
   }) => React.ReactNode;
 }
 
@@ -375,6 +371,10 @@ export interface ShareholderRowProps {
   onCheckIn: (id: string, shareholderId: string) => void;
   onUndoCheckIn: (id: string, shareholderId: string) => void;
   isSubmitting?: boolean;
+  /** Quyền `Class.DaiHoiCoDong_CoDong_DiemDanh.Insert` — thiếu thì ẩn nút. */
+  canCheckIn?: boolean;
+  /** Quyền `...DiemDanh.Delete` — thiếu thì ẩn nút huỷ, vẫn thấy trạng thái. */
+  canUndoCheckIn?: boolean;
 }
 
 export interface ResolutionCardProps {

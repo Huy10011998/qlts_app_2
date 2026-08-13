@@ -553,6 +553,8 @@ export const makeStyles = (c: AppColors) =>
       alignSelf: "center",
       marginBottom: 4,
     },
+    /** Canh viên nhãn theo mốc thay vì giữa khung; lề trái là giá trị động. */
+    tooltipBubblePinned: { alignSelf: "flex-start" },
     tooltipText: { color: "white", fontSize: 13, fontWeight: "500" },
     splitChartBlock: {
       marginTop: 18,

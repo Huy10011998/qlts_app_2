@@ -251,7 +251,6 @@ export default function HomeMachineStructureCard({
 
       <BottomSheetModalShell
         visible={isSheetVisible}
-        animationType="fade"
         closeOnBackdropPress
         onClose={() => setIsSheetVisible(false)}
         overlayStyle={styles.overlay}

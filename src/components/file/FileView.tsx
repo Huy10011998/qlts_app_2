@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
-  Dimensions,
   Platform,
   Animated,
 } from "react-native";
@@ -18,6 +17,7 @@ import IsLoading from "../ui/IconLoading";
 import { error } from "../../utils/Logger";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
+import { buildPdfViewerHtml } from "./pdfViewerHtml";
 
 export default function FileView({ visible, onClose, params }: ViewerProps) {
   const styles = useStyles(makeStyles);
@@ -27,7 +27,6 @@ export default function FileView({ visible, onClose, params }: ViewerProps) {
   const [loading, setLoading] = useState(false);
   const [useUrlFallback, setUseUrlFallback] = useState(false);
 
-  const windowHeight = Dimensions.get("window").height;
   const { isMounted, showAlertIfActive } = useSafeAlert();
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -103,10 +102,7 @@ export default function FileView({ visible, onClose, params }: ViewerProps) {
           contentContainerStyle={styles.imageScrollContent}
         >
           {uri ? (
-            <Image
-              source={{ uri }}
-              style={[styles.imagePreview, { height: windowHeight }]}
-            />
+            <Image source={{ uri }} style={styles.imagePreview} />
           ) : (
             <Text style={styles.stateText}>❌ Không tải được ảnh</Text>
           )}
@@ -121,50 +117,16 @@ export default function FileView({ visible, onClose, params }: ViewerProps) {
           <WebView
             originWhitelist={["*"]}
             source={{ uri: pdfUrl }}
-            style={[styles.webView, { height: windowHeight }]}
+            style={styles.webView}
           />
         );
       }
 
-      const html = `
-        <html>
-          <head>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
-            <style>
-              body { margin:0; padding:0; }
-              canvas { display:block; margin:16px auto; border:1px solid #ccc; }
-            </style>
-          </head>
-          <body>
-            <div id="container"></div>
-            <script>
-              const pdfData = "${fileData}";
-              const pdfjsLib = window['pdfjs-dist/build/pdf'];
-              pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.worker.min.js';
-              const loadingTask = pdfjsLib.getDocument({ data: atob(pdfData) });
-              loadingTask.promise.then(pdf => {
-                for(let pageNum=1; pageNum <= pdf.numPages; pageNum++){
-                  pdf.getPage(pageNum).then(page=>{
-                    const scale = 1.5;
-                    const viewport = page.getViewport({scale});
-                    const canvas = document.createElement('canvas');
-                    document.getElementById('container').appendChild(canvas);
-                    const context = canvas.getContext('2d');
-                    canvas.height = viewport.height;
-                    canvas.width = viewport.width;
-                    page.render({canvasContext: context, viewport: viewport});
-                  });
-                }
-              });
-            </script>
-          </body>
-        </html>
-      `;
       return (
         <WebView
           originWhitelist={["*"]}
-          source={{ html }}
-          style={[styles.webView, { height: windowHeight }]}
+          source={{ html: buildPdfViewerHtml(fileData ?? "") }}
+          style={styles.webView}
           javaScriptEnabled
           domStorageEnabled
         />
@@ -239,11 +201,14 @@ const makeStyles = (c: AppColors) =>
       backgroundColor: c.loadingOverlay,
     },
     imageScrollContent: {
-      flex: 1,
+      flexGrow: 1,
       justifyContent: "center",
       alignItems: "center",
     },
     imagePreview: {
+      // Cao bằng vùng còn lại (màn trừ header), không phải cả chiều cao màn:
+      // đặt cứng chiều cao màn thì ảnh tràn xuống dưới và lệch tâm dọc.
+      flex: 1,
       width: "100%",
       resizeMode: "contain",
     },

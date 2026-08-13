@@ -261,6 +261,23 @@ export type RootStackParamList = {
   /** ================= QR (NESTED) ================= */
   ScanTab: NavigatorScreenParams<ScanTabParamList>;
 
+  /**
+   * Nhánh quét đặt ở stack gốc, dùng khi mở máy quét từ một màn ngoài tab (ví
+   * dụ nút quét trên header màn danh sách tài sản). Trùng tên với route trong
+   * ScanTab là có ý: `navigate` tìm trong navigator hiện tại trước, nên mỗi
+   * nhánh tự dẫn trong nhánh của mình và back trả về đúng chỗ đã mở.
+   */
+  QrScan: undefined;
+
+  QrDetails: {
+    id: string;
+    titleHeader?: string;
+    nameClass?: string;
+    field?: AssetField;
+    propertyClass?: PropertyClass;
+    itemData?: AssetItem;
+  };
+
   QrReview: {
     nameClass: string;
     propertyReference: string;

@@ -46,6 +46,7 @@ import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { useAppDispatch } from "../../store/hooks";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { isAuthExpiredError } from "../../services/data/callApi";
+import { useReloadPermissions } from "../../hooks/useReloadPermissions";
 import { useReloadPermissionsOnFocus } from "../../hooks/useReloadPermissionsOnFocus";
 import { useSlideInPanel } from "../../hooks/useSlideInPanel";
 import SlideInSidePanel from "../shared/SlideInSidePanel";
@@ -161,6 +162,7 @@ export default function AssetList() {
     [isMounted, nameClass],
   );
   const { can, loaded } = usePermission();
+  const reloadPerms = useReloadPermissions();
 
   const refreshTop = async () => {
     if (isRefreshingTop) return;
@@ -168,7 +170,9 @@ export default function AssetList() {
     setIsRefreshingTop(true);
     skipSizeRef.current = 0;
 
-    await fetchData(false, { isRefresh: true });
+    // Nạp lại quyền cùng lượt: nút thêm mới ẩn/hiện theo quyền, kéo reload phải
+    // đủ để thấy quyền vừa được cấp, khỏi phải ra vào lại màn.
+    await Promise.all([fetchData(false, { isRefresh: true }), reloadPerms()]);
 
     setIsRefreshingTop(false);
   };

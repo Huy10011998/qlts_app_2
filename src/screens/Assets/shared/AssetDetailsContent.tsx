@@ -1,6 +1,7 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import BottomBarDetails from "../../../components/bottom/BottomDetails";
+import DetailSectionTabs from "../../../components/tabs/DetailSectionTabs";
+import { useDetailTabBadges } from "../../../components/tabs/useDetailTabBadges";
 import TabContent from "../../../components/tabs/TabContent";
 import type { Field, TabItem } from "../../../types/index";
 import type { AssetItem } from "../../../types/navigator.d";
@@ -16,8 +17,9 @@ type AssetDetailsContentProps = {
   fieldActive: Field[];
   setActiveTab?: (tabKey: string, label: string) => void;
   tabs?: readonly TabItem[];
-  contentPaddingBottom?: number;
   loadErrorMessage?: string | null;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 };
 
 export default function AssetDetailsContent({
@@ -31,12 +33,23 @@ export default function AssetDetailsContent({
   fieldActive,
   setActiveTab,
   tabs,
-  contentPaddingBottom = 0,
   loadErrorMessage,
+  onRefresh,
+  isRefreshing,
 }: AssetDetailsContentProps) {
+  const tabsWithBadges = useDetailTabBadges({ tabs, item, nameClass });
+
   return (
     <>
-      <View style={[styles.content, { paddingBottom: contentPaddingBottom }]}>
+      {setActiveTab && tabsWithBadges ? (
+        <DetailSectionTabs
+          activeTab={activeTab}
+          onTabPress={setActiveTab}
+          tabs={tabsWithBadges}
+        />
+      ) : null}
+
+      <View style={styles.content}>
         <TabContent
           activeTab={activeTab}
           groupedFields={groupedFields}
@@ -47,16 +60,10 @@ export default function AssetDetailsContent({
           nameClass={nameClass || ""}
           fieldActive={fieldActive}
           loadErrorMessage={loadErrorMessage}
+          onRefresh={onRefresh}
+          isRefreshing={isRefreshing}
         />
       </View>
-
-      {setActiveTab && tabs ? (
-        <BottomBarDetails
-          activeTab={activeTab}
-          onTabPress={setActiveTab}
-          tabs={tabs}
-        />
-      ) : null}
     </>
   );
 }

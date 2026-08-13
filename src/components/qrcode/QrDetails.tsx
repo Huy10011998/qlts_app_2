@@ -1,22 +1,13 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
-import {
-  View,
-  StyleSheet,
-  Alert,
-  Text,
-  TouchableOpacity,
-  Dimensions,
-} from "react-native";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import Ionicons from "react-native-vector-icons/Ionicons";
+import React, { useEffect, useState, useCallback } from "react";
+import { View, StyleSheet } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 
-import type { QrDetailsProps, RootStackParamList } from "../../types/index";
+import type { QrDetailsProps } from "../../types/index";
 import { useParams } from "../../hooks/useParams";
-import { getClassReference, getDetails } from "../../services";
+import { getDetails } from "../../services";
 import IsLoading from "../ui/IconLoading";
 import EmptyState from "../ui/EmptyState";
-import { error, log } from "../../utils/Logger";
+import { error } from "../../utils/Logger";
 import { getFieldValue } from "../../utils/fields/GetFieldValue";
 import { useAppDispatch } from "../../store/hooks";
 import { useSelector } from "react-redux";
@@ -25,40 +16,12 @@ import { resetShouldRefreshDetails } from "../../store/AssetSlice";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { useDetailViewState } from "../../hooks/useDetailViewState";
-import { useSlideInPanel } from "../../hooks/useSlideInPanel";
-import SlideInSidePanel from "../shared/SlideInSidePanel";
-import {
-  AppColors,
-  useAppColors,
-  useSeparatorColor,
-  useStyles,
-} from "../../utils/helpers/colors";
-import AssetListEmptyState from "../assets/shared/AssetListEmptyState";
-import { REVIEW_NAME_CLASSES } from "../../constants/reviewNameClasses";
-import {
-  FRIDGE_NAME_CLASS,
-  toFridgeSummary,
-} from "../../screens/NoiDia/shared/fridgeLookup";
-
-const { width } = Dimensions.get("window");
-const MENU_WIDTH = width * 0.6;
-
-function QrDetailsMenuButton({ onPress }: { onPress: () => void }) {
-  const styles = useStyles(makeStyles);
-  return (
-    <TouchableOpacity onPress={onPress} style={styles.headerButton}>
-      <Ionicons name="menu" size={26} color="#fff" />
-    </TouchableOpacity>
-  );
-}
+import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
 
 export default function QrDetails({ children }: QrDetailsProps) {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
-  const separatorColor = useSeparatorColor();
   const { id, nameClass, field, itemData } = useParams();
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [isLoading, setIsLoading] = useState(true);
   const [item, setItem] = useState<any>(null);
   const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
@@ -72,64 +35,11 @@ export default function QrDetails({ children }: QrDetailsProps) {
     toggleGroup,
   } = useDetailViewState(field);
 
-  const {
-    closePanel: closeMenu,
-    togglePanel: toggleMenu,
-    translateAnim: slideAnim,
-    visible: menuVisible,
-  } = useSlideInPanel({
-    initialOffset: MENU_WIDTH,
-  });
-
   const dispatch = useAppDispatch();
   const shouldRefreshDetails = useSelector(
     (state: RootState) => state.asset.shouldRefreshDetails,
   );
-  const { isMounted, showAlertIfActive } = useSafeAlert();
-
-  // Trung chuyển là nghiệp vụ riêng của tủ lạnh nội địa, không phải thao tác
-  // chung cho mọi loại tài sản quét được.
-  const fridge = useMemo(
-    () =>
-      nameClass === FRIDGE_NAME_CLASS && item ? toFridgeSummary(item) : null,
-    [item, nameClass],
-  );
-
-  const renderHeaderRight = useCallback(
-    () => <QrDetailsMenuButton onPress={toggleMenu} />,
-    [toggleMenu],
-  );
-
-  useEffect(() => {
-    navigation.setOptions({
-      headerRight: renderHeaderRight,
-    });
-  }, [navigation, renderHeaderRight]);
-
-  const handlePress = async () => {
-    if (!nameClass || !id) {
-      Alert.alert("Lỗi", "Thiếu thông tin nameClass hoặc id");
-      return;
-    }
-
-    try {
-      const response = await getClassReference(nameClass);
-      const propertyData = response?.data?.[0]?.propertyReference;
-      const titleHeader = response?.data?.[0]?.moTa;
-      const propertyReference = response?.data?.[0]?.name;
-
-      navigation.navigate("QrReview", {
-        idRoot: id,
-        nameClassRoot: nameClass,
-        nameClass: propertyReference,
-        propertyReference: propertyData,
-        titleHeader,
-      });
-    } catch (e) {
-      error(e);
-      showAlertIfActive("Lỗi", `Không thể tải chi tiết ${nameClass}`);
-    }
-  };
+  const { isMounted } = useSafeAlert();
 
   const fetchDetails = useCallback(async () => {
     if (!id || !nameClass) {
@@ -186,75 +96,6 @@ export default function QrDetails({ children }: QrDetailsProps) {
     else setIsLoading(false);
   }, [fetchDetails, id, itemData, nameClass]);
 
-  const renderMenuPanel = () => (
-    <SlideInSidePanel
-      bodyStyle={styles.menuContent}
-      onClose={closeMenu}
-      showCloseButton={false}
-      title="Menu"
-      translateX={slideAnim}
-      visible={menuVisible}
-      width={MENU_WIDTH}
-    >
-      {loadErrorMessage ? (
-        <AssetListEmptyState
-          iconName="cloud-offline-outline"
-          title="Không thể tải menu"
-          subtitle="Vui lòng kiểm tra kết nối mạng rồi thử mở lại menu."
-        />
-      ) : (
-        <>
-          <TouchableOpacity
-            style={[styles.menuItem, { borderBottomColor: separatorColor }]}
-            onPress={() => log("Báo hỏng")}
-          >
-            <Text style={styles.menuItemText}>Báo hỏng / Yêu cầu sửa chữa</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.menuItem, { borderBottomColor: separatorColor }]}
-            onPress={() => log("Thanh lý")}
-          >
-            <Text style={styles.menuItemText}>Thanh lý</Text>
-          </TouchableOpacity>
-
-          {fridge ? (
-            <>
-              <TouchableOpacity
-                style={[styles.menuItem, { borderBottomColor: separatorColor }]}
-                onPress={() => {
-                  closeMenu();
-                  navigation.navigate("XacNhanViTriTuLanhLichSu", { fridge });
-                }}
-              >
-                <Text style={styles.menuItemText}>Xác nhận vị trí</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.menuItem, { borderBottomColor: separatorColor }]}
-                onPress={() => {
-                  closeMenu();
-                  navigation.navigate("TrungChuyenTuLanhLichSu", { fridge });
-                }}
-              >
-                <Text style={styles.menuItemText}>Trung chuyển</Text>
-              </TouchableOpacity>
-            </>
-          ) : null}
-
-          {REVIEW_NAME_CLASSES.includes(nameClass || "") ? (
-            <TouchableOpacity
-              style={[styles.menuItem, { borderBottomColor: separatorColor }]}
-              onPress={() => handlePress()}
-            >
-              <Text style={styles.menuItemText}>Đánh giá</Text>
-            </TouchableOpacity>
-          ) : null}
-        </>
-      )}
-    </SlideInSidePanel>
-  );
-
   if (isLoading) return <IsLoading size="large" color={c.red} />;
 
   if (loadErrorMessage) {
@@ -267,7 +108,6 @@ export default function QrDetails({ children }: QrDetailsProps) {
             subtitle={loadErrorMessage}
           />
         </View>
-        {renderMenuPanel()}
       </View>
     );
   }
@@ -285,7 +125,6 @@ export default function QrDetails({ children }: QrDetailsProps) {
         nameClass: nameClass || "",
         fieldActive: fieldActive || [],
       })}
-      {renderMenuPanel()}
     </View>
   );
 }
@@ -301,24 +140,5 @@ const makeStyles = (c: AppColors) =>
       alignItems: "center",
       justifyContent: "center",
       paddingHorizontal: 32,
-    },
-    menuContent: {
-      padding: 16,
-      paddingBottom: 24,
-    },
-    menuItem: {
-      paddingVertical: 14,
-      paddingHorizontal: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: c.border,
-    },
-
-    menuItemText: {
-      fontSize: 15,
-      color: c.text,
-      fontWeight: "500",
-    },
-    headerButton: {
-      paddingHorizontal: 8,
     },
   });

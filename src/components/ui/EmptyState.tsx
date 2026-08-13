@@ -5,6 +5,7 @@ import {
   StyleSheet,
   Text,
   TextStyle,
+  TouchableOpacity,
   View,
   ViewStyle,
 } from "react-native";
@@ -18,6 +19,9 @@ type EmptyStateProps = {
   style?: StyleProp<ViewStyle>;
   titleStyle?: StyleProp<TextStyle>;
   subtitleStyle?: StyleProp<TextStyle>;
+  /** Nút hành động dưới phần chữ, ví dụ "Xoá từ khoá" hay "Thử lại". */
+  actionLabel?: string;
+  onActionPress?: () => void;
 };
 
 export default function EmptyState({
@@ -28,6 +32,8 @@ export default function EmptyState({
   style,
   titleStyle,
   subtitleStyle,
+  actionLabel,
+  onActionPress,
 }: EmptyStateProps) {
   const colors = useAppColors();
 
@@ -52,6 +58,20 @@ export default function EmptyState({
         >
           {subtitle}
         </Text>
+      ) : null}
+      {actionLabel && onActionPress ? (
+        <TouchableOpacity
+          style={[
+            styles.action,
+            { backgroundColor: colors.redSurface, borderColor: colors.redBorder },
+          ]}
+          onPress={onActionPress}
+          accessibilityRole="button"
+        >
+          <Text style={[styles.actionText, { color: colors.red }]}>
+            {actionLabel}
+          </Text>
+        </TouchableOpacity>
       ) : null}
     </View>
   );
@@ -88,5 +108,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: "center",
     lineHeight: 18,
+  },
+  action: {
+    marginTop: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  actionText: {
+    fontSize: 13,
+    fontWeight: "700",
   },
 });
