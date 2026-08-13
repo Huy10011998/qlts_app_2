@@ -25,8 +25,12 @@ import { createAssetFormHeaderSubmitRight } from "../../components/assets/shared
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import {
   getNoiDiaErrorMessage,
+  getTrangThaiSuDungOptions,
   xacNhanViTriTuLanh,
+  type TrangThaiSuDungOption,
 } from "../../services/data/callApi";
+import EnumAndReferencePickerModal from "../../components/modal/EnumAndReferencePickerModal";
+import { removeVietnameseTones } from "../../utils/Helper";
 import {
   checkCameraPermission,
   openAppPermissionSettings,
@@ -81,6 +85,16 @@ export default function XacNhanViTriTuLanhScreen() {
   const [isLocating, setIsLocating] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Trạng thái sử dụng lúc xác nhận: mặc định đúng trạng thái hiện tại của tủ,
+  // user không đổi thì cứ gửi nguyên giá trị đó lên.
+  const [statusOptions, setStatusOptions] = useState<TrangThaiSuDungOption[]>(
+    [],
+  );
+  const [statusId, setStatusId] = useState(fridge?.idTrangThaiSuDung ?? 0);
+  const [isLoadingStatus, setIsLoadingStatus] = useState(false);
+  const [isStatusPickerVisible, setIsStatusPickerVisible] = useState(false);
+  const [statusKeyword, setStatusKeyword] = useState("");
+
   // Giờ hiển thị chỉ để user đối chiếu; server mới là nơi chốt NgayXacNhan.
   const capturedAt = photoTakenAt ?? openedAt;
   const locationRows = useMemo(
@@ -121,6 +135,72 @@ export default function XacNhanViTriTuLanhScreen() {
   useEffect(() => {
     loadCoordinates();
   }, [loadCoordinates]);
+
+  /** Danh mục ít dòng, tải sẵn một lần để user bấm vào là có danh sách ngay. */
+  const loadStatusOptions = useCallback(async () => {
+    setIsLoadingStatus(true);
+    try {
+      const options = await getTrangThaiSuDungOptions();
+      setStatusOptions(options);
+      return options;
+    } catch (e) {
+      error(e);
+      return [] as TrangThaiSuDungOption[];
+    } finally {
+      setIsLoadingStatus(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadStatusOptions();
+  }, [loadStatusOptions]);
+
+  // Chữ hiển thị: ưu tiên danh mục vừa tải, chưa tải xong thì dùng mô tả sẵn có
+  // của tủ để ô không bị trống.
+  const statusLabel =
+    statusOptions.find((option) => option.id === statusId)?.text ||
+    (statusId === (fridge?.idTrangThaiSuDung ?? 0)
+      ? fridge?.trangThaiSuDung || ""
+      : "");
+
+  const statusPickerItems = useMemo(() => {
+    const keyword = removeVietnameseTones(statusKeyword.trim());
+    const items = statusOptions.map((option) => ({
+      value: option.id,
+      text: option.text,
+    }));
+
+    if (!keyword) return items;
+
+    return items.filter((item) =>
+      removeVietnameseTones(item.text).includes(keyword),
+    );
+  }, [statusKeyword, statusOptions]);
+
+  const handleOpenStatusPicker = useCallback(async () => {
+    if (isSubmitting || isLoadingStatus) return;
+
+    const options = statusOptions.length
+      ? statusOptions
+      : await loadStatusOptions();
+
+    if (!options.length) {
+      showAlertIfActive(
+        "Không tải được trạng thái",
+        "Vui lòng kiểm tra kết nối mạng rồi thử lại.",
+      );
+      return;
+    }
+
+    setStatusKeyword("");
+    setIsStatusPickerVisible(true);
+  }, [
+    isLoadingStatus,
+    isSubmitting,
+    loadStatusOptions,
+    showAlertIfActive,
+    statusOptions,
+  ]);
 
   /**
    * CHỈ mở camera — tuyệt đối không mở thư viện ảnh. Ảnh là bằng chứng tủ đang
@@ -231,6 +311,9 @@ export default function XacNhanViTriTuLanhScreen() {
         ghiChu: note,
         lat: coordinates?.lat,
         lng: coordinates?.lng,
+        // Không đọc được trạng thái hiện tại của tủ thì bỏ trống để server tự
+        // lấy, đừng gửi 0.
+        idTrangThaiSuDung: statusId || undefined,
       });
 
       if (!response?.data) {
@@ -264,6 +347,7 @@ export default function XacNhanViTriTuLanhScreen() {
     note,
     photo,
     showAlertIfActive,
+    statusId,
   ]);
 
   const canSubmit = Boolean(fridge && photo?.uri) && !isSubmitting;
@@ -367,6 +451,34 @@ export default function XacNhanViTriTuLanhScreen() {
           </Text>
         </View>
 
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Trạng thái sử dụng</Text>
+
+          <TouchableOpacity
+            style={styles.selectBox}
+            onPress={handleOpenStatusPicker}
+            disabled={isSubmitting}
+            activeOpacity={0.7}
+          >
+            <Text
+              style={[
+                styles.selectText,
+                !statusLabel && styles.selectPlaceholder,
+              ]}
+              numberOfLines={1}
+            >
+              {statusLabel ||
+                (isLoadingStatus ? "Đang tải..." : "Chọn trạng thái")}
+            </Text>
+            <Ionicons name="chevron-down" size={18} color={c.textMuted} />
+          </TouchableOpacity>
+
+          <Text style={styles.hint}>
+            Trạng thái này chỉ ghi vào lượt xác nhận, không đổi trạng thái của
+            tủ.
+          </Text>
+        </View>
+
         <NoiDiaNoteCard
           value={note}
           onChangeText={setNote}
@@ -418,6 +530,16 @@ export default function XacNhanViTriTuLanhScreen() {
         </View>
       ) : null}
 
+      <EnumAndReferencePickerModal
+        visible={isStatusPickerVisible}
+        title="Trạng thái sử dụng"
+        items={statusPickerItems}
+        selectedValue={statusId || ""}
+        total={statusPickerItems.length}
+        onSearch={setStatusKeyword}
+        onSelect={(value) => setStatusId(Number(value) || 0)}
+        onClose={() => setIsStatusPickerVisible(false)}
+      />
     </ScreenContainer>
   );
 }
@@ -479,6 +601,28 @@ const makeStyles = (c: AppColors) =>
       fontSize: 12,
       fontStyle: "italic",
       color: c.textSub,
+    },
+    selectBox: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 8,
+      minHeight: 44,
+      paddingHorizontal: 12,
+      borderRadius: 10,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.border,
+      backgroundColor: c.surfaceAlt,
+    },
+    selectText: {
+      flex: 1,
+      fontSize: 14.5,
+      fontWeight: "600",
+      color: c.text,
+    },
+    selectPlaceholder: {
+      fontWeight: "400",
+      color: c.textMuted,
     },
     previewWrap: {
       borderRadius: 12,

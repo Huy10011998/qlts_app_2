@@ -9,10 +9,12 @@ import { getClassReference } from "../../services";
 import { getDanhGiaNameClass } from "../../constants/reviewNameClasses";
 import { usePermission } from "../../hooks/usePermission";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
-import { error, log } from "../../utils/Logger";
+import { error } from "../../utils/Logger";
 
 /**
- * Mục riêng của màn chi tiết QR cho menu ⋯: báo hỏng, thanh lý, đánh giá.
+ * Mục riêng của màn chi tiết QR cho menu ⋯. Hiện chỉ có "Đánh giá", và chỉ khi
+ * người dùng có quyền đọc đúng class đánh giá của loại thiết bị đang mở — cùng
+ * lối kiểm quyền như các mục chung (Sửa/Bản sao/Xóa) trong `useAssetRecordActions`.
  *
  * Mục tủ lạnh KHÔNG nằm ở đây — `AssetDetailHeaderActions` đã tự gọi
  * `useFridgeMenuItems`, thêm lần nữa là ra hai mục trùng.
@@ -62,20 +64,10 @@ export function useQrDetailMenuItems({
   }, [id, nameClass, navigation, showAlertIfActive]);
 
   return useMemo(() => {
-    const items: DetailMenuItem[] = [
-      {
-        key: "qr-bao-hong",
-        label: "Báo hỏng / Yêu cầu sửa chữa",
-        icon: "construct-outline",
-        onPress: () => log("Báo hỏng"),
-      },
-      {
-        key: "qr-thanh-ly",
-        label: "Thanh lý",
-        icon: "archive-outline",
-        onPress: () => log("Thanh lý"),
-      },
-    ];
+    // Báo hỏng và Thanh lý chưa có nghiệp vụ thật lẫn class quyền tương ứng trên
+    // server, nên tạm không hiện: mục nào trong menu này cũng phải qua một cửa
+    // quyền, bày ra một mục ai cũng thấy mà bấm vào không làm gì là sai cả hai.
+    const items: DetailMenuItem[] = [];
 
     if (canXemDanhGia) {
       items.push({

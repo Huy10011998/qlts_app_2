@@ -182,6 +182,24 @@ describe("toFridgeSummary", () => {
     });
   });
 
+  it("đọc trạng thái sử dụng hiện tại để làm mặc định cho combobox xác nhận", () => {
+    expect(
+      toFridgeSummary({
+        id: 3158,
+        ma: "TL0001",
+        iD_TrangThaiSuDung: 3,
+        id_TrangThaiSuDung_MoTa: "Đang sử dụng",
+      }),
+    ).toMatchObject({ idTrangThaiSuDung: 3, trangThaiSuDung: "Đang sử dụng" });
+  });
+
+  it("thiếu trạng thái sử dụng thì trả 0 để màn gọi bỏ trống, server tự lấy", () => {
+    const fridge = toFridgeSummary({ id: 7, ma: "A" });
+
+    expect(fridge?.idTrangThaiSuDung).toBe(0);
+    expect(fridge?.trangThaiSuDung).toBe("");
+  });
+
   it("không đọc được id khách hàng thì trả 0 để phía gọi ẩn thao tác toạ độ", () => {
     expect(toFridgeSummary({ id: 7, ma: "A" })?.idKhachHang).toBe(0);
   });

@@ -2,6 +2,7 @@ import { StyleSheet } from "react-native";
 
 import { AppColors } from "../../../utils/helpers/colors";
 import { cardShadow } from "../../../components/assets/shared/listTheme";
+import { ADD_FAB_CLEARANCE } from "../../../components/add/shared/AddActionFab";
 
 /**
  * Style dùng chung cho ba màn danh sách của nhóm Nội địa.
@@ -17,10 +18,9 @@ export const makeNoiDiaListStyles = (c: AppColors) =>
       paddingTop: 2,
       paddingBottom: 24,
     },
-    // Chừa chỗ cho AddActionFab (cao 64 + lề 16 + safe area) để thẻ cuối không
-    // bị nút che mất.
+    // Chừa chỗ cho AddActionFab để thẻ cuối không bị nút che mất.
     listContentWithFab: {
-      paddingBottom: 112,
+      paddingBottom: ADD_FAB_CLEARANCE,
     },
     emptyRoot: {
       flexGrow: 1,

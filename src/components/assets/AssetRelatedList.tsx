@@ -190,6 +190,8 @@ export default function AssetRelatedList() {
   }
 
   const isEmpty = data.length === 0;
+  // Một điều kiện duy nhất cho cả nút và khoảng chừa ở đáy danh sách.
+  const showAddFab = Boolean(loaded && can(nameClass, "Insert"));
 
   return (
     <View style={styles.container}>
@@ -243,6 +245,7 @@ export default function AssetRelatedList() {
           stickyHeaderIndices={[]}
           contentContainerStyle={[
             styles.listContent,
+            showAddFab && !isEmpty && styles.listContentWithFab,
             isEmpty && styles.listContentEmpty,
           ]}
           ListEmptyComponent={
@@ -255,7 +258,7 @@ export default function AssetRelatedList() {
         />
       </View>
 
-      {loaded && can(nameClass, "Insert") && (
+      {showAddFab && (
         <AddItem
           nameClass={nameClass}
           onPress={() =>

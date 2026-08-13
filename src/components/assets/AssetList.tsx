@@ -530,6 +530,9 @@ export default function AssetList() {
   const isEmpty = assetItems.length === 0;
   const hasSearchOrFilter =
     Boolean(debouncedSearch.trim()) || Boolean(selectedNode);
+  // Một điều kiện duy nhất cho cả nút và khoảng chừa ở đáy danh sách, để không
+  // bao giờ lệch nhau.
+  const showAddFab = Boolean(loaded && nameClass && can(nameClass, "Insert"));
 
   return (
     <View style={styles.container}>
@@ -580,6 +583,7 @@ export default function AssetList() {
           stickyHeaderIndices={[]}
           contentContainerStyle={[
             styles.listContent,
+            showAddFab && !isEmpty && styles.listContentWithFab,
             isEmpty && styles.listContentEmpty,
           ]}
           ListEmptyComponent={
@@ -602,7 +606,7 @@ export default function AssetList() {
 
       {renderTreePanel()}
 
-      {loaded && nameClass && can(nameClass, "Insert") && (
+      {showAddFab && (
         <AddItem
           nameClass={nameClass}
           field={fieldActive}

@@ -50,6 +50,13 @@ export type XacNhanViTriTuLanhItem = {
   /** Người thực hiện xác nhận (chỉ có ở API lịch sử). */
   log_ID_User_MoTa?: string | null;
 
+  /**
+   * Trạng thái sử dụng của tủ LÚC XÁC NHẬN (snapshot). Có thể khác trạng thái
+   * hiện tại của tủ — đừng dùng để hiện trạng thái tủ ở màn khác.
+   */
+  id_TrangThaiSuDung?: number | null;
+  id_TrangThaiSuDung_MoTa?: string | null;
+
   /** Toạ độ đăng ký của khách hàng đang giữ tủ (chỉ có ở API lịch sử). */
   noiDia_KhachHang_LAT?: string | null;
   noiDia_KhachHang_LNG?: string | null;
@@ -73,6 +80,11 @@ export type XacNhanViTriPayload = {
   ghiChu?: string;
   lat?: string;
   lng?: string;
+  /**
+   * Trạng thái sử dụng của tủ lúc xác nhận. Bỏ trống thì server tự lấy trạng
+   * thái hiện tại của tủ, nên bản cũ không gửi field này vẫn chạy đúng.
+   */
+  idTrangThaiSuDung?: number;
 };
 
 export const xacNhanViTriTuLanh = async ({
@@ -81,6 +93,7 @@ export const xacNhanViTriTuLanh = async ({
   ghiChu,
   lat,
   lng,
+  idTrangThaiSuDung,
 }: XacNhanViTriPayload) => {
   const form = new FormData();
 
@@ -94,6 +107,8 @@ export const xacNhanViTriTuLanh = async ({
   if (ghiChu?.trim()) form.append("GhiChu", ghiChu.trim());
   if (lat) form.append("LAT", lat);
   if (lng) form.append("LNG", lng);
+  if (idTrangThaiSuDung)
+    form.append("ID_TrangThaiSuDung", String(idTrangThaiSuDung));
 
   return callApi<NoiDiaResponse<XacNhanViTriTuLanhItem>>(
     "POST",
@@ -105,6 +120,50 @@ export const xacNhanViTriTuLanh = async ({
       timeout: 60000,
     },
   );
+};
+
+/** Một dòng danh mục trạng thái sử dụng: hiện `text`, gửi lên `id`. */
+export type TrangThaiSuDungOption = {
+  id: number;
+  text: string;
+};
+
+/**
+ * Danh mục trạng thái sử dụng cho combobox màn xác nhận vị trí.
+ *
+ * Ít dòng và gần như không đổi nên cache lại sau lần gọi đầu; chỉ cache khi có
+ * dữ liệu để lần sau còn thử lại được.
+ */
+let trangThaiSuDungCache: TrangThaiSuDungOption[] | null = null;
+
+export const getTrangThaiSuDungOptions = async () => {
+  if (trangThaiSuDungCache) return trangThaiSuDungCache;
+
+  const response = await callApi<{
+    data?: { items?: Array<{ id?: unknown; text?: unknown }> };
+  }>("POST", API_ENDPOINTS.GET_CATEGORY, {
+    Type: "DM_TrangThaiSuDung",
+    lstParent: "",
+    currentID: [],
+    PageSize: 100,
+    SkipSize: 0,
+  });
+
+  const options = (response?.data?.items ?? []).reduce<TrangThaiSuDungOption[]>(
+    (acc, item) => {
+      const id = Number(item?.id);
+      const text = String(item?.text ?? "").trim();
+
+      if (Number.isFinite(id) && id > 0 && text) acc.push({ id, text });
+
+      return acc;
+    },
+    [],
+  );
+
+  if (options.length) trangThaiSuDungCache = options;
+
+  return options;
 };
 
 /**

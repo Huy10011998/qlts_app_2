@@ -14,6 +14,16 @@ const FAB_SIZE = 64;
 const FAB_OFFSET = 16;
 let cachedBottomInset = 0;
 
+/**
+ * Khoảng trống danh sách phải chừa ở đáy khi màn có FAB: chiều cao nút + lề
+ * dưới + 32pt hở, để thẻ cuối không bị nút che (nút là `position: absolute`).
+ *
+ * Dùng hằng này thay vì gõ số ở từng màn — đổi cỡ nút là mọi danh sách theo
+ * kịp. Safe-area chưa cộng vào đây vì FAB đã tự cộng, còn danh sách thường nằm
+ * trong vùng an toàn rồi; 32pt hở là phần bù cho sai số đó.
+ */
+export const ADD_FAB_CLEARANCE = FAB_SIZE + FAB_OFFSET + 32;
+
 type AddActionFabProps = {
   label?: string;
   onPress: () => void;

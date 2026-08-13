@@ -27,6 +27,13 @@ export type FridgeSummary = {
    * thao tác.
    */
   idKhachHang: number;
+  /**
+   * Trạng thái sử dụng HIỆN TẠI của tủ — dùng làm giá trị mặc định cho combobox
+   * trạng thái ở màn xác nhận vị trí. `0` khi record không có.
+   */
+  idTrangThaiSuDung: number;
+  /** Chữ hiển thị của `idTrangThaiSuDung`, rỗng khi record không có. */
+  trangThaiSuDung: string;
 };
 
 const readField = (raw: Record<string, any>, name: string) => {
@@ -56,6 +63,7 @@ export const toFridgeSummary = (raw: any): FridgeSummary | null => {
   const ma = readField(item, "ma");
   const ten = readField(item, "ten");
   const idKhachHang = Number(readField(item, "id_NoiDia_KhachHang"));
+  const idTrangThaiSuDung = Number(readField(item, "id_TrangThaiSuDung"));
 
   return {
     id,
@@ -70,6 +78,11 @@ export const toFridgeSummary = (raw: any): FridgeSummary | null => {
     khachHang: readField(item, "id_NoiDia_KhachHang_MoTa"),
     idKhachHang:
       Number.isFinite(idKhachHang) && idKhachHang > 0 ? idKhachHang : 0,
+    idTrangThaiSuDung:
+      Number.isFinite(idTrangThaiSuDung) && idTrangThaiSuDung > 0
+        ? idTrangThaiSuDung
+        : 0,
+    trangThaiSuDung: readField(item, "id_TrangThaiSuDung_MoTa"),
   };
 };
 
