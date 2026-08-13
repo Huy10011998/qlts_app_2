@@ -255,6 +255,15 @@ function HeaderDetailsBar({
       ? options.title
       : route.name;
   const meta = getHeaderMeta(title);
+  // Màn chi tiết ghi mã bản ghi vào đây (xem AssetDetailHeaderActions): tiêu đề
+  // là tên loại tài sản, cuộn qua khỏi dòng "Mã:" thì badge là chỗ duy nhất còn
+  // cho biết đang xem bản ghi nào.
+  const recordLabel = (options as { headerBadgeLabel?: string })
+    .headerBadgeLabel;
+  const badgeLabel = recordLabel?.trim() || meta.badgeLabel;
+  const badgeIconName = recordLabel?.trim()
+    ? ("pricetag-outline" as const)
+    : meta.iconName;
   const customHeaderRight =
     typeof options.headerRight === "function"
       ? options.headerRight({
@@ -269,10 +278,10 @@ function HeaderDetailsBar({
       return;
     }
 
-    (navigation as any).navigate("ScanTab", {
-      screen: "Scan",
-      initial: false,
-    });
+    // Đẩy máy quét lên trên màn hiện tại, KHÔNG chuyển sang tab Quét: `Tabs`
+    // nằm dưới các màn này trong stack gốc nên navigate sang nó là pop mất màn
+    // đang xem, back xong người dùng rơi ra Trang chủ chứ không về chỗ cũ.
+    (navigation as any).navigate("QrScan");
   };
 
   return (
@@ -298,13 +307,13 @@ function HeaderDetailsBar({
         <View style={styles.titleWrap}>
           <View style={styles.titleBadge}>
             <Ionicons
-              name={meta.iconName}
+              name={badgeIconName}
               size={12}
               color="rgba(255,255,255,0.82)"
               style={styles.titleBadgeIcon}
             />
             <Text style={styles.titleBadgeText} allowFontScaling={false}>
-              {meta.badgeLabel}
+              {badgeLabel}
             </Text>
           </View>
           <Text

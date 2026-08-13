@@ -505,22 +505,12 @@ const CameraListGrid: React.FC = () => {
     tabNavigation.setOptions({
       tabBarStyle: isGridFullscreenMode
         ? { display: "none" }
-        : [
-            createTabBarStyle({
-              bottomInset: insets.bottom,
-              backgroundColor: colors.surface,
-            }),
-          ],
+        : [createTabBarStyle({ bottomInset: insets.bottom })],
     });
 
     return () => {
       tabNavigation.setOptions({
-        tabBarStyle: [
-          createTabBarStyle({
-            bottomInset: insets.bottom,
-            backgroundColor: colors.surface,
-          }),
-        ],
+        tabBarStyle: [createTabBarStyle({ bottomInset: insets.bottom })],
       });
     };
   }, [colors.surface, insets.bottom, isGridFullscreenMode, navigation]);
@@ -1531,7 +1521,7 @@ const CameraListGrid: React.FC = () => {
         visible={showLayoutPicker && !isGridFullscreenMode}
         animationType="slide"
         transparent
-        statusBarTranslucent={false}
+        statusBarTranslucent
         supportedOrientations={[
           "portrait",
           "landscape-left",

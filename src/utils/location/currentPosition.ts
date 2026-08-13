@@ -6,10 +6,25 @@ export type Coordinates = {
   /** Thập phân, dấu chấm — đúng dạng API nội địa nhận ("10.762622"). */
   lat: string;
   lng: string;
+  /**
+   * Bán kính sai số do thiết bị báo, đơn vị mét. `undefined` khi máy không trả
+   * — luồng nào cần độ chính xác đảm bảo thì phải coi đó là "không đạt".
+   */
+  accuracy?: number;
+};
+
+export type CoordinatesOptions = {
+  /**
+   * Tuổi tối đa của fix được phép tái dùng (ms). Mặc định 30s cho các luồng chỉ
+   * ghi kèm toạ độ; luồng ghi mốc toạ độ phải truyền 0 để không nhận fix cũ lấy
+   * ở chỗ khác.
+   */
+  maximumAge?: number;
 };
 
 const COORDINATE_PRECISION = 6;
 const TIMEOUT_MS = 12000;
+const DEFAULT_MAXIMUM_AGE_MS = 30000;
 
 type GeolocationModule = typeof import("@react-native-community/geolocation").default;
 
@@ -39,7 +54,7 @@ const requestAndroidPermission = async () => {
     {
       title: "Quyền truy cập vị trí",
       message:
-        "Ứng dụng cần vị trí thiết bị để ghi nhận toạ độ nơi chụp ảnh xác nhận.",
+        "Ứng dụng cần vị trí thiết bị để ghi nhận toạ độ nơi bạn đang thao tác.",
       buttonPositive: "Đồng ý",
       buttonNegative: "Từ chối",
     },
@@ -53,9 +68,12 @@ const requestAndroidPermission = async () => {
  *
  * Cố tình KHÔNG bao giờ ném lỗi: theo nghiệp vụ xác nhận vị trí, user tắt định
  * vị hay từ chối quyền thì vẫn gửi được (API nhận LAT/LNG rỗng), nên mọi thất
- * bại ở đây chỉ là "không có toạ độ" chứ không được chặn luồng gửi.
+ * bại ở đây chỉ là "không có toạ độ" chứ không được chặn luồng gửi. Luồng nào
+ * bắt buộc có toạ độ thì tự chặn khi nhận `null`.
  */
-export const getCurrentCoordinates = async (): Promise<Coordinates | null> => {
+export const getCurrentCoordinates = async (
+  options?: CoordinatesOptions,
+): Promise<Coordinates | null> => {
   try {
     const geolocation = loadGeolocation();
     if (!geolocation) return null;
@@ -69,11 +87,15 @@ export const getCurrentCoordinates = async (): Promise<Coordinates | null> => {
 
     return await new Promise<Coordinates | null>((resolve) => {
       geolocation.getCurrentPosition(
-        (position) =>
+        (position) => {
+          const accuracy = Number(position.coords.accuracy);
+
           resolve({
             lat: formatCoordinate(position.coords.latitude),
             lng: formatCoordinate(position.coords.longitude),
-          }),
+            accuracy: Number.isFinite(accuracy) ? accuracy : undefined,
+          });
+        },
         (locationError) => {
           warn("[Location] getCurrentPosition failed", locationError?.message);
           resolve(null);
@@ -81,7 +103,7 @@ export const getCurrentCoordinates = async (): Promise<Coordinates | null> => {
         {
           enableHighAccuracy: true,
           timeout: TIMEOUT_MS,
-          maximumAge: 30000,
+          maximumAge: options?.maximumAge ?? DEFAULT_MAXIMUM_AGE_MS,
         },
       );
     });

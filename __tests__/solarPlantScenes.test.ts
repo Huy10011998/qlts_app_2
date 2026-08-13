@@ -1,4 +1,5 @@
 import { getPlantSceneImage } from "../src/screens/Home/shared/plantScenes";
+import { getSceneHeight } from "../src/screens/Home/SolarPlantScreen.visuals";
 
 // Ảnh nền nhà máy khớp theo tên site của API. Tên đó do bên cấu hình gõ tay nên
 // có thể hoa/thường, có/không dấu, kèm chữ "Nhà máy" — cách khớp phải chịu được
@@ -30,5 +31,23 @@ describe("getPlantSceneImage", () => {
 
     expect(benLuc).toBeTruthy();
     expect(benLuc).not.toBe(getPlantSceneImage("CHOLIMEX FOOD VĨNH LỘC"));
+  });
+});
+
+// Khung cảnh nhà máy cao theo chiều rộng khối: cắm cứng 145 thì trên tablet dải
+// ảnh dẹt gần 5:1 và `cover` cắt mất phần lớn nhà máy.
+describe("getSceneHeight", () => {
+  it("giữ tỉ lệ của bản điện thoại", () => {
+    expect(getSceneHeight(390)).toBe(145);
+  });
+
+  it("máy hẹp hơn vẫn không thấp hơn bản điện thoại", () => {
+    expect(getSceneHeight(320)).toBe(145);
+  });
+
+  it("khối rộng thì cao thêm nhưng có chặn trên", () => {
+    expect(getSceneHeight(520)).toBeGreaterThan(145);
+    expect(getSceneHeight(720)).toBe(230);
+    expect(getSceneHeight(2000)).toBe(230);
   });
 });

@@ -135,7 +135,13 @@ export function NoiDiaPhotoViewer({
   );
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      statusBarTranslucent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <Pressable style={styles.viewerRoot} onPress={onClose}>
         {source ? (
           <Image

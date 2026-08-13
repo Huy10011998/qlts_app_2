@@ -189,8 +189,6 @@ export function useSolarDashboard({
   }, []);
 
   const meterId = Number(selectedSite?.value);
-  const fromTime = dateRange.fromDate.getTime();
-  const toTime = dateRange.toDate.getTime();
 
   // ─── Bước khởi tạo: danh sách site ─────────────────────────────────────────
 
@@ -354,7 +352,7 @@ export function useSolarDashboard({
       },
       env: (id: number) => getSolarEnvBenefits(id).then(mapEnvBenefits),
     }),
-    [period, fromTime, toTime],
+    [dateRange, period],
   );
 
   const runSequence = useCallback(

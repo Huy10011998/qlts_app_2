@@ -6,30 +6,12 @@ import { getMatchedKey } from "../../utils/Helper";
 import { warn } from "../../utils/Logger";
 import { api, callApi } from "./httpClient";
 
-/**
- * Nội địa – tủ lạnh: xác nhận vị trí và trung chuyển.
- *
- * Hai nhóm API này không đi qua khuôn `get-list`/`insert` chung của tài sản mà
- * có controller riêng, cùng chung quy ước response `{ message, data }`:
- * `data` là kết quả (null = thất bại), `message` là câu tiếng Việt viết sẵn để
- * hiện thẳng cho người dùng.
- */
-
 export type NoiDiaResponse<T> = {
   message?: string;
   data: T | null;
 };
 
-/**
- * BE serialize các cột `ID_...` thành `iD_...` (i thường, D hoa) chứ không phải
- * `id_...` — ví dụ `iD_NoiDia_KhachHang_MoTa`. Lệch đúng một ký tự nên mọi field
- * vị trí đọc ra `undefined` và bảng hiện toàn dấu gạch.
- *
- * Thêm bí danh `id_...` cho từng key thay vì đổi tên: giữ luôn key gốc nên nếu
- * BE sửa lại cho đúng thì cũng không hỏng, và không phải rải `getMatchedKey`
- * khắp các màn.
- */
-export const withIdAliases = <T,>(row: T): T => {
+export const withIdAliases = <T>(row: T): T => {
   if (!row || typeof row !== "object") return row;
 
   const source = row as Record<string, unknown>;
@@ -46,7 +28,7 @@ export const withIdAliases = <T,>(row: T): T => {
 };
 
 /** Áp `withIdAliases` cho `data` của một response dạng mảng. */
-const normalizeNoiDiaRows = <T,>(
+const normalizeNoiDiaRows = <T>(
   response: NoiDiaResponse<T[]>,
 ): NoiDiaResponse<T[]> => ({
   ...response,
@@ -93,15 +75,6 @@ export type XacNhanViTriPayload = {
   lng?: string;
 };
 
-/**
- * Gửi một lượt xác nhận vị trí.
- *
- * multipart/form-data, KHÔNG phải JSON. `NgayXacNhan` cố tình không gửi để
- * server lấy giờ hệ thống — app không cho user sửa ngày xác nhận.
- *
- * ⚠️ Mỗi lần gọi tạo một dòng lịch sử MỚI, API không chống trùng: chỉ retry khi
- * thật sự lỗi mạng, đã nhận được `data` thì tuyệt đối không gọi lại.
- */
 export const xacNhanViTriTuLanh = async ({
   idNoiDiaTuLanh,
   photo,
@@ -135,10 +108,14 @@ export const xacNhanViTriTuLanh = async ({
 };
 
 /**
- * `Top` mặc định của cả hai API lịch sử. Không gửi `Top` thì server tự cắt ở
- * mốc này, và không có phân trang — danh sách chạm đúng 500 dòng nghĩa là có
- * thể còn dòng cũ hơn bị bỏ, phải nói cho người dùng biết.
+ * Hai class quyền của nghiệp vụ tủ lạnh nội địa, lấy đúng tên bảng server dùng
+ * trong đường dẫn API (`/XacNhanViTri_TuLanh/…`, `/TrungChuyen_TuLanh/…`).
+ *
+ * Dùng bộ action chuẩn: `Read` để xem lịch sử, `Insert` để tạo lượt mới.
  */
+export const XAC_NHAN_VI_TRI_NAME_CLASS = "XacNhanViTri_TuLanh";
+export const TRUNG_CHUYEN_NAME_CLASS = "TrungChuyen_TuLanh";
+
 export const NOI_DIA_LICH_SU_TOP = 500;
 
 export type XacNhanViTriLichSuFilter = {
@@ -195,12 +172,6 @@ export type TrungChuyenTuLanhItem = {
   log_ID_User_MoTa?: string | null;
 };
 
-/**
- * Lịch sử trung chuyển của MỘT tủ, mới nhất trước.
- *
- * `ID_NoiDia_TuLanh` bắt buộc: bỏ trống hoặc <= 0 thì server trả mảng rỗng (cố
- * tình không cho lấy toàn bộ lịch sử của mọi tủ).
- */
 export const getTrungChuyenTuLanhLichSu = async (
   idNoiDiaTuLanh: number,
   top?: number,
@@ -242,12 +213,6 @@ export const getTrungChuyenNhaPhanPhoi = async () =>
     ),
   );
 
-/**
- * Khách hàng của một NPP. Server tự lọc thêm theo miền / vùng miền / khu vực
- * lấy từ chính NPP, app không cần gửi mấy field đó.
- *
- * ⚠️ Một NPP có thể hơn 1.000 khách hàng → màn gọi phải có ô tìm kiếm.
- */
 export const getTrungChuyenKhachHang = async (idNhaPhanPhoi: number) =>
   normalizeNoiDiaRows(
     await callApi<NoiDiaResponse<KhachHangItem[]>>(
@@ -258,17 +223,8 @@ export const getTrungChuyenKhachHang = async (idNhaPhanPhoi: number) =>
   );
 
 export const KHACH_HANG_NAME_CLASS = "NoiDia_KhachHang";
+export const CAP_NHAT_TOA_DO_ACTION = "CapNhatToaDo";
 
-/**
- * Ba cấp vị trí của một khách hàng, đọc từ chính record khách hàng.
- *
- * `get-list-khach-hang` chỉ trả id/mã/tên nên màn xác nhận trung chuyển không
- * có gì để hiện ở cột "ĐẾN". Bản thân record thì có đủ (lưới "Danh sách Khách
- * hàng" trên web hiện đúng ba cột này), nên lấy qua API chi tiết dùng chung.
- *
- * Trả `null` khi không đọc được — chỉ ảnh hưởng phần hiển thị, không được chặn
- * luồng gửi.
- */
 export const getKhachHangLocation = async (id: number) => {
   try {
     const response = await callApi<any>(
@@ -298,6 +254,49 @@ export const getKhachHangLocation = async (id: number) => {
     warn("[NoiDia] Không đọc được vị trí khách hàng", e);
     return null;
   }
+};
+
+/**
+ * Khách hàng SAU khi ghi đè toạ độ.
+ *
+ * Lấy lat/lng từ đây để hiện lại, đừng giả định server lưu đúng chuỗi app gửi:
+ * server nhận cả dấu phẩy thập phân nhưng luôn lưu về dạng dấu chấm.
+ */
+export type KhachHangToaDoItem = KhachHangItem & {
+  lat?: string | null;
+  lng?: string | null;
+};
+
+/**
+ * Ghi đè toạ độ mốc của khách hàng bằng GPS thiết bị (người đi hiện trường đứng
+ * tại điểm bán).
+ *
+ * LAT/LNG là BẮT BUỘC ở API này — màn gọi phải có fix GPS rồi mới cho bấm lưu,
+ * server từ chối toạ độ rỗng, ngoài [-90,90]/[-180,180] và đúng (0, 0).
+ *
+ * Toạ độ mới LUÔN ghi đè, không có ngưỡng chặn; mỗi lượt gọi sinh thêm 1 dòng
+ * lịch sử nên màn gọi phải tự chặn double-submit. Đổi mốc chỉ ảnh hưởng các
+ * lượt xác nhận vị trí tủ lạnh TỪ ĐÓ VỀ SAU.
+ */
+export const capNhatToaDoKhachHang = async ({
+  idKhachHang,
+  lat,
+  lng,
+}: {
+  idKhachHang: number;
+  lat: string;
+  lng: string;
+}) => {
+  const response = await callApi<NoiDiaResponse<KhachHangToaDoItem>>(
+    "POST",
+    API_ENDPOINTS.NOI_DIA_KHACH_HANG_CAP_NHAT_TOA_DO,
+    { ID_NoiDia_KhachHang: idKhachHang, LAT: lat, LNG: lng },
+  );
+
+  return {
+    ...response,
+    data: response.data ? withIdAliases(response.data) : null,
+  };
 };
 
 /** `data` của API trung chuyển: số tủ đã cập nhật, hoặc mã lỗi âm. */

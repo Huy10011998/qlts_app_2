@@ -31,6 +31,9 @@ import { error } from "../../utils/Logger";
 import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
 import { makeNoiDiaListStyles } from "./shared/noiDiaListStyles";
 import { displayValue, formatNoiDiaDateTime } from "./shared/noiDiaFormat";
+import { useNoiDiaTuLanhPermissions } from "./shared/useNoiDiaTuLanhPermissions";
+import { useReloadPermissions } from "../../hooks/useReloadPermissions";
+import { useReloadPermissionsOnFocus } from "../../hooks/useReloadPermissionsOnFocus";
 
 /**
  * Năm cấp vị trí của một lần chuyển, dạng {cũ} → {mới}.
@@ -67,6 +70,13 @@ const getTransferRows = (item: TrungChuyenTuLanhItem) => [
 ];
 
 export default function TrungChuyenTuLanhLichSuScreen() {
+  // Nút trung chuyển ẩn/hiện theo quyền, mà quyền chỉ nằm trong store — nạp lại
+  // mỗi lần focus và mỗi lượt kéo reload để không phải ra vào lại màn.
+  useReloadPermissionsOnFocus();
+
+  const reloadPerms = useReloadPermissions();
+  const { canXemTrungChuyen, canThemTrungChuyen, loaded } =
+    useNoiDiaTuLanhPermissions();
   const styles = useStyles(makeStyles);
   const listStyles = useStyles(makeNoiDiaListStyles);
   const c = useAppColors();
@@ -80,6 +90,10 @@ export default function TrungChuyenTuLanhLichSuScreen() {
   const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
 
   const fetchHistory = useCallback(async () => {
+    // Không có quyền xem thì đừng gọi API cho ăn 403 — màn dưới hiện trạng thái
+    // "không có quyền" thay cho danh sách.
+    if (!canXemTrungChuyen) return;
+
     try {
       const response = await getTrungChuyenTuLanhLichSu(fridge.id);
 
@@ -95,7 +109,7 @@ export default function TrungChuyenTuLanhLichSuScreen() {
           : getNoiDiaErrorMessage(e, "Không tải được lịch sử trung chuyển."),
       );
     }
-  }, [fridge.id]);
+  }, [canXemTrungChuyen, fridge.id]);
 
   useEffect(() => {
     (async () => {
@@ -120,9 +134,9 @@ export default function TrungChuyenTuLanhLichSuScreen() {
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    await fetchHistory();
+    await Promise.all([fetchHistory(), reloadPerms()]);
     setIsRefreshing(false);
-  }, [fetchHistory]);
+  }, [fetchHistory, reloadPerms]);
 
   const toggleExpanded = useCallback((id: number) => {
     setExpandedIds((prev) =>
@@ -130,7 +144,26 @@ export default function TrungChuyenTuLanhLichSuScreen() {
     );
   }, []);
 
-  if (isLoading) return <IsLoading size="large" color={BRAND_RED} />;
+  // Chờ cả quyền: `loaded` false thì `can()` trả false, render sớm là nháy màn
+  // "không có quyền" rồi mới ra danh sách.
+  if (!loaded || isLoading) return <IsLoading size="large" color={BRAND_RED} />;
+
+  if (!canXemTrungChuyen) {
+    return (
+      <ScreenContainer>
+        <FridgeSummaryHeader
+          ma={fridge.ma}
+          ten={fridge.ten}
+          serialNumber={fridge.serialNumber}
+        />
+        <AssetListEmptyState
+          iconName="lock-closed-outline"
+          title="Bạn không có quyền truy cập"
+          subtitle="Tài khoản hiện tại không có quyền xem lịch sử trung chuyển tủ lạnh."
+        />
+      </ScreenContainer>
+    );
+  }
 
   return (
     <ScreenContainer>
@@ -175,7 +208,9 @@ export default function TrungChuyenTuLanhLichSuScreen() {
             }
             subtitle={
               loadErrorMessage ??
-              "Bấm nút (+) để tạo yêu cầu trung chuyển đầu tiên cho tủ này."
+              (canThemTrungChuyen
+                ? "Bấm nút (+) để tạo yêu cầu trung chuyển đầu tiên cho tủ này."
+                : "Tủ này chưa được trung chuyển lần nào.")
             }
           />
         }
@@ -255,17 +290,19 @@ export default function TrungChuyenTuLanhLichSuScreen() {
         }}
       />
 
-      <AddActionFab
-        variant="extended"
-        label="Trung chuyển"
-        // Đi thẳng sang chọn NPP: luồng này chỉ chuyển đúng con tủ đã mở, id
-        // lấy từ màn chi tiết bên ngoài. Bước quét thêm tủ (ChonTu) đang tắt.
-        onPress={() =>
-          navigation.navigate("TrungChuyenTuLanhChonNhaPhanPhoi", {
-            fridges: [fridge],
-          })
-        }
-      />
+      {canThemTrungChuyen ? (
+        <AddActionFab
+          variant="extended"
+          label="Trung chuyển"
+          // Đi thẳng sang chọn NPP: luồng này chỉ chuyển đúng con tủ đã mở, id
+          // lấy từ màn chi tiết bên ngoài. Bước quét thêm tủ (ChonTu) đang tắt.
+          onPress={() =>
+            navigation.navigate("TrungChuyenTuLanhChonNhaPhanPhoi", {
+              fridges: [fridge],
+            })
+          }
+        />
+      ) : null}
     </ScreenContainer>
   );
 }

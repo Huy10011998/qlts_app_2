@@ -56,6 +56,8 @@ const ShareholdersMeetingScreen: React.FC = () => {
     activeTab,
     attendanceFilter,
     attendanceRate,
+    canDiemDanh,
+    canHuyDiemDanh,
     canViewAttendance,
     canViewVoting,
     filteredOpinions,
@@ -319,6 +321,8 @@ const ShareholdersMeetingScreen: React.FC = () => {
                 onCheckIn={handleCheckIn}
                 onUndoCheckIn={handleUndoCheckIn}
                 isSubmitting={submittingAttendanceId === item.id}
+                canCheckIn={canDiemDanh}
+                canUndoCheckIn={canHuyDiemDanh}
               />
             )}
             refreshControl={

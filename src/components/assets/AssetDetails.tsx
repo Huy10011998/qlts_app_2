@@ -24,6 +24,7 @@ export default function AssetDetails({ children }: DetailsProps) {
   const { id, nameClass, field, activeTab: tabFromParams } = useParams();
 
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [item, setItem] = useState<any>(null);
   const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
 
@@ -60,6 +61,17 @@ export default function AssetDetails({ children }: DetailsProps) {
       }
     }
   }, [id, isMounted, nameClass]);
+
+  /** Kéo xuống để tải lại: giữ nội dung cũ trên màn, chỉ hiện vòng xoay của
+   * RefreshControl thay vì thay cả màn bằng loader. */
+  const refreshDetails = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await fetchDetails();
+    } finally {
+      if (isMounted()) setIsRefreshing(false);
+    }
+  }, [fetchDetails, isMounted]);
 
   useFocusEffect(
     useCallback(() => {
@@ -102,6 +114,8 @@ export default function AssetDetails({ children }: DetailsProps) {
         nameClass: nameClass || "",
         fieldActive: fieldActive || [],
         loadErrorMessage,
+        refreshDetails,
+        isRefreshing,
       })}
     </View>
   );

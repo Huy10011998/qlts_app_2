@@ -241,6 +241,31 @@ export const DateSkipIcon: React.FC<{ muted?: boolean }> = ({ muted }) => (
 
 // ─── Factory + Tower scene ────────────────────────────────────────────────────
 
+/**
+ * Khung cảnh nhà máy cao theo chiều rộng, tỉ lệ lấy từ điện thoại (390 × 145) —
+ * nơi bố cục này được canh. Trước đây chiều cao cắm cứng 145: trên tablet khối
+ * rộng tới `MAX_SOLAR_CONTENT_WIDTH` (720) nên dải ảnh dẹt gần 5:1, `cover` cắt
+ * mất phần lớn nhà máy còn các lớp SVG đè lên bị kéo ngang mà không kéo dọc.
+ * Chặn trên để trên máy màn rộng khối hero không phình quá.
+ */
+const SCENE_HEIGHT_RATIO = 145 / 390;
+const SCENE_MIN_HEIGHT = 145;
+const SCENE_MAX_HEIGHT = 230;
+
+export const getSceneHeight = (width: number) =>
+  Math.round(
+    Math.min(
+      Math.max(width * SCENE_HEIGHT_RATIO, SCENE_MIN_HEIGHT),
+      SCENE_MAX_HEIGHT,
+    ),
+  );
+
+/**
+ * Khoảng chừa phía trên khung cảnh cho ba bong bóng số liệu — giữ đúng khoảng hở
+ * của bản điện thoại (hero 226 − cảnh 145).
+ */
+export const SCENE_TOP_SPACE = 81;
+
 export const SceneView: React.FC<{
   /**
    * Ảnh nhà máy thật, thay cho hình nhà xưởng vẽ bằng SVG. Các lớp còn lại (tấm
@@ -252,7 +277,7 @@ export const SceneView: React.FC<{
 }> = ({ plantImage, width = SCREEN_WIDTH }) => {
   const styles = useStyles(makeStyles);
   const W = width;
-  const H = 145;
+  const H = getSceneHeight(W);
   const VIEW_H = 180;
   const factoryX = W * 0.17;
   const factoryY = 86;
@@ -1060,7 +1085,7 @@ const AreaChartBase: React.FC<{
   const px = useCallback(
     (index: number) =>
       axisCount > 1 ? padL + (index / (axisCount - 1)) * W : padL + W / 2,
-    [axisCount, W],
+    [axisCount, padL, W],
   );
   const py = useCallback(
     (value: number) => padT + H - (value / axisMax) * H,

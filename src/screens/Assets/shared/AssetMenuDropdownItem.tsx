@@ -6,26 +6,16 @@ import React from "react";
 import {
   Image,
   LayoutAnimation,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
-import { useRoute } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
-import type {
-  DropdownProps,
-  Item,
-  StackNavigation,
-  StackRoute,
-} from "../../../types/index";
-import {
-  getAssetMenuItemTheme,
-  getAssetMenuMobileRoute,
-} from "./assetMenuHelpers";
+import type { DropdownProps, Item } from "../../../types/index";
+import { getAssetMenuItemTheme } from "./assetMenuHelpers";
+import { splitHighlight } from "../../../utils/helpers/string";
 
 const localStyles = StyleSheet.create({
   rootWrap: {
@@ -38,8 +28,9 @@ const localStyles = StyleSheet.create({
 });
 
 type AssetMenuDropdownItemProps = DropdownProps & {
-  onShowReport: (item: Item) => void;
+  onOpenItem: (item: Item) => void;
   isSearching: boolean;
+  searchText: string;
 };
 
 function AssetMenuDropdownItem({
@@ -47,12 +38,12 @@ function AssetMenuDropdownItem({
   level = 0,
   expandedIds,
   onToggle,
-  onShowReport,
+  onOpenItem,
   isSearching,
+  searchText,
 }: AssetMenuDropdownItemProps) {
-  const navigation = useNavigation<StackNavigation<"AssetList">>();
-  const route = useRoute<StackRoute<"Asset">>();
-  const hasChildren = item.children?.length > 0;
+  const childCount = item.children?.length ?? 0;
+  const hasChildren = childCount > 0;
   const expanded = expandedIds.includes(item.id);
   const colors = useAppColors();
   const theme = getAssetMenuItemTheme(item, expanded, colors);
@@ -69,33 +60,16 @@ function AssetMenuDropdownItem({
 
   const handlePress = () => {
     if (hasChildren) {
-      if (!isSearching && Platform.OS !== "android") {
+      // Đang tìm kiếm thì danh sách tự thay đổi theo từ khoá, thêm animation
+      // gập/mở vào nữa là rối mắt.
+      if (!isSearching) {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       }
       onToggle(item.id);
       return;
     }
 
-    const mobileRoute = getAssetMenuMobileRoute(item);
-    if (mobileRoute) {
-      navigation.navigate(mobileRoute as never);
-      return;
-    }
-
-    if (item.isReport) {
-      onShowReport(item);
-      return;
-    }
-
-    if (item.contentName_Mobile) {
-      navigation.navigate("AssetList", {
-        nameClass: item.contentName_Mobile,
-        titleHeader: item.label,
-        groupMenuId: route.params?.groupMenuId,
-        viewPermission: route.params?.viewPermission,
-        assetTitleHeader: route.params?.titleHeader,
-      });
-    }
+    onOpenItem(item);
   };
 
   return (
@@ -146,19 +120,41 @@ function AssetMenuDropdownItem({
           numberOfLines={2}
           allowFontScaling={false}
         >
-          {item.label}
+          {splitHighlight(item.label, searchText).map((segment, index) =>
+            segment.match ? (
+              <Text
+                key={index}
+                style={[styles.labelMatch, { backgroundColor: colors.amberLight }]}
+              >
+                {segment.text}
+              </Text>
+            ) : (
+              segment.text
+            ),
+          )}
         </Text>
 
         {hasChildren ? (
-          <View
-            style={[styles.chevronWrap, { backgroundColor: themeBackground }]}
-          >
-            <Ionicons
-              name={expanded ? "chevron-up" : "chevron-down"}
-              size={13}
-              color={theme.color}
-            />
-          </View>
+          <>
+            {/* Số mục con lấy ngay từ cây, không tốn thêm request nào. */}
+            <View style={[styles.countBadge, { backgroundColor: themeBackground }]}>
+              <Text
+                style={[styles.countText, { color: theme.color }]}
+                allowFontScaling={false}
+              >
+                {childCount}
+              </Text>
+            </View>
+            <View
+              style={[styles.chevronWrap, { backgroundColor: themeBackground }]}
+            >
+              <Ionicons
+                name={expanded ? "chevron-up" : "chevron-down"}
+                size={13}
+                color={theme.color}
+              />
+            </View>
+          </>
         ) : (
           <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
         )}
@@ -172,8 +168,9 @@ function AssetMenuDropdownItem({
               level={level + 1}
               expandedIds={expandedIds}
               onToggle={onToggle}
-              onShowReport={onShowReport}
+              onOpenItem={onOpenItem}
               isSearching={isSearching}
+              searchText={searchText}
             />
           ))
         : null}
@@ -244,6 +241,21 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     fontWeight: "500",
     lineHeight: 19,
+  },
+  labelMatch: {
+    fontWeight: "800",
+  },
+  countBadge: {
+    minWidth: 22,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 7,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  countText: {
+    fontSize: 11,
+    fontWeight: "800",
   },
   chevronWrap: {
     width: 24,

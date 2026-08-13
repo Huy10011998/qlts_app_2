@@ -176,6 +176,7 @@ export default function AssetGroupList({
       <Modal
         visible={modalVisible}
         transparent
+        statusBarTranslucent
         animationType="fade"
         onRequestClose={() => setModalVisible(false)}
       >

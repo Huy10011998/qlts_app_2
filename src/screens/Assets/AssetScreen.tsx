@@ -9,6 +9,7 @@ import {
   View,
   Text,
   FlatList,
+  LayoutAnimation,
   RefreshControl,
   Platform,
   UIManager,
@@ -37,7 +38,15 @@ import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { useParams } from "../../hooks/useParams";
 import AssetMenuDropdownItem from "./shared/AssetMenuDropdownItem";
-import AssetMenuSearchBar from "./shared/AssetMenuSearchBar";
+import MenuTreeRecents from "../../components/menuTree/MenuTreeRecents";
+import MenuTreeSearchBar from "../../components/menuTree/MenuTreeSearchBar";
+import MenuCardSkeleton from "../../components/ui/MenuCardSkeleton";
+import { useMenuTreeState } from "../../components/menuTree/useMenuTreeState";
+import { collectTreeIds } from "../../components/menuTree/collectTreeIds";
+import {
+  useAssetMenuNavigate,
+  type AssetMenuTarget,
+} from "./shared/useAssetMenuNavigate";
 import {
   buildAssetMenuTree,
   filterMobileAssetMenuTree,
@@ -58,6 +67,12 @@ type ActiveReport = {
   item: Item;
   previewEndpoint: string;
 };
+
+/**
+ * Mở lại app sau khoảng này thì cây menu được tải lại: quyền hoặc cấu hình menu
+ * có thể đã đổi ở phía quản trị, treo app cả ngày rồi dùng tiếp sẽ thấy bản cũ.
+ */
+const MENU_STALE_MS = 10 * 60 * 1000;
 
 const buildReportPreviewEndpoint = (direct: string) => {
   const normalizedDirect = direct.trim().replace(/^\/+/, "");
@@ -81,7 +96,6 @@ export default function AssetScreen() {
   const [isFetching, setIsFetching] = useState(false);
   const [isRefreshingTop, setIsRefreshingTop] = useState(false);
   const [search, setSearch] = useState("");
-  const [expandedIds, setExpandedIds] = useState<(string | number)[]>([]);
   const [activeReport, setActiveReport] = useState<ActiveReport | null>(null);
   const [comingSoonReportItem, setComingSoonReportItem] = useState<Item | null>(
     null
@@ -89,6 +103,7 @@ export default function AssetScreen() {
   const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
 
   const fetchingRef = useRef(false);
+  const lastLoadedAtRef = useRef(0);
   const debouncedSearch = useDebounce(search, 400);
   const [isSearching, setIsSearching] = useState(false);
   const { isMounted } = useSafeAlert();
@@ -176,6 +191,7 @@ export default function AssetScreen() {
             ? permissionFilteredTree
             : filterMobileAssetMenuTree(permissionFilteredTree)
         );
+        lastLoadedAtRef.current = Date.now();
         setLoadErrorMessage(null);
       } catch (e) {
         error("API error:", e);
@@ -210,12 +226,18 @@ export default function AssetScreen() {
   useNetworkAwareReload(
     () => {
       if (!loaded || !hasViewPermission) return;
+
+      // Đang lỗi thì tải lại ngay; còn lại chỉ tải khi dữ liệu đã cũ, để mở lại
+      // app liên tục không thành gọi API liên tục.
+      const isStale = Date.now() - lastLoadedAtRef.current > MENU_STALE_MS;
+      if (!loadErrorMessage && !isStale) return;
+
       fetchData();
     },
     {
       enabled: loaded && hasViewPermission,
       hasError: Boolean(loadErrorMessage),
-      refetchOnAppResume: false,
+      refetchOnAppResume: true,
       onOffline: () => {
         setLoadErrorMessage(
           "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại."
@@ -229,21 +251,32 @@ export default function AssetScreen() {
     () => filterAssetMenuTree(data, debouncedSearch),
     [debouncedSearch, data]
   );
+  const hasSearch = Boolean(debouncedSearch.trim());
 
-  useEffect(() => {
-    if (debouncedSearch.trim()) setExpandedIds(autoExpanded);
-    else setExpandedIds([]);
-  }, [debouncedSearch, autoExpanded]);
+  // Trạng thái gập/mở: tập tạm khi đang tìm kiếm, tập đã lưu khi không — nên xoá
+  // từ khoá là danh sách trở về đúng những nhóm người dùng tự mở trước đó.
+  const { recents, rememberRecent, expandedIds, toggleExpanded, collapseAll } =
+    useMenuTreeState<AssetMenuTarget>(`asset:${groupMenuId}`, {
+      hasSearch,
+      autoExpanded,
+    });
 
-  const handleToggle = (id: string | number) => {
-    setExpandedIds((prev) =>
-      prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]
-    );
+  // Đối chiếu với cây đầy đủ (đã lọc quyền), không phải cây đang lọc theo từ khoá.
+  const availableIds = useMemo(() => collectTreeIds(data), [data]);
+
+  const handleCollapseAll = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    collapseAll();
   };
 
   useEffect(() => {
     setIsSearching(search !== debouncedSearch);
   }, [search, debouncedSearch]);
+
+  const openMenuItem = useAssetMenuNavigate({
+    onShowReport: handleShowReport,
+    onOpened: rememberRecent,
+  });
 
   if (!loaded) return <IsLoading size="large" color={ASSET_MENU_BRAND_RED} />;
 
@@ -262,7 +295,7 @@ export default function AssetScreen() {
   }
 
   if (isFetching && !isRefreshingTop && !debouncedSearch) {
-    return <IsLoading size="large" color={ASSET_MENU_BRAND_RED} />;
+    return <MenuCardSkeleton />;
   }
 
   if (loadErrorMessage) {
@@ -281,20 +314,29 @@ export default function AssetScreen() {
   }
 
   const isEmpty = filteredData.length === 0;
-  const hasSearch = Boolean(debouncedSearch.trim());
 
   return (
     <KeyboardAvoidingView
       style={[s.container, { backgroundColor: colors.bg }]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <AssetMenuSearchBar
+      <MenuTreeSearchBar
         value={search}
         onChangeText={setSearch}
         isSearching={isSearching}
+        placeholder="Tìm kiếm tài sản..."
         resultCount={filteredData.length}
         showResultCount={Boolean(debouncedSearch.trim())}
+        onCollapseAll={expandedIds.length > 0 ? handleCollapseAll : undefined}
       />
+
+      {hasSearch ? null : (
+        <MenuTreeRecents
+          recents={recents}
+          onPressItem={openMenuItem}
+          validIds={availableIds}
+        />
+      )}
 
       <FlatList
         data={filteredData}
@@ -303,9 +345,10 @@ export default function AssetScreen() {
           <AssetMenuDropdownItem
             item={item}
             expandedIds={expandedIds}
-            onToggle={handleToggle}
-            onShowReport={handleShowReport}
+            onToggle={toggleExpanded}
+            onOpenItem={openMenuItem}
             isSearching={!!debouncedSearch}
+            searchText={debouncedSearch}
           />
         )}
         contentContainerStyle={[s.listContent, isEmpty && s.listContentEmpty]}
@@ -333,9 +376,11 @@ export default function AssetScreen() {
             }
             subtitle={
               hasSearch
-                ? "Thử tìm kiếm với từ khóa khác"
+                ? `Không có mục nào khớp "${debouncedSearch.trim()}".`
                 : `Danh sách ${normalizedTitleLower} sẽ hiển thị tại đây khi có dữ liệu.`
             }
+            actionLabel={hasSearch ? "Xoá từ khoá" : undefined}
+            onActionPress={hasSearch ? () => setSearch("") : undefined}
           />
         }
       />

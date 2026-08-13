@@ -122,7 +122,6 @@ export default function OpinionPickerModal({
   return (
     <BottomSheetModalShell
       visible={visible}
-      animationType="fade"
       closeOnBackdropPress
       onClose={onClose}
       overlayStyle={styles.overlay}

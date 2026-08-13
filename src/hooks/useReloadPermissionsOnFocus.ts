@@ -1,14 +1,13 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback } from "react";
-import { useAppDispatch } from "../store/hooks";
-import { reloadPermissions } from "../store/PermissionActions";
+import { useReloadPermissions } from "./useReloadPermissions";
 
 export function useReloadPermissionsOnFocus() {
-  const dispatch = useAppDispatch();
+  const reload = useReloadPermissions();
 
   useFocusEffect(
     useCallback(() => {
-      dispatch(reloadPermissions());
-    }, [dispatch]),
+      reload();
+    }, [reload]),
   );
 }

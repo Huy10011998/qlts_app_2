@@ -94,7 +94,9 @@ import {
   ChartTransition,
   DonutChart,
   EnergyBarChart,
+  getSceneHeight,
   SceneView,
+  SCENE_TOP_SPACE,
   StatBubble,
   WeatherIcon,
 } from "./SolarPlantScreen.visuals";
@@ -272,7 +274,8 @@ const ChartMarkerPill: React.FC<{
       }
       style={[
         styles.tooltipBubble,
-        offsetX != null && { alignSelf: "flex-start", marginLeft: offsetX },
+        offsetX != null && styles.tooltipBubblePinned,
+        offsetX != null && { marginLeft: offsetX },
       ]}
     >
       <View style={[styles.dot, dotStyle]} />
@@ -1008,7 +1011,9 @@ const SolarHeroSection: React.FC<SolarHeroSectionProps> = ({
   const contentWidth = getSolarContentWidth(screenWidth);
   const visualWidth = Math.min(contentWidth, MAX_SOLAR_CONTENT_WIDTH);
   const visualInset = (contentWidth - visualWidth) / 2;
-  const heroVisualHeight = clamp(visualWidth * 0.58, 200, 245);
+  // Cao theo đúng khung cảnh nhà máy: cảnh giữ tỉ lệ theo chiều rộng nên vùng
+  // hero phải nới theo, không thì trên tablet ảnh bị cắt cụt ở đáy.
+  const heroVisualHeight = getSceneHeight(visualWidth) + SCENE_TOP_SPACE;
   const heroCenterBubbleSize = clamp(visualWidth * 0.31, 108, 126);
   const heroSideBubbleSize = clamp(visualWidth * 0.23, 82, 90);
   const heroSideBubbleTop = clamp(visualWidth * 0.17, 54, 72);

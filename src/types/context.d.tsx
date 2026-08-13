@@ -30,6 +30,11 @@ export interface TabItem {
   key: string;
   label: string;
   icon: string;
+  /**
+   * Dấu hiệu "trong mục này có gì": số lượng khi đếm được (số tệp), hoặc "dot"
+   * khi chỉ biết có nội dung mà không đếm được (ghi chú là một khối text).
+   */
+  badge?: number | "dot";
 }
 
 export type SearchContextType = {

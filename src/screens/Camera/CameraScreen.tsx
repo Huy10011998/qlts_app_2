@@ -27,13 +27,27 @@ import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import CameraMenuDropdownItem from "./shared/CameraMenuDropdownItem";
-import CameraMenuSearchBar from "./shared/CameraMenuSearchBar";
+import MenuTreeSearchBar from "../../components/menuTree/MenuTreeSearchBar";
+import MenuTreeRecents from "../../components/menuTree/MenuTreeRecents";
+import MenuCardSkeleton from "../../components/ui/MenuCardSkeleton";
+import { useMenuTreeState } from "../../components/menuTree/useMenuTreeState";
+import { collectTreeIds } from "../../components/menuTree/collectTreeIds";
+import {
+  useOpenCameraZone,
+  type CameraZoneTarget,
+} from "./shared/useOpenCameraZone";
 import {
   buildCameraTree,
   CameraItem,
   filterCameraTree,
 } from "./shared/cameraMenuHelpers";
 import { CAMERA_MENU_BRAND_RED } from "./shared/cameraMenuTheme";
+
+/**
+ * Mở lại app sau khoảng này thì cây khu vực được tải lại: khu vực/camera có thể
+ * đã được thêm bớt ở phía quản trị.
+ */
+const CAMERA_TREE_STALE_MS = 10 * 60 * 1000;
 
 if (
   Platform.OS === "android" &&
@@ -56,10 +70,10 @@ export default function CameraScreen() {
   const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
 
   const debouncedSearch = useDebounce(search, 400);
-  const [expandedIds, setExpandedIds] = useState<string[]>([]);
   const [rawData, setRawData] = useState<any[]>([]);
 
   const fetchingRef = useRef(false);
+  const lastLoadedAtRef = useRef(0);
   const { isMounted } = useSafeAlert();
 
   const fetchData = useCallback(
@@ -80,6 +94,7 @@ export default function CameraScreen() {
 
         setRawData(nextData);
         setData(buildCameraTree(nextData));
+        lastLoadedAtRef.current = Date.now();
         setLoadErrorMessage(null);
       } catch (e) {
         error("API error:", e);
@@ -97,13 +112,12 @@ export default function CameraScreen() {
     [isMounted],
   );
 
+  // Kéo làm mới chỉ tải lại dữ liệu, KHÔNG thu các nhóm đang mở: người dùng mở
+  // khu vực ra xem rồi kéo làm mới thì đóng sạch là mất chỗ đang theo dõi.
   const refreshTop = async () => {
     if (isRefreshingTop) return;
 
     setLoadErrorMessage(null);
-    if (!debouncedSearch.trim()) {
-      setExpandedIds([]);
-    }
     setIsRefreshingTop(true);
     await fetchData({ isRefresh: true });
   };
@@ -118,12 +132,17 @@ export default function CameraScreen() {
 
   useNetworkAwareReload(
     () => {
+      // Đang lỗi thì tải lại ngay; còn lại chỉ tải khi dữ liệu đã cũ, để mở lại
+      // app liên tục không thành gọi API liên tục.
+      const isStale = Date.now() - lastLoadedAtRef.current > CAMERA_TREE_STALE_MS;
+      if (!loadErrorMessage && !isStale) return;
+
       fetchData();
     },
     {
       enabled: isFocused && loaded && hasViewPermission,
       hasError: Boolean(loadErrorMessage),
-      refetchOnAppResume: false,
+      refetchOnAppResume: true,
       onOffline: () => {
         setLoadErrorMessage(
           "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại.",
@@ -136,21 +155,31 @@ export default function CameraScreen() {
     () => filterCameraTree(data, debouncedSearch),
     [debouncedSearch, data],
   );
+  const hasSearch = Boolean(debouncedSearch.trim());
 
-  useEffect(() => {
-    if (debouncedSearch.trim()) {
-      setExpandedIds(autoExpand);
-    }
-  }, [autoExpand, debouncedSearch]);
+  // Hai tập gập/mở riêng: tập của người dùng (lưu xuống máy) và tập tạm trong
+  // lúc tìm kiếm — xoá từ khoá là trở về đúng khu vực đang mở trước đó.
+  const { recents, rememberRecent, expandedIds, toggleExpanded, collapseAll } =
+    useMenuTreeState<CameraZoneTarget>("camera", {
+      hasSearch,
+      autoExpanded: autoExpand,
+    });
+
+  const openZone = useOpenCameraZone(rawData, rememberRecent);
+  // Đối chiếu với cây đầy đủ, không phải cây đang lọc theo từ khoá.
+  const availableIds = useMemo(() => collectTreeIds(data), [data]);
 
   const handleToggle = (id: string) => {
-    if (!debouncedSearch && Platform.OS !== "android") {
+    if (!hasSearch) {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     }
 
-    setExpandedIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
+    toggleExpanded(id);
+  };
+
+  const handleCollapseAll = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    collapseAll();
   };
 
   useEffect(() => {
@@ -177,7 +206,7 @@ export default function CameraScreen() {
   }
 
   if (isFetching && !isRefreshingTop && !debouncedSearch)
-    return <IsLoading size="large" color={CAMERA_MENU_BRAND_RED} />;
+    return <MenuCardSkeleton />;
 
   if (loadErrorMessage) {
     return (
@@ -195,7 +224,6 @@ export default function CameraScreen() {
   }
 
   const isEmpty = filteredTree.length === 0;
-  const hasSearch = Boolean(debouncedSearch.trim());
 
   return (
     <KeyboardAvoidingView
@@ -203,13 +231,26 @@ export default function CameraScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View style={styles.container}>
-        <CameraMenuSearchBar
+        <MenuTreeSearchBar
           value={search}
           onChangeText={setSearch}
           isSearching={isSearching}
+          placeholder="Tìm kiếm camera..."
           resultCount={filteredTree.length}
-          showResultCount={Boolean(debouncedSearch.trim())}
+          showResultCount={hasSearch}
+          onCollapseAll={
+            expandedIds.length > 0 ? handleCollapseAll : undefined
+          }
         />
+
+        {hasSearch ? null : (
+          <MenuTreeRecents
+            recents={recents}
+            onPressItem={openZone}
+            iconName="videocam-outline"
+            validIds={availableIds}
+          />
+        )}
 
         <FlatList
           data={filteredTree}
@@ -219,7 +260,8 @@ export default function CameraScreen() {
               item={item}
               expandedIds={expandedIds}
               onToggle={handleToggle}
-              rawData={rawData}
+              onOpenZone={openZone}
+              searchText={debouncedSearch}
             />
           )}
           contentContainerStyle={[
@@ -248,9 +290,11 @@ export default function CameraScreen() {
               }
               subtitle={
                 hasSearch
-                  ? "Thử tìm kiếm với tên khu vực hoặc camera khác"
+                  ? `Không có khu vực hay camera nào khớp "${debouncedSearch.trim()}".`
                   : "Danh sách camera sẽ hiển thị tại đây khi có dữ liệu."
               }
+              actionLabel={hasSearch ? "Xoá từ khoá" : undefined}
+              onActionPress={hasSearch ? () => setSearch("") : undefined}
             />
           }
         />

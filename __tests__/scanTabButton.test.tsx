@@ -1,5 +1,11 @@
 import React from "react";
-import { Text, TouchableOpacity } from "react-native";
+import {
+  AccessibilityInfo,
+  Animated,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+} from "react-native";
 import ReactTestRenderer from "react-test-renderer";
 import ScanTabButton from "../src/navigation/shared/ScanTabButton";
 
@@ -20,7 +26,16 @@ afterEach(async () => {
   await ReactTestRenderer.act(async () => {
     mountedTrees.splice(0).forEach((tree) => tree.unmount());
   });
+  jest.restoreAllMocks();
 });
+
+const findScanLine = (tree: ReactTestRenderer.ReactTestRenderer) =>
+  tree.root.findAll((node) => {
+    if (typeof node.type !== "string") return false;
+    const style = StyleSheet.flatten(node.props?.style) as any;
+
+    return style?.position === "absolute" && style?.height === 2;
+  });
 
 describe("nút Quét QR ở giữa thanh tab", () => {
   it("gọi onPress khi bấm", async () => {
@@ -34,23 +49,40 @@ describe("nút Quét QR ở giữa thanh tab", () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
-  // `tabBarButton` thay toàn bộ nội dung nút, nên nhãn "Quét QR" không còn được
-  // render ra chữ — thông tin đó phải nằm ở accessibilityLabel.
-  it("giữ nhãn cho trình đọc màn hình dù không hiện chữ", async () => {
+  it("hiện nhãn 'Quét QR' và giữ nhãn cho trình đọc màn hình", async () => {
     const tree = await mount(<ScanTabButton {...({} as any)} />);
     const button = tree.root.findByType(TouchableOpacity);
 
-    expect(button.props.accessibilityLabel).toBe("Quét QR");
+    expect(button.props["aria-label"]).toBe("Quét QR");
     expect(button.props.accessibilityRole).toBe("button");
 
-    // Icon của react-native-vector-icons cũng là một <Text> chứa glyph, nên chỉ
-    // khẳng định được là không có <Text> nào hiện ra chữ "Quét QR".
     const renderedStrings = tree.root
       .findAllByType(Text)
       .flatMap((node) => node.props.children)
       .filter((child): child is string => typeof child === "string");
 
-    expect(renderedStrings).not.toContain("Quét QR");
+    expect(renderedStrings).toContain("Quét QR");
+  });
+
+  it("chạy vạch quét trong icon", async () => {
+    const loop = jest.spyOn(Animated, "loop");
+    const tree = await mount(<ScanTabButton {...({} as any)} />);
+
+    expect(findScanLine(tree)).toHaveLength(1);
+    expect(loop).toHaveBeenCalled();
+  });
+
+  // Người bật "giảm chuyển động" của hệ điều hành thì bỏ hẳn vạch quét, không
+  // chỉ dừng animation.
+  it("không chạy vạch quét khi hệ thống bật giảm chuyển động", async () => {
+    jest
+      .spyOn(AccessibilityInfo, "isReduceMotionEnabled")
+      .mockResolvedValue(true);
+    const loop = jest.spyOn(Animated, "loop");
+    const tree = await mount(<ScanTabButton {...({} as any)} />);
+
+    expect(findScanLine(tree)).toHaveLength(0);
+    expect(loop).not.toHaveBeenCalled();
   });
 
   it("chỉ thêm viền sáng khi đang ở tab quét", async () => {
@@ -64,15 +96,13 @@ describe("nút Quét QR ở giữa thanh tab", () => {
           ),
       ).length;
 
+    // BottomTabItem của @react-navigation v7 truyền trạng thái chọn qua
+    // `aria-selected`, không phải `accessibilityState`.
     const focusedTree = await mount(
-      <ScanTabButton
-        {...({ accessibilityState: { selected: true } } as any)}
-      />,
+      <ScanTabButton {...({ "aria-selected": true } as any)} />,
     );
     const blurredTree = await mount(
-      <ScanTabButton
-        {...({ accessibilityState: { selected: false } } as any)}
-      />,
+      <ScanTabButton {...({ "aria-selected": false } as any)} />,
     );
 
     expect(countBorders(focusedTree)).toBe(1);

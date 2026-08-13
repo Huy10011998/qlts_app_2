@@ -43,7 +43,6 @@ export default function HomeBlockOrderSheet({
   return (
     <BottomSheetModalShell
       visible={visible}
-      animationType="fade"
       closeOnBackdropPress
       onClose={onClose}
       overlayStyle={styles.overlay}

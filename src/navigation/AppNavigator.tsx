@@ -15,7 +15,14 @@ import CameraPlaybackScreen from "../screens/Camera/CameraPlaybackScreen";
 import ShareholdersMeetingScannerScreen from "../screens/ShareholdersMeeting/ShareholdersMeetingScannerScreen";
 import ShareholdersMeetingScreen from "../screens/ShareholdersMeeting/ShareholdersMeetingScreen";
 import CameraScreen from "../screens/Camera/CameraScreen";
-import { getScreenTitle, headerWithBack } from "./shared/navigationOptions";
+import {
+  getScreenTitle,
+  headerWithBack,
+  headerWithBackAndScan,
+} from "./shared/navigationOptions";
+import QrScannerScreen from "../screens/QrScanner/QrScannerScreen";
+import QrDetailsScreen from "../screens/QrScanner/QrDetailsScreen";
+import QrReviewScreen from "../screens/QrScanner/QrReviewScreen";
 import AssetScreen from "../screens/Assets/AssetScreen";
 import AssetListScreen from "../screens/Assets/AssetListScreen";
 import AssetDetailsScreen from "../screens/Assets/AssetDetailsScreen";
@@ -69,13 +76,39 @@ export default function AppNavigator() {
         name="ShareholdersMeetingScanner"
         component={ShareholdersMeetingScannerScreen}
       />
+      {/* Nhánh quét mở từ ngoài tab: đẩy lên trên màn đang xem để back trả về
+          đúng chỗ đã bấm quét. Chuyển sang tab Quét thì màn đang xem bị pop
+          khỏi stack, back xong ra Trang chủ. */}
+      <Stack.Screen
+        name="QrScan"
+        component={QrScannerScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="QrDetails"
+        component={QrDetailsScreen}
+        options={{
+          headerShown: true,
+          title: "Thông tin",
+          ...headerWithBack,
+        }}
+      />
+      <Stack.Screen
+        name="QrReview"
+        component={QrReviewScreen}
+        options={{
+          headerShown: true,
+          title: "Danh sách",
+          ...headerWithBack,
+        }}
+      />
       <Stack.Screen
         name="Asset"
         component={AssetScreen}
         options={({ route }) => ({
           headerShown: true,
           title: getScreenTitle(route.params?.titleHeader, "Tài sản"),
-          ...headerWithBack,
+          ...headerWithBackAndScan,
         })}
       />
       <Stack.Screen
@@ -84,7 +117,7 @@ export default function AppNavigator() {
         options={({ route }) => ({
           headerShown: true,
           title: getScreenTitle(route.params?.titleHeader, "Tài sản"),
-          ...headerWithBack,
+          ...headerWithBackAndScan,
         })}
       />
       <Stack.Screen

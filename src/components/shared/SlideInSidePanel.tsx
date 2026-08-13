@@ -13,6 +13,8 @@ import {
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 type SlideInSidePanelProps = {
   children: React.ReactNode;
   onClose: () => void;
@@ -40,11 +42,22 @@ export default function SlideInSidePanel({
 }: SlideInSidePanelProps) {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
+  // Nền mờ dần theo chính panel: nội suy từ `translateX` nên không cần thêm
+  // Animated.Value nào. Trước đây nền bật/tắt đột ngột trong khi panel trượt.
+  const overlayOpacity = translateX.interpolate({
+    inputRange: [0, Math.max(width, 1)],
+    outputRange: [1, 0],
+    extrapolate: "clamp",
+  });
+
   if (!visible) return null;
 
   return (
     <View style={StyleSheet.absoluteFill}>
-      <Pressable style={styles.overlay} onPress={onClose} />
+      <AnimatedPressable
+        style={[styles.overlay, { opacity: overlayOpacity }]}
+        onPress={onClose}
+      />
       <Animated.View
         style={[
           styles.panel,

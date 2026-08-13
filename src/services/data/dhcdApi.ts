@@ -1,6 +1,16 @@
 import { callApi } from "./httpClient";
 import { API_ENDPOINTS } from "../../config/index";
 
+/**
+ * Hai class quyền của màn đại hội cổ đông trên mobile, đúng tên bảng server.
+ *
+ * `Read` cho từng tab, `Insert` cho thao tác ghi (điểm danh / lưu ý kiến cổ
+ * đông), `Delete` cho huỷ điểm danh. Xem được không có nghĩa là được ghi — có
+ * người chỉ theo dõi tiến độ đại hội.
+ */
+export const DHCD_DIEM_DANH_NAME_CLASS = "DaiHoiCoDong_CoDong_DiemDanh";
+export const DHCD_Y_KIEN_NAME_CLASS = "DaiHoiCoDong_CoDong_YKien";
+
 export const getActiveDhcd = async <T = any,>() =>
   callApi<T>("POST", API_ENDPOINTS.GET_ACTIVE_DHCD);
 

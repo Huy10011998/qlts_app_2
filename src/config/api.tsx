@@ -20,8 +20,6 @@ export const API_ENDPOINTS = {
 
   // DASHBOARD TRANG CHỦ — một lượt gọi dựng cả 4 khối số liệu, không tham số.
   GET_DASHBOARD_TAISAN: `${BASE_URL}/Common/get-dashboard-taisan`,
-  // Hai card máy móc (cơ cấu theo đơn vị + 12 tháng luỹ kế). Gọi ĐỘC LẬP với
-  // endpoint trên: lỗi ở đây chỉ được làm trống hai card đó, không phải cả màn.
   GET_DASHBOARD_MAYMOC: `${BASE_URL}/MayMoc/dashboard`,
 
   // PERMISSION
@@ -51,8 +49,6 @@ export const API_ENDPOINTS = {
   GET_CONFIG_REPORT: `${BASE_URL}/Common/get-config`,
 
   // SOLAR DASHBOARD — toàn bộ nhóm này yêu cầu quyền Solar_Dashboard.
-  // Tất cả đều POST, response chung dạng { message, data }; data == null là
-  // thất bại và message đã là câu tiếng Việt viết sẵn cho người dùng đọc.
   GET_LIST_SOLAR: `${BASE_URL}/TieuThu_Solar/get-list-solar`,
   SOLAR_POWER_FLOW: `${BASE_URL}/TieuThu_Solar/dashboard-power-flow`,
   SOLAR_OVERVIEW: `${BASE_URL}/TieuThu_Solar/dashboard-overview`,
@@ -68,16 +64,14 @@ export const API_ENDPOINTS = {
   GET_PHUONG_TIEN_TRACKING: `${BASE_URL}/PhuongTien_Tracking/get-list`,
   GET_PHUONG_TIEN_CURRENT_LOCATION: `${BASE_URL}/PhuongTien/vi-tri-hien-tai`,
 
-  // NỘI ĐỊA — TỦ LẠNH
-  // Hai nhóm dưới đây dùng chung quy ước { message, data }: `data` là kết quả,
-  // `message` là câu tiếng Việt viết sẵn cho user. Lỗi 400 → hiện thẳng
-  // `message`; lỗi 403 KHÔNG có body (xem `getNoiDiaErrorMessage`).
+  // NỘI ĐỊA
   XAC_NHAN_VI_TRI_TU_LANH: `${BASE_URL}/XacNhanViTri_TuLanh/xac-nhan`,
   XAC_NHAN_VI_TRI_TU_LANH_LICH_SU: `${BASE_URL}/XacNhanViTri_TuLanh/get-list-lich-su`,
   TRUNG_CHUYEN_TU_LANH_LICH_SU: `${BASE_URL}/TrungChuyen_TuLanh/get-list-lich-su`,
   TRUNG_CHUYEN_TU_LANH_NHA_PHAN_PHOI: `${BASE_URL}/TrungChuyen_TuLanh/get-list-nha-phan-phoi`,
   TRUNG_CHUYEN_TU_LANH_KHACH_HANG: `${BASE_URL}/TrungChuyen_TuLanh/get-list-khach-hang`,
   TRUNG_CHUYEN_TU_LANH: `${BASE_URL}/TrungChuyen_TuLanh/trung-chuyen`,
+  NOI_DIA_KHACH_HANG_CAP_NHAT_TOA_DO: `${BASE_URL}/NoiDia_KhachHang/cap-nhat-toa-do`,
 
   // PUSH NOTIFICATION
   // ⚠️ Đường dẫn tạm — BE chưa xong. Sửa lại đúng path rồi bật
@@ -86,14 +80,4 @@ export const API_ENDPOINTS = {
   UNREGISTER_DEVICE_TOKEN: `${BASE_URL}/Notification/unregister-device`,
 };
 
-/**
- * Công tắc cho phần gọi API đăng ký device token.
- *
- * Đang false vì BE chưa có endpoint: toàn bộ luồng nhận & hiển thị thông báo vẫn
- * chạy đầy đủ (xin quyền, lấy FCM token, hiển thị, bấm để điều hướng), chỉ riêng
- * bước gửi token lên server bị bỏ qua và ghi log. Nhờ vậy app không bị spam lỗi
- * 404 trong lúc chờ BE.
- *
- * Khi BE xong: sửa 2 path ở trên cho đúng rồi đổi cờ này thành true.
- */
 export const PUSH_NOTIFICATION_API_READY = false;

@@ -423,6 +423,7 @@ export default function FridgeScannerView({
         visible={isManualOpen}
         animationType="slide"
         transparent
+        statusBarTranslucent
         onRequestClose={() => {
           closeManualSearch();
           resumeScanner();
