@@ -25,6 +25,7 @@ export type OptionalParams = {
   propertyReference?: string;
   nameClass?: string;
   nameClassRoot?: string;
+  rootRecordLabel?: string;
   id?: string;
   field?: AssetField;
   name?: string;
@@ -56,6 +57,8 @@ export type ScanTabParamList = {
     field?: AssetField;
     propertyClass?: PropertyClass;
     itemData?: AssetItem;
+    /** Xem chú thích ở `AssetDetails.activeTab`. */
+    activeTab?: string;
   };
 };
 
@@ -198,6 +201,11 @@ export type RootStackParamList = {
     titleHeader?: string;
     field?: AssetField;
     propertyClass?: PropertyClass;
+    /**
+     * Tab mở sẵn. Chỉ là giá trị khởi tạo; màn đã mount thì `AssetDetails` đổi tab
+     * qua effect rồi xoá param — xem nút "bản ghi gốc" ở AssetRelatedList.
+     */
+    activeTab?: string;
     groupMenuId?: number;
     viewPermission?: string;
     assetTitleHeader?: string;
@@ -215,6 +223,9 @@ export type RootStackParamList = {
     id_previous: string | null;
     nameClass: string;
     field?: AssetField;
+    /** Bản ghi mà lịch sử này thuộc về — cho pill mã bản ghi trên header. */
+    idRoot?: string;
+    rootRecordLabel?: string;
   };
 
   /** ================= ASSET RELATED ================= */
@@ -224,6 +235,12 @@ export type RootStackParamList = {
     idRoot: string;
     nameClassRoot?: string;
     titleHeader?: string; // ✅ FIX
+    /**
+     * Mã bản ghi cha (ví dụ "PC0015") — title của màn là tên mục liên quan nên
+     * không có gì khác cho biết đang xem con của bản ghi nào. Thiếu thì góc phải
+     * header để trống như cũ.
+     */
+    rootRecordLabel?: string;
     groupMenuId?: number;
     viewPermission?: string;
     assetTitleHeader?: string;
@@ -238,6 +255,7 @@ export type RootStackParamList = {
     idRoot?: string;
     propertyReference?: string;
     nameClassRoot?: string;
+    rootRecordLabel?: string;
     returnTo?: "assetList" | "assetRelatedList" | "qrReview";
     groupMenuId?: number;
     viewPermission?: string;
@@ -252,6 +270,7 @@ export type RootStackParamList = {
     nameClassRoot?: string;
     propertyReference?: string;
     titleHeader?: string;
+    rootRecordLabel?: string;
     returnTo?: "assetList" | "assetRelatedList" | "qrReview";
     groupMenuId?: number;
     viewPermission?: string;
@@ -276,6 +295,8 @@ export type RootStackParamList = {
     field?: AssetField;
     propertyClass?: PropertyClass;
     itemData?: AssetItem;
+    /** Xem chú thích ở `AssetDetails.activeTab`. */
+    activeTab?: string;
   };
 
   QrReview: {
@@ -313,6 +334,7 @@ export type RootStackParamList = {
     idRoot?: string;
     propertyReference?: string;
     nameClassRoot?: string;
+    rootRecordLabel?: string;
     titleHeader?: string;
     groupMenuId?: number;
     viewPermission?: string;

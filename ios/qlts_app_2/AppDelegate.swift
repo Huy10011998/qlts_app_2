@@ -11,6 +11,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   var reactNativeDelegate: ReactNativeDelegate?
   var reactNativeFactory: RCTReactNativeFactory?
 
+  /// Thời gian tối thiểu giữ splash screen. Nếu app khởi động lâu hơn mức này
+  /// thì splash vẫn tắt đúng mốc, không cộng dồn thêm.
+  /// Giữ đồng bộ với SPLASH_MIN_DURATION_MS trong MainActivity.kt.
+  private let splashHoldSeconds: TimeInterval = 3
+  private let splashFadeSeconds: TimeInterval = 0.25
+
   func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
@@ -40,7 +46,37 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       launchOptions: launchOptions
     )
 
+    holdSplashScreen()
+
     return true
+  }
+
+  /// iOS gỡ LaunchScreen.storyboard ngay khi window hiện lên, không có API nào
+  /// giữ lại. Nên ta dựng lại chính storyboard đó thành một lớp phủ trên window
+  /// rồi mờ dần gỡ xuống sau splashHoldSeconds — người dùng thấy liền mạch một
+  /// màn splash duy nhất.
+  private func holdSplashScreen() {
+    guard
+      let window = window,
+      let launchViewController = UIStoryboard(name: "LaunchScreen", bundle: nil)
+        .instantiateInitialViewController(),
+      let overlay = launchViewController.view
+    else {
+      return
+    }
+
+    overlay.frame = window.bounds
+    overlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+    window.addSubview(overlay)
+    window.bringSubviewToFront(overlay)
+
+    DispatchQueue.main.asyncAfter(deadline: .now() + splashHoldSeconds) { [splashFadeSeconds] in
+      UIView.animate(
+        withDuration: splashFadeSeconds,
+        animations: { overlay.alpha = 0 },
+        completion: { _ in overlay.removeFromSuperview() }
+      )
+    }
   }
 
   func application(

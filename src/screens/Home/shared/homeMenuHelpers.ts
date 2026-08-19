@@ -21,11 +21,11 @@ const LEGACY_PINNED_FEATURE_ID_MAP: Record<string, string> = {
   "5": "4",
 };
 
-// Chỉ 4 ô cho hàng shortcut một dòng trên Trang chủ. Các chức năng phương tiện
-// vẫn có đủ trong tab Chức năng và user tự ghim thêm nếu muốn.
+// Chỉ 3 ô, vừa đúng một hàng của lưới shortcut (3 cột) trên Trang chủ. Các chức
+// năng còn lại vẫn có đủ trong tab Chức năng và user tự ghim thêm nếu muốn.
 // Đổi hằng số này chỉ ảnh hưởng user chưa từng ghim; ai đã ghim thì đọc từ
 // AsyncStorage.
-export const DEFAULT_HOME_FEATURE_IDS = ["2", "5", "6", "3"];
+export const DEFAULT_HOME_FEATURE_IDS = ["2", "5", "6"];
 
 export const normalizeHomeFeatureId = (id: string) =>
   LEGACY_PINNED_FEATURE_ID_MAP[id] ?? id;

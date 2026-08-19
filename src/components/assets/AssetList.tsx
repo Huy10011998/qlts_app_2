@@ -351,6 +351,12 @@ export default function AssetList() {
       if (shouldRefresh) {
         fetchData(false);
         dispatch(resetShouldRefreshList());
+        // Nạp lại cả danh sách đã bao trùm việc merge một item, nên phải dọn luôn
+        // cờ merge của chính class này. Để nó treo lại thì lần focus sau sẽ merge
+        // một bản ghi có thể đã bị xoá và ăn 404.
+        if (updatedListItem?.nameClass === nameClass) {
+          dispatch(resetUpdatedListItem());
+        }
       } else if (updatedListItem && updatedListItem.nameClass === nameClass) {
         mergeUpdatedItem(updatedListItem.id);
         dispatch(resetUpdatedListItem());

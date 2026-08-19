@@ -46,7 +46,7 @@ export const HOME_BLOCK_META: Record<
   },
   attendance: { label: "Điểm danh nhân sự", iconName: "people-outline" },
   utilities: {
-    label: "Tiêu thụ điện · nước · hơi",
+    label: "Tiêu thụ điện · điện mặt trời · nước cấp · nước thải · hơi",
     iconName: "speedometer-outline",
   },
 };
@@ -62,7 +62,7 @@ export const getHomeBlockOrderKey = (userName: string | null) => {
   if (!normalizedUserName) return HOME_BLOCK_ORDER_KEY;
 
   return `${HOME_BLOCK_ORDER_USER_KEY}:${encodeURIComponent(
-    normalizedUserName
+    normalizedUserName,
   )}`;
 };
 

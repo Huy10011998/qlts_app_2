@@ -21,6 +21,9 @@ export const API_ENDPOINTS = {
   // DASHBOARD TRANG CHỦ — một lượt gọi dựng cả 4 khối số liệu, không tham số.
   GET_DASHBOARD_TAISAN: `${BASE_URL}/Common/get-dashboard-taisan`,
   GET_DASHBOARD_MAYMOC: `${BASE_URL}/MayMoc/dashboard`,
+  // Chi tiết điểm danh của MỘT bộ phận — chỉ gọi khi người dùng bấm vào bộ phận,
+  // không gọi sẵn lúc mở màn hình (kéo từng dòng nhân viên qua linked server).
+  GET_DASHBOARD_TAISAN_DIEMDANH_CHITIET: `${BASE_URL}/Common/get-dashboard-taisan-diemdanh-chitiet`,
 
   // PERMISSION
   GET_PERMISSION: `${BASE_URL}/Common/get-permission`,

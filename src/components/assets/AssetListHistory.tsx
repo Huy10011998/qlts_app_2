@@ -22,7 +22,12 @@ import AssetListSummaryCard from "./shared/AssetListSummaryCard";
 import { makeSharedAssetListStyles } from "./shared/listStyles";
 import { BRAND_RED } from "./shared/listTheme";
 
-export default function AssetListHistory() {
+export default function AssetListHistory({
+  rootRecordLabel,
+}: {
+  /** Mã bản ghi đang xem, chuyển tiếp cho header màn chi tiết lịch sử. */
+  rootRecordLabel?: string;
+} = {}) {
   const styles = useStyles(makeStyles);
   const [historyItems, setHistoryItems] = useState<Record<string, any>[]>([]);
   const [fieldActive, setFieldActive] = useState<Field[]>([]);
@@ -57,6 +62,8 @@ export default function AssetListHistory() {
           id_previous: previousId,
           field: JSON.stringify(fieldActive),
           nameClass: nameClass!,
+          idRoot: id,
+          rootRecordLabel,
         });
       } catch (e) {
         error(e);
@@ -70,9 +77,11 @@ export default function AssetListHistory() {
     [
       fieldActive,
       historyItems,
+      id,
       isMounted,
       nameClass,
       navigation,
+      rootRecordLabel,
       showAlertIfActive,
     ],
   );

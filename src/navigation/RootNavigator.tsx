@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import AppNavigator from "./AppNavigator.tsx";
 import AuthNavigator from "./AuthNavigator.tsx";
 import IsLoading from "../components/ui/IconLoading.tsx";
+import { markAppReady } from "../services/splash/splashGate";
 import { clearPermissions, setPermissions } from "../store/PermissionSlice.ts";
 import { RootState } from "../store/index.ts";
 import { useSelector } from "react-redux";
@@ -36,6 +37,10 @@ export default function RootNavigator() {
   const hasShownExpiredRef = useRef(false);
   const hasShownAndroidOfflineRef = useRef(false);
   const [isAndroidOfflineBlocked, setIsAndroidOfflineBlocked] = useState(false);
+  // Cây điều hướng đã dựng lần nào chưa. Sau lần đầu thì màn chặn offline không
+  // được phép thay thế `AppNavigator` nữa — thay là unmount sạch cả
+  // `HomeMenuProvider` lẫn màn đang mở, và lúc mount lại mọi API gọi lại từ đầu.
+  const hasEnteredAppRef = useRef(false);
 
   const openNetworkDetails = useCallback(async () => {
     try {
@@ -119,7 +124,7 @@ export default function RootNavigator() {
     // app. Once permissions are loaded, replacing AppNavigator with IsLoading
     // would unmount the whole navigation tree (including an open report/map)
     // whenever the device goes offline.
-    if (loaded) {
+    if (loaded || hasEnteredAppRef.current) {
       setIsAndroidOfflineBlocked(false);
       hasShownAndroidOfflineRef.current = false;
       return;
@@ -209,13 +214,31 @@ export default function RootNavigator() {
   }, [dispatch, iosAuthenticated, isAuthenticated, loaded]);
 
   // ===== LOADING STATE =====
-  if (!authReady || isLoading || isAndroidOfflineBlocked) {
+  // Chặn offline chỉ có tác dụng lúc bootstrap, khi chưa có gì để mất. Một lượt
+  // probe hỏng thoáng qua sau đó không được kéo người dùng ra khỏi màn đang xem.
+  const isOfflineBlocking = isAndroidOfflineBlocked && !hasEnteredAppRef.current;
+  const isBootstrapping = !authReady || isLoading || isOfflineBlocking;
+  const canEnterApp = canAccessAppNavigator({
+    iosAuthenticated,
+    isAuthenticated,
+  });
+
+  useEffect(() => {
+    if (isBootstrapping) return;
+
+    hasEnteredAppRef.current = true;
+
+    // Chưa đăng nhập thì màn đăng nhập CHÍNH LÀ nội dung đầu tiên — gỡ splash
+    // ngay. Còn vào được app thì để `HomeScreen` báo, vì lúc này mới chỉ dựng
+    // xong khung điều hướng, Trang chủ vẫn đang là một vòng xoay.
+    if (!canEnterApp) {
+      markAppReady();
+    }
+  }, [canEnterApp, isBootstrapping]);
+
+  if (isBootstrapping) {
     return <IsLoading />;
   }
 
-  return canAccessAppNavigator({ iosAuthenticated, isAuthenticated }) ? (
-    <AppNavigator />
-  ) : (
-    <AuthNavigator />
-  );
+  return canEnterApp ? <AppNavigator /> : <AuthNavigator />;
 }

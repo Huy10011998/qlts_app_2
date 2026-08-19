@@ -27,9 +27,7 @@ import { usePermission } from "../../hooks/usePermission";
 import HomeMenuItemCard from "./shared/HomeMenuItemCard";
 import HomeSectionTitle from "./shared/HomeSectionTitle";
 import HomeStatTiles, { type HomeStatTile } from "./shared/HomeStatTiles";
-import HomeUtilityCard, {
-  type HomeUtilityRow,
-} from "./shared/HomeUtilityCard";
+import HomeUtilityCard, { type HomeUtilityRow } from "./shared/HomeUtilityCard";
 import HomeAttendanceCard from "./shared/HomeAttendanceCard";
 import HomeAssetStructurePager from "./shared/HomeAssetStructurePager";
 import HomeCustomizeSheet, {
@@ -57,6 +55,7 @@ import EmptyState from "../../components/ui/EmptyState";
 import { useAppDispatch } from "../../store/hooks";
 import { reloadPermissions } from "../../store/PermissionActions";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
+import { markAppReady } from "../../services/splash/splashGate";
 import {
   useAppColors,
   useHairlineBorderColor,
@@ -88,8 +87,9 @@ const HomeScreen: React.FC = () => {
   const {
     menuItems,
     fetchHomeMenuItems,
+    hasLoadedMenuOnce,
     hasMenuLoadError,
-    isMenuLoading,
+    isPinnedFeatureIdsLoading,
     openFeatureTab,
     openReportScreen,
     pinnedFeatureIds,
@@ -124,7 +124,7 @@ const HomeScreen: React.FC = () => {
   const openCustomizeSheet = useCallback(() => setIsCustomizeVisible(true), []);
   const closeCustomizeSheet = useCallback(
     () => setIsCustomizeVisible(false),
-    []
+    [],
   );
 
   const loadPermissions = useCallback(
@@ -144,7 +144,7 @@ const HomeScreen: React.FC = () => {
         }
       }
     },
-    [dispatch]
+    [dispatch],
   );
 
   useFocusEffect(
@@ -161,7 +161,7 @@ const HomeScreen: React.FC = () => {
       return () => {
         isActive = false;
       };
-    }, [loadPermissions])
+    }, [loadPermissions]),
   );
 
   useNetworkAwareReload(
@@ -175,7 +175,7 @@ const HomeScreen: React.FC = () => {
       onOffline: () => {
         setHasLoadError(true);
       },
-    }
+    },
   );
 
   const refreshHomeData = useCallback(async () => {
@@ -194,13 +194,13 @@ const HomeScreen: React.FC = () => {
   // xoay của RefreshControl cũng chạy theo — không có hai đường tải khác nhau.
   useEffect(
     () => registerHomeRefresh(refreshHomeData),
-    [refreshHomeData, registerHomeRefresh]
+    [refreshHomeData, registerHomeRefresh],
   );
 
   const visibleMenuItems = useMemo(() => {
     if (!loaded) return [];
     return menuItems.filter((item) =>
-      item.viewPermission ? canView(item.viewPermission) : true
+      item.viewPermission ? canView(item.viewPermission) : true,
     );
   }, [canView, loaded, menuItems]);
   // Phải lọc bỏ nhóm phương tiện y như tab Chức năng: chức năng phương tiện cũng
@@ -208,15 +208,15 @@ const HomeScreen: React.FC = () => {
   // `report:` mà tab Chức năng không bao giờ hiện — ghim không tới được.
   const visibleFeatureItems = useMemo(
     () => visibleMenuItems.filter((item) => item.homeGroup !== "vehicle"),
-    [visibleMenuItems]
+    [visibleMenuItems],
   );
   const visibleVehicleItems = useMemo(
     () => visibleMenuItems.filter((item) => item.homeGroup === "vehicle"),
-    [visibleMenuItems]
+    [visibleMenuItems],
   );
   const reportActions = useMemo(
     () => createReportActions(visibleFeatureItems, openReportScreen),
-    [openReportScreen, visibleFeatureItems]
+    [openReportScreen, visibleFeatureItems],
   );
   // Bảng Tuỳ chỉnh phải thấy đủ ba nhóm y như tab Chức năng — ghim từ Trang chủ
   // mà thiếu nhóm nào thì user vẫn phải sang tab kia, đúng thứ mà nút này định bỏ.
@@ -227,7 +227,7 @@ const HomeScreen: React.FC = () => {
         reportItems: reportActions,
         vehicleItems: visibleVehicleItems,
       }),
-    [reportActions, visibleFeatureItems, visibleVehicleItems]
+    [reportActions, visibleFeatureItems, visibleVehicleItems],
   );
   // Hàng shortcut lấy đúng thứ tự user đã ghim, không phân biệt chức năng, phương
   // tiện hay báo cáo — tab Chức năng mới là chỗ chia nhóm. Báo cáo mang id có
@@ -248,7 +248,22 @@ const HomeScreen: React.FC = () => {
   }, [pinnedFeatureIds, reportActions, visibleMenuItems]);
   const hasNoViewFeatures = visibleMenuItems.length === 0;
   const hasNoShortcuts = !hasNoViewFeatures && shortcutItems.length === 0;
-  const isInitialMenuLoading = isMenuLoading && menuItems.length === 0;
+  // Truy cập nhanh chỉ nói được "chưa ghim gì" khi đã biết ĐỦ hai vế: user ghim
+  // những id nào, và những id đó có nằm trong menu khả dụng không. Thiếu vế nào
+  // cũng ra một danh sách rỗng giả và block chớp qua thẻ "Chưa ghim chức năng
+  // nào" rồi mới nhảy ra lưới thật.
+  //
+  // Không dùng `menuItems.length === 0` được: danh sách luôn có sẵn mục tĩnh
+  // "Điện mặt trời" nên vế đó không bao giờ đúng — cổng chờ coi như không có.
+  const isInitialMenuLoading = !hasLoadedMenuOnce || isPinnedFeatureIdsLoading;
+  // Splash native bên Android giữ tới đây rồi mới gỡ. Màn lỗi cũng tính là xong:
+  // thà thấy lý do hỏng còn hơn ngồi nhìn splash tới lúc trần thời gian đá ra.
+  const isHomeSettled =
+    hasLoadError || hasMenuLoadError || (loaded && !isInitialMenuLoading);
+
+  useEffect(() => {
+    if (isHomeSettled) markAppReady();
+  }, [isHomeSettled]);
   // Một chỉ số / một dòng hoạt động chỉ hữu ích khi bấm được. Thay vì hard-code
   // route, tra lại chính chức năng có cùng viewPermission và dùng luôn onPress
   // của nó — quyền và tham số điều hướng đã đúng sẵn.
@@ -275,7 +290,7 @@ const HomeScreen: React.FC = () => {
 
       return loaded && canView(viewPermission);
     },
-    [canView, loaded]
+    [canView, loaded],
   );
   const canViewAttendance = canViewBlock(dashboard?.attendance?.viewPermission);
   const statTiles = useMemo<HomeStatTile[]>(() => {
@@ -333,7 +348,7 @@ const HomeScreen: React.FC = () => {
           attendance.total == null
             ? HOME_NO_DATA
             : `${formatHomeCount(attendance.checkedIn)} / ${formatHomeNumber(
-                attendance.total
+                attendance.total,
               )}`,
         sub: attendance.total == null ? undefined : "người",
       });
@@ -342,7 +357,7 @@ const HomeScreen: React.FC = () => {
     return tiles;
   }, [canViewAttendance, colors, dashboard, menuItemByPermission]);
   const canViewItStructure = canViewBlock(
-    dashboard?.itStructure?.viewPermission
+    dashboard?.itStructure?.viewPermission,
   );
   const itStructure = useMemo(() => {
     if (!canViewItStructure) return null;
@@ -365,9 +380,13 @@ const HomeScreen: React.FC = () => {
       { iconBg: string; iconColor: string }
     > = {
       electricity: { iconBg: colors.amberLight, iconColor: colors.amber },
-      water: { iconBg: colors.blueSurface, iconColor: colors.sky },
-      steam: { iconBg: colors.redSurface, iconColor: colors.rose },
       solar: { iconBg: colors.orangeSurface, iconColor: colors.violet },
+      water: { iconBg: colors.blueSurface, iconColor: colors.sky },
+      // Nước thải đứng ngay dưới nước cấp nên phải khác màu hẳn, không thì hai
+      // dòng liền nhau cùng icon xanh đọc như một dòng bị lặp. Tránh luôn
+      // `slate` vì đó là màu đoạn BL của vạch chia hai nhà máy.
+      wasteWater: { iconBg: colors.tealSurface, iconColor: colors.green },
+      steam: { iconBg: colors.redSurface, iconColor: colors.rose },
     };
 
     return dashboard.utilities.items.map((item) => ({
@@ -394,7 +413,7 @@ const HomeScreen: React.FC = () => {
   const hasDashboardLoadFailure = hasDashboardError && !dashboard;
   // Ba ô đếm thiết bị luôn hiện nên lưới số liệu luôn có phần để hiện; lúc chưa
   // có dữ liệu thì `statTiles` rỗng vì lý do khác, vẫn phải dựng khung chờ / thẻ
-  // lỗi kèm nút Thử lại.
+  // lỗi kèm nút Tải lại.
   const hasStatSection =
     statTiles.length > 0 || isFirstDashboardLoad || hasDashboardLoadFailure;
   const hasUtilitySection =
@@ -500,7 +519,7 @@ const HomeScreen: React.FC = () => {
 
       moveBlock({ visibleKeys, fromIndex, toIndex });
     },
-    [moveBlock]
+    [moveBlock],
   );
 
   if (hasLoadError || hasMenuLoadError) {
@@ -541,78 +560,63 @@ const HomeScreen: React.FC = () => {
   const blockNodes: Record<HomeBlockKey, React.ReactNode> = {
     stats: (
       <>
-      {/* Còn giữ số cũ vì lượt gọi mới nhất thất bại thì phải ghi rõ ở
+        {/* Còn giữ số cũ vì lượt gọi mới nhất thất bại thì phải ghi rõ ở
           đây — lưới số liệu không có chỗ nào khác để báo. */}
-      <HomeSectionTitle
-        label="SỐ LIỆU TOÀN CÔNG TY"
-        // Giờ SERVER lúc chạy proc, không phải giờ máy — người xem cần biết
-        // đang xem số cũ hay số mới.
-        note={
-          updatedAtLabel
-            ? `${
-                isDashboardStale ? "Số cũ · s" : "S"
-              }ố liệu lúc ${updatedAtLabel}`
-            : undefined
-        }
-      />
-      {hasDashboardLoadFailure ? (
-        <View
-          style={[
-            styles.overviewErrorCard,
-            {
-              backgroundColor: colors.surface,
-              borderColor: hairlineBorderColor,
-              shadowColor: colors.shadow,
-            },
-          ]}
-        >
-          <Ionicons
-            name="cloud-offline-outline"
-            size={18}
-            color={colors.textMuted}
-          />
-          <Text
+        <HomeSectionTitle
+          label="SỐ LIỆU TOÀN CÔNG TY"
+          // Giờ SERVER lúc chạy proc, không phải giờ máy — người xem cần biết
+          // đang xem số cũ hay số mới.
+          note={
+            updatedAtLabel
+              ? `${
+                  isDashboardStale ? "Số cũ · s" : "S"
+                }ố liệu lúc ${updatedAtLabel}`
+              : undefined
+          }
+        />
+        {hasDashboardLoadFailure ? (
+          <View
             style={[
-              styles.overviewErrorText,
-              { color: colors.textSecondary },
+              styles.overviewErrorCard,
+              {
+                backgroundColor: colors.surface,
+                borderColor: hairlineBorderColor,
+                shadowColor: colors.shadow,
+              },
             ]}
-            allowFontScaling={false}
           >
-            Không lấy được số liệu dashboard. Vui lòng thử lại.
-          </Text>
-          <TouchableOpacity
-            onPress={refreshDashboard}
-            activeOpacity={0.7}
-          >
+            <Ionicons
+              name="cloud-offline-outline"
+              size={18}
+              color={colors.textMuted}
+            />
             <Text
               style={[
-                styles.overviewErrorAction,
-                { color: HOME_BRAND_RED },
+                styles.overviewErrorText,
+                { color: colors.textSecondary },
               ]}
               allowFontScaling={false}
             >
-              Thử lại
+              Không lấy được số liệu dashboard. Vui lòng thử lại.
             </Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <HomeStatTiles
-          tiles={statTiles}
-          isLoading={isFirstDashboardLoad}
-        />
-      )}
+            <TouchableOpacity onPress={refreshDashboard} activeOpacity={0.7}>
+              <Text
+                style={[styles.overviewErrorAction, { color: HOME_BRAND_RED }]}
+                allowFontScaling={false}
+              >
+                Tải lại
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <HomeStatTiles tiles={statTiles} isLoading={isFirstDashboardLoad} />
+        )}
       </>
     ),
     shortcuts: (
       <>
-        {/* "Xem tất cả" nằm ở hàng dưới lưới cùng với chấm trang, không nằm trên
-            dòng tiêu đề — chỗ đó đã có "Tuỳ chỉnh". Nó dẫn sang tab Chức năng,
-            nơi có đủ chức năng · phương tiện · báo cáo. */}
         <HomeSectionTitle
           label="TRUY CẬP NHANH"
-          // Đếm theo `shortcutItems` chứ không phải `pinnedFeatureIds`: danh sách
-          // ghim có thể còn id của chức năng user đã bị thu quyền hoặc API không
-          // trả về nữa. Đếm theo id sẽ ra con số không khớp số card đang hiện.
           note={
             shortcutItems.length > 0
               ? `Đã ghim ${shortcutItems.length} mục`
@@ -732,7 +736,10 @@ const HomeScreen: React.FC = () => {
                 accessibilityRole="button"
                 accessibilityLabel="Xem tất cả"
               >
-                <Text style={styles.shortcutViewAllText} allowFontScaling={false}>
+                <Text
+                  style={styles.shortcutViewAllText}
+                  allowFontScaling={false}
+                >
                   Xem tất cả
                 </Text>
                 <Ionicons
@@ -762,34 +769,32 @@ const HomeScreen: React.FC = () => {
     ),
     attendance: (
       <>
-      <HomeSectionTitle
-        label="ĐIỂM DANH NHÂN SỰ HÔM NAY"
-      />
-      <HomeAttendanceCard
-        total={attendance?.total ?? null}
-        checkedIn={attendance?.checkedIn ?? null}
-        notCheckedIn={attendance?.notCheckedIn ?? null}
-        departments={attendance?.departments ?? []}
-        isLoading={isFirstDashboardLoad}
-      />
+        <HomeSectionTitle label="ĐIỂM DANH NHÂN SỰ HÔM NAY" />
+        <HomeAttendanceCard
+          total={attendance?.total ?? null}
+          checkedIn={attendance?.checkedIn ?? null}
+          notCheckedIn={attendance?.notCheckedIn ?? null}
+          departments={attendance?.departments ?? []}
+          isLoading={isFirstDashboardLoad}
+        />
       </>
     ),
     utilities: (
       <>
-      {/* Kỳ tiêu thụ là THÁNG TRƯỚC và do SQL tự quyết — tiêu đề phải ghi
+        {/* Kỳ tiêu thụ là THÁNG TRƯỚC và do SQL tự quyết — tiêu đề phải ghi
           rõ tháng nhận được, không tự trừ thêm một tháng. */}
-      <HomeSectionTitle
-        label={
-          utilityPeriodLabel
-            ? `TIÊU THỤ ${utilityPeriodLabel.toUpperCase()}`
-            : "TIÊU THỤ ĐIỆN · NƯỚC · HƠI"
-        }
-      />
-      <HomeUtilityCard
-        rows={utilityRows}
-        periodLabel={utilityPeriodLabel || undefined}
-        isLoading={isFirstDashboardLoad}
-      />
+        <HomeSectionTitle
+          label={
+            utilityPeriodLabel
+              ? `TIÊU THỤ ${utilityPeriodLabel.toUpperCase()}`
+              : "TIÊU THỤ ĐIỆN · NƯỚC · HƠI"
+          }
+        />
+        <HomeUtilityCard
+          rows={utilityRows}
+          periodLabel={utilityPeriodLabel || undefined}
+          isLoading={isFirstDashboardLoad}
+        />
       </>
     ),
   };

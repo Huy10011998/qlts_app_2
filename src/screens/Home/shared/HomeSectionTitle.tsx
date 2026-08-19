@@ -23,6 +23,7 @@ export default function HomeSectionTitle({
   action,
   actionIconName,
   onAction,
+  note,
 }: HomeSectionTitleProps) {
   const styles = useStyles(makeStyles);
   const colors = useAppColors();
@@ -44,6 +45,19 @@ export default function HomeSectionTitle({
       >
         {label}
       </Text>
+
+      {/* Chú thích phụ đứng ngay cạnh tiêu đề: "số liệu lúc HH:mm" là thứ cho
+          biết đang xem số mới hay số cũ, để tuột mất là người xem không có chỗ
+          nào khác để biết. */}
+      {note ? (
+        <Text
+          style={[styles.note, { color: colors.textMuted }]}
+          numberOfLines={1}
+          allowFontScaling={false}
+        >
+          {note}
+        </Text>
+      ) : null}
 
       {action ? (
         <TouchableOpacity
@@ -90,6 +104,14 @@ const makeStyles = (c: AppColors) =>
       letterSpacing: 0.5,
     },
 
+    note: {
+      fontSize: 10.5,
+      lineHeight: 14,
+      fontWeight: "600",
+      color: c.textMuted,
+      marginLeft: 8,
+      flexShrink: 0,
+    },
     actionButton: {
       flexDirection: "row",
       alignItems: "center",

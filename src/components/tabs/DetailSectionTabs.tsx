@@ -115,20 +115,42 @@ export default function DetailSectionTabs({
     return widthValues[key];
   };
 
+  /**
+   * Chỉ ngón tay mới được kéo animation. Bề rộng là thuộc tính layout nên phải
+   * chạy trên JS driver; đổi tab bằng code thì thời điểm đổi hay trùng lúc
+   * navigator đang chạy hiệu ứng chuyển màn (nút "bản ghi gốc" ở AssetRelatedList
+   * pop về kèm `activeTab`), hai thứ tranh nhau JS thread nên thấy giật. Những lúc
+   * đó nhảy thẳng tới bề rộng đích: màn hiện ra là đã đúng hình, không ai kịp thấy
+   * animation mà cũng chẳng mất gì.
+   *
+   * Cùng lý do, lần render đầu và lúc đổi bề rộng màn hình (quay máy, hoặc quyền
+   * về muộn làm số mục thay đổi) đều nhảy thẳng.
+   */
+  const fromTapRef = useRef(false);
+
   useEffect(() => {
-    const animations = visibleTabs.map((tab, i) =>
-      Animated.timing(
-        widthOf(tab.key, i === index ? activeWidth : inactiveWidth),
-        {
-          toValue: i === index ? activeWidth : inactiveWidth,
+    const targetOf = (i: number) => (i === index ? activeWidth : inactiveWidth);
+
+    if (!fromTapRef.current) {
+      visibleTabs.forEach((tab, i) =>
+        widthOf(tab.key, targetOf(i)).setValue(targetOf(i)),
+      );
+      return;
+    }
+
+    fromTapRef.current = false;
+
+    const animation = Animated.parallel(
+      visibleTabs.map((tab, i) =>
+        Animated.timing(widthOf(tab.key, targetOf(i)), {
+          toValue: targetOf(i),
           duration: EXPAND_DURATION,
           easing: Easing.out(Easing.cubic),
           // Bề rộng là thuộc tính layout, native driver không nhận.
           useNativeDriver: false,
-        },
+        }),
       ),
     );
-    const animation = Animated.parallel(animations);
     animation.start();
 
     return () => animation.stop();
@@ -138,6 +160,7 @@ export default function DetailSectionTabs({
   const handlePress = (tab: TabItem) => {
     if (tab.key !== activeTab) tapHaptic();
 
+    fromTapRef.current = true;
     onTabPress(tab.key, tab.label);
   };
 

@@ -37,6 +37,7 @@ import AssetListEmptyState from "./shared/AssetListEmptyState";
 import { BRAND_RED } from "./shared/listTheme";
 import { makeSharedAssetListStyles } from "./shared/listStyles";
 import { useRelatedAssetListData } from "../../hooks/useRelatedAssetListData";
+import { useHeaderRecordPill } from "./shared/useHeaderRecordPill";
 
 if (
   Platform.OS === "android" &&
@@ -54,6 +55,7 @@ export default function AssetRelatedList() {
     idRoot,
     propertyReference,
     nameClassRoot,
+    rootRecordLabel,
     groupMenuId,
     viewPermission,
     assetTitleHeader,
@@ -120,12 +122,23 @@ export default function AssetRelatedList() {
       idRoot,
       propertyReference,
       nameClassRoot,
+      rootRecordLabel,
       titleHeader: route.params?.titleHeader,
       groupMenuId,
       viewPermission,
       assetTitleHeader,
     });
   };
+
+  // Pill mã bản ghi gốc ở góc phải header, bấm là mở lại bản ghi cha.
+  useHeaderRecordPill({
+    label: rootRecordLabel,
+    recordId: idRoot,
+    nameClass: nameClassRoot,
+    groupMenuId,
+    viewPermission,
+    assetTitleHeader,
+  });
 
   const shouldRefresh = useSelector(
     (state: RootState) => state.asset.shouldRefreshList,
@@ -143,6 +156,12 @@ export default function AssetRelatedList() {
       if (shouldRefresh) {
         fetchData(false);
         dispatch(resetShouldRefreshList());
+        // Nạp lại cả danh sách đã bao trùm việc merge một item, nên phải dọn luôn
+        // cờ merge của chính class này. Để nó treo lại thì lần focus sau sẽ merge
+        // một bản ghi có thể đã bị xoá và ăn 404.
+        if (updatedListItem?.nameClass === nameClass) {
+          dispatch(resetUpdatedListItem());
+        }
       } else if (updatedListItem && updatedListItem.nameClass === nameClass) {
         mergeItemById(updatedListItem.id);
         dispatch(resetUpdatedListItem());
@@ -268,6 +287,7 @@ export default function AssetRelatedList() {
               propertyClass: mapPropertyResponseToPropertyClass(propertyClass),
               idRoot,
               nameClassRoot,
+              rootRecordLabel,
               propertyReference,
               titleHeader: route.params?.titleHeader,
               returnTo: "assetRelatedList",

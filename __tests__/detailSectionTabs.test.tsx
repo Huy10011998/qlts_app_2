@@ -1,5 +1,5 @@
 import React from "react";
-import { Text, TouchableOpacity } from "react-native";
+import { Animated, Text, TouchableOpacity } from "react-native";
 import ReactTestRenderer from "react-test-renderer";
 
 import { ThemeProvider } from "../src/context/ThemeContext";
@@ -240,6 +240,96 @@ describe("thanh chuyển mục trên đầu màn chi tiết", () => {
       .filter((child) => typeof child === "number");
 
     expect(badgeNumbers).toEqual([]);
+  });
+
+  // Bề rộng chạy trên JS driver, nên đổi tab bằng code (nút "bản ghi gốc" pop về
+  // kèm activeTab) mà còn animate thì nó chạy đúng lúc navigator đang chuyển màn
+  // và thấy giật. Bấm bằng tay thì không có transition nào, animate mới đáng.
+  describe("animation bề rộng", () => {
+    const widthOfItem = (
+      tree: ReactTestRenderer.ReactTestRenderer,
+      label: string,
+    ) => {
+      const item = items(tree).find(
+        (node) => node.props.accessibilityLabel === label,
+      );
+
+      // Animated đã rót giá trị vào style của View, đọc thẳng số là được.
+      return item!.parent!.props.style.width as number;
+    };
+
+    const rerenderWith = (
+      tree: ReactTestRenderer.ReactTestRenderer,
+      activeTab: string,
+      onTabPress: () => void,
+    ) =>
+      ReactTestRenderer.act(async () => {
+        tree.update(
+          <ThemeProvider>
+            <DetailSectionTabs
+              tabs={TABS}
+              activeTab={activeTab}
+              onTabPress={onTabPress}
+            />
+          </ThemeProvider>,
+        );
+      });
+
+    let timingSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      timingSpy = jest.spyOn(Animated, "timing");
+    });
+
+    afterEach(() => {
+      timingSpy.mockRestore();
+    });
+
+    it("nhảy thẳng tới bề rộng đích khi đổi tab bằng code", async () => {
+      const tree = await mount(
+        <DetailSectionTabs
+          tabs={TABS}
+          activeTab="list"
+          onTabPress={jest.fn()}
+        />,
+      );
+      const activeWidth = widthOfItem(tree, "Thông tin");
+
+      await rerenderWith(tree, "notes", jest.fn());
+
+      expect(timingSpy).not.toHaveBeenCalled();
+      // Không chờ frame nào: "Note" đã nở sẵn, "Thông tin" đã co sẵn.
+      expect(widthOfItem(tree, "Note")).toBeGreaterThan(
+        widthOfItem(tree, "Thông tin"),
+      );
+      expect(widthOfItem(tree, "Thông tin")).toBeLessThan(activeWidth);
+    });
+
+    it("còn bấm bằng tay thì vẫn animate", async () => {
+      const onTabPress = jest.fn();
+      const tree = await mount(
+        <DetailSectionTabs
+          tabs={TABS}
+          activeTab="list"
+          onTabPress={onTabPress}
+        />,
+      );
+
+      await ReactTestRenderer.act(async () => {
+        items(tree)
+          .find((node) => node.props.accessibilityLabel === "Note")!
+          .props.onPress();
+      });
+
+      expect(onTabPress).toHaveBeenCalledWith("notes", "Note");
+
+      await rerenderWith(tree, "notes", onTabPress);
+
+      expect(timingSpy).toHaveBeenCalled();
+      expect(timingSpy.mock.calls[0][1]).toMatchObject({
+        useNativeDriver: false,
+      });
+    });
   });
 
   it("tự chuyển về mục đầu khi mục đang chọn bị lọc mất", async () => {

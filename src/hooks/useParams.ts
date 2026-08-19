@@ -9,6 +9,7 @@ export function useParams<RouteName extends keyof RootStackParamList>() {
     propertyReference: params?.propertyReference,
     nameClass: params?.nameClass,
     nameClassRoot: params?.nameClassRoot,
+    rootRecordLabel: params?.rootRecordLabel,
     id: params?.id,
     field: params?.field,
     name: params?.name,

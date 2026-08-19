@@ -79,6 +79,18 @@ export default function HomeItStructureCard({
                 />
               </View>
             ))
+          : items.length === 0
+          ? (
+            // Nguồn số của trang này là endpoint tài sản, khác hai trang máy
+            // móc: endpoint đó hỏng thì `items` rỗng và card sẽ ra khung trắng
+            // không chữ nếu không nói gì ở đây.
+            <Text
+              style={[styles.emptyText, { color: colors.textSecondary }]}
+              allowFontScaling={false}
+            >
+              Chưa lấy được cơ cấu thiết bị CNTT.
+            </Text>
+          )
           : items.map((item, index) => {
               const percent = getHomeRatioPercent(item.value, total);
               const barColor = BAR_COLORS[index % BAR_COLORS.length];
@@ -239,5 +251,11 @@ const makeStyles = (c: AppColors) =>
       marginTop: 7,
       fontWeight: "600",
       color: c.textMuted,
+    },
+    emptyText: {
+      fontSize: 12.5,
+      lineHeight: 18,
+      fontWeight: "600",
+      color: c.textSecondary,
     },
   });

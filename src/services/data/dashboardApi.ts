@@ -8,6 +8,9 @@ export const DASHBOARD_TAISAN_ERROR_MESSAGE =
 export const DASHBOARD_MAYMOC_ERROR_MESSAGE =
   "Chưa lấy được số liệu máy móc.";
 
+export const DASHBOARD_DIEMDANH_CHITIET_ERROR_MESSAGE =
+  "Không lấy được danh sách nhân viên của bộ phận. Vui lòng thử lại.";
+
 /**
  * Dữ liệu thô của `POST /Common/get-dashboard-taisan`.
  *
@@ -36,8 +39,12 @@ export type TaiSanDashboardRaw = {
   // Tiêu thụ của kỳ (thang/nam) — null khi kỳ đó chưa chốt chỉ số đồng hồ.
   dien_TieuThu_VL: number | null;
   dien_TieuThu_BL: number | null;
+  /** Nước CẤP (TypeNuoc = 0), m3. */
   nuoc_TieuThu_VL: number | null;
   nuoc_TieuThu_BL: number | null;
+  /** Nước THẢI (TypeNuoc = 1), m3 — đại lượng riêng, không trừ vào nước cấp. */
+  nuocThai_TieuThu_VL: number | null;
+  nuocThai_TieuThu_BL: number | null;
   hoi_TieuThu_VL: number | null;
   hoi_TieuThu_BL: number | null;
   solar_TieuThu_VL: number | null;
@@ -100,6 +107,27 @@ export type MayMocDashboardMonthRaw = {
   nhan: string | null;
   /** "MM/yy" — dùng cho trục hoành. */
   nhanNgan: string | null;
+};
+
+/**
+ * Một nhân viên trong `POST /Common/get-dashboard-taisan-diemdanh-chitiet`.
+ *
+ * Phạm vi nhân viên giống hệt endpoint tổng quan, nên số dòng nhận được PHẢI
+ * bằng `tongNhanVien` của bộ phận đó bên kia — lệch là lỗi, đừng tự cộng trừ.
+ */
+export type DiemDanhChiTietRaw = {
+  maNhanVien: string | null;
+  hoTen: string | null;
+  /** null = chưa gán chức danh, view hiện "—" chứ không để trống. */
+  chucDanh: string | null;
+  daDiemDanh: boolean;
+  /** Giờ quẹt SỚM NHẤT trong ngày; null khi chưa điểm danh. */
+  gioDiemDanh: string | null;
+};
+
+type DiemDanhChiTietEnvelope = {
+  message?: string | null;
+  data?: DiemDanhChiTietRaw[] | null;
 };
 
 type DashboardEnvelope = {
@@ -172,6 +200,47 @@ export const fetchMayMocDashboard = async (): Promise<MayMocDashboardRaw> => {
   if (envelope?.data == null) {
     throw new Error(
       envelope?.message?.trim() || DASHBOARD_MAYMOC_ERROR_MESSAGE,
+    );
+  }
+
+  return envelope.data;
+};
+
+/**
+ * Danh sách nhân viên đã / chưa điểm danh của MỘT bộ phận.
+ *
+ * Chỉ gọi khi người dùng bấm vào một bộ phận để xem chi tiết: endpoint tổng quan
+ * đã có đủ số lượng để vẽ, còn lượt này kéo từng dòng nhân viên qua linked server
+ * nên nặng hơn nhiều. Bộ lọc "tất cả / đã / chưa" và ô tìm nhanh chạy TẠI MÁY
+ * trên mảng đã tải — đổi bộ lọc KHÔNG gọi lại.
+ *
+ * Server đã sắp sẵn: chưa điểm danh lên trước, trong mỗi nhóm xếp theo tên. Giữ
+ * nguyên thứ tự nhận được.
+ */
+export const fetchDiemDanhChiTiet = async (
+  deptCode: string,
+): Promise<DiemDanhChiTietRaw[]> => {
+  let envelope: DiemDanhChiTietEnvelope;
+
+  try {
+    envelope = await callApi<DiemDanhChiTietEnvelope>(
+      "POST",
+      API_ENDPOINTS.GET_DASHBOARD_TAISAN_DIEMDANH_CHITIET,
+      { deptCode },
+    );
+  } catch (error) {
+    throw new Error(
+      getApiErrorMessage(error, DASHBOARD_DIEMDANH_CHITIET_ERROR_MESSAGE).trim() ||
+        DASHBOARD_DIEMDANH_CHITIET_ERROR_MESSAGE,
+    );
+  }
+
+  // Mảng rỗng trong khi bộ phận đang có người là lỗi đọc Bravo8 (server nuốt lỗi
+  // và trả rỗng thay vì 500) — nơi gọi đối chiếu với `tongNhanVien` để báo
+  // "không lấy được danh sách" thay vì "bộ phận không có nhân viên".
+  if (!Array.isArray(envelope?.data)) {
+    throw new Error(
+      envelope?.message?.trim() || DASHBOARD_DIEMDANH_CHITIET_ERROR_MESSAGE,
     );
   }
 

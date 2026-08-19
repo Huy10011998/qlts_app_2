@@ -9,13 +9,19 @@ const mockNavigate = jest.fn();
 const mockGoBack = jest.fn();
 const mockShowAlert = jest.fn();
 let mockAllowedActions: string[] = [];
+let mockUpdatedListItem: { id: string; nameClass: string } | null = null;
+const mockDispatch = jest.fn();
 
 jest.mock("@react-navigation/native", () => ({
   useRoute: () => mockRoute,
   useNavigation: () => ({ navigate: mockNavigate, goBack: mockGoBack }),
 }));
 
-jest.mock("react-redux", () => ({ useDispatch: () => jest.fn() }));
+jest.mock("react-redux", () => ({
+  useDispatch: () => mockDispatch,
+  useSelector: (selector: (state: any) => unknown) =>
+    selector({ asset: { updatedListItem: mockUpdatedListItem } }),
+}));
 
 jest.mock("../src/services/data/callApi", () => ({
   checkReferenceUsage: jest.fn(),
@@ -86,7 +92,22 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockRoute.name = "AssetDetails";
   mockAllowedActions = ["Update", "Delete", "Insert"];
+  mockUpdatedListItem = null;
 });
+
+/** Bấm nút trong alert vừa hiện (nút cuối là nút hành động). */
+const pressLastAlertButton = async () => {
+  const buttons = mockShowAlert.mock.calls.at(-1)?.[2] as
+    | Array<{ onPress?: () => void }>
+    | undefined;
+
+  await ReactTestRenderer.act(async () => {
+    buttons?.at(-1)?.onPress?.();
+  });
+};
+
+const dispatchedTypes = () =>
+  mockDispatch.mock.calls.map(([action]) => action?.type);
 
 describe("useAssetRecordActions", () => {
   it("cho phép cả ba hành động khi đủ quyền", async () => {
@@ -155,6 +176,46 @@ describe("useAssetRecordActions", () => {
       expect.any(Object),
     );
     expect(mockedDeleteItems).not.toHaveBeenCalled();
+
+    await harness.unmount();
+  });
+
+  // Sửa bản ghi xong là có cờ "nạp lại đúng item này"; xoá luôn bản ghi đó mà
+  // không dọn cờ thì danh sách gọi get-details cho một id không còn tồn tại và ăn
+  // 404 ở lần focus sau.
+  it("dọn cờ nạp lại item khi xoá đúng bản ghi đang treo cờ", async () => {
+    mockUpdatedListItem = { id: "7", nameClass: "Asset_PC" };
+    mockedCheckReference.mockResolvedValue({ data: [] } as any);
+    mockedDeleteItems.mockResolvedValue({} as any);
+    const harness = await mount();
+
+    await ReactTestRenderer.act(async () => {
+      await harness.result.onDelete();
+    });
+    await pressLastAlertButton(); // Xác nhận xoá → gọi API xoá
+    await pressLastAlertButton(); // OK ở thông báo thành công
+
+    expect(mockedDeleteItems).toHaveBeenCalled();
+    expect(dispatchedTypes()).toContain("asset/resetUpdatedListItem");
+    expect(mockGoBack).toHaveBeenCalled();
+
+    await harness.unmount();
+  });
+
+  it("giữ cờ khi bản ghi bị xoá không phải bản ghi đang treo cờ", async () => {
+    mockUpdatedListItem = { id: "99", nameClass: "Asset_PC" };
+    mockedCheckReference.mockResolvedValue({ data: [] } as any);
+    mockedDeleteItems.mockResolvedValue({} as any);
+    const harness = await mount();
+
+    await ReactTestRenderer.act(async () => {
+      await harness.result.onDelete();
+    });
+    await pressLastAlertButton();
+    await pressLastAlertButton();
+
+    expect(dispatchedTypes()).not.toContain("asset/resetUpdatedListItem");
+    expect(dispatchedTypes()).toContain("asset/setShouldRefreshList");
 
     await harness.unmount();
   });

@@ -1,10 +1,12 @@
 import type {
+  DiemDanhChiTietRaw,
   MayMocDashboardMonthRaw,
   MayMocDashboardRaw,
   MayMocDashboardUnitRaw,
   TaiSanDashboardDeptRaw,
   TaiSanDashboardRaw,
 } from "../../../services/data/dashboardApi";
+import { formatHomeClockTime } from "./homeFormat";
 
 export const HOME_MEETING_INFO = {
   meetingId: "meeting-2026",
@@ -50,6 +52,19 @@ export type HomeDashboardDepartment = {
   total: number;
   checkedIn: number;
   notCheckedIn: number;
+};
+
+/** Một nhân viên trong màn chi tiết điểm danh của một bộ phận. */
+export type HomeAttendanceEmployee = {
+  key: string;
+  /** Mã nhân viên Bravo8; rỗng thì view giấu dòng mã đi. */
+  code: string;
+  name: string;
+  /** null = chưa gán chức danh — view hiện "—", không để trống. */
+  title: string | null;
+  checkedIn: boolean;
+  /** "HH:mm" của lượt quẹt SỚM NHẤT; null khi chưa điểm danh. */
+  time: string | null;
 };
 
 export type HomeDashboardPayload = {
@@ -176,6 +191,32 @@ const mapDepartment = (
   };
 };
 
+const mapAttendanceEmployee = (
+  employee: DiemDanhChiTietRaw,
+  index: number,
+): HomeAttendanceEmployee => {
+  const code = employee.maNhanVien?.trim() ?? "";
+  const title = employee.chucDanh?.trim();
+  // Server trả `daDiemDanh` là bool, nhưng giờ quẹt mới là thứ hiển thị được —
+  // có giờ mà cờ lại false thì tin cờ, vì cờ là thứ dùng để lọc.
+  const checkedIn = employee.daDiemDanh === true;
+
+  return {
+    // Mã có thể rỗng (hồ sơ Bravo8 thiếu mã) nên kèm index cho khoá luôn duy nhất.
+    key: `${code || "khong-ma"}-${index}`,
+    code,
+    name: employee.hoTen?.trim() || code || "Chưa có tên",
+    title: title ? title : null,
+    checkedIn,
+    // Chưa điểm danh thì `gioDiemDanh` = null; view hiện "---" chứ không "00:00".
+    time: checkedIn ? formatHomeClockTime(employee.gioDiemDanh ?? undefined) : null,
+  };
+};
+
+export const mapDiemDanhChiTiet = (
+  raw: DiemDanhChiTietRaw[],
+): HomeAttendanceEmployee[] => raw.map(mapAttendanceEmployee);
+
 const mapMachineUnit = (
   unit: MayMocDashboardUnitRaw,
   index: number,
@@ -244,6 +285,8 @@ export const mapTaiSanDashboard = (
   const dienBL = toNullableNumber(raw.dien_TieuThu_BL);
   const nuocVL = toNullableNumber(raw.nuoc_TieuThu_VL);
   const nuocBL = toNullableNumber(raw.nuoc_TieuThu_BL);
+  const nuocThaiVL = toNullableNumber(raw.nuocThai_TieuThu_VL);
+  const nuocThaiBL = toNullableNumber(raw.nuocThai_TieuThu_BL);
   const hoiVL = toNullableNumber(raw.hoi_TieuThu_VL);
   const hoiBL = toNullableNumber(raw.hoi_TieuThu_BL);
   const solarVL = toNullableNumber(raw.solar_TieuThu_VL);
@@ -267,6 +310,9 @@ export const mapTaiSanDashboard = (
       })).sort((left, right) => right.value - left.value),
     },
     utilities: {
+      // Thứ tự cố định theo hướng dẫn BE: điện đi cùng điện mặt trời, hai loại
+      // nước đứng cạnh nhau, hơi chốt cuối. Đừng sắp lại theo độ lớn — người
+      // xem quen đọc khối này theo đúng thứ tự của bản web.
       items: [
         {
           key: "electricity",
@@ -278,13 +324,33 @@ export const mapTaiSanDashboard = (
           total: sumUtility(dienVL, dienBL),
         },
         {
+          key: "solar",
+          label: "Điện mặt trời",
+          iconName: "sunny-outline",
+          unit: "kWh",
+          vinhLoc: solarVL,
+          benLuc: solarBL,
+          total: sumUtility(solarVL, solarBL),
+        },
+        {
+          // "Nước cấp" chứ không phải "Nước": đứng ngay trên nước thải, để
+          // trống chữ "cấp" là hai dòng đọc như một.
           key: "water",
-          label: "Nước",
+          label: "Nước cấp",
           iconName: "water-outline",
           unit: "m³",
           vinhLoc: nuocVL,
           benLuc: nuocBL,
           total: sumUtility(nuocVL, nuocBL),
+        },
+        {
+          key: "wasteWater",
+          label: "Nước thải",
+          iconName: "git-merge-outline",
+          unit: "m³",
+          vinhLoc: nuocThaiVL,
+          benLuc: nuocThaiBL,
+          total: sumUtility(nuocThaiVL, nuocThaiBL),
         },
         {
           key: "steam",
@@ -294,15 +360,6 @@ export const mapTaiSanDashboard = (
           vinhLoc: hoiVL,
           benLuc: hoiBL,
           total: sumUtility(hoiVL, hoiBL),
-        },
-        {
-          key: "solar",
-          label: "Điện mặt trời",
-          iconName: "sunny-outline",
-          unit: "kWh",
-          vinhLoc: solarVL,
-          benLuc: solarBL,
-          total: sumUtility(solarVL, solarBL),
         },
       ],
     },
