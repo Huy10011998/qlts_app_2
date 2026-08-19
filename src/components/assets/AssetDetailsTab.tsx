@@ -28,8 +28,11 @@ import { normalizeIconImageUri } from "../../utils/iconImage";
 
 export default function AssetDeTailsTab({
   nameClassRoot,
+  rootRecordLabel,
 }: {
   nameClassRoot?: string;
+  /** Mã bản ghi đang xem, chuyển tiếp cho header danh sách con. */
+  rootRecordLabel?: string;
 }) {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
@@ -104,6 +107,7 @@ export default function AssetDeTailsTab({
 
       idRoot: id,
       nameClassRoot: nameClassRoot,
+      rootRecordLabel,
       titleHeader: item.moTa ?? "Danh sách",
       groupMenuId,
       viewPermission,

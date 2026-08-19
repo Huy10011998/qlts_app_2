@@ -53,6 +53,19 @@ type HomeMenuContextValue = {
   /** Lượt làm mới do nút trên header bấm — để nút tự quay trong lúc chờ. */
   isHomeRefreshing: boolean;
   isMenuLoading: boolean;
+  /**
+   * Lượt gọi GET_VIEW_ACTIVE/GET_MENU_ACTIVE đầu tiên đã xong chưa (dù thành
+   * công hay lỗi). Không suy ra được từ `menuItems.length` vì danh sách luôn có
+   * sẵn mục tĩnh "Điện mặt trời" — đếm độ dài là cổng chờ không bao giờ đóng.
+   */
+  hasLoadedMenuOnce: boolean;
+  /**
+   * Danh sách ghim đọc từ AsyncStorage/Keychain xong chưa. Trên Android chuỗi
+   * đọc này (SQLite + Android Keystore) chậm hơn hẳn iOS và thường về SAU lời
+   * gọi menu — render sớm là Truy cập nhanh chớp qua "Chưa ghim chức năng nào"
+   * rồi mới nhảy ra đúng danh sách của user.
+   */
+  isPinnedFeatureIdsLoading: boolean;
   moveBlock: (args: {
     visibleKeys: HomeBlockKey[];
     fromIndex: number;
@@ -93,6 +106,7 @@ export function HomeMenuProvider({ children }: React.PropsWithChildren) {
   const [vehicleCurrentLocationMenuItem, setVehicleCurrentLocationMenuItem] =
     useState<Item | null>(null);
   const [isMenuLoading, setIsMenuLoading] = useState(true);
+  const [hasLoadedMenuOnce, setHasLoadedMenuOnce] = useState(false);
   const [hasMenuLoadError, setHasMenuLoadError] = useState(false);
   const [pinnedFeatureIds, setPinnedFeatureIds] = useState<string[]>(
     DEFAULT_HOME_FEATURE_IDS
@@ -100,6 +114,8 @@ export function HomeMenuProvider({ children }: React.PropsWithChildren) {
   const [pinnedFeatureIdsKey, setPinnedFeatureIdsKey] = useState(
     HOME_FEATURE_PINNED_IDS_KEY
   );
+  const [isPinnedFeatureIdsLoading, setIsPinnedFeatureIdsLoading] =
+    useState(true);
   const fetchingRef = useRef(false);
   const { blockOrder, moveBlock } = useHomeBlockOrder();
   // Nút mở bảng sắp xếp nằm trên header (do navigator dựng), còn bảng thì nằm
@@ -192,6 +208,7 @@ export function HomeMenuProvider({ children }: React.PropsWithChildren) {
     } finally {
       fetchingRef.current = false;
       setIsMenuLoading(false);
+      setHasLoadedMenuOnce(true);
     }
   }, []);
 
@@ -210,8 +227,11 @@ export function HomeMenuProvider({ children }: React.PropsWithChildren) {
         const migratedKey = getHomeFeaturePinnedIdsMigratedKey(
           nextPinnedFeatureIdsKey
         );
-        const hasMigrated = await AsyncStorage.getItem(migratedKey);
-        const rawValue = await AsyncStorage.getItem(nextPinnedFeatureIdsKey);
+        // Hai khoá độc lập nhau — đọc song song để rút bớt một vòng cầu nối.
+        const [hasMigrated, rawValue] = await AsyncStorage.multiGet([
+          migratedKey,
+          nextPinnedFeatureIdsKey,
+        ]).then(([migrated, stored]) => [migrated[1], stored[1]]);
         const parsedValue = rawValue ? JSON.parse(rawValue) : null;
 
         if (!isActive) return;
@@ -238,6 +258,8 @@ export function HomeMenuProvider({ children }: React.PropsWithChildren) {
         if (isActive) {
           setPinnedFeatureIds(DEFAULT_HOME_FEATURE_IDS);
         }
+      } finally {
+        if (isActive) setIsPinnedFeatureIdsLoading(false);
       }
     };
 
@@ -276,7 +298,9 @@ export function HomeMenuProvider({ children }: React.PropsWithChildren) {
       hasMenuLoadError,
       isBlockOrderSheetVisible,
       isHomeRefreshing,
+      hasLoadedMenuOnce,
       isMenuLoading,
+      isPinnedFeatureIdsLoading,
       moveBlock,
       openBlockOrderSheet,
       pinnedFeatureIds,
@@ -295,7 +319,9 @@ export function HomeMenuProvider({ children }: React.PropsWithChildren) {
       hasMenuLoadError,
       isBlockOrderSheetVisible,
       isHomeRefreshing,
+      hasLoadedMenuOnce,
       isMenuLoading,
+      isPinnedFeatureIdsLoading,
       moveBlock,
       openBlockOrderSheet,
       pinnedFeatureIds,

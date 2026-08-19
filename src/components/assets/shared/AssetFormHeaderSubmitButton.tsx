@@ -5,9 +5,9 @@ import {
 } from "../../../utils/helpers/colors";
 import React from "react";
 import {
+  Pressable,
   StyleSheet,
   Text,
-  TouchableOpacity,
   ViewStyle,
   StyleProp,
 } from "react-native";
@@ -35,17 +35,32 @@ export default function AssetFormHeaderSubmitButton({
   const styles = useStyles(makeStyles);
   const c = useAppColors();
   return (
-    <TouchableOpacity
-      style={[styles.button, disabled && styles.buttonDisabled, style]}
+    // Pressable + style theo `pressed`, KHÔNG dùng TouchableOpacity: nút này bấm
+    // là điều hướng (Sửa mở màn sửa, Lưu quay về danh sách). TouchableOpacity mờ
+    // đi bằng animation opacity và phải có thêm mấy frame nữa mới sáng lại; đúng
+    // lúc đó JS thread đang dựng màn mới nên animation bị bỏ dở, nút đứng ở mức
+    // mờ trông như bị disable, tới lúc back ra mới sáng lên. Đổi mờ/sáng thành
+    // một lần render thì không còn gì để bỏ dở.
+    <Pressable
+      style={({ pressed }) => [
+        styles.button,
+        pressed && styles.buttonPressed,
+        disabled && styles.buttonDisabled,
+        style,
+      ]}
       onPress={onPress}
       disabled={disabled}
-      activeOpacity={0.78}
     >
       <Ionicons name={iconName} size={16} color={c.red} />
-      <Text style={styles.label} allowFontScaling={false}>
+      <Text
+        style={styles.label}
+        allowFontScaling={false}
+        numberOfLines={1}
+        ellipsizeMode="tail"
+      >
         {label}
       </Text>
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
@@ -62,6 +77,9 @@ const makeStyles = (c: AppColors) =>
       backgroundColor: c.surface,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: "rgba(255,255,255,0.7)",
+    },
+    buttonPressed: {
+      opacity: 0.78,
     },
     buttonDisabled: {
       opacity: 0.55,

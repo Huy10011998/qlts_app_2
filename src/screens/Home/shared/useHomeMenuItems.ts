@@ -47,8 +47,10 @@ export function useHomeMenuItems(
   const {
     apiViews,
     fetchHomeMenuItems,
+    hasLoadedMenuOnce,
     hasMenuLoadError,
     isMenuLoading,
+    isPinnedFeatureIdsLoading,
     pinnedFeatureIds,
     togglePinnedFeature,
     vehicleCurrentLocationMenuItem,
@@ -242,8 +244,10 @@ export function useHomeMenuItems(
   return {
     menuItems,
     fetchHomeMenuItems,
+    hasLoadedMenuOnce,
     hasMenuLoadError,
     isMenuLoading,
+    isPinnedFeatureIdsLoading,
     openFeatureTab,
     openMeetingScreen,
     openReportScreen,

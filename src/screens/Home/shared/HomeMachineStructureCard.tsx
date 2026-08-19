@@ -155,7 +155,7 @@ export default function HomeMachineStructureCard({
           {onRetry ? (
             <TouchableOpacity onPress={onRetry} activeOpacity={0.7}>
               <Text style={styles.errorAction} allowFontScaling={false}>
-                Thử lại
+                Tải lại
               </Text>
             </TouchableOpacity>
           ) : null}
@@ -180,6 +180,16 @@ export default function HomeMachineStructureCard({
         </Text>
       ) : (
         <>
+          {/* Đơn vị tiền chỉ ghi ở từng dòng thì phải đọc hết mới biết cột cuối
+              là tỷ hay đồng — nói một lần ở đây, ngay trên danh sách. */}
+          <Text
+            style={[styles.columnHead, { color: colors.textMuted }]}
+            numberOfLines={1}
+            allowFontScaling={false}
+          >
+            Đơn vị · Số lượng · Tỷ trọng · Giá trị (tỷ)
+          </Text>
+
           {/* Danh sách nhận phần chiều cao dôi ra, còn dòng tổng cộng và ghi chú
               nằm sát đáy card — không thả nổi ở lưng chừng với một vùng trắng ở
               dưới. */}
@@ -293,6 +303,14 @@ export default function HomeMachineStructureCard({
 
 const makeStyles = (c: AppColors) =>
   StyleSheet.create({
+    columnHead: {
+      fontSize: 10,
+      lineHeight: 13,
+      fontWeight: "700",
+      marginTop: 2,
+      marginBottom: 4,
+      color: c.textMuted,
+    },
     list: {
       flexGrow: 1,
     },

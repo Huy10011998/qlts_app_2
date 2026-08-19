@@ -15,8 +15,11 @@ import {
 } from "./homeData";
 import { formatHomeUpdatedAt } from "./homeFormat";
 
-const HOME_DASHBOARD_CACHE_KEY = "@home:dashboard";
-const HOME_MACHINE_CACHE_KEY = "@home:machineDashboard";
+// Cache giữ payload ĐÃ MAP, nên đổi hình dạng payload là phải đổi luôn key —
+// không thì lần mở app đầu sau khi cập nhật còn dựng theo cấu trúc bản cũ
+// (v2: khối tiêu thụ thêm nước thải và đổi thứ tự).
+const HOME_DASHBOARD_CACHE_KEY = "@home:dashboard:v2";
+const HOME_MACHINE_CACHE_KEY = "@home:machineDashboard:v2";
 
 const withUserSuffix = (baseKey: string, userName: string | null) => {
   const normalizedUserName = userName?.trim().toLowerCase();
@@ -240,7 +243,7 @@ export function useHomeDashboard() {
     machine,
     hasMachineError,
     isMachineLoading,
-    /** Nút "Thử lại" của riêng hai card máy móc, không kéo theo endpoint kia. */
+    /** Nút "Tải lại" của riêng hai card máy móc, không kéo theo endpoint kia. */
     refreshMachineDashboard: loadMachineDashboard,
   };
 }

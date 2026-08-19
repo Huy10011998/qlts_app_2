@@ -131,6 +131,8 @@ const RAW: TaiSanDashboardRaw = {
   dien_TieuThu_BL: 453587,
   nuoc_TieuThu_VL: 37566,
   nuoc_TieuThu_BL: 14760,
+  nuocThai_TieuThu_VL: 31024,
+  nuocThai_TieuThu_BL: 11890,
   hoi_TieuThu_VL: 1117,
   hoi_TieuThu_BL: 373,
   solar_TieuThu_VL: 101285,
@@ -203,11 +205,15 @@ describe("mapTaiSanDashboard", () => {
       (item) => item.key === "electricity",
     );
 
+    // Thứ tự cố định theo bản web: điện đi cùng điện mặt trời, hai loại nước
+    // đứng cạnh nhau, hơi chốt cuối. Chốt lại bằng test để không ai sắp lại
+    // theo độ lớn.
     expect(payload.utilities.items.map((item) => item.key)).toEqual([
       "electricity",
-      "water",
-      "steam",
       "solar",
+      "water",
+      "wasteWater",
+      "steam",
     ]);
     expect(electricity?.total).toBe(705420 + 453587);
     expect(electricity?.vinhLoc).toBe(705420);

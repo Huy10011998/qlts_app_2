@@ -253,7 +253,7 @@ export default function HomeMachineGrowthCard({
           {onRetry ? (
             <TouchableOpacity onPress={onRetry} activeOpacity={0.7}>
               <Text style={styles.errorAction} allowFontScaling={false}>
-                Thử lại
+                Tải lại
               </Text>
             </TouchableOpacity>
           ) : null}

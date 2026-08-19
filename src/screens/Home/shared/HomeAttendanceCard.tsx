@@ -10,6 +10,7 @@ import {
   useSeparatorColor,
   useStyles,
 } from "../../../utils/helpers/colors";
+import HomeAttendanceDetailSheet from "./HomeAttendanceDetailSheet";
 import type { HomeDashboardDepartment } from "./homeData";
 import {
   formatHomeCount,
@@ -94,6 +95,15 @@ export default function HomeAttendanceCard({
   const [selectedKey, setSelectedKey] = useState(ALL_DEPARTMENTS_KEY);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [pickerSearch, setPickerSearch] = useState("");
+  // Bộ phận đang xem chi tiết. Giữ lại cả trong lúc sheet trượt ra (chỉ tắt cờ
+  // `isDetailOpen`) để tiêu đề sheet không đổi thành chữ mặc định giữa chừng.
+  const [detailDepartment, setDetailDepartment] =
+    useState<HomeDashboardDepartment | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const openDetail = (dept: HomeDashboardDepartment) => {
+    setDetailDepartment(dept);
+    setIsDetailOpen(true);
+  };
 
   // API trả sẵn số của tất cả bộ phận trong cùng response nên lọc ngay tại máy —
   // ô tìm kiếm của modal dùng chung không kéo theo lượt gọi nào.
@@ -247,14 +257,37 @@ export default function HomeAttendanceCard({
 
           {visibleDepartments.length > 0 ? (
             <View style={[styles.deptList, { borderTopColor: separatorColor }]}>
-              {visibleDepartments.map((dept) => {
+              {visibleDepartments.map((dept, index) => {
                 const deptPercent = getHomeRatioPercent(
                   dept.checkedIn,
                   dept.total,
                 );
+                // Endpoint chi tiết nhận deptCode, nên dòng "Chưa gán bộ phận"
+                // (code null) không mở được — để nguyên, đừng gọi API với mã rỗng.
+                const canOpenDetail = Boolean(dept.code);
 
                 return (
-                  <View key={dept.key} style={styles.deptRow}>
+                  <TouchableOpacity
+                    key={dept.key}
+                    style={[
+                      styles.deptRow,
+                      // Các dòng nay dính sát nhau (khoảng cách nằm trong vùng
+                      // chạm), nên cần vạch mảnh để không đọc lẫn dòng.
+                      index > 0 && {
+                        borderTopWidth: StyleSheet.hairlineWidth,
+                        borderTopColor: separatorColor,
+                      },
+                    ]}
+                    activeOpacity={canOpenDetail ? 0.6 : 1}
+                    disabled={!canOpenDetail}
+                    onPress={() => openDetail(dept)}
+                    accessibilityRole={canOpenDetail ? "button" : undefined}
+                    accessibilityLabel={
+                      canOpenDetail
+                        ? `Xem chi tiết điểm danh ${dept.name}`
+                        : undefined
+                    }
+                  >
                     <Text
                       style={[styles.deptName, { color: colors.textSecondary }]}
                       numberOfLines={1}
@@ -286,11 +319,27 @@ export default function HomeAttendanceCard({
                         ]}
                       />
                     </View>
-                  </View>
+                    {/* Mũi tên là chỗ duy nhất cho biết dòng bấm được — không có
+                        nó thì không ai nghĩ ra là chạm vào xem được danh sách. */}
+                    <Ionicons
+                      name="chevron-forward"
+                      size={16}
+                      color={canOpenDetail ? colors.textMuted : "transparent"}
+                    />
+                  </TouchableOpacity>
                 );
               })}
             </View>
           ) : null}
+
+          {/* Phạm vi số liệu: SQL đã lọc sẵn, nhưng không ghi ra thì người xem
+              đem so với báo cáo nhân sự toàn công ty rồi báo lệch. */}
+          <Text
+            style={[styles.note, { color: colors.textMuted }]}
+            allowFontScaling={false}
+          >
+            Tính theo lượt quẹt thẻ hôm nay. Không tính nhân viên đã nghỉ việc.
+          </Text>
         </>
       ) : (
         <Text
@@ -316,6 +365,12 @@ export default function HomeAttendanceCard({
           setSelectedKey(String(value ?? ALL_DEPARTMENTS_KEY));
           closePicker();
         }}
+      />
+
+      <HomeAttendanceDetailSheet
+        visible={isDetailOpen}
+        department={detailDepartment}
+        onClose={() => setIsDetailOpen(false)}
       />
     </View>
   );
@@ -344,6 +399,8 @@ const makeStyles = (c: AppColors) =>
       borderRadius: 12,
       paddingHorizontal: 11,
       paddingVertical: 9,
+      // Cùng mức 44pt với dòng bộ phận bên dưới: cả hai đều là chỗ bấm.
+      minHeight: 44,
       marginBottom: 12,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: c.border,
@@ -409,38 +466,51 @@ const makeStyles = (c: AppColors) =>
     },
     deptList: {
       marginTop: 12,
-      paddingTop: 10,
+      paddingTop: 4,
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: c.border,
-      gap: 9,
     },
+    // Dòng bấm được nên chiều cao do vùng chạm quyết định (44pt là mức tối thiểu
+    // cho đầu ngón tay), không phải do cỡ chữ. Khoảng cách giữa các dòng nằm
+    // trong `paddingVertical` luôn, để phần đệm cũng bấm trúng.
     deptRow: {
       flexDirection: "row",
       alignItems: "center",
       gap: 8,
+      minHeight: 44,
+      paddingVertical: 6,
     },
     deptName: {
       flex: 1,
-      fontSize: 12,
-      lineHeight: 16,
+      fontSize: 13,
+      lineHeight: 18,
       fontWeight: "600",
       color: c.textSecondary,
     },
     deptCount: {
-      width: 74,
+      width: 80,
       textAlign: "right",
-      fontSize: 12,
-      lineHeight: 16,
+      fontSize: 14,
+      lineHeight: 18,
       fontWeight: "800",
       includeFontPadding: false,
       color: c.text,
     },
     deptTrack: {
-      width: 56,
+      width: 48,
       height: 6,
       borderRadius: 3,
       overflow: "hidden",
       backgroundColor: c.surfaceAlt,
+    },
+    // Cùng cỡ với ghi chú cuối các card cơ cấu / tiêu thụ, để mọi chú thích trên
+    // Trang chủ đọc như một loại chữ.
+    note: {
+      fontSize: 10.5,
+      lineHeight: 14,
+      marginTop: 10,
+      fontWeight: "600",
+      color: c.textMuted,
     },
     errorNote: {
       fontSize: 12.5,

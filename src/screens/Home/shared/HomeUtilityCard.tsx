@@ -23,14 +23,9 @@ type HomeUtilityCardProps = {
   isLoading?: boolean;
 };
 
-/**
- * Điện · nước · hơi · điện mặt trời của KỲ THÁNG TRƯỚC, mỗi đại lượng một dòng.
- *
- * Bốn đại lượng khác đơn vị và khác cả độ lớn (mấy trăm nghìn kWh cạnh nghìn
- * tấn hơi), xếp theo cột thì con số bị co lại và không so được với nhau. Mỗi
- * dòng có một vạch chia hai nhà máy để thấy ngay nhà máy nào tiêu thụ nhiều hơn
- * mà không phải trừ hai con số trong đầu.
- */
+/** Số dòng khung chờ — bằng đúng số đại lượng mapper dựng ra (xem `homeData`). */
+const UTILITY_ROW_COUNT = 5;
+
 export default function HomeUtilityCard({
   rows,
   periodLabel,
@@ -53,13 +48,13 @@ export default function HomeUtilityCard({
       ]}
     >
       {isLoading && rows.length === 0
-        ? Array.from({ length: 4 }).map((_, index) => (
+        ? Array.from({ length: UTILITY_ROW_COUNT }).map((_, index) => (
             <View
               key={`utility-skeleton-${index}`}
               style={[
                 styles.row,
                 { borderBottomColor: separatorColor },
-                index === 3 && styles.rowLast,
+                index === UTILITY_ROW_COUNT - 1 && styles.rowLast,
               ]}
             >
               <View style={styles.headRow}>

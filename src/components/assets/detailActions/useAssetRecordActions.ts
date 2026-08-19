@@ -1,13 +1,18 @@
 import React from "react";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 
 import type { AssetDetailsNavigationProp, Field } from "../../../types";
 import type { AssetItem } from "../../../types/navigator.d";
 import { checkReferenceUsage, deleteItems } from "../../../services/data/callApi";
-import { setShouldRefreshList } from "../../../store/AssetSlice";
+import {
+  resetUpdatedListItem,
+  setShouldRefreshList,
+} from "../../../store/AssetSlice";
+import type { RootState } from "../../../store";
 import { error } from "../../../utils/Logger";
 import { getFieldValue } from "../../../utils/fields/GetFieldValue";
+import { TypeProperty } from "../../../utils/Enum";
 import { useParams } from "../../../hooks/useParams";
 import { usePermission } from "../../../hooks/usePermission";
 import { useSafeAlert } from "../../../hooks/useSafeAlert";
@@ -19,21 +24,31 @@ type UseAssetRecordActionsArgs = {
 };
 
 /**
+ * Chỉ hai loại này đựng được một cái mã. Ảnh/link/ngày/số... đứng đầu danh sách
+ * là chuyện bố cục của cấu hình class, không phải định danh bản ghi.
+ */
+const RECORD_LABEL_TYPES: number[] = [TypeProperty.String, TypeProperty.Text];
+
+/**
  * Định danh bản ghi (ví dụ "PC0015") — dùng cho câu xác nhận xoá và cho badge
  * trên header.
  *
  * Field của tài sản là động (do cấu hình class), không có key `code`/`name` cố
- * định, nên lấy field đầu tiên trong danh sách đang hiển thị; theo cấu hình hiện
- * tại đó là mã. Không đọc được thì trả rỗng để nơi gọi dùng phương án chung.
+ * định, nên lấy field chữ đầu tiên trong danh sách đang hiển thị; theo cấu hình
+ * hiện tại đó là mã. Phải lọc theo loại chứ không lấy thẳng field đầu: có class
+ * (Máy móc) đặt "Hình ảnh 1" lên trước "Mã", lấy thẳng thì badge ra cả đường dẫn
+ * ảnh. Không đọc được thì trả rỗng để nơi gọi dùng phương án chung.
  */
 export const getRecordLabel = (
   item: AssetItem | null | undefined,
   fieldActive?: Field[],
 ) => {
-  const firstField = fieldActive?.[0];
-  if (!item || !firstField) return "";
+  const labelField = fieldActive?.find((field) =>
+    RECORD_LABEL_TYPES.includes(field.typeProperty),
+  );
+  if (!item || !labelField) return "";
 
-  const value = getFieldValue(item, firstField);
+  const value = getFieldValue(item, labelField);
 
   return typeof value === "string" && value !== "---" ? value : "";
 };
@@ -51,6 +66,9 @@ export function useAssetRecordActions({
   const route = useRoute();
   const navigation = useNavigation<AssetDetailsNavigationProp>();
   const dispatch = useDispatch();
+  const updatedListItem = useSelector(
+    (state: RootState) => state.asset.updatedListItem,
+  );
   const { showAlertIfActive } = useSafeAlert();
   const { can } = usePermission();
   const { propertyClass, groupMenuId, viewPermission, assetTitleHeader } =
@@ -77,6 +95,15 @@ export function useAssetRecordActions({
           text: "OK",
           onPress: () => {
             dispatch(setShouldRefreshList(true));
+            // Bản ghi vừa bị xoá mà còn treo lệnh "nạp lại đúng item này" từ lần
+            // sửa trước thì lệnh đó thành rác: danh sách sẽ gọi get-details cho
+            // một id không còn tồn tại và ăn 404.
+            if (
+              updatedListItem?.id === String(item.id) &&
+              updatedListItem.nameClass === nameClass
+            ) {
+              dispatch(resetUpdatedListItem());
+            }
             navigation.goBack();
           },
         },
@@ -85,7 +112,14 @@ export function useAssetRecordActions({
       error(err);
       showAlertIfActive("Lỗi", "Không thể xoá thông tin!");
     }
-  }, [dispatch, item, nameClass, navigation, showAlertIfActive]);
+  }, [
+    dispatch,
+    item,
+    nameClass,
+    navigation,
+    showAlertIfActive,
+    updatedListItem,
+  ]);
 
   const onDelete = React.useCallback(async () => {
     if (!item?.id) return;
@@ -149,6 +183,7 @@ export function useAssetRecordActions({
                   idRoot?: string;
                   propertyReference?: string;
                   nameClassRoot?: string;
+                  rootRecordLabel?: string;
                   titleHeader?: string;
                   returnTo?: "assetList" | "assetRelatedList" | "qrReview";
                 }
@@ -171,6 +206,7 @@ export function useAssetRecordActions({
         idRoot: relatedRouteParams?.idRoot,
         propertyReference: relatedRouteParams?.propertyReference,
         nameClassRoot: relatedRouteParams?.nameClassRoot,
+        rootRecordLabel: relatedRouteParams?.rootRecordLabel,
         titleHeader: relatedRouteParams?.titleHeader,
         groupMenuId,
         viewPermission,

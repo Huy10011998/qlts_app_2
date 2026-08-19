@@ -8,6 +8,7 @@ import AssetDeTailsTab from "../assets/AssetDetailsTab";
 import AssetListHistory from "../assets/AssetListHistory";
 import AssetNoteDetails from "../assets/AssetNoteDetails";
 import AssetListEmptyState from "../assets/shared/AssetListEmptyState";
+import { getRecordLabel } from "../assets/detailActions/useAssetRecordActions";
 import {
   AppColors,
   useAppColors,
@@ -50,6 +51,10 @@ export default function TabContent({
   const c = useAppColors();
   const nameClassRoot = nameClass;
   const shouldShowDetailsError = Boolean(loadErrorMessage);
+  // Cùng nguồn với badge mã bản ghi trên header màn chi tiết
+  // (AssetDetailHeaderActions), nên danh sách con hiện đúng mã mà màn cha đang
+  // hiện — không phát sinh request nào.
+  const rootRecordLabel = getRecordLabel(item, fieldActive);
 
   const tabContentMap: Record<string, JSX.Element> = {
     list: (
@@ -95,14 +100,19 @@ export default function TabContent({
       </View>
     ),
 
-    details: <AssetDeTailsTab nameClassRoot={nameClassRoot} />,
+    details: (
+      <AssetDeTailsTab
+        nameClassRoot={nameClassRoot}
+        rootRecordLabel={rootRecordLabel}
+      />
+    ),
     notes: (
       <AssetNoteDetails
         text={item?.notes ?? "---"}
         loadErrorMessage={loadErrorMessage}
       />
     ),
-    history: <AssetListHistory />,
+    history: <AssetListHistory rootRecordLabel={rootRecordLabel} />,
     attach: <AssetListAttachFile />,
   };
 

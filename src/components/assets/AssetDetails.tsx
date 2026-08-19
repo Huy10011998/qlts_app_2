@@ -16,6 +16,7 @@ import { useAppDispatch } from "../../store/hooks";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { useDetailViewState } from "../../hooks/useDetailViewState";
+import { useTabFromParams } from "../../hooks/useTabFromParams";
 import { BRAND_RED } from "./shared/listTheme";
 import { isNetworkRequestError } from "../../utils/helpers/api";
 
@@ -96,6 +97,8 @@ export default function AssetDetails({ children }: DetailsProps) {
     if (id && nameClass) fetchDetails();
     else setIsLoading(false);
   }, [id, nameClass, fetchDetails]);
+
+  useTabFromParams(handleChangeTab);
 
   if (isLoading && !item && !loadErrorMessage)
     return <IsLoading size="large" color={BRAND_RED} />;

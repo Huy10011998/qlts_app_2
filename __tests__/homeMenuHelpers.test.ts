@@ -37,11 +37,11 @@ describe("id chức năng Trang chủ", () => {
     expect(normalizeHomeFeatureId("solar-dashboard")).toBe("solar-dashboard");
   });
 
-  // Hàng shortcut trên Trang chủ chỉ có một dòng 4 ô; ghim mặc định nhiều hơn 4
-  // là user mới vào đã thấy Trang chủ dài ra hai dòng.
+  // Lưới shortcut trên Trang chủ rộng 3 cột; ghim mặc định nhiều hơn 3 là user
+  // mới vào đã thấy Trang chủ dài ra hai dòng.
   it("ghim mặc định vừa đúng một hàng", () => {
-    expect(DEFAULT_HOME_FEATURE_IDS).toHaveLength(4);
-    expect(new Set(DEFAULT_HOME_FEATURE_IDS).size).toBe(4);
+    expect(DEFAULT_HOME_FEATURE_IDS).toHaveLength(3);
+    expect(new Set(DEFAULT_HOME_FEATURE_IDS).size).toBe(3);
   });
 
   it("lấy thứ tự từ stt, thiếu stt thì lấy id", () => {

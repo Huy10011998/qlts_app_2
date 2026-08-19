@@ -16,6 +16,7 @@ import { resetShouldRefreshDetails } from "../../store/AssetSlice";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { useDetailViewState } from "../../hooks/useDetailViewState";
+import { useTabFromParams } from "../../hooks/useTabFromParams";
 import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
 
 export default function QrDetails({ children }: QrDetailsProps) {
@@ -34,6 +35,8 @@ export default function QrDetails({ children }: QrDetailsProps) {
     handleChangeTab,
     toggleGroup,
   } = useDetailViewState(field);
+
+  useTabFromParams(handleChangeTab);
 
   const dispatch = useAppDispatch();
   const shouldRefreshDetails = useSelector(

@@ -21,16 +21,6 @@ type HomeBlockOrderSheetProps = {
   visible: boolean;
 };
 
-/**
- * Bảng "Sắp xếp Trang chủ": đổi thứ tự các khối bằng cách kéo tên khối.
- *
- * Chỉ liệt kê khối đang hiện — sắp xếp một khối mình không thấy thì không kiểm
- * chứng được kết quả, và khối bị ẩn vẫn giữ đúng chỗ tương đối của nó trong thứ
- * tự đã lưu.
- *
- * Không có nút Lưu: mỗi lần thả là lưu ngay và Trang chủ sau lưng sheet cũng đổi
- * theo, y như bảng "Chọn chức năng".
- */
 export default function HomeBlockOrderSheet({
   items,
   onClose,

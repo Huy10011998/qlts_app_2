@@ -105,14 +105,6 @@ type HomeCustomizeSheetProps = {
   visible: boolean;
 };
 
-/**
- * Bảng "Tuỳ chỉnh" của Trang chủ: bật/tắt từng mục cho hàng TRUY CẬP NHANH.
- *
- * Nút + trên card ở tab Chức năng vẫn giữ, nhưng ở đó user phải đi tìm; đây là
- * chỗ thấy hết chức năng, phương tiện, báo cáo trong một danh sách và ghim ngay
- * mà không rời Trang chủ. Mọi thay đổi ăn ngay (không có nút Lưu) — cùng một
- * `togglePinnedFeature` nên hàng shortcut đằng sau sheet cập nhật tức thì.
- */
 export default function HomeCustomizeSheet({
   onClose,
   onTogglePinned,

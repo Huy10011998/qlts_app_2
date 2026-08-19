@@ -99,3 +99,9 @@ export const formatHomeUpdatedAt = (updatedAt: string | undefined) => {
 
   return `${hours}:${minutes}`;
 };
+
+/**
+ * Giờ quẹt thẻ (`gioDiemDanh`) cũng là chuỗi giờ server không kèm múi giờ, nên
+ * lấy HH:mm y hệt `ngayCapNhat` — tên riêng cho dễ đọc ở chỗ gọi.
+ */
+export const formatHomeClockTime = formatHomeUpdatedAt;
