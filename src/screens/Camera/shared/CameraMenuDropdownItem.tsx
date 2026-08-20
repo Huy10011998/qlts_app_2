@@ -82,7 +82,6 @@ function CameraMenuDropdownItem({
           <Text
             style={[styles.label, level > 0 && styles.labelChild]}
             numberOfLines={2}
-            allowFontScaling={false}
           >
             {splitHighlight(item.label, searchText).map((segment, index) =>
               segment.match ? (
@@ -105,7 +104,6 @@ function CameraMenuDropdownItem({
             <View style={[styles.countBadge, { backgroundColor: theme.bg }]}>
               <Text
                 style={[styles.countText, { color: theme.color }]}
-                allowFontScaling={false}
               >
                 {childCount}
               </Text>
@@ -205,15 +203,12 @@ const makeStyles = (c: AppColors) =>
       fontWeight: "600",
       color: c.text,
       letterSpacing: 0.1,
-      lineHeight: 20,
-      includeFontPadding: false,
       textAlignVertical: "center",
     },
     labelChild: {
       fontSize: 12.5,
       fontWeight: "500",
       color: c.textSecondary,
-      lineHeight: 19,
     },
     labelMatch: {
       fontWeight: "800",

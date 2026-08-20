@@ -222,13 +222,13 @@ export default function EnumAndReferencePickerModal({
       showCloseButton
       showHandle
     >
-      <Text style={styles.modalTitle} allowFontScaling={false}>
+      <Text style={styles.modalTitle}>
         {title}
       </Text>
 
       {isMulti ? (
         <View style={styles.multiActionRow}>
-          <Text style={styles.multiCount} allowFontScaling={false}>
+          <Text style={styles.multiCount}>
             Đã chọn: {multiSelectedValues.length}
           </Text>
           <TouchableOpacity
@@ -238,7 +238,7 @@ export default function EnumAndReferencePickerModal({
               onClose();
             }}
           >
-            <Text style={styles.multiDoneText} allowFontScaling={false}>
+            <Text style={styles.multiDoneText}>
               Xong
             </Text>
           </TouchableOpacity>
@@ -257,7 +257,7 @@ export default function EnumAndReferencePickerModal({
 
       {!isEmpty ? (
         <View style={styles.stickyHeader}>
-          <Text style={styles.header} allowFontScaling={false}>
+          <Text style={styles.header}>
             Tổng: {total} (Đã tải: {loaded})
           </Text>
         </View>

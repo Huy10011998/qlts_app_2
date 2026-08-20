@@ -158,7 +158,6 @@ export const makeStyles = (c: AppColors) =>
     overviewErrorText: {
       flex: 1,
       fontSize: 12.5,
-      lineHeight: 17,
       fontWeight: "600",
       color: c.textSecondary,
     },

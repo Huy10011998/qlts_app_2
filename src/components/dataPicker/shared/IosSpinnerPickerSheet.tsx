@@ -31,14 +31,13 @@ export default function IosSpinnerPickerSheet({
     >
       <View style={[styles.toolbar, { borderColor: separatorColor }]}>
         <TouchableOpacity onPress={onCancel}>
-          <Text style={styles.toolbarText} allowFontScaling={false}>
+          <Text style={styles.toolbarText}>
             Hủy
           </Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={onConfirm}>
           <Text
             style={[styles.toolbarText, styles.toolbarTextBold]}
-            allowFontScaling={false}
           >
             Chọn
           </Text>

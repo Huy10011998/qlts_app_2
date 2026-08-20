@@ -102,7 +102,6 @@ export default function AssetTreeNodeItem({
           <Text
             style={[styles.nodeText, level > 0 && styles.nodeTextChild]}
             numberOfLines={2}
-            allowFontScaling={false}
           >
             {node.text}
           </Text>
@@ -201,15 +200,12 @@ const makeStyles = (c: AppColors) =>
       fontSize: 13.5,
       color: c.text,
       fontWeight: "600",
-      lineHeight: 20,
-      includeFontPadding: false,
       textAlignVertical: "center",
     },
     nodeTextChild: {
       fontSize: 12.5,
       fontWeight: "500",
       color: c.textSecondary,
-      lineHeight: 19,
     },
     nodeChevronWrap: {
       width: 24,

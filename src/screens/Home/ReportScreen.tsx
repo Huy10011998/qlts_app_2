@@ -632,7 +632,6 @@ const s = StyleSheet.create({
   reportTitle: {
     fontSize: 14.5,
     fontWeight: "700",
-    lineHeight: 20,
   },
   reportPathWrap: {
     flexDirection: "row",
@@ -644,7 +643,6 @@ const s = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     fontWeight: "500",
-    lineHeight: 16,
   },
   reportChevronWrap: {
     width: 28,

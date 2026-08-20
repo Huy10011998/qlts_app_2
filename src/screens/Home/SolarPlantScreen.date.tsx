@@ -36,6 +36,7 @@ import {
   type SolarDateRange,
 } from "./SolarPlantScreen.helpers";
 import { makeStyles } from "./SolarPlantScreen.styles";
+import { UnscaledText } from "../../utils/helpers/textScaling";
 import {
   DateCalendarIcon,
   DateChevron,
@@ -44,9 +45,19 @@ import {
 
 type SolarTextProps = ComponentProps<typeof NativeText>;
 
-const Text: React.FC<SolarTextProps> = (props) => (
-  <NativeText {...props} allowFontScaling={false} />
+/**
+ * Chữ không phóng to theo cỡ chữ hệ thống.
+ *
+ * Chỉ dùng cho những chỗ hình học đã khoá cứng: ô lịch tròn (`calendarDayCircle`
+ * 46px, `calendarOptionCircle` 76px) và hàng tab kỳ — hàng này tự tính một cỡ
+ * chữ chung cho cả 5 nhãn nên không được để hệ điều hành can thiệp. Mọi chữ
+ * khác trong màn dùng `Text` thường để đi theo cài đặt cỡ chữ của người dùng.
+ */
+const FixedText: React.FC<SolarTextProps> = (props) => (
+  <UnscaledText {...props} allowFontScaling={false} />
 );
+
+const Text = NativeText;
 
 /**
  * Cỡ chữ của hàng 5 tab kỳ, chọn theo bề ngang màn hình.
@@ -109,7 +120,7 @@ export const PeriodHeader: React.FC<PeriodHeaderProps> = ({
                 activeTab === tab && styles.tabChipActive,
               ]}
             >
-              <Text
+              <FixedText
                 adjustsFontSizeToFit
                 minimumFontScale={0.75}
                 numberOfLines={1}
@@ -120,7 +131,7 @@ export const PeriodHeader: React.FC<PeriodHeaderProps> = ({
                 ]}
               >
                 {PERIOD_TAB_LABELS[tab]}
-              </Text>
+              </FixedText>
             </View>
           </TouchableOpacity>
         ))}
@@ -387,7 +398,7 @@ export const SolarDateRangePicker: React.FC<SolarDateRangePickerProps> = ({
                         isDisabled && styles.calendarOptionDisabled,
                       ]}
                     >
-                      <Text
+                      <FixedText
                         style={[
                           styles.calendarOptionText,
                           isSelected && styles.calendarOptionSelectedText,
@@ -395,7 +406,7 @@ export const SolarDateRangePicker: React.FC<SolarDateRangePickerProps> = ({
                         ]}
                       >
                         {monthName}
-                      </Text>
+                      </FixedText>
                     </View>
                   </TouchableOpacity>
                 );
@@ -422,7 +433,7 @@ export const SolarDateRangePicker: React.FC<SolarDateRangePickerProps> = ({
                         isDisabled && styles.calendarOptionDisabled,
                       ]}
                     >
-                      <Text
+                      <FixedText
                         style={[
                           styles.calendarOptionText,
                           isSelected && styles.calendarOptionSelectedText,
@@ -430,7 +441,7 @@ export const SolarDateRangePicker: React.FC<SolarDateRangePickerProps> = ({
                         ]}
                       >
                         {year}
-                      </Text>
+                      </FixedText>
                     </View>
                   </TouchableOpacity>
                 );
@@ -440,9 +451,12 @@ export const SolarDateRangePicker: React.FC<SolarDateRangePickerProps> = ({
             <>
               <View style={styles.calendarWeekRow}>
                 {weekDays.map((day, index) => (
-                  <Text key={`${day}-${index}`} style={styles.calendarWeekText}>
+                  <FixedText
+                    key={`${day}-${index}`}
+                    style={styles.calendarWeekText}
+                  >
                     {day}
-                  </Text>
+                  </FixedText>
                 ))}
               </View>
 
@@ -474,7 +488,7 @@ export const SolarDateRangePicker: React.FC<SolarDateRangePickerProps> = ({
                           isDisabled && styles.calendarDayDisabled,
                         ]}
                       >
-                        <Text
+                        <FixedText
                           style={[
                             styles.calendarDayText,
                             !isCurrentMonth && styles.calendarDayMuted,
@@ -483,7 +497,7 @@ export const SolarDateRangePicker: React.FC<SolarDateRangePickerProps> = ({
                           ]}
                         >
                           {date.getDate()}
-                        </Text>
+                        </FixedText>
                       </View>
                     </TouchableOpacity>
                   );

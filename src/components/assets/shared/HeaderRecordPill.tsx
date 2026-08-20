@@ -47,7 +47,6 @@ export default function HeaderRecordPill({
       <Ionicons name="pricetag-outline" size={14} color={c.red} />
       <Text
         style={styles.label}
-        allowFontScaling={false}
         numberOfLines={2}
         // Mã là một chuỗi liền không có dấu cách: Android mặc định coi nó là một
         // "từ" và không ngắt giữa từ, nên phải hạ chiến lược ngắt dòng xuống mức
@@ -85,7 +84,6 @@ const makeStyles = (c: AppColors) =>
       flexShrink: 1,
       color: c.red,
       fontSize: 11,
-      lineHeight: 13,
       fontWeight: "800",
     },
   });

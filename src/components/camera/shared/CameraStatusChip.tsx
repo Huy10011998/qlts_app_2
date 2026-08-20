@@ -22,7 +22,7 @@ export default function CameraStatusChip({
   return (
     <View style={[styles.root, style]}>
       <View style={[styles.dot, !isLive && styles.dotIdle]} />
-      <Text style={styles.text} allowFontScaling={false} numberOfLines={1}>
+      <Text style={styles.text} numberOfLines={1}>
         {label}
       </Text>
     </View>

@@ -1,5 +1,6 @@
 import React from "react";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { UnscaledText } from "../../../utils/helpers/textScaling";
+import { Image, StyleSheet, View } from "react-native";
 
 /** Cạnh dài tối đa của ảnh nung watermark — cùng mức nén BE khuyến nghị. */
 export const WATERMARK_MAX_DIMENSION = 1600;
@@ -72,14 +73,14 @@ export default function PhotoWatermark({
           },
         ]}
       >
-        <Text
+        <UnscaledText
           allowFontScaling={false}
           numberOfLines={1}
           style={[styles.timestamp, { fontSize: unit * 4.4 }]}
         >
           {lines.timestamp}
-        </Text>
-        <Text
+        </UnscaledText>
+        <UnscaledText
           allowFontScaling={false}
           numberOfLines={1}
           style={[
@@ -88,8 +89,8 @@ export default function PhotoWatermark({
           ]}
         >
           {lines.coordinates}
-        </Text>
-        <Text
+        </UnscaledText>
+        <UnscaledText
           allowFontScaling={false}
           numberOfLines={2}
           style={[
@@ -98,9 +99,9 @@ export default function PhotoWatermark({
           ]}
         >
           {lines.fridge}
-        </Text>
+        </UnscaledText>
         {lines.account ? (
-          <Text
+          <UnscaledText
             allowFontScaling={false}
             numberOfLines={1}
             style={[
@@ -109,7 +110,7 @@ export default function PhotoWatermark({
             ]}
           >
             {lines.account}
-          </Text>
+          </UnscaledText>
         ) : null}
       </View>
     </View>

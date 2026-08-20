@@ -595,14 +595,12 @@ const HomeScreen: React.FC = () => {
                 styles.overviewErrorText,
                 { color: colors.textSecondary },
               ]}
-              allowFontScaling={false}
             >
               Không lấy được số liệu dashboard. Vui lòng thử lại.
             </Text>
             <TouchableOpacity onPress={refreshDashboard} activeOpacity={0.7}>
               <Text
                 style={[styles.overviewErrorAction, { color: HOME_BRAND_RED }]}
-                allowFontScaling={false}
               >
                 Tải lại
               </Text>
@@ -738,7 +736,6 @@ const HomeScreen: React.FC = () => {
               >
                 <Text
                   style={styles.shortcutViewAllText}
-                  allowFontScaling={false}
                 >
                   Xem tất cả
                 </Text>

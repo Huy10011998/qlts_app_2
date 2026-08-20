@@ -41,7 +41,6 @@ export default function HomeSectionTitle({
       <View style={styles.pill} />
       <Text
         style={[styles.label, { color: colors.textSecondary }]}
-        allowFontScaling={false}
       >
         {label}
       </Text>
@@ -53,7 +52,6 @@ export default function HomeSectionTitle({
         <Text
           style={[styles.note, { color: colors.textMuted }]}
           numberOfLines={1}
-          allowFontScaling={false}
         >
           {note}
         </Text>
@@ -71,7 +69,7 @@ export default function HomeSectionTitle({
           {actionIconName ? (
             <Ionicons name={actionIconName} size={13} color={HOME_BRAND_RED} />
           ) : null}
-          <Text style={styles.action} allowFontScaling={false}>
+          <Text style={styles.action}>
             {action}
           </Text>
         </TouchableOpacity>
@@ -106,7 +104,6 @@ const makeStyles = (c: AppColors) =>
 
     note: {
       fontSize: 10.5,
-      lineHeight: 14,
       fontWeight: "600",
       color: c.textMuted,
       marginLeft: 8,

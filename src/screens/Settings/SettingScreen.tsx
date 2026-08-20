@@ -41,6 +41,7 @@ import {
   writeFaceIdEnabled,
 } from "../../services/auth/faceIdFlag";
 import { C, useAppColors } from "../../utils/helpers/colors";
+import { useTextScale } from "../../context/FontScaleContext";
 import EmptyState from "../../components/ui/EmptyState";
 import { warn } from "../../utils/Logger";
 import SettingWaveDivider from "./shared/SettingWaveDivider";
@@ -92,6 +93,7 @@ const LOCAL_NETWORK_FALLBACK_STATE: StoredLocalNetworkPermissionState = {
 const SettingScreen = () => {
   const isDark = useColorScheme() === "dark";
   const colors = useAppColors();
+  const { factor: textScaleFactor } = useTextScale();
   const [isLoading, setIsLoading] = useState(false);
   const [user, setUser] = useState<UserInfo>();
   const appVersionLabel = `v${formatVersionWithBuild(
@@ -850,6 +852,13 @@ const SettingScreen = () => {
               sublabel="Theo thiết bị, giao diện sáng hoặc tối"
               onPress={() => navigation.navigate("Appearance")}
             />
+            <SettingRowItem
+              iconName="text-outline"
+              iconBg={C.blue}
+              label="Cỡ chữ"
+              sublabel={`${Math.round(textScaleFactor * 100)}% • cỡ chữ toàn ứng dụng`}
+              onPress={() => navigation.navigate("TextSize")}
+            />
             <SettingSwitchRow
               iconName="wifi-outline"
               iconBg={C.sky}
@@ -895,6 +904,29 @@ const SettingScreen = () => {
                     onPress: handlePressLogout,
                   },
                 ])
+              }
+            />
+          </SettingSectionGroup>
+
+          <SettingSectionGroup title="HỖ TRỢ">
+            <SettingRowItem
+              iconName="book-outline"
+              iconBg={C.emerald}
+              label="Hướng dẫn sử dụng"
+              sublabel="Các bước dùng từng chức năng"
+              onPress={() => navigation.navigate("Guide")}
+            />
+            <SettingRowItem
+              iconName="help-circle-outline"
+              iconBg={C.violet}
+              label="Câu hỏi thường gặp"
+              sublabel="Lỗi kết nối, quyền, Face ID"
+              isLast
+              onPress={() =>
+                navigation.navigate("GuideTopic", {
+                  topicId: "faq",
+                  titleHeader: "Câu hỏi thường gặp",
+                })
               }
             />
           </SettingSectionGroup>
@@ -1062,12 +1094,10 @@ const styles = StyleSheet.create({
   },
   localNetworkSummaryText: {
     fontSize: 13,
-    lineHeight: 20,
   },
   localNetworkSummaryHint: {
     marginTop: 6,
     fontSize: 12,
-    lineHeight: 18,
   },
   appVersionRow: {
     minHeight: 88,
@@ -1094,12 +1124,10 @@ const styles = StyleSheet.create({
   },
   appVersionTitle: {
     fontSize: 14.5,
-    lineHeight: 20,
     fontWeight: "600",
   },
   appVersionInstalled: {
     fontSize: 11.5,
-    lineHeight: 16,
     marginTop: 2,
   },
   appVersionStatusRow: {
@@ -1121,7 +1149,6 @@ const styles = StyleSheet.create({
   },
   appVersionStatusText: {
     fontSize: 11,
-    lineHeight: 15,
     fontWeight: "600",
   },
   updateButton: {

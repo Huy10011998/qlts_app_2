@@ -908,13 +908,11 @@ const CameraList: React.FC = () => {
               </View>
               <Text
                 style={[styles.sheetTitle, { color: colors.text }]}
-                allowFontScaling={false}
               >
                 Bố trí cửa sổ
               </Text>
               <Text
                 style={[styles.sheetTitleChild, { color: colors.textMuted }]}
-                allowFontScaling={false}
               >
                 Chọn số lượng cửa sổ
               </Text>
@@ -938,7 +936,6 @@ const CameraList: React.FC = () => {
                       { color: colors.text },
                       layoutCount === Number(item) && styles.activeText,
                     ]}
-                    allowFontScaling={false}
                   >
                     {item}
                   </Text>
@@ -953,7 +950,6 @@ const CameraList: React.FC = () => {
               >
                 <Text
                   style={[styles.closeText, { color: colors.text }]}
-                  allowFontScaling={false}
                 >
                   Đóng
                 </Text>

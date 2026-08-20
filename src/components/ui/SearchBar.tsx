@@ -136,7 +136,7 @@ const makeStyles = (c: AppColors) =>
     },
     plainBox: {
       backgroundColor: c.surfaceAlt,
-      height: 42,
+      minHeight: 42,
       borderRadius: 12,
     },
     // Ô chứa rộng hơn glyph 20pt một chút để chữ ký tự không chạm mép.
@@ -153,15 +153,13 @@ const makeStyles = (c: AppColors) =>
       fontSize: 14,
       color: c.text,
       fontWeight: "400",
-      includeFontPadding: false,
       textAlignVertical: "center",
     },
     cardInput: {
-      height: 48,
-      lineHeight: 20,
+      minHeight: 48,
     },
     plainInput: {
-      height: 42,
+      minHeight: 42,
     },
     spinnerWrap: {
       width: 24,

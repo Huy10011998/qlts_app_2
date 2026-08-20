@@ -263,14 +263,12 @@ export default function XacNhanViTriTuLanhLichSuScreen() {
             <Text
               style={sharedStyles.filterCardTitle}
               numberOfLines={1}
-              allowFontScaling={false}
             >
               {items.length} lượt xác nhận
             </Text>
             <Text
               style={sharedStyles.filterCardSub}
               numberOfLines={1}
-              allowFontScaling={false}
             >
               {dateSummary}
             </Text>

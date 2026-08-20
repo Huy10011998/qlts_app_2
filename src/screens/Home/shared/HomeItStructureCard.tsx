@@ -86,7 +86,6 @@ export default function HomeItStructureCard({
             // không chữ nếu không nói gì ở đây.
             <Text
               style={[styles.emptyText, { color: colors.textSecondary }]}
-              allowFontScaling={false}
             >
               Chưa lấy được cơ cấu thiết bị CNTT.
             </Text>
@@ -101,19 +100,16 @@ export default function HomeItStructureCard({
                     <Text
                       style={[styles.label, { color: colors.textSecondary }]}
                       numberOfLines={1}
-                      allowFontScaling={false}
                     >
                       {item.label}
                     </Text>
                     <Text
                       style={[styles.value, { color: colors.text }]}
-                      allowFontScaling={false}
                     >
                       {formatHomeNumber(item.value)}
                     </Text>
                     <Text
                       style={[styles.percent, { color: colors.textMuted }]}
-                      allowFontScaling={false}
                     >
                       {formatHomePercent(percent)}
                     </Text>
@@ -144,13 +140,11 @@ export default function HomeItStructureCard({
           <View style={[styles.footer, { borderTopColor: separatorColor }]}>
             <Text
               style={[styles.footerLabel, { color: colors.textSecondary }]}
-              allowFontScaling={false}
             >
               Tổng cộng
             </Text>
             <Text
               style={[styles.footerValue, { color: colors.text }]}
-              allowFontScaling={false}
             >
               {formatHomeNumber(total)}
             </Text>
@@ -159,7 +153,6 @@ export default function HomeItStructureCard({
               ở trên vào rồi thắc mắc lệch số. */}
           <Text
             style={[styles.note, { color: colors.textMuted }]}
-            allowFontScaling={false}
           >
             Không tính Camera — camera được theo dõi riêng ở ô số phía trên.
           </Text>
@@ -185,23 +178,19 @@ const makeStyles = (c: AppColors) =>
     label: {
       flex: 1,
       fontSize: 12.5,
-      lineHeight: 17,
       fontWeight: "600",
       color: c.textSecondary,
     },
     value: {
       fontSize: 14,
-      lineHeight: 18,
       fontWeight: "800",
       letterSpacing: -0.2,
-      includeFontPadding: false,
       color: c.text,
     },
     percent: {
       width: 48,
       textAlign: "right",
       fontSize: 11,
-      lineHeight: 15,
       fontWeight: "700",
       color: c.textMuted,
     },
@@ -233,28 +222,23 @@ const makeStyles = (c: AppColors) =>
     },
     footerLabel: {
       fontSize: 12,
-      lineHeight: 16,
       fontWeight: "700",
       color: c.textSecondary,
     },
     footerValue: {
       fontSize: 15,
-      lineHeight: 19,
       fontWeight: "800",
       letterSpacing: -0.3,
-      includeFontPadding: false,
       color: c.text,
     },
     note: {
       fontSize: 10.5,
-      lineHeight: 14,
       marginTop: 7,
       fontWeight: "600",
       color: c.textMuted,
     },
     emptyText: {
       fontSize: 12.5,
-      lineHeight: 18,
       fontWeight: "600",
       color: c.textSecondary,
     },

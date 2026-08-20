@@ -113,7 +113,6 @@ export default function HomeUtilityCard({
                   <Text
                     style={[styles.label, { color: colors.textSecondary }]}
                     numberOfLines={1}
-                    allowFontScaling={false}
                   >
                     {row.label}
                   </Text>
@@ -122,14 +121,12 @@ export default function HomeUtilityCard({
                     <Text
                       style={[styles.value, { color: colors.text }]}
                       numberOfLines={1}
-                      allowFontScaling={false}
                     >
                       {formatHomeCount(row.total, decimals)}
                     </Text>
                     <Text
                       style={[styles.unit, { color: colors.textMuted }]}
                       numberOfLines={1}
-                      allowFontScaling={false}
                     >
                       {row.unit}
                     </Text>
@@ -178,7 +175,6 @@ export default function HomeUtilityCard({
                             { color: colors.textMuted },
                           ]}
                           numberOfLines={1}
-                          allowFontScaling={false}
                         >
                           {`VL ${formatHomeCount(row.vinhLoc, decimals)}`}
                         </Text>
@@ -196,7 +192,6 @@ export default function HomeUtilityCard({
                             { color: colors.textMuted },
                           ]}
                           numberOfLines={1}
-                          allowFontScaling={false}
                         >
                           {`BL ${formatHomeCount(row.benLuc, decimals)}`}
                         </Text>
@@ -206,7 +201,6 @@ export default function HomeUtilityCard({
                 ) : (
                   <Text
                     style={[styles.emptyNote, { color: colors.textMuted }]}
-                    allowFontScaling={false}
                   >
                     Kỳ này chưa chốt chỉ số đồng hồ
                   </Text>
@@ -218,7 +212,6 @@ export default function HomeUtilityCard({
       {periodLabel ? (
         <Text
           style={[styles.footer, { color: colors.textMuted }]}
-          allowFontScaling={false}
         >
           {`${periodLabel} (kỳ tháng trước) · VL = Vĩnh Lộc, BL = Bến Lức · ${HOME_NO_DATA} = chưa có số liệu`}
         </Text>
@@ -268,7 +261,6 @@ const makeStyles = (c: AppColors) =>
     label: {
       flex: 1,
       fontSize: 13,
-      lineHeight: 17,
       fontWeight: "600",
       color: c.textSecondary,
     },
@@ -280,10 +272,8 @@ const makeStyles = (c: AppColors) =>
     },
     value: {
       fontSize: 17,
-      lineHeight: 21,
       fontWeight: "800",
       letterSpacing: -0.3,
-      includeFontPadding: false,
       color: c.text,
     },
     unit: {
@@ -320,13 +310,11 @@ const makeStyles = (c: AppColors) =>
     },
     plantText: {
       fontSize: 11,
-      lineHeight: 15,
       fontWeight: "700",
       color: c.textMuted,
     },
     emptyNote: {
       fontSize: 11,
-      lineHeight: 15,
       fontWeight: "600",
       marginTop: 7,
       color: c.textMuted,
@@ -345,7 +333,6 @@ const makeStyles = (c: AppColors) =>
     },
     footer: {
       fontSize: 10.5,
-      lineHeight: 14,
       fontWeight: "600",
       textAlign: "right",
       marginTop: 8,

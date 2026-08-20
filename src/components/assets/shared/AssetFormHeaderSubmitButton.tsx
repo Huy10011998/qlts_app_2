@@ -54,7 +54,6 @@ export default function AssetFormHeaderSubmitButton({
       <Ionicons name={iconName} size={16} color={c.red} />
       <Text
         style={styles.label}
-        allowFontScaling={false}
         numberOfLines={1}
         ellipsizeMode="tail"
       >

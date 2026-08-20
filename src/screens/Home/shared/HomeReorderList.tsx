@@ -425,14 +425,12 @@ function ReorderRow({
       </View>
       <Text
         style={[styles.rowLabel, { color: colors.text }]}
-        allowFontScaling={false}
         numberOfLines={1}
       >
         {label}
       </Text>
       <Text
         style={[styles.rowPosition, { color: colors.textMuted }]}
-        allowFontScaling={false}
       >
         {position}
       </Text>

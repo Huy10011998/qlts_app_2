@@ -60,19 +60,16 @@ function MachineUnitRow({
         <Text
           style={[styles.label, { color: colors.textSecondary }]}
           numberOfLines={1}
-          allowFontScaling={false}
         >
           {unit.name}
         </Text>
         <Text
           style={[styles.value, { color: colors.text }]}
-          allowFontScaling={false}
         >
           {formatHomeNumber(unit.quantity)}
         </Text>
         <Text
           style={[styles.percent, { color: colors.textMuted }]}
-          allowFontScaling={false}
         >
           {formatHomePercent(percent)}
         </Text>
@@ -96,7 +93,6 @@ function MachineUnitRow({
         </View>
         <Text
           style={[styles.money, { color: colors.textMuted }]}
-          allowFontScaling={false}
         >
           {`${formatHomeBillion(unit.value)} tỷ`}
         </Text>
@@ -148,13 +144,12 @@ export default function HomeMachineStructureCard({
         <View style={styles.errorBox}>
           <Text
             style={[styles.errorText, { color: colors.textSecondary }]}
-            allowFontScaling={false}
           >
             Chưa lấy được số liệu máy móc.
           </Text>
           {onRetry ? (
             <TouchableOpacity onPress={onRetry} activeOpacity={0.7}>
-              <Text style={styles.errorAction} allowFontScaling={false}>
+              <Text style={styles.errorAction}>
                 Tải lại
               </Text>
             </TouchableOpacity>
@@ -174,7 +169,6 @@ export default function HomeMachineStructureCard({
       ) : !hasUnits ? (
         <Text
           style={[styles.errorText, { color: colors.textSecondary }]}
-          allowFontScaling={false}
         >
           Chưa có máy móc nào đang được quản lý.
         </Text>
@@ -185,7 +179,6 @@ export default function HomeMachineStructureCard({
           <Text
             style={[styles.columnHead, { color: colors.textMuted }]}
             numberOfLines={1}
-            allowFontScaling={false}
           >
             Đơn vị · Số lượng · Tỷ trọng · Giá trị (tỷ)
           </Text>
@@ -212,7 +205,7 @@ export default function HomeMachineStructureCard({
                 accessibilityRole="button"
                 accessibilityLabel={`Xem tất cả ${units.length} đơn vị`}
               >
-                <Text style={styles.viewAllText} allowFontScaling={false}>
+                <Text style={styles.viewAllText}>
                   {`Xem tất cả ${units.length} đơn vị`}
                 </Text>
                 <Ionicons name="chevron-forward" size={13} color={HOME_BRAND_RED} />
@@ -223,13 +216,11 @@ export default function HomeMachineStructureCard({
           <View style={[styles.footer, { borderTopColor: separatorColor }]}>
             <Text
               style={[styles.footerLabel, { color: colors.textSecondary }]}
-              allowFontScaling={false}
             >
               Tổng cộng
             </Text>
             <Text
               style={[styles.footerValue, { color: colors.text }]}
-              allowFontScaling={false}
             >
               {`${formatHomeNumber(totalQuantity)} · ${formatHomeBillion(
                 totalValue,
@@ -239,7 +230,6 @@ export default function HomeMachineStructureCard({
 
           <Text
             style={[styles.note, { color: colors.textMuted }]}
-            allowFontScaling={false}
           >
             Giá trị = đơn giá × số lượng, đã quy đổi về VND.
           </Text>
@@ -249,7 +239,6 @@ export default function HomeMachineStructureCard({
           {missingRateCurrencies.length > 0 ? (
             <Text
               style={[styles.warning, { color: C.amber }]}
-              allowFontScaling={false}
             >
               {`Chưa lấy được tỷ giá ${missingRateCurrencies.join(
                 ", ",
@@ -271,13 +260,11 @@ export default function HomeMachineStructureCard({
       >
         <Text
           style={[styles.sheetTitle, { color: colors.text }]}
-          allowFontScaling={false}
         >
           Cơ cấu máy móc theo đơn vị
         </Text>
         <Text
           style={[styles.sheetSubtitle, { color: colors.textSub }]}
-          allowFontScaling={false}
         >
           {`${formatHomeNumber(units.length)} đơn vị · ${formatHomeNumber(
             totalQuantity,
@@ -305,7 +292,6 @@ const makeStyles = (c: AppColors) =>
   StyleSheet.create({
     columnHead: {
       fontSize: 10,
-      lineHeight: 13,
       fontWeight: "700",
       marginTop: 2,
       marginBottom: 4,
@@ -325,23 +311,19 @@ const makeStyles = (c: AppColors) =>
     label: {
       flex: 1,
       fontSize: 12.5,
-      lineHeight: 17,
       fontWeight: "600",
       color: c.textSecondary,
     },
     value: {
       fontSize: 14,
-      lineHeight: 18,
       fontWeight: "800",
       letterSpacing: -0.2,
-      includeFontPadding: false,
       color: c.text,
     },
     percent: {
       width: 48,
       textAlign: "right",
       fontSize: 11,
-      lineHeight: 15,
       fontWeight: "700",
       color: c.textMuted,
     },
@@ -366,9 +348,7 @@ const makeStyles = (c: AppColors) =>
       width: 74,
       textAlign: "right",
       fontSize: 11,
-      lineHeight: 15,
       fontWeight: "700",
-      includeFontPadding: false,
       color: c.textMuted,
     },
     skeletonLabel: {
@@ -402,28 +382,23 @@ const makeStyles = (c: AppColors) =>
     },
     footerLabel: {
       fontSize: 12,
-      lineHeight: 16,
       fontWeight: "700",
       color: c.textSecondary,
     },
     footerValue: {
       fontSize: 14.5,
-      lineHeight: 19,
       fontWeight: "800",
       letterSpacing: -0.3,
-      includeFontPadding: false,
       color: c.text,
     },
     note: {
       fontSize: 10.5,
-      lineHeight: 14,
       marginTop: 7,
       fontWeight: "600",
       color: c.textMuted,
     },
     warning: {
       fontSize: 10.5,
-      lineHeight: 14,
       marginTop: 5,
       fontWeight: "700",
     },
@@ -433,7 +408,6 @@ const makeStyles = (c: AppColors) =>
     },
     errorText: {
       fontSize: 12.5,
-      lineHeight: 18,
       fontWeight: "600",
       color: c.textSecondary,
     },
@@ -467,7 +441,6 @@ const makeStyles = (c: AppColors) =>
       marginTop: 4,
       marginBottom: 10,
       fontSize: 12.5,
-      lineHeight: 17,
       fontWeight: "500",
       color: c.textSub,
     },

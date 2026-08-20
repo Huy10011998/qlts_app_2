@@ -50,7 +50,6 @@ export default function HomeAssetPageCard({
         <Text
           style={[styles.title, { color: colors.text }]}
           numberOfLines={1}
-          allowFontScaling={false}
         >
           {title}
         </Text>
@@ -58,7 +57,6 @@ export default function HomeAssetPageCard({
           <Text
             style={[styles.note, { color: colors.textMuted }]}
             numberOfLines={1}
-            allowFontScaling={false}
           >
             {note}
           </Text>
@@ -95,14 +93,12 @@ const makeStyles = (c: AppColors) =>
     title: {
       flex: 1,
       fontSize: 14,
-      lineHeight: 19,
       fontWeight: "800",
       letterSpacing: -0.2,
       color: c.text,
     },
     note: {
       fontSize: 11,
-      lineHeight: 15,
       fontWeight: "700",
       flexShrink: 0,
       color: c.textMuted,

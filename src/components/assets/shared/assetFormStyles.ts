@@ -62,7 +62,6 @@ export const createAssetFormBaseStyles = (c: AppColors) => {
     heroSub: {
       fontSize: 12,
       color: c.textSub,
-      lineHeight: 18,
     },
     groupCard: {
       backgroundColor: c.surface,
@@ -124,10 +123,8 @@ export const createAssetFormBaseStyles = (c: AppColors) => {
       borderRadius: 12,
       paddingVertical: 0,
       fontSize: 14,
-      lineHeight: 20,
       color: c.text,
       backgroundColor: c.input,
-      includeFontPadding: false,
       textAlignVertical: "center" as const,
     },
     switchRow: {

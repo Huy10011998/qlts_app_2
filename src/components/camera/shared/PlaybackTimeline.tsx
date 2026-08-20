@@ -1,4 +1,5 @@
 import React from "react";
+import { UnscaledText } from "../../../utils/helpers/textScaling";
 import { Animated, FlatList, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { C, useAppColors, useStyles } from "../../../utils/helpers/colors";
@@ -82,12 +83,12 @@ const TimelineRow = React.memo(function TimelineRow({
           là nhãn thường. */}
       <View style={styles.timelineLabelCol}>
         <View style={styles.timelineLabelDash} />
-        <Text
+        <UnscaledText
           style={[styles.timelineLabel, isActive && styles.timelineLabelActive]}
           allowFontScaling={false}
         >
           {`${String(group.hour).padStart(2, "0")}:00`}
-        </Text>
+        </UnscaledText>
       </View>
 
       <View style={styles.timelineRailCol}>
@@ -140,7 +141,6 @@ const TimelineRow = React.memo(function TimelineRow({
                 styles.clipCardTime,
                 isActive && styles.clipCardTimeActive,
               ]}
-              allowFontScaling={false}
               numberOfLines={1}
             >
               {`${String(group.hour).padStart(2, "0")}:00 – ${String(
@@ -148,7 +148,7 @@ const TimelineRow = React.memo(function TimelineRow({
               ).padStart(2, "0")}:00`}
             </Text>
             {/* Mức phủ nằm trên rail rồi nên thẻ chỉ còn con số. */}
-            <Text style={styles.clipCardMeta} allowFontScaling={false}>
+            <Text style={styles.clipCardMeta}>
               {`${group.clipCount} clip · ${Math.floor(
                 group.durationSec / 60,
               )}'${String(group.durationSec % 60).padStart(2, "0")}"`}
@@ -202,7 +202,6 @@ const ClipCard = React.memo(function ClipCard({
             styles.playbackGridTime,
             isActive && styles.playbackGridTimeActive,
           ]}
-          allowFontScaling={false}
         >
           {formatClock(clip.startSec, false)}
         </Text>
@@ -227,7 +226,7 @@ const ClipCard = React.memo(function ClipCard({
       </View>
 
       <View style={styles.playbackGridBottomRow}>
-        <Text style={styles.playbackGridDuration} allowFontScaling={false}>
+        <Text style={styles.playbackGridDuration}>
           {`${Math.floor(clip.durationSec / 60)}'${String(
             clip.durationSec % 60,
           ).padStart(2, "0")}"`}
@@ -258,11 +257,11 @@ const ClipGridGroup = React.memo(function ClipGridGroup({
   return (
     <View style={styles.playbackGridGroup}>
       <View style={styles.playbackGridHourRow}>
-        <Text style={styles.playbackGridHour} allowFontScaling={false}>
+        <Text style={styles.playbackGridHour}>
           {`${String(group.hour).padStart(2, "0")}:00`}
         </Text>
         <View style={styles.playbackGridHourRule} />
-        <Text style={styles.playbackGridHourCount} allowFontScaling={false}>
+        <Text style={styles.playbackGridHourCount}>
           {`${group.clipCount} clip`}
         </Text>
       </View>
@@ -348,7 +347,7 @@ function PlaybackTimeline({
     return (
       <View style={styles.timelineLoading}>
         <IsLoading size="small" />
-        <Text style={styles.timelineLoadingText} allowFontScaling={false}>
+        <Text style={styles.timelineLoadingText}>
           Đang tải bản ghi...
         </Text>
       </View>
@@ -456,7 +455,7 @@ function PlaybackTimeline({
               >
                 <Ionicons name="close" size={28} color={c.text} />
               </TouchableOpacity>
-              <Text style={styles.playbackGroupTitle} allowFontScaling={false}>
+              <Text style={styles.playbackGroupTitle}>
                 Tổng cộng {detailGroup.clipCount} clip
               </Text>
             </View>

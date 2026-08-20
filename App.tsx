@@ -12,11 +12,14 @@ import { AuthProvider } from "./src/context/AuthContext";
 import { Provider } from "react-redux";
 import { store } from "./src/store/index";
 import AppBootstrap from "./src/app/AppBootstrap";
-import { configureTextScalingDefaults } from "./src/utils/helpers/textScaling";
 import { useColorScheme } from "./src/hooks/useColorScheme";
 import { Colors } from "./src/constants/Colors";
 import { C } from "./src/utils/helpers/colors";
 import { ThemeProvider } from "./src/context/ThemeContext";
+import {
+  FontScaleProvider,
+  useTextScale,
+} from "./src/context/FontScaleContext";
 import { navigationRef } from "./src/navigation/navigationService";
 
 const LANDSCAPE_ALLOWED_ROUTES = new Set([
@@ -25,10 +28,9 @@ const LANDSCAPE_ALLOWED_ROUTES = new Set([
   "CameraPlayback",
 ]);
 
-configureTextScalingDefaults();
-
 function AppContent() {
   const colorScheme = useColorScheme() ?? "light";
+  const { factor: textScaleFactor } = useTextScale();
   const isDark = colorScheme === "dark";
   // navigationRef ở cấp module (navigationService) thay cho useNavigationContainerRef
   // để handler push notification — chạy ngoài cây React — cũng điều hướng được.
@@ -84,7 +86,13 @@ function AppContent() {
             onReady={syncOrientationWithRoute}
             onStateChange={syncOrientationWithRoute}
           >
-            <RootNavigator />
+            {/*
+              Hệ số cỡ chữ là biến module do `installTextScaling` đọc lúc render
+              từng Text, nên đổi nó không làm các màn đang mount vẽ lại. Remount
+              cây điều hướng bằng key — cùng hành vi với việc Android recreate
+              Activity khi người dùng đổi cỡ chữ trong Cài đặt hệ thống.
+            */}
+            <RootNavigator key={`text-scale-${textScaleFactor}`} />
           </NavigationContainer>
         </AuthProvider>
       </Provider>
@@ -95,7 +103,9 @@ function AppContent() {
 export default function App() {
   return (
     <ThemeProvider>
-      <AppContent />
+      <FontScaleProvider>
+        <AppContent />
+      </FontScaleProvider>
     </ThemeProvider>
   );
 }

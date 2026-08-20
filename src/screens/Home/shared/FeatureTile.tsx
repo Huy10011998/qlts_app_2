@@ -51,7 +51,7 @@ export default function FeatureTile({
         <Ionicons name={iconName} color={accent.color} size={24} />
         {notificationCount ? (
           <View style={styles.tileBadge}>
-            <Text style={styles.tileBadgeText} allowFontScaling={false}>
+            <Text style={styles.tileBadgeText}>
               {notificationCount}
             </Text>
           </View>
@@ -60,7 +60,6 @@ export default function FeatureTile({
 
       <Text
         style={styles.tileLabel}
-        allowFontScaling={false}
         numberOfLines={2}
         ellipsizeMode="tail"
       >

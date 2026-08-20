@@ -107,7 +107,6 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 12,
     textAlign: "center",
-    lineHeight: 18,
   },
   action: {
     marginTop: 14,

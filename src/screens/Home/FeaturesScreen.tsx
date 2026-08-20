@@ -97,7 +97,7 @@ const FeaturesScreen: React.FC = () => {
     return (
       <View style={styles.sectionCard}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle} allowFontScaling={false}>
+          <Text style={styles.sectionTitle}>
             {title}
           </Text>
         </View>

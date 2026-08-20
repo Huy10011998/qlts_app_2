@@ -316,7 +316,7 @@ export default function FridgeScannerView({
         </TouchableOpacity>
 
         <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle} allowFontScaling={false}>
+          <Text style={styles.headerTitle}>
             {title}
           </Text>
         </View>
@@ -349,7 +349,7 @@ export default function FridgeScannerView({
       >
         {multiple ? (
           <View style={styles.selectedCard}>
-            <Text style={styles.selectedTitle} allowFontScaling={false}>
+            <Text style={styles.selectedTitle}>
               Đã chọn ({selected.length})
             </Text>
 
@@ -365,7 +365,6 @@ export default function FridgeScannerView({
                     <Text
                       style={styles.selectedRowText}
                       numberOfLines={1}
-                      allowFontScaling={false}
                     >
                       {fridge.serialNumber || fridge.label}
                     </Text>
@@ -398,7 +397,7 @@ export default function FridgeScannerView({
           }}
         >
           <Ionicons name="keypad-outline" size={18} color="#fff" />
-          <Text style={styles.manualButtonText} allowFontScaling={false}>
+          <Text style={styles.manualButtonText}>
             Nhập seri thủ công
           </Text>
         </TouchableOpacity>
@@ -412,7 +411,7 @@ export default function FridgeScannerView({
             disabled={!selected.length}
             onPress={() => onSubmit(selected)}
           >
-            <Text style={styles.primaryButtonText} allowFontScaling={false}>
+            <Text style={styles.primaryButtonText}>
               {submitLabel}
             </Text>
           </TouchableOpacity>

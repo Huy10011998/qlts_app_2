@@ -32,7 +32,6 @@ export const makeStyles = (c: AppColors) =>
       flex: 1,
       color: C.redDeep,
       fontSize: 12,
-      lineHeight: 17,
     },
     menuScrollContent: {
       paddingBottom: 12,
@@ -62,7 +61,6 @@ export const makeStyles = (c: AppColors) =>
       fontSize: 36,
       fontWeight: "700",
       color: c.text,
-      lineHeight: 43,
     },
     prodUnit: { fontSize: 19, fontWeight: "400" },
     weatherRow: {
@@ -135,7 +133,6 @@ export const makeStyles = (c: AppColors) =>
       fontSize: 10,
       color: c.textMuted,
       textAlign: "center",
-      lineHeight: 14,
       marginTop: 2,
     },
 
@@ -245,7 +242,6 @@ export const makeStyles = (c: AppColors) =>
     dateNavCenterText: {
       flexShrink: 1,
       fontSize: 15,
-      lineHeight: 20,
       color: "#6EA0F6",
       fontWeight: "300",
       textAlign: "center",
@@ -444,7 +440,6 @@ export const makeStyles = (c: AppColors) =>
       fontSize: 36,
       fontWeight: "700",
       color: c.text,
-      lineHeight: 44,
     },
     balanceUnit: { fontSize: 18, fontWeight: "400", color: c.textSecondary },
     barTrack: {
@@ -575,7 +570,7 @@ export const makeStyles = (c: AppColors) =>
     chartLegendText: { fontSize: 13, color: c.textSecondary },
     chartLegendTextMuted: { fontSize: 13, color: c.textMuted },
     chartLegendTextCompact: { fontSize: 11, flexShrink: 1 },
-    chartLegendTextSmall: { fontSize: 12, color: c.textMuted, lineHeight: 17 },
+    chartLegendTextSmall: { fontSize: 12, color: c.textMuted },
     checkCircle: {
       width: 22,
       height: 22,
@@ -640,7 +635,6 @@ export const makeStyles = (c: AppColors) =>
       fontSize: 12,
       color: c.textMuted,
       textAlign: "center",
-      lineHeight: 18,
     },
 
     // Expanded chart
@@ -675,7 +669,6 @@ export const makeStyles = (c: AppColors) =>
     expandedCompareTabText: {
       color: c.text,
       fontSize: 16,
-      lineHeight: 22,
     },
     expandedCompareTabTextActive: {
       color: "#6ea0f6",
@@ -730,7 +723,6 @@ export const makeStyles = (c: AppColors) =>
     blockErrorText: {
       color: C.redDeep,
       fontSize: 13,
-      lineHeight: 18,
     },
     // Khung chờ của biểu đồ. Chiều cao do phía gọi truyền vào cho khớp đúng chỗ
     // biểu đồ sẽ chiếm, nên lúc dữ liệu về trang không bị đẩy xuống.
@@ -781,7 +773,6 @@ export const makeStyles = (c: AppColors) =>
       color: c.text,
       fontSize: 15,
       fontWeight: "500",
-      lineHeight: 22,
       textAlign: "center",
     },
     fullScreenRetryButton: {
@@ -827,7 +818,6 @@ export const makeStyles = (c: AppColors) =>
     flowSummaryText: {
       flexShrink: 1,
       fontSize: 13,
-      lineHeight: 18,
       color: c.textSecondary,
       // Xuống 2 dòng trên máy hẹp thì cả hai dòng vẫn cân giữa viên nền.
       textAlign: "center",

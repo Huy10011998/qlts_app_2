@@ -12,7 +12,7 @@ import {
   EnergyBarChart,
   SceneView,
 } from "../src/screens/Home/SolarPlantScreen.visuals";
-import { getPlantSceneImage } from "../src/screens/Home/shared/plantScenes";
+import { getPlantScene } from "../src/screens/Home/shared/plantScenes";
 
 // Các khối này chạy Animated (dashoffset donut, chiều rộng thanh tỉ trọng, mờ
 // dần khi đổi bộ dữ liệu) nên lỗi thường chỉ nổ lúc mount chứ không phải lúc
@@ -187,7 +187,7 @@ describe("biểu đồ điện mặt trời", () => {
 
     const photo = await mount(
       <SceneView
-        plantImage={getPlantSceneImage("CHOLIMEX FOOD VĨNH LỘC")}
+        plantScene={getPlantScene("CHOLIMEX FOOD VĨNH LỘC")}
         width={390}
       />,
     );

@@ -46,7 +46,6 @@ export default function AssetListSearchBar({
           <Text
             style={styles.summaryBadgeText}
             numberOfLines={1}
-            allowFontScaling={false}
           >
             {badgeText}
           </Text>
@@ -54,7 +53,6 @@ export default function AssetListSearchBar({
         <Text
           style={styles.summaryMeta}
           numberOfLines={1}
-          allowFontScaling={false}
         >
           {summaryText}
         </Text>

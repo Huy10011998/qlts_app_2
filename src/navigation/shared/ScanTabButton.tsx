@@ -1,10 +1,10 @@
 import React from "react";
+import { UnscaledText } from "../../utils/helpers/textScaling";
 import {
   AccessibilityInfo,
   Animated,
   Easing,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -116,9 +116,9 @@ export default function ScanTabButton({
         ) : null}
       </View>
       <View style={styles.labelPill}>
-        <Text numberOfLines={1} allowFontScaling={false} style={styles.label}>
+        <UnscaledText numberOfLines={1} allowFontScaling={false} style={styles.label}>
           Quét QR
-        </Text>
+        </UnscaledText>
       </View>
     </TouchableOpacity>
   );

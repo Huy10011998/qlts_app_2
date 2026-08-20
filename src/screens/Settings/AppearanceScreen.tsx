@@ -251,6 +251,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   systemTextWrap: { flex: 1, paddingRight: 12 },
-  systemLabel: { fontSize: 15.5, lineHeight: 22, fontWeight: "700" },
-  systemDescription: { marginTop: 5, fontSize: 12.5, lineHeight: 18 },
+  systemLabel: { fontSize: 15.5, fontWeight: "700" },
+  systemDescription: { marginTop: 5, fontSize: 12.5 },
 });

@@ -118,7 +118,6 @@ function AssetMenuDropdownItem({
             level > 0 && { color: colors.textSecondary },
           ]}
           numberOfLines={2}
-          allowFontScaling={false}
         >
           {splitHighlight(item.label, searchText).map((segment, index) =>
             segment.match ? (
@@ -140,7 +139,6 @@ function AssetMenuDropdownItem({
             <View style={[styles.countBadge, { backgroundColor: themeBackground }]}>
               <Text
                 style={[styles.countText, { color: theme.color }]}
-                allowFontScaling={false}
               >
                 {childCount}
               </Text>
@@ -233,14 +231,11 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     fontWeight: "600",
     letterSpacing: 0.1,
-    lineHeight: 20,
-    includeFontPadding: false,
     textAlignVertical: "center",
   },
   labelChild: {
     fontSize: 12.5,
     fontWeight: "500",
-    lineHeight: 19,
   },
   labelMatch: {
     fontWeight: "800",

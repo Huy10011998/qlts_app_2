@@ -1,4 +1,5 @@
 import React from "react";
+import { scaledLineHeight } from "../../utils/helpers/textScaling";
 import {
   ActivityIndicator,
   FlatList,
@@ -598,7 +599,7 @@ const makeStyles = (c: AppColors) =>
       color: "#FFFFFF",
       fontSize: 12,
       fontWeight: "800",
-      lineHeight: 24,
+      lineHeight: scaledLineHeight(12, 2),
       textAlign: "center",
     },
     centerState: {
@@ -826,7 +827,6 @@ const makeVoteStyles = (c: AppColors) =>
     opinionPickerValue: {
       color: c.textPrimary,
       fontSize: 13,
-      lineHeight: 18,
       fontWeight: "600",
     },
     loadingWrap: {
@@ -876,7 +876,6 @@ const makeVoteStyles = (c: AppColors) =>
     selectedInfoDesc: {
       color: c.textSecondary,
       fontSize: 12,
-      lineHeight: 18,
       marginTop: 4,
     },
     choiceList: {
@@ -907,7 +906,6 @@ const makeVoteStyles = (c: AppColors) =>
     choiceDesc: {
       color: c.textSecondary,
       fontSize: 12,
-      lineHeight: 18,
       marginTop: 2,
     },
     readyHint: {
@@ -926,7 +924,6 @@ const makeVoteStyles = (c: AppColors) =>
       flex: 1,
       color: c.accent,
       fontSize: 12,
-      lineHeight: 18,
       fontWeight: "600",
     },
     bottomSpacer: {

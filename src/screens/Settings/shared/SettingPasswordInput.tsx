@@ -74,11 +74,9 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    height: 54,
+    minHeight: 54,
     paddingVertical: 0,
     fontSize: 14,
-    lineHeight: 20,
-    includeFontPadding: false,
     textAlignVertical: "center",
   },
   eye: {

@@ -73,7 +73,6 @@ export default function HomeReportCard({
       <View style={styles.reportTextWrap}>
         <Text
           style={[styles.reportTitle, { color: colors.text }]}
-          allowFontScaling={false}
           numberOfLines={2}
         >
           {label}
@@ -129,7 +128,6 @@ const makeStyles = (c: AppColors) =>
       fontSize: 13,
       fontWeight: "700",
       color: c.text,
-      lineHeight: 17,
       minHeight: 34,
       marginBottom: 6,
     },

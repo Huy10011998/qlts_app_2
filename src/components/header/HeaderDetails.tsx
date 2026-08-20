@@ -15,6 +15,7 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import Ionicons from "react-native-vector-icons/Ionicons";
 import Svg, { Path } from "react-native-svg";
 import type { HeaderOptionsProps } from "../../types";
+import { getGuideTopicTitle } from "../../screens/Guide/shared/guideContent";
 import { AppColors, useStyles } from "../../utils/helpers/colors";
 
 const makeStyles = (c: AppColors) =>
@@ -155,6 +156,7 @@ export const HeaderDetails = ({
   showBackButton,
   showQrScannerButton,
   onQrScannerPress,
+  helpTopicId,
 }: HeaderOptionsProps = {}): NativeStackNavigationOptions => {
   return {
     headerShown: true,
@@ -164,6 +166,7 @@ export const HeaderDetails = ({
         showBackButton={showBackButton}
         showQrScannerButton={showQrScannerButton}
         onQrScannerPress={onQrScannerPress}
+        helpTopicId={helpTopicId}
       />
     ),
   };
@@ -215,13 +218,12 @@ export function HeaderDetailsModalHeader({
               color="rgba(255,255,255,0.82)"
               style={styles.titleBadgeIcon}
             />
-            <Text style={styles.titleBadgeText} allowFontScaling={false}>
+            <Text style={styles.titleBadgeText}>
               {resolvedBadgeLabel}
             </Text>
           </View>
           <Text
             adjustsFontSizeToFit
-            allowFontScaling={false}
             minimumFontScale={0.7}
             numberOfLines={1}
             style={styles.title}
@@ -247,6 +249,7 @@ function HeaderDetailsBar({
   showBackButton,
   showQrScannerButton,
   onQrScannerPress,
+  helpTopicId,
 }: NativeStackHeaderProps & HeaderOptionsProps) {
   const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
@@ -284,6 +287,26 @@ function HeaderDetailsBar({
     (navigation as any).navigate("QrScan");
   };
 
+  const handleHelpPress = () => {
+    if (!helpTopicId) return;
+
+    (navigation as any).navigate("GuideTopic", {
+      topicId: helpTopicId,
+      titleHeader: getGuideTopicTitle(helpTopicId),
+    });
+  };
+
+  // Hai slot hai bên tiêu đề phải rộng bằng nhau, không thì tiêu đề lệch khỏi
+  // giữa — rõ nhất ở màn có cả nút dấu hỏi và nút quét QR, bên trái chỉ có một
+  // mũi tên quay lại. 34 là bề ngang một nút (icon 24 + padding 5 mỗi bên), 4 là
+  // khoảng cách giữa hai nút, 36 là bề ngang nút quay lại (icon 26 + padding).
+  const rightIconCount =
+    (showQrScannerButton ? 1 : 0) + (helpTopicId ? 1 : 0);
+  const sideSlotMinWidth = Math.max(
+    36,
+    rightIconCount * 34 + Math.max(0, rightIconCount - 1) * 4,
+  );
+
   return (
     <View style={[styles.outer, { paddingTop: insets.top }]}>
       <View style={styles.decoLarge} />
@@ -293,7 +316,7 @@ function HeaderDetailsBar({
       <View style={styles.decoBubbleTwo} />
 
       <View style={styles.topBar}>
-        <View style={styles.sideSlot}>
+        <View style={[styles.sideSlot, { minWidth: sideSlotMinWidth }]}>
           {showBackButton ? (
             <TouchableOpacity
               onPress={() => navigation.goBack()}
@@ -312,13 +335,12 @@ function HeaderDetailsBar({
               color="rgba(255,255,255,0.82)"
               style={styles.titleBadgeIcon}
             />
-            <Text style={styles.titleBadgeText} allowFontScaling={false}>
+            <Text style={styles.titleBadgeText}>
               {badgeLabel}
             </Text>
           </View>
           <Text
             adjustsFontSizeToFit
-            allowFontScaling={false}
             minimumFontScale={0.7}
             numberOfLines={1}
             style={styles.title}
@@ -327,9 +349,25 @@ function HeaderDetailsBar({
           </Text>
         </View>
 
-        <View style={[styles.sideSlot, styles.rightSlot]}>
+        <View
+          style={[
+            styles.sideSlot,
+            styles.rightSlot,
+            { minWidth: sideSlotMinWidth },
+          ]}
+        >
           <View style={styles.rightActions}>
             {customHeaderRight}
+            {helpTopicId ? (
+              <TouchableOpacity
+                onPress={handleHelpPress}
+                style={styles.iconButton}
+                accessibilityRole="button"
+                accessibilityLabel="Hướng dẫn sử dụng màn hình này"
+              >
+                <Ionicons name="help-circle-outline" size={24} color="#fff" />
+              </TouchableOpacity>
+            ) : null}
             {showQrScannerButton ? (
               <View style={styles.qrButtonWrap}>
                 <TouchableOpacity
