@@ -32,14 +32,12 @@ export default function AssetListSummaryCard({
           <Text
             style={styles.filterCardTitle}
             numberOfLines={1}
-            allowFontScaling={false}
           >
             {title}
           </Text>
           <Text
             style={styles.filterCardSub}
             numberOfLines={1}
-            allowFontScaling={false}
           >
             {subtitle}
           </Text>

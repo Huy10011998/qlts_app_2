@@ -1,5 +1,6 @@
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { UnscaledText } from "../../utils/helpers/textScaling";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import type { BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import Svg, { Rect } from "react-native-svg";
@@ -93,7 +94,7 @@ function TabBarItemButton({
           color={isFocused ? "#fff" : inactiveColor}
         />
       </View>
-      <Text
+      <UnscaledText
         numberOfLines={1}
         allowFontScaling={false}
         style={[
@@ -103,7 +104,7 @@ function TabBarItemButton({
         ]}
       >
         {label}
-      </Text>
+      </UnscaledText>
     </TouchableOpacity>
   );
 }

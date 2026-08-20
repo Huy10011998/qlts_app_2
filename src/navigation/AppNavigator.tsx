@@ -18,7 +18,8 @@ import CameraScreen from "../screens/Camera/CameraScreen";
 import {
   getScreenTitle,
   headerWithBack,
-  headerWithBackAndScan,
+  headerWithBackAndHelp,
+  headerWithBackScanAndHelp,
 } from "./shared/navigationOptions";
 import QrScannerScreen from "../screens/QrScanner/QrScannerScreen";
 import QrDetailsScreen from "../screens/QrScanner/QrDetailsScreen";
@@ -45,7 +46,10 @@ import TrungChuyenTuLanhChonNhaPhanPhoiScreen from "../screens/NoiDia/TrungChuye
 import TrungChuyenTuLanhChonKhachHangScreen from "../screens/NoiDia/TrungChuyenTuLanhChonKhachHangScreen";
 import TrungChuyenTuLanhXacNhanScreen from "../screens/NoiDia/TrungChuyenTuLanhXacNhanScreen";
 import AppearanceScreen from "../screens/Settings/AppearanceScreen";
+import TextSizeScreen from "../screens/Settings/TextSizeScreen";
 import ProfileScreen from "../screens/Profile/ProfileScreen";
+import GuideScreen from "../screens/Guide/GuideScreen";
+import GuideTopicScreen from "../screens/Guide/GuideTopicScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -59,7 +63,7 @@ export default function AppNavigator() {
         options={{
           headerShown: true,
           title: "Danh sách Camera",
-          ...headerWithBack,
+          ...headerWithBackAndHelp("camera"),
         }}
       />
       <Stack.Screen
@@ -68,7 +72,7 @@ export default function AppNavigator() {
         options={{
           headerShown: true,
           title: "Live View Camera",
-          ...headerWithBack,
+          ...headerWithBackAndHelp("camera"),
         }}
       />
       <Stack.Screen name="CameraPlayback" component={CameraPlaybackScreen} />
@@ -108,7 +112,7 @@ export default function AppNavigator() {
         options={({ route }) => ({
           headerShown: true,
           title: getScreenTitle(route.params?.titleHeader, "Tài sản"),
-          ...headerWithBackAndScan,
+          ...headerWithBackScanAndHelp("tai-san"),
         })}
       />
       <Stack.Screen
@@ -117,7 +121,7 @@ export default function AppNavigator() {
         options={({ route }) => ({
           headerShown: true,
           title: getScreenTitle(route.params?.titleHeader, "Tài sản"),
-          ...headerWithBackAndScan,
+          ...headerWithBackScanAndHelp("tai-san"),
         })}
       />
       <Stack.Screen
@@ -126,7 +130,7 @@ export default function AppNavigator() {
         options={({ route }) => ({
           headerShown: true,
           title: getScreenTitle(route.params?.titleHeader, "Chi tiết"),
-          ...headerWithBack,
+          ...headerWithBackAndHelp("tai-san"),
         })}
       />
       <Stack.Screen
@@ -162,7 +166,7 @@ export default function AppNavigator() {
         options={{
           headerShown: true,
           title: "Hệ thống Camera",
-          ...headerWithBack,
+          ...headerWithBackAndHelp("camera"),
         }}
       />
       <Stack.Screen
@@ -171,7 +175,7 @@ export default function AppNavigator() {
         options={{
           headerShown: true,
           title: "Đại hội cổ đông",
-          ...headerWithBack,
+          ...headerWithBackAndHelp("dai-hoi-co-dong"),
         }}
       />
       <Stack.Screen
@@ -180,7 +184,7 @@ export default function AppNavigator() {
         options={({ route }) => ({
           headerShown: true,
           title: getScreenTitle(route.params?.titleHeader, "Báo cáo"),
-          ...headerWithBack,
+          ...headerWithBackAndHelp("bao-cao"),
         })}
       />
       <Stack.Screen
@@ -189,7 +193,7 @@ export default function AppNavigator() {
         options={{
           headerShown: true,
           title: "CHOLIMEX FOOD - VĨNH LỘC",
-          ...headerWithBack,
+          ...headerWithBackAndHelp("bao-cao"),
         }}
       />
       <Stack.Screen
@@ -198,7 +202,7 @@ export default function AppNavigator() {
         options={{
           headerShown: true,
           title: "Hành trình phương tiện",
-          ...headerWithBack,
+          ...headerWithBackAndHelp("phuong-tien"),
         }}
       />
       <Stack.Screen
@@ -207,7 +211,7 @@ export default function AppNavigator() {
         options={{
           headerShown: true,
           title: "Dừng đỗ phương tiện",
-          ...headerWithBack,
+          ...headerWithBackAndHelp("phuong-tien"),
         }}
       />
       <Stack.Screen
@@ -234,7 +238,7 @@ export default function AppNavigator() {
         options={{
           headerShown: true,
           title: "Vị trí hiện tại phương tiện",
-          ...headerWithBack,
+          ...headerWithBackAndHelp("phuong-tien"),
         }}
       />
       <Stack.Screen
@@ -280,7 +284,7 @@ export default function AppNavigator() {
         options={{
           headerShown: true,
           title: "Xác nhận vị trí",
-          ...headerWithBack,
+          ...headerWithBackAndHelp("xac-nhan-tu-lanh"),
         }}
       />
       <Stack.Screen
@@ -298,7 +302,7 @@ export default function AppNavigator() {
         options={{
           headerShown: true,
           title: "Lịch sử xác nhận",
-          ...headerWithBack,
+          ...headerWithBackAndHelp("xac-nhan-tu-lanh"),
         }}
       />
 
@@ -309,7 +313,7 @@ export default function AppNavigator() {
         options={{
           headerShown: true,
           title: "Trung chuyển tủ lạnh",
-          ...headerWithBack,
+          ...headerWithBackAndHelp("trung-chuyen-tu-lanh"),
         }}
       />
       <Stack.Screen
@@ -318,7 +322,7 @@ export default function AppNavigator() {
         options={{
           headerShown: true,
           title: "Lịch sử trung chuyển",
-          ...headerWithBack,
+          ...headerWithBackAndHelp("trung-chuyen-tu-lanh"),
         }}
       />
       {/*
@@ -339,7 +343,7 @@ export default function AppNavigator() {
         options={{
           headerShown: true,
           title: "Chọn nhà phân phối",
-          ...headerWithBack,
+          ...headerWithBackAndHelp("trung-chuyen-tu-lanh"),
         }}
       />
       <Stack.Screen
@@ -348,7 +352,7 @@ export default function AppNavigator() {
         options={{
           headerShown: true,
           title: "Chọn khách hàng",
-          ...headerWithBack,
+          ...headerWithBackAndHelp("trung-chuyen-tu-lanh"),
         }}
       />
       <Stack.Screen
@@ -357,7 +361,7 @@ export default function AppNavigator() {
         options={{
           headerShown: true,
           title: "Xác nhận trung chuyển",
-          ...headerWithBack,
+          ...headerWithBackAndHelp("trung-chuyen-tu-lanh"),
         }}
       />
 
@@ -370,12 +374,36 @@ export default function AppNavigator() {
         }}
       />
       <Stack.Screen
+        name="TextSize"
+        component={TextSizeScreen}
+        options={{
+          title: "Cỡ chữ",
+          ...headerWithBack,
+        }}
+      />
+      <Stack.Screen
         name="Profile"
         component={ProfileScreen}
         options={{
           title: "Hồ sơ cá nhân",
           ...headerWithBack,
         }}
+      />
+      <Stack.Screen
+        name="Guide"
+        component={GuideScreen}
+        options={{
+          title: "Hướng dẫn sử dụng",
+          ...headerWithBack,
+        }}
+      />
+      <Stack.Screen
+        name="GuideTopic"
+        component={GuideTopicScreen}
+        options={({ route }) => ({
+          title: getScreenTitle(route.params?.titleHeader, "Hướng dẫn"),
+          ...headerWithBack,
+        })}
       />
     </Stack.Navigator>
   );

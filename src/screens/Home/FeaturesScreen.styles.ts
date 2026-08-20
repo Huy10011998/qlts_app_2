@@ -128,7 +128,6 @@ export const makeFeatureStyles = (c: AppColors) =>
     // hàng dưới phải bắt đầu ngang nhau, không so le.
     tileLabel: {
       fontSize: 12.5,
-      lineHeight: 16,
       height: 32,
       fontWeight: "500",
       color: c.text,

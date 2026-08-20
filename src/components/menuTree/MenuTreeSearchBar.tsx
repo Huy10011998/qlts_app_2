@@ -55,7 +55,7 @@ export default function MenuTreeSearchBar({
                 },
               ]}
             >
-              <Text style={styles.resultText} allowFontScaling={false}>
+              <Text style={styles.resultText}>
                 {resultCount} kết quả
               </Text>
             </View>
@@ -74,7 +74,7 @@ export default function MenuTreeSearchBar({
                 size={13}
                 color={C.red}
               />
-              <Text style={styles.resultText} allowFontScaling={false}>
+              <Text style={styles.resultText}>
                 Thu tất cả
               </Text>
             </TouchableOpacity>

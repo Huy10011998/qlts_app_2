@@ -161,18 +161,18 @@ const styles = StyleSheet.create({
   textCol: {
     flex: 1,
   },
+  // Không đặt `lineHeight` / `includeFontPadding: false`: React Native không
+  // scale lineHeight theo cỡ chữ hệ thống, và includeFontPadding cắt phần đệm
+  // glyph trên Android — cả hai đều xén dấu tiếng Việt khi người dùng để cỡ
+  // chữ lớn. Để platform tự tính leading theo cỡ chữ đã scale.
   label: {
     fontSize: 14.5,
-    lineHeight: 20,
     fontWeight: "600",
     letterSpacing: 0.1,
-    includeFontPadding: false,
   },
   sub: {
     fontSize: 11.5,
-    lineHeight: 16,
     marginTop: 2,
-    includeFontPadding: false,
   },
   chevronWrap: {
     width: 24,

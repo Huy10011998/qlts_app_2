@@ -54,14 +54,12 @@ function AttendanceStat({
       <Text
         style={[styles.statValue, { color }]}
         numberOfLines={1}
-        allowFontScaling={false}
       >
         {value}
       </Text>
       <Text
         style={[styles.statLabel, { color }]}
         numberOfLines={2}
-        allowFontScaling={false}
       >
         {label}
       </Text>
@@ -122,7 +120,10 @@ export default function HomeAttendanceCard({
     // Đang tìm kiếm thì bỏ dòng "Tất cả" đi cho khỏi lẫn vào kết quả.
     return keyword
       ? matchedItems
-      : [{ value: ALL_DEPARTMENTS_KEY, text: ALL_DEPARTMENTS_LABEL }, ...matchedItems];
+      : [
+          { value: ALL_DEPARTMENTS_KEY, text: ALL_DEPARTMENTS_LABEL },
+          ...matchedItems,
+        ];
   }, [departments, pickerSearch]);
   const pickerCount = pickerItems.filter(
     (item) => item.value !== ALL_DEPARTMENTS_KEY,
@@ -181,11 +182,14 @@ export default function HomeAttendanceCard({
             selectedDepartment?.name ?? ALL_DEPARTMENTS_LABEL
           }`}
         >
-          <Ionicons name="business-outline" size={15} color={colors.textMuted} />
+          <Ionicons
+            name="business-outline"
+            size={15}
+            color={colors.textMuted}
+          />
           <Text
             style={[styles.pickerText, { color: colors.text }]}
             numberOfLines={1}
-            allowFontScaling={false}
           >
             {selectedDepartment?.name ?? ALL_DEPARTMENTS_LABEL}
           </Text>
@@ -198,14 +202,12 @@ export default function HomeAttendanceCard({
           <Text
             style={[styles.headerTitle, { color: colors.text }]}
             numberOfLines={1}
-            allowFontScaling={false}
           >
             {`${formatHomePercent(ratePercent)} đã điểm danh`}
           </Text>
           <Text
             style={[styles.headerNote, { color: colors.textMuted }]}
             numberOfLines={1}
-            allowFontScaling={false}
           >
             {`${formatHomeCount(scope.checkedIn)} / ${formatHomeCount(
               scope.total,
@@ -291,13 +293,11 @@ export default function HomeAttendanceCard({
                     <Text
                       style={[styles.deptName, { color: colors.textSecondary }]}
                       numberOfLines={1}
-                      allowFontScaling={false}
                     >
                       {dept.name}
                     </Text>
                     <Text
                       style={[styles.deptCount, { color: colors.text }]}
-                      allowFontScaling={false}
                     >
                       {`${formatHomeNumber(dept.checkedIn)}/${formatHomeNumber(
                         dept.total,
@@ -336,7 +336,6 @@ export default function HomeAttendanceCard({
               đem so với báo cáo nhân sự toàn công ty rồi báo lệch. */}
           <Text
             style={[styles.note, { color: colors.textMuted }]}
-            allowFontScaling={false}
           >
             Tính theo lượt quẹt thẻ hôm nay. Không tính nhân viên đã nghỉ việc.
           </Text>
@@ -344,7 +343,6 @@ export default function HomeAttendanceCard({
       ) : (
         <Text
           style={[styles.errorNote, { color: colors.textSecondary }]}
-          allowFontScaling={false}
         >
           Chưa lấy được dữ liệu điểm danh (không kết nối được hệ thống nhân sự
           Bravo8).
@@ -409,20 +407,17 @@ const makeStyles = (c: AppColors) =>
     pickerText: {
       flex: 1,
       fontSize: 12.5,
-      lineHeight: 17,
       fontWeight: "700",
       color: c.text,
     },
     headerTitle: {
       fontSize: 16,
-      lineHeight: 20,
       fontWeight: "800",
       letterSpacing: -0.3,
       color: c.text,
     },
     headerNote: {
       fontSize: 11,
-      lineHeight: 15,
       marginTop: 3,
       fontWeight: "600",
       color: c.textMuted,
@@ -453,14 +448,11 @@ const makeStyles = (c: AppColors) =>
     },
     statValue: {
       fontSize: 17,
-      lineHeight: 21,
       fontWeight: "800",
       letterSpacing: -0.4,
-      includeFontPadding: false,
     },
     statLabel: {
       fontSize: 10.5,
-      lineHeight: 14,
       marginTop: 2,
       fontWeight: "700",
     },
@@ -483,7 +475,6 @@ const makeStyles = (c: AppColors) =>
     deptName: {
       flex: 1,
       fontSize: 13,
-      lineHeight: 18,
       fontWeight: "600",
       color: c.textSecondary,
     },
@@ -491,9 +482,7 @@ const makeStyles = (c: AppColors) =>
       width: 80,
       textAlign: "right",
       fontSize: 14,
-      lineHeight: 18,
       fontWeight: "800",
-      includeFontPadding: false,
       color: c.text,
     },
     deptTrack: {
@@ -507,14 +496,12 @@ const makeStyles = (c: AppColors) =>
     // Trang chủ đọc như một loại chữ.
     note: {
       fontSize: 10.5,
-      lineHeight: 14,
       marginTop: 10,
       fontWeight: "600",
       color: c.textMuted,
     },
     errorNote: {
       fontSize: 12.5,
-      lineHeight: 18,
       fontWeight: "600",
       color: c.textSecondary,
     },

@@ -287,7 +287,7 @@ export default function QrScannerScreen() {
         </TouchableOpacity>
 
         <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle} allowFontScaling={false}>
+          <Text style={styles.headerTitle}>
             Quét mã QR
           </Text>
         </View>

@@ -2,6 +2,14 @@ import React from "react";
 import { C } from "../../utils/helpers/colors";
 
 /** Chiều cao thanh tab, chưa tính safe area dưới. */
+/**
+ * Chiều cao thanh tab, khoá cứng vì phải khớp với SVG nền (`HUMP_RISE`) và độ
+ * nhô của nút quét (`SCAN_BUTTON_RISE`). Đổi số này là phải chỉnh cả hai chỗ đó.
+ *
+ * Vì thế nhãn tab trong `TabBarItemButton` / `ScanTabButton` giữ
+ * `allowFontScaling={false}` — đây là chỗ duy nhất trong ứng dụng cố tình không
+ * đi theo cỡ chữ hệ thống, đánh đổi lấy việc thanh tab không vỡ.
+ */
 export const TAB_HEIGHT = 62;
 
 /** Đường kính vòng tròn Quét QR. */

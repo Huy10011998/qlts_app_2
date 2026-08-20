@@ -73,7 +73,6 @@ export default function HomeStatCard({
           <Text
             style={[styles.label, { color: c.textSecondary }]}
             numberOfLines={2}
-            allowFontScaling={false}
           >
             {label}
           </Text>
@@ -95,7 +94,6 @@ export default function HomeStatCard({
           numberOfLines={1}
           adjustsFontSizeToFit
           minimumFontScale={0.72}
-          allowFontScaling={false}
         >
           {value}
         </Text>
@@ -103,7 +101,6 @@ export default function HomeStatCard({
           <Text
             style={[styles.unit, { color: iconColor }]}
             numberOfLines={1}
-            allowFontScaling={false}
           >
             {unit}
           </Text>
@@ -113,7 +110,6 @@ export default function HomeStatCard({
         <Text
           style={[styles.sub, { color: resolvedSubColor }]}
           numberOfLines={2}
-          allowFontScaling={false}
         >
           {sub}
         </Text>
@@ -183,14 +179,12 @@ const makeStyles = (c: AppColors) =>
     },
     label: {
       fontSize: 13,
-      lineHeight: 17,
       color: c.textSecondary,
       fontWeight: "700",
       flex: 1,
     },
     sub: {
       fontSize: 11.5,
-      lineHeight: 15,
       marginTop: 5,
       fontWeight: "600",
     },

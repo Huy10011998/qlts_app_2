@@ -11,6 +11,7 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { TAB_ITEMS } from "../utils/helpers/ui";
 import { TabItem } from "./context.d";
 import { AssetItem } from "./navigator.d";
+import type { GuideTopicId } from "../screens/Guide/shared/guideTypes";
 
 export interface CardItemProps {
   item: AssetItem;
@@ -205,6 +206,11 @@ export type HeaderOptionsProps = {
   onMenuPress?: () => void;
   showQrScannerButton?: boolean;
   onQrScannerPress?: () => void;
+  /**
+   * Hiện nút dấu hỏi bên phải, mở đúng chủ đề hướng dẫn của màn đang xem. Bỏ
+   * trống thì không có nút.
+   */
+  helpTopicId?: GuideTopicId;
 };
 
 export interface ViewerProps {

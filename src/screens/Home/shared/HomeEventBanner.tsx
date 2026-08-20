@@ -179,7 +179,6 @@ const makeStyles = (c: AppColors) =>
       fontSize: 20,
       fontWeight: "800",
       color: HOME_BRAND_RED,
-      lineHeight: 24,
     },
     dateMon: {
       fontSize: 11,
@@ -210,7 +209,6 @@ const makeStyles = (c: AppColors) =>
       fontWeight: "700",
       color: c.text,
       marginBottom: 5,
-      lineHeight: 18,
     },
     metaRow: {
       flexDirection: "row",

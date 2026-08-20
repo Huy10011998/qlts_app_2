@@ -44,13 +44,11 @@ export default function HomeBlockOrderSheet({
       <View style={styles.header}>
         <Text
           style={[styles.title, { color: colors.text }]}
-          allowFontScaling={false}
         >
           Sắp xếp Trang chủ
         </Text>
         <Text
           style={[styles.subtitle, { color: colors.textSub }]}
-          allowFontScaling={false}
         >
           {items.length > 1
             ? "Kéo tên khối lên hoặc xuống để đổi thứ tự. Thứ tự lưu riêng theo tài khoản của bạn."
@@ -103,7 +101,6 @@ const makeStyles = (c: AppColors) =>
     subtitle: {
       marginTop: 4,
       fontSize: 12.5,
-      lineHeight: 17,
       fontWeight: "500",
       color: c.textSub,
     },

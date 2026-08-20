@@ -246,13 +246,12 @@ export default function HomeMachineGrowthCard({
         <View style={styles.errorBox}>
           <Text
             style={[styles.errorText, { color: colors.textSecondary }]}
-            allowFontScaling={false}
           >
             Chưa lấy được số liệu máy móc.
           </Text>
           {onRetry ? (
             <TouchableOpacity onPress={onRetry} activeOpacity={0.7}>
-              <Text style={styles.errorAction} allowFontScaling={false}>
+              <Text style={styles.errorAction}>
                 Tải lại
               </Text>
             </TouchableOpacity>
@@ -265,7 +264,6 @@ export default function HomeMachineGrowthCard({
       ) : !hasGrowth ? (
         <Text
           style={[styles.errorText, { color: colors.textSecondary }]}
-          allowFontScaling={false}
         >
           Chưa có số liệu tăng trưởng máy móc.
         </Text>
@@ -274,7 +272,6 @@ export default function HomeMachineGrowthCard({
           <Text
             style={[styles.total, { color: colors.text }]}
             numberOfLines={1}
-            allowFontScaling={false}
           >
             {`Hiện có ${formatHomeNumber(
               totalQuantity,
@@ -311,7 +308,6 @@ export default function HomeMachineGrowthCard({
                       styles.switchText,
                       { color: isSelected ? colors.text : colors.textMuted },
                     ]}
-                    allowFontScaling={false}
                   >
                     {item.label}
                   </Text>
@@ -323,7 +319,6 @@ export default function HomeMachineGrowthCard({
           <View style={styles.chartHead}>
             <Text
               style={[styles.chartTitle, { color: colors.textSecondary }]}
-              allowFontScaling={false}
             >
               {isQuantity
                 ? "Thêm mới trong tháng (thiết bị)"
@@ -331,7 +326,6 @@ export default function HomeMachineGrowthCard({
             </Text>
             <Text
               style={[styles.chartValue, { color: colors.text }]}
-              allowFontScaling={false}
             >
               {isQuantity
                 ? `+${formatHomeNumber(activePoint?.quantity ?? 0)}`
@@ -356,7 +350,6 @@ export default function HomeMachineGrowthCard({
           <Text
             style={[styles.activeNote, { color: colors.textSecondary }]}
             numberOfLines={1}
-            allowFontScaling={false}
           >
             {`${activePoint?.label ?? ""}: +${formatHomeNumber(
               activePoint?.quantity ?? 0,
@@ -369,7 +362,6 @@ export default function HomeMachineGrowthCard({
 
           <Text
             style={[styles.note, { color: colors.textMuted }]}
-            allowFontScaling={false}
           >
             {
               'Cột là máy phát sinh trong tháng; tháng hiện tại còn đang chạy dở nên cột cuối còn tăng tiếp. "Hiện có" là luỹ kế đến hết tháng, đã gồm số dư đầu kỳ (máy có ngày trước kỳ 12 tháng hoặc chưa ghi ngày sử dụng/ngày nhận).'
@@ -402,10 +394,8 @@ const makeStyles = (c: AppColors) =>
     },
     total: {
       fontSize: 15,
-      lineHeight: 20,
       fontWeight: "800",
       letterSpacing: -0.3,
-      includeFontPadding: false,
       marginTop: 2,
       color: c.text,
     },
@@ -427,7 +417,6 @@ const makeStyles = (c: AppColors) =>
     },
     switchText: {
       fontSize: 11.5,
-      lineHeight: 15,
       fontWeight: "700",
       color: c.textMuted,
     },
@@ -442,29 +431,24 @@ const makeStyles = (c: AppColors) =>
     chartTitle: {
       flex: 1,
       fontSize: 11.5,
-      lineHeight: 15,
       fontWeight: "700",
       color: c.textSecondary,
     },
     chartValue: {
       fontSize: 12.5,
-      lineHeight: 16,
       fontWeight: "800",
       letterSpacing: -0.2,
-      includeFontPadding: false,
       flexShrink: 0,
       color: c.text,
     },
     activeNote: {
       fontSize: 11,
-      lineHeight: 15,
       marginTop: 8,
       fontWeight: "700",
       color: c.textSecondary,
     },
     note: {
       fontSize: 10.5,
-      lineHeight: 14,
       marginTop: 32,
       fontWeight: "600",
       color: c.textMuted,
@@ -481,7 +465,6 @@ const makeStyles = (c: AppColors) =>
     },
     errorText: {
       fontSize: 12.5,
-      lineHeight: 18,
       fontWeight: "600",
       color: c.textSecondary,
     },

@@ -1,4 +1,5 @@
 import React from "react";
+import { scaledLineHeight } from "../../../utils/helpers/textScaling";
 import {
   StyleSheet,
   Text,
@@ -91,7 +92,7 @@ const makeStyles = (c: AppColors) =>
       fontSize: 14,
       color: c.textSecondary,
       textAlign: "center",
-      lineHeight: 22,
+      lineHeight: scaledLineHeight(14, 1.55),
     },
     actionBtn: {
       marginTop: 24,

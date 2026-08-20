@@ -55,7 +55,7 @@ export default function PlaybackTimeSheet({
         >
           <Ionicons name="chevron-back" size={28} color={c.text} />
         </TouchableOpacity>
-        <Text style={styles.timeSheetTitle} allowFontScaling={false}>
+        <Text style={styles.timeSheetTitle}>
           Thời gian bắt đầu
         </Text>
         <TouchableOpacity
@@ -63,7 +63,7 @@ export default function PlaybackTimeSheet({
           onPress={() => onConfirm(hour * 3600 + minute * 60 + second)}
           accessibilityLabel="Xác nhận thời gian"
         >
-          <Text style={styles.timeSheetConfirmText} allowFontScaling={false}>
+          <Text style={styles.timeSheetConfirmText}>
             OK
           </Text>
         </TouchableOpacity>
@@ -85,7 +85,7 @@ export default function PlaybackTimeSheet({
             />
           ))}
         </Picker>
-        <Text style={styles.timePickerColon} allowFontScaling={false}>
+        <Text style={styles.timePickerColon}>
           :
         </Text>
         <Picker
@@ -103,7 +103,7 @@ export default function PlaybackTimeSheet({
             />
           ))}
         </Picker>
-        <Text style={styles.timePickerColon} allowFontScaling={false}>
+        <Text style={styles.timePickerColon}>
           :
         </Text>
         <Picker

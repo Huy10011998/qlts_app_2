@@ -19,6 +19,7 @@ import {
   useStyles,
 } from "../../utils/helpers/colors";
 import { useVisibleDetailTabs } from "./useVisibleDetailTabs";
+import { READABLE_TEXT_MAX_SCALE } from "../../utils/helpers/textScaling";
 
 const SHELL_INSET = 12;
 const SHELL_GAP = 10;
@@ -50,15 +51,18 @@ export const computeTabWidths = ({
   contentWidth,
   tabCount,
   activeLabelLength,
+  fontScale = 1,
 }: {
   contentWidth: number;
   tabCount: number;
   activeLabelLength: number;
+  /** Cỡ chữ hệ thống đã kẹp trần — nhãn to ra thì pill phải rộng ra theo. */
+  fontScale?: number;
 }) => {
   const activeWidth = Math.min(
     ICON_SIZE +
       LABEL_GAP +
-      Math.ceil(activeLabelLength * CHAR_WIDTH) +
+      Math.ceil(activeLabelLength * CHAR_WIDTH * fontScale) +
       PILL_PADDING * 2,
     Math.floor(contentWidth * MAX_PILL_RATIO),
   );
@@ -85,7 +89,7 @@ export default function DetailSectionTabs({
 }: DetailSectionTabsProps) {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
-  const { width: screenWidth } = useWindowDimensions();
+  const { width: screenWidth, fontScale } = useWindowDimensions();
   const hairlineBorderColor = useHairlineBorderColor();
   const visibleTabs = useVisibleDetailTabs(tabs);
 
@@ -105,6 +109,7 @@ export default function DetailSectionTabs({
     contentWidth: screenWidth - SHELL_INSET * 2 - BAR_PADDING * 2,
     tabCount,
     activeLabelLength: visibleTabs[index]?.label.length ?? 0,
+    fontScale: Math.min(fontScale, READABLE_TEXT_MAX_SCALE),
   });
 
   // Một Animated.Value cho mỗi mục, khởi tạo đúng bề rộng đích để lần render đầu
@@ -202,7 +207,6 @@ export default function DetailSectionTabs({
                 </View>
                 {isActive ? (
                   <Text
-                    allowFontScaling={false}
                     numberOfLines={1}
                     style={styles.label}
                   >
@@ -230,7 +234,7 @@ function TabBadge({
 
   return (
     <View style={styles.badge}>
-      <Text style={styles.badgeText} allowFontScaling={false}>
+      <Text style={styles.badgeText}>
         {badge > 99 ? "99+" : badge}
       </Text>
     </View>
@@ -249,7 +253,7 @@ const makeStyles = (c: AppColors) =>
       alignItems: "center",
       justifyContent: "space-between",
       backgroundColor: c.surface,
-      height: SECTION_TABS_HEIGHT,
+      minHeight: SECTION_TABS_HEIGHT,
       paddingHorizontal: BAR_PADDING,
       borderRadius: SECTION_TABS_HEIGHT / 2,
       borderWidth: StyleSheet.hairlineWidth,
@@ -261,7 +265,7 @@ const makeStyles = (c: AppColors) =>
       elevation: 6,
     },
     item: {
-      height: ITEM_HEIGHT,
+      minHeight: ITEM_HEIGHT,
       borderRadius: ITEM_HEIGHT / 2,
       flexDirection: "row",
       alignItems: "center",

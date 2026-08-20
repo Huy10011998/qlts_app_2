@@ -100,19 +100,16 @@ import {
   StatBubble,
   WeatherIcon,
 } from "./SolarPlantScreen.visuals";
-import { getPlantSceneImage } from "./shared/plantScenes";
+import { getPlantScene } from "./shared/plantScenes";
 import {
   useSolarDashboard,
   type SolarBlockState,
 } from "./shared/useSolarDashboard";
 
-type SolarTextProps = ComponentProps<typeof NativeText>;
-
-// Keep this dense dashboard readable when the device uses Display Zoom and
-// the largest accessibility font. Scope the opt-out to this screen only.
-const Text: React.FC<SolarTextProps> = (props) => (
-  <NativeText {...props} allowFontScaling={false} />
-);
+// Bảng điều khiển này đi theo cỡ chữ hệ thống như phần còn lại của ứng dụng.
+// Riêng khối "Sản lượng hôm nay" ở đầu màn giữ `allowFontScaling={false}` tại
+// chỗ: nó dùng `adjustsFontSizeToFit` để ép con số vào đúng một dòng.
+const Text = NativeText;
 
 const EMPTY_MESSAGE = "Không có dữ liệu";
 
@@ -1130,7 +1127,7 @@ const SolarHeroSection: React.FC<SolarHeroSectionProps> = ({
 
           <View style={styles.sceneWrap}>
             <SceneView
-              plantImage={getPlantSceneImage(plantName)}
+              plantScene={getPlantScene(plantName)}
               width={visualWidth}
             />
           </View>

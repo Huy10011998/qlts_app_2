@@ -95,7 +95,7 @@ export default function HomeMenuItemCard({
           <Ionicons name={iconName} color={theme.color} size={22} />
           {notificationCount ? (
             <View style={styles.badge}>
-              <Text style={styles.badgeText} allowFontScaling={false}>
+              <Text style={styles.badgeText}>
                 {notificationCount}
               </Text>
             </View>
@@ -105,7 +105,6 @@ export default function HomeMenuItemCard({
         <View style={styles.labelWrap}>
           <Text
             style={[styles.label, { color: theme.text }]}
-            allowFontScaling={false}
             numberOfLines={2}
             ellipsizeMode="tail"
           >
@@ -175,9 +174,7 @@ const makeStyles = (c: AppColors) =>
       fontSize: 13,
       fontWeight: "700",
       textAlign: "center",
-      lineHeight: 17,
       width: "100%",
-      includeFontPadding: false,
       textAlignVertical: "center",
     },
     labelWrap: {

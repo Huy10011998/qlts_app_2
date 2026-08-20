@@ -222,6 +222,5 @@ const makeStyles = (c: AppColors) =>
       fontSize: 13.5,
       color: c.text,
       fontWeight: "600",
-      lineHeight: 18,
     },
   });

@@ -57,7 +57,6 @@ export default function HomeQuickAction({
           { color: disabled ? colors.textMuted : colors.textSecondary },
           disabled && styles.labelDisabled,
         ]}
-        allowFontScaling={false}
       >
         {label}
       </Text>
@@ -92,7 +91,6 @@ const makeStyles = (c: AppColors) =>
     },
     label: {
       fontSize: 13,
-      lineHeight: 17,
       fontWeight: "700",
       color: c.textSecondary,
       textAlign: "center",

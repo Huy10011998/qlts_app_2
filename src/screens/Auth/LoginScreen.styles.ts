@@ -160,11 +160,9 @@ export const makeStyles = (c: AppColors) =>
     cardSubtitle: {
       fontSize: 14,
       color: c.textMuted,
-      lineHeight: 20,
     },
     cardSubtitleCompact: {
       fontSize: 13,
-      lineHeight: 18,
     },
     // ── Inputs ──
     inputWrapper: {
@@ -191,17 +189,16 @@ export const makeStyles = (c: AppColors) =>
     },
     textInput: {
       flex: 1,
-      height: 48,
+      minHeight: 48,
       paddingTop: 0,
       paddingBottom: 0,
       paddingVertical: 0,
       fontSize: 14,
       color: c.text,
-      includeFontPadding: false,
       textAlignVertical: "center",
     },
     textInputCompact: {
-      height: 44,
+      minHeight: 44,
     },
 
     // ── Buttons ──
@@ -216,7 +213,8 @@ export const makeStyles = (c: AppColors) =>
     },
     loginBtn: {
       flex: 1,
-      height: 45,
+      minHeight: 45,
+      paddingVertical: 10,
       borderRadius: 14,
       backgroundColor: RED,
       justifyContent: "center",

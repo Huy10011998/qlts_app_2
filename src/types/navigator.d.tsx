@@ -5,6 +5,7 @@ import type {
   NhaPhanPhoiItem,
 } from "../services/data/noiDiaApi";
 import type { FridgeSummary } from "../screens/NoiDia/shared/fridgeLookup";
+import type { GuideTopicId } from "../screens/Guide/shared/guideTypes";
 
 // =====================================================
 // COMMON TYPES
@@ -131,6 +132,12 @@ export type RootStackParamList = {
   Settings: undefined;
   Profile: undefined;
   Appearance: undefined;
+  /** Chọn trần phóng to cỡ chữ cho toàn ứng dụng. */
+  TextSize: undefined;
+  /** Mục lục tài liệu hướng dẫn sử dụng. */
+  Guide: undefined;
+  /** Một chủ đề hướng dẫn; mở từ mục lục hoặc từ nút dấu hỏi trên header. */
+  GuideTopic: { topicId: GuideTopicId; titleHeader?: string };
 
   /** ================= ASSET ================= */
   Asset:
@@ -407,6 +414,12 @@ export type StackRoute<T extends keyof RootStackParamList> = RouteProp<
 // SCREEN-SPECIFIC TYPES
 // =====================================================
 export type HomeNavigationProp = StackNavigation<"Home">;
+
+/** ================= GUIDE ================= */
+export type GuideNavigationProp = StackNavigation<"Guide">;
+
+export type GuideTopicNavigationProp = StackNavigation<"GuideTopic">;
+export type GuideTopicRouteProp = StackRoute<"GuideTopic">;
 
 export type AssetListNavigationProp = StackNavigation<"AssetList">;
 export type AssetListRouteProp = StackRoute<"AssetList">;

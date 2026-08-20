@@ -5,6 +5,7 @@ import {
   useHairlineBorderColor,
   useStyles,
 } from "../../utils/helpers/colors";
+import { READABLE_TEXT_MAX_SCALE } from "../../utils/helpers/textScaling";
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import {
   Alert,
@@ -62,13 +63,15 @@ import {
   checkServerReachability,
   SERVER_UNAVAILABLE_MESSAGE,
 } from "../../services/network/reachability";
+import {
+  SUPPORT_EMAIL,
+  SUPPORT_PHONE,
+  SUPPORT_PHONE_LINK,
+} from "../../constants/support";
 import { makeStyles } from "./LoginScreen.styles";
 
 const RED = C.red;
 const COMPANY_FOUNDED_YEAR = 1983;
-const SUPPORT_EMAIL = "cholimexfood@cholimexfood.com.vn";
-const SUPPORT_PHONE = "028 3765 5037";
-const SUPPORT_PHONE_LINK = SUPPORT_PHONE.replace(/\s/g, "");
 
 export default function LoginScreen() {
   const c = useAppColors();
@@ -127,9 +130,14 @@ export default function LoginScreen() {
     : isLocalNetworkDenied
     ? RED
     : "#64748B";
-  const isCompactHeight = windowHeight < 880;
-  const isShortHeight = windowHeight < 760;
-  const isNarrowFooter = windowWidth < 330 * Math.min(fontScale, 1.3);
+  // Chữ to lên thì nội dung cao thêm mà `windowHeight` không đổi, nên màn hình
+  // vẫn rơi vào nhánh "rộng rãi" trong khi thực tế đã chật. Quy về chiều cao
+  // hiệu dụng: chia cho cỡ chữ đang áp dụng (đã kẹp trần) trước khi so ngưỡng.
+  const cappedFontScale = Math.min(fontScale, READABLE_TEXT_MAX_SCALE);
+  const effectiveHeight = windowHeight / cappedFontScale;
+  const isCompactHeight = effectiveHeight < 880;
+  const isShortHeight = effectiveHeight < 760;
+  const isNarrowFooter = windowWidth < 330 * cappedFontScale;
   const heroRatio = isShortHeight ? 0.17 : isCompactHeight ? 0.18 : 0.2;
   const heroHeight = Math.min(Math.max(windowHeight * heroRatio, 112), 190);
   const heroBgStyle = [

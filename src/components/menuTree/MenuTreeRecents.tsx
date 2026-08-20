@@ -45,7 +45,7 @@ export default function MenuTreeRecents<TRecent extends MenuTreeRecent>({
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.heading} allowFontScaling={false}>
+      <Text style={styles.heading}>
         Truy cập nhanh
       </Text>
 
@@ -71,7 +71,7 @@ export default function MenuTreeRecents<TRecent extends MenuTreeRecent>({
             accessibilityLabel={`Mở ${target.label}`}
           >
             <Ionicons name={iconName} size={14} color={C.red} />
-            <Text style={styles.chipText} numberOfLines={1} allowFontScaling={false}>
+            <Text style={styles.chipText} numberOfLines={1}>
               {target.label}
             </Text>
           </TouchableOpacity>

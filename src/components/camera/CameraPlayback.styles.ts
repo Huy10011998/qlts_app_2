@@ -497,7 +497,6 @@ export const makeStyles = (c: AppColors) =>
     },
     timelineLabel: {
       fontSize: 13.5,
-      lineHeight: 18,
       fontWeight: "700",
       color: c.textSub,
       letterSpacing: 0.2,

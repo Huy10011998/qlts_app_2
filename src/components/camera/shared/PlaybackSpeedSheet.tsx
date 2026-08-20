@@ -63,10 +63,10 @@ export default function PlaybackSpeedSheet({
             <View style={styles.handleWrapper}>
               <View style={styles.handle} />
             </View>
-            <Text style={styles.sheetTitle} allowFontScaling={false}>
+            <Text style={styles.sheetTitle}>
               Tốc độ phát
             </Text>
-            <Text style={styles.sheetTitleChild} allowFontScaling={false}>
+            <Text style={styles.sheetTitleChild}>
               Chọn tốc độ tua
             </Text>
             {PLAYBACK_SPEED_OPTIONS.map((speed, index) => (
@@ -85,14 +85,13 @@ export default function PlaybackSpeedSheet({
                     styles.listItemText,
                     selectedSpeed === speed && styles.activeText,
                   ]}
-                  allowFontScaling={false}
                 >
                   {getPlaybackSpeedLabel(speed)}
                 </Text>
               </TouchableOpacity>
             ))}
             <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-              <Text style={styles.closeText} allowFontScaling={false}>
+              <Text style={styles.closeText}>
                 Đóng
               </Text>
             </TouchableOpacity>

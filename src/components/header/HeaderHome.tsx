@@ -219,7 +219,7 @@ export default function HeaderHome(_props: HeaderHomeProps) {
               color="rgba(255,255,255,0.85)"
             />
           </View>
-          <Text style={styles.greetText} allowFontScaling={false}>
+          <Text style={styles.greetText}>
             {greeting.text}
           </Text>
         </View>
@@ -230,13 +230,13 @@ export default function HeaderHome(_props: HeaderHomeProps) {
             color="rgba(255,255,255,0.7)"
             style={styles.timeIcon}
           />
-          <Text style={styles.timeText} allowFontScaling={false}>
+          <Text style={styles.timeText}>
             {formatTime(now)}
           </Text>
         </View>
       </View>
 
-      <Text style={styles.dateText} allowFontScaling={false}>
+      <Text style={styles.dateText}>
         {formatDate(now)}
       </Text>
 

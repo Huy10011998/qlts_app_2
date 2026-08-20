@@ -1,5 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import BottomSheetModalShell from "../../../components/shared/BottomSheetModalShell";
@@ -21,7 +27,11 @@ import {
   type HomeAttendanceEmployee,
   type HomeDashboardDepartment,
 } from "./homeData";
-import { formatHomeNumber, formatHomePercent, getHomeRatioPercent } from "./homeFormat";
+import {
+  formatHomeNumber,
+  formatHomePercent,
+  getHomeRatioPercent,
+} from "./homeFormat";
 
 /** Chưa điểm danh hiện dấu này ở cột giờ, KHÔNG để trống. */
 const NO_CHECK_IN_TIME = "---";
@@ -30,8 +40,8 @@ export type AttendanceFilterKey = "all" | "checkedIn" | "notCheckedIn";
 
 const FILTERS: { key: AttendanceFilterKey; label: string }[] = [
   { key: "all", label: "Tất cả" },
-  { key: "checkedIn", label: "Đã điểm danh" },
-  { key: "notCheckedIn", label: "Chưa điểm danh" },
+  { key: "checkedIn", label: "Đã ĐD" },
+  { key: "notCheckedIn", label: "Chưa ĐD" },
 ];
 
 const normalize = (value: string) => removeVietnameseTones(value).trim();
@@ -96,14 +106,12 @@ function EmployeeRow({
         <Text
           style={[styles.rowName, { color: colors.text }]}
           numberOfLines={1}
-          allowFontScaling={false}
         >
           {employee.name}
         </Text>
         <Text
           style={[styles.rowMeta, { color: colors.textSub }]}
           numberOfLines={1}
-          allowFontScaling={false}
         >
           {/* chucDanh = null nghĩa là chưa gán chức danh -> "—", đừng để trống. */}
           {employee.code ? `${employee.code} · ` : ""}
@@ -119,7 +127,6 @@ function EmployeeRow({
         />
         <Text
           style={[styles.rowTime, { color: statusColor }]}
-          allowFontScaling={false}
         >
           {employee.checkedIn ? employee.time ?? "—" : NO_CHECK_IN_TIME}
         </Text>
@@ -238,23 +245,22 @@ export default function HomeAttendanceDetailSheet({
         <Text
           style={[styles.title, { color: colors.text }]}
           numberOfLines={2}
-          allowFontScaling={false}
         >
           {department?.name ?? "Chi tiết điểm danh"}
         </Text>
         <Text
           style={[styles.subtitle, { color: colors.textSub }]}
-          allowFontScaling={false}
         >
           {hasEmployees
             ? `${formatHomeNumber(counts.checkedIn)}/${formatHomeNumber(
                 counts.all,
-              )} đã điểm danh · ${formatHomePercent(ratePercent)} · trong hôm nay`
+              )} đã điểm danh · ${formatHomePercent(
+                ratePercent,
+              )} · trong hôm nay`
             : "Điểm danh trong hôm nay"}
         </Text>
         <Text
           style={[styles.note, { color: colors.textMuted }]}
-          allowFontScaling={false}
         >
           Tính theo lượt quẹt thẻ hôm nay. Không tính nhân viên đã nghỉ việc.
         </Text>
@@ -267,7 +273,6 @@ export default function HomeAttendanceDetailSheet({
         placeholder="Tìm theo tên, mã, chức danh..."
         variant="plain"
         style={styles.searchSpacing}
-        allowFontScaling={false}
       />
 
       <View style={styles.filters}>
@@ -280,7 +285,9 @@ export default function HomeAttendanceDetailSheet({
               style={[
                 styles.filterChip,
                 {
-                  backgroundColor: isActive ? colors.accentLight : colors.surface,
+                  backgroundColor: isActive
+                    ? colors.accentLight
+                    : colors.surface,
                   borderColor: isActive ? colors.accent : hairlineBorderColor,
                 },
               ]}
@@ -296,7 +303,6 @@ export default function HomeAttendanceDetailSheet({
                   { color: isActive ? colors.accent : colors.textSecondary },
                 ]}
                 numberOfLines={1}
-                allowFontScaling={false}
               >
                 {`${filter.label} (${formatHomeNumber(counts[filter.key])})`}
               </Text>
@@ -381,14 +387,12 @@ const makeStyles = (c: AppColors) =>
     },
     title: {
       fontSize: 16,
-      lineHeight: 21,
       fontWeight: "700",
       textAlign: "center",
       letterSpacing: -0.2,
     },
     subtitle: {
       fontSize: 12,
-      lineHeight: 17,
       fontWeight: "600",
       textAlign: "center",
       marginTop: 3,
@@ -396,7 +400,6 @@ const makeStyles = (c: AppColors) =>
     // Cùng cỡ với ghi chú cuối các card trên Trang chủ.
     note: {
       fontSize: 10.5,
-      lineHeight: 14,
       marginTop: 5,
       fontWeight: "600",
       textAlign: "center",
@@ -423,7 +426,6 @@ const makeStyles = (c: AppColors) =>
     },
     filterLabel: {
       fontSize: 12,
-      lineHeight: 16,
       fontWeight: "700",
     },
     loading: {
@@ -442,13 +444,11 @@ const makeStyles = (c: AppColors) =>
     rowTextWrap: { flex: 1 },
     rowName: {
       fontSize: 14,
-      lineHeight: 19,
       fontWeight: "700",
       color: c.text,
     },
     rowMeta: {
       fontSize: 12,
-      lineHeight: 16,
       marginTop: 2,
       fontWeight: "600",
       color: c.textSub,
@@ -462,8 +462,6 @@ const makeStyles = (c: AppColors) =>
     },
     rowTime: {
       fontSize: 13.5,
-      lineHeight: 18,
       fontWeight: "800",
-      includeFontPadding: false,
     },
   });

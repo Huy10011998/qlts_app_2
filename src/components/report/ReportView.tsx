@@ -761,7 +761,7 @@ const ReportView: React.FC<ReportViewProps> = ({
           presentationStyle="overFullScreen"
           sheetStyle={styles.shareSheet}
         >
-          <Text style={styles.shareSheetTitle} allowFontScaling={false}>
+          <Text style={styles.shareSheetTitle}>
             Chọn loại file chia sẻ
           </Text>
 
@@ -780,7 +780,7 @@ const ReportView: React.FC<ReportViewProps> = ({
                 <View style={styles.shareOptionIcon}>
                   <Ionicons name={option.icon} size={20} color={c.red} />
                 </View>
-                <Text style={styles.shareOptionText} allowFontScaling={false}>
+                <Text style={styles.shareOptionText}>
                   {option.label}
                 </Text>
                 <Ionicons
@@ -850,14 +850,14 @@ const ReportView: React.FC<ReportViewProps> = ({
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.submitButtonText} allowFontScaling={false}>
+            <Text style={styles.submitButtonText}>
               Thực hiện
             </Text>
           )}
         </TouchableOpacity>
 
         {loading && reportLoadingMessage ? (
-          <Text style={styles.reportLoadingText} allowFontScaling={false}>
+          <Text style={styles.reportLoadingText}>
             {reportLoadingMessage}
           </Text>
         ) : null}

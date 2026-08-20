@@ -227,14 +227,12 @@ const makeStyles = (c: AppColors) =>
     itemTitle: {
       color: c.textPrimary,
       fontSize: 13,
-      lineHeight: 18,
       fontWeight: "700",
     },
     itemTitleActive: { color: c.accent },
     itemDesc: {
       color: c.textSecondary,
       fontSize: 12,
-      lineHeight: 18,
       marginTop: 4,
     },
     separator: { height: 8 },

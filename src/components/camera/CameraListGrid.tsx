@@ -1546,10 +1546,10 @@ const CameraListGrid: React.FC = () => {
               <View style={styles.handleWrapper}>
                 <View style={styles.handle} />
               </View>
-              <Text style={styles.sheetTitle} allowFontScaling={false}>
+              <Text style={styles.sheetTitle}>
                 Bố trí cửa sổ
               </Text>
-              <Text style={styles.sheetTitleChild} allowFontScaling={false}>
+              <Text style={styles.sheetTitleChild}>
                 Chọn số lượng cửa sổ
               </Text>
               {CAMERA_LAYOUT_CHOICES.map((n, index) => (
@@ -1568,7 +1568,6 @@ const CameraListGrid: React.FC = () => {
                       styles.listItemText,
                       layoutCount === n && styles.activeText,
                     ]}
-                    allowFontScaling={false}
                   >
                     {getCameraLayoutLabel(n)}
                   </Text>
@@ -1578,7 +1577,7 @@ const CameraListGrid: React.FC = () => {
                 style={styles.closeBtn}
                 onPress={() => setShowLayoutPicker(false)}
               >
-                <Text style={styles.closeText} allowFontScaling={false}>
+                <Text style={styles.closeText}>
                   Đóng
                 </Text>
               </TouchableOpacity>

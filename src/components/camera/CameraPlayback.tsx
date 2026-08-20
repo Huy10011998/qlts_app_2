@@ -1,4 +1,5 @@
 import React from "react";
+import { UnscaledText } from "../../utils/helpers/textScaling";
 import {
   Animated,
   BackHandler,
@@ -2162,11 +2163,11 @@ const CameraPlayback: React.FC = () => {
                 </TouchableOpacity>
 
                 {showPlaybackControls && activeClip ? (
-                  <Text style={styles.playerClock} allowFontScaling={false}>
+                  <UnscaledText style={styles.playerClock} allowFontScaling={false}>
                     {`${formatElapsed(clipElapsedSec)} / ${formatElapsed(
                       activeClip.durationSec,
                     )}`}
-                  </Text>
+                  </UnscaledText>
                 ) : null}
               </View>
 
@@ -2184,12 +2185,12 @@ const CameraPlayback: React.FC = () => {
                     hitSlop={8}
                     accessibilityLabel="Tốc độ phát"
                   >
-                    <Text
+                    <UnscaledText
                       style={styles.playerSpeedText}
                       allowFontScaling={false}
                     >
                       {getPlaybackSpeedBadge(speed)}
-                    </Text>
+                    </UnscaledText>
                     <MaterialCommunityIcons
                       name="fast-forward-outline"
                       size={18}
@@ -2282,12 +2283,11 @@ const CameraPlayback: React.FC = () => {
             <Text
               style={styles.headerTitle}
               numberOfLines={1}
-              allowFontScaling={false}
             >
               {cameraTitle}
             </Text>
             {clipGroups.length > 0 ? (
-              <Text style={styles.headerMeta} allowFontScaling={false}>
+              <Text style={styles.headerMeta}>
                 {`${getTotalClipCount(clipGroups)} bản ghi`}
               </Text>
             ) : null}
@@ -2314,7 +2314,7 @@ const CameraPlayback: React.FC = () => {
                 activeOpacity={0.7}
                 accessibilityLabel="Mở lịch chọn ngày"
               >
-                <Text style={styles.datePillText} allowFontScaling={false}>
+                <Text style={styles.datePillText}>
                   {getPlaybackDateLabel(selectedDate, today)}
                 </Text>
                 <Ionicons name="funnel-outline" size={14} color={c.textSub} />
@@ -2423,13 +2423,13 @@ const CameraPlayback: React.FC = () => {
                 <View style={styles.scrubLine} pointerEvents="none" />
                 <View style={styles.scrubBadgeWrap} pointerEvents="none">
                   <View style={styles.scrubBadge}>
-                    <Text
+                    <UnscaledText
                       style={styles.scrubBadgeText}
                       allowFontScaling={false}
                       numberOfLines={1}
                     >
                       {formatClock(displayedTimelineSec)}
-                    </Text>
+                    </UnscaledText>
                     <View style={styles.scrubBadgeArrow} />
                   </View>
                 </View>
@@ -2490,7 +2490,7 @@ const CameraPlayback: React.FC = () => {
                   accessibilityLabel="Quay lại xem trực tiếp"
                 >
                   <Ionicons name="play-circle" size={20} color={c.onBrand} />
-                  <Text style={styles.liveButtonText} allowFontScaling={false}>
+                  <Text style={styles.liveButtonText}>
                     Xem trực tiếp
                   </Text>
                 </TouchableOpacity>

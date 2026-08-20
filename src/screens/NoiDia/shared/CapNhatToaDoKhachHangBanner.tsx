@@ -174,7 +174,6 @@ const makeStyles = (c: AppColors) =>
     },
     hint: {
       fontSize: 12,
-      lineHeight: 17,
       color: c.textSecondary,
     },
     button: {

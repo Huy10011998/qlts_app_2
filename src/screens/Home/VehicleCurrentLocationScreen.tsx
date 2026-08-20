@@ -503,7 +503,7 @@ const makeStyles = (c: AppColors) =>
       fontWeight: "700",
       marginTop: 9,
     },
-    infoValue: { color: c.text, fontSize: 13, lineHeight: 18, marginTop: 2 },
+    infoValue: { color: c.text, fontSize: 13, marginTop: 2 },
     liveRow: {
       flexDirection: "row",
       alignItems: "center",

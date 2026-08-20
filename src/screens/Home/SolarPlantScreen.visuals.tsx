@@ -1,17 +1,10 @@
 import { useAppColors, useStyles } from "../../utils/helpers/colors";
-import React, {
-  type ComponentProps,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-} from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   ActivityIndicator,
   Animated,
   Easing,
   Image,
-  Text as NativeText,
   View,
   type ImageSourcePropType,
   type StyleProp,
@@ -44,12 +37,8 @@ import {
   type SolarComparativeBucket,
 } from "./SolarPlantScreen.helpers";
 import { makeStyles } from "./SolarPlantScreen.styles";
-
-type SolarTextProps = ComponentProps<typeof NativeText>;
-
-const Text: React.FC<SolarTextProps> = (props) => (
-  <NativeText {...props} allowFontScaling={false} />
-);
+import type { PlantScene } from "./shared/plantScenes";
+import { UnscaledText } from "../../utils/helpers/textScaling";
 
 // ─── Weather SVG ─────────────────────────────────────────────────────────────
 
@@ -248,6 +237,16 @@ export const DateSkipIcon: React.FC<{ muted?: boolean }> = ({ muted }) => (
  * mất phần lớn nhà máy còn các lớp SVG đè lên bị kéo ngang mà không kéo dọc.
  * Chặn trên để trên máy màn rộng khối hero không phình quá.
  */
+/**
+ * Bật/tắt sơ đồ dòng năng lượng vẽ đè lên ảnh nhà máy: tấm pin ở tường, tủ
+ * điện, ba mũi tên và cột điện lưới. Tắt thì khung cảnh chỉ còn ảnh nhà máy với
+ * dàn pin trên mái, phần số liệu do ba bong bóng phía trên đảm nhiệm.
+ */
+const SHOW_ENERGY_FLOW = false;
+
+/** Nhóm SVG có thể chạy animation opacity – dùng cho vệt nắng quét trên dàn pin. */
+const AnimatedG = Animated.createAnimatedComponent(G);
+
 const SCENE_HEIGHT_RATIO = 145 / 390;
 const SCENE_MIN_HEIGHT = 145;
 const SCENE_MAX_HEIGHT = 230;
@@ -268,14 +267,15 @@ export const SCENE_TOP_SPACE = 81;
 
 export const SceneView: React.FC<{
   /**
-   * Ảnh nhà máy thật, thay cho hình nhà xưởng vẽ bằng SVG. Các lớp còn lại (tấm
-   * pin, tủ điện, 3 mũi tên, cột điện, hàng cây) vẫn vẽ đè lên trên vì chúng
-   * biểu diễn dòng năng lượng chứ không phải trang trí.
+   * Ảnh nhà máy thật (kèm toạ độ dàn pin trên mái), thay cho hình nhà xưởng vẽ
+   * bằng SVG. Các lớp còn lại (tủ điện, 3 mũi tên, cột điện) vẫn vẽ đè lên trên
+   * vì chúng biểu diễn dòng năng lượng chứ không phải trang trí.
    */
-  plantImage?: ImageSourcePropType | null;
+  plantScene?: PlantScene | null;
   width?: number;
-}> = ({ plantImage, width = SCREEN_WIDTH }) => {
+}> = ({ plantScene, width = SCREEN_WIDTH }) => {
   const styles = useStyles(makeStyles);
+  const plantImage: ImageSourcePropType | null = plantScene?.image ?? null;
   const W = width;
   const H = getSceneHeight(W);
   const VIEW_H = 180;
@@ -290,14 +290,118 @@ export const SceneView: React.FC<{
   const panelX = factoryX + 12;
   const panelY = 124;
   const panelCellW = W * 0.035;
+  const panelW = panelCellW * 3;
+  const panelH = 11;
+  // Độ lệch cạnh trên so với cạnh dưới của tấm pin (góc nghiêng giả 3D).
+  const panelSkew = 7;
   const panelRows = [0, 15, 30];
+
+  /**
+   * Dàn pin thật nằm trên mái nhà máy trong ảnh. Quy toạ độ đo trên ảnh gốc về
+   * hệ toạ độ của `viewBox` để lớp highlight trùm đúng lên dàn pin: ảnh đang
+   * `cover` nên phải trừ phần bị cắt, còn viewBox lại cao 180 trong khi khung
+   * chỉ cao H.
+   */
+  const roofs = useMemo(() => {
+    if (!plantScene) return null;
+
+    const { height: imgH, width: imgW } = plantScene.imageSize;
+    const coverScale = Math.max(W / imgW, H / imgH);
+    const drawnW = imgW * coverScale;
+    const drawnH = imgH * coverScale;
+    const offsetX = (W - drawnW) / 2;
+    const offsetY = (H - drawnH) / 2;
+    const toViewY = VIEW_H / H;
+
+    return plantScene.panelZones.map((zone) => {
+      const corners = zone.corners.map(([u, v]) => ({
+        x: offsetX + u * drawnW,
+        y: (offsetY + v * drawnH) * toViewY,
+      }));
+      const [tl, tr, br, bl] = corners;
+      // Nội suy song tuyến tính trong tứ giác -> lưới vẽ đè tự bám theo góc phối
+      // cảnh của mái, không cần biết trước độ nghiêng.
+      const at = (sx: number, ty: number) => {
+        const topX = tl.x + (tr.x - tl.x) * sx;
+        const topY = tl.y + (tr.y - tl.y) * sx;
+        const botX = bl.x + (br.x - bl.x) * sx;
+        const botY = bl.y + (br.y - bl.y) * sx;
+        return { x: topX + (botX - topX) * ty, y: topY + (botY - topY) * ty };
+      };
+      const points = (quad: { x: number; y: number }[]) =>
+        quad.map((pt) => `${pt.x},${pt.y}`).join(" ");
+      const cx = (tl.x + tr.x + br.x + bl.x) / 4;
+      const cy = (tl.y + tr.y + br.y + bl.y) / 4;
+      // Viền sáng thu vào trong vài phần trăm để chắc chắn nằm trên mặt pin, lệch
+      // ra ngoài mái là thấy ngay.
+      const frame = corners.map((pt) => ({
+        x: cx + (pt.x - cx) * 0.975,
+        y: cy + (pt.y - cy) * 0.975,
+      }));
+
+      return {
+        at,
+        bottomLeft: bl,
+        cols: zone.cols,
+        framePoints: points(frame),
+        points,
+        rows: zone.rows,
+        zonePoints: points([tl, tr, br, bl]),
+      };
+    });
+  }, [H, W, plantScene]);
+
+  /** Mái chính – nhãn và mũi tên xanh neo theo mái này. */
+  const roof = roofs?.[0] ?? null;
+
+  /** Vệt nắng quét qua dàn pin – dấu hiệu "đang phát điện". */
+  const glare = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!roofs) return;
+
+    const loop = Animated.loop(
+      Animated.timing(glare, {
+        duration: 3400,
+        easing: Easing.linear,
+        toValue: 1,
+        useNativeDriver: false,
+      }),
+    );
+
+    loop.start();
+
+    return () => loop.stop();
+  }, [glare, roofs]);
+
   const panelLineY = panelY + 15;
   const panelLineStartX = cabinetX - 7;
   const panelLineEndX = panelX + panelCellW * 3 + 8;
   const panelArrowBaseX = panelLineEndX + 12;
   const downArrowBaseY = 114;
   const downArrowTipY = 126;
-  const downArrowSegments = Array.from({ length: 9 }, (_, i) => 36 + i * 9);
+  const downArrowX = W * 0.46 + 14;
+  /**
+   * Có ảnh: mũi tên xanh xuất phát ngay dưới mép dàn pin trên mái, để thấy rõ
+   * điện chạy từ dàn pin xuống tủ điện. Không có ảnh: giữ nguyên mốc cũ.
+   */
+  const downArrowStartY = (() => {
+    if (!roof) return 36;
+
+    const bottom = [roof.at(0, 1), roof.at(1, 1)];
+    const span = bottom[1].x - bottom[0].x;
+    const ratio = span === 0 ? 0 : (downArrowX - bottom[0].x) / span;
+
+    if (ratio < 0 || ratio > 1) return 36;
+
+    const edgeY = bottom[0].y + (bottom[1].y - bottom[0].y) * ratio;
+
+    return Math.min(Math.max(edgeY + 5, 30), downArrowBaseY - 20);
+  })();
+  const downArrowSegments = Array.from(
+    { length: Math.max(Math.floor((downArrowBaseY - downArrowStartY) / 9), 2) },
+    (_, i) => downArrowStartY + i * 9,
+  );
   const panelLineSegmentCount = Math.ceil(
     (panelLineStartX - panelArrowBaseX) / 10,
   );
@@ -316,6 +420,14 @@ export const SceneView: React.FC<{
     },
   ).filter((segment) => segment.x1 > segment.x2);
 
+  /**
+   * Nhãn "PIN MẶT TRỜI" neo dưới góc trái dàn pin, nhưng phải dừng trước tủ
+   * điện – ở Vĩnh Lộc dàn pin phủ gần giữa ảnh nên hai thứ đè nhau.
+   */
+  const badgeX = roof
+    ? Math.min(Math.max(roof.bottomLeft.x, 4), W - 84, cabinetX - 84)
+    : 0;
+
   const scene = (
     <Svg
       width={W}
@@ -331,6 +443,19 @@ export const SceneView: React.FC<{
         <LinearGradient id="roof" x1="0" y1="0" x2="0" y2="1">
           <Stop offset="0%" stopColor="#b8cfe6" />
           <Stop offset="100%" stopColor="#8faec8" />
+        </LinearGradient>
+        {/* Kính tấm pin: xanh đậm chuyển sáng theo hướng nghiêng để nhìn ra
+            ngay là pin mặt trời, không còn là ô vuông vàng phẳng. */}
+        <LinearGradient id="pvGlass" x1="0" y1="0" x2="1" y2="1">
+          <Stop offset="0%" stopColor="#2f6fd0" />
+          <Stop offset="45%" stopColor="#1b3b8f" />
+          <Stop offset="100%" stopColor="#0d1f4d" />
+        </LinearGradient>
+        {/* Vệt nắng loá chạy chéo trên mặt kính. */}
+        <LinearGradient id="pvGlare" x1="0" y1="0" x2="1" y2="0">
+          <Stop offset="0%" stopColor="#ffffff" stopOpacity="0.6" />
+          <Stop offset="50%" stopColor="#ffffff" stopOpacity="0.12" />
+          <Stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
         </LinearGradient>
       </Defs>
 
@@ -369,9 +494,9 @@ export const SceneView: React.FC<{
             fill="#1b2f67"
           />
           <Polygon
-            points={`${factoryX + leftWallW},${factoryY} ${factoryX + W * 0.38},${
-              factoryY - 15
-            } ${factoryX + factoryW},${factoryY - 15} ${
+            points={`${factoryX + leftWallW},${factoryY} ${
+              factoryX + W * 0.38
+            },${factoryY - 15} ${factoryX + factoryW},${factoryY - 15} ${
               factoryX + factoryW
             },${factoryY}`}
             fill="#192b5f"
@@ -395,153 +520,381 @@ export const SceneView: React.FC<{
         </G>
       )}
 
-      {/* solar panels on factory wall */}
-      {panelRows.map((rowOffset) => (
-        <G key={rowOffset}>
-          {[0, 1, 2].map((cell) => (
-            <Rect
-              key={cell}
-              x={panelX + cell * panelCellW}
-              y={panelY + rowOffset}
-              width={panelCellW - 1}
-              height={10}
-              rx={1}
-              fill="#fde88d"
-              stroke="#5f7896"
-              strokeWidth={1}
-            />
-          ))}
+      {/* ── Dàn pin mặt trời ──
+          Có ảnh nhà máy: dàn pin thật đã nằm trên mái trong ảnh, nên lớp vẽ đè
+          bám theo đúng tứ giác mái đó (làm sâu mặt kính + lưới module + viền
+          phát sáng + vệt nắng quét) để nhìn vào là biết ngay đâu là dàn pin.
+          Không có ảnh: vẽ tấm pin nghiêng trên tường nhà xưởng như cũ. */}
+      {roofs?.map((zone, zoneIndex) => (
+        <G key={zoneIndex}>
+          {/* làm sâu màu mặt kính để dàn pin bật khỏi mái sáng */}
+          <Polygon points={zone.zonePoints} fill="#0a1f4d" opacity={0.34} />
+          <Polygon
+            points={zone.zonePoints}
+            fill="url(#pvGlass)"
+            opacity={0.3}
+          />
+
+          {/* lưới module trùng nhịp với dàn pin trong ảnh */}
+          {Array.from({ length: zone.cols - 1 }, (_, i) => {
+            const sx = (i + 1) / zone.cols;
+            const a = zone.at(sx, 0);
+            const b = zone.at(sx, 1);
+            return (
+              <Line
+                key={`c${i}`}
+                x1={a.x}
+                y1={a.y}
+                x2={b.x}
+                y2={b.y}
+                stroke="#d8ecff"
+                strokeWidth={0.7}
+                opacity={0.45}
+              />
+            );
+          })}
+          {Array.from({ length: zone.rows - 1 }, (_, i) => {
+            const ty = (i + 1) / zone.rows;
+            const a = zone.at(0, ty);
+            const b = zone.at(1, ty);
+            return (
+              <Line
+                key={`r${i}`}
+                x1={a.x}
+                y1={a.y}
+                x2={b.x}
+                y2={b.y}
+                stroke="#d8ecff"
+                strokeWidth={0.7}
+                opacity={0.4}
+              />
+            );
+          })}
+
+          {/* Hiệu ứng sáng duyệt qua từng hàng tấm pin, từ hàng dưới lên hàng
+              trên. Mỗi vệt trùng đúng một hàng module của lưới (chừa mép để
+              thấy đường viền giữa các tấm) nên nhìn ra là đang "chạy" qua từng
+              tấm, chứ không phải một dải sáng trôi qua. */}
+          {Array.from({ length: zone.rows }, (_, i) => {
+            const rowGap = 0.12 / zone.rows;
+            const t0 = i / zone.rows + rowGap;
+            const t1 = (i + 1) / zone.rows - rowGap;
+            // Hàng dưới cùng sáng trước -> chạy ngược lên trên.
+            const peak = 0.12 + ((zone.rows - 1 - i) / zone.rows) * 0.72;
+            return (
+              <AnimatedG
+                key={`g${i}`}
+                opacity={glare.interpolate({
+                  inputRange: [
+                    0,
+                    Math.max(peak - 0.1, 0.001),
+                    peak,
+                    Math.min(peak + 0.1, 0.999),
+                    1,
+                  ],
+                  outputRange: [0, 0, 0.45, 0, 0],
+                })}
+              >
+                <Polygon
+                  points={zone.points([
+                    zone.at(0, t0),
+                    zone.at(1, t0),
+                    zone.at(1, t1),
+                    zone.at(0, t1),
+                  ])}
+                  fill="#ffffff"
+                />
+              </AnimatedG>
+            );
+          })}
+
+          {/* viền phát sáng khoanh vùng dàn pin */}
+          <Polygon
+            points={zone.framePoints}
+            fill="none"
+            stroke="#38bdf8"
+            strokeWidth={5}
+            strokeLinejoin="round"
+            opacity={0.24}
+          />
+          <Polygon
+            points={zone.framePoints}
+            fill="none"
+            stroke="#d6efff"
+            strokeWidth={1.8}
+            strokeLinejoin="round"
+            opacity={0.95}
+          />
         </G>
       ))}
-      {/* center panel with logo (red control cabinet – arrows converge here) */}
-      <Rect
-        x={cabinetX}
-        y={cabinetY}
-        width={cabinetW}
-        height={44}
-        rx={2}
-        fill="#eff8ff"
-        stroke="#8097b2"
-        strokeWidth={1.4}
-      />
-      <Polygon
-        points={`${cabinetX + 14},140 ${cabinetX + 8},152 ${cabinetX + 22},152`}
-        fill="#d94444"
-      />
-      {/* windows right */}
-      <Rect x={W * 0.58} y={112} width={22} height={16} rx={2} fill="#ddedf8" />
-      <Rect x={W * 0.64} y={112} width={22} height={16} rx={2} fill="#ddedf8" />
 
-      {/* ── Arrows (all converge on the red control cabinet at x≈W*0.46+14, y:118-170) ── */}
+      {/* nhãn dưới góc mái chính, khỏi phải đoán đó là cái gì */}
+      {roof ? (
+        <G>
+          <Rect
+            x={badgeX}
+            y={roof.bottomLeft.y + 4}
+            width={80}
+            height={15}
+            rx={7.5}
+            fill="#0b2545"
+            opacity={0.85}
+          />
+          <Circle
+            cx={badgeX + 10}
+            cy={roof.bottomLeft.y + 11.5}
+            r={3.4}
+            fill="#ffd35c"
+          />
+          <SvgText
+            x={badgeX + 18}
+            y={roof.bottomLeft.y + 15}
+            fill="#eaf5ff"
+            fontSize={8.5}
+            fontWeight="700"
+          >
+            PIN MẶT TRỜI
+          </SvgText>
+        </G>
+      ) : null}
 
-      {/* down arrow: solar power → top of the cabinet */}
-      {downArrowSegments.map((y) => (
+      {/* Sơ đồ dòng năng lượng: 3 tấm pin vẽ ở tường nhà xưởng, tủ điện, ba
+          mũi tên nối vào tủ và cột điện lưới. Đang tắt theo yêu cầu hiển thị –
+          màn chỉ giữ dàn pin trên mái với ba bong bóng số liệu. Bật lại bằng
+          cách đổi SHOW_ENERGY_FLOW thành true. */}
+      {SHOW_ENERGY_FLOW ? (
+        <G>
+        {/* ── Tấm pin vẽ trên tường nhà xưởng ──
+            Giữ cả khi có ảnh: đây là đích của mũi tên xanh–cam, bỏ đi thì mũi tên
+            trỏ vào khoảng không. */}
+        <G>
+          {panelRows.map((rowOffset) => {
+            const y = panelY + rowOffset;
+            const yb = y + panelH;
+            const x0 = panelX;
+            const x1 = panelX + panelW;
+            // Cạnh trên lệch phải so với cạnh dưới -> cảm giác mặt kính đang ngửa
+            // lên trời.
+            const t0 = x0 + panelSkew;
+            const t1 = x1 + panelSkew;
+            const quad = `${t0},${y} ${t1},${y} ${x1},${yb} ${x0},${yb}`;
+            return (
+              <G key={rowOffset}>
+                {/* bóng đổ mỏng cho tấm nổi khỏi ảnh nhà máy phía sau */}
+                <Polygon
+                  points={`${t0},${y + 2.5} ${t1},${y + 2.5} ${x1},${
+                    yb + 2.5
+                  } ${x0},${yb + 2.5}`}
+                  fill="#0b1a3a"
+                  opacity={0.22}
+                />
+                <Polygon
+                  points={quad}
+                  fill="url(#pvGlass)"
+                  stroke="#e8f1fb"
+                  strokeWidth={1.4}
+                  strokeLinejoin="round"
+                />
+                {/* lưới cell: 2 đường dọc chia 3 module + 1 đường ngang giữa */}
+                {[1, 2].map((i) => {
+                  const bx = x0 + (panelW * i) / 3;
+                  return (
+                    <Line
+                      key={i}
+                      x1={bx + panelSkew}
+                      y1={y}
+                      x2={bx}
+                      y2={yb}
+                      stroke="#cfe0f5"
+                      strokeWidth={0.9}
+                      opacity={0.85}
+                    />
+                  );
+                })}
+                <Line
+                  x1={x0 + panelSkew / 2}
+                  y1={y + panelH / 2}
+                  x2={x1 + panelSkew / 2}
+                  y2={y + panelH / 2}
+                  stroke="#cfe0f5"
+                  strokeWidth={0.9}
+                  opacity={0.7}
+                />
+                {/* vệt nắng loá phủ nửa trên mặt kính */}
+                <Polygon
+                  points={`${t0},${y} ${t1},${y} ${x1 + panelSkew / 2},${
+                    y + panelH / 2
+                  } ${x0 + panelSkew / 2},${y + panelH / 2}`}
+                  fill="url(#pvGlare)"
+                />
+                {/* chân đỡ tấm pin */}
+                <Line
+                  x1={x0 + panelW * 0.18}
+                  y1={yb}
+                  x2={x0 + panelW * 0.18}
+                  y2={yb + 3.5}
+                  stroke="#8ea6c2"
+                  strokeWidth={1.6}
+                />
+                <Line
+                  x1={x0 + panelW * 0.82}
+                  y1={yb}
+                  x2={x0 + panelW * 0.82}
+                  y2={yb + 3.5}
+                  stroke="#8ea6c2"
+                  strokeWidth={1.6}
+                />
+              </G>
+            );
+          })}
+          {/* tia nắng chớp ở góc tấm trên cùng – điểm nhấn "đang phát điện" */}
+          <G>
+            <Circle
+              cx={panelX + panelW + panelSkew - 7}
+              cy={panelY + 1}
+              r={4.5}
+              fill="#ffe08a"
+              opacity={0.55}
+            />
+            <Circle
+              cx={panelX + panelW + panelSkew - 7}
+              cy={panelY + 1}
+              r={2}
+              fill="#fff8e1"
+            />
+          </G>
+        </G>
+        {/* center panel with logo (red control cabinet – arrows converge here) */}
+        <Rect
+          x={cabinetX}
+          y={cabinetY}
+          width={cabinetW}
+          height={44}
+          rx={2}
+          fill="#eff8ff"
+          stroke="#8097b2"
+          strokeWidth={1.4}
+        />
+        <Polygon
+          points={`${cabinetX + 14},140 ${cabinetX + 8},152 ${cabinetX + 22},152`}
+          fill="#d94444"
+        />
+        {/* windows right */}
+        {/* <Rect x={W * 0.58} y={112} width={22} height={16} rx={2} fill="#ddedf8" />
+        <Rect x={W * 0.64} y={112} width={22} height={16} rx={2} fill="#ddedf8" /> */}
+
+        {/* ── Arrows (all converge on the red control cabinet at x≈W*0.46+14, y:118-170) ── */}
+
+        {/* down arrow: solar power → top of the cabinet */}
+        {downArrowSegments.map((y) => (
+          <Line
+            key={y}
+            x1={W * 0.46 + 14}
+            y1={y}
+            x2={W * 0.46 + 14}
+            y2={y + 7}
+            stroke="#4caf50"
+            strokeWidth={3}
+            strokeLinecap="round"
+          />
+        ))}
+        <Polygon
+          points={`${cabinetX + 14},${downArrowTipY} ${
+            cabinetX + 6
+          },${downArrowBaseY} ${cabinetX + 22},${downArrowBaseY}`}
+          fill="#4caf50"
+        />
+
+        {/* left arrow: cabinet → solar panels, with orange energy segments */}
+        {panelLineSegments.map((segment, i) => (
+          <Line
+            key={i}
+            x1={segment.x1}
+            y1={panelLineY}
+            x2={segment.x2}
+            y2={panelLineY}
+            stroke={segment.color}
+            strokeWidth={4}
+            strokeLinecap="round"
+          />
+        ))}
+        <Polygon
+          points={`${panelLineEndX},${panelLineY} ${panelLineEndX + 12},${
+            panelLineY - 7
+          } ${panelLineEndX + 12},${panelLineY + 7}`}
+          fill="#4caf50"
+        />
+
+        {/* right orange arrow: grid → cabinet, at the vertical center of the cabinet (y=140) */}
         <Line
-          key={y}
-          x1={W * 0.46 + 14}
-          y1={y}
-          x2={W * 0.46 + 14}
-          y2={y + 7}
-          stroke="#4caf50"
+          x1={W * 0.82}
+          y1={panelLineY}
+          x2={cabinetX + cabinetW}
+          y2={panelLineY}
+          stroke="#f5a623"
           strokeWidth={3}
           strokeLinecap="round"
         />
-      ))}
-      <Polygon
-        points={`${cabinetX + 14},${downArrowTipY} ${
-          cabinetX + 6
-        },${downArrowBaseY} ${cabinetX + 22},${downArrowBaseY}`}
-        fill="#4caf50"
-      />
-
-      {/* left arrow: cabinet → solar panels, with orange energy segments */}
-      {panelLineSegments.map((segment, i) => (
-        <Line
-          key={i}
-          x1={segment.x1}
-          y1={panelLineY}
-          x2={segment.x2}
-          y2={panelLineY}
-          stroke={segment.color}
-          strokeWidth={4}
-          strokeLinecap="round"
+        <Polygon
+          points={`${cabinetX + cabinetW},${panelLineY} ${
+            cabinetX + cabinetW + 11
+          },${panelLineY - 6} ${cabinetX + cabinetW + 11},${panelLineY + 6}`}
+          fill="#f5a623"
         />
-      ))}
-      <Polygon
-        points={`${panelLineEndX},${panelLineY} ${panelLineEndX + 12},${
-          panelLineY - 7
-        } ${panelLineEndX + 12},${panelLineY + 7}`}
-        fill="#4caf50"
-      />
 
-      {/* right orange arrow: grid → cabinet, at the vertical center of the cabinet (y=140) */}
-      <Line
-        x1={W * 0.82}
-        y1={panelLineY}
-        x2={cabinetX + cabinetW}
-        y2={panelLineY}
-        stroke="#f5a623"
-        strokeWidth={3}
-        strokeLinecap="round"
-      />
-      <Polygon
-        points={`${cabinetX + cabinetW},${panelLineY} ${
-          cabinetX + cabinetW + 11
-        },${panelLineY - 6} ${cabinetX + cabinetW + 11},${panelLineY + 6}`}
-        fill="#f5a623"
-      />
-
-      {/* ── Electric tower ── */}
-      <Line
-        x1={W * 0.87}
-        y1={88}
-        x2={W * 0.8}
-        y2={168}
-        stroke="#9ab0c4"
-        strokeWidth={2}
-      />
-      <Line
-        x1={W * 0.87}
-        y1={88}
-        x2={W * 0.94}
-        y2={168}
-        stroke="#9ab0c4"
-        strokeWidth={2}
-      />
-      <Line
-        x1={W * 0.81}
-        y1={110}
-        x2={W * 0.93}
-        y2={110}
-        stroke="#9ab0c4"
-        strokeWidth={1.5}
-      />
-      <Line
-        x1={W * 0.8}
-        y1={128}
-        x2={W * 0.94}
-        y2={128}
-        stroke="#9ab0c4"
-        strokeWidth={1.5}
-      />
-      <Line
-        x1={W * 0.78}
-        y1={148}
-        x2={W * 0.96}
-        y2={148}
-        stroke="#9ab0c4"
-        strokeWidth={1.5}
-      />
-      <Line
-        x1={W * 0.82}
-        y1={98}
-        x2={W * 0.92}
-        y2={98}
-        stroke="#9ab0c4"
-        strokeWidth={1.5}
-      />
-      <Circle cx={W * 0.82} cy={98} r={2} fill="#7a9ab0" />
-      <Circle cx={W * 0.92} cy={98} r={2} fill="#7a9ab0" />
+        {/* ── Electric tower ── */}
+        <Line
+          x1={W * 0.87}
+          y1={88}
+          x2={W * 0.8}
+          y2={168}
+          stroke="#9ab0c4"
+          strokeWidth={2}
+        />
+        <Line
+          x1={W * 0.87}
+          y1={88}
+          x2={W * 0.94}
+          y2={168}
+          stroke="#9ab0c4"
+          strokeWidth={2}
+        />
+        <Line
+          x1={W * 0.81}
+          y1={110}
+          x2={W * 0.93}
+          y2={110}
+          stroke="#9ab0c4"
+          strokeWidth={1.5}
+        />
+        <Line
+          x1={W * 0.8}
+          y1={128}
+          x2={W * 0.94}
+          y2={128}
+          stroke="#9ab0c4"
+          strokeWidth={1.5}
+        />
+        <Line
+          x1={W * 0.78}
+          y1={148}
+          x2={W * 0.96}
+          y2={148}
+          stroke="#9ab0c4"
+          strokeWidth={1.5}
+        />
+        <Line
+          x1={W * 0.82}
+          y1={98}
+          x2={W * 0.92}
+          y2={98}
+          stroke="#9ab0c4"
+          strokeWidth={1.5}
+        />
+        <Circle cx={W * 0.82} cy={98} r={2} fill="#7a9ab0" />
+        <Circle cx={W * 0.92} cy={98} r={2} fill="#7a9ab0" />
+        </G>
+      ) : null}
     </Svg>
   );
 
@@ -605,7 +958,7 @@ export const StatBubble: React.FC<{
       ]}
     >
       <View style={styles.bubbleValueRow}>
-        <Text
+        <UnscaledText
           adjustsFontSizeToFit
           allowFontScaling={false}
           minimumFontScale={0.72}
@@ -613,23 +966,23 @@ export const StatBubble: React.FC<{
           style={[styles.bubbleValue, { fontSize: valueSize }]}
         >
           {value}
-        </Text>
-        <Text
+        </UnscaledText>
+        <UnscaledText
           allowFontScaling={false}
           numberOfLines={1}
           style={styles.bubbleUnit}
         >
           {unit}
-        </Text>
+        </UnscaledText>
       </View>
       {label ? (
-        <Text
+        <UnscaledText
           allowFontScaling={false}
           numberOfLines={2}
           style={styles.bubbleLabel}
         >
           {label}
-        </Text>
+        </UnscaledText>
       ) : null}
     </View>
   );
@@ -741,12 +1094,9 @@ export const ChartSkeleton: React.FC<{
           style={styles.chartSkeletonSpinner}
         />
       ) : (
-        <NativeText
-          allowFontScaling={false}
-          style={styles.chartSkeletonText}
-        >
+        <UnscaledText allowFontScaling={false} style={styles.chartSkeletonText}>
           {message}
-        </NativeText>
+        </UnscaledText>
       )}
     </View>
   );
@@ -834,8 +1184,7 @@ const DonutChartBase: React.FC<{
   const circ = 2 * Math.PI * r;
   // Cung được vẽ bằng dashoffset (dashArray cố định) để chạy được animation;
   // điểm bắt đầu đưa về 12 giờ bằng rotation thay cho offset 1/4 vòng như trước.
-  const primary =
-    (Math.min(Math.max(primaryPct, 0), 100) / 100) * circ;
+  const primary = (Math.min(Math.max(primaryPct, 0), 100) / 100) * circ;
   const dashOffset = useRef(new Animated.Value(circ)).current;
 
   useEffect(() => {
@@ -879,7 +1228,6 @@ const DonutChartBase: React.FC<{
 
 export const DonutChart = React.memo(DonutChartBase);
 
-
 // ─── Thang đo dùng chung cho 2 biểu đồ ───────────────────────────────────────
 
 /**
@@ -896,7 +1244,7 @@ const NICE_STEP_CANDIDATES = [0.5, 1, 5, 10];
 const buildNiceTicks = (
   maxValue: number,
   tickCount = 3,
-  candidates = NICE_STEP_CANDIDATES
+  candidates = NICE_STEP_CANDIDATES,
 ) => {
   if (!Number.isFinite(maxValue) || maxValue <= 0) return [0, 1];
 
@@ -904,8 +1252,8 @@ const buildNiceTicks = (
   const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
   const normalized = rawStep / magnitude;
   const chosen = candidates.findIndex((candidate) => normalized <= candidate);
-  let niceStep = candidates[chosen < 0 ? candidates.length - 1 : chosen] *
-    magnitude;
+  let niceStep =
+    candidates[chosen < 0 ? candidates.length - 1 : chosen] * magnitude;
 
   // Bước quá to thì cả trục chỉ còn một khoảng (đỉnh 4,9 mà bước 5 -> chỉ có
   // mốc 0 và 5), lùi một nấc để vẫn còn đường kẻ ở giữa.
@@ -915,10 +1263,7 @@ const buildNiceTicks = (
 
   // Mốc cuối phải >= đỉnh dữ liệu, nếu không thang đo cắt mất phần trên biểu đồ
   // (ví dụ đỉnh 0,50 với bước 0,2 phải lên tới 0,6 chứ không dừng ở 0,4).
-  const stepCount = Math.max(
-    Math.ceil(roundTo(maxValue / niceStep, 6)),
-    1
-  );
+  const stepCount = Math.max(Math.ceil(roundTo(maxValue / niceStep, 6)), 1);
 
   const ticks: number[] = [];
   for (let index = 0; index <= stepCount; index += 1) {
@@ -942,9 +1287,7 @@ const tickDigits = (step: number) => {
 const formatTick = (value: number, step: number) => {
   const formatted = formatVnNumber(value, tickDigits(step));
 
-  return formatted.includes(",")
-    ? formatted.replace(/,?0+$/, "")
-    : formatted;
+  return formatted.includes(",") ? formatted.replace(/,?0+$/, "") : formatted;
 };
 
 /**
@@ -966,7 +1309,7 @@ const AREA_PAD_R = 8;
 export const areaChartMarkerX = (
   width: number,
   index: number,
-  axisCount: number
+  axisCount: number,
 ) => {
   const plotWidth = width - AREA_PAD_L - AREA_PAD_R;
 
@@ -984,7 +1327,7 @@ type ChartPoint = { index: number; value: number };
  */
 const buildSegments = (
   data: (number | null | undefined)[],
-  endIndex: number
+  endIndex: number,
 ): ChartPoint[][] => {
   const segments: ChartPoint[][] = [];
   let current: ChartPoint[] = [];
@@ -1052,7 +1395,7 @@ const AreaChartBase: React.FC<{
   const pointCount = Math.max(
     productionData.length,
     consumptionData.length,
-    selfData?.length ?? 0
+    selfData?.length ?? 0,
   );
   const endIndex = pointCount - 1;
   // Bề rộng trục tính theo cả ngày; dữ liệu tới đâu thì vẽ tới đó.
@@ -1065,18 +1408,17 @@ const AreaChartBase: React.FC<{
     : [productionData, consumptionData, ...(selfData ? [selfData] : [])];
 
   const hasReference =
-    referenceValue != null && Number.isFinite(referenceValue) &&
+    referenceValue != null &&
+    Number.isFinite(referenceValue) &&
     referenceValue > 0;
 
-  const maxValue = visibleSeries
-    .flat()
-    .reduce<number>(
-      (max, value) =>
-        value != null && Number.isFinite(value) && value > max ? value : max,
-      // Đỉnh hôm trước phải nằm trong thang đo, không thì đường kẻ bị đẩy ra
-      // ngoài khung và không thấy đâu cả.
-      hasReference ? (referenceValue as number) : 0
-    );
+  const maxValue = visibleSeries.flat().reduce<number>(
+    (max, value) =>
+      value != null && Number.isFinite(value) && value > max ? value : max,
+    // Đỉnh hôm trước phải nằm trong thang đo, không thì đường kẻ bị đẩy ra
+    // ngoài khung và không thấy đâu cả.
+    hasReference ? (referenceValue as number) : 0,
+  );
 
   const yTicks = buildNiceTicks(maxValue);
   const tickStep = yTicks.length > 1 ? yTicks[1] - yTicks[0] : 1;
@@ -1106,9 +1448,9 @@ const AreaChartBase: React.FC<{
               (point, position) =>
                 `${position === 0 ? "M" : "L"}${px(point.index)},${py(
                   point.value,
-                )}`
+                )}`,
             )
-            .join(" ")
+            .join(" "),
         )
         .join(" ");
 
@@ -1122,7 +1464,7 @@ const AreaChartBase: React.FC<{
               (point, position) =>
                 `${position === 0 ? "M" : "L"}${px(point.index)},${py(
                   point.value,
-                )}`
+                )}`,
             )
             .join(" ");
 
@@ -1147,16 +1489,15 @@ const AreaChartBase: React.FC<{
       : isConsumption
       ? consumptionData[markerIndex]
       : productionData[markerIndex];
-  const resolvedLabels =
-    xLabels?.length
-      ? xLabels
-      : axisCount > 1
-      ? [
-          { label: "6", idx: Math.round((axisCount - 1) * 0.25) },
-          { label: "Trưa", idx: Math.round((axisCount - 1) * 0.5) },
-          { label: "18", idx: Math.round((axisCount - 1) * 0.75) },
-        ]
-      : [];
+  const resolvedLabels = xLabels?.length
+    ? xLabels
+    : axisCount > 1
+    ? [
+        { label: "6", idx: Math.round((axisCount - 1) * 0.25) },
+        { label: "Trưa", idx: Math.round((axisCount - 1) * 0.5) },
+        { label: "18", idx: Math.round((axisCount - 1) * 0.75) },
+      ]
+    : [];
 
   return (
     <Svg width={width} height={height}>
@@ -1244,7 +1585,9 @@ const AreaChartBase: React.FC<{
           <Path
             d={paths.productionLine}
             fill="none"
-            stroke={isConsumption ? SOLAR_SERIES_COLOR : PRODUCTION_SERIES_COLOR}
+            stroke={
+              isConsumption ? SOLAR_SERIES_COLOR : PRODUCTION_SERIES_COLOR
+            }
             strokeWidth={1.5}
           />
         </>
@@ -1353,8 +1696,8 @@ const EnergyBarChartBase: React.FC<{
   const bucketCount = Math.max(buckets.length, 1);
   const columnCount = Math.max(buckets[0]?.columns.length ?? 1, 1);
 
-  const { axisMax, barWidth, columnGap, slotWidth, tickStep, yTicks } = useMemo(
-    () => {
+  const { axisMax, barWidth, columnGap, slotWidth, tickStep, yTicks } =
+    useMemo(() => {
       const stackTotal = (values: number[]) =>
         values.reduce((sum, value) => sum + Math.max(value, 0), 0);
 
@@ -1365,11 +1708,11 @@ const EnergyBarChartBase: React.FC<{
               Math.max(
                 columnMax,
                 stackTotal(column.stack.map((segment) => segment.value)),
-                column.overlay?.value ?? 0
+                column.overlay?.value ?? 0,
               ),
-            max
+            max,
           ),
-        0
+        0,
       );
 
       const ticks = buildNiceTicks(peak);
@@ -1382,16 +1725,14 @@ const EnergyBarChartBase: React.FC<{
         // thành một dải đặc ở kỳ Tháng (31 mốc).
         barWidth: Math.max(
           (slot * 0.72 - gap * (columnCount - 1)) / columnCount,
-          1.5
+          1.5,
         ),
         columnGap: gap,
         slotWidth: slot,
         tickStep: ticks.length > 1 ? ticks[1] - ticks[0] : 1,
         yTicks: ticks,
       };
-    },
-    [W, bucketCount, buckets, columnCount]
-  );
+    }, [W, bucketCount, buckets, columnCount]);
 
   const py = (value: number) => padT + H - (value / axisMax) * H;
   const groupWidth = barWidth * columnCount + columnGap * (columnCount - 1);
@@ -1536,7 +1877,7 @@ const EnergyBarChartBase: React.FC<{
           >
             {bucket.label}
           </SvgText>
-        ) : null
+        ) : null,
       )}
 
       {/* Đơn vị ở chân trục Y, cùng chỗ với biểu đồ vùng — xem chú thích ở đó. */}
@@ -1585,7 +1926,7 @@ const BarChartBase: React.FC<{
   const bucketCount = Math.max(data.length, 1);
   const maxValue = data.reduce(
     (max, bucket) => Math.max(max, bucket.previous, bucket.current),
-    0
+    0,
   );
   // Cột cao nhất chạm đỉnh khung, đường kẻ ngang chỉ vẽ ở các mốc nằm dưới nó —
   // bước 1-2-5-10 để mốc không quá thưa (670 -> 200/400/600, không phải 500).
@@ -1596,10 +1937,7 @@ const BarChartBase: React.FC<{
   const slotWidth = W / bucketCount;
   // Một mốc duy nhất: hai cột dạt ra hai đầu trục như app nhà cung cấp.
   const isSingleBucket = data.length === 1;
-  const barW = Math.max(
-    isSingleBucket ? W * 0.3 : slotWidth * 0.32,
-    2
-  );
+  const barW = Math.max(isSingleBucket ? W * 0.3 : slotWidth * 0.32, 2);
 
   return (
     <Svg width={width} height={height}>
@@ -1675,7 +2013,7 @@ const BarChartBase: React.FC<{
                   >
                     {label}
                   </SvgText>
-                ) : null
+                ) : null,
               )
             ) : (
               <SvgText

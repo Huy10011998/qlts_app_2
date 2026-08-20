@@ -66,7 +66,6 @@ export default function AssetFormActionButton({
             : [styles.secondaryLabel, { color: brandColor }],
           textStyle,
         ]}
-        allowFontScaling={false}
       >
         {label}
       </Text>

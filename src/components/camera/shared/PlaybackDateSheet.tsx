@@ -121,7 +121,7 @@ export default function PlaybackDateSheet({
           >
             <Ionicons name="chevron-back" size={22} color={c.textSecondary} />
           </TouchableOpacity>
-          <Text style={styles.calendarMonthText} allowFontScaling={false}>
+          <Text style={styles.calendarMonthText}>
             {monthLabel}
           </Text>
           <TouchableOpacity
@@ -143,7 +143,7 @@ export default function PlaybackDateSheet({
           onPress={() => onConfirm(tempDate, tempStartTimeSec)}
           accessibilityLabel="Xác nhận ngày"
         >
-          <Text style={styles.calendarConfirmText} allowFontScaling={false}>
+          <Text style={styles.calendarConfirmText}>
             OK
           </Text>
         </TouchableOpacity>
@@ -154,7 +154,6 @@ export default function PlaybackDateSheet({
           <Text
             key={day}
             style={styles.calendarWeekText}
-            allowFontScaling={false}
           >
             {day}
           </Text>
@@ -190,7 +189,6 @@ export default function PlaybackDateSheet({
                       styles.calendarDayTextMuted,
                     isSelected && styles.calendarDayTextSelected,
                   ]}
-                  allowFontScaling={false}
                 >
                   {date.getDate()}
                 </Text>
@@ -211,11 +209,11 @@ export default function PlaybackDateSheet({
         activeOpacity={0.75}
         accessibilityLabel="Chọn thời gian bắt đầu"
       >
-        <Text style={styles.calendarStartTimeLabel} allowFontScaling={false}>
+        <Text style={styles.calendarStartTimeLabel}>
           Thời gian bắt đầu
         </Text>
         <View style={styles.calendarStartTimeValueWrap}>
-          <Text style={styles.calendarStartTimeValue} allowFontScaling={false}>
+          <Text style={styles.calendarStartTimeValue}>
             {tempStartTimeSec === null
               ? "Chưa đặt"
               : formatClock(tempStartTimeSec)}

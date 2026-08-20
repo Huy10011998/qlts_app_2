@@ -151,13 +151,11 @@ export default function HomeCustomizeSheet({
       <View style={styles.header}>
         <Text
           style={[styles.title, { color: colors.text }]}
-          allowFontScaling={false}
         >
           Chọn chức năng
         </Text>
         <Text
           style={[styles.subtitle, { color: colors.textSub }]}
-          allowFontScaling={false}
         >
           {pinnedCount > 0
             ? `${pinnedCount} mục đang hiện ở Truy cập nhanh`
@@ -171,7 +169,6 @@ export default function HomeCustomizeSheet({
         placeholder="Tìm chức năng, báo cáo..."
         variant="plain"
         style={styles.searchSpacing}
-        allowFontScaling={false}
       />
 
       <ScrollView
@@ -215,13 +212,11 @@ export default function HomeCustomizeSheet({
                       styles.sectionTitle,
                       { color: colors.textSecondary },
                     ]}
-                    allowFontScaling={false}
                   >
                     {section.title}
                   </Text>
                   <Text
                     style={[styles.sectionCount, { color: colors.textSub }]}
-                    allowFontScaling={false}
                   >
                     {section.items.length}
                   </Text>
@@ -287,7 +282,6 @@ export default function HomeCustomizeSheet({
                         <View style={styles.rowTextWrap}>
                           <Text
                             style={[styles.rowLabel, { color: colors.text }]}
-                            allowFontScaling={false}
                             numberOfLines={1}
                           >
                             {item.label}
@@ -298,7 +292,6 @@ export default function HomeCustomizeSheet({
                                 styles.rowDescription,
                                 { color: colors.textSub },
                               ]}
-                              allowFontScaling={false}
                               numberOfLines={1}
                             >
                               {description}
@@ -376,7 +369,6 @@ const makeStyles = (c: AppColors) =>
     },
     subtitle: {
       fontSize: 12.5,
-      lineHeight: 17,
       fontWeight: "500",
       textAlign: "center",
       marginTop: 3,

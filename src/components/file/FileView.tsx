@@ -150,7 +150,7 @@ export default function FileView({ visible, onClose, params }: ViewerProps) {
             </Text>
           </View>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Text style={styles.closeText} allowFontScaling={false}>
+            <Text style={styles.closeText}>
               Đóng
             </Text>
           </TouchableOpacity>
