@@ -25,6 +25,7 @@ import {
   useSeparatorColor,
   useStyles,
 } from "../../../utils/helpers/colors";
+import { resetFormImageOriginals } from "../../../utils/formImageOriginals";
 
 type AssetFormKeyboardContextValue = {
   handleInputFocus: (target: any) => void;
@@ -57,6 +58,16 @@ type AssetFormScreenShellProps = {
   style?: StyleProp<ViewStyle>;
 };
 
+/* Mở form nào thì mốc ảnh gốc của form trước không còn nghĩa gì — dọn ngay lúc
+   dựng màn, trước cả khi field ảnh đầu tiên kịp ghi mốc. */
+const useResetFormImageOriginals = () => {
+  const isFirstRender = useRef(true);
+  if (isFirstRender.current) {
+    isFirstRender.current = false;
+    resetFormImageOriginals();
+  }
+};
+
 export default function AssetFormScreenShell({
   brandColor,
   children,
@@ -78,6 +89,8 @@ export default function AssetFormScreenShell({
   const [scrollViewportHeight, setScrollViewportHeight] = useState(0);
   const [contentHeight, setContentHeight] = useState(0);
   const scrollRef = useRef<ScrollView | null>(null);
+
+  useResetFormImageOriginals();
   const focusedInputRef = useRef<any>(null);
   const scrollYRef = useRef(0);
   const keyboardTopRef = useRef(0);

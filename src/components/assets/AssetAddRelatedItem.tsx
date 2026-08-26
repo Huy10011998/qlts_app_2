@@ -17,7 +17,6 @@ import { parseCsv } from "../../utils/helpers/string";
 import { isEffectivelyEmptyCodeValue } from "../../utils/helpers/string";
 import {
   AppColors,
-  useAccentBorderColors,
   useAppColors,
   useStyles,
 } from "../../utils/helpers/colors";
@@ -30,7 +29,10 @@ import {
 
 import { useSelector } from "react-redux";
 import { RootState } from "../../store/index";
-import { setShouldRefreshList } from "../../store/AssetSlice";
+import {
+  setLastSavedNotice,
+  setShouldRefreshList,
+} from "../../store/AssetSlice";
 import { usePermission } from "../../hooks/usePermission";
 
 import { formatDateForBE, getDefaultValueForField } from "../../utils/Date";
@@ -61,6 +63,7 @@ import { REVIEW_NAME_CLASSES_DANHGIA } from "../../constants/reviewNameClasses";
 import {
   backToAssetList,
   backToAssetRelatedList,
+  backToQrScanner,
   openAssetRelatedList,
 } from "../../navigation/shared/assetNavigationReset";
 
@@ -69,7 +72,6 @@ const BRAND_RED = ASSET_FORM_BRAND_RED;
 export default function AssetAddRelatedItem() {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
-  const accentBorders = useAccentBorderColors();
   const {
     field,
     nameClass,
@@ -294,6 +296,29 @@ export default function AssetAddRelatedItem() {
 
       await insert(nameClass, payload);
 
+      // Luồng đánh giá nhanh: về thẳng máy quét, báo bằng dải toast chứ không
+      // phải Alert. Đi kiểm kê hàng loạt thì mỗi bản ghi một lần bấm OK là một
+      // thao tác thừa nhân lên theo số thiết bị.
+      if (returnTo === "qrScan") {
+        setFormData({});
+        setImages({});
+
+        dispatch(setShouldRefreshList(true));
+        dispatch(
+          setLastSavedNotice({
+            message: isReviewClass ? "Đã lưu đánh giá" : "Đã lưu bản ghi",
+            recordLabel: rootRecordLabel,
+            nameClass,
+            idRoot,
+            propertyReference,
+            nameClassRoot,
+            titleHeader,
+          }),
+        );
+        backToQrScanner(navigation);
+        return;
+      }
+
       showAlertIfActive(
         "Thành công",
         "Tạo mới thành công!",
@@ -453,13 +478,7 @@ export default function AssetAddRelatedItem() {
         validationErrors={validationErrors}
         setImages={setImages}
         setLoadingImages={setLoadingImages}
-        styles={{
-          ...styles,
-          uploadButton: [
-            styles.uploadButton,
-            { borderColor: accentBorders.red },
-          ],
-        }}
+        styles={styles}
         toggleGroup={toggleGroup}
       />
     </AssetFormScreenShell>

@@ -29,13 +29,13 @@ import type {
 } from "../../types";
 import { getPreviewBC } from "../../services/data/callApi";
 import { error, log } from "../../utils/Logger";
+import { resetFormImageOriginals } from "../../utils/formImageOriginals";
 import { formatDateForBE } from "../../utils/Date";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { useColorScheme } from "../../hooks/useColorScheme";
 import {
   useAppColors,
   useHairlineBorderColor,
-  useStrongBorderColor,
   useStyles,
 } from "../../utils/helpers/colors";
 import { makeStyles } from "./ReportView.styles";
@@ -80,7 +80,6 @@ const ReportView: React.FC<ReportViewProps> = ({
   const styles = useStyles(makeStyles);
   const isDark = useColorScheme() === "dark";
   const hairlineBorderColor = useHairlineBorderColor();
-  const strongBorderColor = useStrongBorderColor();
   const reportConfig = useMemo(
     () => config ?? createDefaultReportConfig(title),
     [config, title],
@@ -123,6 +122,13 @@ const ReportView: React.FC<ReportViewProps> = ({
   const [reportLoadingMessage, setReportLoadingMessage] = useState("");
   const [webViewRenderKey, setWebViewRenderKey] = useState(0);
   const webViewRef = useRef<WebView>(null);
+  /* Mốc ảnh gốc là của riêng một lần mở form: màn này không dùng
+     AssetFormScreenShell nên tự dọn. */
+  const didResetImageOriginals = useRef(false);
+  if (!didResetImageOriginals.current) {
+    didResetImageOriginals.current = true;
+    resetFormImageOriginals();
+  }
   const reportHtmlRef = useRef<string | null>(null);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const { isMounted, showAlertIfActive } = useSafeAlert();
@@ -831,13 +837,7 @@ const ReportView: React.FC<ReportViewProps> = ({
               disableNumberGrouping={Boolean(parameter.notShowSplit)}
               mode="add"
               openEnumReferanceModal={openReferenceModal}
-              styles={{
-                ...styles,
-                uploadButton: [
-                  styles.uploadButton,
-                  { borderColor: strongBorderColor },
-                ],
-              }}
+              styles={styles}
             />
           </View>
         ))}

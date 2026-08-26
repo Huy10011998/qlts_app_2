@@ -1,24 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigation } from "@react-navigation/native";
-import {
-  getClassReference,
-  getFieldActive,
-  getPropertyClass,
-} from "../../../services";
-import type {
-  Field,
-  MenuItemResponse,
-  PropertyResponse,
-  StackNavigation,
-} from "../../../types";
-import { mapPropertyResponseToPropertyClass } from "../../../utils/helpers/propertyClass";
-import { normalizeIconImageUri } from "../../../utils/iconImage";
+import type { Field, MenuItemResponse } from "../../../types";
 import { isNetworkRequestError } from "../../../utils/helpers/api";
 import { error } from "../../../utils/Logger";
-import { usePermission } from "../../../hooks/usePermission";
 import { useSafeAlert } from "../../../hooks/useSafeAlert";
 import { getRecordLabel } from "../detailActions/useAssetRecordActions";
-import { REVIEW_NAME_CLASSES_DANHGIA } from "../../../constants/reviewNameClasses";
+import {
+  getAddChildIcon,
+  getAddChildLabel,
+  useOpenAddRelatedForm,
+} from "./useOpenAddRelatedForm";
 
 type UseAddChildShortcutParams = {
   assetTitleHeader?: string;
@@ -32,39 +22,13 @@ type UseAddChildShortcutParams = {
 const NETWORK_MESSAGE =
   "Vui lòng kiểm tra kết nối mạng rồi thử lại.";
 
-const isDanhGiaClass = (name?: string) =>
-  REVIEW_NAME_CLASSES_DANHGIA.includes((name || "").trim());
-
-/**
- * Nhãn nút vuốt. Biết chắc chỉ có một danh mục con thì gọi đúng tên việc sẽ
- * làm ("Đánh giá", "Thêm bảo trì"); nhiều danh mục hoặc chưa biết thì để chung.
- */
-const getActionLabel = (children: MenuItemResponse[] | null) => {
-  // Cố ý không dùng "Thêm mới" — đó là nhãn của FAB (thêm bản ghi cha), để
-  // chung một chữ thì không phân biệt được hai việc.
-  const GENERIC_LABEL = "Thêm mục con";
-
-  if (!children || children.length !== 1) return GENERIC_LABEL;
-
-  const [child] = children;
-  if (isDanhGiaClass(child.name)) return "Đánh giá";
-
-  const moTa = (child.moTa || "").trim();
-  return moTa ? `Thêm ${moTa.toLowerCase()}` : GENERIC_LABEL;
-};
-
-const getActionIcon = (children: MenuItemResponse[] | null) =>
-  children?.length === 1 && isDanhGiaClass(children[0].name)
-    ? "clipboard-outline"
-    : "add-circle-outline";
-
 /**
  * Đường tắt "thêm bản ghi con" từ ngay danh sách cha: bỏ qua chặng
  * AssetDetails → tab Chi tiết → AssetRelatedList, vào thẳng `AssetAddRelatedItem`.
  *
- * Cấu hình cần cho màn tạo (field + propertyClass của class con) chỉ được tải
- * khi người dùng thực sự bấm, và danh sách class con được cache theo class cha
- * nên chỉ gọi mạng lần đầu.
+ * Đây là lớp state UI của nút vuốt; phần tải danh mục con và mở màn tạo nằm ở
+ * `useOpenAddRelatedForm` để thanh hành động ở màn chi tiết và màn quét QR dùng
+ * chung cùng một lõi.
  */
 export function useAddChildShortcut({
   assetTitleHeader,
@@ -73,9 +37,13 @@ export function useAddChildShortcut({
   nameClass,
   viewPermission,
 }: UseAddChildShortcutParams) {
-  const navigation = useNavigation<StackNavigation<"AssetList">>();
-  const { can, loaded } = usePermission();
   const { isMounted, showAlertIfActive } = useSafeAlert();
+  const {
+    filterByInsertPermission,
+    filterInsertable,
+    loadChildClasses,
+    openAddForm,
+  } = useOpenAddRelatedForm();
 
   const [busyItemId, setBusyItemId] = useState<string | null>(null);
   // `null` = chưa biết (chưa tải xong / tải lỗi): vẫn cho bấm, nhãn để chung.
@@ -88,28 +56,6 @@ export function useAddChildShortcut({
 
   // Bản ghi cha đang chờ chọn danh mục con.
   const pendingItemRef = useRef<Record<string, any> | null>(null);
-  const referenceCacheRef = useRef<Record<string, MenuItemResponse[]>>({});
-
-  const loadChildClasses = useCallback(async () => {
-    if (!nameClass) return [];
-
-    const cached = referenceCacheRef.current[nameClass];
-    if (cached) return cached;
-
-    const response = await getClassReference(nameClass);
-    const data = response?.data;
-    if (!Array.isArray(data)) throw new Error("Dữ liệu trả về không hợp lệ");
-
-    const items: MenuItemResponse[] = data.map((item: any) => ({
-      ...item,
-      label: item.moTa ?? "Không có mô tả",
-      icon: "document-text-outline",
-      iconImageUri: normalizeIconImageUri(item.iconMobile),
-    }));
-
-    referenceCacheRef.current[nameClass] = items;
-    return items;
-  }, [nameClass]);
 
   // Tải trước danh mục con để nhãn nút vuốt gọi đúng tên việc ("Đánh giá",
   // "Thêm bảo trì") và ẩn nút khi không có gì để thêm — đồng thời lần bấm đầu
@@ -120,7 +66,7 @@ export function useAddChildShortcut({
 
     if (!nameClass) return;
 
-    loadChildClasses()
+    loadChildClasses(nameClass)
       .then((items) => {
         if (!cancelled) setChildClasses(items);
       })
@@ -138,43 +84,24 @@ export function useAddChildShortcut({
   }, [loadChildClasses, nameClass]);
 
   /** Danh mục con mà người dùng có quyền thêm; `null` khi chưa biết. */
-  const allowedChildClasses = useMemo(() => {
-    if (!childClasses || !loaded) return null;
-    return childClasses.filter((child) => can(child.name, "Insert"));
-    // `can` được tạo mới mỗi lần render nên cố ý không đưa vào deps; `loaded`
-    // đổi là đủ để tính lại sau khi quyền nạp xong.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [childClasses, loaded]);
+  const allowedChildClasses = useMemo(
+    () => filterInsertable(childClasses),
+    [childClasses, filterInsertable],
+  );
 
   const goToAddRelated = useCallback(
     async (item: Record<string, any>, childClass: MenuItemResponse) => {
       setBusyItemId(String(item.id));
       try {
-        const [resField, resProp] = await Promise.all([
-          getFieldActive(childClass.name),
-          getPropertyClass(childClass.name),
-        ]);
-
-        const childFields: Field[] = resField?.data || [];
-        const childPropertyClass: PropertyResponse | undefined = resProp?.data;
-
-        if (!isMounted()) return;
-
-        navigation.navigate("AssetAddRelatedItem", {
-          field: JSON.stringify(childFields),
-          nameClass: childClass.name,
-          propertyClass: mapPropertyResponseToPropertyClass(childPropertyClass),
-          idRoot: String(item.id),
-          nameClassRoot: nameClass,
-          rootRecordLabel: getRecordLabel(item, fieldActive),
-          propertyReference: childClass.propertyReference,
-          titleHeader: childClass.moTa ?? "Thêm mới",
+        await openAddForm({
+          assetContext: { assetTitleHeader, groupMenuId, viewPermission },
+          childClass,
+          item,
+          parentFieldActive: fieldActive,
+          parentNameClass: nameClass,
           // Lưu xong mở danh sách con để thấy ngay bản ghi vừa tạo; danh sách
           // cha vẫn nằm dưới stack nên bấm back là về đúng chỗ vừa vuốt.
           returnTo: "openAssetRelatedList",
-          groupMenuId,
-          viewPermission,
-          assetTitleHeader,
         });
       } catch (e) {
         if (!isNetworkRequestError(e)) error(e);
@@ -192,7 +119,7 @@ export function useAddChildShortcut({
       groupMenuId,
       isMounted,
       nameClass,
-      navigation,
+      openAddForm,
       showAlertIfActive,
       viewPermission,
     ],
@@ -209,9 +136,9 @@ export function useAddChildShortcut({
         // Prefetch chưa xong hoặc lỗi: tải tại đây, lần này báo lỗi cho người dùng.
         setBusyItemId(String(item.id));
         try {
-          const items = await loadChildClasses();
+          const items = await loadChildClasses(nameClass);
           if (isMounted()) setChildClasses(items);
-          allowed = items.filter((child) => can(child.name, "Insert"));
+          allowed = filterByInsertPermission(items);
         } catch (e) {
           if (!isNetworkRequestError(e)) error(e);
           showAlertIfActive(
@@ -247,11 +174,12 @@ export function useAddChildShortcut({
     [
       allowedChildClasses,
       busyItemId,
-      can,
       fieldActive,
+      filterByInsertPermission,
       goToAddRelated,
       isMounted,
       loadChildClasses,
+      nameClass,
       showAlertIfActive,
     ],
   );
@@ -272,8 +200,8 @@ export function useAddChildShortcut({
   );
 
   return {
-    actionIcon: getActionIcon(allowedChildClasses),
-    actionLabel: getActionLabel(allowedChildClasses),
+    actionIcon: getAddChildIcon(allowedChildClasses),
+    actionLabel: getAddChildLabel(allowedChildClasses),
     busyItemId,
     // Biết chắc không có danh mục con nào được thêm thì ẩn hẳn nút vuốt.
     canAddChild: allowedChildClasses === null || allowedChildClasses.length > 0,

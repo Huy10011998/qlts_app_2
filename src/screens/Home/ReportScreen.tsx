@@ -24,6 +24,7 @@ import {
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { API_ENDPOINTS, BASE_URL } from "../../config/index";
 import { useDebounce } from "../../hooks/useDebounce";
+import { useDismissableModal } from "../../hooks/useDismissableModal";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { usePermission } from "../../hooks/usePermission";
 import { filterReportPermissionTree } from "../../hooks/shared/permissionHelpers";
@@ -221,7 +222,13 @@ export default function ReportScreen() {
   const [isFetching, setIsFetching] = useState(false);
   const [isRefreshingTop, setIsRefreshingTop] = useState(false);
   const [search, setSearch] = useState("");
-  const [activeReport, setActiveReport] = useState<ActiveReport | null>(null);
+  const {
+    content: activeReport,
+    visible: isReportVisible,
+    open: openActiveReport,
+    close: closeActiveReport,
+    handleDismiss: handleReportDismiss,
+  } = useDismissableModal<ActiveReport>();
   const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
 
   const fetchingRef = useRef(false);
@@ -233,10 +240,6 @@ export default function ReportScreen() {
 
   permissionsRef.current = permissions;
   isFullAccessRef.current = isFullAccess;
-
-  const closeActiveReport = useCallback(() => {
-    setActiveReport(null);
-  }, []);
 
   const handleShowReport = useCallback(
     async (item: Item) => {
@@ -277,7 +280,7 @@ export default function ReportScreen() {
           throw new Error("Invalid report config");
         }
 
-        setActiveReport({
+        openActiveReport({
           item,
           config,
           previewEndpoint: buildReportPreviewEndpoint(direct),
@@ -287,7 +290,7 @@ export default function ReportScreen() {
         showAlertIfActive("Lỗi", "Không thể tải cấu hình báo cáo.");
       }
     },
-    [showAlertIfActive]
+    [openActiveReport, showAlertIfActive]
   );
 
   const fetchData = useCallback(
@@ -497,7 +500,7 @@ export default function ReportScreen() {
       />
 
       <Modal
-        visible={!!activeReport}
+        visible={isReportVisible}
         animationType="slide"
         transparent={false}
         statusBarTranslucent
@@ -507,6 +510,7 @@ export default function ReportScreen() {
           "landscape-left",
           "landscape-right",
         ]}
+        onDismiss={handleReportDismiss}
         onRequestClose={closeActiveReport}
       >
         <View

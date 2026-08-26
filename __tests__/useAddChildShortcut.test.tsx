@@ -2,6 +2,7 @@ import React from "react";
 import ReactTestRenderer from "react-test-renderer";
 
 import { useAddChildShortcut } from "../src/components/assets/shared/useAddChildShortcut";
+import { resetChildClassCache } from "../src/components/assets/shared/useOpenAddRelatedForm";
 import {
   getClassReference,
   getFieldActive,
@@ -106,6 +107,9 @@ const mount = async () => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // Cache danh mục con ở cấp module (dùng chung cho nút vuốt, thanh hành động ở
+  // màn chi tiết và màn quét), nên phải dọn giữa các test cùng một class cha.
+  resetChildClassCache();
   mockAllowedInsertClasses = CHILD_CLASSES.map((child) => child.name);
   mockedGetClassReference.mockResolvedValue({ data: CHILD_CLASSES } as any);
   mockedGetFieldActive.mockResolvedValue({

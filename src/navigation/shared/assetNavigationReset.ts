@@ -9,6 +9,7 @@ type AssetRouteContext = {
 
 type ResetNavigation = {
   dispatch?: (action: any) => void;
+  navigate?: (...args: any[]) => void;
   getState?: () => {
     index: number;
     routes: Array<{
@@ -164,6 +165,31 @@ export function popToRecordDetailsRoot(
     { id, nameClass },
     { activeTab: "list" },
   );
+}
+
+/**
+ * Về máy quét sau khi lưu, cho luồng đánh giá nhanh: quét mã kế tiếp là việc kế
+ * tiếp, không phải xem lại danh sách.
+ *
+ * Máy quét tồn tại ở hai chỗ và stack khác nhau tuỳ nơi mở (xem chú thích của
+ * `QrScan` trong `RootStackParamList`):
+ * - Mở từ header màn danh sách: `QrScan` nằm ngay trong stack gốc → pop về nó.
+ * - Mở từ tab Quét: màn quét là route `Scan` trong `ScanTab`, còn màn tạo được
+ *   đẩy lên stack gốc. Một lệnh `navigate` lồng lo cả hai tầng: `Tabs` đang nằm
+ *   dưới trong stack gốc nên navigate về nó là pop, và params lồng đẩy stack của
+ *   `ScanTab` về `Scan`, tức pop luôn `QrDetails` nếu có.
+ *
+ * Không cần đánh thức camera bằng tay: `useFocusEffect` của màn quét tự
+ * `resetScannerSession` + `activateScanner` khi được focus lại.
+ */
+export function backToQrScanner(navigation: ResetNavigation) {
+  if (popToExistingRoute(navigation, "QrScan", {})) return true;
+
+  navigation.navigate?.("Tabs", {
+    screen: "ScanTab",
+    params: { screen: "Scan" },
+  });
+  return false;
 }
 
 export function resetToAssetRelatedList(

@@ -1,11 +1,12 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import type { AssetState } from "../types/redux.d";
+import type { AssetState, SavedNotice } from "../types/redux.d";
 
 const initialState: AssetState = {
   shouldRefreshList: false,
   shouldRefreshDetails: false,
 
   updatedListItem: null,
+  lastSavedNotice: null,
 
   selectedTreeValue: null,
   selectedTreeProperty: null,
@@ -31,6 +32,13 @@ const assetSlice = createSlice({
     },
     resetUpdatedListItem(state) {
       state.updatedListItem = null;
+    },
+
+    setLastSavedNotice(state, action: PayloadAction<SavedNotice>) {
+      state.lastSavedNotice = action.payload;
+    },
+    clearLastSavedNotice(state) {
+      state.lastSavedNotice = null;
     },
 
     setShouldRefreshDetails(state, action: PayloadAction<boolean>) {
@@ -67,6 +75,8 @@ export const {
   resetShouldRefreshList,
   setUpdatedListItem,
   resetUpdatedListItem,
+  setLastSavedNotice,
+  clearLastSavedNotice,
   setShouldRefreshDetails,
   resetShouldRefreshDetails,
   setSelectedTreeNode,

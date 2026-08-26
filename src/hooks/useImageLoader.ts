@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { TypeProperty } from "../utils/Enum";
 import type { PreviewImgByTypeProps } from "../types/components.d";
+import { hasLocalPreview } from "../utils/Image";
 
 export const useImageLoader = ({
   fieldActive,
@@ -23,6 +24,13 @@ export const useImageLoader = ({
             setImages((p: any) => ({ ...p, [f.name]: "" }));
             setLoadingImages((p: any) => ({ ...p, [f.name]: false }));
 
+            prevImageValues.current[f.name] = newVal;
+            return;
+          }
+
+          // Ảnh đang hiện bằng file trên máy thì đã đúng ảnh đó rồi, tải lại chỉ
+          // làm nhấp nháy thêm một nhịp.
+          if (hasLocalPreview(String(f.name), String(newVal))) {
             prevImageValues.current[f.name] = newVal;
             return;
           }

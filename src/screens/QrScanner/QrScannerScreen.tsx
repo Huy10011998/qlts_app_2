@@ -1,5 +1,6 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import {
+  ActivityIndicator,
   Linking,
   StyleSheet,
   Text,
@@ -26,9 +27,20 @@ import {
 import { getDetails, getFieldActive, getPropertyClass } from "../../services";
 import { error } from "../../utils/Logger";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
+import QrQuickReviewToggle from "../../components/qrcode/shared/QrQuickReviewToggle";
 import QrScannerGateView from "../../components/qrcode/shared/QrScannerGateView";
 import QrScannerViewportOverlay from "../../components/qrcode/shared/QrScannerViewportOverlay";
 import useQrScannerController from "../../components/qrcode/shared/useQrScannerController";
+import InlineToast from "../../components/ui/InlineToast";
+import {
+  isDanhGiaClass,
+  useOpenAddRelatedForm,
+} from "../../components/assets/shared/useOpenAddRelatedForm";
+import { useQuickReview } from "../../context/QuickReviewContext";
+import { clearLastSavedNotice } from "../../store/AssetSlice";
+import { useAppDispatch } from "../../store/hooks";
+import type { RootState } from "../../store";
+import { useSelector } from "react-redux";
 import { getDetailsQr } from "../../services/data/callApi";
 import { getMatchedKey } from "../../utils/Helper";
 import { isNetworkRequestError } from "../../utils/helpers/api";
@@ -85,6 +97,17 @@ export default function QrScannerScreen() {
   // permission right after login while the user is still on Home, and the
   // resulting background→foreground transition would flicker/hide the tab bar.
   const isFocused = useIsFocused();
+  const dispatch = useAppDispatch();
+  const { enabled: quickReviewEnabled, setEnabled: setQuickReviewEnabled } =
+    useQuickReview();
+  const { openAddForm, pickPrimaryChildClass, resolveChildClasses } =
+    useOpenAddRelatedForm();
+  const lastSavedNotice = useSelector(
+    (state: RootState) => state.asset.lastSavedNotice,
+  );
+  // Chỉ để hiện dấu hiệu "đang mở form", vì chế độ nhanh tốn thêm hai request
+  // cấu hình class con — màn đen không có gì thì tưởng treo.
+  const [isOpeningQuickReview, setIsOpeningQuickReview] = useState(false);
   const {
     activateScanner,
     cameraActive,
@@ -126,6 +149,54 @@ export default function QrScannerScreen() {
       startInitTimeoutTimer,
     ]),
   );
+  /**
+   * Chế độ đánh giá nhanh: vào thẳng màn đánh giá của thiết bị vừa quét.
+   *
+   * Trả về `false` khi không đi được đường này — không có class đánh giá cho
+   * loại thiết bị, không có quyền thêm, hoặc lỗi mạng. Nơi gọi im lặng mở màn
+   * chi tiết như luồng thường: người dùng vẫn còn thanh "Đánh giá ngay" ở đó,
+   * nên không có gì phải báo lỗi.
+   */
+  const tryOpenQuickReview = useCallback(
+    async ({
+      detailId,
+      fieldActive,
+      itemData,
+      nameClass,
+    }: {
+      detailId: string;
+      fieldActive: any[];
+      itemData: any;
+      nameClass: string;
+    }) => {
+      setIsOpeningQuickReview(true);
+      try {
+        const children = await resolveChildClasses(nameClass);
+        const primary = pickPrimaryChildClass(nameClass, children);
+
+        // Công tắc tên là "đánh giá nhanh" nên chỉ nhảy thẳng vào đúng bảng đánh
+        // giá; class chỉ có mục con khác (bảo trì, kiểm kê) vẫn qua màn chi tiết.
+        if (!primary || !isDanhGiaClass(primary.name)) return false;
+
+        const detailItem = Array.isArray(itemData) ? itemData[0] : itemData;
+
+        return await openAddForm({
+          childClass: primary,
+          item: { ...detailItem, id: detailId },
+          parentFieldActive: fieldActive,
+          parentNameClass: nameClass,
+          returnTo: "qrScan",
+        });
+      } catch (e) {
+        if (!isNetworkRequestError(e)) error(e);
+        return false;
+      } finally {
+        setIsOpeningQuickReview(false);
+      }
+    },
+    [openAddForm, pickPrimaryChildClass, resolveChildClasses],
+  );
+
   const codeScanner: CodeScanner = useCodeScanner({
     codeTypes: ["qr"],
     onCodeScanned: async (codes: Code[]) => {
@@ -191,6 +262,20 @@ export default function QrScannerScreen() {
         const detailId = isExternalQrUrl
           ? getDetailIdFromItemData(itemData, idOrQr)
           : idOrQr;
+
+        // Quét mã mới là bỏ qua thông báo của lần lưu trước.
+        dispatch(clearLastSavedNotice());
+
+        if (quickReviewEnabled) {
+          const opened = await tryOpenQuickReview({
+            detailId,
+            fieldActive: res?.data || [],
+            itemData,
+            nameClass,
+          });
+
+          if (opened) return;
+        }
 
         navigation.navigate("QrDetails", {
           id: detailId,
@@ -271,43 +356,84 @@ export default function QrScannerScreen() {
         enableZoomGesture
       />
 
+      <QrScannerViewportOverlay scanLineAnim={scanLineAnim} />
+
+      {/*
+        Sau lớp mặt nạ: mặt nạ là absoluteFill đen 55%, đặt header trước thì cả
+        header lẫn dải thông báo bị phủ mờ theo — chữ trên nền xanh nhạt của dải
+        toast gần như không đọc được.
+      */}
       <View
         pointerEvents="box-none"
         style={[styles.header, { paddingTop: insets.top + 8 }]}
       >
-        <TouchableOpacity
-          style={styles.headerIconButton}
-          hitSlop={10}
-          onPress={() => {
-            deactivateScanner();
-            navigation.goBack();
-          }}
-        >
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-
-        <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>
-            Quét mã QR
-          </Text>
-        </View>
-
-        <View style={styles.headerRight}>
+        <View style={styles.headerRow}>
           <TouchableOpacity
             style={styles.headerIconButton}
             hitSlop={10}
-            onPress={() => setIsTorchOn((prev) => !prev)}
+            onPress={() => {
+              deactivateScanner();
+              navigation.goBack();
+            }}
           >
-            <Ionicons
-              name={isTorchOn ? "flash" : "flash-off"}
-              size={22}
-              color="#fff"
-            />
+            <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
+
+          <View style={styles.headerTitleWrap}>
+            <Text style={styles.headerTitle}>
+              Quét mã QR
+            </Text>
+          </View>
+
+          <View style={styles.headerRight}>
+            <TouchableOpacity
+              style={styles.headerIconButton}
+              hitSlop={10}
+              onPress={() => setIsTorchOn((prev) => !prev)}
+            >
+              <Ionicons
+                name={isTorchOn ? "flash" : "flash-off"}
+                size={22}
+                color="#fff"
+              />
+            </TouchableOpacity>
+          </View>
         </View>
+
+        <QrQuickReviewToggle
+          enabled={quickReviewEnabled}
+          onChange={setQuickReviewEnabled}
+        />
+
+        <InlineToast
+          message={lastSavedNotice?.message}
+          detail={lastSavedNotice?.recordLabel}
+          actionLabel={lastSavedNotice?.nameClass ? "Xem" : undefined}
+          onAction={() => {
+            const notice = lastSavedNotice;
+            if (!notice?.nameClass || !notice.idRoot || !notice.propertyReference) {
+              return;
+            }
+
+            deactivateScanner();
+            navigation.navigate("QrReview", {
+              nameClass: notice.nameClass,
+              propertyReference: notice.propertyReference,
+              idRoot: notice.idRoot,
+              nameClassRoot: notice.nameClassRoot,
+              titleHeader: notice.titleHeader,
+            });
+          }}
+          onDismiss={() => dispatch(clearLastSavedNotice())}
+        />
       </View>
 
-      <QrScannerViewportOverlay scanLineAnim={scanLineAnim} />
+      {isOpeningQuickReview ? (
+        <View style={styles.busyOverlay} pointerEvents="auto">
+          <ActivityIndicator size="large" color="#fff" />
+          <Text style={styles.busyLabel}>Đang mở form đánh giá…</Text>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -318,10 +444,25 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 0,
     right: 0,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    backgroundColor: "rgba(0,0,0,0.28)",
+  },
+  headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    backgroundColor: "rgba(0,0,0,0.28)",
+  },
+  busyOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    backgroundColor: "rgba(0,0,0,0.55)",
+  },
+  busyLabel: {
+    color: "#fff",
+    fontSize: 13.5,
+    fontWeight: "600",
   },
   headerIconButton: {
     width: 38,

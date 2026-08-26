@@ -4,6 +4,7 @@ import ScreenContainer from "../shared/ScreenContainer";
 import { useReloadPermissionsOnFocus } from "../../hooks/useReloadPermissionsOnFocus";
 import AssetDetailsContent from "./shared/AssetDetailsContent";
 import AssetDetailHeaderActions from "../../components/assets/detailActions/AssetDetailHeaderActions";
+import RecordPrimaryActionBar from "../../components/assets/shared/RecordPrimaryActionBar";
 
 export default function AssetDetailsScreen() {
   useReloadPermissionsOnFocus();
@@ -41,6 +42,17 @@ export default function AssetDetailsScreen() {
               loadErrorMessage={loadErrorMessage}
               onRefresh={refreshDetails}
               isRefreshing={isRefreshing}
+            />
+            {/*
+              Cùng đường tắt như nút vuốt ở danh sách: vào thẳng màn tạo bản ghi
+              con, khỏi phải qua tab "Chi tiết" → danh mục → nút thêm mới.
+            */}
+            <RecordPrimaryActionBar
+              item={item}
+              nameClass={nameClass}
+              fieldActive={fieldActive}
+              listRoute="AssetRelatedList"
+              returnTo="openAssetRelatedList"
             />
             {/* Sau nội dung: panel menu dùng absoluteFill, đặt trước sẽ bị phủ. */}
             <AssetDetailHeaderActions
