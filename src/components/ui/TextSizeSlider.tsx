@@ -56,7 +56,16 @@ const stepHaptic = () => {
 type TextSizeSliderProps = {
   stepCount: number;
   value: number;
+  /** Mỗi lần thumb nhảy nấc — dùng cho phần xem trước. */
   onChange: (step: number) => void;
+  /**
+   * Nhấc tay ra khỏi thanh trượt.
+   *
+   * Tách khỏi `onChange` vì chỗ dùng áp dụng cỡ chữ thật ở đây, mà việc đó
+   * remount cả cây điều hướng — remount giữa lúc ngón tay còn trên thanh trượt
+   * là `PanResponder` bị huỷ và cú kéo đứt ngay sau nấc đầu tiên.
+   */
+  onChangeEnd?: (step: number) => void;
   accessibilityLabel?: string;
 };
 
@@ -70,6 +79,7 @@ export default function TextSizeSlider({
   stepCount,
   value,
   onChange,
+  onChangeEnd,
   accessibilityLabel,
 }: TextSizeSliderProps) {
   const colors = useAppColors();
@@ -79,10 +89,12 @@ export default function TextSizeSlider({
   const trackWidthRef = useRef(0);
   const valueRef = useRef(value);
   const onChangeRef = useRef(onChange);
+  const onChangeEndRef = useRef(onChangeEnd);
 
   trackWidthRef.current = trackWidth;
   valueRef.current = value;
   onChangeRef.current = onChange;
+  onChangeEndRef.current = onChangeEnd;
 
   const lastStep = Math.max(stepCount - 1, 1);
 
@@ -105,6 +117,12 @@ export default function TextSizeSlider({
     [stepCount]
   );
 
+  // `valueRef` là nấc đang xem trước, do chỗ dùng truyền xuống lại sau mỗi
+  // `onChange` — nên lúc nhấc tay nó chính là nấc người dùng chốt.
+  const commitCurrentStep = useCallback(() => {
+    onChangeEndRef.current?.(valueRef.current);
+  }, []);
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -115,6 +133,8 @@ export default function TextSizeSlider({
       onPanResponderMove: (event) => {
         moveToPosition(event.nativeEvent.locationX);
       },
+      onPanResponderRelease: commitCurrentStep,
+      onPanResponderTerminate: commitCurrentStep,
     })
   ).current;
 
@@ -132,10 +152,15 @@ export default function TextSizeSlider({
         { name: "decrement", label: "Chữ nhỏ hơn" },
       ]}
       onAccessibilityAction={(event) => {
+        // Không có cử chỉ kéo nên xem trước và áp dụng rơi vào cùng một nhịp.
         if (event.nativeEvent.actionName === "increment") {
-          onChange(Math.min(value + 1, lastStep));
+          const nextStep = Math.min(value + 1, lastStep);
+          onChange(nextStep);
+          onChangeEnd?.(nextStep);
         } else if (event.nativeEvent.actionName === "decrement") {
-          onChange(Math.max(value - 1, 0));
+          const nextStep = Math.max(value - 1, 0);
+          onChange(nextStep);
+          onChangeEnd?.(nextStep);
         }
       }}
       style={styles.root}

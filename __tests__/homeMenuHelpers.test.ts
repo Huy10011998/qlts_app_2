@@ -19,7 +19,7 @@ const makeView = (overrides: Record<string, any> = {}) =>
     label: "Tài sản",
     ma: "TaiSan",
     ...overrides,
-  }) as any;
+  } as any);
 
 const makeMenuItem = (overrides: Record<string, any> = {}) =>
   ({
@@ -28,7 +28,7 @@ const makeMenuItem = (overrides: Record<string, any> = {}) =>
     label: "Hành trình",
     viewWebMobile: "VehicleJourney",
     ...overrides,
-  }) as any;
+  } as any);
 
 describe("id chức năng Trang chủ", () => {
   it("đổi id ghim cũ sang id mới, id lạ thì giữ nguyên", () => {
@@ -55,7 +55,7 @@ describe("báo cáo ghim ra Trang chủ", () => {
   const featureItems = [
     { id: "5", label: "Nội địa", groupMenuId: 11, viewPermission: "NoiDia" },
     { id: "3", label: "Camera", viewPermission: "Camera" },
-    { id: "6", label: "BHLĐ", groupMenuId: 12, viewPermission: "BHLD" },
+    { id: "6", label: "PCCC", groupMenuId: 12, viewPermission: "PCCC" },
   ];
 
   // Đây là lý do phải có tiền tố: báo cáo sinh ra bằng cách spread lại chính chức
@@ -77,10 +77,7 @@ describe("báo cáo ghim ra Trang chủ", () => {
   it("chỉ chức năng có groupMenuId mới sinh ra báo cáo", () => {
     const reports = createReportActions(featureItems, () => undefined);
 
-    expect(reports.map((report) => report.label)).toEqual([
-      "Nội địa",
-      "BHLĐ",
-    ]);
+    expect(reports.map((report) => report.label)).toEqual(["Nội địa", "PCCC"]);
     expect(reports.map((report) => report.id)).toEqual([
       toReportFeatureId("5"),
       toReportFeatureId("6"),
@@ -153,7 +150,9 @@ describe("nhận diện chức năng phương tiện", () => {
 
   it("chấp nhận mọi dạng cờ bật mà API có thể trả về", () => {
     [true, 1, "1", "true"].forEach((isViewWeb) => {
-      expect(isVehicleJourneyMobileView(makeMenuItem({ isViewWeb }))).toBe(true);
+      expect(isVehicleJourneyMobileView(makeMenuItem({ isViewWeb }))).toBe(
+        true,
+      );
     });
 
     [false, 0, "0", "false", undefined].forEach((isViewWeb) => {

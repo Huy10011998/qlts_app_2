@@ -479,7 +479,7 @@ const makeStyles = (c: AppColors) =>
       justifyContent: "center",
       backgroundColor: c.surfaceAlt,
     },
-    loadingText: { marginTop: 9, color: c.textSecondary },
+    loadingText: { marginTop: 9, fontSize: 14, color: c.textSecondary },
 
     title: { fontSize: 19, fontWeight: "700", color: c.text },
     subtitle: { fontSize: 13, color: c.textSecondary, marginTop: 2 },

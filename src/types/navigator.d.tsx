@@ -39,7 +39,11 @@ export type OptionalParams = {
   titleHeader?: string;
   propertyClass?: PropertyClass;
   itemData?: AssetItem;
-  returnTo?: "assetList" | "assetRelatedList" | "qrReview";
+  returnTo?:
+    | "assetList"
+    | "assetRelatedList"
+    | "openAssetRelatedList"
+    | "qrReview";
   groupMenuId?: number;
   viewPermission?: string;
   assetTitleHeader?: string;
@@ -263,7 +267,11 @@ export type RootStackParamList = {
     propertyReference?: string;
     nameClassRoot?: string;
     rootRecordLabel?: string;
-    returnTo?: "assetList" | "assetRelatedList" | "qrReview";
+    returnTo?:
+      | "assetList"
+      | "assetRelatedList"
+      | "openAssetRelatedList"
+      | "qrReview";
     groupMenuId?: number;
     viewPermission?: string;
     assetTitleHeader?: string;
@@ -278,7 +286,11 @@ export type RootStackParamList = {
     propertyReference?: string;
     titleHeader?: string;
     rootRecordLabel?: string;
-    returnTo?: "assetList" | "assetRelatedList" | "qrReview";
+    returnTo?:
+      | "assetList"
+      | "assetRelatedList"
+      | "openAssetRelatedList"
+      | "qrReview";
     groupMenuId?: number;
     viewPermission?: string;
     assetTitleHeader?: string;
@@ -337,7 +349,11 @@ export type RootStackParamList = {
     field: string;
     nameClass?: string;
     propertyClass?: PropertyClass;
-    returnTo?: "assetList" | "assetRelatedList" | "qrReview";
+    returnTo?:
+      | "assetList"
+      | "assetRelatedList"
+      | "openAssetRelatedList"
+      | "qrReview";
     idRoot?: string;
     propertyReference?: string;
     nameClassRoot?: string;

@@ -206,3 +206,16 @@ export const scaledLineHeight = (
   activeFactor *
   Math.min(PixelRatio.getFontScale(), deviceCap) *
   ratio;
+
+/**
+ * Cỡ chữ cho chữ vẽ bên trong `<Svg>` (nhãn trục biểu đồ).
+ *
+ * `Text` của `react-native-svg` là component riêng, không đi qua lớp bọc mà
+ * `installTextScaling` cài lên module `react-native`, nên phải nhân hệ số bằng
+ * tay. Chỉ nhân tầng người dùng: chữ SVG nằm trong hệ toạ độ của khung vẽ, tầng
+ * thiết bị mà cộng vào nữa là nhãn tràn ra ngoài trục.
+ *
+ * Chỗ gọi phải tự nới lề trục theo `getTextScaleFactor()` cho nhãn có chỗ đứng —
+ * xem `SolarPlantScreen.visuals` và `HomeMachineGrowthCard`.
+ */
+export const scaledSvgFontSize = (fontSize: number) => fontSize * activeFactor;

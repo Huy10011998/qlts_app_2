@@ -38,7 +38,11 @@ import {
 } from "./SolarPlantScreen.helpers";
 import { makeStyles } from "./SolarPlantScreen.styles";
 import type { PlantScene } from "./shared/plantScenes";
-import { UnscaledText } from "../../utils/helpers/textScaling";
+import {
+  UnscaledText,
+  getTextScaleFactor,
+  scaledSvgFontSize,
+} from "../../utils/helpers/textScaling";
 
 // ─── Weather SVG ─────────────────────────────────────────────────────────────
 
@@ -1303,6 +1307,15 @@ const AREA_PAD_L = 40;
 const AREA_PAD_R = 8;
 
 /**
+ * Lề trái thật của biểu đồ vùng.
+ *
+ * Nhãn trục Y đứng trong lề này và là `Text` của SVG — không tự lớn theo cài đặt
+ * cỡ chữ, nên vừa phải nhân cỡ chữ bằng tay vừa phải nới lề đúng ngần ấy. Viên
+ * nhãn ngoài Svg tính lại cùng công thức nên phải gọi chung một hàm.
+ */
+const areaChartPadLeft = () => Math.round(AREA_PAD_L * getTextScaleFactor());
+
+/**
  * Hoành độ của mốc đang xem trên biểu đồ vùng. Viên nhãn ("14:00 0,46 MW") nằm
  * ngoài Svg nên phải tính lại cùng công thức, nếu không nó lệch khỏi đường kẻ dọc.
  */
@@ -1311,11 +1324,12 @@ export const areaChartMarkerX = (
   index: number,
   axisCount: number,
 ) => {
-  const plotWidth = width - AREA_PAD_L - AREA_PAD_R;
+  const padL = areaChartPadLeft();
+  const plotWidth = width - padL - AREA_PAD_R;
 
   return axisCount > 1
-    ? AREA_PAD_L + (index / (axisCount - 1)) * plotWidth
-    : AREA_PAD_L + plotWidth / 2;
+    ? padL + (index / (axisCount - 1)) * plotWidth
+    : padL + plotWidth / 2;
 };
 
 type ChartPoint = { index: number; value: number };
@@ -1382,10 +1396,14 @@ const AreaChartBase: React.FC<{
   width = CHART_WIDTH,
   height = 180,
 }) => {
-  const padL = AREA_PAD_L;
+  // Cỡ chữ nhãn trục và lề chứa nó cùng đi theo cài đặt cỡ chữ. Khung biểu đồ
+  // giữ nguyên `height` do màn hình cấp: chữ to thì vùng vẽ hụt vài px, đổi lại
+  // không chỗ nào phải tính lại chiều cao.
+  const textScale = getTextScaleFactor();
+  const padL = areaChartPadLeft();
   const padR = AREA_PAD_R;
   const padT = 16;
-  const padB = 28;
+  const padB = Math.round(28 * textScale);
   const W = width - padL - padR;
   const H = height - padT - padB;
   const isMerged = variant === "merged";
@@ -1517,7 +1535,7 @@ const AreaChartBase: React.FC<{
             <SvgText
               x={padL - 4}
               y={py(value) + 4}
-              fontSize={9}
+              fontSize={scaledSvgFontSize(9)}
               fill="#aaa"
               textAnchor="end"
             >
@@ -1542,7 +1560,7 @@ const AreaChartBase: React.FC<{
             <SvgText
               x={padL + 2}
               y={py(referenceValue as number) + 4}
-              fontSize={11}
+              fontSize={scaledSvgFontSize(11)}
               fontWeight="600"
               fill="#777"
             >
@@ -1618,8 +1636,8 @@ const AreaChartBase: React.FC<{
         <SvgText
           key={`${label}-${idx}`}
           x={px(idx)}
-          y={padT + H + 14}
-          fontSize={10}
+          y={padT + H + Math.round(14 * textScale)}
+          fontSize={scaledSvgFontSize(10)}
           fill="#999"
           textAnchor="middle"
         >
@@ -1630,8 +1648,8 @@ const AreaChartBase: React.FC<{
           trục X chỉ ghi 6 - Trưa - 18. */}
       <SvgText
         x={padL - 4}
-        y={padT + H + 4}
-        fontSize={9}
+        y={padT + H + Math.round(4 * textScale)}
+        fontSize={scaledSvgFontSize(9)}
         fill="#aaa"
         textAnchor="end"
       >
@@ -1687,10 +1705,12 @@ const EnergyBarChartBase: React.FC<{
   width = CHART_WIDTH,
   height = 180,
 }) => {
-  const padL = 44;
+  // Nhãn trục co giãn theo cài đặt cỡ chữ; lề trái/đáy nới theo để có chỗ đứng.
+  const textScale = getTextScaleFactor();
+  const padL = Math.round(44 * textScale);
   const padR = 8;
   const padT = 16;
-  const padB = 30;
+  const padB = Math.round(30 * textScale);
   const W = width - padL - padR;
   const H = height - padT - padB;
   const bucketCount = Math.max(buckets.length, 1);
@@ -1756,7 +1776,7 @@ const EnergyBarChartBase: React.FC<{
             <SvgText
               x={padL - 4}
               y={py(value) + 4}
-              fontSize={9}
+              fontSize={scaledSvgFontSize(9)}
               fill="#bbb"
               textAnchor="end"
             >
@@ -1870,8 +1890,8 @@ const EnergyBarChartBase: React.FC<{
           <SvgText
             key={`label-${bucketIndex}`}
             x={padL + (bucketIndex + 0.5) * slotWidth}
-            y={padT + H + 15}
-            fontSize={9}
+            y={padT + H + Math.round(15 * textScale)}
+            fontSize={scaledSvgFontSize(9)}
             fill="#aaa"
             textAnchor="middle"
           >
@@ -1883,8 +1903,8 @@ const EnergyBarChartBase: React.FC<{
       {/* Đơn vị ở chân trục Y, cùng chỗ với biểu đồ vùng — xem chú thích ở đó. */}
       <SvgText
         x={padL - 4}
-        y={padT + H + 4}
-        fontSize={9}
+        y={padT + H + Math.round(4 * textScale)}
+        fontSize={scaledSvgFontSize(9)}
         fill="#bbb"
         textAnchor="end"
       >
@@ -1917,10 +1937,12 @@ const BarChartBase: React.FC<{
   width = CHART_WIDTH,
   height = 180,
 }) => {
-  const padL = 44;
+  // Nhãn trục co giãn theo cài đặt cỡ chữ; lề trái/đáy nới theo để có chỗ đứng.
+  const textScale = getTextScaleFactor();
+  const padL = Math.round(44 * textScale);
   const padR = 8;
   const padT = 16;
-  const padB = 32;
+  const padB = Math.round(32 * textScale);
   const W = width - padL - padR;
   const H = height - padT - padB;
   const bucketCount = Math.max(data.length, 1);
@@ -1958,7 +1980,7 @@ const BarChartBase: React.FC<{
               <SvgText
                 x={padL - 4}
                 y={y + 4}
-                fontSize={9}
+                fontSize={scaledSvgFontSize(9)}
                 fill="#bbb"
                 textAnchor="end"
               >
@@ -2006,8 +2028,8 @@ const BarChartBase: React.FC<{
                   <SvgText
                     key={label}
                     x={x}
-                    y={padT + H + 18}
-                    fontSize={9}
+                    y={padT + H + Math.round(18 * textScale)}
+                    fontSize={scaledSvgFontSize(9)}
                     fill="#aaa"
                     textAnchor="middle"
                   >
@@ -2018,8 +2040,8 @@ const BarChartBase: React.FC<{
             ) : (
               <SvgText
                 x={cx}
-                y={padT + H + 18}
-                fontSize={9}
+                y={padT + H + Math.round(18 * textScale)}
+                fontSize={scaledSvgFontSize(9)}
                 fill="#aaa"
                 textAnchor="middle"
               >
@@ -2040,8 +2062,8 @@ const BarChartBase: React.FC<{
       {/* Đơn vị ở chân trục Y cho khớp với hai biểu đồ còn lại của màn. */}
       <SvgText
         x={padL - 4}
-        y={padT + H + 4}
-        fontSize={9}
+        y={padT + H + Math.round(4 * textScale)}
+        fontSize={scaledSvgFontSize(9)}
         fill="#bbb"
         textAnchor="end"
       >

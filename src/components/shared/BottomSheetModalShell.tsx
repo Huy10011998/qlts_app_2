@@ -33,6 +33,12 @@ type BottomSheetModalShellProps = {
   keyboardOffset?: number;
   onClose: () => void;
   overlayStyle?: StyleProp<ViewStyle>;
+  /**
+   * Chừa thêm phần safe area đáy màn hình. Mặc định bật: máy tính bảng Android
+   * có thanh điều hướng cao, không chừa thì đáy sheet lọt xuống dưới thanh và
+   * nhìn như bị tụt quá thấp. Tắt khi nơi gọi đã tự cộng `insets.bottom`.
+   */
+  safeAreaBottom?: boolean;
   sheetStyle?: StyleProp<ViewStyle>;
   showCloseButton?: boolean;
   showHandle?: boolean;
@@ -50,6 +56,7 @@ export default function BottomSheetModalShell({
   keyboardOffset = 0,
   onClose,
   overlayStyle,
+  safeAreaBottom = true,
   sheetStyle,
   showCloseButton = false,
   showHandle = false,
@@ -264,6 +271,9 @@ export default function BottomSheetModalShell({
           ) : null}
           {showHandle ? <View style={styles.handle} /> : null}
           {children}
+          {safeAreaBottom && insets.bottom > 0 ? (
+            <View style={{ height: insets.bottom }} />
+          ) : null}
         </Animated.View>
       </View>
     </Modal>

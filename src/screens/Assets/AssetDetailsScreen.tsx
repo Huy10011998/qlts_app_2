@@ -1,5 +1,4 @@
 import React from "react";
-
 import AssetDetails from "../../components/assets/AssetDetails";
 import ScreenContainer from "../shared/ScreenContainer";
 import { useReloadPermissionsOnFocus } from "../../hooks/useReloadPermissionsOnFocus";

@@ -61,6 +61,7 @@ import { REVIEW_NAME_CLASSES_DANHGIA } from "../../constants/reviewNameClasses";
 import {
   backToAssetList,
   backToAssetRelatedList,
+  openAssetRelatedList,
 } from "../../navigation/shared/assetNavigationReset";
 
 const BRAND_RED = ASSET_FORM_BRAND_RED;
@@ -310,12 +311,18 @@ export default function AssetAddRelatedItem() {
               }
 
               if (
-                returnTo === "assetRelatedList" &&
+                (returnTo === "assetRelatedList" ||
+                  returnTo === "openAssetRelatedList") &&
                 nameClass &&
                 idRoot &&
                 propertyReference
               ) {
-                backToAssetRelatedList(navigation, {
+                const goToRelatedList =
+                  returnTo === "openAssetRelatedList"
+                    ? openAssetRelatedList
+                    : backToAssetRelatedList;
+
+                goToRelatedList(navigation, {
                   assetContext: {
                     groupMenuId,
                     viewPermission,

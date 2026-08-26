@@ -9,7 +9,6 @@ import {
   FlatList,
   UIManager,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import type { PropsEnum } from "../../types/components.d";
 import { useDebounce } from "../../hooks/useDebounce";
@@ -56,7 +55,6 @@ export default function EnumAndReferencePickerModal({
   loadedCount,
 }: PropsEnum & ExtraProps) {
   const styles = useStyles(makeStyles);
-  const insets = useSafeAreaInsets();
   const separatorColor = useSeparatorColor();
   const [searchText, setSearchText] = useState("");
   const [multiSelectedValues, setMultiSelectedValues] = useState<string[]>([]);
@@ -214,10 +212,7 @@ export default function EnumAndReferencePickerModal({
       onClose={onClose}
       statusBarTranslucent
       presentationStyle="overFullScreen"
-      sheetStyle={[
-        styles.modalContainer,
-        { paddingBottom: insets.bottom || 16 },
-      ]}
+      sheetStyle={[styles.modalContainer, { paddingBottom: 16 }]}
       closeButtonStyle={styles.closeButton}
       showCloseButton
       showHandle

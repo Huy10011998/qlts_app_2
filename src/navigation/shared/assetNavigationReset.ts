@@ -186,6 +186,35 @@ export function resetToAssetRelatedList(
   });
 }
 
+/**
+ * Sau khi thêm bản ghi con từ đường tắt vuốt ở danh sách cha: thay màn thêm mới
+ * bằng danh sách con, để người dùng thấy ngay bản ghi vừa tạo mà danh sách cha
+ * vẫn còn nguyên bên dưới (bấm back là về đúng chỗ vừa vuốt, giữ cả từ khoá tìm
+ * kiếm và vị trí cuộn).
+ *
+ * Khác `backToAssetRelatedList`: hàm đó dùng khi danh sách con đã có trong stack,
+ * không có thì nó reset và xoá mất danh sách cha.
+ */
+export function openAssetRelatedList(
+  navigation: ResetNavigation,
+  {
+    assetContext,
+    relatedListParams,
+  }: {
+    assetContext: AssetRouteContext;
+    relatedListParams: RootStackParamList["AssetRelatedList"];
+  },
+) {
+  if (!navigation.dispatch) {
+    resetToAssetRelatedList(navigation, { assetContext, relatedListParams });
+    return;
+  }
+
+  navigation.dispatch(
+    StackActions.replace("AssetRelatedList", relatedListParams),
+  );
+}
+
 export function backToAssetRelatedList(
   navigation: ResetNavigation,
   {

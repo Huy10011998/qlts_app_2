@@ -1,3 +1,5 @@
+import { getTextScaleFactor } from "../../utils/helpers/textScaling";
+
 const PDFJS_VERSION = "2.14.305";
 const PDFJS_BASE = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}`;
 
@@ -22,6 +24,10 @@ const GUTTER = 12;
  *   nằm trước.
  * - Bitmap nhân theo `devicePixelRatio` (chặn ở 3) cho nét, còn bề rộng CSS giữ
  *   đúng bề ngang khung.
+ * - Chữ báo lỗi đi theo cài đặt cỡ chữ của ứng dụng: WebView nằm ngoài tầm với
+ *   của lớp bọc `Text`, nên hệ số phải nung thẳng vào CSS. Nội dung PDF thì
+ *   không — mỗi trang là một ảnh vẽ vừa khung, muốn đọc chữ nhỏ thì phóng to
+ *   bằng hai ngón (tới 5×).
  */
 export const buildPdfViewerHtml = (base64Data: string) => `
   <html>
@@ -41,7 +47,7 @@ export const buildPdfViewerHtml = (base64Data: string) => `
         #fallback {
           margin:0;
           padding:24px 16px;
-          font:15px -apple-system,system-ui,Roboto,sans-serif;
+          font:${15 * getTextScaleFactor()}px -apple-system,system-ui,Roboto,sans-serif;
           color:#555;
           text-align:center;
         }

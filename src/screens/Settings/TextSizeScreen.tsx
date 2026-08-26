@@ -10,8 +10,9 @@ import {
 } from "../../utils/helpers/textScaling";
 
 /**
- * Cỡ chữ trong khối xem trước phải nhân tay theo nấc đang rê, vì hệ số toàn cục
- * chỉ đổi sau khi cây điều hướng remount — mà lúc đó màn này đã đóng.
+ * Cỡ chữ trong khối xem trước phải nhân tay theo nấc đang rê: hệ số toàn cục chỉ
+ * đổi lúc nhấc tay (xem `handleChangeEnd`), nên trong lúc kéo thì lớp bọc `Text`
+ * vẫn đang nhân theo hệ số cũ — chia lại `appliedFactor` để bù.
  */
 const previewFontSize = (base: number, factor: number, appliedFactor: number) =>
   (base / appliedFactor) * factor;
@@ -59,9 +60,18 @@ export default function TextSizeScreen() {
   // cỡ. Chia ngược hệ số đang áp dụng để bù lại phép nhân toàn cục.
   const fixed = (base: number) => base / appliedFactor;
 
-  const handleChange = (nextStep: number) => {
-    // Đổi preview trước cho phản hồi tức thì; áp dụng thật sẽ remount cây điều
-    // hướng nên màn này biến mất.
+  // Đang rê thì chỉ đổi phần xem trước — nhẹ và tức thì.
+  const handleChange = setPreviewStep;
+
+  /**
+   * Nhấc tay mới áp dụng thật.
+   *
+   * `setStep` remount cả cây điều hướng để hệ số cỡ chữ mới có hiệu lực; làm
+   * việc đó theo từng nấc trong lúc kéo thì cú kéo đứt ngay nấc đầu. Màn này
+   * được dựng lại tại chỗ (`initialState` ở `App.tsx`), nên sau khi nhấc tay
+   * người dùng vẫn đứng đây và thấy cả màn đổi cỡ, không riêng bảng mẫu chữ.
+   */
+  const handleChangeEnd = (nextStep: number) => {
     setPreviewStep(nextStep);
     setStep(nextStep);
   };
@@ -154,6 +164,7 @@ export default function TextSizeScreen() {
               stepCount={TEXT_SCALE_STEPS.length}
               value={previewStep}
               onChange={handleChange}
+              onChangeEnd={handleChangeEnd}
             />
           </View>
           <Text

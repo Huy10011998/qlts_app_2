@@ -45,6 +45,7 @@ const makeLocalStyles = (c: AppColors) => ({
   },
   imageButtonText: {
     marginLeft: 8,
+    fontSize: 14,
     color: c.red,
   },
   imageWrap: {
@@ -57,6 +58,7 @@ const makeLocalStyles = (c: AppColors) => ({
     color: c.text,
   },
   linkText: {
+    fontSize: 14,
     color: "blue",
   },
   selectText: {

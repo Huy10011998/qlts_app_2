@@ -219,6 +219,9 @@ const makeStyles = (c: AppColors) =>
       padding: 16,
     },
     stateText: {
+      // Cỡ chữ phải khai tường minh: hệ số cỡ chữ của app chỉ nhân vào
+      // `fontSize` có sẵn trong style, không chạm tới cỡ mặc định của `Text`.
+      fontSize: 14,
       color: c.text,
     },
     titleWrap: {

@@ -149,9 +149,13 @@ jest.mock('react-native-image-picker', () => ({
 
 jest.mock('react-native-video', () => 'Video');
 
-jest.mock('react-native-gesture-handler', () =>
-  require('react-native-gesture-handler/jestSetup'),
-);
+// `jestSetup` chỉ mock phần native, không export component nào. Phải trả về
+// module thật sau đó, nếu không `GestureHandlerRootView`/`Swipeable` là undefined
+// và mọi màn dùng chúng sẽ hỏng khi render trong test.
+jest.mock('react-native-gesture-handler', () => {
+  require('react-native-gesture-handler/jestSetup');
+  return jest.requireActual('react-native-gesture-handler');
+});
 
 jest.mock('@react-native-community/geolocation', () => ({
   __esModule: true,

@@ -26,6 +26,8 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     "quyen",
     "gps",
     "camera",
+    "vuot the",
+    "them nhanh",
   ],
   sections: [
     {
@@ -149,6 +151,28 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
             "Đổi góc để tránh bóng đèn phản lên tem; đưa xa/gần cho tem nằm gọn trong khung ngắm.",
             "Tem bị dán chồng, xé mất góc hoặc mờ hẳn thì không đọc được — tìm thiết bị theo danh sách tài sản và báo bộ phận quản lý in tem mới.",
           ],
+        },
+      ],
+    },
+    {
+      id: "faq-vuot-the-khong-ra-nut",
+      heading: "Vuốt dòng ở danh sách tài sản không thấy nút nào",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Nút vuốt là đường tắt để thêm bản ghi con, nên nó chỉ có ở danh sách của loại tài sản thật sự có danh mục con.",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Không có dòng nhắc màu đỏ nhạt dưới ô tìm kiếm nghĩa là danh sách đó không vuốt được.",
+            "Loại tài sản không khai báo danh mục con nào — ví dụ danh sách phiếu đánh giá — thì không có gì để thêm bên dưới nữa.",
+            "Có danh mục con nhưng tài khoản chưa có quyền thêm ở đó thì nút cũng ẩn; liên hệ IT để được cấp quyền.",
+          ],
+        },
+        {
+          kind: "paragraph",
+          text: "Muốn biết một loại tài sản có danh mục con nào: mở một bản ghi rồi xem tab Chi tiết — đúng danh sách đó là những gì vuốt để thêm nhanh được.",
         },
       ],
     },
