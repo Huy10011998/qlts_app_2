@@ -17,6 +17,10 @@ import {
   formatHomeNumber,
 } from "./homeFormat";
 import { HOME_BRAND_RED } from "./homeTheme";
+import {
+  getTextScaleFactor,
+  scaledSvgFontSize,
+} from "../../../utils/helpers/textScaling";
 
 type HomeMachineGrowthCardProps = {
   /** 12 mốc, giữ nguyên thứ tự cũ -> mới của server. */
@@ -40,6 +44,8 @@ const PAD_LEFT = 36;
 const PAD_RIGHT = 4;
 const PAD_TOP = 6;
 const PAD_BOTTOM = 14;
+/** Cỡ nhãn trục ở hệ số cỡ chữ 1. */
+const LABEL_FONT_SIZE = 8.5;
 /** Bề rộng cột so với ô tháng — chừa khe để 12 cột không dính vào nhau. */
 const BAR_WIDTH_RATIO = 0.56;
 /** Tháng không phát sinh máy nào vẫn phải thấy là CÓ mốc và bằng 0. */
@@ -86,8 +92,16 @@ function GrowthBarChart({
 }) {
   const styles = useStyles(makeStyles);
   const colors = useAppColors();
-  const plotWidth = Math.max(0, width - PAD_LEFT - PAD_RIGHT);
-  const plotHeight = CHART_HEIGHT - PAD_TOP - PAD_BOTTOM;
+  // Nhãn trục là `Text` của SVG nên không tự lớn theo cài đặt cỡ chữ — phải tự
+  // nhân, và nới lề trái/đáy đúng bằng ngần ấy để nhãn không đè vào vùng vẽ.
+  // Khung biểu đồ giữ nguyên `CHART_HEIGHT`: chữ to thì vùng vẽ hụt vài px, đổi
+  // lại không màn nào phải tính lại chiều cao.
+  const textScale = getTextScaleFactor();
+  const labelFontSize = scaledSvgFontSize(LABEL_FONT_SIZE);
+  const padLeft = Math.round(PAD_LEFT * textScale);
+  const padBottom = Math.round(PAD_BOTTOM * textScale);
+  const plotWidth = Math.max(0, width - padLeft - PAD_RIGHT);
+  const plotHeight = CHART_HEIGHT - PAD_TOP - padBottom;
   const count = values.length;
   const baseY = PAD_TOP + plotHeight;
   const maxValue = values.reduce((max, value) => Math.max(max, value), 0);
@@ -96,7 +110,7 @@ function GrowthBarChart({
   const slotWidth = count > 0 ? plotWidth / count : plotWidth;
   const barWidth = Math.max(3, slotWidth * BAR_WIDTH_RATIO);
 
-  const slotCenter = (index: number) => PAD_LEFT + (index + 0.5) * slotWidth;
+  const slotCenter = (index: number) => padLeft + (index + 0.5) * slotWidth;
   const py = (value: number) => baseY - (value / axisMax) * plotHeight;
 
   // Nhãn cách mốc (1 bỏ 1) và luôn giữ mốc cuối: 12 nhãn "MM/yy" xếp cạnh nhau
@@ -109,17 +123,17 @@ function GrowthBarChart({
         {[0, axisMax / 2, axisMax].map((tickValue) => (
           <React.Fragment key={`tick-${tickValue}`}>
             <Line
-              x1={PAD_LEFT}
+              x1={padLeft}
               y1={py(tickValue)}
-              x2={PAD_LEFT + plotWidth}
+              x2={padLeft + plotWidth}
               y2={py(tickValue)}
               stroke={colors.border}
               strokeWidth={0.8}
             />
             <SvgText
-              x={PAD_LEFT - 4}
+              x={padLeft - 4}
               y={py(tickValue) + 3}
-              fontSize={8.5}
+              fontSize={labelFontSize}
               fill={colors.textMuted}
               textAnchor="end"
             >
@@ -150,9 +164,9 @@ function GrowthBarChart({
         })}
 
         <Line
-          x1={PAD_LEFT}
+          x1={padLeft}
           y1={baseY}
-          x2={PAD_LEFT + plotWidth}
+          x2={padLeft + plotWidth}
           y2={baseY}
           stroke={colors.borderStrong}
           strokeWidth={1.2}
@@ -164,7 +178,7 @@ function GrowthBarChart({
               key={point.key}
               x={slotCenter(index)}
               y={CHART_HEIGHT - 3}
-              fontSize={8.5}
+              fontSize={labelFontSize}
               fill={index === activeIndex ? colors.text : colors.textMuted}
               fontWeight={index === activeIndex ? "700" : "400"}
               textAnchor="middle"
@@ -177,7 +191,10 @@ function GrowthBarChart({
 
       {/* Dải chạm trong suốt: mỗi tháng một ô, chạm đâu chọn đó — cột của tháng
           không phát sinh quá thấp để tự nhận cử chỉ. */}
-      <View style={styles.touchRow} pointerEvents="box-none">
+      <View
+        style={[styles.touchRow, { left: padLeft }]}
+        pointerEvents="box-none"
+      >
         {points.map((point, index) => (
           <TouchableOpacity
             key={`touch-${point.key}`}
@@ -382,8 +399,8 @@ const makeStyles = (c: AppColors) =>
       position: "relative",
     },
     touchRow: {
+      // `left` do chỗ dùng truyền vào: lề trái co giãn theo cỡ chữ nhãn trục.
       position: "absolute",
-      left: PAD_LEFT,
       right: PAD_RIGHT,
       top: 0,
       bottom: 0,

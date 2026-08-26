@@ -27,6 +27,7 @@ import {
   getBuildTree,
 } from "../../services";
 import ListCardAsset from "../../components/list/ListCardAsset";
+import SwipeableListRow from "../../components/list/SwipeableListRow";
 import IsLoading from "../../components/ui/IconLoading";
 import { useDebounce } from "../../hooks/useDebounce";
 import Ionicons from "react-native-vector-icons/Ionicons";
@@ -61,6 +62,9 @@ import {
 } from "./shared/treeHelpers";
 import { BRAND_RED } from "./shared/listTheme";
 import { makeSharedAssetListStyles } from "./shared/listStyles";
+import AddChildClassSheet from "./shared/AddChildClassSheet";
+import SwipeHintBanner from "./shared/SwipeHintBanner";
+import { useAddChildShortcut } from "./shared/useAddChildShortcut";
 
 if (
   Platform.OS === "android" &&
@@ -163,6 +167,42 @@ export default function AssetList() {
   );
   const { can, loaded } = usePermission();
   const reloadPerms = useReloadPermissions();
+
+  // Đường tắt: vuốt một dòng để thêm bản ghi con, không phải đi qua
+  // AssetDetails → tab Chi tiết → AssetRelatedList.
+  const {
+    actionIcon: addChildIcon,
+    actionLabel: addChildLabel,
+    busyItemId,
+    canAddChild,
+    hasChildClasses,
+    openFor: openAddChild,
+    sheetProps: addChildSheetProps,
+  } = useAddChildShortcut({
+    assetTitleHeader,
+    fieldActive,
+    groupMenuId,
+    nameClass,
+    viewPermission,
+  });
+  // Chỉ một thẻ được mở tại một thời điểm. Thẻ cũ đóng ngay khi ngón tay bắt
+  // đầu kéo thẻ mới, để hai chuyển động chạy cùng lúc thay vì giật nối tiếp.
+  const openRowCloseRef = useRef<(() => void) | null>(null);
+  const closeOpenRow = useCallback((except?: () => void) => {
+    const close = openRowCloseRef.current;
+    if (close && close !== except) {
+      openRowCloseRef.current = null;
+      close();
+    }
+  }, []);
+  const handleRowOpened = useCallback((close: () => void) => {
+    openRowCloseRef.current = close;
+  }, []);
+  const handleRowClosed = useCallback((close: () => void) => {
+    if (openRowCloseRef.current === close) {
+      openRowCloseRef.current = null;
+    }
+  }, []);
 
   const refreshTop = async () => {
     if (isRefreshingTop) return;
@@ -465,14 +505,39 @@ export default function AssetList() {
 
   const renderItem = useCallback(
     ({ item }: { item: Record<string, any> }) => (
-      <ListCardAsset
-        item={item}
-        fields={fieldShowMobile.length ? fieldShowMobile : fieldActive}
-        icon={propertyClass?.iconMobile || ""}
-        onPress={() => handlePress(item)}
-      />
+      <SwipeableListRow
+        actionIcon={addChildIcon}
+        actionLabel={addChildLabel}
+        busy={busyItemId === String(item.id)}
+        disabled={!canAddChild}
+        onAction={() => openAddChild(item)}
+        onClosed={handleRowClosed}
+        onOpened={handleRowOpened}
+        onOpenStartDrag={closeOpenRow}
+        onTouchStart={closeOpenRow}
+      >
+        <ListCardAsset
+          item={item}
+          fields={fieldShowMobile.length ? fieldShowMobile : fieldActive}
+          icon={propertyClass?.iconMobile || ""}
+          onPress={() => handlePress(item)}
+        />
+      </SwipeableListRow>
     ),
-    [fieldActive, fieldShowMobile, handlePress, propertyClass],
+    [
+      addChildIcon,
+      addChildLabel,
+      busyItemId,
+      canAddChild,
+      closeOpenRow,
+      fieldActive,
+      fieldShowMobile,
+      handlePress,
+      handleRowClosed,
+      handleRowOpened,
+      openAddChild,
+      propertyClass,
+    ],
   );
 
   const renderTreePanel = () => (
@@ -560,6 +625,10 @@ export default function AssetList() {
         />
       ) : null}
 
+      {!isEmpty && hasChildClasses ? (
+        <SwipeHintBanner actionLabel={addChildLabel} />
+      ) : null}
+
       <View style={styles.listWrap}>
         <FlatList
           key={`asset-list-${nameClass || "default"}-${listLayoutVersion}`}
@@ -581,6 +650,8 @@ export default function AssetList() {
           initialNumToRender={10}
           windowSize={5}
           scrollEventThrottle={16}
+          // Cuộn danh sách thì thẻ đang mở đóng lại, khỏi trôi lửng lơ.
+          onScrollBeginDrag={() => closeOpenRow()}
           removeClippedSubviews={Platform.OS === "android"}
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
@@ -611,6 +682,8 @@ export default function AssetList() {
       </View>
 
       {renderTreePanel()}
+
+      <AddChildClassSheet {...addChildSheetProps} />
 
       {showAddFab && (
         <AddItem

@@ -12,7 +12,7 @@ import {
   Easing,
   Modal,
   View,
-  Text as NativeText,
+  Text,
   RefreshControl,
   ScrollView,
   TouchableOpacity,
@@ -109,7 +109,10 @@ import {
 // Bảng điều khiển này đi theo cỡ chữ hệ thống như phần còn lại của ứng dụng.
 // Riêng khối "Sản lượng hôm nay" ở đầu màn giữ `allowFontScaling={false}` tại
 // chỗ: nó dùng `adjustsFontSizeToFit` để ép con số vào đúng một dòng.
-const Text = NativeText;
+//
+// `Text` phải đọc thẳng từ `react-native` mỗi lần render — gán ra một biến ở
+// phạm vi module sẽ chốt lại component *trước* khi `installTextScaling` kịp
+// ghi đè, và cả màn hình mất luôn hệ số cỡ chữ người dùng chọn.
 
 const EMPTY_MESSAGE = "Không có dữ liệu";
 

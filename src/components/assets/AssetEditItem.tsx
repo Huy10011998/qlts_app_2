@@ -18,7 +18,6 @@ import {
 } from "../../utils/helpers/string";
 import {
   AppColors,
-  useAccentBorderColors,
   useAppColors,
   useStyles,
 } from "../../utils/helpers/colors";
@@ -139,7 +138,6 @@ const areUpdateValuesEqual = (
 export default function AssetEditItem() {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
-  const accentBorders = useAccentBorderColors();
   const { item, field, nameClass } = useParams();
   const navigation = useNavigation<AssetEditItemNavigationProp>();
   const dispatch = useAppDispatch();
@@ -487,13 +485,7 @@ export default function AssetEditItem() {
         validationErrors={validationErrors}
         setImages={setImages}
         setLoadingImages={setLoadingImages}
-        styles={{
-          ...styles,
-          uploadButton: [
-            styles.uploadButton,
-            { borderColor: accentBorders.red },
-          ],
-        }}
+        styles={styles}
         toggleGroup={toggleGroup}
       />
     </AssetFormScreenShell>

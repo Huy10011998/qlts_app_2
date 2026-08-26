@@ -83,7 +83,7 @@ const makeStyles = (c: AppColors) =>
       borderTopLeftRadius: 22,
       borderTopRightRadius: 22,
       paddingHorizontal: 16,
-      paddingBottom: 8,
+      paddingBottom: 12,
     },
     closeButton: {
       top: 14,

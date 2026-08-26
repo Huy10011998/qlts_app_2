@@ -7,7 +7,7 @@ import React, { type ComponentProps, useEffect, useState } from "react";
 import {
   Alert,
   Modal,
-  Text as NativeText,
+  Text,
   TouchableOpacity,
   useWindowDimensions,
   View,
@@ -43,7 +43,7 @@ import {
   DateSkipIcon,
 } from "./SolarPlantScreen.visuals";
 
-type SolarTextProps = ComponentProps<typeof NativeText>;
+type SolarTextProps = ComponentProps<typeof Text>;
 
 /**
  * Chữ không phóng to theo cỡ chữ hệ thống.
@@ -56,8 +56,6 @@ type SolarTextProps = ComponentProps<typeof NativeText>;
 const FixedText: React.FC<SolarTextProps> = (props) => (
   <UnscaledText {...props} allowFontScaling={false} />
 );
-
-const Text = NativeText;
 
 /**
  * Cỡ chữ của hàng 5 tab kỳ, chọn theo bề ngang màn hình.

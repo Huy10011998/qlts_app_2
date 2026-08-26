@@ -278,7 +278,19 @@ const TOPICS: GuideTopic[] = [
     iconName: "cube-outline",
     iconBg: C.amber,
     group: "Nghiệp vụ",
-    keywords: ["tai san", "thiet bi", "may moc", "cntt", "danh sach", "them moi", "ban sao"],
+    keywords: [
+      "tai san",
+      "thiet bi",
+      "may moc",
+      "cntt",
+      "danh sach",
+      "them moi",
+      "ban sao",
+      "vuot the",
+      "them nhanh",
+      "them muc con",
+      "danh gia nhanh",
+    ],
     sections: [
       {
         id: "tai-san-tra-cuu",
@@ -334,6 +346,30 @@ const TOPICS: GuideTopic[] = [
             kind: "note",
             tone: "info",
             text: "Không thấy nút Thêm mới, Sửa hay Xoá nghĩa là tài khoản chưa có quyền tương ứng với loại tài sản đó, chứ không phải app lỗi.",
+          },
+        ],
+      },
+      {
+        id: "tai-san-vuot-them-con",
+        heading: "Thêm nhanh bản ghi con bằng cách vuốt",
+        blocks: [
+          {
+            kind: "paragraph",
+            text: "Đường tắt cho việc làm hằng ngày: thay vì mở chi tiết → tab Chi tiết → danh sách con → Thêm mới, vuốt thẳng trên dòng ở danh sách là vào ngay màn thêm mới, bản ghi cha được điền sẵn.",
+          },
+          {
+            kind: "steps",
+            items: [
+              "Ở màn danh sách, vuốt một dòng sang trái.",
+              "Bấm nút đỏ hiện ra ở mép phải. Nút ghi đúng việc sẽ làm, ví dụ Đánh giá ở danh sách bình chữa cháy.",
+              "Loại tài sản có nhiều danh mục con thì app hỏi thêm một bước: chọn danh mục cần thêm.",
+              "Điền và bấm lưu. Lưu xong app mở danh sách con để thấy ngay bản ghi vừa tạo; bấm back là về lại đúng danh sách vừa vuốt.",
+            ],
+          },
+          {
+            kind: "note",
+            tone: "info",
+            text: "Danh sách nào vuốt được thì có dòng nhắc màu đỏ nhạt ngay dưới ô tìm kiếm. Không có dòng đó nghĩa là loại tài sản này không khai báo danh mục con nào, hoặc tài khoản chưa có quyền thêm ở danh mục con — không phải app lỗi.",
           },
         ],
       },

@@ -2,6 +2,7 @@ import { StyleSheet } from "react-native";
 import { AppColors } from "../../utils/helpers/colors";
 import { elevation, radius, spacing } from "../../utils/helpers/tokens";
 import { CAMERA_FULLSCREEN_EDGE_INSET } from "./shared/cameraStreamConfig";
+import { getTextScaleFactor } from "../../utils/helpers/textScaling";
 
 export const PLAYER_ASPECT_RATIO = 16 / 9;
 export const TIMELINE_ROW_HEIGHT = 168;
@@ -472,7 +473,14 @@ export const makeStyles = (c: AppColors) =>
       paddingHorizontal: spacing.xxl,
     },
     timePickerColumn: { flex: 1, height: 220 },
-    timePickerItem: { color: c.text, fontSize: 22, height: 220 },
+    // `Picker` là component gốc của hệ điều hành, không đi qua lớp bọc `Text`
+    // nên phải tự nhân hệ số. `itemStyle` chỉ có tác dụng trên iOS — Android
+    // vẽ danh sách bằng widget riêng, không nhận cỡ chữ từ đây.
+    timePickerItem: {
+      color: c.text,
+      fontSize: 22 * getTextScaleFactor(),
+      height: 220,
+    },
     timePickerColon: {
       color: c.text,
       fontSize: 24,

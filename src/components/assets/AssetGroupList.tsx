@@ -69,19 +69,34 @@ export default function AssetGroupList({
         return (
           <View key={groupName} style={styles.groupCard}>
             <TouchableOpacity
-              style={styles.groupHeader}
+              style={[
+                styles.groupHeader,
+                !isCollapsed && styles.groupHeaderOpen,
+              ]}
               onPress={() => toggleGroup(groupName)}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={groupName}
             >
-              <Text style={styles.groupTitle}>{groupName}</Text>
-              <Ionicons
-                name={isCollapsed ? "chevron-down" : "chevron-up"}
-                size={26}
-                color={c.red}
-              />
+              <View style={styles.groupTitleWrap}>
+                <View style={styles.groupBullet} />
+                <Text style={styles.groupTitle}>{groupName}</Text>
+              </View>
+
+              {/* Số trường trong nhóm: nhóm đang gập lại vẫn biết bên trong có gì. */}
+              <Text style={styles.groupCount}>{fields.length}</Text>
+
+              <View style={styles.groupChevron}>
+                <Ionicons
+                  name={isCollapsed ? "chevron-down" : "chevron-up"}
+                  size={16}
+                  color={c.red}
+                />
+              </View>
             </TouchableOpacity>
 
             {!isCollapsed &&
-              fields.map((field) => {
+              fields.map((field, fieldIndex) => {
                 const currentValue = getFieldValue(item, field) || "---";
                 const prevValue =
                   (previousItem && getFieldValue(previousItem, field)) || "---";
@@ -91,32 +106,57 @@ export default function AssetGroupList({
                     ? isFieldChanged(field, item, previousItem)
                     : false;
 
+                const isEmpty = currentValue === "---";
+                const isLast = fieldIndex === fields.length - 1;
+
                 return (
-                  <View key={field.name} style={styles.fieldRow}>
-                    <Text style={styles.label}>{field.moTa}: </Text>
+                  <View
+                    key={field.name}
+                    style={[styles.fieldRow, !isLast && styles.fieldDivider]}
+                  >
+                    {/* Nhãn trên, giá trị dưới: nhãn tiếng Việt hay dài, để cùng
+                        một dòng thì chữ bị ngắt lung tung, mỗi dòng lệch một kiểu. */}
+                    <Text style={styles.label}>{field.moTa}</Text>
 
                     {field.typeProperty === TypeProperty.Image ? (
                       currentValue !== "---" ? (
                         loadingImages[field.name] ? (
-                          <IsLoading size="small" />
+                          <View style={styles.imageLoading}>
+                            <IsLoading size="small" />
+                          </View>
                         ) : images[field.name] ? (
                           <TouchableOpacity
+                            style={styles.imageWrap}
                             onPress={() => {
                               setSelectedImage(images[field.name]);
                               setModalVisible(true);
                             }}
+                            activeOpacity={0.9}
+                            accessibilityRole="imagebutton"
+                            accessibilityLabel={`Xem ${field.moTa}`}
                           >
                             <Image
                               source={{ uri: images[field.name] }}
                               style={styles.image}
                               resizeMode="cover"
                             />
+
+                            {/* Không phải ai cũng đoán được ảnh bấm vào xem to được. */}
+                            <View style={styles.imageZoomHint}>
+                              <Ionicons
+                                name="expand-outline"
+                                size={14}
+                                color="#fff"
+                              />
+                            </View>
                           </TouchableOpacity>
                         ) : (
-                          <Text style={styles.value}>---</Text>
+                          <Text style={[styles.value, styles.emptyValue]}>
+                            ---
+                          </Text>
                         )
                       ) : (
-                        <Text style={styles.value}>---</Text>
+                        <Text style={[styles.value, styles.emptyValue]}>---</Text>
                       )
                     ) : field.typeProperty === TypeProperty.Link ? (
                       (() => {
@@ -152,14 +192,18 @@ export default function AssetGroupList({
                                 {currentParsed.text}
                               </Text>
                             ) : (
-                              <Text>---</Text>
+                              <Text style={styles.emptyValue}>---</Text>
                             )}
                           </Text>
                         );
                       })()
                     ) : (
                       <Text
-                        style={[styles.value, changed && styles.changedValue]}
+                        style={[
+                          styles.value,
+                          isEmpty && !changed && styles.emptyValue,
+                          changed && styles.changedValue,
+                        ]}
                       >
                         {changed
                           ? `${prevValue}  ->  ${currentValue}`
@@ -217,33 +261,78 @@ const makeStyles = (c: AppColors) =>
 
     groupHeader: {
       flexDirection: "row",
-      justifyContent: "space-between",
       alignItems: "center",
+      gap: 8,
       paddingVertical: 4,
-      marginBottom: 12,
     },
 
-    groupTitle: { fontSize: 16, fontWeight: "700", color: c.red },
+    groupHeaderOpen: {
+      paddingBottom: 12,
+      marginBottom: 4,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
+    },
 
-    fieldRow: {
+    groupTitleWrap: {
+      flex: 1,
       flexDirection: "row",
       alignItems: "center",
-      marginBottom: 8,
-      flexWrap: "wrap",
+      gap: 8,
+    },
+
+    groupBullet: {
+      width: 4,
+      height: 16,
+      borderRadius: 2,
+      backgroundColor: c.red,
+    },
+
+    groupTitle: { flex: 1, fontSize: 15.5, fontWeight: "700", color: c.red },
+
+    groupCount: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: c.textMuted,
+      minWidth: 18,
+      textAlign: "right",
+    },
+
+    groupChevron: {
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: c.redSurface,
+    },
+
+    fieldRow: {
+      paddingVertical: 9,
+    },
+
+    fieldDivider: {
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
     },
 
     label: {
       fontWeight: "600",
-      color: c.text,
-      fontSize: 14,
-      marginRight: 6,
+      color: c.textMuted,
+      fontSize: 11.5,
+      letterSpacing: 0.2,
+      marginBottom: 3,
     },
 
     value: {
       fontSize: 14,
       color: c.text,
-      flexShrink: 1,
+      lineHeight: 20,
     },
+
+    emptyValue: {
+      color: c.textMuted,
+    },
+
     changedValue: {
       color: c.red,
       fontWeight: "600",
@@ -254,11 +343,42 @@ const makeStyles = (c: AppColors) =>
       textDecorationLine: "underline",
     },
 
-    image: {
-      width: 100,
-      height: 100,
-      borderRadius: 8,
+    imageWrap: {
+      marginTop: 4,
+      width: "100%",
+      aspectRatio: 4 / 3,
+      borderRadius: 12,
+      overflow: "hidden",
       backgroundColor: c.surfaceAlt,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.border,
+    },
+
+    image: {
+      width: "100%",
+      height: "100%",
+    },
+
+    imageZoomHint: {
+      position: "absolute",
+      right: 8,
+      bottom: 8,
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "rgba(17,24,39,0.6)",
+    },
+
+    imageLoading: {
+      marginTop: 4,
+      width: "100%",
+      aspectRatio: 4 / 3,
+      borderRadius: 12,
+      backgroundColor: c.surfaceAlt,
+      alignItems: "center",
+      justifyContent: "center",
     },
 
     modalContainer: {

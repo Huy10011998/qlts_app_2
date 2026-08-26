@@ -18,7 +18,6 @@ import { fetchImage, pickImage } from "../../utils/Image";
 import { isEffectivelyEmptyCodeValue } from "../../utils/helpers/string";
 import {
   AppColors,
-  useAccentBorderColors,
   useAppColors,
   useStyles,
 } from "../../utils/helpers/colors";
@@ -65,7 +64,6 @@ const BRAND_RED = ASSET_FORM_BRAND_RED;
 export default function AssetCloneItem() {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
-  const accentBorders = useAccentBorderColors();
   const {
     item,
     field,
@@ -501,13 +499,7 @@ export default function AssetCloneItem() {
         validationErrors={validationErrors}
         setImages={setImages}
         setLoadingImages={setLoadingImages}
-        styles={{
-          ...styles,
-          uploadButton: [
-            styles.uploadButton,
-            { borderColor: accentBorders.red },
-          ],
-        }}
+        styles={styles}
         toggleGroup={toggleGroup}
       />
     </AssetFormScreenShell>

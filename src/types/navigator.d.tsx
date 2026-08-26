@@ -21,6 +21,19 @@ export type PropertyClass = {
   prefix?: string;
 };
 
+/**
+ * Nơi quay về sau khi lưu ở các màn tạo/sửa bản ghi con.
+ *
+ * `qrScan` là nhánh của luồng đánh giá nhanh: lưu xong về thẳng máy quét để
+ * quét mã kế tiếp, không dừng ở danh sách nào cả.
+ */
+export type AssetReturnTo =
+  | "assetList"
+  | "assetRelatedList"
+  | "openAssetRelatedList"
+  | "qrReview"
+  | "qrScan";
+
 // chỉnh mode thành optional
 export type OptionalParams = {
   propertyReference?: string;
@@ -39,7 +52,7 @@ export type OptionalParams = {
   titleHeader?: string;
   propertyClass?: PropertyClass;
   itemData?: AssetItem;
-  returnTo?: "assetList" | "assetRelatedList" | "qrReview";
+  returnTo?: AssetReturnTo;
   groupMenuId?: number;
   viewPermission?: string;
   assetTitleHeader?: string;
@@ -49,7 +62,8 @@ export type OptionalParams = {
 // QR TAB (NESTED NAVIGATOR)
 // =====================================================
 export type ScanTabParamList = {
-  QrScanner: undefined;
+  /** Tên route thật trong `ScanStack` là "Scan" — đừng đổi, đã có nơi navigate tới. */
+  Scan: undefined;
 
   QrDetails: {
     id: string;
@@ -263,7 +277,7 @@ export type RootStackParamList = {
     propertyReference?: string;
     nameClassRoot?: string;
     rootRecordLabel?: string;
-    returnTo?: "assetList" | "assetRelatedList" | "qrReview";
+    returnTo?: AssetReturnTo;
     groupMenuId?: number;
     viewPermission?: string;
     assetTitleHeader?: string;
@@ -278,7 +292,7 @@ export type RootStackParamList = {
     propertyReference?: string;
     titleHeader?: string;
     rootRecordLabel?: string;
-    returnTo?: "assetList" | "assetRelatedList" | "qrReview";
+    returnTo?: AssetReturnTo;
     groupMenuId?: number;
     viewPermission?: string;
     assetTitleHeader?: string;
@@ -337,7 +351,7 @@ export type RootStackParamList = {
     field: string;
     nameClass?: string;
     propertyClass?: PropertyClass;
-    returnTo?: "assetList" | "assetRelatedList" | "qrReview";
+    returnTo?: AssetReturnTo;
     idRoot?: string;
     propertyReference?: string;
     nameClassRoot?: string;

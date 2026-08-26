@@ -163,6 +163,7 @@ const makeStyles = (c: AppColors) =>
     },
 
     label: {
+      fontSize: 14,
       fontWeight: "bold",
       color: c.text,
     },

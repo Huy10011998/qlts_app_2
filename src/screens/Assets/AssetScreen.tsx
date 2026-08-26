@@ -27,6 +27,7 @@ import type {
 } from "../../types/index";
 import { API_ENDPOINTS, BASE_URL } from "../../config/index";
 import { useDebounce } from "../../hooks/useDebounce";
+import { useDismissableModal } from "../../hooks/useDismissableModal";
 import { usePermission } from "../../hooks/usePermission";
 import { filterReportPermissionTree } from "../../hooks/shared/permissionHelpers";
 import IsLoading from "../../components/ui/IconLoading";
@@ -96,7 +97,13 @@ export default function AssetScreen() {
   const [isFetching, setIsFetching] = useState(false);
   const [isRefreshingTop, setIsRefreshingTop] = useState(false);
   const [search, setSearch] = useState("");
-  const [activeReport, setActiveReport] = useState<ActiveReport | null>(null);
+  const {
+    content: activeReport,
+    visible: isReportVisible,
+    open: openActiveReport,
+    close: closeActiveReport,
+    handleDismiss: handleReportDismiss,
+  } = useDismissableModal<ActiveReport>();
   const [comingSoonReportItem, setComingSoonReportItem] = useState<Item | null>(
     null
   );
@@ -149,7 +156,7 @@ export default function AssetScreen() {
         throw new Error("Invalid report config");
       }
 
-      setActiveReport({
+      openActiveReport({
         item,
         config,
         previewEndpoint: buildReportPreviewEndpoint(direct),
@@ -158,7 +165,7 @@ export default function AssetScreen() {
       error("Get config report error:", e);
       setComingSoonReportItem(item);
     }
-  }, []);
+  }, [openActiveReport]);
 
   // ── Fetch ──
   const fetchData = useCallback(
@@ -386,7 +393,7 @@ export default function AssetScreen() {
       />
 
       <Modal
-        visible={!!activeReport}
+        visible={isReportVisible}
         animationType="slide"
         transparent={false}
         statusBarTranslucent
@@ -396,7 +403,8 @@ export default function AssetScreen() {
           "landscape-left",
           "landscape-right",
         ]}
-        onRequestClose={() => setActiveReport(null)}
+        onDismiss={handleReportDismiss}
+        onRequestClose={closeActiveReport}
       >
         <View
           style={[s.reportModalBackdrop, { backgroundColor: colors.surface }]}
@@ -406,7 +414,7 @@ export default function AssetScreen() {
               title={activeReport.config.report.moTa || activeReport.item.label}
               config={activeReport.config}
               previewEndpoint={activeReport.previewEndpoint}
-              onClose={() => setActiveReport(null)}
+              onClose={closeActiveReport}
             />
           )}
         </View>

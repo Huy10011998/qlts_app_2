@@ -218,10 +218,17 @@ const SettingScreen = () => {
   );
 
   const fetchData = React.useCallback(async () => {
-    if (loadingRef.current || !canUpdateScreen()) return;
+    if (loadingRef.current) return;
+
+    const isInitialLoad = !hasLoadedOnceRef.current && !userRef.current;
+
+    // Lượt tải đầu được phép chạy khi màn chưa focus — xem effect theo
+    // `isFocused` bên dưới. Các lượt sau vẫn phải đúng màn đang xem, để lần quay
+    // lại nào cũng làm mới dữ liệu chứ không nạp nền vô ích.
+    if (!(isInitialLoad ? canCommitRequest() : canUpdateScreen())) return;
+
     loadingRef.current = true;
-    const shouldShowBlockingLoader =
-      !hasLoadedOnceRef.current && !userRef.current;
+    const shouldShowBlockingLoader = isInitialLoad;
     blockingLoaderActiveRef.current = shouldShowBlockingLoader;
     if (isMountedRef.current && shouldShowBlockingLoader) setIsLoading(true);
     try {
@@ -298,6 +305,14 @@ const SettingScreen = () => {
   useEffect(() => {
     if (!isFocused) {
       isScreenActiveRef.current = false;
+
+      // Màn này có thể mount trong lúc CHƯA focus: đổi cỡ chữ remount cả cây
+      // điều hướng và dựng lại stack đang mở, khi đó màn Cỡ chữ nằm trên. Đợi
+      // focus mới tải thì lúc người dùng back về, vòng xoay chặn màn nhảy ra
+      // ngay giữa animation — thấy rõ như một cú giật. Nạp sẵn ở đây; dữ liệu
+      // về lúc chưa focus vẫn nhận được (`canCommitRequest`).
+      if (!hasLoadedOnceRef.current && !userRef.current) fetchData();
+
       return;
     }
     isScreenActiveRef.current = true;

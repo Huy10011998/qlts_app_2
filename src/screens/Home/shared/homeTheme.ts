@@ -24,7 +24,7 @@ export const makeHomeCardTheme = (
     color: c.emerald,
     accent: "#14B8A6",
   },
-  BHLD: {
+  PCCC: {
     bg: c.surface,
     iconBg: c.orangeSurface,
     color: c.amber,
