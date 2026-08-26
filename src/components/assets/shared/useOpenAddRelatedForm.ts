@@ -16,10 +16,7 @@ import { normalizeIconImageUri } from "../../../utils/iconImage";
 import { usePermission } from "../../../hooks/usePermission";
 import { useSafeAlert } from "../../../hooks/useSafeAlert";
 import { getRecordLabel } from "../detailActions/useAssetRecordActions";
-import {
-  getDanhGiaNameClass,
-  REVIEW_NAME_CLASSES_DANHGIA,
-} from "../../../constants/reviewNameClasses";
+import { REVIEW_NAME_CLASSES_DANHGIA } from "../../../constants/reviewNameClasses";
 
 /** Ngữ cảnh menu/quyền của luồng tài sản, đi kèm suốt các màn con. */
 export type AddRelatedAssetContext = {
@@ -55,7 +52,7 @@ const childClassCache = new Map<string, MenuItemResponse[]>();
  */
 export const resetChildClassCache = () => childClassCache.clear();
 
-export const isDanhGiaClass = (name?: string) =>
+const isDanhGiaClass = (name?: string) =>
   REVIEW_NAME_CLASSES_DANHGIA.includes((name || "").trim());
 
 /**
@@ -140,35 +137,6 @@ export function useOpenAddRelatedForm() {
     [filterByInsertPermission, loaded],
   );
 
-  /** Vừa tải vừa lọc quyền — dùng khi cần kết quả ngay lúc người dùng bấm. */
-  const resolveChildClasses = useCallback(
-    async (nameClass?: string) =>
-      filterByInsertPermission(await loadChildClasses(nameClass)),
-    [filterByInsertPermission, loadChildClasses],
-  );
-
-  /**
-   * Danh mục con đóng vai "hành động chính" của bản ghi cha: ưu tiên đúng class
-   * đánh giá của loại thiết bị (bảng đánh giá do server đặt tên, tra qua
-   * `getDanhGiaNameClass` chứ không tự nối chuỗi), sau đó mới đến trường hợp chỉ
-   * có duy nhất một danh mục con. Nhiều danh mục mà không có đánh giá thì trả
-   * `null` để nơi gọi mở sheet cho người dùng chọn.
-   */
-  const pickPrimaryChildClass = useCallback(
-    (parentNameClass?: string, children?: MenuItemResponse[] | null) => {
-      if (!children || children.length === 0) return null;
-
-      const danhGiaNameClass = getDanhGiaNameClass(parentNameClass);
-      const danhGia = danhGiaNameClass
-        ? children.find((child) => child.name === danhGiaNameClass)
-        : undefined;
-      if (danhGia) return danhGia;
-
-      return children.length === 1 ? children[0] : null;
-    },
-    [],
-  );
-
   /** Mở màn tạo bản ghi con. Ném lỗi nếu không tải được cấu hình class con. */
   const openAddForm = useCallback(
     async ({
@@ -215,7 +183,5 @@ export function useOpenAddRelatedForm() {
     loadChildClasses,
     openAddForm,
     permissionLoaded: loaded,
-    pickPrimaryChildClass,
-    resolveChildClasses,
   };
 }

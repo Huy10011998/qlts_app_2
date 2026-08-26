@@ -3,6 +3,8 @@ import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
 
+export type InlineToastTone = "success" | "warning";
+
 type InlineToastProps = {
   /** Nhãn nút phụ bên phải (ví dụ "Xem"). Thiếu thì không có nút. */
   actionLabel?: string;
@@ -14,6 +16,8 @@ type InlineToastProps = {
   onAction?: () => void;
   /** Gọi khi dải đã ẩn hẳn — nơi gọi dọn state ở đây. */
   onDismiss: () => void;
+  /** "warning" cho tin cần đọc kỹ hơn, ví dụ giải thích vì sao không làm được việc đang chọn. */
+  tone?: InlineToastTone;
 };
 
 const DEFAULT_DURATION_MS = 4000;
@@ -34,9 +38,12 @@ export default function InlineToast({
   message,
   onAction,
   onDismiss,
+  tone = "success",
 }: InlineToastProps) {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
+  const isWarning = tone === "warning";
+  const accent = isWarning ? c.amber : c.green;
   const opacity = useRef(new Animated.Value(0)).current;
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -72,8 +79,12 @@ export default function InlineToast({
 
   return (
     <Animated.View style={[styles.wrap, { opacity }]} pointerEvents="box-none">
-      <View style={styles.banner}>
-        <Ionicons name="checkmark-circle" size={18} color={c.green} />
+      <View style={[styles.banner, isWarning && styles.bannerWarning]}>
+        <Ionicons
+          name={isWarning ? "alert-circle" : "checkmark-circle"}
+          size={18}
+          color={accent}
+        />
 
         <View style={styles.textWrap}>
           <Text style={styles.message} numberOfLines={2}>
@@ -99,8 +110,10 @@ export default function InlineToast({
               pressed && styles.actionPressed,
             ]}
           >
-            <Text style={styles.actionLabel}>{actionLabel}</Text>
-            <Ionicons name="chevron-forward" size={13} color={c.green} />
+            <Text style={[styles.actionLabel, { color: accent }]}>
+              {actionLabel}
+            </Text>
+            <Ionicons name="chevron-forward" size={13} color={accent} />
           </Pressable>
         ) : null}
       </View>
@@ -137,6 +150,10 @@ const makeStyles = (c: AppColors) =>
       fontSize: 11.5,
       color: c.textSub,
       marginTop: 1,
+    },
+    bannerWarning: {
+      backgroundColor: c.amberLight,
+      borderColor: c.amberBorder,
     },
     action: {
       flexDirection: "row",

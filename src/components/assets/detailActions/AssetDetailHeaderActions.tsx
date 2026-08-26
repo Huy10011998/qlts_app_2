@@ -16,7 +16,6 @@ import HeaderDetailActionsRight from "../../header/HeaderDetailActionButtons";
 import AssetListEmptyState from "../shared/AssetListEmptyState";
 import { BRAND_RED } from "../shared/listTheme";
 import { useSlideInPanel } from "../../../hooks/useSlideInPanel";
-import { useFridgeMenuItems } from "../../../screens/NoiDia/shared/useFridgeMenuItems";
 import { useKhachHangMenuItems } from "../../../screens/NoiDia/shared/useKhachHangMenuItems";
 import {
   AppColors,
@@ -42,8 +41,12 @@ type AssetDetailHeaderActionsProps = {
 };
 
 /**
- * Toàn bộ thao tác của màn chi tiết, gom vào góc phải header: nút Sửa và một
- * menu ⋯.
+ * Quản trị bản ghi ở góc phải header: nút Sửa và một menu ⋯ (Bản sao, Xóa, cùng
+ * các việc chạy tại chỗ như cập nhật toạ độ).
+ *
+ * Việc LÀM với thiết bị (đánh giá, kiểm kê, trung chuyển, xác nhận vị trí…) không
+ * ở đây nữa mà ở `RecordActionBar` dưới đáy màn: đó là việc làm nhiều nhất, giấu
+ * sau một tap vào ⋯ là sai chỗ. Xem `recordActions/`.
  *
  * Đây là component DUY NHẤT được `setOptions({ headerRight })` trong màn chi
  * tiết. Trước đây mỗi nghiệp vụ (tủ lạnh, khách hàng) tự chiếm `headerRight` và
@@ -67,7 +70,6 @@ export default function AssetDetailHeaderActions({
 
   const { allowEdit, allowClone, allowDelete, onEdit, onClone, onDelete } =
     useAssetRecordActions({ item, nameClass, fieldActive });
-  const fridgeItems = useFridgeMenuItems({ nameClass, item: item ?? null });
   const khachHangItems = useKhachHangMenuItems({
     nameClass,
     item: item ?? null,
@@ -75,7 +77,6 @@ export default function AssetDetailHeaderActions({
 
   const items = React.useMemo(() => {
     const list: DetailMenuItem[] = [
-      ...fridgeItems,
       ...khachHangItems,
       ...(extraItems ?? []),
     ];
@@ -104,7 +105,6 @@ export default function AssetDetailHeaderActions({
     allowClone,
     allowDelete,
     extraItems,
-    fridgeItems,
     khachHangItems,
     onClone,
     onDelete,

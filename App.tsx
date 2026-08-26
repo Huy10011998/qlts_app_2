@@ -22,7 +22,7 @@ import {
   FontScaleProvider,
   useTextScale,
 } from "./src/context/FontScaleContext";
-import { QuickReviewProvider } from "./src/context/QuickReviewContext";
+import { ScanModeProvider } from "./src/context/ScanModeContext";
 import { navigationRef } from "./src/navigation/navigationService";
 
 const LANDSCAPE_ALLOWED_ROUTES = new Set([
@@ -142,9 +142,9 @@ export default function App() {
   return (
     <ThemeProvider>
       <FontScaleProvider>
-        <QuickReviewProvider>
+        <ScanModeProvider>
           <AppContent />
-        </QuickReviewProvider>
+        </ScanModeProvider>
       </FontScaleProvider>
     </ThemeProvider>
   );

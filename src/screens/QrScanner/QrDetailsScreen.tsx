@@ -4,7 +4,7 @@ import QrDetails from "../../components/qrcode/QrDetails";
 import ScreenContainer from "../shared/ScreenContainer";
 import AssetDetailsContent from "../Assets/shared/AssetDetailsContent";
 import AssetDetailHeaderActions from "../../components/assets/detailActions/AssetDetailHeaderActions";
-import RecordPrimaryActionBar from "../../components/assets/shared/RecordPrimaryActionBar";
+import RecordActionBar from "../../components/assets/shared/RecordActionBar";
 import { TAB_ITEMS } from "../../utils/Helper";
 
 export default function QrDetailsScreen() {
@@ -35,8 +35,8 @@ export default function QrDetailsScreen() {
               fieldActive={fieldActive}
               tabs={TAB_ITEMS}
             />
-            {/* Việc chính sau khi quét một thiết bị: ghi một lần đánh giá. */}
-            <RecordPrimaryActionBar
+            {/* Việc làm được với thiết bị vừa quét: đánh giá, kiểm kê, trung chuyển… */}
+            <RecordActionBar
               item={item}
               nameClass={itemNameClass}
               fieldActive={fieldActive}
