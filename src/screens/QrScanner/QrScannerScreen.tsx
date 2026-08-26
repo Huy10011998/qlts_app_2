@@ -27,16 +27,18 @@ import {
 import { getDetails, getFieldActive, getPropertyClass } from "../../services";
 import { error } from "../../utils/Logger";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
-import QrQuickReviewToggle from "../../components/qrcode/shared/QrQuickReviewToggle";
+import ScanModePill, {
+  getScanModeLabel,
+} from "../../components/qrcode/shared/ScanModePill";
+import ScanModeSheet from "../../components/qrcode/shared/ScanModeSheet";
 import QrScannerGateView from "../../components/qrcode/shared/QrScannerGateView";
 import QrScannerViewportOverlay from "../../components/qrcode/shared/QrScannerViewportOverlay";
 import useQrScannerController from "../../components/qrcode/shared/useQrScannerController";
 import InlineToast from "../../components/ui/InlineToast";
-import {
-  isDanhGiaClass,
-  useOpenAddRelatedForm,
-} from "../../components/assets/shared/useOpenAddRelatedForm";
-import { useQuickReview } from "../../context/QuickReviewContext";
+import { useOpenAddRelatedForm } from "../../components/assets/shared/useOpenAddRelatedForm";
+import { resolveRecordActions } from "../../components/assets/detailActions/recordActions/resolveRecordActions";
+import { usePermission } from "../../hooks/usePermission";
+import { useScanMode } from "../../context/ScanModeContext";
 import { clearLastSavedNotice } from "../../store/AssetSlice";
 import { useAppDispatch } from "../../store/hooks";
 import type { RootState } from "../../store";
@@ -98,16 +100,17 @@ export default function QrScannerScreen() {
   // resulting background→foreground transition would flicker/hide the tab bar.
   const isFocused = useIsFocused();
   const dispatch = useAppDispatch();
-  const { enabled: quickReviewEnabled, setEnabled: setQuickReviewEnabled } =
-    useQuickReview();
-  const { openAddForm, pickPrimaryChildClass, resolveChildClasses } =
-    useOpenAddRelatedForm();
+  const { mode, setMode } = useScanMode();
+  const { can } = usePermission();
+  const { loadChildClasses, openAddForm } = useOpenAddRelatedForm();
   const lastSavedNotice = useSelector(
     (state: RootState) => state.asset.lastSavedNotice,
   );
-  // Chỉ để hiện dấu hiệu "đang mở form", vì chế độ nhanh tốn thêm hai request
-  // cấu hình class con — màn đen không có gì thì tưởng treo.
-  const [isOpeningQuickReview, setIsOpeningQuickReview] = useState(false);
+  const [modeSheetVisible, setModeSheetVisible] = useState(false);
+  // Chỉ để hiện dấu hiệu "đang mở việc", vì chế độ quét tốn thêm request cấu hình
+  // class con — màn đen không có gì thì tưởng treo.
+  const [isOpeningAction, setIsOpeningAction] = useState(false);
+  const [fallbackNotice, setFallbackNotice] = useState<string | null>(null);
   const {
     activateScanner,
     cameraActive,
@@ -149,15 +152,21 @@ export default function QrScannerScreen() {
       startInitTimeoutTimer,
     ]),
   );
+
   /**
-   * Chế độ đánh giá nhanh: vào thẳng màn đánh giá của thiết bị vừa quét.
+   * Chạy việc của chế độ quét đang bật với thiết bị vừa quét.
    *
-   * Trả về `false` khi không đi được đường này — không có class đánh giá cho
-   * loại thiết bị, không có quyền thêm, hoặc lỗi mạng. Nơi gọi im lặng mở màn
-   * chi tiết như luồng thường: người dùng vẫn còn thanh "Đánh giá ngay" ở đó,
-   * nên không có gì phải báo lỗi.
+   * Không mở được thì nói đúng lý do: thiết bị không có việc đó ("unsupported")
+   * khác hẳn không tải được cấu hình ("failed"). Gộp một câu thì người dùng mất
+   * mạng sẽ đi tìm bảng con không tồn tại.
+   *
+   * Cả hai đường đều mở màn thông tin thiết bị chứ không chặn — thanh hành động ở
+   * đó vẫn làm được việc.
+   *
+   * Không hàm nào ở đây biết "đánh giá" hay "kiểm kê" là gì — thêm việc mới chỉ
+   * cần một dòng trong `recordActionKinds`.
    */
-  const tryOpenQuickReview = useCallback(
+  const tryRunScanModeAction = useCallback(
     async ({
       detailId,
       fieldActive,
@@ -168,33 +177,38 @@ export default function QrScannerScreen() {
       fieldActive: any[];
       itemData: any;
       nameClass: string;
-    }) => {
-      setIsOpeningQuickReview(true);
+    }): Promise<"opened" | "unsupported" | "failed"> => {
+      if (mode === "view") return "unsupported";
+
+      setIsOpeningAction(true);
       try {
-        const children = await resolveChildClasses(nameClass);
-        const primary = pickPrimaryChildClass(nameClass, children);
-
-        // Công tắc tên là "đánh giá nhanh" nên chỉ nhảy thẳng vào đúng bảng đánh
-        // giá; class chỉ có mục con khác (bảo trì, kiểm kê) vẫn qua màn chi tiết.
-        if (!primary || !isDanhGiaClass(primary.name)) return false;
-
         const detailItem = Array.isArray(itemData) ? itemData[0] : itemData;
-
-        return await openAddForm({
-          childClass: primary,
+        const { actions, childClassesFailed } = await resolveRecordActions({
+          can,
+          fieldActive,
           item: { ...detailItem, id: detailId },
-          parentFieldActive: fieldActive,
-          parentNameClass: nameClass,
-          returnTo: "qrScan",
+          loadChildClasses,
+          nameClass,
+          navigate: (screen, params) => navigation.navigate(screen, params),
+          openAddForm,
         });
+
+        const action = actions.find(
+          (candidate) => candidate.kind === mode && !candidate.inPlace,
+        );
+
+        if (!action) return childClassesFailed ? "failed" : "unsupported";
+
+        await action.run({ quick: true });
+        return "opened";
       } catch (e) {
         if (!isNetworkRequestError(e)) error(e);
-        return false;
+        return "failed";
       } finally {
-        setIsOpeningQuickReview(false);
+        setIsOpeningAction(false);
       }
     },
-    [openAddForm, pickPrimaryChildClass, resolveChildClasses],
+    [can, loadChildClasses, mode, navigation, openAddForm],
   );
 
   const codeScanner: CodeScanner = useCodeScanner({
@@ -263,18 +277,26 @@ export default function QrScannerScreen() {
           ? getDetailIdFromItemData(itemData, idOrQr)
           : idOrQr;
 
-        // Quét mã mới là bỏ qua thông báo của lần lưu trước.
+        // Quét mã mới là bỏ qua thông báo của lần quét/lưu trước.
         dispatch(clearLastSavedNotice());
+        setFallbackNotice(null);
 
-        if (quickReviewEnabled) {
-          const opened = await tryOpenQuickReview({
+        if (mode !== "view") {
+          const outcome = await tryRunScanModeAction({
             detailId,
             fieldActive: res?.data || [],
             itemData,
             nameClass,
           });
 
-          if (opened) return;
+          if (outcome === "opened") return;
+
+          const modeLabel = getScanModeLabel(mode).toLowerCase();
+          setFallbackNotice(
+            outcome === "failed"
+              ? `Chưa mở được ${modeLabel} — đang mở thông tin thiết bị`
+              : `Thiết bị này không có mục ${modeLabel} — đang mở thông tin thiết bị`,
+          );
         }
 
         navigation.navigate("QrDetails", {
@@ -400,9 +422,12 @@ export default function QrScannerScreen() {
           </View>
         </View>
 
-        <QrQuickReviewToggle
-          enabled={quickReviewEnabled}
-          onChange={setQuickReviewEnabled}
+        <ScanModePill mode={mode} onPress={() => setModeSheetVisible(true)} />
+
+        <InlineToast
+          message={fallbackNotice}
+          tone="warning"
+          onDismiss={() => setFallbackNotice(null)}
         />
 
         <InlineToast
@@ -428,12 +453,25 @@ export default function QrScannerScreen() {
         />
       </View>
 
-      {isOpeningQuickReview ? (
+      {isOpeningAction ? (
         <View style={styles.busyOverlay} pointerEvents="auto">
           <ActivityIndicator size="large" color="#fff" />
-          <Text style={styles.busyLabel}>Đang mở form đánh giá…</Text>
+          <Text style={styles.busyLabel}>
+            Đang mở {getScanModeLabel(mode).toLowerCase()}…
+          </Text>
         </View>
       ) : null}
+
+      <ScanModeSheet
+        mode={mode}
+        onClose={() => setModeSheetVisible(false)}
+        onSelect={(next) => {
+          setModeSheetVisible(false);
+          setFallbackNotice(null);
+          setMode(next);
+        }}
+        visible={modeSheetVisible}
+      />
     </SafeAreaView>
   );
 }
