@@ -138,7 +138,7 @@ const TOPICS: GuideTopic[] = [
             items: [
               "Dấu hỏi: mở đúng chủ đề hướng dẫn của màn đang xem.",
               "Hình mã QR: quét tem để ra ngay bản ghi, nhanh hơn dò cây danh mục.",
-              "Dấu ba chấm: các thao tác trên bản ghi (Sửa, Bản sao, Xoá, Đánh giá…).",
+              "Dấu ba chấm: thao tác quản trị bản ghi (Bản sao, Xoá). Việc nghiệp vụ như Đánh giá nằm ở thanh dưới đáy màn chi tiết, không nằm trong đây.",
             ],
           },
           {
@@ -244,28 +244,52 @@ const TOPICS: GuideTopic[] = [
             tone: "info",
             text: "Tem mờ, bị dán chồng hoặc phản sáng thì đọc không ra. Lau tem, đổi góc để tránh bóng đèn, hoặc tìm thiết bị theo danh sách tài sản.",
           },
+          {
+            kind: "note",
+            tone: "warn",
+            text: "Quét phải tem không thuộc hệ thống thì app báo Mã QR không hợp lệ và không mở gì cả. Bấm OK là quét tiếp được.",
+          },
         ],
       },
       {
         id: "quet-qr-sau-khi-quet",
-        heading: "Sau khi quét ra bản ghi",
+        heading: "Sau khi quét ra thiết bị",
         blocks: [
           {
             kind: "paragraph",
-            text: "Màn Thông tin hiện các nhóm thông tin của thiết bị. Bấm dấu ba chấm ở góc phải để làm tiếp:",
+            text: "App mở màn Thông tin của thiết bị. Nếu thiết bị có nhiều việc làm được thì bảng Làm gì với thiết bị này? tự mở sẵn — quét xong thường là để làm một việc gì đó, không phải để đọc.",
           },
           {
-            kind: "bullets",
+            kind: "steps",
             items: [
-              "Đánh giá: mở danh sách phiếu đánh giá của thiết bị.",
-              "Sửa / Bản sao / Xoá: cập nhật bản ghi, nếu tài khoản có quyền.",
-              "Với tủ lạnh còn có Xác nhận vị trí và Trung chuyển.",
+              "Chọn việc trong bảng, ví dụ Đánh giá.",
+              "App mở thẳng màn nhập của việc đó, ô thiết bị đã điền sẵn.",
+              "Nhập xong bấm Xác nhận ở góc phải thanh đỏ.",
+              "App tự quay về màn quét kèm dải xanh Đã lưu…, camera sẵn sàng cho mã kế tiếp.",
             ],
           },
           {
             kind: "note",
-            tone: "warn",
-            text: "Quét ra mã không thuộc hệ thống thì app hỏi có mở bằng trình duyệt hay không. Đừng mở link lạ nếu tem không phải của công ty.",
+            tone: "info",
+            text: "Chỉ muốn xem thông tin thì bấm ra ngoài bảng để đóng. Thiết bị chỉ làm được một việc thì bảng không mở, thanh dưới đáy màn ghi thẳng tên việc đó.",
+          },
+        ],
+      },
+      {
+        id: "quet-qr-quet-lien-tuc",
+        heading: "Quét nhiều thiết bị liên tiếp",
+        blocks: [
+          {
+            kind: "paragraph",
+            text: "Lưu xong là về ngay màn quét, nên đi kiểm tra cả loạt thiết bị thì cứ lặp: quét — chọn việc — nhập — Xác nhận. Không phải bấm quay lại lần nào.",
+          },
+          {
+            kind: "bullets",
+            items: [
+              "Dải xanh Đã lưu… kèm mã thiết bị vừa lưu, tự tắt sau vài giây.",
+              "Bấm Xem trên dải xanh để mở danh sách bản ghi vừa tạo, kiểm lại cho chắc.",
+              "Quét mã mới là dải xanh tự mất.",
+            ],
           },
         ],
       },
@@ -327,6 +351,29 @@ const TOPICS: GuideTopic[] = [
               "Dấu ba chấm → Bản sao: tạo bản ghi mới lấy sẵn dữ liệu của bản ghi đang xem, cho thiết bị giống nhau.",
               "Dấu ba chấm → Xoá: xoá bản ghi, cần xác nhận.",
             ],
+          },
+        ],
+      },
+      {
+        id: "tai-san-thanh-thao-tac",
+        heading: "Thanh thao tác dưới đáy màn",
+        blocks: [
+          {
+            kind: "paragraph",
+            text: "Đáy màn chi tiết có thanh làm việc với thiết bị. Đây là chỗ ghi nhận đánh giá, kiểm kê, báo hỏng… — không còn nằm trong dấu ba chấm nữa.",
+          },
+          {
+            kind: "bullets",
+            items: [
+              "Thiết bị chỉ làm được một việc: nút ghi thẳng tên việc, ví dụ Đánh giá. Bấm là vào màn nhập luôn.",
+              "Thiết bị làm được nhiều việc: nút ghi Chọn thao tác kèm số việc, bấm ra bảng chọn.",
+              "Dòng nhỏ bên dưới, ví dụ Lịch sử đánh giá (7), mở danh sách bản ghi đã có của việc đó.",
+            ],
+          },
+          {
+            kind: "note",
+            tone: "info",
+            text: "Không thấy thanh này nghĩa là loại tài sản chưa khai danh mục con nào, hoặc tài khoản không có quyền thêm bản ghi con.",
           },
         ],
       },
@@ -393,9 +440,9 @@ const TOPICS: GuideTopic[] = [
             kind: "steps",
             items: [
               "Tìm con tủ cần xác nhận: quét tem QR trên tủ, hoặc mở nó từ danh sách tài sản nội địa.",
-              "Ở màn chi tiết, bấm dấu ba chấm → Xác nhận vị trí.",
-              "App mở màn Lịch sử xác nhận của con tủ đó.",
-              "Bấm nút Xác nhận để bắt đầu một lần xác nhận mới.",
+              "Ở màn chi tiết, bấm Xác nhận vị trí tủ lạnh trên thanh dưới đáy màn (trước đây nằm trong dấu ba chấm).",
+              "Mở từ danh sách tài sản thì app ra màn Lịch sử xác nhận — bấm nút Xác nhận để bắt đầu lần mới.",
+              "Quét tem QR thì app vào thẳng màn xác nhận, bỏ qua bước xem lịch sử.",
             ],
           },
         ],
@@ -459,12 +506,12 @@ const TOPICS: GuideTopic[] = [
             kind: "bullets",
             items: [
               "Từ chức năng Trung chuyển tủ lạnh: tìm tủ trong danh sách, hoặc quét tem QR trên tủ ở tab Quét.",
-              "Hoặc mở chi tiết con tủ rồi bấm dấu ba chấm → Trung chuyển.",
+              "Hoặc mở chi tiết con tủ rồi bấm Trung chuyển tủ lạnh trên thanh dưới đáy màn (trước đây nằm trong dấu ba chấm).",
             ],
           },
           {
             kind: "paragraph",
-            text: "App mở màn Lịch sử trung chuyển của con tủ. Bấm dấu (+) để tạo lần chuyển mới.",
+            text: "Mở từ danh sách tài sản thì app ra màn Lịch sử trung chuyển của con tủ — bấm dấu (+) để tạo lần chuyển mới. Quét tem QR thì app vào thẳng bước chọn nhà phân phối.",
           },
         ],
       },
@@ -508,7 +555,19 @@ const TOPICS: GuideTopic[] = [
     iconName: "videocam-outline",
     iconBg: C.sky,
     group: "Theo dõi & báo cáo",
-    keywords: ["camera", "cctv", "live view", "xem lai", "playback"],
+    keywords: [
+      "camera",
+      "cctv",
+      "live view",
+      "xem lai",
+      "playback",
+      "thong bao",
+      "noti",
+      "chuyen dong",
+      "tam dung",
+      "bao dong",
+      "dau ghi",
+    ],
     sections: [
       {
         id: "camera-xem",
@@ -537,6 +596,68 @@ const TOPICS: GuideTopic[] = [
           {
             kind: "paragraph",
             text: "Nếu tab Camera báo \"Tài khoản hiện tại không có quyền xem danh sách camera\" thì cần IT cấp quyền xem camera cho tài khoản; bản thân app không mở được quyền này.",
+          },
+        ],
+      },
+      {
+        id: "camera-thong-bao",
+        heading: "Thông báo phát hiện chuyển động",
+        blocks: [
+          {
+            kind: "paragraph",
+            text: "Khi đầu ghi phát hiện chuyển động ở camera đã được bật theo dõi, app hiện thông báo kèm tên camera, vị trí và thời điểm.",
+          },
+          {
+            kind: "steps",
+            items: [
+              "Bấm vào thông báo — app mở thẳng hình trực tiếp của đúng camera đó.",
+              "Xoay ngang máy để xem hình lớn hơn.",
+            ],
+          },
+          {
+            kind: "bullets",
+            items: [
+              "Thông báo không kèm ảnh chụp hiện trường; muốn biết chuyện gì thì phải mở xem trực tiếp.",
+              "App không lưu lịch sử thông báo — vuốt bỏ rồi thì không xem lại được trong app.",
+              "Một camera chỉ báo tối đa một lần mỗi 10 giây, nhưng nhiều camera cùng có chuyển động thì vẫn dồn nhiều thông báo một lúc.",
+            ],
+          },
+          {
+            kind: "note",
+            tone: "info",
+            text: "Không nhận được thông báo nào thì kiểm tra ba chỗ: Cài đặt của app còn hiện dòng Thông báo camera không (không hiện là tài khoản chưa được IT cấp quyền), Quyền thông báo đã ở trạng thái Đã cấp quyền chưa, và có ai đang đặt tạm dừng không.",
+          },
+        ],
+      },
+      {
+        id: "camera-tam-dung-thong-bao",
+        heading: "Tạm dừng thông báo",
+        blocks: [
+          {
+            kind: "paragraph",
+            text: "Khi đang thi công, dọn kho hay có việc làm camera báo liên tục, có thể tắt thông báo trong một khoảng thời gian rồi app tự bật lại.",
+          },
+          {
+            kind: "steps",
+            items: [
+              "Vào tab Cài đặt, chọn Thông báo camera.",
+              "Điền lý do — không bắt buộc, nhưng nên có để sau này biết ai tắt và vì sao.",
+              "Bấm một trong bốn mốc 15 phút, 30 phút, 1 giờ hoặc 4 giờ.",
+              "Hết giờ app tự nhận thông báo trở lại; muốn nhận sớm hơn thì bấm Bật lại ngay.",
+            ],
+          },
+          {
+            kind: "paragraph",
+            text: "Khối trên cùng cho biết đang nhận hay đang tạm dừng, còn bao lâu, ai tắt và lý do. Đặt mốc mới trong lúc đang tạm dừng thì mốc cũ bị thay chứ không cộng dồn.",
+          },
+          {
+            kind: "note",
+            tone: "warn",
+            text: "Khối TẮT CHO CẢ CÔNG TY viền đỏ ở cuối màn áp dụng cho MỌI NGƯỜI, không riêng bạn — app hỏi xác nhận trước khi tắt. Bốn nút phía trên chỉ tắt cho riêng bạn.",
+          },
+          {
+            kind: "paragraph",
+            text: "Thấy dòng \"cả công ty\" ở phần trạng thái nghĩa là người khác đã tắt cho tất cả; tên người tắt hiện ngay bên dưới. Bật lại lệnh đó cũng là bật lại cho mọi người nên app hỏi xác nhận một lần nữa.",
           },
         ],
       },
@@ -676,7 +797,7 @@ const TOPICS: GuideTopic[] = [
     iconName: "settings-outline",
     iconBg: C.amber,
     group: "Trợ giúp",
-    keywords: ["cai dat", "quyen", "ho so", "doi mat khau", "giao dien", "sang toi", "phien ban", "dang xuat"],
+    keywords: ["cai dat", "quyen", "ho so", "doi mat khau", "giao dien", "sang toi", "phien ban", "dang xuat", "thong bao camera", "tam dung thong bao"],
     sections: [
       {
         id: "cai-dat-tai-khoan",
@@ -703,6 +824,7 @@ const TOPICS: GuideTopic[] = [
               "Quyền mạng nội bộ: cần có để kết nối máy chủ trong công ty.",
               "Quyền camera: cần có để quét QR và chụp ảnh xác nhận.",
               "Quyền thông báo: nhận thông báo từ hệ thống.",
+              "Thông báo camera: tạm dừng thông báo phát hiện chuyển động trong một khoảng thời gian. Dòng này chỉ hiện với tài khoản được cấp quyền nhận thông báo camera.",
             ],
           },
           {

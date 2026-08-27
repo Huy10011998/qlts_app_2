@@ -31,6 +31,25 @@ describe("tìm kiếm trong tài liệu hướng dẫn", () => {
     expect(hit?.matchedHeadings).toContain("Bật và dùng Face ID");
   });
 
+  // Việc nghiệp vụ đã rời menu ⋯ xuống thanh dưới đáy màn; người dùng đi tìm sẽ
+  // gõ đúng chữ họ thấy trên màn hình.
+  it("tra được thanh thao tác mới ở cả tài liệu lẫn câu hỏi thường gặp", () => {
+    const ids = filterGuideTopics("thanh thao tac").map((hit) => hit.topic.id);
+
+    expect(ids).toContain("tai-san");
+    expect(ids).toContain("faq");
+  });
+
+  it("tra được câu hỏi vì sao mất thông báo Tạo mới thành công", () => {
+    const hit = filterGuideTopics("tao moi thanh cong").find(
+      (entry) => entry.topic.id === "faq",
+    );
+
+    expect(hit?.matchedHeadings).toContain(
+      'Lưu xong không thấy thông báo "Tạo mới thành công"',
+    );
+  });
+
   it("từ khoá không có trong tài liệu thì không ra kết quả", () => {
     expect(filterGuideTopics("khong-he-co-chu-nay")).toHaveLength(0);
   });

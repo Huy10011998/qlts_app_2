@@ -76,11 +76,16 @@ export const API_ENDPOINTS = {
   TRUNG_CHUYEN_TU_LANH: `${BASE_URL}/TrungChuyen_TuLanh/trung-chuyen`,
   NOI_DIA_KHACH_HANG_CAP_NHAT_TOA_DO: `${BASE_URL}/NoiDia_KhachHang/cap-nhat-toa-do`,
 
-  // PUSH NOTIFICATION
-  // ⚠️ Đường dẫn tạm — BE chưa xong. Sửa lại đúng path rồi bật
-  // PUSH_NOTIFICATION_API_READY bên dưới.
-  REGISTER_DEVICE_TOKEN: `${BASE_URL}/Notification/register-device`,
-  UNREGISTER_DEVICE_TOKEN: `${BASE_URL}/Notification/unregister-device`,
+  // PUSH NOTIFICATION — map FCM token ↔ user đang đăng nhập.
+  // Server tự lấy ID_User từ access token, app chỉ gửi token + platform.
+  UPDATE_FCM_TOKEN: `${BASE_URL}/Common/update-fcm-token`,
+  LOGOUT_FCM_TOKEN: `${BASE_URL}/Common/logout-fcm-token`,
+
+  // NOTI CAMERA — tạm dừng thông báo phát hiện chuyển động.
+  // Cả 3 API yêu cầu quyền Class.Camera.NotiCameraMobile, thiếu quyền trả 403.
+  CAMERA_NOTI_TAM_DUNG: `${BASE_URL}/Camera/noti-tam-dung`,
+  CAMERA_NOTI_TRANG_THAI: `${BASE_URL}/Camera/noti-trang-thai`,
+  CAMERA_NOTI_HUY_TAM_DUNG: `${BASE_URL}/Camera/noti-huy-tam-dung`,
 };
 
-export const PUSH_NOTIFICATION_API_READY = false;
+export const PUSH_NOTIFICATION_API_READY = true;

@@ -7,7 +7,7 @@ import {
   REGISTER_RETRY_DELAYS_MS,
 } from "./constants";
 import { ensureNotificationPermission } from "./permissions";
-import { registerDeviceToken, unregisterDeviceToken } from "./pushTokenApi";
+import { logoutFcmToken, updateFcmToken } from "./pushTokenApi";
 import { fetchFcmToken } from "./token";
 import type {
   PushPlatform,
@@ -63,45 +63,36 @@ const clearCache = async () => {
   }
 };
 
-const buildRegistration = async (
-  token: string,
-): Promise<PushTokenRegistration> => {
-  // getUniqueId là async; các getter còn lại đồng bộ. Bọc try/catch từng phần để
-  // một getter lỗi không làm mất cả lần đăng ký.
-  let deviceId = "unknown";
-  let deviceName = "unknown";
+const buildRegistration = (token: string): PushTokenRegistration => ({
+  fcmToken: token,
+  platform: Platform.OS as PushPlatform,
+});
 
+/**
+ * Phiên bản app hiện tại — nằm trong cache để lần cập nhật app nào cũng gửi lại
+ * token một lượt, kể cả khi token không đổi.
+ */
+const readAppVersion = () => {
   try {
-    deviceId = await DeviceInfo.getUniqueId();
+    return {
+      appVersion: DeviceInfo.getVersion(),
+      buildNumber: DeviceInfo.getBuildNumber(),
+    };
   } catch (err) {
-    warn("[Push] Không lấy được deviceId", err);
+    warn("[Push] Không đọc được phiên bản app", err);
+    return { appVersion: "unknown", buildNumber: "unknown" };
   }
-
-  try {
-    deviceName = DeviceInfo.getModel();
-  } catch (err) {
-    warn("[Push] Không lấy được tên thiết bị", err);
-  }
-
-  return {
-    token,
-    platform: Platform.OS as PushPlatform,
-    deviceId,
-    deviceName,
-    osVersion: DeviceInfo.getSystemVersion(),
-    appVersion: DeviceInfo.getVersion(),
-    buildNumber: DeviceInfo.getBuildNumber(),
-  };
 };
 
 const isSameRegistration = (
   cache: PushRegistrationCache | null,
   registration: PushTokenRegistration,
+  version: { appVersion: string; buildNumber: string },
 ) =>
   cache !== null &&
-  cache.token === registration.token &&
-  cache.appVersion === registration.appVersion &&
-  cache.buildNumber === registration.buildNumber;
+  cache.token === registration.fcmToken &&
+  cache.appVersion === version.appVersion &&
+  cache.buildNumber === version.buildNumber;
 
 const scheduleRetry = (reason: string) => {
   if (retryAttempt >= REGISTER_RETRY_DELAYS_MS.length) {
@@ -141,26 +132,23 @@ const runSync = async (reason: string) => {
 
   activeToken = token;
 
-  const registration = await buildRegistration(token);
+  const registration = buildRegistration(token);
+  const version = readAppVersion();
   const cache = await readCache();
 
-  if (isSameRegistration(cache, registration)) {
+  if (isSameRegistration(cache, registration, version)) {
     log("[Push] Token không đổi → bỏ qua gọi BE", { reason });
     retryAttempt = 0;
     return;
   }
 
   try {
-    await registerDeviceToken(registration);
-    await writeCache({
-      token: registration.token,
-      appVersion: registration.appVersion,
-      buildNumber: registration.buildNumber,
-    });
+    await updateFcmToken(registration);
+    await writeCache({ token: registration.fcmToken, ...version });
     retryAttempt = 0;
-    log("[Push] Đăng ký device token xong", { reason });
+    log("[Push] Gửi FCM token lên BE xong", { reason });
   } catch (err) {
-    warn("[Push] Đăng ký device token thất bại", err);
+    warn("[Push] Gửi FCM token lên BE thất bại", err);
     scheduleRetry(reason);
   }
 };
@@ -215,11 +203,11 @@ export const unregisterPushToken = async (): Promise<void> => {
   }
 
   try {
-    await unregisterDeviceToken(token);
-    log("[Push] Huỷ đăng ký device token xong");
+    await logoutFcmToken(token);
+    log("[Push] Đã tắt FCM token của máy này");
   } catch (err) {
     // Không chặn luồng logout vì lỗi này.
-    warn("[Push] Huỷ đăng ký device token thất bại", err);
+    warn("[Push] Tắt FCM token thất bại", err);
   }
 };
 
