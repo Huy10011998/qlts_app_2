@@ -45,14 +45,17 @@ export function buildFridgeActions({
   const actions: RecordAction[] = [];
 
   if (can(XAC_NHAN_VI_TRI_NAME_CLASS, "Read")) {
-    const info = getRecordActionKindInfo("xacNhanViTri");
+    const info = getRecordActionKindInfo("xacNhanViTriTuLanh");
 
     actions.push({
       key: "fridge:xac-nhan-vi-tri",
-      kind: "xacNhanViTri",
-      label: info?.label ?? "Xác nhận vị trí",
+      kind: "xacNhanViTriTuLanh",
+      label: info?.label ?? "Xác nhận vị trí tủ lạnh",
       icon: info?.icon,
       group: "work",
+      // `Read` đủ để xem lịch sử, nhưng vào thẳng form là tạo mới nên cần `Insert`
+      // — cùng cửa mà nút thêm trên màn lịch sử đang giữ.
+      canQuickRun: can(XAC_NHAN_VI_TRI_NAME_CLASS, "Insert"),
       run: ({ quick }) =>
         navigate(
           quick ? "XacNhanViTriTuLanhForm" : "XacNhanViTriTuLanhLichSu",
@@ -62,14 +65,15 @@ export function buildFridgeActions({
   }
 
   if (can(TRUNG_CHUYEN_NAME_CLASS, "Read")) {
-    const info = getRecordActionKindInfo("trungChuyen");
+    const info = getRecordActionKindInfo("trungChuyenTuLanh");
 
     actions.push({
       key: "fridge:trung-chuyen",
-      kind: "trungChuyen",
-      label: info?.label ?? "Trung chuyển",
+      kind: "trungChuyenTuLanh",
+      label: info?.label ?? "Trung chuyển tủ lạnh",
       icon: info?.icon,
       group: "work",
+      canQuickRun: can(TRUNG_CHUYEN_NAME_CLASS, "Insert"),
       // Bước đầu của wizard trung chuyển nhận danh sách tủ, không nhận một tủ.
       run: ({ quick }) =>
         quick

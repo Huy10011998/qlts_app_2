@@ -41,9 +41,10 @@ describe("gộp việc làm được với một bản ghi", () => {
     const { actions, childClassesFailed } = await resolveRecordActions(
       makeCtx({
         loadChildClasses: async () => [
-          child("DanhGia_BinhChuaChay", "Đánh giá bình chữa cháy"),
-          // Class chưa tồn tại hôm nay; BE trả về là app nhận ngay.
+          // Chưa khai tiền tố nên là "other" — vẫn thành một việc dùng được, chỉ
+          // xếp sau việc đã đặt tên.
           child("KiemKe_BinhChuaChay", "Kiểm kê bình chữa cháy"),
+          child("DanhGia_BinhChuaChay", "Đánh giá bình chữa cháy"),
         ],
       }),
     );
@@ -51,11 +52,11 @@ describe("gộp việc làm được với một bản ghi", () => {
     expect(childClassesFailed).toBe(false);
     expect(actions.map((a) => [a.kind, a.label])).toEqual([
       ["danhGia", "Đánh giá"],
-      ["kiemKe", "Kiểm kê"],
+      ["other", "Thêm kiểm kê bình chữa cháy"],
     ]);
   });
 
-  it("class con lạ vẫn dùng được, chỉ là kind other", async () => {
+  it("class con lạ lấy nhãn từ moTa của class", async () => {
     const { actions } = await resolveRecordActions(
       makeCtx({
         loadChildClasses: async () => [child("BaoTri_BinhChuaChay", "Bảo trì")],
@@ -71,15 +72,15 @@ describe("gộp việc làm được với một bản ghi", () => {
     const { actions } = await resolveRecordActions(
       makeCtx({
         can: (nameClass: string, action: string) =>
-          action === "Insert" && nameClass === "KiemKe_BinhChuaChay",
+          action === "Insert" && nameClass === "BaoTri_BinhChuaChay",
         loadChildClasses: async () => [
           child("DanhGia_BinhChuaChay", "Đánh giá"),
-          child("KiemKe_BinhChuaChay", "Kiểm kê"),
+          child("BaoTri_BinhChuaChay", "Bảo trì"),
         ],
       }),
     );
 
-    expect(actions.map((a) => a.kind)).toEqual(["kiemKe"]);
+    expect(actions.map((a) => a.key)).toEqual(["child:BaoTri_BinhChuaChay"]);
   });
 
   // Mạng lỗi khi tải danh mục con thì việc có màn riêng vẫn phải dùng được —
@@ -96,7 +97,61 @@ describe("gộp việc làm được với một bản ghi", () => {
     );
 
     expect(childClassesFailed).toBe(true);
-    expect(actions.map((a) => a.kind)).toEqual(["xacNhanViTri", "trungChuyen"]);
+    expect(actions.map((a) => a.kind)).toEqual([
+      "xacNhanViTriTuLanh",
+      "trungChuyenTuLanh",
+    ]);
+  });
+
+  // `Read` đủ để thấy việc và mở màn lịch sử; vào THẲNG form là tạo mới nên phải
+  // có `Insert`. Cửa `Insert` vốn nằm ở nút thêm trên màn lịch sử, mà màn form
+  // không tự kiểm quyền — bỏ qua màn lịch sử là bỏ luôn cửa đó.
+  it("chỉ có quyền xem thì việc tủ lạnh vẫn hiện nhưng không quét liên tục được", async () => {
+    const { actions } = await resolveRecordActions(
+      makeCtx({
+        can: (_nameClass: string, action: string) => action === "Read",
+        item: FRIDGE,
+        nameClass: "NoiDia_TuLanh",
+      }),
+    );
+
+    expect(actions).toHaveLength(2);
+    expect(actions.every((a) => a.canQuickRun === false)).toBe(true);
+  });
+
+  it("có quyền thêm thì quét liên tục được", async () => {
+    const { actions } = await resolveRecordActions(
+      makeCtx({
+        can: (nameClass: string, action: string) =>
+          action === "Read" ||
+          (action === "Insert" && nameClass === "TrungChuyen_TuLanh"),
+        item: FRIDGE,
+        nameClass: "NoiDia_TuLanh",
+      }),
+    );
+
+    const byKind = Object.fromEntries(
+      actions.map((a) => [a.kind, a.canQuickRun]),
+    );
+
+    expect(byKind).toEqual({
+      xacNhanViTriTuLanh: false,
+      trungChuyenTuLanh: true,
+    });
+  });
+
+  // Bản ghi con: danh sách đã lọc `Insert` của chính class con rồi, và cả hai
+  // đường đều mở cùng một màn tạo.
+  it("bản ghi con đã qua cửa Insert nên quét liên tục được", async () => {
+    const { actions } = await resolveRecordActions(
+      makeCtx({
+        loadChildClasses: async () => [
+          child("DanhGia_BinhChuaChay", "Đánh giá"),
+        ],
+      }),
+    );
+
+    expect(actions[0].canQuickRun).toBe(true);
   });
 
   // Quyền của nghiệp vụ tủ lạnh nằm ở class khác class bản ghi.
@@ -110,7 +165,7 @@ describe("gộp việc làm được với một bản ghi", () => {
       }),
     );
 
-    expect(actions.map((a) => a.kind)).toEqual(["trungChuyen"]);
+    expect(actions.map((a) => a.kind)).toEqual(["trungChuyenTuLanh"]);
   });
 
   it("không phải tủ lạnh thì không có việc tủ lạnh", async () => {
@@ -133,7 +188,7 @@ describe("gộp việc làm được với một bản ghi", () => {
     const { actions } = await resolveRecordActions(
       makeCtx({ item: FRIDGE, nameClass: "NoiDia_TuLanh", navigate }),
     );
-    const xacNhan = actions.find((a) => a.kind === "xacNhanViTri")!;
+    const xacNhan = actions.find((a) => a.kind === "xacNhanViTriTuLanh")!;
 
     await xacNhan.run({ quick: false });
     expect(navigate).toHaveBeenLastCalledWith(
@@ -195,20 +250,30 @@ describe("gộp việc làm được với một bản ghi", () => {
 
 describe("chọn việc chính", () => {
   const danhGia = { key: "a", kind: "danhGia", group: "work" } as any;
-  const kiemKe = { key: "b", kind: "kiemKe", group: "work" } as any;
+  const trungChuyen = {
+    key: "b",
+    kind: "trungChuyenTuLanh",
+    group: "work",
+  } as any;
   const khac = { key: "c", kind: "other", group: "work" } as any;
   const admin = { key: "d", kind: "other", group: "admin" } as any;
 
   // Đang đi kiểm kê thì nút chính của mọi thiết bị nên là Kiểm kê, dù bảng ưu
   // tiên xếp đánh giá trước.
   it("chế độ quét đang bật thắng thứ tự ưu tiên mặc định", () => {
-    expect(pickPrimaryRecordAction([danhGia, kiemKe], "kiemKe")).toBe(kiemKe);
-    expect(pickPrimaryRecordAction([danhGia, kiemKe], "view")).toBe(danhGia);
-    expect(pickPrimaryRecordAction([danhGia, kiemKe])).toBe(danhGia);
+    expect(
+      pickPrimaryRecordAction([danhGia, trungChuyen], "trungChuyenTuLanh"),
+    ).toBe(trungChuyen);
+    expect(pickPrimaryRecordAction([danhGia, trungChuyen], "view")).toBe(
+      danhGia,
+    );
+    expect(pickPrimaryRecordAction([danhGia, trungChuyen])).toBe(danhGia);
   });
 
   it("chế độ đang bật mà thiết bị không làm được thì về thứ tự mặc định", () => {
-    expect(pickPrimaryRecordAction([danhGia], "trungChuyen")).toBe(danhGia);
+    expect(pickPrimaryRecordAction([danhGia], "trungChuyenTuLanh")).toBe(
+      danhGia,
+    );
   });
 
   it("nhiều việc chưa đặt tên thì không đoán bừa", () => {

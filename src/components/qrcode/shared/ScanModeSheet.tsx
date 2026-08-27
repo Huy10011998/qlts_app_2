@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
@@ -8,11 +8,13 @@ import {
   useAppColors,
   useStyles,
 } from "../../../utils/helpers/colors";
-import { RECORD_ACTION_KINDS } from "../../../constants/recordActionKinds";
+import type { RecordActionKindInfo } from "../../../constants/recordActionKinds";
 import type { ScanMode } from "../../../context/ScanModeContext";
 import { BRAND_RED } from "../../assets/shared/listTheme";
 
 type ScanModeSheetProps = {
+  /** Loại việc người dùng có quyền chọn — xem `useAvailableScanModes`. */
+  kinds: RecordActionKindInfo[];
   mode: ScanMode;
   onClose: () => void;
   onSelect: (mode: ScanMode) => void;
@@ -26,30 +28,23 @@ type ScanModeOption = {
   sublabel: string;
 };
 
-/**
- * Danh sách lấy từ bảng loại việc (`RECORD_ACTION_KINDS`) chứ KHÔNG từ việc làm
- * được của một bản ghi cụ thể: chưa quét thì chưa biết bản ghi thuộc class nào,
- * mà chế độ phải chọn được trước khi quét.
- *
- * Chọn một việc mà thiết bị quét được không làm được việc đó thì màn quét tự mở
- * thông tin thiết bị kèm lời giải thích — không chặn đường ai.
- */
-const OPTIONS: ScanModeOption[] = [
-  {
-    mode: "view",
-    label: "Xem thông tin",
-    sublabel: "Quét xong mở màn thông tin thiết bị",
-    icon: "information-circle-outline",
-  },
-  ...RECORD_ACTION_KINDS.map((info) => ({
-    mode: info.kind as ScanMode,
-    label: info.label,
-    sublabel: `Quét xong vào thẳng ${info.label.toLowerCase()}`,
-    icon: info.icon,
-  })),
-];
+const VIEW_OPTION: ScanModeOption = {
+  mode: "view",
+  label: "Xem thông tin",
+  sublabel: "Quét xong mở màn thông tin thiết bị",
+  icon: "information-circle-outline",
+};
 
+/**
+ * Danh sách là loại việc (`RECORD_ACTION_KINDS`, đã lọc quyền) chứ KHÔNG phải việc
+ * làm được của một bản ghi cụ thể: chưa quét thì chưa biết bản ghi thuộc class
+ * nào, mà chế độ phải chọn được trước khi quét.
+ *
+ * Chọn một việc mà thiết bị quét được không làm được thì màn quét tự mở thông tin
+ * thiết bị kèm lời giải thích — không chặn đường ai.
+ */
 export default function ScanModeSheet({
+  kinds,
   mode,
   onClose,
   onSelect,
@@ -57,6 +52,19 @@ export default function ScanModeSheet({
 }: ScanModeSheetProps) {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
+
+  const options = useMemo<ScanModeOption[]>(
+    () => [
+      VIEW_OPTION,
+      ...kinds.map((info) => ({
+        mode: info.kind as ScanMode,
+        label: info.label,
+        sublabel: `Quét xong vào thẳng ${info.label.toLowerCase()}`,
+        icon: info.icon,
+      })),
+    ],
+    [kinds],
+  );
 
   return (
     <BottomSheetModalShell
@@ -72,7 +80,7 @@ export default function ScanModeSheet({
       </Text>
 
       <View style={styles.list}>
-        {OPTIONS.map((option) => {
+        {options.map((option) => {
           const isSelected = option.mode === mode;
 
           return (

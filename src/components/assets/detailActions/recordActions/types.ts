@@ -45,6 +45,15 @@ export type RecordAction = {
   disabled?: boolean;
   tone?: "default" | "danger";
   /**
+   * Có được chạy trong vòng quét liên tục hay không. Thiếu = được.
+   *
+   * KHÔNG trùng với "có được hiện ra": nghiệp vụ tủ lạnh chỉ cần quyền `Read` là
+   * thấy và mở được màn lịch sử, nhưng `quick` đi thẳng vào form tạo nên phải có
+   * `Insert`. Trước đây cửa `Insert` nằm ở nút thêm trên màn lịch sử — mà bản thân
+   * màn form không kiểm quyền, nên bỏ qua màn lịch sử là bỏ luôn cửa đó.
+   */
+  canQuickRun?: boolean;
+  /**
    * Việc chính khi bấm từ màn chi tiết. Tạo bản ghi con → mở màn tạo; nghiệp vụ
    * có màn lịch sử riêng → mở lịch sử (xem `RecordActionRunOptions.quick`).
    */

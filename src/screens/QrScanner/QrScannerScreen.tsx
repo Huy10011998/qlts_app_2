@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Linking,
@@ -31,6 +31,7 @@ import ScanModePill, {
   getScanModeLabel,
 } from "../../components/qrcode/shared/ScanModePill";
 import ScanModeSheet from "../../components/qrcode/shared/ScanModeSheet";
+import { useAvailableScanModes } from "../../components/qrcode/shared/useAvailableScanModes";
 import QrScannerGateView from "../../components/qrcode/shared/QrScannerGateView";
 import QrScannerViewportOverlay from "../../components/qrcode/shared/QrScannerViewportOverlay";
 import useQrScannerController from "../../components/qrcode/shared/useQrScannerController";
@@ -101,6 +102,7 @@ export default function QrScannerScreen() {
   const isFocused = useIsFocused();
   const dispatch = useAppDispatch();
   const { mode, setMode } = useScanMode();
+  const availableScanModes = useAvailableScanModes();
   const { can } = usePermission();
   const { loadChildClasses, openAddForm } = useOpenAddRelatedForm();
   const lastSavedNotice = useSelector(
@@ -111,6 +113,26 @@ export default function QrScannerScreen() {
   // class con — màn đen không có gì thì tưởng treo.
   const [isOpeningAction, setIsOpeningAction] = useState(false);
   const [fallbackNotice, setFallbackNotice] = useState<string | null>(null);
+
+  /**
+   * Tham số mở danh sách bản ghi vừa lưu, `null` khi thiếu thứ gì đó. Thông báo
+   * lưu xong luôn có, nhưng nút "Xem" chỉ có nghĩa khi đủ ba tham số của danh sách.
+   */
+  const savedNoticeListParams = useMemo(() => {
+    const notice = lastSavedNotice;
+
+    if (!notice?.nameClass || !notice.idRoot || !notice.propertyReference) {
+      return null;
+    }
+
+    return {
+      nameClass: notice.nameClass,
+      propertyReference: notice.propertyReference,
+      idRoot: notice.idRoot,
+      nameClassRoot: notice.nameClassRoot,
+      titleHeader: notice.titleHeader,
+    };
+  }, [lastSavedNotice]);
   const {
     activateScanner,
     cameraActive,
@@ -156,9 +178,10 @@ export default function QrScannerScreen() {
   /**
    * Chạy việc của chế độ quét đang bật với thiết bị vừa quét.
    *
-   * Không mở được thì nói đúng lý do: thiết bị không có việc đó ("unsupported")
-   * khác hẳn không tải được cấu hình ("failed"). Gộp một câu thì người dùng mất
-   * mạng sẽ đi tìm bảng con không tồn tại.
+   * Không mở được thì nói đúng lý do: thiết bị không có việc đó ("unsupported"),
+   * có nhưng không đủ quyền tạo ("forbidden"), hay không tải được cấu hình
+   * ("failed"). Gộp một câu thì người mất mạng sẽ đi tìm bảng con không tồn tại,
+   * còn người thiếu quyền sẽ tưởng thiết bị sai.
    *
    * Cả hai đường đều mở màn thông tin thiết bị chứ không chặn — thanh hành động ở
    * đó vẫn làm được việc.
@@ -177,7 +200,7 @@ export default function QrScannerScreen() {
       fieldActive: any[];
       itemData: any;
       nameClass: string;
-    }): Promise<"opened" | "unsupported" | "failed"> => {
+    }): Promise<"opened" | "unsupported" | "forbidden" | "failed"> => {
       if (mode === "view") return "unsupported";
 
       setIsOpeningAction(true);
@@ -198,6 +221,11 @@ export default function QrScannerScreen() {
         );
 
         if (!action) return childClassesFailed ? "failed" : "unsupported";
+
+        // Thấy việc nhưng chỉ đủ quyền xem: màn form của nghiệp vụ tủ lạnh không
+        // tự kiểm quyền, cửa `Insert` nằm ở nút thêm trên màn lịch sử — vào thẳng
+        // form là đi vòng qua cửa đó.
+        if (action.canQuickRun === false) return "forbidden";
 
         await action.run({ quick: true });
         return "opened";
@@ -292,11 +320,13 @@ export default function QrScannerScreen() {
           if (outcome === "opened") return;
 
           const modeLabel = getScanModeLabel(mode).toLowerCase();
-          setFallbackNotice(
-            outcome === "failed"
-              ? `Chưa mở được ${modeLabel} — đang mở thông tin thiết bị`
-              : `Thiết bị này không có mục ${modeLabel} — đang mở thông tin thiết bị`,
-          );
+          const reason = {
+            failed: `Chưa mở được ${modeLabel}`,
+            forbidden: `Bạn không có quyền thêm ${modeLabel}`,
+            unsupported: `Thiết bị này không có mục ${modeLabel}`,
+          }[outcome];
+
+          setFallbackNotice(`${reason} — đang mở thông tin thiết bị`);
         }
 
         navigation.navigate("QrDetails", {
@@ -433,22 +463,17 @@ export default function QrScannerScreen() {
         <InlineToast
           message={lastSavedNotice?.message}
           detail={lastSavedNotice?.recordLabel}
-          actionLabel={lastSavedNotice?.nameClass ? "Xem" : undefined}
-          onAction={() => {
-            const notice = lastSavedNotice;
-            if (!notice?.nameClass || !notice.idRoot || !notice.propertyReference) {
-              return;
-            }
-
-            deactivateScanner();
-            navigation.navigate("QrReview", {
-              nameClass: notice.nameClass,
-              propertyReference: notice.propertyReference,
-              idRoot: notice.idRoot,
-              nameClassRoot: notice.nameClassRoot,
-              titleHeader: notice.titleHeader,
-            });
-          }}
+          // Cùng một điều kiện cho cả nhãn lẫn việc mở danh sách: thiếu tham số
+          // mà vẫn bày nút "Xem" thì bấm vào không ra gì.
+          actionLabel={savedNoticeListParams ? "Xem" : undefined}
+          onAction={
+            savedNoticeListParams
+              ? () => {
+                  deactivateScanner();
+                  navigation.navigate("QrReview", savedNoticeListParams);
+                }
+              : undefined
+          }
           onDismiss={() => dispatch(clearLastSavedNotice())}
         />
       </View>
@@ -463,6 +488,7 @@ export default function QrScannerScreen() {
       ) : null}
 
       <ScanModeSheet
+        kinds={availableScanModes}
         mode={mode}
         onClose={() => setModeSheetVisible(false)}
         onSelect={(next) => {
