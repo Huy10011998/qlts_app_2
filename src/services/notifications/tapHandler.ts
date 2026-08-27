@@ -1,4 +1,9 @@
 import { log } from "../../utils/Logger";
+import {
+  buildCameraMotionParams,
+  CAMERA_MOTION_ROUTE,
+  isCameraMotionPush,
+} from "./cameraPush";
 import { TAP_DEDUPE_LIMIT } from "./constants";
 import { createDedupeStore } from "./dedupe";
 import { parseNotificationParams } from "./payload";
@@ -24,18 +29,42 @@ const handledTaps = createDedupeStore(TAP_DEDUPE_LIMIT);
 const isAlreadyHandled = (payload: PushTapPayload) =>
   handledTaps.has(payload.id);
 
+/**
+ * Đích đến của một thông báo.
+ *
+ * BE gửi noti camera theo khoá nghiệp vụ (`type` + `ID_Camera`) chứ không gửi
+ * `route`/`params`, nên phải suy ra route ở đây. Các loại noti sau này vẫn dùng
+ * được đường `route`/`params` chung.
+ */
+const resolveTapTarget = (
+  data: Record<string, string>,
+): { route: string; params?: Record<string, unknown> } | null => {
+  if (isCameraMotionPush(data)) {
+    const params = buildCameraMotionParams(data);
+    return params ? { route: CAMERA_MOTION_ROUTE, params } : null;
+  }
+
+  if (!data.route || !isKnownPushRoute(data.route)) return null;
+
+  return {
+    route: data.route,
+    params: parseNotificationParams(data.params),
+  };
+};
+
 const routePendingTap = (): boolean => {
   if (!pendingTap) return true;
 
   const payload = pendingTap;
-  const route = payload.data.route;
+  const target = resolveTapTarget(payload.data);
 
-  // Không có route hoặc route lạ: coi như đã xử lý xong — mục tiêu của thông báo
+  // Không suy ra được đích đến: coi như đã xử lý xong — mục tiêu của thông báo
   // chỉ là mở app, không cần điều hướng.
-  if (!route || !isKnownPushRoute(route)) {
-    log("[Push] Thông báo không có route hợp lệ → chỉ mở app", {
+  if (!target) {
+    log("[Push] Thông báo không có đích hợp lệ → chỉ mở app", {
       id: payload.id,
-      route,
+      type: payload.data.type,
+      route: payload.data.route,
       source: payload.source,
     });
     handledTaps.claim(payload.id);
@@ -43,10 +72,7 @@ const routePendingTap = (): boolean => {
     return true;
   }
 
-  const navigated = navigateToPushRoute(
-    route,
-    parseNotificationParams(payload.data.params),
-  );
+  const navigated = navigateToPushRoute(target.route, target.params);
 
   if (!navigated) {
     // Navigation chưa sẵn sàng — giữ pendingTap để drain lại lần sau.
@@ -79,6 +105,7 @@ export const handlePushTap = (
   log("[Push] Nhận thao tác bấm thông báo", {
     id: payload.id,
     source: payload.source,
+    type: payload.data.type,
     route: payload.data.route,
     canNavigate,
   });

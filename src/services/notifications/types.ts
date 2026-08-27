@@ -13,7 +13,7 @@ export type PushPlatform = "android" | "ios";
  * hình đích tự đọc.
  */
 export type KnownPushDataKeys = {
-  /** Phân loại nghiệp vụ, ví dụ "asset" | "camera" | "dhcd" | "vehicle". */
+  /** Phân loại nghiệp vụ. Hiện BE gửi "CAMERA_MOTION" (xem `cameraPush`). */
   type?: string;
   /** Tên route trong RootNavigator để mở khi user bấm vào thông báo. */
   route?: string;
@@ -24,6 +24,33 @@ export type KnownPushDataKeys = {
   /** Id ổn định do BE sinh — dùng để chống hiển thị trùng. */
   notificationId?: string;
   /** Tiêu đề/nội dung khi BE gửi data-only (không có khối `notification`). */
+  title?: string;
+  body?: string;
+};
+
+/**
+ * Khối `data` của thông báo "đầu ghi phát hiện chuyển động".
+ *
+ * FCM chỉ truyền string nên mọi số cũng là chuỗi — ép kiểu ở `cameraPush`,
+ * đừng dùng thẳng. Luôn đọc theo key, ĐỪNG parse chuỗi title/body: BE có thể
+ * đổi text bất cứ lúc nào.
+ */
+export type CameraMotionPushData = {
+  type: "CAMERA_MOTION";
+  /** Khoá chính để mở live view. */
+  ID_Camera: string;
+  CameraMa: string;
+  CameraTen: string;
+  ViTri: string;
+  VungCamera: string;
+  ID_DauGhi: string;
+  /** Số kênh trên đầu ghi. */
+  Kenh: string;
+  /** "VMD" = motion detection. */
+  EventType: string;
+  /** "2026-08-27 09:13:58" — giờ server, không có timezone offset. */
+  ThoiGian: string;
+  /** BE lặp lại title/body trong data cho tiện dựng noti lúc app đang mở. */
   title?: string;
   body?: string;
 };
@@ -65,15 +92,10 @@ export type PushTapPayload = {
   source: PushTapSource;
 };
 
-/** Body gửi lên BE để map token ↔ user. */
+/** Body gửi lên BE để map token ↔ user (POST /api/Common/update-fcm-token). */
 export type PushTokenRegistration = {
-  token: string;
+  fcmToken: string;
   platform: PushPlatform;
-  deviceId: string;
-  deviceName: string;
-  osVersion: string;
-  appVersion: string;
-  buildNumber: string;
 };
 
 /** Bản ghi cache local của lần đăng ký thành công gần nhất. */

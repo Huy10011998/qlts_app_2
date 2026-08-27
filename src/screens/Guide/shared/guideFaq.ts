@@ -28,6 +28,16 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     "camera",
     "vuot the",
     "them nhanh",
+    "thanh thao tac",
+    "chon thao tac",
+    "danh gia",
+    "quet lien tuc",
+    "tao moi thanh cong",
+    "thong bao camera",
+    "khong nhan duoc thong bao",
+    "chuyen dong",
+    "tam dung thong bao",
+    "ca cong ty",
   ],
   sections: [
     {
@@ -173,6 +183,152 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
         {
           kind: "paragraph",
           text: "Muốn biết một loại tài sản có danh mục con nào: mở một bản ghi rồi xem tab Chi tiết — đúng danh sách đó là những gì vuốt để thêm nhanh được.",
+        },
+      ],
+    },
+    {
+      id: "faq-mat-muc-danh-gia",
+      heading: "Dấu ba chấm không còn mục Đánh giá / Trung chuyển nữa",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Những việc này đã chuyển xuống thanh dưới đáy màn chi tiết, không mất đi. Dấu ba chấm giờ chỉ còn thao tác quản trị bản ghi: Bản sao và Xoá.",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Thiết bị chỉ làm được một việc: nút đỏ dưới đáy ghi thẳng tên việc, ví dụ Đánh giá.",
+            "Thiết bị làm được nhiều việc: nút ghi Chọn thao tác kèm số việc, bấm ra bảng chọn.",
+          ],
+        },
+        {
+          kind: "paragraph",
+          text: "Đưa ra ngoài vì đây là việc làm nhiều nhất sau khi quét, giấu sau một lần bấm là sai chỗ.",
+        },
+      ],
+    },
+    {
+      id: "faq-bang-tu-mo",
+      heading: "Quét xong tự hiện bảng hỏi làm gì, tôi chỉ muốn xem thông tin",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Bấm ra ngoài bảng để đóng, màn Thông tin của thiết bị nằm ngay dưới đó. Bảng chỉ tự mở khi vào từ máy quét và thiết bị có từ hai việc trở lên.",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Mở thiết bị từ danh sách tài sản thì bảng không bao giờ tự mở.",
+            "Đóng rồi cần lại thì bấm nút Chọn thao tác trên thanh dưới đáy.",
+          ],
+        },
+      ],
+    },
+    {
+      id: "faq-khong-thay-tao-moi-thanh-cong",
+      heading: 'Lưu xong không thấy thông báo "Tạo mới thành công"',
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Ở luồng quét QR, app không hỏi OK nữa mà quay thẳng về màn quét kèm dải xanh Đã lưu… ở trên, tự tắt sau vài giây. Bản ghi đã lưu rồi.",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Muốn kiểm lại: bấm Xem trên dải xanh để mở danh sách bản ghi vừa tạo.",
+            "Dải xanh tắt mất rồi thì quét lại thiết bị đó, dòng Lịch sử dưới đáy màn có số bản ghi mới nhất.",
+          ],
+        },
+        {
+          kind: "paragraph",
+          text: "Bỏ bước bấm OK vì đi kiểm tra cả loạt thiết bị thì mỗi bản ghi một lần bấm là thao tác thừa nhân lên theo số thiết bị. Các luồng thêm mới khác vẫn báo như cũ.",
+        },
+      ],
+    },
+    {
+      id: "faq-khong-thay-thanh-thao-tac",
+      heading: "Không thấy thanh thao tác dưới đáy màn chi tiết",
+      blocks: [
+        {
+          kind: "bullets",
+          items: [
+            "Loại tài sản đó chưa khai danh mục con nào và cũng không có nghiệp vụ riêng — không có việc gì để làm.",
+            "Có danh mục con nhưng tài khoản chưa có quyền thêm ở đó thì thanh cũng ẩn hẳn, thay vì hiện rồi báo lỗi khi bấm.",
+            "Đang mất mạng thì app chưa lấy được danh sách việc; kéo xuống nạp lại sau khi có mạng.",
+          ],
+        },
+        {
+          kind: "paragraph",
+          text: "Muốn biết một loại tài sản có việc gì: mở một bản ghi rồi xem tab Chi tiết.",
+        },
+      ],
+    },
+    {
+      id: "faq-khong-nhan-thong-bao-camera",
+      heading: "Không nhận được thông báo camera",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Kiểm tra lần lượt theo thứ tự này, phần lớn trường hợp dừng ở bước 1 hoặc 2.",
+        },
+        {
+          kind: "steps",
+          items: [
+            "Vào tab Cài đặt xem có dòng Thông báo camera không. Không thấy nghĩa là tài khoản chưa được cấp quyền — nhờ IT thêm quyền nhận thông báo camera.",
+            "Vẫn ở Cài đặt, xem dòng Quyền thông báo đã ở trạng thái Đã cấp quyền chưa. Đang bị chặn thì bấm vào dòng đó để mở Cài đặt của điện thoại.",
+            "Mở Thông báo camera, xem phần trạng thái có đang Tạm dừng không — kể cả lệnh do người khác tắt cho cả công ty.",
+            "Ba bước trên đều ổn mà vẫn không có thì đóng hẳn app rồi mở lại một lần, app sẽ đăng ký lại với máy chủ.",
+          ],
+        },
+        {
+          kind: "paragraph",
+          text: "Đến đây vẫn không được thì báo IT kèm tên tài khoản và giờ bạn thử, để bên kỹ thuật tra lại nhật ký gửi thông báo.",
+        },
+      ],
+    },
+    {
+      id: "faq-thong-bao-camera-ca-cong-ty",
+      heading: "Cả phòng không ai nhận được thông báo camera",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Nhiều khả năng có người đã đặt tạm dừng cho cả công ty. Vào tab Cài đặt, chọn Thông báo camera — nếu đúng vậy thì phần trạng thái ghi rõ cả công ty, kèm tên người tắt, lý do và còn bao lâu.",
+        },
+        {
+          kind: "paragraph",
+          text: "Cần nhận lại ngay thì bấm Bật lại ngay; app hỏi xác nhận vì thao tác này khôi phục thông báo cho tất cả mọi người. Nên hỏi người đã tắt một câu trước khi bật lại, tránh bật giữa lúc họ đang thi công.",
+        },
+      ],
+    },
+    {
+      id: "faq-tam-dung-het-han",
+      heading: "Tạm dừng thông báo camera có tự hết không?",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Có. Hết mốc thời gian đã chọn là app tự nhận thông báo trở lại, không phải bật tay. Màn Thông báo camera đếm ngược cho biết còn bao lâu.",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Đặt mốc mới trong lúc đang tạm dừng thì mốc cũ bị thay, không cộng dồn.",
+            "Bấm Bật lại ngay là nhận lại ngay, không phải chờ hết giờ.",
+            "Chỉ có bốn mốc 15 phút, 30 phút, 1 giờ và 4 giờ — cố ý không cho nhập số phút tự do để không ai lỡ tắt quá lâu rồi quên.",
+          ],
+        },
+      ],
+    },
+    {
+      id: "faq-bam-thong-bao-camera",
+      heading: "Bấm vào thông báo camera thì mở ra gì?",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "App mở thẳng hình trực tiếp của đúng camera vừa báo. Nếu app đang khoá bằng Face ID thì mở sau khi xác thực xong.",
+        },
+        {
+          kind: "paragraph",
+          text: "Camera chỉ xem được khi máy đang ở mạng nội bộ công ty. Đang dùng 4G thì thông báo vẫn tới nhưng hình không lên — không phải camera hỏng.",
         },
       ],
     },

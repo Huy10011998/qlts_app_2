@@ -1,5 +1,6 @@
 import notifee, { AndroidImportance } from "@notifee/react-native";
 import { log, warn } from "../../utils/Logger";
+import { getCameraMotionGroupId } from "./cameraPush";
 import { ensureNotificationChannels } from "./channels";
 import {
   ANDROID_SMALL_ICON,
@@ -47,6 +48,8 @@ export const displayPushNotification = async (
       data: message.data,
       android: {
         channelId: message.channelId,
+        // Nhiều camera cùng có chuyển động sẽ dồn noti một lúc → gom theo camera.
+        groupId: getCameraMotionGroupId(message.data),
         smallIcon: ANDROID_SMALL_ICON,
         color: NOTIFICATION_COLOR,
         importance:

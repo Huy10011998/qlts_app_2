@@ -46,6 +46,7 @@ import TrungChuyenTuLanhChonNhaPhanPhoiScreen from "../screens/NoiDia/TrungChuye
 import TrungChuyenTuLanhChonKhachHangScreen from "../screens/NoiDia/TrungChuyenTuLanhChonKhachHangScreen";
 import TrungChuyenTuLanhXacNhanScreen from "../screens/NoiDia/TrungChuyenTuLanhXacNhanScreen";
 import AppearanceScreen from "../screens/Settings/AppearanceScreen";
+import CameraNotificationScreen from "../screens/Settings/CameraNotificationScreen";
 import TextSizeScreen from "../screens/Settings/TextSizeScreen";
 import ProfileScreen from "../screens/Profile/ProfileScreen";
 import GuideScreen from "../screens/Guide/GuideScreen";
@@ -386,6 +387,14 @@ export default function AppNavigator() {
         component={ProfileScreen}
         options={{
           title: "Hồ sơ cá nhân",
+          ...headerWithBack,
+        }}
+      />
+      <Stack.Screen
+        name="CameraNotification"
+        component={CameraNotificationScreen}
+        options={{
+          title: "Thông báo camera",
           ...headerWithBack,
         }}
       />

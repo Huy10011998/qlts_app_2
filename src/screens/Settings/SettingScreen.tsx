@@ -71,8 +71,10 @@ import {
   getNotificationPermissionLabel,
   openNotificationSettings,
   requestNotificationPermission,
+  unregisterPushToken,
 } from "../../services/notifications";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
+import { usePermission } from "../../hooks/usePermission";
 import {
   ANDROID_STORE_URL,
   formatVersionWithBuild,
@@ -133,6 +135,9 @@ const SettingScreen = () => {
   ] = useState(false);
 
   const navigation = useNavigation<StackNavigation<"Profile">>();
+  const { can } = usePermission();
+  // Quyền do IT cấp ở Admin → Nhóm → Phân quyền → Camera → "Noti Camera Mobile".
+  const canUseCameraNoti = can("Camera", "NotiCameraMobile");
   const { logout, logoutReason } = useAuth();
   const isFocused = useIsFocused();
   const dispatch = useAppDispatch();
@@ -450,6 +455,10 @@ const SettingScreen = () => {
     isLoggingOutRef.current = true;
     if (isMountedRef.current) setIsLoading(true);
     try {
+      // PHẢI gọi trước khi xoá access token: request tắt token cần Authorization.
+      // Bỏ qua bước này thì máy vẫn nhận noti của user cũ cho tới khi có người
+      // khác đăng nhập trên chính máy đó — điện thoại dùng chung sẽ lộ thông tin.
+      await unregisterPushToken();
       hardResetApi();
       resetAuthState();
       await clearTokenStorage();
@@ -904,6 +913,17 @@ const SettingScreen = () => {
               value={notificationPermissionStatus === "granted"}
               onValueChange={handleToggleNotificationPermission}
             />
+            {/* Chỉ hiện với người được cấp quyền nhận noti camera — 3 API bên
+                trong đều trả 403 nếu thiếu quyền. */}
+            {canUseCameraNoti ? (
+              <SettingRowItem
+                iconName="videocam-outline"
+                iconBg={C.rose}
+                label="Thông báo camera"
+                sublabel="Tạm dừng thông báo phát hiện chuyển động"
+                onPress={() => navigation.navigate("CameraNotification")}
+              />
+            ) : null}
             <SettingRowItem
               iconName="log-out-outline"
               label="Đăng xuất"

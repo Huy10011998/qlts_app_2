@@ -1,4 +1,5 @@
 import type { FirebaseMessagingTypes } from "@react-native-firebase/messaging";
+import { isCameraMotionPush } from "./cameraPush";
 import { resolveChannelId } from "./channels";
 import type { NormalizedPushMessage } from "./types";
 
@@ -104,7 +105,11 @@ export const normalizeRemoteMessage = (
     title,
     body,
     data,
-    channelId: resolveChannelId(data.channelId),
+    // BE không gửi channelId cho noti camera — chuyển động là việc cần biết ngay
+    // nên mặc định đẩy lên channel ưu tiên cao.
+    channelId: resolveChannelId(
+      data.channelId ?? (isCameraMotionPush(data) ? "urgent" : undefined),
+    ),
     hasOsNotification: Boolean(remoteMessage.notification),
   };
 };

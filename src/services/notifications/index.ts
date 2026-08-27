@@ -16,6 +16,8 @@
  *                  └─ syncPushToken()     → xin quyền, lấy token, gửi BE
  *
  * Contract payload với BE: xem mục "Push Notification" trong README.md ở gốc repo.
+ * Thông báo camera phát hiện chuyển động: xem `cameraPush` (định tuyến) và
+ * `cameraNotiApi` (tạm dừng / bật lại).
  */
 export { ensureNotificationChannels, resolveChannelId } from "./channels";
 export {
@@ -34,7 +36,24 @@ export {
 } from "./permissions";
 export type { AppNotificationPermissionStatus } from "./permissions";
 export { isKnownPushRoute, navigateToPushRoute } from "./pushRoutes";
-export { registerDeviceToken, unregisterDeviceToken } from "./pushTokenApi";
+export {
+  buildCameraMotionParams,
+  CAMERA_MOTION_ROUTE,
+  CAMERA_MOTION_TYPE,
+  getCameraMotionGroupId,
+  isCameraMotionPush,
+} from "./cameraPush";
+export {
+  CameraNotiPhamVi,
+  getTrangThaiNotiCamera,
+  huyTamDungNotiCamera,
+  tamDungNotiCamera,
+} from "./cameraNotiApi";
+export type {
+  CameraNotiLenh,
+  TamDungNotiCameraInput,
+} from "./cameraNotiApi";
+export { logoutFcmToken, updateFcmToken } from "./pushTokenApi";
 export {
   stopPushTokenRetries,
   syncPushToken,
