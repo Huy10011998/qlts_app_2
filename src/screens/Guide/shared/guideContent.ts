@@ -314,6 +314,10 @@ const TOPICS: GuideTopic[] = [
       "them nhanh",
       "them muc con",
       "danh gia nhanh",
+      "them nhanh danh muc",
+      "dau cong",
+      "bang chon",
+      "khong co trong danh sach",
     ],
     sections: [
       {
@@ -393,6 +397,44 @@ const TOPICS: GuideTopic[] = [
             kind: "note",
             tone: "info",
             text: "Không thấy nút Thêm mới, Sửa hay Xoá nghĩa là tài khoản chưa có quyền tương ứng với loại tài sản đó, chứ không phải app lỗi.",
+          },
+        ],
+      },
+      {
+        id: "tai-san-them-nhanh-danh-muc",
+        heading: "Bảng chọn không có giá trị cần: thêm ngay tại đó",
+        blocks: [
+          {
+            kind: "paragraph",
+            text: "Đang nhập dở một bản ghi mà ô chọn từ danh mục chưa có giá trị mình cần (đơn vị mới, nhà cung cấp mới…) thì không phải thoát form ra tạo rồi quay lại nhập lại từ đầu.",
+          },
+          {
+            kind: "steps",
+            items: [
+              "Bấm vào ô chọn để mở bảng chọn.",
+              "Tìm không thấy thì bấm nút dấu + màu đỏ nằm bên phải ô tìm kiếm.",
+              "Bảng chọn đổi thành form thêm mới của chính danh mục đó, đủ các ô như màn thêm mới bình thường.",
+              "Điền xong bấm Lưu ở góc phải trên. App báo Tạo mới thành công.",
+              "Bấm OK để về lại bảng chọn — danh sách đã tải lại và có bản ghi vừa tạo. Chạm vào dòng đó để chọn.",
+            ],
+          },
+          {
+            kind: "note",
+            tone: "info",
+            text: "Bản ghi vừa tạo KHÔNG tự điền vào ô. Tạo được không có nghĩa là đã chọn, nên vẫn phải chạm chọn như mọi dòng khác — tránh việc app tự điền một giá trị mình chưa kịp xem lại.",
+          },
+          {
+            kind: "bullets",
+            items: [
+              "Muốn về danh sách mà không lưu: bấm mũi tên ◄ góc trái trên, hoặc nút back của máy.",
+              "Bấm ra ngoài vùng bảng chọn là đóng hẳn, phần đang nhập dở mất.",
+              "Dùng được ở mọi form: Thêm mới, Chỉnh sửa, Bản sao và cả thêm bản ghi con.",
+            ],
+          },
+          {
+            kind: "note",
+            tone: "info",
+            text: "Không thấy nút dấu + thì có hai khả năng: tài khoản chưa có quyền thêm ở đúng danh mục đó, hoặc ô này chọn từ danh sách cố định (Có/Không, trạng thái…) chứ không phải danh mục — loại đó không thêm được từ app.",
           },
         ],
       },

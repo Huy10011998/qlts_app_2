@@ -268,11 +268,18 @@ const CameraListGrid: React.FC = () => {
   const separatorColor = useSeparatorColor();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
-  const { cameras = [], zoneName } = route.params ?? {};
+  const { cameras = [], zoneName, layoutCount: initialLayoutCount } =
+    route.params ?? {};
   const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();
 
-  const [layoutCount, setLayoutCount] = React.useState(16);
+  // Mặc định lưới 4×4. Mở từ thông báo camera thì chỉ có một camera, màn hình
+  // truyền layoutCount = 1 để hình chiếm trọn khung thay vì nằm lọt thỏm một ô.
+  const [layoutCount, setLayoutCount] = React.useState(() =>
+    initialLayoutCount && LAYOUT_OPTIONS[initialLayoutCount]
+      ? initialLayoutCount
+      : 16,
+  );
   const [activeIndex, setActiveIndex] = React.useState(-1);
   const [page, setPage] = React.useState(0);
   const [isMuted, setIsMuted] = React.useState(false);

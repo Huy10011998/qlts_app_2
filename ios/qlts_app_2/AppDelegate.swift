@@ -14,7 +14,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   /// Thời gian tối thiểu giữ splash screen. Nếu app khởi động lâu hơn mức này
   /// thì splash vẫn tắt đúng mốc, không cộng dồn thêm.
   /// Giữ đồng bộ với SPLASH_MIN_DURATION_MS trong MainActivity.kt.
-  private let splashHoldSeconds: TimeInterval = 3
+  private let splashHoldSeconds: TimeInterval = 2
   private let splashFadeSeconds: TimeInterval = 0.25
 
   func application(

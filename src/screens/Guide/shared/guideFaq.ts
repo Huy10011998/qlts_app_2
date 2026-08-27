@@ -33,6 +33,11 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     "danh gia",
     "quet lien tuc",
     "tao moi thanh cong",
+    "bang chon",
+    "dau cong",
+    "them nhanh danh muc",
+    "khong co trong danh sach",
+    "o chon van trong",
     "thong bao camera",
     "khong nhan duoc thong bao",
     "chuyen dong",
@@ -242,6 +247,42 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
         {
           kind: "paragraph",
           text: "Bỏ bước bấm OK vì đi kiểm tra cả loạt thiết bị thì mỗi bản ghi một lần bấm là thao tác thừa nhân lên theo số thiết bị. Các luồng thêm mới khác vẫn báo như cũ.",
+        },
+      ],
+    },
+    {
+      id: "faq-bang-chon-khong-co-gia-tri",
+      heading: "Bảng chọn không có giá trị tôi cần",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Bấm nút dấu + màu đỏ bên phải ô tìm kiếm trong bảng chọn: bảng đổi thành form thêm mới của chính danh mục đó, lưu xong là quay về danh sách đã có bản ghi mới. Không phải thoát form đang nhập.",
+        },
+        {
+          kind: "paragraph",
+          text: "Không thấy nút dấu +:",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Tài khoản chưa có quyền thêm ở đúng danh mục đó — nhờ quản trị hệ thống cấp quyền, app không tự mở được.",
+            "Ô này chọn từ danh sách cố định (Có/Không, trạng thái…) chứ không phải danh mục, loại đó chỉ sửa được ở hệ thống trên web.",
+            "Gõ tìm nhưng gõ sai chính tả nên tưởng không có. Thử gõ ngắn hơn, gõ không dấu vẫn ra kết quả.",
+          ],
+        },
+      ],
+    },
+    {
+      id: "faq-them-nhanh-o-van-trong",
+      heading: "Thêm nhanh xong mà ô chọn vẫn trống",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Đúng như thiết kế. Tạo được một bản ghi không có nghĩa là đã chọn nó, nên app chỉ tải lại danh sách chứ không tự điền — bản ghi vừa tạo nằm trong đó, chạm vào là chọn.",
+        },
+        {
+          kind: "paragraph",
+          text: "Đã bấm OK ở thông báo Tạo mới thành công mà không thấy bản ghi trong danh sách thì gõ tên nó vào ô tìm kiếm. Bản ghi đã lưu trên máy chủ rồi, không cần tạo lại — tạo lại là trùng dữ liệu.",
         },
       ],
     },

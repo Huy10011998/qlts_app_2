@@ -31,6 +31,12 @@ type BottomSheetModalShellProps = {
   closeOnBackdropPress?: boolean;
   closeButtonStyle?: StyleProp<ViewStyle>;
   keyboardOffset?: number;
+  /**
+   * Bấm ra ngoài sheet. Bỏ trống thì dùng `onClose` — chỉ truyền khi nền mờ phải
+   * làm việc khác với nút đóng/nút back của máy (sheet nhiều bước: nút back lùi
+   * một bước, bấm ra ngoài là thoát hẳn).
+   */
+  onBackdropPress?: () => void;
   onClose: () => void;
   overlayStyle?: StyleProp<ViewStyle>;
   /**
@@ -54,6 +60,7 @@ export default function BottomSheetModalShell({
   closeOnBackdropPress = false,
   closeButtonStyle,
   keyboardOffset = 0,
+  onBackdropPress,
   onClose,
   overlayStyle,
   safeAreaBottom = true,
@@ -235,7 +242,7 @@ export default function BottomSheetModalShell({
           <TouchableOpacity
             style={styles.backdrop}
             activeOpacity={1}
-            onPress={onClose}
+            onPress={onBackdropPress ?? onClose}
           />
         ) : (
           <View style={styles.backdrop} />

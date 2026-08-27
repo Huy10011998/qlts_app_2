@@ -80,9 +80,7 @@ function AddActionFabComponent({
           <View style={styles.iconWrap}>
             <Ionicons name={iconName} size={22} color="#fff" />
           </View>
-          <Text style={styles.label}>
-            {label}
-          </Text>
+          <Text style={styles.label}>{label}</Text>
         </>
       ) : (
         <Ionicons name={iconName} size={34} color="#fff" />

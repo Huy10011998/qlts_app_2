@@ -13,18 +13,12 @@ class MainActivity : ReactActivity() {
 
   companion object {
     /**
-     * Thời gian tối thiểu giữ splash screen, tính bằng ms. Nếu app khởi động
-     * lâu hơn mức này thì splash tự tắt khi sẵn sàng, không cộng dồn thêm.
+     * Thời gian giữ splash screen, tính bằng ms — cố định, đúng như iOS: JS báo
+     * sẵn sàng sớm thì vẫn giữ đủ mốc này, JS treo thì cũng gỡ đúng mốc này chứ
+     * không chờ thêm.
      * Giữ đồng bộ với splashHoldSeconds trong ios/qlts_app_2/AppDelegate.swift.
      */
-    private const val SPLASH_MIN_DURATION_MS = 3000L
-
-    /**
-     * Trần cứng cho lượt chờ JS báo sẵn sàng. Mạng chết, API treo hay JS crash
-     * thì splash vẫn phải nhường chỗ cho màn hình lỗi — không được khoá người
-     * dùng ở màn splash vô thời hạn.
-     */
-    private const val SPLASH_MAX_DURATION_MS = 10000L
+    private const val SPLASH_DURATION_MS = 2000L
 
     /** Thời gian mờ dần khi gỡ splash. Khớp splashFadeSeconds bên iOS. */
     private const val SPLASH_FADE_MS = 250L
@@ -50,22 +44,16 @@ class MainActivity : ReactActivity() {
       val dismiss = {
         if (!hasDismissed) {
           hasDismissed = true
-          val remaining = SPLASH_MIN_DURATION_MS - (SystemClock.uptimeMillis() - splashStartedAt)
-          provider.view.postDelayed({
-            provider.view.animate()
-              .alpha(0f)
-              .setDuration(SPLASH_FADE_MS)
-              .withEndAction { provider.remove() }
-              .start()
-          }, remaining.coerceAtLeast(0L))
+          provider.view.animate()
+            .alpha(0f)
+            .setDuration(SPLASH_FADE_MS)
+            .withEndAction { provider.remove() }
+            .start()
         }
       }
 
-      // Gỡ khi JS báo màn hình đầu tiên đã có nội dung thật, chứ không phải khi
-      // hết 3s: mốc thời gian cứng gỡ splash giữa lúc app còn đang bootstrap và
-      // để lộ chuỗi vòng xoay. SPLASH_MIN_DURATION_MS giờ chỉ còn là sàn.
-      SplashGate.awaitReady(dismiss)
-      provider.view.postDelayed(dismiss, SPLASH_MAX_DURATION_MS)
+      val remaining = SPLASH_DURATION_MS - (SystemClock.uptimeMillis() - splashStartedAt)
+      provider.view.postDelayed(dismiss, remaining.coerceAtLeast(0L))
     }
     requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
     super.onCreate(savedInstanceState)
