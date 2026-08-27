@@ -44,6 +44,9 @@ import {
   getReportFileInfo,
   sanitizeShareFileName,
   formatShareTimestamp,
+  waitForSheetDismiss,
+  normalizeBase64Payload,
+  getBase64Signature,
   SHARE_REPORT_OPTIONS,
   REPORT_PREVIEW_TIMEOUT_MS,
   REPORT_SLOW_LOADING_MS,
@@ -61,7 +64,9 @@ import { RenderInputByType } from "../form/RenderInputByType";
 import { useEnumAndReferenceLoader } from "../../hooks/AssetAddItem/useEnumAndReferenceLoader";
 import { useModalItems } from "../../hooks/AssetAddItem/useModalItems";
 import AssetFormReferencePickerModal from "../assets/shared/AssetFormReferencePickerModal";
-import BottomSheetModalShell from "../shared/BottomSheetModalShell";
+import BottomSheetModalShell, {
+  SHEET_CLOSE_DURATION,
+} from "../shared/BottomSheetModalShell";
 import { HeaderDetailsModalHeader } from "../header/HeaderDetails";
 import { handleCascadeChange } from "../../utils/cascade";
 import {
@@ -505,15 +510,41 @@ const ReportView: React.FC<ReportViewProps> = ({
         throw new Error("Report share data is empty");
       }
 
+      const normalized = normalizeBase64Payload(base64Data);
+      if (!normalized) {
+        throw new Error("Report share data is empty");
+      }
+
+      // Kiem tra chu ky dau tep truoc khi ghi. Neu API tra ve HTML/JSON loi thay
+      // vi tep bao cao, tep ghi ra van co dung ten .pdf nen man chia se mo binh
+      // thuong, nhung ben nhan (Zalo, Gmail...) doc khong ra va lang le bo qua.
+      const signature = getBase64Signature(fileInfo.extension);
+      if (signature && !normalized.startsWith(signature.prefix)) {
+        throw new Error(`BAD_FILE:${signature.label}`);
+      }
+
       const fileName = `${sanitizeShareFileName(
         title,
       )}_${formatShareTimestamp()}.${fileInfo.extension}`;
       const filePath = `${RNFS.CachesDirectoryPath}/${fileName}`;
 
-      await RNFS.writeFile(filePath, base64Data, "base64");
+      await RNFS.writeFile(filePath, normalized, "base64");
+
+      const stat = await RNFS.stat(filePath);
+      if (!stat || Number(stat.size) <= 0) {
+        throw new Error("EMPTY_FILE");
+      }
+
+      log("[ReportView] Report file ready to share", {
+        filePath,
+        size: stat.size,
+        type: fileInfo.mimeType,
+      });
+
       await Share.open({
         url: `file://${filePath}`,
         type: fileInfo.mimeType,
+        filename: fileName,
         failOnCancel: false,
       });
     },
@@ -534,6 +565,11 @@ const ReportView: React.FC<ReportViewProps> = ({
       try {
         setIsSharing(true);
         setShareOptionsVisible(false);
+        // Phai cho sheet dong xong moi goi Share.open. Ban "file PDF" dung lai
+        // base64 da tai nen chay ngay lap tuc: man chia se bam vao modal dang
+        // bien mat, khong hien ra va promise treo mai (icon share quay hoai).
+        // Ban "file goc" con doi API nen tinh co du thoi gian, khong loi.
+        await waitForSheetDismiss(SHEET_CLOSE_DURATION);
         await shareReportFile(option);
       } catch (err) {
         const message = err instanceof Error ? err.message : "";
@@ -552,8 +588,27 @@ const ReportView: React.FC<ReportViewProps> = ({
           return;
         }
 
+        if (message.startsWith("BAD_FILE:")) {
+          const label = message.replace("BAD_FILE:", "");
+          showAlertIfActive(
+            "Lỗi",
+            `Dữ liệu báo cáo trả về không phải tệp ${label} hợp lệ. Vui lòng tải lại báo cáo rồi thử lại.`,
+          );
+          return;
+        }
+        if (message === "EMPTY_FILE") {
+          showAlertIfActive(
+            "Lỗi",
+            "Tệp báo cáo ghi ra bị rỗng. Vui lòng tải lại báo cáo rồi thử lại.",
+          );
+          return;
+        }
+
         error("Share report error:", err);
-        showAlertIfActive("Lỗi", "Không thể mở chia sẻ báo cáo.");
+        showAlertIfActive(
+          "Lỗi",
+          `Không thể mở chia sẻ báo cáo.${message ? `\n${message}` : ""}`,
+        );
       } finally {
         if (isMounted()) {
           setIsSharing(false);

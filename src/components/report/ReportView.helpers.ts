@@ -77,6 +77,39 @@ export const formatShareTimestamp = (value = new Date()) => {
   return `${day}-${month}-${year}_${hours}-${minutes}-${seconds}`;
 };
 
+/**
+ * Cho modal sheet thao xong (dong + go khoi cay) truoc khi mo man chia se cua
+ * he thong. Cong them mot khoang du de kip mot nhip render sau animation.
+ */
+export const waitForSheetDismiss = (closeDuration: number) =>
+  new Promise<void>((resolve) => {
+    setTimeout(resolve, closeDuration + 80);
+  });
+
+/**
+ * API co the tra base64 kem tien to data-uri hoac xuong dong. RNFS.writeFile
+ * voi encoding "base64" khong loc nhung ky tu nay: file ghi ra bi hong, app
+ * chia se van mo binh thuong nhung ben nhan (Zalo, Gmail...) bo qua tep.
+ */
+export const normalizeBase64Payload = (value: string) =>
+  value.replace(/^data:[^;]*;base64,/, "").replace(/\s+/g, "");
+
+/**
+ * Tien to base64 tuong ung chu ky dau tep: "%PDF" -> JVBER, zip (xlsx/docx) ->
+ * UEs, OLE (xls/doc) -> 0M8R4. So sanh trong base64 nen khong phai doc lai tep
+ * hay lo encoding.
+ */
+const BASE64_SIGNATURES: Record<string, { label: string; prefix: string }> = {
+  pdf: { prefix: "JVBER", label: "PDF" },
+  xlsx: { prefix: "UEs", label: "Excel" },
+  docx: { prefix: "UEs", label: "Word" },
+  xls: { prefix: "0M8R4", label: "Excel" },
+  doc: { prefix: "0M8R4", label: "Word" },
+};
+
+export const getBase64Signature = (extension: string) =>
+  BASE64_SIGNATURES[extension] ?? null;
+
 export type ShareReportOption = "original" | "pdf";
 
 export const SHARE_REPORT_OPTIONS: Array<{
