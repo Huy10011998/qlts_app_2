@@ -121,6 +121,12 @@ export const useOpenReferenceModal = ({
         return "error";
       }
 
+      /* Trả nguyên kết quả tải (items/totalCount) khi thành công: nơi gọi cần
+         danh sách vừa về để chọn thẳng bản ghi mới tạo, không đợi state. Vẫn
+         giữ `false`/`"error"` cho các nhánh lỗi nên chỗ cũ chỉ kiểm tra truthy
+         không bị ảnh hưởng. */
+      if (didLoad && typeof didLoad === "object") return didLoad;
+
       return didLoad !== false;
     },
     [formData, pageSize, setReferenceData, setReferenceErrorMessage],

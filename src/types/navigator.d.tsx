@@ -201,6 +201,11 @@ export type RootStackParamList = {
   CameraListGrid: {
     zoneName?: string;
     cameras?: CameraRouteItem[];
+    /**
+     * Số ô của lưới lúc mở màn: 1 | 4 | 9 | 12 | 16 (xem LAYOUT_OPTIONS). Bỏ
+     * trống là 16. Người dùng vẫn đổi được bằng nút chọn bố cục.
+     */
+    layoutCount?: number;
   };
   CameraPlayback: {
     camera: CameraRouteItem;

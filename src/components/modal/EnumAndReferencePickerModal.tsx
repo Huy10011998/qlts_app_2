@@ -36,6 +36,19 @@ type ExtraProps = {
   loadingMore?: boolean;
   total?: number;
   loadedCount?: number;
+  /**
+   * Bật đường tắt "thêm nhanh": hiện nút thêm cạnh ô tìm kiếm. Chỉ nơi gọi biết
+   * class đích và quyền `Insert` nên việc quyết định có nút hay không nằm ở đó.
+   */
+  onQuickAdd?: () => void;
+  quickAddLabel?: string;
+  /**
+   * Form thêm nhanh. Có nội dung thì sheet đổi hẳn sang form — cố ý KHÔNG mở
+   * thêm một Modal nữa: chồng ba lớp Modal (picker → form → picker của form)
+   * là chỗ iOS hay không hiện lớp trong cùng.
+   */
+  quickAddContent?: React.ReactNode | null;
+  onQuickAddClose?: () => void;
 };
 
 export default function EnumAndReferencePickerModal({
@@ -53,9 +66,14 @@ export default function EnumAndReferencePickerModal({
   loadingMore,
   total = 0,
   loadedCount,
+  onQuickAdd,
+  quickAddLabel = "Thêm mới",
+  quickAddContent,
+  onQuickAddClose,
 }: PropsEnum & ExtraProps) {
   const styles = useStyles(makeStyles);
   const separatorColor = useSeparatorColor();
+  const isQuickAdding = Boolean(quickAddContent);
   const [searchText, setSearchText] = useState("");
   const [multiSelectedValues, setMultiSelectedValues] = useState<string[]>([]);
   const debouncedSearch = useDebounce(searchText, 600);
@@ -205,6 +223,26 @@ export default function EnumAndReferencePickerModal({
     );
   };
 
+  if (isQuickAdding) {
+    return (
+      <BottomSheetModalShell
+        visible={visible}
+        avoidKeyboard
+        closeOnBackdropPress
+        /* Nút back của máy chỉ lùi về danh sách, còn bấm ra ngoài sheet là thoát
+           hẳn — đúng như bấm ra ngoài lúc đang xem danh sách. */
+        onClose={() => onQuickAddClose?.()}
+        onBackdropPress={onClose}
+        statusBarTranslucent
+        presentationStyle="overFullScreen"
+        sheetStyle={[styles.modalContainer, { paddingBottom: 16 }]}
+        showHandle
+      >
+        {quickAddContent}
+      </BottomSheetModalShell>
+    );
+  }
+
   return (
     <BottomSheetModalShell
       visible={visible}
@@ -240,15 +278,29 @@ export default function EnumAndReferencePickerModal({
         </View>
       ) : null}
 
-      <SearchBar
-        value={searchText}
-        onChangeText={setSearchText}
-        placeholder="Tìm kiếm..."
-        onClear={handleClearSearch}
-        isSearching={showSearchSpinner}
-        style={styles.searchSpacing}
-        maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
-      />
+      <View style={styles.searchRow}>
+        <View style={styles.searchGrow}>
+          <SearchBar
+            value={searchText}
+            onChangeText={setSearchText}
+            placeholder="Tìm kiếm..."
+            onClear={handleClearSearch}
+            isSearching={showSearchSpinner}
+            maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
+          />
+        </View>
+
+        {onQuickAdd ? (
+          <TouchableOpacity
+            style={styles.quickAddButton}
+            onPress={onQuickAdd}
+            accessibilityRole="button"
+            accessibilityLabel={`${quickAddLabel} ${title}`}
+          >
+            <Ionicons name="add" size={24} color="#fff" />
+          </TouchableOpacity>
+        ) : null}
+      </View>
 
       {!isEmpty ? (
         <View style={styles.stickyHeader}>
@@ -347,9 +399,30 @@ const makeStyles = (c: AppColors) =>
       color: "#fff",
     },
 
-    searchSpacing: {
+    searchRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
       marginBottom: 8,
     },
+
+    searchGrow: {
+      flex: 1,
+      minWidth: 0,
+    },
+
+    /* Nút thêm nhanh nằm cạnh ô tìm kiếm: người dùng tìm không thấy thì việc kế
+       tiếp là tạo mới, để ngay đó thì không phải thoát ra khỏi form. Chỉ dấu
+       cộng — ô tìm kiếm mới là thứ cần chỗ ở hàng này. */
+    quickAddButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 10,
+      backgroundColor: c.red,
+    },
+
 
     list: {
       flex: 1,

@@ -1,15 +1,22 @@
 import React from "react";
 import { useNetworkAwareReload } from "../../../hooks/useNetworkAwareReload";
+import { usePermission } from "../../../hooks/usePermission";
 import EnumAndReferencePickerModal from "../../modal/EnumAndReferencePickerModal";
 import { TypeProperty } from "../../../utils/Enum";
 import type { ReferenceDataMap } from "../../../types";
+import ReferenceQuickAddForm from "./ReferenceQuickAddForm";
 
 type AssetFormReferencePickerModalProps = {
   activeEnumField: any;
   formData: Record<string, any>;
   loadReferenceModalData: (
     field: any,
-    options: { textSearch: string; page: number; append: boolean },
+    options: {
+      textSearch: string;
+      page: number;
+      append: boolean;
+      currentIds?: Array<string | number>;
+    },
   ) => Promise<any>;
   modalItems: Array<{ value: any; text: string }>;
   modalVisible: boolean;
@@ -30,6 +37,11 @@ type AssetFormReferencePickerModalProps = {
   setRefPage: React.Dispatch<React.SetStateAction<number>>;
   setRefSearching: (value: boolean) => void;
   handleChange: (name: string, value: any) => void;
+  /**
+   * Cho phép đường tắt "thêm nhanh" bản ghi của class được reference tới. Tắt ở
+   * picker nằm trong chính form thêm nhanh, để không lồng thêm cấp nữa.
+   */
+  enableQuickAdd?: boolean;
 };
 
 export default function AssetFormReferencePickerModal({
@@ -55,12 +67,74 @@ export default function AssetFormReferencePickerModal({
   setRefLoadingMore,
   setRefPage,
   setRefSearching,
+  enableQuickAdd = true,
 }: AssetFormReferencePickerModalProps) {
   const [showSearchingIndicator, setShowSearchingIndicator] =
     React.useState(false);
   const isReferenceField =
     activeEnumField?.typeProperty === TypeProperty.Reference;
   const realItemCount = modalItems.filter((item) => item.value !== "").length;
+  const { can } = usePermission();
+  const [quickAddOpen, setQuickAddOpen] = React.useState(false);
+
+  /* Class đích của thêm nhanh chính là `type` mà picker gửi cho `get-category`,
+     tức `referenceName` của field. Cửa duy nhất là quyền
+     `Class.{referenceName}.Insert`: `referenceName` không phải class thật thì
+     quyền không bao giờ khớp và nút cũng không hiện. */
+  const quickAddNameClass = isReferenceField
+    ? String(activeEnumField?.referenceName ?? "").trim()
+    : "";
+  const canQuickAdd = Boolean(
+    enableQuickAdd && quickAddNameClass && can(quickAddNameClass, "Insert"),
+  );
+
+  /* Mỗi lần mở picker (hoặc đổi field) là một lượt mới: form thêm nhanh phải
+     bắt đầu lại từ trắng, không giữ dữ liệu nhập dở của lượt trước. */
+  React.useEffect(() => {
+    setQuickAddOpen(false);
+  }, [activeEnumField?.name, modalVisible]);
+
+  /**
+   * Tạo xong thì chỉ quay về danh sách và tải lại trang đầu — KHÔNG tự điền vào
+   * form. Tạo được một bản ghi không có nghĩa là đã chọn nó; việc chọn vẫn phải
+   * do người dùng chạm, y như mọi dòng khác trong danh sách.
+   *
+   * `currentIds` mang id vừa tạo để chắc chắn nó có mặt trong trang đầu, khỏi
+   * phải tìm kiếm lại.
+   */
+  const handleQuickAddCreated = React.useCallback(
+    async (createdId: number | null) => {
+      setQuickAddOpen(false);
+
+      if (!activeEnumField) return;
+
+      setReferenceErrorMessage(null);
+      setRefSearching(true);
+      setRefKeyword("");
+      setRefPage(0);
+      setRefHasMore(true);
+
+      try {
+        await loadReferenceModalData(activeEnumField, {
+          textSearch: "",
+          page: 0,
+          append: false,
+          currentIds: createdId != null ? [createdId] : undefined,
+        });
+      } finally {
+        setRefSearching(false);
+      }
+    },
+    [
+      activeEnumField,
+      loadReferenceModalData,
+      setRefHasMore,
+      setRefKeyword,
+      setRefPage,
+      setRefSearching,
+      setReferenceErrorMessage,
+    ],
+  );
 
   React.useEffect(() => {
     if (refSearching) {
@@ -111,6 +185,21 @@ export default function AssetFormReferencePickerModal({
 
   return (
     <EnumAndReferencePickerModal
+      onQuickAdd={canQuickAdd ? () => setQuickAddOpen(true) : undefined}
+      onQuickAddClose={() => setQuickAddOpen(false)}
+      quickAddContent={
+        quickAddOpen && canQuickAdd ? (
+          <ReferenceQuickAddForm
+            nameClass={quickAddNameClass}
+            fieldLabel={activeEnumField?.moTa}
+            title={`Thêm ${
+              activeEnumField?.moTa || activeEnumField?.name || "mới"
+            }`}
+            onCancel={() => setQuickAddOpen(false)}
+            onCreated={handleQuickAddCreated}
+          />
+        ) : null
+      }
       isSearching={showSearchingIndicator}
       errorMessage={referenceErrorMessage}
       loadingMore={refLoadingMore}

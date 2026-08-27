@@ -40,6 +40,7 @@ describe("buildCameraMotionParams", () => {
   it("dựng params live view từ payload BE", () => {
     expect(buildCameraMotionParams(CAMERA_MOTION_DATA)).toEqual({
       zoneName: "Vòng ngoài sauce 3-Vp CBTP",
+      layoutCount: 1,
       cameras: [
         {
           iD_Camera: 2568,

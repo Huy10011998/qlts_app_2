@@ -24,7 +24,11 @@ export const isCameraMotionPush = (data: Record<string, string>): boolean =>
  */
 export const buildCameraMotionParams = (
   data: Record<string, string>,
-): { zoneName?: string; cameras: CameraRouteItem[] } | null => {
+): {
+  zoneName?: string;
+  cameras: CameraRouteItem[];
+  layoutCount: number;
+} | null => {
   const cameraId = Number(data.ID_Camera);
   const cameraCode = data.CameraMa?.trim();
 
@@ -32,6 +36,9 @@ export const buildCameraMotionParams = (
 
   return {
     zoneName: data.ViTri || data.VungCamera || undefined,
+    // Lưới 1 ô: thông báo chỉ trỏ tới đúng một camera, để mặc định 4×4 thì hình
+    // nằm lọt thỏm góc trên bên trái, phần còn lại là khoảng đen.
+    layoutCount: 1,
     cameras: [
       {
         iD_Camera: cameraId,
