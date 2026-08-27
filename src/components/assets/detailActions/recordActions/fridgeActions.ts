@@ -6,7 +6,10 @@ import {
   TRUNG_CHUYEN_NAME_CLASS,
   XAC_NHAN_VI_TRI_NAME_CLASS,
 } from "../../../../services/data/callApi";
-import { getRecordActionKindInfo } from "../../../../constants/recordActionKinds";
+import {
+  FRIDGE_TRUNG_CHUYEN_KIND,
+  FRIDGE_XAC_NHAN_VI_TRI_KIND,
+} from "../../../../constants/recordActionKinds";
 import type { RecordAction, RecordActionBuilderContext } from "./types";
 
 type BuildFridgeActionsArgs = Pick<
@@ -45,13 +48,11 @@ export function buildFridgeActions({
   const actions: RecordAction[] = [];
 
   if (can(XAC_NHAN_VI_TRI_NAME_CLASS, "Read")) {
-    const info = getRecordActionKindInfo("xacNhanViTriTuLanh");
-
     actions.push({
       key: "fridge:xac-nhan-vi-tri",
-      kind: "xacNhanViTriTuLanh",
-      label: info?.label ?? "Xác nhận vị trí tủ lạnh",
-      icon: info?.icon,
+      kind: FRIDGE_XAC_NHAN_VI_TRI_KIND,
+      label: "Xác nhận vị trí tủ lạnh",
+      icon: "location-outline",
       group: "work",
       // `Read` đủ để xem lịch sử, nhưng vào thẳng form là tạo mới nên cần `Insert`
       // — cùng cửa mà nút thêm trên màn lịch sử đang giữ.
@@ -65,13 +66,11 @@ export function buildFridgeActions({
   }
 
   if (can(TRUNG_CHUYEN_NAME_CLASS, "Read")) {
-    const info = getRecordActionKindInfo("trungChuyenTuLanh");
-
     actions.push({
       key: "fridge:trung-chuyen",
-      kind: "trungChuyenTuLanh",
-      label: info?.label ?? "Trung chuyển tủ lạnh",
-      icon: info?.icon,
+      kind: FRIDGE_TRUNG_CHUYEN_KIND,
+      label: "Trung chuyển tủ lạnh",
+      icon: "swap-horizontal-outline",
       group: "work",
       canQuickRun: can(TRUNG_CHUYEN_NAME_CLASS, "Insert"),
       // Bước đầu của wizard trung chuyển nhận danh sách tủ, không nhận một tủ.

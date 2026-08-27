@@ -2,6 +2,10 @@ import {
   pickPrimaryRecordAction,
   resolveRecordActions,
 } from "../src/components/assets/detailActions/recordActions/resolveRecordActions";
+import {
+  FRIDGE_TRUNG_CHUYEN_KIND,
+  FRIDGE_XAC_NHAN_VI_TRI_KIND,
+} from "../src/constants/recordActionKinds";
 
 jest.mock("../src/utils/Logger", () => ({
   error: jest.fn(),
@@ -41,8 +45,8 @@ describe("gộp việc làm được với một bản ghi", () => {
     const { actions, childClassesFailed } = await resolveRecordActions(
       makeCtx({
         loadChildClasses: async () => [
-          // Chưa khai tiền tố nên là "other" — vẫn thành một việc dùng được, chỉ
-          // xếp sau việc đã đặt tên.
+          // Class chưa tồn tại hôm nay: BE trả về là thành một việc dùng được
+          // ngay, app không phải khai gì trước.
           child("KiemKe_BinhChuaChay", "Kiểm kê bình chữa cháy"),
           child("DanhGia_BinhChuaChay", "Đánh giá bình chữa cháy"),
         ],
@@ -50,9 +54,10 @@ describe("gộp việc làm được với một bản ghi", () => {
     );
 
     expect(childClassesFailed).toBe(false);
+    // Giữ nguyên thứ tự server trả về; nhãn suy từ moTa của chính class con.
     expect(actions.map((a) => [a.kind, a.label])).toEqual([
-      ["danhGia", "Đánh giá"],
-      ["other", "Thêm kiểm kê bình chữa cháy"],
+      ["child:kiemke", "Thêm kiểm kê bình chữa cháy"],
+      ["child:danhgia", "Đánh giá"],
     ]);
   });
 
@@ -64,7 +69,7 @@ describe("gộp việc làm được với một bản ghi", () => {
     );
 
     expect(actions).toHaveLength(1);
-    expect(actions[0].kind).toBe("other");
+    expect(actions[0].kind).toBe("child:baotri");
     expect(actions[0].label).toBe("Thêm bảo trì");
   });
 
@@ -98,8 +103,8 @@ describe("gộp việc làm được với một bản ghi", () => {
 
     expect(childClassesFailed).toBe(true);
     expect(actions.map((a) => a.kind)).toEqual([
-      "xacNhanViTriTuLanh",
-      "trungChuyenTuLanh",
+      FRIDGE_XAC_NHAN_VI_TRI_KIND,
+      FRIDGE_TRUNG_CHUYEN_KIND,
     ]);
   });
 
@@ -135,8 +140,8 @@ describe("gộp việc làm được với một bản ghi", () => {
     );
 
     expect(byKind).toEqual({
-      xacNhanViTriTuLanh: false,
-      trungChuyenTuLanh: true,
+      [FRIDGE_XAC_NHAN_VI_TRI_KIND]: false,
+      [FRIDGE_TRUNG_CHUYEN_KIND]: true,
     });
   });
 
@@ -165,7 +170,7 @@ describe("gộp việc làm được với một bản ghi", () => {
       }),
     );
 
-    expect(actions.map((a) => a.kind)).toEqual(["trungChuyenTuLanh"]);
+    expect(actions.map((a) => a.kind)).toEqual([FRIDGE_TRUNG_CHUYEN_KIND]);
   });
 
   it("không phải tủ lạnh thì không có việc tủ lạnh", async () => {
@@ -188,7 +193,9 @@ describe("gộp việc làm được với một bản ghi", () => {
     const { actions } = await resolveRecordActions(
       makeCtx({ item: FRIDGE, nameClass: "NoiDia_TuLanh", navigate }),
     );
-    const xacNhan = actions.find((a) => a.kind === "xacNhanViTriTuLanh")!;
+    const xacNhan = actions.find(
+      (a) => a.kind === FRIDGE_XAC_NHAN_VI_TRI_KIND,
+    )!;
 
     await xacNhan.run({ quick: false });
     expect(navigate).toHaveBeenLastCalledWith(
@@ -249,38 +256,38 @@ describe("gộp việc làm được với một bản ghi", () => {
 });
 
 describe("chọn việc chính", () => {
-  const danhGia = { key: "a", kind: "danhGia", group: "work" } as any;
+  const danhGia = { key: "a", kind: "child:danhgia", group: "work" } as any;
   const trungChuyen = {
     key: "b",
-    kind: "trungChuyenTuLanh",
+    kind: FRIDGE_TRUNG_CHUYEN_KIND,
     group: "work",
   } as any;
-  const khac = { key: "c", kind: "other", group: "work" } as any;
-  const admin = { key: "d", kind: "other", group: "admin" } as any;
+  const admin = { key: "d", kind: "child:danhgia", group: "admin" } as any;
 
   // Đang đi kiểm kê thì nút chính của mọi thiết bị nên là Kiểm kê, dù bảng ưu
   // tiên xếp đánh giá trước.
-  it("chế độ quét đang bật thắng thứ tự ưu tiên mặc định", () => {
+  // Việc người dùng đang làm hôm nay lên làm nút chính.
+  it("chế độ quét đang nhớ quyết định nút chính", () => {
     expect(
-      pickPrimaryRecordAction([danhGia, trungChuyen], "trungChuyenTuLanh"),
+      pickPrimaryRecordAction([danhGia, trungChuyen], FRIDGE_TRUNG_CHUYEN_KIND),
     ).toBe(trungChuyen);
-    expect(pickPrimaryRecordAction([danhGia, trungChuyen], "view")).toBe(
-      danhGia,
-    );
-    expect(pickPrimaryRecordAction([danhGia, trungChuyen])).toBe(danhGia);
   });
 
-  it("chế độ đang bật mà thiết bị không làm được thì về thứ tự mặc định", () => {
-    expect(pickPrimaryRecordAction([danhGia], "trungChuyenTuLanh")).toBe(
-      danhGia,
-    );
+  // Bỏ bảng ưu tiên cứng: nhiều việc mà không có căn cứ thì mở bảng chọn, không
+  // đoán bừa một việc rồi để người dùng bấm nhầm.
+  it("nhiều việc mà chưa chốt gì thì không đoán bừa", () => {
+    expect(pickPrimaryRecordAction([danhGia, trungChuyen])).toBeNull();
+    expect(pickPrimaryRecordAction([danhGia, trungChuyen], null)).toBeNull();
   });
 
-  it("nhiều việc chưa đặt tên thì không đoán bừa", () => {
+  it("chế độ đang nhớ mà thiết bị không làm được thì cũng không đoán", () => {
     expect(
-      pickPrimaryRecordAction([khac, { ...khac, key: "c2" }]),
+      pickPrimaryRecordAction([danhGia, trungChuyen], "child:kiemke"),
     ).toBeNull();
-    expect(pickPrimaryRecordAction([khac])).toBe(khac);
+  });
+
+  it("chỉ có một việc thì đó là nút chính", () => {
+    expect(pickPrimaryRecordAction([danhGia])).toBe(danhGia);
   });
 
   it("bỏ qua nhóm admin và việc chạy tại chỗ", () => {

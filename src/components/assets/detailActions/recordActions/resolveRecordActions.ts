@@ -1,8 +1,5 @@
 import type { MenuItemResponse } from "../../../../types";
-import {
-  compareRecordActionKinds,
-  type RecordActionKind,
-} from "../../../../constants/recordActionKinds";
+import type { RecordActionKind } from "../../../../constants/recordActionKinds";
 import { isNetworkRequestError } from "../../../../utils/helpers/api";
 import { error } from "../../../../utils/Logger";
 import type { OpenAddFormArgs } from "../../shared/useOpenAddRelatedForm";
@@ -70,24 +67,26 @@ export async function resolveRecordActions(
     ...buildFridgeActions({ can, item, nameClass, navigate }),
   ];
 
-  // Sort ổn định (ES2019) nên các việc cùng loại giữ nguyên thứ tự server trả về.
-  actions.sort((a, b) => compareRecordActionKinds(a.kind, b.kind));
-
+  // Giữ nguyên thứ tự server trả về danh mục con, nghiệp vụ riêng của app xếp sau.
+  // Không còn bảng ưu tiên nào để sắp lại — mà cũng không nên có: thứ tự "việc nào
+  // quan trọng hơn" là chuyện của cấu hình class, không phải của app.
   return { actions, childClassesFailed };
 }
 
 /**
  * Việc nào lên làm nút chính ở thanh đáy.
  *
- * Chế độ quét đang bật thắng thứ tự mặc định: người dùng đang đi kiểm kê thì nút
- * chính của mọi thiết bị nên là "Kiểm kê", dù bảng ưu tiên xếp đánh giá trước.
+ * Chỉ hai căn cứ, đều chắc chắn: việc người dùng đang làm hôm nay (chế độ quét
+ * đang nhớ), hoặc bản ghi chỉ làm được đúng một việc.
  *
- * Trả `null` khi có nhiều việc mà không có căn cứ nào để chọn — lúc đó nút chính
- * mở luôn bảng chọn thay vì đoán bừa.
+ * Nhiều việc mà không có căn cứ nào thì trả `null` — nút chính mở luôn bảng chọn.
+ * Trước đây chỗ này ưu tiên đánh giá theo một bảng cứng trong app; bỏ đi vì thứ tự
+ * đó là do app tự đặt chứ không phải nghiệp vụ nói, và đoán sai thì người dùng bấm
+ * nhầm việc.
  */
 export function pickPrimaryRecordAction(
   actions: RecordAction[],
-  scanMode?: RecordActionKind | "view",
+  scanModeKind?: RecordActionKind | null,
 ): RecordAction | null {
   const workActions = actions.filter(
     (action) => action.group === "work" && !action.inPlace,
@@ -95,13 +94,12 @@ export function pickPrimaryRecordAction(
 
   if (workActions.length === 0) return null;
 
-  if (scanMode && scanMode !== "view") {
-    const matchedMode = workActions.find((action) => action.kind === scanMode);
+  if (scanModeKind) {
+    const matchedMode = workActions.find(
+      (action) => action.kind === scanModeKind,
+    );
     if (matchedMode) return matchedMode;
   }
-
-  const named = workActions.find((action) => action.kind !== "other");
-  if (named) return named;
 
   return workActions.length === 1 ? workActions[0] : null;
 }

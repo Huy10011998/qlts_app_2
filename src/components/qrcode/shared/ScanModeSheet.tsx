@@ -8,13 +8,10 @@ import {
   useAppColors,
   useStyles,
 } from "../../../utils/helpers/colors";
-import type { RecordActionKindInfo } from "../../../constants/recordActionKinds";
 import type { ScanMode } from "../../../context/ScanModeContext";
 import { BRAND_RED } from "../../assets/shared/listTheme";
 
 type ScanModeSheetProps = {
-  /** Loại việc người dùng có quyền chọn — xem `useAvailableScanModes`. */
-  kinds: RecordActionKindInfo[];
   mode: ScanMode;
   onClose: () => void;
   onSelect: (mode: ScanMode) => void;
@@ -23,28 +20,21 @@ type ScanModeSheetProps = {
 
 type ScanModeOption = {
   icon: string;
+  key: string;
   label: string;
   mode: ScanMode;
   sublabel: string;
 };
 
-const VIEW_OPTION: ScanModeOption = {
-  mode: "view",
-  label: "Xem thông tin",
-  sublabel: "Quét xong mở màn thông tin thiết bị",
-  icon: "information-circle-outline",
-};
-
 /**
- * Danh sách là loại việc (`RECORD_ACTION_KINDS`, đã lọc quyền) chứ KHÔNG phải việc
- * làm được của một bản ghi cụ thể: chưa quét thì chưa biết bản ghi thuộc class
- * nào, mà chế độ phải chọn được trước khi quét.
+ * Bảng của pill: đổi hoặc bỏ việc đang nhớ.
  *
- * Chọn một việc mà thiết bị quét được không làm được thì màn quét tự mở thông tin
- * thiết bị kèm lời giải thích — không chặn đường ai.
+ * KHÁC bảng hiện ra sau khi quét — bảng kia liệt kê việc của đúng tài sản vừa
+ * quét. Ở đây chưa quét gì nên không biết tài sản nào, chỉ có ba lựa chọn không
+ * phụ thuộc tài sản: giữ việc đang nhớ, chỉ xem thông tin, hoặc hỏi lại ở lần
+ * quét tới (rồi chọn trên chính tài sản đó).
  */
 export default function ScanModeSheet({
-  kinds,
   mode,
   onClose,
   onSelect,
@@ -53,18 +43,38 @@ export default function ScanModeSheet({
   const styles = useStyles(makeStyles);
   const c = useAppColors();
 
-  const options = useMemo<ScanModeOption[]>(
-    () => [
-      VIEW_OPTION,
-      ...kinds.map((info) => ({
-        mode: info.kind as ScanMode,
-        label: info.label,
-        sublabel: `Quét xong vào thẳng ${info.label.toLowerCase()}`,
-        icon: info.icon,
-      })),
-    ],
-    [kinds],
-  );
+  const options = useMemo<ScanModeOption[]>(() => {
+    const list: ScanModeOption[] = [];
+
+    if (mode.state === "action") {
+      list.push({
+        key: "current",
+        mode,
+        label: mode.label,
+        sublabel: "Quét là vào thẳng việc này",
+        icon: mode.icon || "ellipsis-horizontal-circle-outline",
+      });
+    }
+
+    list.push(
+      {
+        key: "ask",
+        mode: { state: "ask" },
+        label: "Chọn khi quét",
+        sublabel: "Quét xong hiện danh sách việc của thiết bị đó",
+        icon: "help-circle-outline",
+      },
+      {
+        key: "view",
+        mode: { state: "view" },
+        label: "Xem thông tin",
+        sublabel: "Quét xong mở màn thông tin thiết bị",
+        icon: "information-circle-outline",
+      },
+    );
+
+    return list;
+  }, [mode]);
 
   return (
     <BottomSheetModalShell
@@ -81,11 +91,11 @@ export default function ScanModeSheet({
 
       <View style={styles.list}>
         {options.map((option) => {
-          const isSelected = option.mode === mode;
+          const isSelected = option.mode.state === mode.state;
 
           return (
             <Pressable
-              key={option.mode}
+              key={option.key}
               style={({ pressed }) => [
                 styles.item,
                 isSelected && styles.itemSelected,
@@ -107,11 +117,7 @@ export default function ScanModeSheet({
               {isSelected ? (
                 <Ionicons name="checkmark-circle" size={20} color={BRAND_RED} />
               ) : (
-                <Ionicons
-                  name="ellipse-outline"
-                  size={20}
-                  color={c.textMuted}
-                />
+                <Ionicons name="ellipse-outline" size={20} color={c.textMuted} />
               )}
             </Pressable>
           );

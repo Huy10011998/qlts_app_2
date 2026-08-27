@@ -40,7 +40,7 @@ export function useRecordActions({
   const navigation = useNavigation<StackNavigation<"AssetDetails">>();
   const { can, loaded } = usePermission();
   const { isMounted } = useSafeAlert();
-  const { mode } = useScanMode();
+  const { modeKind } = useScanMode();
   const { groupMenuId, viewPermission, assetTitleHeader } = useParams();
   const { loadChildClasses, openAddForm } = useOpenAddRelatedForm();
 
@@ -124,8 +124,8 @@ export function useRecordActions({
   );
 
   const primary = useMemo(
-    () => (workActions ? pickPrimaryRecordAction(workActions, mode) : null),
-    [mode, workActions],
+    () => (workActions ? pickPrimaryRecordAction(workActions, modeKind) : null),
+    [modeKind, workActions],
   );
 
   return {
