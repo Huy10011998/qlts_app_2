@@ -266,24 +266,10 @@ describe("chọn việc chính", () => {
 
   // Đang đi kiểm kê thì nút chính của mọi thiết bị nên là Kiểm kê, dù bảng ưu
   // tiên xếp đánh giá trước.
-  // Việc người dùng đang làm hôm nay lên làm nút chính.
-  it("chế độ quét đang nhớ quyết định nút chính", () => {
-    expect(
-      pickPrimaryRecordAction([danhGia, trungChuyen], FRIDGE_TRUNG_CHUYEN_KIND),
-    ).toBe(trungChuyen);
-  });
-
-  // Bỏ bảng ưu tiên cứng: nhiều việc mà không có căn cứ thì mở bảng chọn, không
-  // đoán bừa một việc rồi để người dùng bấm nhầm.
-  it("nhiều việc mà chưa chốt gì thì không đoán bừa", () => {
+  // Bỏ mọi bảng ưu tiên: nhiều việc thì mở bảng chọn, không đoán bừa một việc
+  // rồi để người dùng bấm nhầm.
+  it("nhiều việc thì không đoán bừa", () => {
     expect(pickPrimaryRecordAction([danhGia, trungChuyen])).toBeNull();
-    expect(pickPrimaryRecordAction([danhGia, trungChuyen], null)).toBeNull();
-  });
-
-  it("chế độ đang nhớ mà thiết bị không làm được thì cũng không đoán", () => {
-    expect(
-      pickPrimaryRecordAction([danhGia, trungChuyen], "child:kiemke"),
-    ).toBeNull();
   });
 
   it("chỉ có một việc thì đó là nút chính", () => {
