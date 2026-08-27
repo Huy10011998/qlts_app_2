@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -29,6 +29,14 @@ type RecordActionBarProps = {
   nameClass?: string;
   /** Nơi màn tạo quay về sau khi lưu, khi bấm từ đây. */
   returnTo: AssetReturnTo;
+  /**
+   * Màn này là một chặng của vòng quét mã.
+   *
+   * Hai hệ quả: bảng chọn việc tự mở ngay khi vào màn (quét xong là để làm việc gì
+   * đó, không phải để đọc), và việc nào có màn lịch sử riêng thì đi thẳng vào form
+   * tạo — đang quét cái thứ 12 thì không ai muốn xem lại lịch sử.
+   */
+  scanFlow?: boolean;
 };
 
 const NETWORK_MESSAGE = "Vui lòng kiểm tra kết nối mạng rồi thử lại.";
@@ -53,6 +61,7 @@ export default function RecordActionBar({
   listRoute,
   nameClass,
   returnTo,
+  scanFlow = false,
 }: RecordActionBarProps) {
   const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
@@ -80,7 +89,7 @@ export default function RecordActionBar({
     async (action: RecordAction) => {
       setBusy(true);
       try {
-        await action.run({ quick: false });
+        await action.run({ quick: scanFlow });
       } catch (e) {
         if (!isNetworkRequestError(e)) error(e);
         showAlertIfActive(
@@ -91,20 +100,32 @@ export default function RecordActionBar({
         if (isMounted()) setBusy(false);
       }
     },
-    [isMounted, showAlertIfActive],
+    [isMounted, scanFlow, showAlertIfActive],
   );
 
-  // Nút chính đã chiếm một việc thì bảng chọn không lặp lại nó nữa.
-  const otherActions = useMemo(
-    () => (actions ?? []).filter((action) => action.key !== primary?.key),
-    [actions, primary],
-  );
+  // Bảng chọn tự mở đúng một lần cho mỗi bản ghi: mở lại mỗi khi danh sách việc
+  // tính lại thì người dùng vừa đóng đi là nó bật lên ngay.
+  const autoOpenedRef = useRef(false);
+
+  useEffect(() => {
+    if (!scanFlow || autoOpenedRef.current) return;
+    // Chỉ có đúng một việc thì không cần hỏi — nút chính đã là việc đó.
+    if (!actions || actions.length < 2) return;
+
+    autoOpenedRef.current = true;
+    setSheetVisible(true);
+  }, [actions, scanFlow]);
 
   // `null` = chưa biết (đang tải / quyền chưa nạp): chưa dựng gì để khỏi loé một
   // thanh rỗng. `[]` = biết chắc không có việc nào.
   if (!item || !actions || actions.length === 0) return null;
 
-  const primaryLabel = primary?.label ?? "Chọn thao tác";
+  // Không có việc chính nghĩa là bản ghi làm được nhiều việc: nút mở bảng chọn.
+  // Trước đây chỗ này vừa có nút "Chọn thao tác" vừa có dòng "Thao tác khác (n)",
+  // hai cái mở CÙNG một bảng với CÙNG một danh sách.
+  const primaryLabel = primary
+    ? primary.label
+    : `Chọn thao tác (${actions.length})`;
   const primaryIcon = primary?.icon ?? "ellipsis-horizontal-circle-outline";
   const recordLabel = getRecordLabel(item, fieldActive);
 
@@ -115,8 +136,7 @@ export default function RecordActionBar({
         accessibilityLabel={primaryLabel}
         disabled={busy}
         onPress={() => {
-          // Không xác định được việc chính (nhiều việc, không việc nào ưu tiên)
-          // thì nút chính mở bảng chọn thay vì đoán bừa.
+          // Nhiều việc thì không đoán bừa cái nào là chính — mở bảng cho chọn.
           if (primary) {
             runAction(primary);
             return;
@@ -137,51 +157,38 @@ export default function RecordActionBar({
         <Text style={styles.primaryLabel}>{primaryLabel}</Text>
       </Pressable>
 
-      <View style={styles.secondaryRow}>
-        {primary?.review ? (
-          <Pressable
-            accessibilityRole="button"
-            hitSlop={6}
-            onPress={primary.review.run}
-            style={({ pressed }) => [
-              styles.secondary,
-              pressed && styles.secondaryPressed,
-            ]}
-          >
-            <Text style={styles.secondaryLabel} numberOfLines={1}>
-              {primary.review.label}
-              {typeof relatedCount === "number" ? ` (${relatedCount})` : ""}
-            </Text>
-            <Ionicons name="chevron-forward" size={14} color={BRAND_RED} />
-          </Pressable>
-        ) : null}
-
-        {otherActions.length > 0 ? (
-          <Pressable
-            accessibilityRole="button"
-            hitSlop={6}
-            onPress={() => setSheetVisible(true)}
-            style={({ pressed }) => [
-              styles.secondary,
-              pressed && styles.secondaryPressed,
-            ]}
-          >
-            <Text style={styles.secondaryLabel} numberOfLines={1}>
-              Thao tác khác ({otherActions.length})
-            </Text>
-            <Ionicons name="chevron-forward" size={14} color={BRAND_RED} />
-          </Pressable>
-        ) : null}
-      </View>
+      {/*
+        Đường xem lại chỉ có khi biết chắc việc chính là gì — mới đếm được số bản
+        ghi bằng đúng một request. Nhiều việc thì bỏ, chứ đếm cho từng việc là mỗi
+        lần vào màn tốn ngần ấy request.
+      */}
+      {primary?.review ? (
+        <Pressable
+          accessibilityRole="button"
+          hitSlop={6}
+          onPress={primary.review.run}
+          style={({ pressed }) => [
+            styles.secondary,
+            pressed && styles.secondaryPressed,
+          ]}
+        >
+          <Text style={styles.secondaryLabel} numberOfLines={1}>
+            {primary.review.label}
+            {typeof relatedCount === "number" ? ` (${relatedCount})` : ""}
+          </Text>
+          <Ionicons name="chevron-forward" size={14} color={BRAND_RED} />
+        </Pressable>
+      ) : null}
 
       <RecordActionSheet
-        actions={primary ? otherActions : actions}
+        actions={actions}
         onClose={() => setSheetVisible(false)}
         onSelect={(action) => {
           setSheetVisible(false);
           runAction(action);
         }}
         recordLabel={recordLabel}
+        title={scanFlow ? "Làm gì với thiết bị này?" : "Chọn thao tác"}
         visible={sheetVisible}
       />
     </View>
@@ -219,18 +226,12 @@ const makeStyles = (c: AppColors) =>
       fontWeight: "700",
       letterSpacing: 0.1,
     },
-    secondaryRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 14,
-    },
     secondary: {
       flexDirection: "row",
       alignItems: "center",
+      justifyContent: "center",
       gap: 3,
       paddingVertical: 6,
-      flexShrink: 1,
     },
     secondaryPressed: {
       opacity: 0.6,

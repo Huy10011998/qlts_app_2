@@ -5,7 +5,6 @@ import type { AssetReturnTo, Field, StackNavigation } from "../../../../types";
 import { usePermission } from "../../../../hooks/usePermission";
 import { useSafeAlert } from "../../../../hooks/useSafeAlert";
 import { useParams } from "../../../../hooks/useParams";
-import { useScanMode } from "../../../../context/ScanModeContext";
 import { useOpenAddRelatedForm } from "../../shared/useOpenAddRelatedForm";
 import {
   pickPrimaryRecordAction,
@@ -40,7 +39,6 @@ export function useRecordActions({
   const navigation = useNavigation<StackNavigation<"AssetDetails">>();
   const { can, loaded } = usePermission();
   const { isMounted } = useSafeAlert();
-  const { modeKind } = useScanMode();
   const { groupMenuId, viewPermission, assetTitleHeader } = useParams();
   const { loadChildClasses, openAddForm } = useOpenAddRelatedForm();
 
@@ -124,8 +122,8 @@ export function useRecordActions({
   );
 
   const primary = useMemo(
-    () => (workActions ? pickPrimaryRecordAction(workActions, modeKind) : null),
-    [modeKind, workActions],
+    () => (workActions ? pickPrimaryRecordAction(workActions) : null),
+    [workActions],
   );
 
   return {

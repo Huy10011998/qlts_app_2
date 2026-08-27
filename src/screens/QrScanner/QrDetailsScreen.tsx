@@ -35,7 +35,10 @@ export default function QrDetailsScreen() {
               fieldActive={fieldActive}
               tabs={TAB_ITEMS}
             />
-            {/* Việc làm được với thiết bị vừa quét: đánh giá, kiểm kê, trung chuyển… */}
+            {/*
+              Việc làm được với thiết bị vừa quét. `scanFlow` mở sẵn bảng chọn khi
+              có nhiều việc: quét xong là để LÀM gì đó, không phải để đọc.
+            */}
             <RecordActionBar
               item={item}
               nameClass={itemNameClass}
@@ -43,6 +46,7 @@ export default function QrDetailsScreen() {
               listRoute="QrReview"
               // Lưu xong về thẳng máy quét để quét mã kế tiếp.
               returnTo="qrScan"
+              scanFlow
             />
             {/* Sau nội dung: panel menu dùng absoluteFill, đặt trước sẽ bị phủ. */}
             <AssetDetailHeaderActions

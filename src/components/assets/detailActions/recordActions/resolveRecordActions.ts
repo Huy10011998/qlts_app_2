@@ -1,5 +1,4 @@
 import type { MenuItemResponse } from "../../../../types";
-import type { RecordActionKind } from "../../../../constants/recordActionKinds";
 import { isNetworkRequestError } from "../../../../utils/helpers/api";
 import { error } from "../../../../utils/Logger";
 import type { OpenAddFormArgs } from "../../shared/useOpenAddRelatedForm";
@@ -74,32 +73,18 @@ export async function resolveRecordActions(
 }
 
 /**
- * Việc nào lên làm nút chính ở thanh đáy.
+ * Việc nào lên làm nút chính ở thanh đáy — chỉ khi bản ghi làm được đúng một việc.
  *
- * Chỉ hai căn cứ, đều chắc chắn: việc người dùng đang làm hôm nay (chế độ quét
- * đang nhớ), hoặc bản ghi chỉ làm được đúng một việc.
- *
- * Nhiều việc mà không có căn cứ nào thì trả `null` — nút chính mở luôn bảng chọn.
- * Trước đây chỗ này ưu tiên đánh giá theo một bảng cứng trong app; bỏ đi vì thứ tự
- * đó là do app tự đặt chứ không phải nghiệp vụ nói, và đoán sai thì người dùng bấm
- * nhầm việc.
+ * Nhiều việc thì trả `null` và nơi gọi mở bảng chọn. Không có bảng ưu tiên nào
+ * trong app để xếp việc nào quan trọng hơn: thứ tự đó là chuyện của cấu hình class,
+ * đoán sai thì người dùng bấm nhầm việc.
  */
 export function pickPrimaryRecordAction(
   actions: RecordAction[],
-  scanModeKind?: RecordActionKind | null,
 ): RecordAction | null {
   const workActions = actions.filter(
     (action) => action.group === "work" && !action.inPlace,
   );
-
-  if (workActions.length === 0) return null;
-
-  if (scanModeKind) {
-    const matchedMode = workActions.find(
-      (action) => action.kind === scanModeKind,
-    );
-    if (matchedMode) return matchedMode;
-  }
 
   return workActions.length === 1 ? workActions[0] : null;
 }
