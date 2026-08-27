@@ -17,6 +17,8 @@ type RecordActionSheetProps = {
   onSelect: (action: RecordAction) => void;
   /** Mã bản ghi đang thao tác, hiện ở phụ đề cho khỏi nhầm bản ghi. */
   recordLabel?: string;
+  /** Thay phụ đề mặc định, dùng khi cần nói rõ vì sao đang phải chọn. */
+  subtitle?: string;
   title?: string;
   visible: boolean;
 };
@@ -32,6 +34,7 @@ export default function RecordActionSheet({
   onClose,
   onSelect,
   recordLabel,
+  subtitle,
   title = "Chọn thao tác",
   visible,
 }: RecordActionSheetProps) {
@@ -48,9 +51,10 @@ export default function RecordActionSheet({
     >
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.subtitle}>
-        {recordLabel
-          ? `Việc bạn có thể làm với ${recordLabel}`
-          : "Việc bạn có thể làm với bản ghi này"}
+        {subtitle ??
+          (recordLabel
+            ? `Việc bạn có thể làm với ${recordLabel}`
+            : "Việc bạn có thể làm với bản ghi này")}
       </Text>
 
       <View style={styles.list}>

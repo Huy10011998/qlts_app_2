@@ -31,13 +31,15 @@ import ScanModePill, {
   getScanModeLabel,
 } from "../../components/qrcode/shared/ScanModePill";
 import ScanModeSheet from "../../components/qrcode/shared/ScanModeSheet";
-import { useAvailableScanModes } from "../../components/qrcode/shared/useAvailableScanModes";
 import QrScannerGateView from "../../components/qrcode/shared/QrScannerGateView";
 import QrScannerViewportOverlay from "../../components/qrcode/shared/QrScannerViewportOverlay";
 import useQrScannerController from "../../components/qrcode/shared/useQrScannerController";
 import InlineToast from "../../components/ui/InlineToast";
 import { useOpenAddRelatedForm } from "../../components/assets/shared/useOpenAddRelatedForm";
 import { resolveRecordActions } from "../../components/assets/detailActions/recordActions/resolveRecordActions";
+import type { RecordAction } from "../../components/assets/detailActions/recordActions/types";
+import { getRecordLabel } from "../../components/assets/detailActions/useAssetRecordActions";
+import RecordActionSheet from "../../components/assets/shared/RecordActionSheet";
 import { usePermission } from "../../hooks/usePermission";
 import { useScanMode } from "../../context/ScanModeContext";
 import { clearLastSavedNotice } from "../../store/AssetSlice";
@@ -90,6 +92,38 @@ const getDetailIdFromItemData = (itemData: any, fallbackId: string) => {
   return fallbackId;
 };
 
+/** Thiết bị vừa quét được, đủ để dựng danh sách việc làm được với nó. */
+type ScannedRecord = {
+  detailId: string;
+  fieldActive: any[];
+  itemData: any;
+  nameClass: string;
+};
+
+/**
+ * Dòng "Xem thông tin" ghép thêm vào bảng chọn của lần quét thứ hai. Là một
+ * `RecordAction` giả để bảng chọn không phải biết gì về chế độ quét; nhận ra nó
+ * bằng `key` này lúc người dùng chọn.
+ */
+const SCAN_VIEW_ACTION_KEY = "scan:view";
+
+/** Đang chờ người dùng chọn việc cho thiết bị vừa quét. */
+type PendingPick = {
+  actions: RecordAction[];
+  recordLabel: string;
+  /**
+   * Vì sao phải hỏi — quyết định dòng "Xem thông tin" có ghi đè việc đang nhớ hay
+   * không.
+   *
+   * - `ask`: chưa chốt việc nào, nên chọn "Xem thông tin" là chốt luôn — đó là
+   *   đường duy nhất để thoát khỏi trạng thái hỏi mãi.
+   * - `fallback`: đang nhớ một việc nhưng thiết bị này không có. Chọn "Xem thông
+   *   tin" ở đây chỉ là xem đúng cái này; ghi đè thì người đang đánh giá 30 bình
+   *   mà lỡ xem một tủ lạnh sẽ mất luôn chế độ đánh giá mà không hiểu vì sao.
+   */
+  reason: "ask" | "fallback";
+};
+
 export default function QrScannerScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
@@ -101,8 +135,7 @@ export default function QrScannerScreen() {
   // resulting background→foreground transition would flicker/hide the tab bar.
   const isFocused = useIsFocused();
   const dispatch = useAppDispatch();
-  const { mode, setMode } = useScanMode();
-  const availableScanModes = useAvailableScanModes();
+  const { markScanned, mode, setMode } = useScanMode();
   const { can } = usePermission();
   const { loadChildClasses, openAddForm } = useOpenAddRelatedForm();
   const lastSavedNotice = useSelector(
@@ -113,6 +146,7 @@ export default function QrScannerScreen() {
   // class con — màn đen không có gì thì tưởng treo.
   const [isOpeningAction, setIsOpeningAction] = useState(false);
   const [fallbackNotice, setFallbackNotice] = useState<string | null>(null);
+  const [pendingPick, setPendingPick] = useState<PendingPick | null>(null);
 
   /**
    * Tham số mở danh sách bản ghi vừa lưu, `null` khi thiếu thứ gì đó. Thông báo
@@ -176,48 +210,60 @@ export default function QrScannerScreen() {
   );
 
   /**
-   * Chạy việc của chế độ quét đang bật với thiết bị vừa quét.
+   * Lấy danh sách việc làm được với thiết bị vừa quét, đã lọc thành những việc
+   * chạy thẳng được trong vòng quét liên tục.
    *
-   * Không mở được thì nói đúng lý do: thiết bị không có việc đó ("unsupported"),
+   * `resolveRecordActions` là hàm thường chứ không phải hook chính vì chỗ này:
+   * `onCodeScanned` không gọi hook được.
+   */
+  const resolveQuickActions = useCallback(
+    async ({ detailId, fieldActive, itemData, nameClass }: ScannedRecord) => {
+      const detailItem = Array.isArray(itemData) ? itemData[0] : itemData;
+      const { actions, childClassesFailed } = await resolveRecordActions({
+        can,
+        fieldActive,
+        item: { ...detailItem, id: detailId },
+        loadChildClasses,
+        nameClass,
+        navigate: (screen, params) => navigation.navigate(screen, params),
+        openAddForm,
+      });
+
+      return {
+        childClassesFailed,
+        // Việc chạy tại chỗ (cập nhật toạ độ) không vào vòng quét được: chạy từ
+        // màn quét thì không có màn nào để hiện tiến trình.
+        quickActions: actions.filter(
+          (action) => action.group === "work" && !action.inPlace,
+        ),
+      };
+    },
+    [can, loadChildClasses, navigation, openAddForm],
+  );
+
+  /**
+   * Chạy việc mà chế độ quét đang nhớ, với thiết bị vừa quét.
+   *
+   * Không chạy được thì nói đúng lý do: thiết bị không có việc đó ("unsupported"),
    * có nhưng không đủ quyền tạo ("forbidden"), hay không tải được cấu hình
    * ("failed"). Gộp một câu thì người mất mạng sẽ đi tìm bảng con không tồn tại,
-   * còn người thiếu quyền sẽ tưởng thiết bị sai.
+   * còn người thiếu quyền sẽ tưởng quét nhầm thiết bị.
    *
-   * Cả hai đường đều mở màn thông tin thiết bị chứ không chặn — thanh hành động ở
-   * đó vẫn làm được việc.
-   *
-   * Không hàm nào ở đây biết "đánh giá" hay "kiểm kê" là gì — thêm việc mới chỉ
-   * cần một dòng trong `recordActionKinds`.
+   * Mọi đường không chạy được đều mở màn thông tin thiết bị chứ không chặn —
+   * thanh hành động ở đó vẫn làm được việc.
    */
   const tryRunScanModeAction = useCallback(
-    async ({
-      detailId,
-      fieldActive,
-      itemData,
-      nameClass,
-    }: {
-      detailId: string;
-      fieldActive: any[];
-      itemData: any;
-      nameClass: string;
-    }): Promise<"opened" | "unsupported" | "forbidden" | "failed"> => {
-      if (mode === "view") return "unsupported";
-
+    async (
+      scanned: ScannedRecord,
+      kind: string,
+    ): Promise<"opened" | "unsupported" | "forbidden" | "failed"> => {
       setIsOpeningAction(true);
       try {
-        const detailItem = Array.isArray(itemData) ? itemData[0] : itemData;
-        const { actions, childClassesFailed } = await resolveRecordActions({
-          can,
-          fieldActive,
-          item: { ...detailItem, id: detailId },
-          loadChildClasses,
-          nameClass,
-          navigate: (screen, params) => navigation.navigate(screen, params),
-          openAddForm,
-        });
-
-        const action = actions.find(
-          (candidate) => candidate.kind === mode && !candidate.inPlace,
+        const { childClassesFailed, quickActions } = await resolveQuickActions(
+          scanned,
+        );
+        const action = quickActions.find(
+          (candidate) => candidate.kind === kind,
         );
 
         if (!action) return childClassesFailed ? "failed" : "unsupported";
@@ -236,7 +282,60 @@ export default function QrScannerScreen() {
         setIsOpeningAction(false);
       }
     },
-    [can, loadChildClasses, mode, navigation, openAddForm],
+    [resolveQuickActions],
+  );
+
+  /**
+   * Lần quét thứ hai: hỏi người dùng muốn làm gì, với danh sách lấy từ CHÍNH tài
+   * sản vừa quét. Chọn xong là nhớ luôn, từ lần thứ ba trở đi chạy thẳng.
+   *
+   * Không có việc nào chạy thẳng được (không quyền, hoặc class không có bảng con)
+   * thì không hỏi — mở màn thông tin như thường, ở đó vẫn còn thanh hành động.
+   */
+  const tryAskForScanMode = useCallback(
+    async (
+      scanned: ScannedRecord,
+      openDetails: () => void,
+      reason: PendingPick["reason"] = "ask",
+    ) => {
+      setIsOpeningAction(true);
+      try {
+        const { quickActions } = await resolveQuickActions(scanned);
+        const runnable = quickActions.filter(
+          (action) => action.canQuickRun !== false,
+        );
+
+        if (runnable.length === 0) return false;
+
+        const viewAction: RecordAction = {
+          key: SCAN_VIEW_ACTION_KEY,
+          kind: "view",
+          label: "Xem thông tin",
+          icon: "information-circle-outline",
+          group: "work",
+          run: () => openDetails(),
+        };
+
+        setPendingPick({
+          reason,
+          actions: [viewAction, ...runnable],
+          recordLabel: getRecordLabel(
+            Array.isArray(scanned.itemData)
+              ? scanned.itemData[0]
+              : scanned.itemData,
+            scanned.fieldActive,
+          ),
+        });
+
+        return true;
+      } catch (e) {
+        if (!isNetworkRequestError(e)) error(e);
+        return false;
+      } finally {
+        setIsOpeningAction(false);
+      }
+    },
+    [resolveQuickActions],
   );
 
   const codeScanner: CodeScanner = useCodeScanner({
@@ -309,15 +408,66 @@ export default function QrScannerScreen() {
         dispatch(clearLastSavedNotice());
         setFallbackNotice(null);
 
-        if (mode !== "view") {
-          const outcome = await tryRunScanModeAction({
-            detailId,
-            fieldActive: res?.data || [],
-            itemData,
+        const scanned: ScannedRecord = {
+          detailId,
+          fieldActive: res?.data || [],
+          itemData,
+          nameClass,
+        };
+
+        const openDetails = () =>
+          navigation.navigate("QrDetails", {
+            id: detailId,
+            titleHeader: nameClass,
             nameClass,
+            field: res?.data || [],
+            propertyClass: resProp?.data,
+            itemData,
           });
 
+        // Lần quét ĐẦU TIÊN đi đúng quy trình cũ: ra màn chi tiết để người dùng
+        // thấy thiết bị rồi tự chọn việc ở thanh hành động. Đánh dấu đã quét để
+        // lần sau chuyển sang hỏi.
+        if (mode.state === "firstTime") {
+          markScanned();
+          openDetails();
+          return;
+        }
+
+        // Lần thứ HAI: hỏi làm gì, danh sách lấy từ chính thiết bị vừa quét.
+        // Không hỏi được (không có việc nào chạy thẳng được) thì mở chi tiết.
+        if (mode.state === "ask") {
+          const asked = await tryAskForScanMode(scanned, openDetails);
+
+          if (asked) return;
+
+          openDetails();
+          return;
+        }
+
+        // Từ lần thứ BA: chạy thẳng việc đang nhớ.
+        if (mode.state === "action") {
+          const outcome = await tryRunScanModeAction(scanned, mode.kind);
+
           if (outcome === "opened") return;
+
+          // Thiết bị này không có việc đang nhớ — coi như người dùng đã chuyển
+          // sang việc khác, hỏi lại với danh sách của chính nó. Không làm thế thì
+          // mỗi lần quét tủ lạnh giữa đợt đánh giá đều lặp lại banner + màn chi
+          // tiết + tự bấm, mà chẳng có gì gợi đường đổi chế độ.
+          //
+          // Chỉ áp dụng cho `unsupported`. Thiếu quyền là chuyện của tài khoản,
+          // mất mạng là tạm thời — cả hai đều không phải "đang chuyển việc", hỏi
+          // lại lúc đó là đổi trí nhớ vì một lý do sai.
+          if (outcome === "unsupported") {
+            const asked = await tryAskForScanMode(
+              scanned,
+              openDetails,
+              "fallback",
+            );
+
+            if (asked) return;
+          }
 
           const modeLabel = getScanModeLabel(mode).toLowerCase();
           const reason = {
@@ -329,14 +479,7 @@ export default function QrScannerScreen() {
           setFallbackNotice(`${reason} — đang mở thông tin thiết bị`);
         }
 
-        navigation.navigate("QrDetails", {
-          id: detailId,
-          titleHeader: nameClass,
-          nameClass,
-          field: res?.data || [],
-          propertyClass: resProp?.data,
-          itemData,
-        });
+        openDetails();
       } catch (e) {
         const isNetworkError = isNetworkRequestError(e);
 
@@ -488,7 +631,6 @@ export default function QrScannerScreen() {
       ) : null}
 
       <ScanModeSheet
-        kinds={availableScanModes}
         mode={mode}
         onClose={() => setModeSheetVisible(false)}
         onSelect={(next) => {
@@ -497,6 +639,50 @@ export default function QrScannerScreen() {
           setMode(next);
         }}
         visible={modeSheetVisible}
+      />
+
+      {/*
+        Bảng của lần quét thứ hai. Khác bảng của pill ở trên: danh sách đây là việc
+        của ĐÚNG thiết bị vừa quét, nên không cần app khai trước loại việc nào.
+      */}
+      <RecordActionSheet
+        actions={pendingPick?.actions ?? []}
+        onClose={() => {
+          // Đóng mà không chọn: không nhớ gì cả, mở camera cho quét lại.
+          setPendingPick(null);
+          resumeScanner();
+        }}
+        onSelect={(action) => {
+          const reason = pendingPick?.reason;
+          setPendingPick(null);
+
+          if (action.key === SCAN_VIEW_ACTION_KEY) {
+            // Xem chỉ chốt thành chế độ khi chưa có việc nào để giữ.
+            if (reason === "ask") setMode({ state: "view" });
+          } else {
+            // Nhớ luôn nhãn và icon: app không có bảng nào để tra lại tên việc này.
+            setMode({
+              state: "action",
+              kind: action.kind,
+              label: action.label,
+              icon: action.icon,
+            });
+          }
+
+          action.run({ quick: true });
+        }}
+        recordLabel={pendingPick?.recordLabel}
+        subtitle={
+          // Hỏi giữa đợt thì phải nói vì sao, không thì người dùng tưởng app quên
+          // mất việc họ đang làm.
+          pendingPick?.reason === "fallback" && mode.state === "action"
+            ? `Thiết bị này không có mục ${getScanModeLabel(
+                mode,
+              ).toLowerCase()} — chọn việc khác cho nó`
+            : undefined
+        }
+        title="Làm gì với thiết bị này?"
+        visible={Boolean(pendingPick)}
       />
     </SafeAreaView>
   );

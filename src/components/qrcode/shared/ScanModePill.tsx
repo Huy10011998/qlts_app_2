@@ -2,9 +2,6 @@ import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
-import {
-  getRecordActionKindInfo,
-} from "../../../constants/recordActionKinds";
 import type { ScanMode } from "../../../context/ScanModeContext";
 
 type ScanModePillProps = {
@@ -14,28 +11,45 @@ type ScanModePillProps = {
 
 const ACCENT = "#22C55E";
 
-/** Nhãn của chế độ, dùng chung cho pill và bảng chọn. */
-export const getScanModeLabel = (mode: ScanMode) =>
-  mode === "view"
-    ? "Xem thông tin"
-    : getRecordActionKindInfo(mode)?.label ?? "Xem thông tin";
+/**
+ * Nhãn của chế độ, dùng chung cho pill, bảng chọn và câu báo khi không chạy được.
+ *
+ * Chế độ `action` tự mang nhãn của nó (nhớ lúc người dùng chọn trên một tài sản
+ * thật) — app không còn bảng nào để tra tên việc nữa.
+ */
+export const getScanModeLabel = (mode: ScanMode) => {
+  switch (mode.state) {
+    case "action":
+      return mode.label;
+    case "ask":
+      return "Chọn khi quét";
+    default:
+      return "Xem thông tin";
+  }
+};
 
-export const getScanModeIcon = (mode: ScanMode) =>
-  mode === "view"
-    ? "information-circle-outline"
-    : getRecordActionKindInfo(mode)?.icon ?? "information-circle-outline";
+export const getScanModeIcon = (mode: ScanMode) => {
+  switch (mode.state) {
+    case "action":
+      return mode.icon || "ellipsis-horizontal-circle-outline";
+    case "ask":
+      return "help-circle-outline";
+    default:
+      return "information-circle-outline";
+  }
+};
 
 /**
  * Chế độ quét đang bật, ngay trên màn quét.
  *
- * Luôn hiện — kể cả khi đang là "Xem thông tin". Người dùng phải biết quét xong
- * sẽ xảy ra chuyện gì TRƯỚC khi quét, và đổi việc phải trong một tap chứ không
- * phải đi tìm trong Cài đặt.
+ * Luôn hiện — người dùng phải biết quét xong sẽ xảy ra chuyện gì TRƯỚC khi quét,
+ * và đổi việc phải trong một tap chứ không phải đi tìm trong Cài đặt. Đây cũng là
+ * đường quay lại duy nhất khi lỡ chốt nhầm việc.
  *
  * Màu chốt cứng theo bộ chrome tối của màn quét, không lấy theo theme.
  */
 export default function ScanModePill({ mode, onPress }: ScanModePillProps) {
-  const isActive = mode !== "view";
+  const isRunningAction = mode.state === "action";
 
   return (
     <View style={styles.wrap}>
@@ -49,20 +63,24 @@ export default function ScanModePill({ mode, onPress }: ScanModePillProps) {
         <Ionicons
           name={getScanModeIcon(mode)}
           size={15}
-          color={isActive ? ACCENT : "rgba(255,255,255,0.75)"}
+          color={isRunningAction ? ACCENT : "rgba(255,255,255,0.75)"}
         />
-        {/* Nhãn dài nhất là "Xác nhận vị trí tủ lạnh" — máy màn hẹp phải cắt chứ
-            không được xuống dòng làm méo pill. */}
+        {/* Nhãn là moTa của class con nên có thể dài — cắt chứ không xuống dòng
+            làm méo pill. */}
         <Text style={styles.label} numberOfLines={1}>
           Chế độ: <Text style={styles.value}>{getScanModeLabel(mode)}</Text>
         </Text>
         <Ionicons name="chevron-down" size={14} color="rgba(255,255,255,0.75)" />
       </Pressable>
 
-      {isActive ? (
+      {isRunningAction ? (
         <Text style={styles.hint}>
           Quét là vào thẳng {getScanModeLabel(mode).toLowerCase()}
         </Text>
+      ) : null}
+
+      {mode.state === "ask" ? (
+        <Text style={styles.hint}>Quét xong sẽ hỏi bạn muốn làm gì</Text>
       ) : null}
     </View>
   );

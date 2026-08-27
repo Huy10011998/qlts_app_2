@@ -1,8 +1,5 @@
 import type { MenuItemResponse } from "../../../../types";
-import {
-  getRecordActionKindForChildClass,
-  getRecordActionKindInfo,
-} from "../../../../constants/recordActionKinds";
+import { getChildClassActionKind } from "../../../../constants/recordActionKinds";
 import {
   getAddChildIcon,
   getAddChildLabel,
@@ -40,17 +37,15 @@ export function buildChildClassActions({
   const idRoot = String(item.id);
 
   return childClasses.map((childClass) => {
-    const kind = getRecordActionKindForChildClass(childClass.name);
-    const kindInfo = getRecordActionKindInfo(kind);
-    const label = kindInfo?.label ?? getAddChildLabel([childClass]);
+    const label = getAddChildLabel([childClass]);
 
     return {
       key: `child:${childClass.name}`,
-      kind,
-      // Loại đã đặt tên thì dùng nhãn của loại ("Đánh giá", "Kiểm kê") cho thống
-      // nhất với bảng chọn chế độ quét; còn lại lấy nhãn suy từ moTa của class.
+      kind: getChildClassActionKind(childClass.name),
+      // Nhãn và icon suy từ chính class con ("Đánh giá", "Thêm bảo trì") — không
+      // còn bảng nào đặt tên sẵn cho từng loại việc nữa.
       label,
-      icon: kindInfo?.icon ?? getAddChildIcon([childClass]),
+      icon: getAddChildIcon([childClass]),
       group: "work",
       // Danh sách truyền vào đây đã lọc `Insert` của chính class con, mà cả hai
       // đường (bấm ở màn chi tiết / quét liên tục) đều mở cùng một màn tạo.

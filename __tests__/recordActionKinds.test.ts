@@ -1,72 +1,62 @@
 import {
-  compareRecordActionKinds,
-  getRecordActionKindForChildClass,
-  getRecordActionKindInfo,
-  RECORD_ACTION_KINDS,
+  FRIDGE_TRUNG_CHUYEN_KIND,
+  FRIDGE_XAC_NHAN_VI_TRI_KIND,
+  getChildClassActionKind,
+  UNKNOWN_RECORD_ACTION_KIND,
 } from "../src/constants/recordActionKinds";
 
-// Loại việc suy từ TIỀN TỐ tên class con mà server trả về — một dòng trong bảng
-// phủ hết mọi loại thiết bị, khác hẳn `reviewNameClasses` phải liệt kê từng cặp.
+/**
+ * Loại việc là thứ duy nhất giúp chế độ quét nhớ được: chọn "Đánh giá" trên bình
+ * BCC-014 thì quét hộp HCC-002 vẫn phải khớp, dù hai bản ghi con khác class.
+ *
+ * Suy từ tiền tố tên class server trả về, KHÔNG có bảng liệt kê nào trong app —
+ * nghiệp vụ BE thêm sau này tự khớp, không phải sửa gì.
+ */
 describe("loại việc của class con", () => {
-  it("khớp tiền tố, một dòng phủ mọi loại thiết bị", () => {
-    expect(getRecordActionKindForChildClass("DanhGia_BinhChuaChay")).toBe(
-      "danhGia",
+  it("cùng tiền tố thì cùng loại, dù khác loại thiết bị", () => {
+    expect(getChildClassActionKind("DanhGia_BinhChuaChay")).toBe(
+      getChildClassActionKind("DanhGia_HongChuaChay"),
     );
-    expect(getRecordActionKindForChildClass("DanhGia_HongChuaChay")).toBe(
-      "danhGia",
+    expect(getChildClassActionKind("DanhGia_BinhChuaChay")).toBe(
+      "child:danhgia",
     );
-    // Loại thiết bị chưa có bảng đánh giá hôm nay: BE trả về là nhận ngay, không
-    // phải thêm dòng nào — đó là điểm khác `reviewNameClasses` (liệt kê từng cặp).
-    expect(getRecordActionKindForChildClass("DanhGia_MayMoc")).toBe("danhGia");
   });
 
-  // Nghiệp vụ BE chưa ship (kiểm kê, báo hỏng) KHÔNG được khai tiền tố: khai là
-  // đoán cách BE đặt tên. Chúng vẫn là việc dùng được bình thường ở thanh hành
-  // động, chỉ mang kind "other" nên chưa chọn được làm chế độ quét.
-  it("nghiệp vụ chưa ship thì là other, vẫn dùng được", () => {
-    expect(getRecordActionKindForChildClass("KiemKe_BinhChuaChay")).toBe(
-      "other",
+  it("nghiệp vụ BE chưa ship cũng khớp sẵn, không cần khai trước", () => {
+    expect(getChildClassActionKind("KiemKe_MayMoc")).toBe("child:kiemke");
+    expect(getChildClassActionKind("BaoHong_TuChuaChay")).toBe("child:baohong");
+  });
+
+  it("khác tiền tố là khác loại", () => {
+    expect(getChildClassActionKind("DanhGia_BinhChuaChay")).not.toBe(
+      getChildClassActionKind("KiemKe_BinhChuaChay"),
     );
-    expect(getRecordActionKindForChildClass("BaoHong_TuChuaChay")).toBe("other");
-    expect(getRecordActionKindForChildClass("BaoTri_MayMoc")).toBe("other");
-    expect(getRecordActionKindForChildClass("LinhKien")).toBe("other");
-    expect(getRecordActionKindForChildClass(undefined)).toBe("other");
-    expect(getRecordActionKindForChildClass("")).toBe("other");
   });
 
-  // Hai nghiệp vụ tủ lạnh có màn riêng trong app, không đến từ bảng con — khai
-  // tiền tố cho chúng là đoán thêm một cái tên BE chưa hề trả về.
-  it("việc của tủ lạnh không khai tiền tố class con", () => {
-    const fridgeKinds = ["xacNhanViTriTuLanh", "trungChuyenTuLanh"] as const;
-
-    for (const kind of fridgeKinds) {
-      expect(getRecordActionKindInfo(kind)?.childClassPrefix).toBeUndefined();
-      // Nhãn phải nói rõ "tủ lạnh": trung chuyển tài sản là nghiệp vụ khác hẳn.
-      expect(getRecordActionKindInfo(kind)?.label).toContain("tủ lạnh");
-    }
+  it("tên không có gạch dưới thì cả tên là tiền tố", () => {
+    expect(getChildClassActionKind("LinhKien")).toBe("child:linhkien");
   });
 
-  it("không nhận nhầm tiền tố chỉ trùng một phần", () => {
-    expect(getRecordActionKindForChildClass("DanhGiaXX_BinhChuaChay")).toBe(
-      "other",
+  it("tên rỗng thì thành loại không xác định", () => {
+    expect(getChildClassActionKind(undefined)).toBe(UNKNOWN_RECORD_ACTION_KIND);
+    expect(getChildClassActionKind("   ")).toBe(UNKNOWN_RECORD_ACTION_KIND);
+  });
+
+  /**
+   * Trung chuyển tủ lạnh (màn riêng trong app) và trung chuyển tài sản (bảng con
+   * BE sẽ trả sau) là HAI nghiệp vụ khác nhau: khác class quyền, khác màn, khác
+   * luồng. Gộp một loại là chọn "Trung chuyển" ở màn quét sẽ chạy sai việc.
+   */
+  it("việc của tủ lạnh không đụng loại của bảng con cùng tên", () => {
+    expect(getChildClassActionKind("TrungChuyen_TaiSan")).not.toBe(
+      FRIDGE_TRUNG_CHUYEN_KIND,
     );
-    expect(getRecordActionKindForChildClass("PhuDanhGia_Binh")).toBe("other");
+    expect(getChildClassActionKind("XacNhanViTri_TaiSan")).not.toBe(
+      FRIDGE_XAC_NHAN_VI_TRI_KIND,
+    );
   });
 
-  it("other xếp sau mọi loại đã đặt tên", () => {
-    for (const info of RECORD_ACTION_KINDS) {
-      expect(compareRecordActionKinds(info.kind, "other")).toBeLessThan(0);
-    }
-  });
-
-  it("mọi loại đã đặt tên đều có nhãn và icon", () => {
-    for (const info of RECORD_ACTION_KINDS) {
-      const resolved = getRecordActionKindInfo(info.kind);
-
-      expect(resolved?.label.trim()).toBeTruthy();
-      expect(resolved?.icon.trim()).toBeTruthy();
-    }
-
-    expect(getRecordActionKindInfo("other")).toBeUndefined();
+  it("hai việc của tủ lạnh khác loại nhau", () => {
+    expect(FRIDGE_TRUNG_CHUYEN_KIND).not.toBe(FRIDGE_XAC_NHAN_VI_TRI_KIND);
   });
 });
