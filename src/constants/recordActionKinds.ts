@@ -8,10 +8,8 @@
  */
 export type RecordActionKind =
   | "danhGia"
-  | "kiemKe"
-  | "baoHong"
-  | "trungChuyen"
-  | "xacNhanViTri"
+  | "xacNhanViTriTuLanh"
+  | "trungChuyenTuLanh"
   | "other";
 
 export type NamedRecordActionKind = Exclude<RecordActionKind, "other">;
@@ -37,6 +35,12 @@ export type RecordActionKindInfo = {
  * Thêm nghiệp vụ mới mà BE trả về dạng bảng con thì chỉ cần thêm một dòng ở đây:
  * thanh hành động, bảng chọn và chế độ quét đều tự có, không phải sửa màn nào.
  *
+ * CHỈ khai loại việc đã chạy được thật. Kiểm kê và báo hỏng chưa có bảng nào trên
+ * server nên chưa nằm ở đây: bày ra mà quét gì cũng báo "thiết bị này không có mục
+ * kiểm kê" thì đúng lỗi đã sửa ở menu ⋯ — một lựa chọn ai bấm cũng không ra gì.
+ * Khi BE ship thì thêm lại một dòng, `__tests__/recordActionKinds.test.ts` có sẵn
+ * ca kiểm tiền tố lạ để biết chỗ nối vẫn đúng.
+ *
  * KHÁC BIỆT quan trọng với `reviewNameClasses.ts`: chỗ đó cấm **tự nối** tên
  * class (`"DanhGia_" + nameClass`) vì tên bảng là do server đặt, app không có
  * quyền suy ra. Ở đây ta làm việc ngược lại — **đọc** tiền tố của cái tên server
@@ -44,35 +48,31 @@ export type RecordActionKindInfo = {
  * không khớp tiền tố nào thì thành "other" và vẫn dùng được bình thường.
  */
 export const RECORD_ACTION_KINDS: RecordActionKindInfo[] = [
+  // Bảng con `DanhGia_*` — nguồn duy nhất đã thấy server trả về, nên cũng là tiền
+  // tố duy nhất được khai ở đây. Khai tiền tố cho bảng chưa tồn tại là đoán cách
+  // BE đặt tên, đoán sai thì chế độ quét không bao giờ khớp mà chẳng ai biết vì sao.
   {
     kind: "danhGia",
     label: "Đánh giá",
     icon: "clipboard-outline",
     childClassPrefix: "DanhGia",
   },
+  // Hai nghiệp vụ tủ lạnh: có màn riêng trong app, không phải bảng con, nên KHÔNG
+  // khai `childClassPrefix` — builder của chúng tự gắn `kind`.
+  //
+  // Nhãn nói rõ "tủ lạnh" vì chúng chỉ áp dụng cho `NoiDia_TuLanh`. Trung chuyển
+  // tài sản là nghiệp vụ KHÁC: class quyền khác, màn khác, luồng khác — khi nào có
+  // thì thêm `trungChuyenTaiSan` thành một loại riêng, đừng dùng lại loại tủ lạnh,
+  // không thì chọn "Trung chuyển" ở màn quét sẽ ra sai nghiệp vụ.
   {
-    kind: "kiemKe",
-    label: "Kiểm kê",
-    icon: "checkbox-outline",
-    childClassPrefix: "KiemKe",
-  },
-  {
-    kind: "baoHong",
-    label: "Báo hỏng",
-    icon: "warning-outline",
-    childClassPrefix: "BaoHong",
-  },
-  {
-    kind: "xacNhanViTri",
-    label: "Xác nhận vị trí",
+    kind: "xacNhanViTriTuLanh",
+    label: "Xác nhận vị trí tủ lạnh",
     icon: "location-outline",
-    childClassPrefix: "XacNhanViTri",
   },
   {
-    kind: "trungChuyen",
-    label: "Trung chuyển",
+    kind: "trungChuyenTuLanh",
+    label: "Trung chuyển tủ lạnh",
     icon: "swap-horizontal-outline",
-    childClassPrefix: "TrungChuyen",
   },
 ];
 

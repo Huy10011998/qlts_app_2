@@ -78,12 +78,12 @@ describe("chế độ quét", () => {
   });
 
   it("chế độ đã lưu thắng khoá cũ còn sót", async () => {
-    mockStore[SCAN_MODE_KEY] = "kiemKe";
+    mockStore[SCAN_MODE_KEY] = "trungChuyenTuLanh";
     mockStore[LEGACY_KEY] = "true";
 
     const result = await mountProvider();
 
-    expect(result().mode).toBe("kiemKe");
+    expect(result().mode).toBe("trungChuyenTuLanh");
   });
 
   it("giá trị lưu không hợp lệ thì về xem thông tin, không vỡ", async () => {
@@ -94,14 +94,25 @@ describe("chế độ quét", () => {
     expect(result().mode).toBe("view");
   });
 
+  // Loại việc bị rút khỏi bảng (kiểm kê/báo hỏng gỡ ra vì BE chưa có) thì máy nào
+  // đang lưu giá trị đó phải về xem thông tin, không được kẹt ở một chế độ mà app
+  // không còn hiểu.
+  it("chế độ đã bị gỡ khỏi bảng thì về xem thông tin", async () => {
+    mockStore[SCAN_MODE_KEY] = "kiemKe";
+
+    const result = await mountProvider();
+
+    expect(result().mode).toBe("view");
+  });
+
   it("đổi chế độ thì ghi xuống storage", async () => {
     const result = await mountProvider();
 
     await ReactTestRenderer.act(async () => {
-      result().setMode("baoHong");
+      result().setMode("trungChuyenTuLanh");
     });
 
-    expect(result().mode).toBe("baoHong");
-    expect(mockStore[SCAN_MODE_KEY]).toBe("baoHong");
+    expect(result().mode).toBe("trungChuyenTuLanh");
+    expect(mockStore[SCAN_MODE_KEY]).toBe("trungChuyenTuLanh");
   });
 });

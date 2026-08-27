@@ -52,6 +52,9 @@ export function buildChildClassActions({
       label,
       icon: kindInfo?.icon ?? getAddChildIcon([childClass]),
       group: "work",
+      // Danh sách truyền vào đây đã lọc `Insert` của chính class con, mà cả hai
+      // đường (bấm ở màn chi tiết / quét liên tục) đều mở cùng một màn tạo.
+      canQuickRun: true,
       run: async ({ quick }) => {
         await openAddForm({
           assetContext,

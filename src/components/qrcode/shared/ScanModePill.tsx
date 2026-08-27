@@ -51,7 +51,9 @@ export default function ScanModePill({ mode, onPress }: ScanModePillProps) {
           size={15}
           color={isActive ? ACCENT : "rgba(255,255,255,0.75)"}
         />
-        <Text style={styles.label}>
+        {/* Nhãn dài nhất là "Xác nhận vị trí tủ lạnh" — máy màn hẹp phải cắt chứ
+            không được xuống dòng làm méo pill. */}
+        <Text style={styles.label} numberOfLines={1}>
           Chế độ: <Text style={styles.value}>{getScanModeLabel(mode)}</Text>
         </Text>
         <Ionicons name="chevron-down" size={14} color="rgba(255,255,255,0.75)" />
@@ -70,6 +72,8 @@ const styles = StyleSheet.create({
   wrap: {
     alignItems: "flex-start",
     marginTop: 10,
+    // Pill co lại theo bề rộng màn, không đẩy tràn ra ngoài header.
+    maxWidth: "100%",
   },
   pill: {
     flexDirection: "row",
@@ -84,6 +88,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   label: {
+    flexShrink: 1,
     color: "rgba(255,255,255,0.75)",
     fontSize: 13,
     fontWeight: "500",
