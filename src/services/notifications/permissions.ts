@@ -1,4 +1,4 @@
-import { Platform } from "react-native";
+import { Linking, NativeModules, Platform } from "react-native";
 import notifee, {
   AuthorizationStatus as NotifeeAuthorizationStatus,
 } from "@notifee/react-native";
@@ -172,11 +172,43 @@ export const ensureNotificationPermission = async (): Promise<boolean> => {
   return (await requestNotificationPermission()) === "granted";
 };
 
-/** Mở trang cài đặt thông báo của app — dùng khi user đã từ chối trước đó. */
+/**
+ * Cầu native iOS: mở thẳng trang Thông báo của app (xem
+ * ios/qlts_app_2/NotificationSettings.swift). Resolve false nếu hệ thống từ
+ * chối mở — khi đó rơi về Linking.openSettings().
+ */
+const IosNotificationSettings = NativeModules.NotificationSettings as
+  | { open: () => Promise<boolean> }
+  | undefined;
+
+/**
+ * Mở trang cài đặt thông báo của app — dùng khi user đã từ chối trước đó.
+ *
+ * Android: notifee vào thẳng trang Thông báo của app (API >= 26).
+ * iOS: notifee.openNotificationSettings() là no-op, resolve ngay và không mở gì
+ * cả (bấm nút trông như treo), nên phải đi qua module native ở trên; bản build
+ * cũ chưa có module thì rơi về Linking.openSettings() — tới trang app, người
+ * dùng bấm thêm một nhịp vào "Thông báo".
+ */
 export const openNotificationSettings = async (): Promise<void> => {
+  if (Platform.OS === "android") {
+    try {
+      await notifee.openNotificationSettings();
+      return;
+    } catch (err) {
+      warn("[Push] Mở cài đặt thông báo thất bại, thử mở cài đặt app", err);
+    }
+  } else if (IosNotificationSettings) {
+    try {
+      if (await IosNotificationSettings.open()) return;
+    } catch (err) {
+      warn("[Push] Mở trang Thông báo iOS thất bại, thử mở cài đặt app", err);
+    }
+  }
+
   try {
-    await notifee.openNotificationSettings();
+    await Linking.openSettings();
   } catch (err) {
-    warn("[Push] Mở cài đặt thông báo thất bại", err);
+    warn("[Push] Mở cài đặt app thất bại", err);
   }
 };
