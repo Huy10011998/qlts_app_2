@@ -1,7 +1,7 @@
 #!/bin/zsh
 set -e
 
-BUILD_NUMBER="20"
+BUILD_NUMBER="83"
 
 SCRIPT_DIR="${0:A:h}"
 IOS_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
