@@ -22,23 +22,29 @@ export default function MenuTreeRecents<TRecent extends MenuTreeRecent>({
   recents,
   onPressItem,
   iconName = "time-outline",
-  validIds,
+  nodeById,
 }: {
   recents: TRecent[];
   onPressItem: (target: TRecent) => void;
   iconName?: string;
   /**
-   * Id đang có trong cây. Mục đã bị xoá hoặc bị lọc vì thu hồi quyền thì bỏ khỏi
-   * hàng chip, thay vì để bấm vào rồi mở ra màn trống.
+   * Các nút đang có trong cây, tra theo id. Chip mở bằng **nút trong cây** chứ
+   * không bằng bản chụp đã lưu: bản chụp cũ (quản trị đổi tên class, đổi nhãn)
+   * sẽ gọi API với tên không còn tồn tại rồi báo lỗi. Id không còn trong cây —
+   * mục bị xoá hoặc bị lọc vì thu hồi quyền — thì bỏ khỏi hàng chip.
    */
-  validIds?: Set<string | number>;
+  nodeById?: ReadonlyMap<string | number, TRecent>;
 }) {
   const styles = useStyles(makeStyles);
   const colors = useAppColors();
   const accentBorders = useAccentBorderColors();
 
-  const items = validIds
-    ? recents.filter((target) => validIds.has(target.id))
+  const items = nodeById
+    ? recents.flatMap((target) => {
+        const fresh = nodeById.get(target.id);
+
+        return fresh ? [fresh] : [];
+      })
     : recents;
 
   if (items.length === 0) return null;

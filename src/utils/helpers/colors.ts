@@ -59,6 +59,11 @@ const ADAPTIVE = {
   // Card outline: a faint rule in light, invisible in dark where the surface
   // already separates itself from the background by luminance.
   hairline: ["app_border", "#F3F5F9", "transparent"],
+  // Khối xám của khung chờ (skeleton). Phải đọc được trên CẢ hai thứ nằm dưới
+  // nó: thẻ trắng và nền trang. `surfaceAlt` (#F0F2F6) lệch nền trang (#F0F2F8)
+  // đúng 2/255 nên vẽ trực tiếp trên nền là tàng hình — đó là lý do token này
+  // tồn tại riêng thay vì dùng lại màu nền phụ.
+  skeleton: ["app_skeleton", "#DFE4EE", "#22303F"],
   // Row divider / toolbar rule: must stay visible in both schemes.
   separator: ["app_border", "#EDF0F5", "#273649"],
 } as const satisfies Record<string, readonly [string, string, string]>;

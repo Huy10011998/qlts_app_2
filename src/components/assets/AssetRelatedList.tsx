@@ -17,6 +17,8 @@ import {
 } from "@react-navigation/native";
 import type { AssetDetailsNavigationProp, StackRoute } from "../../types/index";
 import { mapPropertyResponseToPropertyClass } from "../../utils/helpers/propertyClass";
+import RecordListSkeleton from "../../components/list/RecordListSkeleton";
+import { shouldShowListSkeleton } from "../../components/ui/shouldShowListSkeleton";
 import ListCardAsset from "../../components/list/ListCardAsset";
 import IsLoading from "../../components/ui/IconLoading";
 import { AddItem } from "../add/AddItem";
@@ -192,8 +194,15 @@ export default function AssetRelatedList() {
     return null;
   }
 
-  if (isLoading && !isRefreshingTop && !isLoadingMore && !isSearching) {
-    return <IsLoading size="large" color={BRAND_RED} />;
+  if (
+    shouldShowListSkeleton({
+      isFetching: isLoading || isLoadingMore,
+      isEmpty: data.length === 0,
+      isRefreshing: isRefreshingTop,
+      isSearching,
+    })
+  ) {
+    return <RecordListSkeleton hasSearchBar hasSummaryCard />;
   }
 
   if (loadErrorMessage) {

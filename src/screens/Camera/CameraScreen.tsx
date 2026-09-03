@@ -19,7 +19,6 @@ import {
 
 import { useDebounce } from "../../hooks/useDebounce";
 import { usePermission } from "../../hooks/usePermission";
-import IsLoading from "../../components/ui/IconLoading";
 import EmptyState from "../../components/ui/EmptyState";
 import { getVungCamera } from "../../services/data/callApi";
 import { error } from "../../utils/Logger";
@@ -30,8 +29,9 @@ import CameraMenuDropdownItem from "./shared/CameraMenuDropdownItem";
 import MenuTreeSearchBar from "../../components/menuTree/MenuTreeSearchBar";
 import MenuTreeRecents from "../../components/menuTree/MenuTreeRecents";
 import MenuCardSkeleton from "../../components/ui/MenuCardSkeleton";
+import { shouldShowListSkeleton } from "../../components/ui/shouldShowListSkeleton";
 import { useMenuTreeState } from "../../components/menuTree/useMenuTreeState";
-import { collectTreeIds } from "../../components/menuTree/collectTreeIds";
+import { collectTreeNodes } from "../../components/menuTree/collectTreeNodes";
 import {
   useOpenCameraZone,
   type CameraZoneTarget,
@@ -167,7 +167,7 @@ export default function CameraScreen() {
 
   const openZone = useOpenCameraZone(rawData, rememberRecent);
   // Đối chiếu với cây đầy đủ, không phải cây đang lọc theo từ khoá.
-  const availableIds = useMemo(() => collectTreeIds(data), [data]);
+  const availableNodes = useMemo(() => collectTreeNodes(data), [data]);
 
   const handleToggle = (id: string) => {
     if (!hasSearch) {
@@ -189,7 +189,9 @@ export default function CameraScreen() {
       setIsSearching(false);
     }
   }, [search, debouncedSearch]);
-  if (!loaded) return <IsLoading size="large" color={CAMERA_MENU_BRAND_RED} />;
+  // Chờ quyền cũng dùng khung chờ như chờ dữ liệu: hai nhánh khác kiểu thì vào
+  // màn thấy vòng xoay nhảy sang khung xám rồi mới ra nội dung.
+  if (!loaded) return <MenuCardSkeleton />;
 
   if (!hasViewPermission) {
     return (
@@ -205,7 +207,14 @@ export default function CameraScreen() {
     );
   }
 
-  if (isFetching && !isRefreshingTop && !debouncedSearch)
+  if (
+    shouldShowListSkeleton({
+      isFetching,
+      isEmpty: data.length === 0,
+      isRefreshing: isRefreshingTop,
+      isSearching: Boolean(debouncedSearch),
+    })
+  )
     return <MenuCardSkeleton />;
 
   if (loadErrorMessage) {
@@ -248,7 +257,7 @@ export default function CameraScreen() {
             recents={recents}
             onPressItem={openZone}
             iconName="videocam-outline"
-            validIds={availableIds}
+            nodeById={availableNodes}
           />
         )}
 

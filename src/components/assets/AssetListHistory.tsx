@@ -8,6 +8,8 @@ import {
   getPropertyClass,
   getListHistory,
 } from "../../services";
+import RecordListSkeleton from "../list/RecordListSkeleton";
+import { shouldShowListSkeleton } from "../ui/shouldShowListSkeleton";
 import ListCardHistory from "../list/ListCardHistory";
 import IsLoading from "../ui/IconLoading";
 import orderBy from "lodash/orderBy";
@@ -182,8 +184,14 @@ export default function AssetListHistory({
     if (historyItems.length < total && !isLoadingMore) fetchData(true);
   };
 
-  if (isLoading && !isRefreshingTop) {
-    return <IsLoading size="large" color={BRAND_RED} />;
+  if (
+    shouldShowListSkeleton({
+      isFetching: isLoading,
+      isEmpty: historyItems.length === 0,
+      isRefreshing: isRefreshingTop,
+    })
+  ) {
+    return <RecordListSkeleton hasSummaryCard lines={2} />;
   }
 
   if (loadErrorMessage) {

@@ -23,11 +23,6 @@ export const FEATURE_TILE_WIDTH = `${100 / FEATURE_GRID_COLUMNS}%` as const;
 export const makeFeatureStyles = (c: AppColors) =>
   StyleSheet.create({
     root: { flex: 1 },
-    loadingWrap: {
-      flex: 1,
-      alignItems: "center",
-      justifyContent: "center",
-    },
     centerState: {
       flexGrow: 1,
       alignItems: "center",

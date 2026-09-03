@@ -26,6 +26,9 @@ import {
   getPropertyClass,
   getBuildTree,
 } from "../../services";
+import RecordListSkeleton from "../list/RecordListSkeleton";
+import MenuCardSkeleton from "../ui/MenuCardSkeleton";
+import { shouldShowListSkeleton } from "../ui/shouldShowListSkeleton";
 import ListCardAsset from "../../components/list/ListCardAsset";
 import SwipeableListRow from "../../components/list/SwipeableListRow";
 import IsLoading from "../../components/ui/IconLoading";
@@ -540,6 +543,14 @@ export default function AssetList() {
     ],
   );
 
+  // Một biến cho cả bốn nhánh của panel, để khung chờ và dữ liệu loại trừ nhau —
+  // trước đây mỗi nhánh tự hỏi `loadingTree` nên dễ vẽ trùng lên nhau.
+  const showTreeSkeleton =
+    shouldShowListSkeleton({
+      isFetching: loadingTree,
+      isEmpty: treeData.length === 0,
+    });
+
   const renderTreePanel = () => (
     <SlideInSidePanel
       bodyStyle={styles.menuScrollContent}
@@ -550,15 +561,23 @@ export default function AssetList() {
       visible={menuVisible}
       width={MENU_WIDTH}
     >
-      {loadingTree && <IsLoading size="small" />}
-      {!loadingTree && treeErrorMessage ? (
+      {/*
+        Truyền số dòng cố định: thân panel là ScrollView nên chiều cao khung do
+        chính nội dung quyết định, không đo ra được như khi khung chờ chiếm cả màn.
+      */}
+      {/*
+        Truyền số dòng cố định: thân panel là ScrollView nên chiều cao khung do
+        chính nội dung quyết định, không đo ra được như khi khung chờ chiếm cả màn.
+      */}
+      {showTreeSkeleton ? <MenuCardSkeleton rows={8} /> : null}
+      {!showTreeSkeleton && treeErrorMessage ? (
         <AssetListEmptyState
           iconName="cloud-offline-outline"
           title="Không thể tải danh mục"
           subtitle={treeErrorMessage}
         />
       ) : null}
-      {!loadingTree && treeData.length > 0
+      {!showTreeSkeleton && treeData.length > 0
         ? treeData.map((node) => (
             <AssetTreeNodeItem
               key={node.index}
@@ -569,7 +588,7 @@ export default function AssetList() {
             />
           ))
         : null}
-      {!loadingTree && !treeErrorMessage && treeData.length === 0 ? (
+      {!showTreeSkeleton && !treeErrorMessage && treeData.length === 0 ? (
         <AssetListEmptyState
           iconName="folder-open-outline"
           title="Chưa có danh mục"
@@ -579,8 +598,21 @@ export default function AssetList() {
     </SlideInSidePanel>
   );
 
-  if (isLoading && !isRefreshingTop && !isLoadingMore && !isSearching) {
-    return <IsLoading size="large" color={BRAND_RED} />;
+  if (
+    shouldShowListSkeleton({
+      isFetching: isLoading || isLoadingMore,
+      isEmpty: assetItems.length === 0,
+      isRefreshing: isRefreshingTop,
+      isSearching,
+    })
+  ) {
+    return (
+      <RecordListSkeleton
+        hasSearchBar
+        hasSummaryCard
+        hasBanner={hasChildClasses}
+      />
+    );
   }
 
   if (loadErrorMessage) {

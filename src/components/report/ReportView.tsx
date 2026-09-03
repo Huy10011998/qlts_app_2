@@ -17,6 +17,7 @@ import {
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import Orientation from "react-native-orientation-locker";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import RNFS from "react-native-fs";
@@ -120,6 +121,7 @@ const ReportView: React.FC<ReportViewProps> = ({
   const [reportError, setReportError] = useState<string | null>(null);
   const [reportLoadFailed, setReportLoadFailed] = useState(false);
   const [isReportRendering, setIsReportRendering] = useState(false);
+  const insets = useSafeAreaInsets();
   const [isLandscape, setIsLandscape] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [shareOptionsVisible, setShareOptionsVisible] = useState(false);
@@ -820,7 +822,13 @@ const ReportView: React.FC<ReportViewProps> = ({
           showHandle
           statusBarTranslucent
           presentationStyle="overFullScreen"
-          sheetStyle={styles.shareSheet}
+          safeAreaBottom={false}
+          sheetStyle={[
+            styles.shareSheet,
+            // Tự cộng safe area (shell đã tắt): máy tính bảng có thanh điều hướng
+            // cao, chừa ít thì mục cuối bị che. Sàn 16 cho máy không báo inset.
+            { paddingBottom: Math.max(insets.bottom, 16) + 16 },
+          ]}
         >
           <Text style={styles.shareSheetTitle}>
             Chọn loại file chia sẻ

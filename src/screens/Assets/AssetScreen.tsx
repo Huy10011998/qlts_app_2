@@ -30,7 +30,6 @@ import { useDebounce } from "../../hooks/useDebounce";
 import { useDismissableModal } from "../../hooks/useDismissableModal";
 import { usePermission } from "../../hooks/usePermission";
 import { filterReportPermissionTree } from "../../hooks/shared/permissionHelpers";
-import IsLoading from "../../components/ui/IconLoading";
 import EmptyState from "../../components/ui/EmptyState";
 import ReportView from "../../components/report/ReportView";
 import { callApi, getConfigReport } from "../../services/data/callApi";
@@ -42,8 +41,9 @@ import AssetMenuDropdownItem from "./shared/AssetMenuDropdownItem";
 import MenuTreeRecents from "../../components/menuTree/MenuTreeRecents";
 import MenuTreeSearchBar from "../../components/menuTree/MenuTreeSearchBar";
 import MenuCardSkeleton from "../../components/ui/MenuCardSkeleton";
+import { shouldShowListSkeleton } from "../../components/ui/shouldShowListSkeleton";
 import { useMenuTreeState } from "../../components/menuTree/useMenuTreeState";
-import { collectTreeIds } from "../../components/menuTree/collectTreeIds";
+import { collectTreeNodes } from "../../components/menuTree/collectTreeNodes";
 import {
   useAssetMenuNavigate,
   type AssetMenuTarget,
@@ -269,7 +269,7 @@ export default function AssetScreen() {
     });
 
   // Đối chiếu với cây đầy đủ (đã lọc quyền), không phải cây đang lọc theo từ khoá.
-  const availableIds = useMemo(() => collectTreeIds(data), [data]);
+  const availableNodes = useMemo(() => collectTreeNodes(data), [data]);
 
   const handleCollapseAll = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -285,7 +285,9 @@ export default function AssetScreen() {
     onOpened: rememberRecent,
   });
 
-  if (!loaded) return <IsLoading size="large" color={ASSET_MENU_BRAND_RED} />;
+  // Chờ quyền cũng dùng khung chờ như chờ dữ liệu: hai nhánh khác kiểu thì vào
+  // màn thấy vòng xoay nhảy sang khung xám rồi mới ra nội dung.
+  if (!loaded) return <MenuCardSkeleton />;
 
   if (!hasViewPermission) {
     return (
@@ -301,7 +303,14 @@ export default function AssetScreen() {
     );
   }
 
-  if (isFetching && !isRefreshingTop && !debouncedSearch) {
+  if (
+    shouldShowListSkeleton({
+      isFetching,
+      isEmpty: data.length === 0,
+      isRefreshing: isRefreshingTop,
+      isSearching: Boolean(debouncedSearch),
+    })
+  ) {
     return <MenuCardSkeleton />;
   }
 
@@ -341,7 +350,7 @@ export default function AssetScreen() {
         <MenuTreeRecents
           recents={recents}
           onPressItem={openMenuItem}
-          validIds={availableIds}
+          nodeById={availableNodes}
         />
       )}
 

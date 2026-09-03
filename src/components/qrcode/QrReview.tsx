@@ -17,6 +17,8 @@ import {
 } from "@react-navigation/native";
 import type { QrReviewNavigationProp, StackRoute } from "../../types/index";
 import { mapPropertyResponseToPropertyClass } from "../../utils/helpers/propertyClass";
+import RecordListSkeleton from "../list/RecordListSkeleton";
+import { shouldShowListSkeleton } from "../ui/shouldShowListSkeleton";
 import ListCardAsset from "../list/ListCardAsset";
 import IsLoading from "../ui/IconLoading";
 import { AddItem } from "../add/AddItem";
@@ -168,8 +170,15 @@ export default function QrReview() {
     return null;
   }
 
-  if (isLoading && !isRefreshingTop && !isLoadingMore && !isSearching) {
-    return <IsLoading size="large" color={BRAND_RED} />;
+  if (
+    shouldShowListSkeleton({
+      isFetching: isLoading || isLoadingMore,
+      isEmpty: data.length === 0,
+      isRefreshing: isRefreshingTop,
+      isSearching,
+    })
+  ) {
+    return <RecordListSkeleton hasSearchBar hasSummaryCard />;
   }
 
   if (loadErrorMessage) {

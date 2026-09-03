@@ -2,7 +2,7 @@ import React, { useCallback, useState, useEffect, useRef } from "react";
 import { useIsFocused } from "@react-navigation/native";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import IsLoading from "../../components/ui/IconLoading";
+import ProfileScreenSkeleton from "./ProfileScreenSkeleton";
 import EmptyState from "../../components/ui/EmptyState";
 import { API_ENDPOINTS } from "../../config/index";
 import type { User } from "../../types/index";
@@ -195,7 +195,7 @@ const ProfileScreen: React.FC = () => {
   );
 
   if (isLoading || (!user && !hasLoadedOnce)) {
-    return <IsLoading size="large" color={c.red} />;
+    return <ProfileScreenSkeleton />;
   }
 
   if (!user || loadErrorMessage) {

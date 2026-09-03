@@ -17,6 +17,8 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 
 import type { StackNavigation, StackRoute } from "../../types/index";
 import ScreenContainer from "../shared/ScreenContainer";
+import RecordListSkeleton from "../../components/list/RecordListSkeleton";
+import { shouldShowListSkeleton } from "../../components/ui/shouldShowListSkeleton";
 import IsLoading from "../../components/ui/IconLoading";
 import AssetListEmptyState from "../../components/assets/shared/AssetListEmptyState";
 import FridgeSummaryHeader from "./shared/FridgeSummaryHeader";
@@ -201,8 +203,14 @@ export default function XacNhanViTriTuLanhLichSuScreen() {
 
   // Chờ cả quyền: `loaded` false thì `can()` trả false, render sớm là nháy màn
   // "không có quyền" rồi mới ra danh sách.
-  if (!loaded || isInitialLoading)
-    return <IsLoading size="large" color={BRAND_RED} />;
+  if (
+    !loaded ||
+    shouldShowListSkeleton({
+      isFetching: isInitialLoading,
+      isEmpty: items.length === 0,
+    })
+  )
+    return <RecordListSkeleton hasSummaryCard hasBanner lines={4} />;
 
   if (!canXemXacNhanViTri) {
     return (

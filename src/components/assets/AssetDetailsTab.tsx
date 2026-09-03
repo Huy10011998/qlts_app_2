@@ -16,7 +16,7 @@ import type {
 } from "../../types";
 import { getClassReference } from "../../services";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import IsLoading from "../ui/IconLoading";
+import MenuCardSkeleton from "../ui/MenuCardSkeleton";
 import EmptyState from "../ui/EmptyState";
 import { error } from "../../utils/Logger";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
@@ -133,7 +133,7 @@ export default function AssetDeTailsTab({
   );
 
   if (isLoading) {
-    return <IsLoading size="large" color={BRAND_RED} />;
+    return <MenuCardSkeleton />;
   }
 
   const isEmpty = items.length === 0;

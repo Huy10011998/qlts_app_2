@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import EmptyState from "../../components/ui/EmptyState";
+import CameraNotificationSkeleton from "./shared/CameraNotificationSkeleton";
 import { CameraNotiPhamVi } from "../../services/notifications/cameraNotiApi";
 import { C, useAppColors } from "../../utils/helpers/colors";
 import { useCameraNotiTamDung } from "./shared/useCameraNotiTamDung";
@@ -175,11 +176,7 @@ export default function CameraNotificationScreen() {
   }
 
   if (dangTai && !lenhChinh) {
-    return (
-      <View style={[styles.root, styles.center, { backgroundColor: colors.bg }]}>
-        <ActivityIndicator color={C.red} />
-      </View>
-    );
+    return <CameraNotificationSkeleton />;
   }
 
   const phamViLabel = lenhChinh?.iD_Camera_MoTa
@@ -355,7 +352,6 @@ export default function CameraNotificationScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  center: { alignItems: "center", justifyContent: "center" },
   content: { padding: 16, paddingBottom: 32 },
   sectionTitle: {
     fontSize: 12,

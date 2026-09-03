@@ -4,7 +4,8 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 
 import SearchBar from "../../../components/ui/SearchBar";
 import { removeVietnameseTones } from "../../../utils/Helper";
-import IsLoading from "../../../components/ui/IconLoading";
+import RecordListSkeleton from "../../../components/list/RecordListSkeleton";
+import { shouldShowListSkeleton } from "../../../components/ui/shouldShowListSkeleton";
 import EmptyState from "../../../components/ui/EmptyState";
 import { AppColors, useAppColors, useStyles } from "../../../utils/helpers/colors";
 
@@ -72,7 +73,15 @@ export default function NoiDiaPickerList<T>({
     return rows.filter((row) => row.searchKey.includes(keyword));
   }, [rows, searchText]);
 
-  if (isLoading) return <IsLoading size="large" color={c.red} />;
+  if (
+    shouldShowListSkeleton({
+      isFetching: Boolean(isLoading),
+      isEmpty: rows.length === 0,
+    })
+  )
+    return (
+      <RecordListSkeleton hasSearchBar variant="row" lines={2} trailing="chevron" />
+    );
 
   return (
     <View style={styles.root}>
