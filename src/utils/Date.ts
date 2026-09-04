@@ -1,6 +1,4 @@
 import { Alert } from "react-native";
-import { TypeProperty } from "./Enum";
-import type { Field } from "../types";
 
 // Convert "dd-MM-yyyy" → "dd/MM/yyyy"
 export const formatToSlash = (str: string) => str.replace(/-/g, "/");
@@ -132,29 +130,6 @@ export const normalizeDateFromBE = (raw: any) => {
 
   // dd-MM-yyyy → giữ nguyên
   if (/^\d{2}-\d{2}-\d{4}$/.test(s)) return s;
-
-  return "";
-};
-
-// Lấy giá trị mặc định Date Now cho field
-export const getDefaultValueForField = (f: Field) => {
-  // ===== DATE =====
-  if (f.typeProperty === TypeProperty.Date && f.defaultDateNow) {
-    const d = new Date();
-
-    // dd-MM-yyyy
-    return d.toLocaleDateString("vi-VN").replaceAll("/", "-");
-  }
-
-  // ===== TIME =====
-  if (f.typeProperty === TypeProperty.Time && f.defaultTimeNow) {
-    const d = new Date();
-
-    const h = String(d.getHours()).padStart(2, "0");
-    const m = String(d.getMinutes()).padStart(2, "0");
-
-    return `${h}:${m}`; // ✅ 16:05
-  }
 
   return "";
 };

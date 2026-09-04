@@ -3,6 +3,7 @@ import { Alert } from "react-native";
 import type { Field } from "../../types/model.d";
 import { TypeProperty } from "../../utils/Enum";
 import { log } from "../../utils/Logger";
+import { getParentGateMessage } from "../../utils/cascade/parentGate";
 import {
   buildReferenceFetchParams,
   getCurrentReferenceIds,
@@ -11,6 +12,8 @@ import {
 
 type Props = {
   formData: Record<string, any>;
+  /** Chỉ để lấy nhãn field cha cho câu nhắc "Vui lòng chọn ... trước". */
+  fieldActive?: Field[];
   setActiveEnumField: (f: Field) => void;
   setRefKeyword: (v: string) => void;
   setRefPage: (v: number) => void;
@@ -30,6 +33,7 @@ type LoadReferenceModalOptions = {
 
 export const useOpenReferenceModal = ({
   formData,
+  fieldActive,
   setActiveEnumField,
   setRefKeyword,
   setRefPage,
@@ -86,19 +90,24 @@ export const useOpenReferenceModal = ({
           append,
           currentIds: currentIds ?? getCurrentReferenceIds(formData, f.name),
         }),
-        requireAllParents: true,
-        onMissingParents: () => {
+        /* Ô chọn thiếu cấp cha đã bị làm xám không bấm được (xem `parentGate`
+           trong RenderInputByType), Alert này là lớp phòng thủ cho trường hợp
+           form data đổi ngay lúc chạm. */
+        alertOnMissingParents: true,
+        onMissingParents: (gate) => {
           log("[useOpenReferenceModal] missing parent fields", {
             fieldName: f.name,
             typeProperty: f.typeProperty,
             enumName: f.enumName,
             referenceName: f.referenceName,
             parentsFields: f.parentsFields,
+            missingFields: gate.missingFields,
             currentValue: formData[f.name],
           });
           Alert.alert(
             "Thông báo",
-            "Vui lòng chọn đầy đủ thông tin cấp trên trước!",
+            getParentGateMessage(gate, fieldActive) ||
+              "Vui lòng chọn đầy đủ thông tin cấp trên trước!",
           );
         },
       });
@@ -129,7 +138,13 @@ export const useOpenReferenceModal = ({
 
       return didLoad !== false;
     },
-    [formData, pageSize, setReferenceData, setReferenceErrorMessage],
+    [
+      fieldActive,
+      formData,
+      pageSize,
+      setReferenceData,
+      setReferenceErrorMessage,
+    ],
   );
 
   const openReferenceModal = useCallback(

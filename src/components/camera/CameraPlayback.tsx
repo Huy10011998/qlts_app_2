@@ -13,10 +13,12 @@ import {
   useWindowDimensions,
   View,
   type GestureResponderEvent,
+  type LayoutChangeEvent,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from "react-native";
 import Video, { type VideoRef } from "react-native-video";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import WebView from "react-native-webview";
 import LinearGradient from "react-native-linear-gradient";
 import {
@@ -169,6 +171,15 @@ const FULLSCREEN_CONTROLS_LIFT = 50;
 const TIMELINE_SCALE_STEP = 0.25;
 const TIMELINE_SCALE_MIN = 0.5;
 const TIMELINE_SCALE_MAX = 2;
+/**
+ * Phóng to khung hình bằng hai ngón khi xem toàn màn hình. Cùng dải với pinch
+ * của bản live chạy trong WebView (cameraStreamHtml), chỉ hạ trần xuống 4 vì
+ * bản ghi đã nén sẵn, quá 4 lần là chỉ còn thấy khối màu.
+ */
+const VIDEO_MIN_SCALE = 1;
+const VIDEO_MAX_SCALE = 4;
+/** Nhả tay mà gần như không phóng nữa thì tự bật về vừa khung. */
+const VIDEO_RESET_SCALE_THRESHOLD = 1.05;
 /**
  * Camera chết/mất mạng thì onError bắn liên tục. Giãn dần thời gian thử lại để
  * không remount player mỗi 2s vô hạn (tốn pin, tốn data), và sau vài lần liên
@@ -749,6 +760,165 @@ const CameraPlayback: React.FC = () => {
     setControlsNonce((prev) => prev + 1);
   }, []);
 
+  /* ── Phóng khung hình bằng hai ngón ──────────────────────────────── */
+  // Animated.Value không đọc được đồng bộ nên phải giữ số song song trong ref:
+  // mỗi nhịp cử chỉ đều cần biết đang phóng bao nhiêu để kẹp biên.
+  const videoScaleAnim = React.useRef(new Animated.Value(1)).current;
+  const videoTranslateXAnim = React.useRef(new Animated.Value(0)).current;
+  const videoTranslateYAnim = React.useRef(new Animated.Value(0)).current;
+  const videoScaleRef = React.useRef(1);
+  const videoTranslateRef = React.useRef({ x: 0, y: 0 });
+  const pinchStartScaleRef = React.useRef(1);
+  const panStartTranslateRef = React.useRef({ x: 0, y: 0 });
+  // Kích thước thật của khung hình, đo bằng onLayout — cần để giới hạn kéo sao
+  // cho mép video không bị lôi vào trong khung.
+  const playerFrameSizeRef = React.useRef({ width: 0, height: 0 });
+  // Chỉ dùng để bật/tắt cử chỉ kéo. Chưa phóng mà vẫn bật kéo một ngón thì
+  // RNGH giành mất chạm của lớp bật/tắt thanh điều khiển nằm trên.
+  const [isVideoZoomed, setIsVideoZoomed] = React.useState(false);
+
+  // Phóng n lần thì phần thừa mỗi bên là (n-1)/2 của cạnh; kéo quá đó là để lộ
+  // nền đen.
+  const clampVideoTranslate = React.useCallback(
+    (x: number, y: number, scale: number) => {
+      const { width, height } = playerFrameSizeRef.current;
+      const maxX = Math.max(0, ((scale - 1) * width) / 2);
+      const maxY = Math.max(0, ((scale - 1) * height) / 2);
+      return {
+        x: Math.min(maxX, Math.max(-maxX, x)),
+        y: Math.min(maxY, Math.max(-maxY, y)),
+      };
+    },
+    [],
+  );
+
+  const applyVideoTransform = React.useCallback(
+    (scale: number, x: number, y: number) => {
+      const clamped = clampVideoTranslate(x, y, scale);
+      videoScaleRef.current = scale;
+      videoTranslateRef.current = clamped;
+      videoScaleAnim.setValue(scale);
+      videoTranslateXAnim.setValue(clamped.x);
+      videoTranslateYAnim.setValue(clamped.y);
+      // Chỉ setState khi cờ thật sự đổi — pinch bắn hàng chục nhịp mỗi giây.
+      const nextZoomed = scale > 1;
+      setIsVideoZoomed((prev) => (prev === nextZoomed ? prev : nextZoomed));
+    },
+    [
+      clampVideoTranslate,
+      videoScaleAnim,
+      videoTranslateXAnim,
+      videoTranslateYAnim,
+    ],
+  );
+
+  // Bật mềm về vừa khung. Gọi cả khi thoát toàn màn hình và khi đổi phiên: giữ
+  // nguyên mức phóng qua các mốc đó sẽ thấy khung hình lệch mà không hiểu vì sao.
+  const resetVideoZoom = React.useCallback(
+    (animated = true) => {
+      videoScaleRef.current = 1;
+      videoTranslateRef.current = { x: 0, y: 0 };
+      setIsVideoZoomed(false);
+
+      if (!animated) {
+        videoScaleAnim.setValue(1);
+        videoTranslateXAnim.setValue(0);
+        videoTranslateYAnim.setValue(0);
+        return;
+      }
+
+      Animated.parallel([
+        Animated.spring(videoScaleAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          tension: 100,
+          friction: 10,
+        }),
+        Animated.spring(videoTranslateXAnim, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 100,
+          friction: 10,
+        }),
+        Animated.spring(videoTranslateYAnim, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 100,
+          friction: 10,
+        }),
+      ]).start();
+    },
+    [videoScaleAnim, videoTranslateXAnim, videoTranslateYAnim],
+  );
+
+  const handlePlayerFrameLayout = React.useCallback(
+    (e: LayoutChangeEvent) => {
+      const { width, height } = e.nativeEvent.layout;
+      playerFrameSizeRef.current = { width, height };
+      // Khung đổi kích thước (xoay máy, vào/ra toàn màn hình) thì biên kéo cũ
+      // không còn đúng — kẹp lại ngay theo khung mới.
+      if (videoScaleRef.current > 1) {
+        const { x, y } = videoTranslateRef.current;
+        applyVideoTransform(videoScaleRef.current, x, y);
+      }
+    },
+    [applyVideoTransform],
+  );
+
+  // Chỉ mở khi toàn màn hình VÀ đang phát bản ghi: ở dọc thì khung hình nằm
+  // chung màn với timeline vốn đã bắt cử chỉ kéo, còn nhánh trực tiếp trên iOS
+  // là WebView đã tự pinch trong HTML.
+  const isVideoZoomEnabled = isFullscreen && playbackSession !== null;
+
+  // runOnJS bắt buộc: dự án không cài reanimated nên callback phải chạy ở luồng
+  // JS, giống các cử chỉ đang dùng ở CameraList.
+  const videoPinchGesture = React.useMemo(
+    () =>
+      Gesture.Pinch()
+        .runOnJS(true)
+        .enabled(isVideoZoomEnabled)
+        .onStart(() => {
+          pinchStartScaleRef.current = videoScaleRef.current;
+        })
+        .onUpdate((e) => {
+          const nextScale = Math.min(
+            VIDEO_MAX_SCALE,
+            Math.max(VIDEO_MIN_SCALE, pinchStartScaleRef.current * e.scale),
+          );
+          const { x, y } = videoTranslateRef.current;
+          applyVideoTransform(nextScale, x, y);
+        })
+        .onEnd(() => {
+          if (videoScaleRef.current < VIDEO_RESET_SCALE_THRESHOLD)
+            resetVideoZoom();
+        }),
+    [applyVideoTransform, isVideoZoomEnabled, resetVideoZoom],
+  );
+
+  const videoPanGesture = React.useMemo(
+    () =>
+      Gesture.Pan()
+        .runOnJS(true)
+        .enabled(isVideoZoomEnabled && isVideoZoomed)
+        .onStart(() => {
+          panStartTranslateRef.current = videoTranslateRef.current;
+        })
+        .onUpdate((e) => {
+          if (videoScaleRef.current <= 1) return;
+          applyVideoTransform(
+            videoScaleRef.current,
+            panStartTranslateRef.current.x + e.translationX,
+            panStartTranslateRef.current.y + e.translationY,
+          );
+        }),
+    [applyVideoTransform, isVideoZoomEnabled, isVideoZoomed],
+  );
+
+  const videoZoomGesture = React.useMemo(
+    () => Gesture.Simultaneous(videoPinchGesture, videoPanGesture),
+    [videoPanGesture, videoPinchGesture],
+  );
+
   useFocusEffect(
     React.useCallback(
       () => () => {
@@ -767,8 +937,9 @@ const CameraPlayback: React.FC = () => {
       // Phải bỏ luôn cờ fullscreen: rời màn hình khi đang toàn màn hình rồi
       // quay lại sẽ có layout fullscreen trong khi máy đã về dọc.
       setIsFullscreen(false);
+      resetVideoZoom(false);
     };
-  }, [isFocused]);
+  }, [isFocused, resetVideoZoom]);
 
   // Android: nút back cứng phải thoát toàn màn hình trước, giống fullscreen của
   // CameraListGrid (nó nằm trong Modal nên có onRequestClose). Ở đây fullscreen
@@ -781,24 +952,27 @@ const CameraPlayback: React.FC = () => {
       () => {
         Orientation.lockToPortrait();
         setIsFullscreen(false);
+        resetVideoZoom(false);
         return true;
       },
     );
 
     return () => subscription.remove();
-  }, [isFocused, isFullscreen]);
+  }, [isFocused, isFullscreen, resetVideoZoom]);
 
   const toggleFullscreen = React.useCallback(() => {
     setIsFullscreen((prev) => {
       if (prev) {
         Orientation.lockToPortrait();
+        // Về dọc mà còn giữ mức phóng thì khung hình lệch hẳn so với lúc rời đi.
+        resetVideoZoom(false);
         return false;
       }
 
       Orientation.lockToLandscape();
       return true;
     });
-  }, []);
+  }, [resetVideoZoom]);
 
   /**
    * Phiên hiện tại đã stream từ mốc mở phiên tới hết ngày, nên phần lớn thao tác
@@ -1209,7 +1383,9 @@ const CameraPlayback: React.FC = () => {
   const handleBackToLive = React.useCallback(() => {
     returnToLiveView();
     setPlaybackError(null);
-  }, [returnToLiveView]);
+    // Đổi nguồn hình: mức phóng của bản ghi cũ không còn ý nghĩa.
+    resetVideoZoom(false);
+  }, [resetVideoZoom, returnToLiveView]);
 
   const handleTogglePause = React.useCallback(() => {
     // Đã phát hết bản ghi: bấm play là phát lại clip từ đầu.
@@ -1734,547 +1910,566 @@ const CameraPlayback: React.FC = () => {
         {/* Toàn màn hình thì để flex chiếm hết như fsVideoArea của
             CameraListGrid, thay vì gán chiều cao cứng theo screenDims — tránh
             lệch khung trong lúc xoay máy. */}
-        <View
-          style={[
-            styles.playerFrame,
-            isFullscreen ? styles.playerFrameFill : { height: playerHeight },
-          ]}
-        >
-          {!cameraToken ? null : playbackSession ? (
-            <Video
-              // Key CỐ ĐỊNH, không gắn sessionId: đổi phiên chỉ đổi prop source
-              // nên native player được giữ nguyên. Trước đây key theo sessionId
-              // làm mỗi lần đổi mốc là tháo/dựng lại một AVPlayer — vừa nháy đen
-              // vừa là chỗ dễ crash khi tháo player đang nạp dở.
-              key="playback"
-              ref={playbackVideoRef}
-              source={{ uri: resolvePlaybackHlsUrl(playbackSession.hlsUrl) }}
-              style={StyleSheet.absoluteFill}
-              resizeMode="contain"
-              muted
-              paused={!isScreenVisible || isPaused || isConnecting}
-              rate={appliedRate}
-              repeat={false}
-              controls={false}
-              progressUpdateInterval={PLAYBACK_PROGRESS_INTERVAL_MS}
-              disableFocus
-              useTextureView
-              hideShutterView
-              // false có chủ ý: react-native-video chỉ dùng
-              // playImmediately(atRate:) ở nhánh này (RCTVideo.setPaused), tức
-              // tốc độ tua được áp nguyên tử cùng lệnh play. Nhánh true là
-              // play() rồi mới gán rate, và AVPlayer bỏ qua lần gán đó khi vừa
-              // seek/vừa gom buffer — chính là lỗi chọn x2 không ăn, phải chọn
-              // x1 rồi x2 lại mới được.
-              automaticallyWaitsToMinimizeStalling={false}
-              preferredForwardBufferDuration={30}
-              bufferConfig={{
-                minBufferMs: 10000,
-                maxBufferMs: 120000,
-                bufferForPlaybackMs: 2000,
-                bufferForPlaybackAfterRebufferMs: 5000,
-                backBufferDurationMs: 90000,
-              }}
-              onLoad={() => {
-                if (sessionRef.current?.sessionId !== playbackSession.sessionId)
-                  return;
-                setIsVideoReady(true);
-                setIsConnecting(false);
-              }}
-              onReadyForDisplay={() => {
-                if (sessionRef.current?.sessionId === playbackSession.sessionId)
-                  setIsVideoReady(true);
-              }}
-              onProgress={({ currentTime, seekableDuration }) => {
-                if (sessionRef.current?.sessionId !== playbackSession.sessionId)
-                  return;
-                currentPositionRef.current = currentTime;
-                // Vùng đã seek được của phiên — dùng để quyết định tua bằng
-                // seek trong phiên hay phải mở phiên mới.
-                if (Number.isFinite(seekableDuration))
-                  seekableDurationRef.current = seekableDuration;
-                // Phiên mới bắt đầu chạy: áp tốc độ đã chọn. Phiên mount với
-                // rate = tốc độ đó rồi, nhưng lệnh lúc mount hay bị AVPlayer bỏ
-                // qua, nên áp lại bằng đường hai bước cho chắc.
-                if (!hasPlaybackProgressRef.current) {
-                  hasPlaybackProgressRef.current = true;
-                  if (speed !== 1) applyPlaybackRate(speed);
-                }
-                // Đang kéo thì ngón tay là chủ: không đẩy núm về mốc đang phát,
-                // và cũng không setState để lúc kéo không có render nào chen
-                // vào giữa các frame.
-                if (isProgressScrubbingRef.current) return;
-                setPositionSec(currentTime);
-
-                // Phiên của "hôm nay" chỉ chạy tới thời điểm mở phiên. Playhead
-                // tới sát mép đó tức đã bắt kịp hiện tại — sang xem trực tiếp,
-                // thay vì phát tới hết rồi bị gateway đóng phiên và ăn onError.
-                const sessionEndMs = sessionEndMsRef.current;
-                const playbackStartMs = playbackStartMsRef.current;
-                if (
-                  isSelectedToday &&
-                  sessionEndMs !== null &&
-                  playbackStartMs !== null &&
-                  // Đã phát được một đoạn: chọn đúng mốc sát hiện tại thì để nó
-                  // chạy chứ đừng đẩy về live ngay khi vừa bấm.
-                  currentTime >= PLAYBACK_CAUGHT_UP_MIN_PLAYED_SEC &&
-                  sessionEndMs - (playbackStartMs + currentTime * 1000) <=
-                    PLAYBACK_CAUGHT_UP_LEAD_SEC * 1000
-                ) {
-                  handleBackToLive();
-                  return;
-                }
-
-                // Đo tốc độ thật = thời gian media chạy được / thời gian thực.
-                // Không có API đọc rate, và onPlaybackRateChange im lặng đúng
-                // lúc lệnh bị nuốt, nên đây là cách duy nhất biết được sự thật.
-                if (isPaused) {
-                  rateSampleRef.current = null;
-                } else {
-                  const now = Date.now();
-                  const sample = rateSampleRef.current;
-                  if (!sample) {
-                    rateSampleRef.current = { mediaSec: currentTime, atMs: now };
-                  } else if (
-                    now - sample.atMs >=
-                    PLAYBACK_RATE_CHECK_WINDOW_MS
-                  ) {
-                    const effective =
-                      (currentTime - sample.mediaSec) /
-                      ((now - sample.atMs) / 1000);
-                    rateSampleRef.current = { mediaSec: currentTime, atMs: now };
-
-                    if (
-                      Math.abs(effective - speed) <=
-                      speed * PLAYBACK_RATE_TOLERANCE
-                    ) {
-                      // Đúng tốc độ — mở lại hạn mức cho lần stall sau.
-                      rateRetryCountRef.current = 0;
-                    } else if (
-                      // Chạy trơn nhưng ở 1X: lệnh rate đã bị nuốt, ép lại.
-                      Math.abs(effective - 1) <= PLAYBACK_RATE_TOLERANCE &&
-                      rateRetryCountRef.current < PLAYBACK_RATE_MAX_RETRY &&
-                      now - lastRateApplyAtRef.current >=
-                        PLAYBACK_RATE_REAPPLY_THROTTLE_MS
-                    ) {
-                      rateRetryCountRef.current += 1;
-                      applyPlaybackRate(speed);
+        {/* Cử chỉ phóng phải bắt ở ĐÚNG khung ngoài này, không phải ở lớp bọc
+            <Video>: lớp chạm bật/tắt nút là một Pressable phủ kín và nằm TRÊN
+            video, nên chạm luôn rơi vào nó. Bộ nhận cử chỉ chỉ nhận được chạm
+            khi nó nằm ở view cha của chỗ bị chạm. */}
+        <GestureDetector gesture={videoZoomGesture}>
+          <View
+            style={[
+              styles.playerFrame,
+              isFullscreen ? styles.playerFrameFill : { height: playerHeight },
+            ]}
+            onLayout={handlePlayerFrameLayout}
+          >
+            {!cameraToken ? null : playbackSession ? (
+              <Animated.View
+                style={[
+                  StyleSheet.absoluteFill,
+                  {
+                    transform: [
+                      { scale: videoScaleAnim },
+                      { translateX: videoTranslateXAnim },
+                      { translateY: videoTranslateYAnim },
+                    ],
+                  },
+                ]}
+              >
+                <Video
+                  // Key CỐ ĐỊNH, không gắn sessionId: đổi phiên chỉ đổi prop source
+                  // nên native player được giữ nguyên. Trước đây key theo sessionId
+                  // làm mỗi lần đổi mốc là tháo/dựng lại một AVPlayer — vừa nháy đen
+                  // vừa là chỗ dễ crash khi tháo player đang nạp dở.
+                  key="playback"
+                  ref={playbackVideoRef}
+                  source={{ uri: resolvePlaybackHlsUrl(playbackSession.hlsUrl) }}
+                  style={StyleSheet.absoluteFill}
+                  resizeMode="contain"
+                  muted
+                  paused={!isScreenVisible || isPaused || isConnecting}
+                  rate={appliedRate}
+                  repeat={false}
+                  controls={false}
+                  progressUpdateInterval={PLAYBACK_PROGRESS_INTERVAL_MS}
+                  disableFocus
+                  useTextureView
+                  hideShutterView
+                  // false có chủ ý: react-native-video chỉ dùng
+                  // playImmediately(atRate:) ở nhánh này (RCTVideo.setPaused), tức
+                  // tốc độ tua được áp nguyên tử cùng lệnh play. Nhánh true là
+                  // play() rồi mới gán rate, và AVPlayer bỏ qua lần gán đó khi vừa
+                  // seek/vừa gom buffer — chính là lỗi chọn x2 không ăn, phải chọn
+                  // x1 rồi x2 lại mới được.
+                  automaticallyWaitsToMinimizeStalling={false}
+                  preferredForwardBufferDuration={30}
+                  bufferConfig={{
+                    minBufferMs: 10000,
+                    maxBufferMs: 120000,
+                    bufferForPlaybackMs: 2000,
+                    bufferForPlaybackAfterRebufferMs: 5000,
+                    backBufferDurationMs: 90000,
+                  }}
+                  onLoad={() => {
+                    if (sessionRef.current?.sessionId !== playbackSession.sessionId)
+                      return;
+                    setIsVideoReady(true);
+                    setIsConnecting(false);
+                  }}
+                  onReadyForDisplay={() => {
+                    if (sessionRef.current?.sessionId === playbackSession.sessionId)
+                      setIsVideoReady(true);
+                  }}
+                  onProgress={({ currentTime, seekableDuration }) => {
+                    if (sessionRef.current?.sessionId !== playbackSession.sessionId)
+                      return;
+                    currentPositionRef.current = currentTime;
+                    // Vùng đã seek được của phiên — dùng để quyết định tua bằng
+                    // seek trong phiên hay phải mở phiên mới.
+                    if (Number.isFinite(seekableDuration))
+                      seekableDurationRef.current = seekableDuration;
+                    // Phiên mới bắt đầu chạy: áp tốc độ đã chọn. Phiên mount với
+                    // rate = tốc độ đó rồi, nhưng lệnh lúc mount hay bị AVPlayer bỏ
+                    // qua, nên áp lại bằng đường hai bước cho chắc.
+                    if (!hasPlaybackProgressRef.current) {
+                      hasPlaybackProgressRef.current = true;
+                      if (speed !== 1) applyPlaybackRate(speed);
                     }
-                    // Còn lại là chạy chậm hơn cả 1X, tức đói buffer (gateway
-                    // cấp dữ liệu theo thời gian thực) — ép rate không giải
-                    // quyết được, để yên cho player tự gom.
-                  }
-                }
+                    // Đang kéo thì ngón tay là chủ: không đẩy núm về mốc đang phát,
+                    // và cũng không setState để lúc kéo không có render nào chen
+                    // vào giữa các frame.
+                    if (isProgressScrubbingRef.current) return;
+                    setPositionSec(currentTime);
 
-                const clip = activeClipRef.current;
-                const startMs = playbackStartMsRef.current;
-                if (!clip || startMs === null) return;
-                const elapsedSec =
-                  (startMs + currentTime * 1000 - clip.startMs) / 1000;
-                progressAnim.setValue(
-                  Math.min(1, Math.max(0, elapsedSec / clip.durationSec)),
-                );
-              }}
-              onEnd={() => {
-                if (sessionRef.current?.sessionId !== playbackSession.sessionId)
-                  return;
+                    // Phiên của "hôm nay" chỉ chạy tới thời điểm mở phiên. Playhead
+                    // tới sát mép đó tức đã bắt kịp hiện tại — sang xem trực tiếp,
+                    // thay vì phát tới hết rồi bị gateway đóng phiên và ăn onError.
+                    const sessionEndMs = sessionEndMsRef.current;
+                    const playbackStartMs = playbackStartMsRef.current;
+                    if (
+                      isSelectedToday &&
+                      sessionEndMs !== null &&
+                      playbackStartMs !== null &&
+                      // Đã phát được một đoạn: chọn đúng mốc sát hiện tại thì để nó
+                      // chạy chứ đừng đẩy về live ngay khi vừa bấm.
+                      currentTime >= PLAYBACK_CAUGHT_UP_MIN_PLAYED_SEC &&
+                      sessionEndMs - (playbackStartMs + currentTime * 1000) <=
+                        PLAYBACK_CAUGHT_UP_LEAD_SEC * 1000
+                    ) {
+                      handleBackToLive();
+                      return;
+                    }
 
-                // Phiên chạy tới hết ngày nên onEnd chỉ nổ khi đầu ghi thật sự
-                // dừng ở mép một bản ghi. Còn bản ghi sau thì mở phiên mới từ
-                // đó, người dùng không phải bấm gì; hết hẳn mới dừng và cho
-                // phát lại. Không tự nhảy khi màn hình đang ẩn hoặc đang tạm
-                // dừng để không âm thầm tải tiếp.
-                const startMs = playbackStartMsRef.current;
-                const next =
-                  startMs === null || !isScreenVisible || isPaused
-                    ? null
-                    : findNextClipAfterMs(
-                        startMs + currentPositionRef.current * 1000,
-                      );
+                    // Đo tốc độ thật = thời gian media chạy được / thời gian thực.
+                    // Không có API đọc rate, và onPlaybackRateChange im lặng đúng
+                    // lúc lệnh bị nuốt, nên đây là cách duy nhất biết được sự thật.
+                    if (isPaused) {
+                      rateSampleRef.current = null;
+                    } else {
+                      const now = Date.now();
+                      const sample = rateSampleRef.current;
+                      if (!sample) {
+                        rateSampleRef.current = { mediaSec: currentTime, atMs: now };
+                      } else if (
+                        now - sample.atMs >=
+                        PLAYBACK_RATE_CHECK_WINDOW_MS
+                      ) {
+                        const effective =
+                          (currentTime - sample.mediaSec) /
+                          ((now - sample.atMs) / 1000);
+                        rateSampleRef.current = { mediaSec: currentTime, atMs: now };
 
-                if (next) {
-                  setActiveGroupId(next.group.id);
-                  setActiveClipId(next.clip.id);
-                  startFrom(next.clip.startMs).catch(() => {});
-                  return;
-                }
+                        if (
+                          Math.abs(effective - speed) <=
+                          speed * PLAYBACK_RATE_TOLERANCE
+                        ) {
+                          // Đúng tốc độ — mở lại hạn mức cho lần stall sau.
+                          rateRetryCountRef.current = 0;
+                        } else if (
+                          // Chạy trơn nhưng ở 1X: lệnh rate đã bị nuốt, ép lại.
+                          Math.abs(effective - 1) <= PLAYBACK_RATE_TOLERANCE &&
+                          rateRetryCountRef.current < PLAYBACK_RATE_MAX_RETRY &&
+                          now - lastRateApplyAtRef.current >=
+                            PLAYBACK_RATE_REAPPLY_THROTTLE_MS
+                        ) {
+                          rateRetryCountRef.current += 1;
+                          applyPlaybackRate(speed);
+                        }
+                        // Còn lại là chạy chậm hơn cả 1X, tức đói buffer (gateway
+                        // cấp dữ liệu theo thời gian thực) — ép rate không giải
+                        // quyết được, để yên cho player tự gom.
+                      }
+                    }
 
-                setIsPaused(true);
-                setIsClipEnded(true);
-              }}
-              onError={(error) => {
-                if (sessionRef.current?.sessionId !== playbackSession.sessionId)
-                  return;
-                warn("Playback video error:", error);
+                    const clip = activeClipRef.current;
+                    const startMs = playbackStartMsRef.current;
+                    if (!clip || startMs === null) return;
+                    const elapsedSec =
+                      (startMs + currentTime * 1000 - clip.startMs) / 1000;
+                    progressAnim.setValue(
+                      Math.min(1, Math.max(0, elapsedSec / clip.durationSec)),
+                    );
+                  }}
+                  onEnd={() => {
+                    if (sessionRef.current?.sessionId !== playbackSession.sessionId)
+                      return;
 
-                // Lỗi cách lần trước đủ lâu thì coi là sự cố mới, mở lại hạn
-                // mức thử. Nhờ vậy không bao giờ có vòng lặp load → lỗi → thử
-                // lại vô hạn, mà cũng không mất khả năng phục hồi về sau.
-                const errorAt = Date.now();
-                if (
-                  errorAt - lastPlaybackErrorAtRef.current >
-                  PLAYBACK_ERROR_RETRY_RESET_MS
-                )
-                  playbackRetryCountRef.current = 0;
-                lastPlaybackErrorAtRef.current = errorAt;
+                    // Phiên chạy tới hết ngày nên onEnd chỉ nổ khi đầu ghi thật sự
+                    // dừng ở mép một bản ghi. Còn bản ghi sau thì mở phiên mới từ
+                    // đó, người dùng không phải bấm gì; hết hẳn mới dừng và cho
+                    // phát lại. Không tự nhảy khi màn hình đang ẩn hoặc đang tạm
+                    // dừng để không âm thầm tải tiếp.
+                    const startMs = playbackStartMsRef.current;
+                    const next =
+                      startMs === null || !isScreenVisible || isPaused
+                        ? null
+                        : findNextClipAfterMs(
+                            startMs + currentPositionRef.current * 1000,
+                          );
 
-                const startMs = playbackStartMsRef.current;
-                const resumeMs =
-                  startMs === null
-                    ? null
-                    : startMs + currentPositionRef.current * 1000;
+                    if (next) {
+                      setActiveGroupId(next.group.id);
+                      setActiveClipId(next.clip.id);
+                      startFrom(next.clip.startMs).catch(() => {});
+                      return;
+                    }
 
-                // Lỗi giữa phiên thường là phiên bị server đóng hoặc mạng chớp,
-                // không phải bản ghi hỏng. Tự mở lại phiên từ đúng vị trí đang
-                // xem trước đã — khung hình giữ frame cuối kèm spinner nên
-                // người dùng chỉ thấy một nhịp chờ, không bị đẩy về trực tiếp.
-                if (
-                  resumeMs !== null &&
-                  isScreenVisible &&
-                  playbackRetryCountRef.current < PLAYBACK_ERROR_MAX_RETRY
-                ) {
-                  const attempt = (playbackRetryCountRef.current += 1);
-                  stopCurrentSession(false);
-                  setIsConnecting(true);
-                  if (playbackRetryTimerRef.current)
-                    clearTimeout(playbackRetryTimerRef.current);
-                  playbackRetryTimerRef.current = setTimeout(() => {
-                    playbackRetryTimerRef.current = null;
-                    startFrom(resumeMs).catch(() => {});
-                  }, PLAYBACK_ERROR_RETRY_BASE_MS * attempt);
-                  return;
-                }
+                    setIsPaused(true);
+                    setIsClipEnded(true);
+                  }}
+                  onError={(error) => {
+                    if (sessionRef.current?.sessionId !== playbackSession.sessionId)
+                      return;
+                    warn("Playback video error:", error);
 
-                // Thử hết vẫn không được: về xem trực tiếp kèm thông báo. Ý
-                // định phát lại vẫn nằm trong reconnectIntentRef cho trường hợp
-                // có mạng trở lại.
-                if (resumeMs !== null) {
-                  reconnectIntentRef.current = {
-                    mode: "playback",
-                    fromMs: resumeMs,
-                  };
-                }
-                // Bỏ cuộc: đưa cả màn hình về trực tiếp cho khớp với khung
-                // hình — bỏ bản ghi đang chọn, cuộn timeline về mốc mới nhất
-                // nên nút "Xem trực tiếp" tự ẩn. Giữ lại reconnect intent để
-                // khi có mạng lại thì phát tiếp đúng chỗ.
-                returnToLiveView({
-                  keepReconnectIntent: true,
-                  notice: "Không thể phát bản ghi.",
-                });
-              }}
-            />
+                    // Lỗi cách lần trước đủ lâu thì coi là sự cố mới, mở lại hạn
+                    // mức thử. Nhờ vậy không bao giờ có vòng lặp load → lỗi → thử
+                    // lại vô hạn, mà cũng không mất khả năng phục hồi về sau.
+                    const errorAt = Date.now();
+                    if (
+                      errorAt - lastPlaybackErrorAtRef.current >
+                      PLAYBACK_ERROR_RETRY_RESET_MS
+                    )
+                      playbackRetryCountRef.current = 0;
+                    lastPlaybackErrorAtRef.current = errorAt;
 
+                    const startMs = playbackStartMsRef.current;
+                    const resumeMs =
+                      startMs === null
+                        ? null
+                        : startMs + currentPositionRef.current * 1000;
+
+                    // Lỗi giữa phiên thường là phiên bị server đóng hoặc mạng chớp,
+                    // không phải bản ghi hỏng. Tự mở lại phiên từ đúng vị trí đang
+                    // xem trước đã — khung hình giữ frame cuối kèm spinner nên
+                    // người dùng chỉ thấy một nhịp chờ, không bị đẩy về trực tiếp.
+                    if (
+                      resumeMs !== null &&
+                      isScreenVisible &&
+                      playbackRetryCountRef.current < PLAYBACK_ERROR_MAX_RETRY
+                    ) {
+                      const attempt = (playbackRetryCountRef.current += 1);
+                      stopCurrentSession(false);
+                      setIsConnecting(true);
+                      if (playbackRetryTimerRef.current)
+                        clearTimeout(playbackRetryTimerRef.current);
+                      playbackRetryTimerRef.current = setTimeout(() => {
+                        playbackRetryTimerRef.current = null;
+                        startFrom(resumeMs).catch(() => {});
+                      }, PLAYBACK_ERROR_RETRY_BASE_MS * attempt);
+                      return;
+                    }
+
+                    // Thử hết vẫn không được: về xem trực tiếp kèm thông báo. Ý
+                    // định phát lại vẫn nằm trong reconnectIntentRef cho trường hợp
+                    // có mạng trở lại.
+                    if (resumeMs !== null) {
+                      reconnectIntentRef.current = {
+                        mode: "playback",
+                        fromMs: resumeMs,
+                      };
+                    }
+                    // Bỏ cuộc: đưa cả màn hình về trực tiếp cho khớp với khung
+                    // hình — bỏ bản ghi đang chọn, cuộn timeline về mốc mới nhất
+                    // nên nút "Xem trực tiếp" tự ẩn. Giữ lại reconnect intent để
+                    // khi có mạng lại thì phát tiếp đúng chỗ.
+                    returnToLiveView({
+                      keepReconnectIntent: true,
+                      notice: "Không thể phát bản ghi.",
+                    });
+                  }}
+                />
+              </Animated.View>
             ) : isPlaybackPending ? null : Platform.OS === "android" ? (
-            <Video
-              key={`live-${camera.iD_Camera}-${liveVideoKey}`}
-              source={{
-                uri: getCameraHlsUrl(camera.iD_Camera_Ma),
-                headers: { Authorization: `Bearer ${cameraToken}` },
-              }}
-              style={StyleSheet.absoluteFill}
-              resizeMode="contain"
-              muted
-              paused={!isScreenVisible || isPaused}
-              rate={1}
-              repeat
-              controls={false}
-              disableFocus
-              useTextureView
-              hideShutterView
-              bufferConfig={{
-                minBufferMs: 1000,
-                maxBufferMs: 3000,
-                bufferForPlaybackMs: 500,
-                bufferForPlaybackAfterRebufferMs: 1000,
-                backBufferDurationMs: 0,
-              }}
-              onLoad={() => {
-                lastLiveProgressAtRef.current = Date.now();
-                if (liveRetryTimerRef.current) {
-                  clearTimeout(liveRetryTimerRef.current);
-                  liveRetryTimerRef.current = null;
-                }
-              }}
-              onReadyForDisplay={() => {
-                lastLiveProgressAtRef.current = Date.now();
-                liveErrorCountRef.current = 0;
-                setIsVideoReady(true);
-                setPlaybackError(null);
-              }}
-              onProgress={() => {
-                lastLiveProgressAtRef.current = Date.now();
-              }}
-              onError={(error) => {
-                warn("Live video error:", error);
-                const attempt = (liveErrorCountRef.current += 1);
-                setIsVideoReady(false);
-                setPlaybackError(
-                  attempt >= ANDROID_LIVE_ERROR_NOTICE_AFTER
-                    ? "Không thể phát camera trực tiếp. Đang thử lại..."
-                    : null,
-                );
-
-                if (liveRetryTimerRef.current)
-                  clearTimeout(liveRetryTimerRef.current);
-                liveRetryTimerRef.current = setTimeout(() => {
-                  liveRetryTimerRef.current = null;
+              <Video
+                key={`live-${camera.iD_Camera}-${liveVideoKey}`}
+                source={{
+                  uri: getCameraHlsUrl(camera.iD_Camera_Ma),
+                  headers: { Authorization: `Bearer ${cameraToken}` },
+                }}
+                style={StyleSheet.absoluteFill}
+                resizeMode="contain"
+                muted
+                paused={!isScreenVisible || isPaused}
+                rate={1}
+                repeat
+                controls={false}
+                disableFocus
+                useTextureView
+                hideShutterView
+                bufferConfig={{
+                  minBufferMs: 1000,
+                  maxBufferMs: 3000,
+                  bufferForPlaybackMs: 500,
+                  bufferForPlaybackAfterRebufferMs: 1000,
+                  backBufferDurationMs: 0,
+                }}
+                onLoad={() => {
                   lastLiveProgressAtRef.current = Date.now();
-                  setLiveVideoKey((value) => value + 1);
-                }, Math.min(ANDROID_LIVE_RETRY_MAX_MS, ANDROID_LIVE_RETRY_BASE_MS * 2 ** (attempt - 1)));
-              }}
-            />
-          ) : (
-            <WebView
-              ref={liveWebViewRef}
-              key={`live-${camera.iD_Camera}-${cameraToken}`}
-              source={{
-                html: buildCameraFullscreenHTML(camera.iD_Camera_Ma),
-                baseUrl: GO2RTC_HOST,
-              }}
-              style={StyleSheet.absoluteFill}
-              javaScriptEnabled
-              domStorageEnabled
-              allowsInlineMediaPlayback
-              mediaPlaybackRequiresUserAction={false}
-              cacheEnabled={false}
-              mixedContentMode="always"
-              originWhitelist={["*"]}
-              allowFileAccess
-              allowUniversalAccessFromFileURLs
-              scrollEnabled={false}
-              scalesPageToFit={false}
-              onLoad={() => {
-                postCameraWebViewToken(liveWebViewRef.current, cameraToken);
-                startCameraWebView(liveWebViewRef.current);
-              }}
-              onMessage={(event) => {
-                const message = event.nativeEvent.data;
-                if (message === "ready") {
+                  if (liveRetryTimerRef.current) {
+                    clearTimeout(liveRetryTimerRef.current);
+                    liveRetryTimerRef.current = null;
+                  }
+                }}
+                onReadyForDisplay={() => {
+                  lastLiveProgressAtRef.current = Date.now();
+                  liveErrorCountRef.current = 0;
                   setIsVideoReady(true);
                   setPlaybackError(null);
-                  return;
-                }
-                if (message === "token_expired") {
-                  fetchCameraTokenRef.current?.(true);
-                  return;
-                }
-                if (message === "close_fullscreen" && isFullscreen) {
-                  toggleFullscreen();
-                }
-              }}
-            />
-          )}
+                }}
+                onProgress={() => {
+                  lastLiveProgressAtRef.current = Date.now();
+                }}
+                onError={(error) => {
+                  warn("Live video error:", error);
+                  const attempt = (liveErrorCountRef.current += 1);
+                  setIsVideoReady(false);
+                  setPlaybackError(
+                    attempt >= ANDROID_LIVE_ERROR_NOTICE_AFTER
+                      ? "Không thể phát camera trực tiếp. Đang thử lại..."
+                      : null,
+                  );
 
-          {!cameraToken || isConnecting || !isVideoReady ? (
-            // pointerEvents none: lớp loading phủ kín khung hình, nếu ăn chạm
-            // thì trong lúc chờ kết nối không bấm/hiện lại được nút nào.
-            <View style={styles.playerLoading} pointerEvents="none">
-              <IsLoading size="small" />
-            </View>
-          ) : null}
-
-          {/* Chạm vào khung hình để hiện/ẩn nút. Đặt dưới các nút (khai báo
-              trước) nên không chặn thao tác bấm nút. */}
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={handleTogglePlayerControls}
-          />
-
-          {areControlsVisible ? (
-            <>
-              {/* Vệt tối trên/dưới: nút trắng vẫn rõ khi cảnh camera sáng. */}
-              <LinearGradient
-                colors={["rgba(0,0,0,0.55)", "transparent"]}
-                style={styles.playerScrimTop}
-                pointerEvents="none"
+                  if (liveRetryTimerRef.current)
+                    clearTimeout(liveRetryTimerRef.current);
+                  liveRetryTimerRef.current = setTimeout(() => {
+                    liveRetryTimerRef.current = null;
+                    lastLiveProgressAtRef.current = Date.now();
+                    setLiveVideoKey((value) => value + 1);
+                  }, Math.min(ANDROID_LIVE_RETRY_MAX_MS, ANDROID_LIVE_RETRY_BASE_MS * 2 ** (attempt - 1)));
+                }}
               />
-              <LinearGradient
-                colors={["transparent", "rgba(0,0,0,0.6)"]}
-                style={styles.playerScrimBottom}
-                pointerEvents="none"
-              />
-            </>
-          ) : null}
-
-          {areControlsVisible ? (
-            <View
-              style={[
-                styles.playerTopBar,
-                isFullscreen && styles.playerTopBarFullscreen,
-              ]}
-            >
-              <TouchableOpacity
-                style={styles.playerBackBtn}
-                onPress={() =>
-                  isFullscreen ? toggleFullscreen() : navigation.goBack()
-                }
-                hitSlop={10}
-                accessibilityLabel={`Quay lại — ${cameraTitle}`}
-              >
-                <Ionicons name="chevron-back" size={22} color="#fff" />
-              </TouchableOpacity>
-
-              <View style={styles.playerTopSpacer} />
-
-              {/* Nhãn trạng thái: đang xem trực tiếp hay đang xem lại. Chỉ
-                  mốc giờ, không kèm tên camera — OSD của đầu ghi thường in
-                  chữ ở góc trên-trái khung hình. */}
-              <CameraStatusChip
-                isLive={!isSeeking}
-                label={
-                  isSeeking
-                    ? displayedTimelineSec === null
-                      ? "XEM LẠI"
-                      : formatClock(displayedTimelineSec)
-                    : "TRỰC TIẾP"
-                }
-              />
-            </View>
-          ) : null}
-
-          {areControlsVisible ? (
-            <View
-              style={[
-                styles.playerControls,
-                isFullscreen && styles.playerControlsFullscreen,
-                isFullscreen && {
-                  bottom: insets.bottom + FULLSCREEN_CONTROLS_LIFT,
-                },
-              ]}
-            >
-              <View style={styles.playerControlGroup}>
-                <TouchableOpacity
-                  style={styles.playerControlBtn}
-                  onPress={() => {
-                    keepControlsVisible();
-                    handleTogglePause();
-                  }}
-                  hitSlop={8}
-                  accessibilityLabel={
-                    isClipEnded ? "Phát lại" : isPaused ? "Phát" : "Tạm dừng"
+            ) : (
+              <WebView
+                ref={liveWebViewRef}
+                key={`live-${camera.iD_Camera}-${cameraToken}`}
+                source={{
+                  html: buildCameraFullscreenHTML(camera.iD_Camera_Ma),
+                  baseUrl: GO2RTC_HOST,
+                }}
+                style={StyleSheet.absoluteFill}
+                javaScriptEnabled
+                domStorageEnabled
+                allowsInlineMediaPlayback
+                mediaPlaybackRequiresUserAction={false}
+                cacheEnabled={false}
+                mixedContentMode="always"
+                originWhitelist={["*"]}
+                allowFileAccess
+                allowUniversalAccessFromFileURLs
+                scrollEnabled={false}
+                scalesPageToFit={false}
+                onLoad={() => {
+                  postCameraWebViewToken(liveWebViewRef.current, cameraToken);
+                  startCameraWebView(liveWebViewRef.current);
+                }}
+                onMessage={(event) => {
+                  const message = event.nativeEvent.data;
+                  if (message === "ready") {
+                    setIsVideoReady(true);
+                    setPlaybackError(null);
+                    return;
                   }
+                  if (message === "token_expired") {
+                    fetchCameraTokenRef.current?.(true);
+                    return;
+                  }
+                  if (message === "close_fullscreen" && isFullscreen) {
+                    toggleFullscreen();
+                  }
+                }}
+              />
+            )}
+
+            {!cameraToken || isConnecting || !isVideoReady ? (
+              // pointerEvents none: lớp loading phủ kín khung hình, nếu ăn chạm
+              // thì trong lúc chờ kết nối không bấm/hiện lại được nút nào.
+              <View style={styles.playerLoading} pointerEvents="none">
+                <IsLoading size="small" />
+              </View>
+            ) : null}
+
+            {/* Chạm vào khung hình để hiện/ẩn nút. Đặt dưới các nút (khai báo
+                trước) nên không chặn thao tác bấm nút. */}
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={handleTogglePlayerControls}
+            />
+
+            {areControlsVisible ? (
+              <>
+                {/* Vệt tối trên/dưới: nút trắng vẫn rõ khi cảnh camera sáng. */}
+                <LinearGradient
+                  colors={["rgba(0,0,0,0.55)", "transparent"]}
+                  style={styles.playerScrimTop}
+                  pointerEvents="none"
+                />
+                <LinearGradient
+                  colors={["transparent", "rgba(0,0,0,0.6)"]}
+                  style={styles.playerScrimBottom}
+                  pointerEvents="none"
+                />
+              </>
+            ) : null}
+
+            {areControlsVisible ? (
+              <View
+                style={[
+                  styles.playerTopBar,
+                  isFullscreen && styles.playerTopBarFullscreen,
+                ]}
+              >
+                <TouchableOpacity
+                  style={styles.playerBackBtn}
+                  onPress={() =>
+                    isFullscreen ? toggleFullscreen() : navigation.goBack()
+                  }
+                  hitSlop={10}
+                  accessibilityLabel={`Quay lại — ${cameraTitle}`}
                 >
-                  <Ionicons
-                    name={isClipEnded ? "refresh" : isPaused ? "play" : "pause"}
-                    size={22}
-                    color="#fff"
-                  />
+                  <Ionicons name="chevron-back" size={22} color="#fff" />
                 </TouchableOpacity>
 
-                {showPlaybackControls && activeClip ? (
-                  <UnscaledText style={styles.playerClock} allowFontScaling={false}>
-                    {`${formatElapsed(clipElapsedSec)} / ${formatElapsed(
-                      activeClip.durationSec,
-                    )}`}
-                  </UnscaledText>
-                ) : null}
+                <View style={styles.playerTopSpacer} />
+
+                {/* Nhãn trạng thái: đang xem trực tiếp hay đang xem lại. Chỉ
+                    mốc giờ, không kèm tên camera — OSD của đầu ghi thường in
+                    chữ ở góc trên-trái khung hình. */}
+                <CameraStatusChip
+                  isLive={!isSeeking}
+                  label={
+                    isSeeking
+                      ? displayedTimelineSec === null
+                        ? "XEM LẠI"
+                        : formatClock(displayedTimelineSec)
+                      : "TRỰC TIẾP"
+                  }
+                />
               </View>
+            ) : null}
 
-              <View style={styles.playerControlSpacer} />
-
-              <View style={styles.playerControlGroup}>
-                {/* Tốc độ chỉ có nghĩa khi đang phát bản ghi. */}
-                {showPlaybackControls ? (
+            {areControlsVisible ? (
+              <View
+                style={[
+                  styles.playerControls,
+                  isFullscreen && styles.playerControlsFullscreen,
+                  isFullscreen && {
+                    bottom: insets.bottom + FULLSCREEN_CONTROLS_LIFT,
+                  },
+                ]}
+              >
+                <View style={styles.playerControlGroup}>
                   <TouchableOpacity
-                    style={[styles.playerControlBtn, styles.playerSpeedBtn]}
+                    style={styles.playerControlBtn}
                     onPress={() => {
                       keepControlsVisible();
-                      setIsSpeedSheetVisible(true);
+                      handleTogglePause();
                     }}
                     hitSlop={8}
-                    accessibilityLabel="Tốc độ phát"
+                    accessibilityLabel={
+                      isClipEnded ? "Phát lại" : isPaused ? "Phát" : "Tạm dừng"
+                    }
                   >
-                    <UnscaledText
-                      style={styles.playerSpeedText}
-                      allowFontScaling={false}
-                    >
-                      {getPlaybackSpeedBadge(speed)}
-                    </UnscaledText>
-                    <MaterialCommunityIcons
-                      name="fast-forward-outline"
-                      size={18}
+                    <Ionicons
+                      name={isClipEnded ? "refresh" : isPaused ? "play" : "pause"}
+                      size={22}
                       color="#fff"
                     />
                   </TouchableOpacity>
-                ) : null}
 
-                <TouchableOpacity
-                  style={styles.playerControlBtn}
-                  onPress={toggleFullscreen}
-                  hitSlop={8}
-                  accessibilityLabel="Toàn màn hình"
-                >
-                  <MaterialCommunityIcons
-                    name={isFullscreen ? "fullscreen-exit" : "fullscreen"}
-                    size={22}
-                    color="#fff"
-                  />
-                </TouchableOpacity>
-              </View>
-            </View>
-          ) : null}
+                  {showPlaybackControls && activeClip ? (
+                    <UnscaledText style={styles.playerClock} allowFontScaling={false}>
+                      {`${formatElapsed(clipElapsedSec)} / ${formatElapsed(
+                        activeClip.durationSec,
+                      )}`}
+                    </UnscaledText>
+                  ) : null}
+                </View>
 
-          {showPlaybackControls ? (
-            <View
-              ref={progressScrubberRef}
-              style={[
-                styles.progressScrubber,
-                isFullscreen && styles.progressScrubberFullscreen,
-                isFullscreen && {
-                  bottom: insets.bottom + FULLSCREEN_SCRUBBER_LIFT,
-                },
-              ]}
-              onLayout={(event) => {
-                const { width } = event.nativeEvent.layout;
-                progressTrackWidthRef.current = width;
-                setProgressTrackWidth(width);
-                // Cần toạ độ theo cửa sổ để quy đổi pageX; layout.x chỉ là vị
-                // trí so với view cha.
-                progressScrubberRef.current?.measureInWindow((pageX) => {
-                  progressTrackPageXRef.current = pageX;
-                });
-              }}
-              onStartShouldSetResponder={() =>
-                Boolean(activeClip && playbackSession && !isConnecting)
-              }
-              onMoveShouldSetResponder={() =>
-                Boolean(activeClip && playbackSession && !isConnecting)
-              }
-              onResponderGrant={handleProgressSeekGrant}
-              onResponderMove={handleProgressSeekMove}
-              onResponderRelease={handleProgressSeekRelease}
-              onResponderTerminate={handleProgressSeekTerminate}
-              accessibilityLabel="Tua vị trí phát"
-            >
-              <View style={styles.progressTrackWrap}>
-                <View style={styles.progressTrack}>
-                  <Animated.View
-                    style={[
-                      styles.progressFill,
-                      { width: progressAnim.interpolate(progressWidthRange) },
-                    ]}
-                  />
-                  <Animated.View
-                    style={[
-                      styles.progressHandle,
-                      // Núm to hơn trong lúc kéo để thấy rõ đang tua.
-                      isProgressScrubbing && styles.progressHandleActive,
-                      {
-                        transform: [
-                          {
-                            translateX:
-                              progressAnim.interpolate(progressWidthRange),
-                          },
-                        ],
-                      },
-                    ]}
-                  />
+                <View style={styles.playerControlSpacer} />
+
+                <View style={styles.playerControlGroup}>
+                  {/* Tốc độ chỉ có nghĩa khi đang phát bản ghi. */}
+                  {showPlaybackControls ? (
+                    <TouchableOpacity
+                      style={[styles.playerControlBtn, styles.playerSpeedBtn]}
+                      onPress={() => {
+                        keepControlsVisible();
+                        setIsSpeedSheetVisible(true);
+                      }}
+                      hitSlop={8}
+                      accessibilityLabel="Tốc độ phát"
+                    >
+                      <UnscaledText
+                        style={styles.playerSpeedText}
+                        allowFontScaling={false}
+                      >
+                        {getPlaybackSpeedBadge(speed)}
+                      </UnscaledText>
+                      <MaterialCommunityIcons
+                        name="fast-forward-outline"
+                        size={18}
+                        color="#fff"
+                      />
+                    </TouchableOpacity>
+                  ) : null}
+
+                  <TouchableOpacity
+                    style={styles.playerControlBtn}
+                    onPress={toggleFullscreen}
+                    hitSlop={8}
+                    accessibilityLabel="Toàn màn hình"
+                  >
+                    <MaterialCommunityIcons
+                      name={isFullscreen ? "fullscreen-exit" : "fullscreen"}
+                      size={22}
+                      color="#fff"
+                    />
+                  </TouchableOpacity>
                 </View>
               </View>
-            </View>
-          ) : null}
-        </View>
+            ) : null}
+
+            {showPlaybackControls ? (
+              <View
+                ref={progressScrubberRef}
+                style={[
+                  styles.progressScrubber,
+                  isFullscreen && styles.progressScrubberFullscreen,
+                  isFullscreen && {
+                    bottom: insets.bottom + FULLSCREEN_SCRUBBER_LIFT,
+                  },
+                ]}
+                onLayout={(event) => {
+                  const { width } = event.nativeEvent.layout;
+                  progressTrackWidthRef.current = width;
+                  setProgressTrackWidth(width);
+                  // Cần toạ độ theo cửa sổ để quy đổi pageX; layout.x chỉ là vị
+                  // trí so với view cha.
+                  progressScrubberRef.current?.measureInWindow((pageX) => {
+                    progressTrackPageXRef.current = pageX;
+                  });
+                }}
+                onStartShouldSetResponder={() =>
+                  Boolean(activeClip && playbackSession && !isConnecting)
+                }
+                onMoveShouldSetResponder={() =>
+                  Boolean(activeClip && playbackSession && !isConnecting)
+                }
+                onResponderGrant={handleProgressSeekGrant}
+                onResponderMove={handleProgressSeekMove}
+                onResponderRelease={handleProgressSeekRelease}
+                onResponderTerminate={handleProgressSeekTerminate}
+                accessibilityLabel="Tua vị trí phát"
+              >
+                <View style={styles.progressTrackWrap}>
+                  <View style={styles.progressTrack}>
+                    <Animated.View
+                      style={[
+                        styles.progressFill,
+                        { width: progressAnim.interpolate(progressWidthRange) },
+                      ]}
+                    />
+                    <Animated.View
+                      style={[
+                        styles.progressHandle,
+                        // Núm to hơn trong lúc kéo để thấy rõ đang tua.
+                        isProgressScrubbing && styles.progressHandleActive,
+                        {
+                          transform: [
+                            {
+                              translateX:
+                                progressAnim.interpolate(progressWidthRange),
+                            },
+                          ],
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+              </View>
+            ) : null}
+          </View>
+        </GestureDetector>
       </View>
 
       {isFullscreen ? null : (

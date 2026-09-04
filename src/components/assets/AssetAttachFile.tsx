@@ -16,6 +16,8 @@ import type { Conditions, FileItem } from "../../types";
 import { SqlOperator, TypeProperty, CategoryFiles } from "../../utils/Enum";
 import { getListAttachFile } from "../../services";
 import IsLoading from "../ui/IconLoading";
+import RecordListSkeleton from "../list/RecordListSkeleton";
+import { shouldShowListSkeleton } from "../ui/shouldShowListSkeleton";
 import ListCardAttachFile from "../list/ListCardAttachFile";
 import { error } from "../../utils/Logger";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
@@ -25,7 +27,7 @@ import { isNetworkRequestError } from "../../utils/helpers/api";
 import AssetListEmptyState from "./shared/AssetListEmptyState";
 import AssetListSummaryCard from "./shared/AssetListSummaryCard";
 import { makeSharedAssetListStyles } from "./shared/listStyles";
-import { BRAND_RED, cardShadow } from "./shared/listTheme";
+import { cardShadow } from "./shared/listTheme";
 
 export default function AssetListAttachFile() {
   const styles = useStyles(makeStyles);
@@ -143,7 +145,12 @@ export default function AssetListAttachFile() {
 
   const categories = Object.keys(groupedData);
 
-  if (isLoading) return <IsLoading size="large" color={BRAND_RED} />;
+  if (
+    shouldShowListSkeleton({ isFetching: isLoading, isEmpty: file.length === 0 })
+  )
+    return (
+      <RecordListSkeleton hasGroupHeader lines={2} trailing="button" />
+    );
 
   if (loadErrorMessage) {
     return (

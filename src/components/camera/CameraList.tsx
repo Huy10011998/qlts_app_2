@@ -994,9 +994,7 @@ const CameraList: React.FC = () => {
             >
               <Ionicons name="chevron-back" size={22} color="#fff" />
             </TouchableOpacity>
-            <Text style={styles.fsTitle} numberOfLines={1}>
-              {fullscreenCamera?.iD_Camera_MoTa ?? "Camera"}
-            </Text>
+            <View style={styles.fsHeaderSpacer} />
             <TouchableOpacity
               style={styles.fsHeaderBtn}
               onPress={() => setIsFullMuted((v) => !v)}
@@ -1144,7 +1142,7 @@ const CameraList: React.FC = () => {
                         <View style={styles.thumbOverlay} />
                         <ActivityIndicator
                           size="large"
-                          color="#fff"
+                          color={C.red}
                           style={styles.spinner}
                         />
                       </View>
@@ -1158,7 +1156,7 @@ const CameraList: React.FC = () => {
                 ) : fullscreenCamera ? (
                   <ActivityIndicator
                     size="large"
-                    color="#fff"
+                    color={C.red}
                     style={styles.spinner}
                   />
                 ) : null}

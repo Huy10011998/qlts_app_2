@@ -1,15 +1,10 @@
 import React, { useState } from "react";
-import {
-  ActivityIndicator,
-  RefreshControl,
-  ScrollView,
-  Text,
-  View,
-} from "react-native";
+import { RefreshControl, ScrollView, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 
 import type { HomeNavigationProp } from "../../types";
 import EmptyState from "../../components/ui/EmptyState";
+import MenuCardSkeleton from "../../components/ui/MenuCardSkeleton";
 import SearchBar from "../../components/ui/SearchBar";
 import { removeVietnameseTones } from "../../utils/helpers/string";
 import { useAppColors, useStyles } from "../../utils/helpers/colors";
@@ -138,9 +133,7 @@ const FeaturesScreen: React.FC = () => {
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
       {isLoading ? (
-        <View style={styles.loadingWrap}>
-          <ActivityIndicator size="small" color={HOME_BRAND_RED} />
-        </View>
+        <MenuCardSkeleton />
       ) : (
         <>
           {searchBar}

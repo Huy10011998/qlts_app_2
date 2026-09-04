@@ -12,10 +12,7 @@ import {
   getApiErrorMessage,
   getApiValidationFieldErrors,
 } from "../../utils/helpers/api";
-import {
-  isEffectivelyEmptyCodeValue,
-  parseCsv,
-} from "../../utils/helpers/string";
+import { isEffectivelyEmptyCodeValue } from "../../utils/helpers/string";
 import {
   AppColors,
   useAppColors,
@@ -23,7 +20,7 @@ import {
 } from "../../utils/helpers/colors";
 import { useParams } from "../../hooks/useParams";
 import { fetchImage, pickImage } from "../../utils/Image";
-import { fetchReferenceByFieldWithParent } from "../../utils/cascade/FetchReferenceByFieldWithParent";
+import { useCascadeParentReload } from "../../hooks/AssetAddItem/useCascadeParentReload";
 import { handleCascadeChange } from "../../utils/cascade/index";
 import { useImageLoader } from "../../hooks/useImageLoader";
 import { checkValidation, update } from "../../services/data/callApi";
@@ -35,7 +32,6 @@ import {
 
 import {
   formatDateForBE,
-  getDefaultValueForField,
   normalizeDateFromBE,
 } from "../../utils/Date";
 
@@ -54,6 +50,7 @@ import {
   getRequiredFieldErrors,
   getRequiredFieldsMessage,
 } from "./shared/assetFormValidation";
+import { getReadOnlyFieldNames } from "./shared/assetFormPayload";
 import { createAssetFormBaseStyles } from "./shared/assetFormStyles";
 import { ASSET_FORM_BRAND_RED } from "./shared/assetFormTheme";
 
@@ -266,24 +263,8 @@ export default function AssetEditItem() {
     referenceData,
   );
 
-  useEffect(() => {
-    fieldActive.forEach((f) => {
-      if (f.typeProperty === TypeProperty.Reference && f.parentsFields) {
-        const parents = parseCsv(f.parentsFields);
-        const haveAllParents = parents.every((p) => formData[p]);
+  useCascadeParentReload(fieldActive, formData, setReferenceData);
 
-        if (haveAllParents) {
-          const parentValues = parents.map((p) => formData[p]).join(",");
-          fetchReferenceByFieldWithParent(
-            f.referenceName!,
-            f.name,
-            parentValues,
-            setReferenceData,
-          );
-        }
-      }
-    });
-  }, [fieldActive, formData]);
   useImageLoader({
     fieldActive,
     formData,
@@ -317,6 +298,7 @@ export default function AssetEditItem() {
 
   const { openReferenceModal, loadReferenceModalData } = useOpenReferenceModal({
     formData,
+    fieldActive,
     setActiveEnumField,
     setRefKeyword,
     setRefPage,
@@ -359,9 +341,7 @@ export default function AssetEditItem() {
       }
 
       const entity: Record<string, any> = { ...currentEntity };
-      const readOnlyFieldNames = fieldActive
-        .filter((activeField) => activeField.isReadOnly)
-        .map((activeField) => activeField.name);
+      const readOnlyFieldNames = getReadOnlyFieldNames(fieldActive);
 
       const autoCodeField = item?.propertyClass?.propertyTuDongTang;
       if (autoCodeField && isEffectivelyEmptyCodeValue(entity[autoCodeField])) {
@@ -473,7 +453,6 @@ export default function AssetEditItem() {
         collapsedGroups={collapsedGroups}
         enumData={enumData}
         formData={formData}
-        getDefaultValueForField={getDefaultValueForField}
         groupedFields={groupedFields}
         handleChange={handleChange}
         images={images}

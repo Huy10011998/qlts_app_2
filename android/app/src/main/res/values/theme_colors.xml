@@ -2,6 +2,7 @@
     <color name="app_background">#F0F2F8</color>
     <color name="app_surface">#FFFFFF</color>
     <color name="app_surface_alt">#F0F2F6</color>
+    <color name="app_skeleton">#DFE4EE</color>
     <color name="app_input">#FBFCFE</color>
     <color name="app_text">#0F1923</color>
     <color name="app_text_secondary">#4B5563</color>

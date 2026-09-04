@@ -38,6 +38,10 @@ export const makeStyles = (c: AppColors) =>
       paddingVertical: 3,
     },
     cellLabel: { color: "#fff", fontSize: 8 },
+    // WKWebView vẽ nền trắng mặc định cho tới khi HTML parse xong — trên nền
+    // đen của lưới thì đó là một cú chớp trắng trông như lỗi render. Phải đi
+    // kèm opaque={false}, không thì iOS bỏ qua backgroundColor này.
+    webViewSurface: { backgroundColor: "#000" },
     cellPlaceholder: {
       ...StyleSheet.absoluteFillObject,
       backgroundColor: "#1a1a1a",
@@ -228,6 +232,7 @@ export const makeStyles = (c: AppColors) =>
     fsHeader: {
       flexDirection: "row",
       alignItems: "center",
+      gap: 8,
       paddingHorizontal: 12,
       paddingBottom: 10,
       position: "absolute",
@@ -248,14 +253,7 @@ export const makeStyles = (c: AppColors) =>
     },
     fsHeaderLandscape: { paddingTop: CAMERA_FULLSCREEN_EDGE_INSET },
     fsHeaderPortrait: { paddingTop: CAMERA_FULLSCREEN_EDGE_INSET },
-    fsTitle: {
-      flex: 1,
-      color: "#fff",
-      fontSize: 15,
-      fontWeight: "600",
-      textAlign: "center",
-      marginHorizontal: 4,
-    },
+    fsHeaderSpacer: { flex: 1 },
     fsFooter: {
       flexDirection: "row",
       alignItems: "center",

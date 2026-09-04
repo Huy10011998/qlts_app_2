@@ -30,7 +30,8 @@ import { usePermission } from "../../hooks/usePermission";
 import { filterReportPermissionTree } from "../../hooks/shared/permissionHelpers";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import ReportView from "../../components/report/ReportView";
-import IsLoading from "../../components/ui/IconLoading";
+import MenuCardSkeleton from "../../components/ui/MenuCardSkeleton";
+import { shouldShowListSkeleton } from "../../components/ui/shouldShowListSkeleton";
 import EmptyState from "../../components/ui/EmptyState";
 import { callApi, getConfigReport } from "../../services/data/callApi";
 import type {
@@ -407,7 +408,7 @@ export default function ReportScreen() {
     setIsSearching(search !== debouncedSearch);
   }, [debouncedSearch, search]);
 
-  if (!loaded) return <IsLoading size="large" color={ASSET_MENU_BRAND_RED} />;
+  if (!loaded) return <MenuCardSkeleton />;
 
   if (!hasViewPermission) {
     return (
@@ -424,8 +425,15 @@ export default function ReportScreen() {
     );
   }
 
-  if (isFetching && !isRefreshingTop && !debouncedSearch) {
-    return <IsLoading size="large" color={ASSET_MENU_BRAND_RED} />;
+  if (
+    shouldShowListSkeleton({
+      isFetching,
+      isEmpty: reports.length === 0,
+      isRefreshing: isRefreshingTop,
+      isSearching: Boolean(debouncedSearch),
+    })
+  ) {
+    return <MenuCardSkeleton />;
   }
 
   if (loadErrorMessage) {

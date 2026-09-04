@@ -105,7 +105,6 @@ const CameraCell = React.memo(
     webviewRestartRef: _webviewRestartRef,
     onTokenExpired,
   }: CameraCellProps) => {
-    const c = useAppColors();
     const styles = useStyles(makeStyles);
     const singleTap = React.useMemo(
       () =>
@@ -167,7 +166,8 @@ const CameraCell = React.memo(
                 html: buildCameraGridStreamHTML(cam.iD_Camera_Ma),
                 baseUrl: GO2RTC_HOST,
               }}
-              style={StyleSheet.absoluteFill}
+              style={[StyleSheet.absoluteFill, styles.webViewSurface]}
+              opaque={false}
               pointerEvents="none"
               javaScriptEnabled
               domStorageEnabled
@@ -210,7 +210,7 @@ const CameraCell = React.memo(
           ) : (
             <View style={styles.cellPlaceholder}>
               {!token && !isPaused ? (
-                <ActivityIndicator size="small" color={c.red} />
+                <ActivityIndicator size="small" color={C.red} />
               ) : !isPaused ? (
                 <Text style={styles.cellPlaceholderText}>
                   {isSnapshotActive ? "Đang tải ảnh..." : "Nhấn đúp để xem"}
@@ -1627,9 +1627,7 @@ const CameraListGrid: React.FC = () => {
             >
               <Ionicons name="chevron-back" size={22} color="#fff" />
             </TouchableOpacity>
-            <Text style={styles.fsTitle} numberOfLines={1}>
-              {fullscreenCam?.iD_Camera_MoTa ?? "Camera"}
-            </Text>
+            <View style={styles.fsHeaderSpacer} />
             <TouchableOpacity
               style={styles.fsHeaderBtn}
               onPress={() => setIsFullMuted((v) => !v)}
@@ -1777,7 +1775,7 @@ const CameraListGrid: React.FC = () => {
                       <View style={styles.thumbOverlay} />
                       <ActivityIndicator
                         size="large"
-                        color="#fff"
+                        color={C.red}
                         style={styles.spinner}
                       />
                     </View>
@@ -1795,7 +1793,7 @@ const CameraListGrid: React.FC = () => {
                         { opacity: fsSwitchOpacity },
                       ]}
                     >
-                      <ActivityIndicator size="small" color="#fff" />
+                      <ActivityIndicator size="small" color={C.red} />
                       <Text style={styles.fsSwitchText}>
                         Đang chuyển camera...
                       </Text>
@@ -1810,7 +1808,7 @@ const CameraListGrid: React.FC = () => {
               ) : fullscreenCam ? (
                 <ActivityIndicator
                   size="large"
-                  color="#fff"
+                  color={C.red}
                   style={styles.spinner}
                 />
               ) : null}

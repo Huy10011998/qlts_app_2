@@ -249,6 +249,8 @@ describe("gộp việc làm được với một bản ghi", () => {
       idRoot: "7",
       nameClass: "KiemKe_BinhChuaChay",
       propertyReference: "iD_Cha",
+      // Class cha — để badge đếm lấy trọn bộ cặp parent-value như danh sách.
+      nameClassRoot: "BinhChuaChay",
     });
     // Màn quét không cần đường xem lại nên không truyền `listRoute`.
     expect(withoutList.actions[0].review).toBeUndefined();

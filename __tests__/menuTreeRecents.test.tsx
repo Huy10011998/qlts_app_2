@@ -4,7 +4,7 @@ import ReactTestRenderer from "react-test-renderer";
 
 import { ThemeProvider } from "../src/context/ThemeContext";
 import MenuTreeRecents from "../src/components/menuTree/MenuTreeRecents";
-import { collectTreeIds } from "../src/components/menuTree/collectTreeIds";
+import { collectTreeNodes } from "../src/components/menuTree/collectTreeNodes";
 
 const RECENTS = [
   { id: 1, label: "Máy tính" },
@@ -34,22 +34,24 @@ const labelsOf = (tree: ReactTestRenderer.ReactTestRenderer) =>
         typeof child === "string" && RECENT_LABELS.includes(child),
     );
 
-describe("gom id trong cây", () => {
-  it("lấy cả id của nút con", () => {
-    const ids = collectTreeIds([
+describe("gom nút trong cây", () => {
+  it("lấy cả nút con", () => {
+    type Node = { id: number; children?: Node[] };
+    const nodes = collectTreeNodes<Node>([
       { id: 1, children: [{ id: 11, children: [{ id: 111 }] }] },
       { id: 2 },
     ]);
 
     // sort() mặc định so theo chuỗi nên phải so theo số.
-    expect([...ids].sort((a, b) => Number(a) - Number(b))).toEqual([
+    expect([...nodes.keys()].sort((a, b) => Number(a) - Number(b))).toEqual([
       1, 2, 11, 111,
     ]);
+    expect(nodes.get(11)?.children?.[0].id).toBe(111);
   });
 
-  it("cây rỗng hoặc chưa có thì trả tập rỗng", () => {
-    expect(collectTreeIds([]).size).toBe(0);
-    expect(collectTreeIds(undefined).size).toBe(0);
+  it("cây rỗng hoặc chưa có thì trả map rỗng", () => {
+    expect(collectTreeNodes([]).size).toBe(0);
+    expect(collectTreeNodes(undefined).size).toBe(0);
   });
 });
 
@@ -67,13 +69,34 @@ describe("hàng Truy cập nhanh", () => {
     expect(onPressItem).toHaveBeenCalledWith(RECENTS[1]);
   });
 
+  // Bản chụp đã lưu có thể cũ (quản trị đổi tên class): mở bằng nó là gọi API
+  // với tên không còn tồn tại rồi báo lỗi, nên phải mở bằng nút trong cây.
+  it("mở bằng nút trong cây, không bằng bản chụp đã lưu", async () => {
+    const onPressItem = jest.fn();
+    const fresh = { id: 1, label: "Máy tính", nameClass: "ThietBiCNTT_Moi" };
+    const stale = { id: 1, label: "Máy tính", nameClass: "ThietBiCNTT_Cu" };
+    const tree = await mount(
+      <MenuTreeRecents
+        recents={[stale]}
+        onPressItem={onPressItem}
+        nodeById={new Map([[1, fresh]])}
+      />,
+    );
+
+    await ReactTestRenderer.act(async () => {
+      tree.root.findAllByType(TouchableOpacity)[0].props.onPress();
+    });
+
+    expect(onPressItem).toHaveBeenCalledWith(fresh);
+  });
+
   // Mục bị xoá bên quản trị hoặc bị lọc vì thu hồi quyền thì không còn trong cây.
   it("bỏ chip của mục không còn trong cây", async () => {
     const tree = await mount(
       <MenuTreeRecents
         recents={RECENTS}
         onPressItem={jest.fn()}
-        validIds={new Set([1])}
+        nodeById={new Map([[1, RECENTS[0]]])}
       />,
     );
 
@@ -85,7 +108,7 @@ describe("hàng Truy cập nhanh", () => {
       <MenuTreeRecents
         recents={RECENTS}
         onPressItem={jest.fn()}
-        validIds={new Set()}
+        nodeById={new Map()}
       />,
     );
 

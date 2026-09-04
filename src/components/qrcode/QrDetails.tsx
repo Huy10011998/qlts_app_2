@@ -5,7 +5,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import type { QrDetailsProps } from "../../types/index";
 import { useParams } from "../../hooks/useParams";
 import { getDetails } from "../../services";
-import IsLoading from "../ui/IconLoading";
+import AssetDetailsSkeleton from "../assets/shared/AssetDetailsSkeleton";
 import EmptyState from "../ui/EmptyState";
 import { error } from "../../utils/Logger";
 import { getFieldValue } from "../../utils/fields/GetFieldValue";
@@ -16,12 +16,13 @@ import { resetShouldRefreshDetails } from "../../store/AssetSlice";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { useDetailViewState } from "../../hooks/useDetailViewState";
+import { useVisibleDetailTabs } from "../tabs/useVisibleDetailTabs";
+import { TAB_ITEMS } from "../../utils/Helper";
 import { useTabFromParams } from "../../hooks/useTabFromParams";
-import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
+import { AppColors, useStyles } from "../../utils/helpers/colors";
 
 export default function QrDetails({ children }: QrDetailsProps) {
   const styles = useStyles(makeStyles);
-  const c = useAppColors();
   const { id, nameClass, field, itemData } = useParams();
   const [isLoading, setIsLoading] = useState(true);
   const [item, setItem] = useState<any>(null);
@@ -35,6 +36,8 @@ export default function QrDetails({ children }: QrDetailsProps) {
     handleChangeTab,
     toggleGroup,
   } = useDetailViewState(field);
+  // Đúng số mục thật của thanh tab, để lúc dữ liệu về ô tab không co lại.
+  const visibleTabs = useVisibleDetailTabs(TAB_ITEMS);
 
   useTabFromParams(handleChangeTab);
 
@@ -99,7 +102,13 @@ export default function QrDetails({ children }: QrDetailsProps) {
     else setIsLoading(false);
   }, [fetchDetails, id, itemData, nameClass]);
 
-  if (isLoading) return <IsLoading size="large" color={c.red} />;
+  if (isLoading)
+    return (
+      <AssetDetailsSkeleton
+        groupedFields={groupedFields}
+        tabCount={visibleTabs.length}
+      />
+    );
 
   if (loadErrorMessage) {
     return (

@@ -17,6 +17,7 @@ import {
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import Orientation from "react-native-orientation-locker";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import RNFS from "react-native-fs";
@@ -51,7 +52,6 @@ import {
   REPORT_PREVIEW_TIMEOUT_MS,
   REPORT_SLOW_LOADING_MS,
   buildReportHtml,
-  getInitialParameterValue,
   buildInitialParameterValues,
   normalizeReportPayloadKey,
   normalizeReportPayloadValue,
@@ -69,6 +69,10 @@ import BottomSheetModalShell, {
 } from "../shared/BottomSheetModalShell";
 import { HeaderDetailsModalHeader } from "../header/HeaderDetails";
 import { handleCascadeChange } from "../../utils/cascade";
+import {
+  getParentGate,
+  getParentGateMessage,
+} from "../../utils/cascade/parentGate";
 import {
   buildReferenceFetchParams,
   getCurrentReferenceIds,
@@ -120,6 +124,7 @@ const ReportView: React.FC<ReportViewProps> = ({
   const [reportError, setReportError] = useState<string | null>(null);
   const [reportLoadFailed, setReportLoadFailed] = useState(false);
   const [isReportRendering, setIsReportRendering] = useState(false);
+  const insets = useSafeAreaInsets();
   const [isLandscape, setIsLandscape] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [shareOptionsVisible, setShareOptionsVisible] = useState(false);
@@ -210,7 +215,16 @@ const ReportView: React.FC<ReportViewProps> = ({
                 .filter(Boolean)
             : getCurrentReferenceIds(parameterValues, field.name),
         }),
-        requireAllParents: false,
+        /* Thiếu cấp cha thì loader chặn cứng (không gọi get-category). Phải bật
+           báo: không thì ô mở ra rỗng mà người dùng không biết vì sao. */
+        alertOnMissingParents: true,
+        onMissingParents: (gate) => {
+          showAlertIfActive(
+            "Thông báo",
+            getParentGateMessage(gate, parameterFields) ||
+              "Vui lòng chọn đầy đủ thông tin cấp trên trước!",
+          );
+        },
       });
 
       if (result && typeof result === "object" && "errorMessage" in result) {
@@ -229,7 +243,7 @@ const ReportView: React.FC<ReportViewProps> = ({
 
       return result !== false;
     },
-    [parameterValues],
+    [parameterFields, parameterValues, showAlertIfActive],
   );
 
   const openReferenceModal = useCallback(
@@ -238,7 +252,10 @@ const ReportView: React.FC<ReportViewProps> = ({
         field.typeProperty === TypeProperty.Reference &&
         field.referenceName
       ) {
-        await loadReferenceModalData(field);
+        const didLoad = await loadReferenceModalData(field);
+
+        // Bị chặn vì thiếu cấp cha: đã báo rồi, mở modal rỗng là vô nghĩa.
+        if (!didLoad) return;
       }
 
       setActiveEnumField(field);
@@ -820,7 +837,13 @@ const ReportView: React.FC<ReportViewProps> = ({
           showHandle
           statusBarTranslucent
           presentationStyle="overFullScreen"
-          sheetStyle={styles.shareSheet}
+          safeAreaBottom={false}
+          sheetStyle={[
+            styles.shareSheet,
+            // Tự cộng safe area (shell đã tắt): máy tính bảng có thanh điều hướng
+            // cao, chừa ít thì mục cuối bị che. Sàn 16 cho máy không báo inset.
+            { paddingBottom: Math.max(insets.bottom, 16) + 16 },
+          ]}
         >
           <Text style={styles.shareSheetTitle}>
             Chọn loại file chia sẻ
@@ -871,7 +894,14 @@ const ReportView: React.FC<ReportViewProps> = ({
         contentContainerStyle={styles.form}
         keyboardShouldPersistTaps="handled"
       >
-        {parameterFields.map((parameter) => (
+        {parameterFields.map((parameter) => {
+          /* Chỉ field Reference mới có cấp cha — Enum đi `get-category-enum`. */
+          const parentGate =
+            parameter.typeProperty === TypeProperty.Reference
+              ? getParentGate(parameter, parameterValues)
+              : null;
+
+          return (
           <View key={parameter.id} style={styles.parameterField}>
             <Text style={styles.parameterLabel}>
               {parameter.moTa || parameter.name}
@@ -888,14 +918,20 @@ const ReportView: React.FC<ReportViewProps> = ({
               handleChange={handleParameterChange}
               pickImage={async () => undefined}
               setLoadingImages={() => undefined}
-              getDefaultValueForField={getInitialParameterValue as any}
               disableNumberGrouping={Boolean(parameter.notShowSplit)}
               mode="add"
               openEnumReferanceModal={openReferenceModal}
               styles={styles}
+              parentGate={parentGate}
+              parentGateMessage={
+                parentGate
+                  ? getParentGateMessage(parentGate, parameterFields)
+                  : undefined
+              }
             />
           </View>
-        ))}
+          );
+        })}
 
         <TouchableOpacity
           style={[styles.submitButton, loading && styles.submitButtonLoading]}

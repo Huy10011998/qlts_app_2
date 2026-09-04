@@ -7,6 +7,7 @@ import {
   loadReferenceItemsForField,
   ReferenceDataSetter,
 } from "./referenceLoaderHelpers";
+import { parseParentIntValue } from "../parentValue/parentValueHelpers";
 
 type ParentReferenceField = {
   field: Field;
@@ -14,15 +15,9 @@ type ParentReferenceField = {
   fallbackReferenceName?: string;
 };
 
-export const buildParentValuePayload = (
-  idRoot: number | string,
-  nameClassRoot: string,
-  nameClass: string,
-) => ({
-  idClass: idRoot,
-  nameClass: nameClassRoot,
-  nameReference: nameClass,
-});
+/* Body của parent-value nằm ở helper dùng chung (danh sách con cũng gọi cùng
+   API); re-export để giữ đường import cũ. */
+export { buildParentValuePayload } from "../parentValue/parentValueHelpers";
 
 const getDetailFieldValue = (
   detail: Record<string, any>,
@@ -165,31 +160,39 @@ export const collectParentAssignments = ({
       fieldMoTa: field?.moTa,
     });
 
-    if (rawValue != null) {
-      const numericValue = Number(rawValue);
+    if (!fieldName) continue;
 
-      log("[useLoadParentValue] apply value:", {
+    /* Spec mục 4: cặp nào parse không ra số nguyên thì BỎ QUA (web dùng
+       int.TryParse, thất bại thì không gán). Giả định: parent-value luôn là
+       khoá ngoại/điều kiện phân loại kiểu int — nếu sau này có cặp mang giá trị
+       chuỗi thì prefill đó sẽ bị bỏ ở đây, log dưới để dò được. */
+    const parsedValue = parseParentIntValue(rawValue);
+
+    if (parsedValue === null) {
+      log("[useLoadParentValue] bỏ qua cặp không parse ra số:", {
         fieldName,
         rawValue,
       });
-
-      nextFormValues[fieldName] = Number.isNaN(numericValue)
-        ? rawValue
-        : numericValue;
+      continue;
     }
+
+    log("[useLoadParentValue] apply value:", {
+      fieldName,
+      rawValue: parsedValue,
+    });
+
+    nextFormValues[fieldName] = parsedValue;
 
     if (
       field?.typeProperty === TypeProperty.Reference &&
-      field.referenceName &&
-      rawValue != null &&
-      rawValue !== ""
+      field.referenceName
     ) {
       referenceFieldsToLoad.push({
         field,
-        rawValue,
+        rawValue: parsedValue,
         fallbackReferenceName:
           field.parentsFields &&
-          String(rawValue) === String(idRoot) &&
+          String(parsedValue) === String(idRoot) &&
           nameClassRoot
             ? nameClassRoot
             : undefined,

@@ -5,7 +5,8 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 
 import type { StackNavigation } from "../../types/index";
 import ScreenContainer from "../shared/ScreenContainer";
-import IsLoading from "../../components/ui/IconLoading";
+import RecordListSkeleton from "../../components/list/RecordListSkeleton";
+import { shouldShowListSkeleton } from "../../components/ui/shouldShowListSkeleton";
 import AssetListEmptyState from "../../components/assets/shared/AssetListEmptyState";
 import AssetListSearchBar from "../../components/assets/shared/AssetListSearchBar";
 import AssetListSummaryCard from "../../components/assets/shared/AssetListSummaryCard";
@@ -79,7 +80,15 @@ export default function TrungChuyenTuLanhScreen() {
     [navigation],
   );
 
-  if (isLoading) return <IsLoading size="large" color={c.red} />;
+  if (
+    shouldShowListSkeleton({
+      isFetching: isLoading,
+      isEmpty: fridges.length === 0,
+    })
+  )
+    return (
+      <RecordListSkeleton hasSearchBar hasSummaryCard lines={4} trailing="chevron" />
+    );
 
   const hasSearch = Boolean(searchText.trim());
 

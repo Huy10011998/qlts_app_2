@@ -17,7 +17,6 @@ import { useIsFocused, useNavigation } from "@react-navigation/native";
 import LinearGradient from "react-native-linear-gradient";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useAuth } from "../../context/AuthContext";
-import IsLoading from "../../components/ui/IconLoading";
 import { changePasswordApi } from "../../services";
 import { API_ENDPOINTS } from "../../config/index";
 import type { StackNavigation, UserInfo } from "../../types";
@@ -46,6 +45,7 @@ import EmptyState from "../../components/ui/EmptyState";
 import { warn } from "../../utils/Logger";
 import SettingWaveDivider from "./shared/SettingWaveDivider";
 import SettingProfileHeader from "./shared/SettingProfileHeader";
+import SettingScreenSkeleton from "./shared/SettingScreenSkeleton";
 import SettingSectionGroup from "./shared/SettingSectionGroup";
 import { SettingRowItem, SettingSwitchRow } from "./shared/SettingRowItem";
 import ChangePasswordModal from "./shared/ChangePasswordModal";
@@ -781,7 +781,7 @@ const SettingScreen = () => {
   };
 
   if (isLoading || (!user && !hasLoadedOnce)) {
-    return <IsLoading size="large" color={C.red} />;
+    return <SettingScreenSkeleton safeTop={insets.top} />;
   }
 
   if (loadErrorMessage) {

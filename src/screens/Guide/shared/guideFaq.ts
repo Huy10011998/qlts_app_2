@@ -12,7 +12,7 @@ import type { GuideTopic } from "./guideTypes";
 export const GUIDE_FAQ_TOPIC: GuideTopic = {
   id: "faq",
   title: "Câu hỏi thường gặp",
-  summary: "Lỗi kết nối, hết phiên, quyền, GPS, camera",
+  summary: "Lỗi kết nối, hết phiên, quyền, GPS, camera, ô chọn bị mờ",
   iconName: "help-circle-outline",
   iconBg: C.violet,
   group: "Trợ giúp",
@@ -43,6 +43,20 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     "chuyen dong",
     "tam dung thong bao",
     "ca cong ty",
+    "o chon mo",
+    "o chon xam",
+    "bam khong duoc",
+    "chon cap tren truoc",
+    "cap cha",
+    "khong sua duoc",
+    "dien san",
+    "tu dien gia tri",
+    "gia tri mac dinh",
+    "danh sach con it dong",
+    "thieu dong",
+    "o xam nhap nhay",
+    "khung cho",
+    "dang tai",
   ],
   sections: [
     {
@@ -283,6 +297,120 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
         {
           kind: "paragraph",
           text: "Đã bấm OK ở thông báo Tạo mới thành công mà không thấy bản ghi trong danh sách thì gõ tên nó vào ô tìm kiếm. Bản ghi đã lưu trên máy chủ rồi, không cần tạo lại — tạo lại là trùng dữ liệu.",
+        },
+        {
+          kind: "note",
+          tone: "info",
+          text: "Danh mục có cấp trên thì form thêm nhanh đã điền sẵn và khoá chuỗi cấp trên đang chọn ở form ngoài, nên bản ghi mới chắc chắn nằm trong danh sách vừa tải lại. Nếu bạn tự đổi mấy ô đó được (danh mục không có cấp trên) thì bản ghi vẫn nằm trong danh sách, chỉ cần gõ tìm.",
+        },
+      ],
+    },
+    {
+      id: "faq-o-chon-bi-mo",
+      heading: "Ô chọn bị mờ, bấm không mở được bảng chọn",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Ô đó phụ thuộc cấp trên và cấp trên chưa được chọn. Chính ô mờ có ghi cần chọn gì trước — ví dụ Vui lòng chọn Toà nhà, Tầng trước. Chọn đủ mấy ô đó là ô này tự mở.",
+        },
+        {
+          kind: "paragraph",
+          text: "Chuỗi hay gặp là Khu → Toà nhà → Tầng → Phòng, phải đi từ trên xuống.",
+        },
+        {
+          kind: "note",
+          tone: "warn",
+          text: "Đây không phải lỗi và cũng không phải thiếu quyền. Trước đây ô vẫn bấm được nhưng danh sách bên trong trả về sai — toàn những mục không thuộc cấp nào — chọn vào là lưu sai chỗ mà không có báo lỗi. Nay app khoá lại để không chọn nhầm được.",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Đã chọn đủ cấp trên mà ô vẫn mờ: kéo xuống nạp lại màn, hoặc thoát form vào lại.",
+            "Vẫn mờ sau khi vào lại thì báo IT kèm tên loại tài sản và tên ô — có thể dữ liệu cấp trên của bản ghi đó đang trống trên máy chủ.",
+          ],
+        },
+      ],
+    },
+    {
+      id: "faq-o-dien-san-khong-sua-duoc",
+      heading: "Ô đã điền sẵn mà mờ, không sửa được",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Gặp ở hai chỗ, cùng một lý do: mấy ô đó chỉ ra bản ghi đang đứng, sửa tay là dữ liệu nhảy sang chỗ khác.",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Thêm bản ghi con (vuốt dòng, hoặc thanh thao tác dưới đáy màn chi tiết): các ô chỉ ra thiết bị cha — Khu, Toà nhà, Tầng, Phòng… — được điền sẵn và khoá.",
+            "Thêm nhanh một danh mục có cấp trên từ bảng chọn: chuỗi cấp trên đang chọn ở form ngoài được mang xuống và khoá.",
+          ],
+        },
+        {
+          kind: "paragraph",
+          text: "Cần thêm bản ghi cho một thiết bị khác thì thoát ra, mở đúng thiết bị đó rồi thêm lại — chứ không sửa mấy ô này.",
+        },
+      ],
+    },
+    {
+      id: "faq-form-tu-dien-gia-tri",
+      heading: "Mở form thêm mới thì một số ô đã có sẵn giá trị",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Đó là giá trị mặc định do bộ phận quản lý khai cho từng loại tài sản: ngày nhập lấy ngày hôm nay, giờ lấy giờ hiện tại của máy, đơn vị tiền tệ lấy loại hay dùng nhất… Mục đích là đỡ phải nhập lại những thứ gần như luôn giống nhau.",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Đây là gợi ý, không phải bắt buộc — sửa lại bình thường trước khi lưu.",
+            "Màn Chỉnh sửa và Bản sao KHÔNG tự điền gì, giữ nguyên giá trị bản ghi cũ.",
+            "Thấy giá trị mặc định sai với thực tế phòng ban mình thì báo bộ phận quản lý sửa ở hệ thống trên web, app không đổi được.",
+          ],
+        },
+        {
+          kind: "paragraph",
+          text: "App điền giống hệt bản web, nên bản ghi tạo từ điện thoại và tạo từ máy tính ra cùng dữ liệu.",
+        },
+      ],
+    },
+    {
+      id: "faq-danh-sach-con-it-dong",
+      heading: "Danh sách bản ghi con ít dòng hơn trước",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Danh sách giờ lọc đúng theo bản ghi cha đang mở. Trước đây có trường hợp lọt cả bản ghi của thiết bị khác cùng loại vào — ví dụ mở linh kiện của một máy tính lại thấy lẫn linh kiện của máy chủ. Số dòng giảm là do bỏ những dòng vốn không thuộc thiết bị này.",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Con số ở dòng Lịch sử… dưới đáy màn chi tiết cũng đếm theo cách đó, nên khớp với số dòng mở ra.",
+            "Kéo xuống làm mới nếu vừa thêm bản ghi ở nơi khác.",
+          ],
+        },
+        {
+          kind: "note",
+          tone: "info",
+          text: "Danh sách hiện Không có dữ liệu trong khi bạn biết chắc có bản ghi: kéo xuống nạp lại một lần. Vẫn trống thì báo IT kèm tên loại tài sản và mã thiết bị cha — có thể phần khai báo cha-con của loại đó đang chặn, app hiện đúng như máy chủ trả về.",
+        },
+      ],
+    },
+    {
+      id: "faq-o-xam-khi-mo-man",
+      heading: "Mở màn hình thấy mấy ô xám rồi mới ra dữ liệu",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Đó là khung chờ, vẽ đúng khung của nội dung sắp hiện ra trong lúc app tải dữ liệu. Nó thay cho vòng xoay tròn giữa màn để mắt không phải nhảy chỗ khi dữ liệu về.",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Khung chờ chỉ hiện khi màn còn trống. Đã có dữ liệu cũ thì app tải lại âm thầm, danh sách đứng yên để không mất chỗ đang đọc.",
+            "Kéo xuống làm mới hoặc gõ tìm kiếm thì không vẽ khung chờ — hai chỗ đó đã có dấu hiệu đang chạy riêng.",
+            "Khung xám đứng mãi không ra dữ liệu là mạng chậm hoặc mất mạng, không phải màn hình bị treo. Chờ vài giây, hoặc kiểm tra Wi-Fi công ty.",
+          ],
         },
       ],
     },

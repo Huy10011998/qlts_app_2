@@ -65,8 +65,14 @@ export type RecordAction = {
    */
   review?: {
     label: string;
-    /** Đủ ba tham số thì thanh đáy đếm được và hiện kèm số bản ghi. */
-    count?: { idRoot: string; nameClass: string; propertyReference: string };
+    /** Đủ ba tham số đầu thì thanh đáy đếm được và hiện kèm số bản ghi. */
+    count?: {
+      idRoot: string;
+      nameClass: string;
+      propertyReference: string;
+      /** Class CHA — để lấy trọn bộ cặp parent-value, đếm đúng như danh sách. */
+      nameClassRoot?: string;
+    };
     run: () => void;
   };
 };

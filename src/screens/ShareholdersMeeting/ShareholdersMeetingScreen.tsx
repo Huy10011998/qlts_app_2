@@ -25,6 +25,7 @@ import {
   useStyles,
   useThemeValue,
 } from "../../utils/helpers/colors";
+import ShareholdersMeetingSkeleton from "./shared/ShareholdersMeetingSkeleton";
 import ShareholderAttendanceRow from "./shared/ShareholderAttendanceRow";
 import OpinionPickerModal from "./shared/OpinionPickerModal";
 import { makeVotingOptions } from "./shared/shareholdersMeetingHelpers";
@@ -95,11 +96,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
   } = useShareholdersMeetingController();
 
   if (!loaded) {
-    return (
-      <SafeAreaView style={styles.centerState} edges={["left", "right"]}>
-        <ActivityIndicator size="small" color={c.red} />
-      </SafeAreaView>
-    );
+    return <ShareholdersMeetingSkeleton />;
   }
 
   if (!hasAnyViewPermission) {
@@ -115,11 +112,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
   }
 
   if (isMeetingLoading) {
-    return (
-      <SafeAreaView style={styles.centerState} edges={["left", "right"]}>
-        <ActivityIndicator size="small" color={c.red} />
-      </SafeAreaView>
-    );
+    return <ShareholdersMeetingSkeleton />;
   }
 
   if (meetingError) {
@@ -350,9 +343,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
           />
         </View>
       ) : isVotingLoading && opinions.length === 0 ? (
-        <View style={styles.contentCenter}>
-          <ActivityIndicator size="small" color={c.red} />
-        </View>
+        <ShareholdersMeetingSkeleton variant="voting" />
       ) : (
         <ScrollView
           style={styles.content}
@@ -651,12 +642,6 @@ const makeStyles = (c: AppColors) =>
     tabBadgeTextActive: { color: "#FFFFFF" },
     tabBadgeTextInactive: { color: c.textMuted },
     content: { flex: 1, paddingTop: 12, backgroundColor: c.bg },
-    contentCenter: {
-      flex: 1,
-      backgroundColor: c.bg,
-      alignItems: "center",
-      justifyContent: "center",
-    },
   });
 
 const makeAttStyles = (c: AppColors) =>

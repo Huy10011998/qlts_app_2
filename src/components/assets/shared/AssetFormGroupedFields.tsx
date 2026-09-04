@@ -4,13 +4,17 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { RenderInputByType } from "../../form/RenderInputByType";
 import { BRAND_RED } from "./listTheme";
 import { useHairlineBorderColor } from "../../../utils/helpers/colors";
-import type { ReferenceDataMap } from "../../../types";
+import { TypeProperty } from "../../../utils/Enum";
+import {
+  getParentGate,
+  getParentGateMessage,
+} from "../../../utils/cascade/parentGate";
+import type { Field, ReferenceDataMap } from "../../../types";
 
 type AssetFormGroupedFieldsProps = {
   collapsedGroups: Record<string, boolean>;
   enumData: Record<string, any[]>;
   formData: Record<string, any>;
-  getDefaultValueForField: (field: any, formData?: Record<string, any>) => any;
   groupedFields: Record<string, any[]>;
   handleChange: (name: string, value: any) => void;
   images: Record<string, string>;
@@ -26,13 +30,14 @@ type AssetFormGroupedFieldsProps = {
   styles: any;
   toggleGroup: (groupName: string) => void;
   validationErrors?: Record<string, string>;
+  /** Field điền sẵn theo ngữ cảnh: hiện nhưng không cho sửa (xem `isLocked`). */
+  lockedFields?: Set<string>;
 };
 
 export default function AssetFormGroupedFields({
   collapsedGroups,
   enumData,
   formData,
-  getDefaultValueForField,
   groupedFields,
   handleChange,
   images,
@@ -46,8 +51,16 @@ export default function AssetFormGroupedFields({
   styles,
   toggleGroup,
   validationErrors = {},
+  lockedFields,
 }: AssetFormGroupedFieldsProps) {
   const hairlineBorderColor = useHairlineBorderColor();
+
+  /* Field cha có thể nằm ở nhóm khác, nên phải gộp mọi nhóm mới tra được nhãn
+     cho câu nhắc "Vui lòng chọn <Toà nhà> trước". */
+  const fieldsForLabels = React.useMemo(
+    () => Object.values(groupedFields).flat() as Field[],
+    [groupedFields],
+  );
 
   return (
     <>
@@ -82,6 +95,14 @@ export default function AssetFormGroupedFields({
               fields.map((field) => {
                 if (field.isReadOnly) return null;
 
+                /* Tính ở đây chứ không trong renderer: chỗ này có cả danh sách
+                   field nên đổi được tên cột thành nhãn cho câu nhắc, và
+                   renderer khỏi phải biết luật cấp cha. */
+                const parentGate =
+                  field.typeProperty === TypeProperty.Reference
+                    ? getParentGate(field, formData)
+                    : null;
+
                 return (
                   <View key={field.id ?? field.name} style={styles.fieldBlock}>
                     <Text style={styles.label}>
@@ -105,7 +126,13 @@ export default function AssetFormGroupedFields({
                       setImages={setImages}
                       mode={mode}
                       styles={styles}
-                      getDefaultValueForField={getDefaultValueForField}
+                      isLocked={lockedFields?.has(field.name)}
+                      parentGate={parentGate}
+                      parentGateMessage={
+                        parentGate
+                          ? getParentGateMessage(parentGate, fieldsForLabels)
+                          : undefined
+                      }
                     />
                   </View>
                 );

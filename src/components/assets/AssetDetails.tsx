@@ -4,7 +4,7 @@ import { View, StyleSheet } from "react-native";
 import type { DetailsProps } from "../../types/index";
 import { useParams } from "../../hooks/useParams";
 import { getDetails } from "../../services";
-import IsLoading from "../ui/IconLoading";
+import AssetDetailsSkeleton from "./shared/AssetDetailsSkeleton";
 import { RootState } from "../../store";
 import { useSelector } from "react-redux";
 import { resetShouldRefreshDetails } from "../../store/AssetSlice";
@@ -17,7 +17,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { useDetailViewState } from "../../hooks/useDetailViewState";
 import { useTabFromParams } from "../../hooks/useTabFromParams";
-import { BRAND_RED } from "./shared/listTheme";
+import { useVisibleDetailTabs } from "../tabs/useVisibleDetailTabs";
 import { isNetworkRequestError } from "../../utils/helpers/api";
 
 export default function AssetDetails({ children }: DetailsProps) {
@@ -37,6 +37,9 @@ export default function AssetDetails({ children }: DetailsProps) {
     handleChangeTab,
     toggleGroup,
   } = useDetailViewState(field, tabFromParams ?? "list");
+  // Thanh tab của khung chờ phải đúng số mục thật, không thì lúc dữ liệu về ô
+  // tab co lại một nhịp.
+  const visibleTabs = useVisibleDetailTabs(TAB_ITEMS);
 
   const dispatch = useAppDispatch();
   const { isMounted } = useSafeAlert();
@@ -101,7 +104,12 @@ export default function AssetDetails({ children }: DetailsProps) {
   useTabFromParams(handleChangeTab);
 
   if (isLoading && !item && !loadErrorMessage)
-    return <IsLoading size="large" color={BRAND_RED} />;
+    return (
+      <AssetDetailsSkeleton
+        groupedFields={groupedFields}
+        tabCount={visibleTabs.length}
+      />
+    );
 
   return (
     <View style={styles.container}>

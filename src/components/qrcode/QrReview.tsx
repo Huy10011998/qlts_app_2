@@ -1,5 +1,5 @@
 import { AppColors, useStyles } from "../../utils/helpers/colors";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   FlatList,
@@ -17,11 +17,13 @@ import {
 } from "@react-navigation/native";
 import type { QrReviewNavigationProp, StackRoute } from "../../types/index";
 import { mapPropertyResponseToPropertyClass } from "../../utils/helpers/propertyClass";
+import RecordListSkeleton from "../list/RecordListSkeleton";
+import { shouldShowListSkeleton } from "../ui/shouldShowListSkeleton";
 import ListCardAsset from "../list/ListCardAsset";
 import IsLoading from "../ui/IconLoading";
 import { AddItem } from "../add/AddItem";
-import { SqlOperator, TypeProperty } from "../../utils/Enum";
 import { useDebounce } from "../../hooks/useDebounce";
+import { useParentValuePairs } from "../../hooks/parentValue/useParentValuePairs";
 import { usePermission } from "../../hooks/usePermission";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store";
@@ -53,17 +55,24 @@ export default function QrReview() {
     route.params ?? {};
   const hasRequiredParams = !!nameClass && !!idRoot && !!propertyReference;
 
-  const conditions = useMemo(
-    () => [
-      {
-        property: propertyReference,
-        operator: SqlOperator.Equals,
-        value: String(idRoot),
-        type: TypeProperty.Int,
-      },
-    ],
-    [propertyReference, idRoot],
-  );
+  /* Lọc bằng TRỌN bộ cặp của parent-value — xem AssetRelatedList. Luồng QR có
+     `nameClassRoot` optional; thiếu thì hook tự lùi về điều kiện lọc kiểu cũ. */
+  /* Kéo làm mới thì nạp lại cả bộ cặp: sửa cột cấp cha của bản ghi cha rồi mà
+     cache cũ còn thì danh sách lọc sai cho tới khi tắt app. */
+  const [parentValueToken, setParentValueToken] = useState(0);
+
+  const {
+    conditions,
+    isReady: isParentValueReady,
+    isLoading: isLoadingParentValue,
+  } = useParentValuePairs({
+    idRoot,
+    nameClass,
+    nameClassRoot,
+    propertyReference,
+    enabled: hasRequiredParams,
+    reloadToken: parentValueToken,
+  });
 
   const [searchText, setSearchText] = useState("");
   const debouncedSearch = useDebounce(searchText, 600);
@@ -98,7 +107,7 @@ export default function QrReview() {
   } = useRelatedAssetListData({
     conditions,
     debouncedSearch,
-    enabled: hasRequiredParams,
+    enabled: hasRequiredParams && isParentValueReady,
     nameClass,
     isMounted,
     showAlertIfActive,
@@ -168,8 +177,15 @@ export default function QrReview() {
     return null;
   }
 
-  if (isLoading && !isRefreshingTop && !isLoadingMore && !isSearching) {
-    return <IsLoading size="large" color={BRAND_RED} />;
+  if (
+    shouldShowListSkeleton({
+      isFetching: isLoading || isLoadingMore || isLoadingParentValue,
+      isEmpty: data.length === 0,
+      isRefreshing: isRefreshingTop,
+      isSearching,
+    })
+  ) {
+    return <RecordListSkeleton hasSearchBar hasSummaryCard />;
   }
 
   if (loadErrorMessage) {
@@ -225,7 +241,10 @@ export default function QrReview() {
           refreshControl={
             <RefreshControl
               refreshing={isRefreshingTop}
-              onRefresh={refreshTop}
+              onRefresh={() => {
+                setParentValueToken((token) => token + 1);
+                refreshTop();
+              }}
               colors={[BRAND_RED]}
               tintColor={BRAND_RED}
             />

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { log, warn } from "../../utils/Logger";
 import type { Field } from "../../types/model.d";
 import {
@@ -8,6 +8,7 @@ import {
   resolveReferenceLabel,
   syncResolvedReferenceField,
 } from "./loadParentValueHelpers";
+import { primeParentValueCache } from "../parentValue/useParentValuePairs";
 
 interface UseLoadParentValueParams {
   idRoot?: number | string;
@@ -28,6 +29,12 @@ export const useLoadParentValue = ({
   setReferenceData,
   setFormData,
 }: UseLoadParentValueParams) => {
+  /* Tên các cột do parent-value điền. Nơi gọi cần biết để KHÔNG loại chúng khỏi
+     payload insert: mục 4 của tài liệu BE yêu cầu bản ghi con phải mang đủ bộ
+     cặp này (ví dụ ID_Complex/ID_Building/ID_Unit/ID_Room), kể cả khi metadata
+     khai cột đó là isReadOnly. */
+  const [parentFieldNames, setParentFieldNames] = useState<string[]>([]);
+
   useEffect(() => {
     if (!idRoot || !nameClassRoot || !nameClass) return;
 
@@ -42,6 +49,13 @@ export const useLoadParentValue = ({
 
         const { parentsFields, parentsValues } = res.data;
         if (!Array.isArray(parentsFields)) return;
+
+        /* Danh sách con và badge đếm dùng cùng bộ cặp này — nhồi vào cache để
+           chúng không phải gọi lại API. */
+        primeParentValueCache(nameClassRoot, idRoot, nameClass, {
+          parentsFields,
+          parentsValues: Array.isArray(parentsValues) ? parentsValues : [],
+        });
 
         log("[useLoadParentValue] parent payload:", payload);
         log("[useLoadParentValue] parent response:", {
@@ -61,6 +75,8 @@ export const useLoadParentValue = ({
           ...prev,
           ...nextFormValues,
         }));
+
+        setParentFieldNames(Object.keys(nextFormValues));
 
         for (const referenceField of referenceFieldsToLoad) {
           const loadedItems = await loadParentReferenceItems({
@@ -119,4 +135,6 @@ export const useLoadParentValue = ({
     setFormData,
     setReferenceData,
   ]);
+
+  return { parentFieldNames };
 };

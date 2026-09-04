@@ -10,7 +10,7 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 
 import BottomSheetModalShell from "../../../components/shared/BottomSheetModalShell";
 import EmptyState from "../../../components/ui/EmptyState";
-import IsLoading from "../../../components/ui/IconLoading";
+import RecordListSkeleton from "../../../components/list/RecordListSkeleton";
 import SearchBar from "../../../components/ui/SearchBar";
 import { fetchDiemDanhChiTiet } from "../../../services/data/dashboardApi";
 import {
@@ -312,7 +312,8 @@ export default function HomeAttendanceDetailSheet({
       </View>
 
       {isLoading ? (
-        <IsLoading style={styles.loading} />
+        // Sheet cao cố định nên truyền số hàng, không đo được như khung chờ cả màn.
+        <RecordListSkeleton variant="row" lines={2} rows={6} />
       ) : errorMessage ? (
         <EmptyState
           iconName="cloud-offline-outline"
@@ -427,9 +428,6 @@ const makeStyles = (c: AppColors) =>
     filterLabel: {
       fontSize: 12,
       fontWeight: "700",
-    },
-    loading: {
-      flex: 1,
     },
     listView: { flex: 1 },
     listContent: { paddingBottom: 20 },

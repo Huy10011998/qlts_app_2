@@ -6,7 +6,6 @@ import React, {
   useState,
 } from "react";
 import {
-  ActivityIndicator,
   RefreshControl,
   ScrollView,
   Text,
@@ -40,6 +39,7 @@ import {
   isHomeBlockKey,
   type HomeBlockKey,
 } from "./shared/homeBlockOrder";
+import HomeScreenSkeleton from "./shared/HomeScreenSkeleton";
 import { HOME_BRAND_RED } from "./shared/homeTheme";
 import {
   formatHomeCount,
@@ -548,11 +548,7 @@ const HomeScreen: React.FC = () => {
   }
 
   if (!loaded || isInitialMenuLoading) {
-    return (
-      <View style={[styles.loadingWrap, { backgroundColor: colors.bg }]}>
-        <ActivityIndicator size="small" color={HOME_BRAND_RED} />
-      </View>
-    );
+    return <HomeScreenSkeleton />;
   }
 
   // Mỗi khối là một hàm dựng, nhận sẵn tay nắm kéo thả để gắn vào dòng tiêu đề.

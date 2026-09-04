@@ -1,5 +1,5 @@
 import { AppColors, useStyles } from "../../utils/helpers/colors";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   FlatList,
@@ -17,11 +17,13 @@ import {
 } from "@react-navigation/native";
 import type { AssetDetailsNavigationProp, StackRoute } from "../../types/index";
 import { mapPropertyResponseToPropertyClass } from "../../utils/helpers/propertyClass";
+import RecordListSkeleton from "../../components/list/RecordListSkeleton";
+import { shouldShowListSkeleton } from "../../components/ui/shouldShowListSkeleton";
 import ListCardAsset from "../../components/list/ListCardAsset";
 import IsLoading from "../../components/ui/IconLoading";
 import { AddItem } from "../add/AddItem";
-import { SqlOperator, TypeProperty } from "../../utils/Enum";
 import { useDebounce } from "../../hooks/useDebounce";
+import { useParentValuePairs } from "../../hooks/parentValue/useParentValuePairs";
 import { usePermission } from "../../hooks/usePermission";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store";
@@ -62,17 +64,25 @@ export default function AssetRelatedList() {
   } = route.params ?? {};
   const hasRequiredParams = !!nameClass && !!idRoot && !!propertyReference;
 
-  const conditions = useMemo(
-    () => [
-      {
-        property: propertyReference,
-        operator: SqlOperator.Equals,
-        value: String(idRoot),
-        type: TypeProperty.Int,
-      },
-    ],
-    [propertyReference, idRoot],
-  );
+  /* Lọc bằng TRỌN bộ cặp của parent-value, không chỉ khoá ngoại tới cha: bộ cặp
+     còn mang điều kiện phân loại (LinhKien của MayTinh phải kèm
+     ID_LoaiThietBiCNTT = 7, không thì lẫn linh kiện của Server). */
+  /* Kéo làm mới thì nạp lại cả bộ cặp: sửa cột cấp cha của bản ghi cha rồi mà
+     cache cũ còn thì danh sách lọc sai cho tới khi tắt app. */
+  const [parentValueToken, setParentValueToken] = useState(0);
+
+  const {
+    conditions,
+    isReady: isParentValueReady,
+    isLoading: isLoadingParentValue,
+  } = useParentValuePairs({
+    idRoot,
+    nameClass,
+    nameClassRoot,
+    propertyReference,
+    enabled: hasRequiredParams,
+    reloadToken: parentValueToken,
+  });
 
   const [searchText, setSearchText] = useState("");
   const debouncedSearch = useDebounce(searchText, 600);
@@ -107,7 +117,9 @@ export default function AssetRelatedList() {
   } = useRelatedAssetListData({
     conditions,
     debouncedSearch,
-    enabled: hasRequiredParams,
+    /* Chờ chốt điều kiện lọc mới gọi get-list: gọi trước với điều kiện rộng rồi
+       gọi lại là nháy dữ liệu của bản ghi cha khác. */
+    enabled: hasRequiredParams && isParentValueReady,
     nameClass,
     isMounted,
     showAlertIfActive,
@@ -192,8 +204,18 @@ export default function AssetRelatedList() {
     return null;
   }
 
-  if (isLoading && !isRefreshingTop && !isLoadingMore && !isSearching) {
-    return <IsLoading size="large" color={BRAND_RED} />;
+  if (
+    shouldShowListSkeleton({
+      /* Lúc chờ parent-value, `useRelatedAssetListData` đang ở nhánh
+         `!enabled` nên tự set `isLoading = false` — không OR thêm cờ này thì
+         màn loé "Không có dữ liệu" rồi mới ra danh sách. */
+      isFetching: isLoading || isLoadingMore || isLoadingParentValue,
+      isEmpty: data.length === 0,
+      isRefreshing: isRefreshingTop,
+      isSearching,
+    })
+  ) {
+    return <RecordListSkeleton hasSearchBar hasSummaryCard />;
   }
 
   if (loadErrorMessage) {
@@ -251,7 +273,10 @@ export default function AssetRelatedList() {
           refreshControl={
             <RefreshControl
               refreshing={isRefreshingTop}
-              onRefresh={refreshTop}
+              onRefresh={() => {
+                setParentValueToken((token) => token + 1);
+                refreshTop();
+              }}
               colors={[BRAND_RED]}
               tintColor={BRAND_RED}
             />
