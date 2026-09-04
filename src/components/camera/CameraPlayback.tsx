@@ -865,10 +865,12 @@ const CameraPlayback: React.FC = () => {
     [applyVideoTransform],
   );
 
-  // Chỉ mở khi toàn màn hình VÀ đang phát bản ghi: ở dọc thì khung hình nằm
-  // chung màn với timeline vốn đã bắt cử chỉ kéo, còn nhánh trực tiếp trên iOS
-  // là WebView đã tự pinch trong HTML.
-  const isVideoZoomEnabled = isFullscreen && playbackSession !== null;
+  // Chỉ mở khi toàn màn hình: ở dọc thì khung hình nằm chung màn với timeline
+  // vốn đã bắt cử chỉ kéo. Áp cho CẢ ba nhánh nguồn hình — xem lại, trực tiếp
+  // trên Android, trực tiếp trên iOS. Bản HTML fullscreen tuy có sẵn pinch
+  // riêng nhưng ở màn này nó không bao giờ nhận được chạm: lớp Pressable
+  // bật/tắt nút phủ kín phía trên WebView.
+  const isVideoZoomEnabled = isFullscreen;
 
   // runOnJS bắt buộc: dự án không cài reanimated nên callback phải chạy ở luồng
   // JS, giống các cử chỉ đang dùng ở CameraList.
@@ -1383,9 +1385,10 @@ const CameraPlayback: React.FC = () => {
   const handleBackToLive = React.useCallback(() => {
     returnToLiveView();
     setPlaybackError(null);
-    // Đổi nguồn hình: mức phóng của bản ghi cũ không còn ý nghĩa.
-    resetVideoZoom(false);
-  }, [resetVideoZoom, returnToLiveView]);
+    // Cố ý KHÔNG bỏ mức phóng: trực tiếp và xem lại giờ đều phóng được, cùng
+    // một camera và cùng khung hình, nên giật về 1x ở đây chỉ tổ cướp mất góc
+    // người dùng đang canh — nhất là khi playback đuổi kịp live rồi tự chuyển.
+  }, [returnToLiveView]);
 
   const handleTogglePause = React.useCallback(() => {
     // Đã phát hết bản ghi: bấm play là phát lại clip từ đầu.
@@ -1922,7 +1925,7 @@ const CameraPlayback: React.FC = () => {
             ]}
             onLayout={handlePlayerFrameLayout}
           >
-            {!cameraToken ? null : playbackSession ? (
+            {!cameraToken ? null : (
               <Animated.View
                 style={[
                   StyleSheet.absoluteFill,
@@ -1935,329 +1938,331 @@ const CameraPlayback: React.FC = () => {
                   },
                 ]}
               >
-                <Video
-                  // Key CỐ ĐỊNH, không gắn sessionId: đổi phiên chỉ đổi prop source
-                  // nên native player được giữ nguyên. Trước đây key theo sessionId
-                  // làm mỗi lần đổi mốc là tháo/dựng lại một AVPlayer — vừa nháy đen
-                  // vừa là chỗ dễ crash khi tháo player đang nạp dở.
-                  key="playback"
-                  ref={playbackVideoRef}
-                  source={{ uri: resolvePlaybackHlsUrl(playbackSession.hlsUrl) }}
-                  style={StyleSheet.absoluteFill}
-                  resizeMode="contain"
-                  muted
-                  paused={!isScreenVisible || isPaused || isConnecting}
-                  rate={appliedRate}
-                  repeat={false}
-                  controls={false}
-                  progressUpdateInterval={PLAYBACK_PROGRESS_INTERVAL_MS}
-                  disableFocus
-                  useTextureView
-                  hideShutterView
-                  // false có chủ ý: react-native-video chỉ dùng
-                  // playImmediately(atRate:) ở nhánh này (RCTVideo.setPaused), tức
-                  // tốc độ tua được áp nguyên tử cùng lệnh play. Nhánh true là
-                  // play() rồi mới gán rate, và AVPlayer bỏ qua lần gán đó khi vừa
-                  // seek/vừa gom buffer — chính là lỗi chọn x2 không ăn, phải chọn
-                  // x1 rồi x2 lại mới được.
-                  automaticallyWaitsToMinimizeStalling={false}
-                  preferredForwardBufferDuration={30}
-                  bufferConfig={{
-                    minBufferMs: 10000,
-                    maxBufferMs: 120000,
-                    bufferForPlaybackMs: 2000,
-                    bufferForPlaybackAfterRebufferMs: 5000,
-                    backBufferDurationMs: 90000,
-                  }}
-                  onLoad={() => {
-                    if (sessionRef.current?.sessionId !== playbackSession.sessionId)
-                      return;
-                    setIsVideoReady(true);
-                    setIsConnecting(false);
-                  }}
-                  onReadyForDisplay={() => {
-                    if (sessionRef.current?.sessionId === playbackSession.sessionId)
+                {playbackSession ? (
+                  <Video
+                    // Key CỐ ĐỊNH, không gắn sessionId: đổi phiên chỉ đổi prop source
+                    // nên native player được giữ nguyên. Trước đây key theo sessionId
+                    // làm mỗi lần đổi mốc là tháo/dựng lại một AVPlayer — vừa nháy đen
+                    // vừa là chỗ dễ crash khi tháo player đang nạp dở.
+                    key="playback"
+                    ref={playbackVideoRef}
+                    source={{ uri: resolvePlaybackHlsUrl(playbackSession.hlsUrl) }}
+                    style={StyleSheet.absoluteFill}
+                    resizeMode="contain"
+                    muted
+                    paused={!isScreenVisible || isPaused || isConnecting}
+                    rate={appliedRate}
+                    repeat={false}
+                    controls={false}
+                    progressUpdateInterval={PLAYBACK_PROGRESS_INTERVAL_MS}
+                    disableFocus
+                    useTextureView
+                    hideShutterView
+                    // false có chủ ý: react-native-video chỉ dùng
+                    // playImmediately(atRate:) ở nhánh này (RCTVideo.setPaused), tức
+                    // tốc độ tua được áp nguyên tử cùng lệnh play. Nhánh true là
+                    // play() rồi mới gán rate, và AVPlayer bỏ qua lần gán đó khi vừa
+                    // seek/vừa gom buffer — chính là lỗi chọn x2 không ăn, phải chọn
+                    // x1 rồi x2 lại mới được.
+                    automaticallyWaitsToMinimizeStalling={false}
+                    preferredForwardBufferDuration={30}
+                    bufferConfig={{
+                      minBufferMs: 10000,
+                      maxBufferMs: 120000,
+                      bufferForPlaybackMs: 2000,
+                      bufferForPlaybackAfterRebufferMs: 5000,
+                      backBufferDurationMs: 90000,
+                    }}
+                    onLoad={() => {
+                      if (sessionRef.current?.sessionId !== playbackSession.sessionId)
+                        return;
                       setIsVideoReady(true);
-                  }}
-                  onProgress={({ currentTime, seekableDuration }) => {
-                    if (sessionRef.current?.sessionId !== playbackSession.sessionId)
-                      return;
-                    currentPositionRef.current = currentTime;
-                    // Vùng đã seek được của phiên — dùng để quyết định tua bằng
-                    // seek trong phiên hay phải mở phiên mới.
-                    if (Number.isFinite(seekableDuration))
-                      seekableDurationRef.current = seekableDuration;
-                    // Phiên mới bắt đầu chạy: áp tốc độ đã chọn. Phiên mount với
-                    // rate = tốc độ đó rồi, nhưng lệnh lúc mount hay bị AVPlayer bỏ
-                    // qua, nên áp lại bằng đường hai bước cho chắc.
-                    if (!hasPlaybackProgressRef.current) {
-                      hasPlaybackProgressRef.current = true;
-                      if (speed !== 1) applyPlaybackRate(speed);
-                    }
-                    // Đang kéo thì ngón tay là chủ: không đẩy núm về mốc đang phát,
-                    // và cũng không setState để lúc kéo không có render nào chen
-                    // vào giữa các frame.
-                    if (isProgressScrubbingRef.current) return;
-                    setPositionSec(currentTime);
-
-                    // Phiên của "hôm nay" chỉ chạy tới thời điểm mở phiên. Playhead
-                    // tới sát mép đó tức đã bắt kịp hiện tại — sang xem trực tiếp,
-                    // thay vì phát tới hết rồi bị gateway đóng phiên và ăn onError.
-                    const sessionEndMs = sessionEndMsRef.current;
-                    const playbackStartMs = playbackStartMsRef.current;
-                    if (
-                      isSelectedToday &&
-                      sessionEndMs !== null &&
-                      playbackStartMs !== null &&
-                      // Đã phát được một đoạn: chọn đúng mốc sát hiện tại thì để nó
-                      // chạy chứ đừng đẩy về live ngay khi vừa bấm.
-                      currentTime >= PLAYBACK_CAUGHT_UP_MIN_PLAYED_SEC &&
-                      sessionEndMs - (playbackStartMs + currentTime * 1000) <=
-                        PLAYBACK_CAUGHT_UP_LEAD_SEC * 1000
-                    ) {
-                      handleBackToLive();
-                      return;
-                    }
-
-                    // Đo tốc độ thật = thời gian media chạy được / thời gian thực.
-                    // Không có API đọc rate, và onPlaybackRateChange im lặng đúng
-                    // lúc lệnh bị nuốt, nên đây là cách duy nhất biết được sự thật.
-                    if (isPaused) {
-                      rateSampleRef.current = null;
-                    } else {
-                      const now = Date.now();
-                      const sample = rateSampleRef.current;
-                      if (!sample) {
-                        rateSampleRef.current = { mediaSec: currentTime, atMs: now };
-                      } else if (
-                        now - sample.atMs >=
-                        PLAYBACK_RATE_CHECK_WINDOW_MS
-                      ) {
-                        const effective =
-                          (currentTime - sample.mediaSec) /
-                          ((now - sample.atMs) / 1000);
-                        rateSampleRef.current = { mediaSec: currentTime, atMs: now };
-
-                        if (
-                          Math.abs(effective - speed) <=
-                          speed * PLAYBACK_RATE_TOLERANCE
-                        ) {
-                          // Đúng tốc độ — mở lại hạn mức cho lần stall sau.
-                          rateRetryCountRef.current = 0;
-                        } else if (
-                          // Chạy trơn nhưng ở 1X: lệnh rate đã bị nuốt, ép lại.
-                          Math.abs(effective - 1) <= PLAYBACK_RATE_TOLERANCE &&
-                          rateRetryCountRef.current < PLAYBACK_RATE_MAX_RETRY &&
-                          now - lastRateApplyAtRef.current >=
-                            PLAYBACK_RATE_REAPPLY_THROTTLE_MS
-                        ) {
-                          rateRetryCountRef.current += 1;
-                          applyPlaybackRate(speed);
-                        }
-                        // Còn lại là chạy chậm hơn cả 1X, tức đói buffer (gateway
-                        // cấp dữ liệu theo thời gian thực) — ép rate không giải
-                        // quyết được, để yên cho player tự gom.
+                      setIsConnecting(false);
+                    }}
+                    onReadyForDisplay={() => {
+                      if (sessionRef.current?.sessionId === playbackSession.sessionId)
+                        setIsVideoReady(true);
+                    }}
+                    onProgress={({ currentTime, seekableDuration }) => {
+                      if (sessionRef.current?.sessionId !== playbackSession.sessionId)
+                        return;
+                      currentPositionRef.current = currentTime;
+                      // Vùng đã seek được của phiên — dùng để quyết định tua bằng
+                      // seek trong phiên hay phải mở phiên mới.
+                      if (Number.isFinite(seekableDuration))
+                        seekableDurationRef.current = seekableDuration;
+                      // Phiên mới bắt đầu chạy: áp tốc độ đã chọn. Phiên mount với
+                      // rate = tốc độ đó rồi, nhưng lệnh lúc mount hay bị AVPlayer bỏ
+                      // qua, nên áp lại bằng đường hai bước cho chắc.
+                      if (!hasPlaybackProgressRef.current) {
+                        hasPlaybackProgressRef.current = true;
+                        if (speed !== 1) applyPlaybackRate(speed);
                       }
-                    }
+                      // Đang kéo thì ngón tay là chủ: không đẩy núm về mốc đang phát,
+                      // và cũng không setState để lúc kéo không có render nào chen
+                      // vào giữa các frame.
+                      if (isProgressScrubbingRef.current) return;
+                      setPositionSec(currentTime);
 
-                    const clip = activeClipRef.current;
-                    const startMs = playbackStartMsRef.current;
-                    if (!clip || startMs === null) return;
-                    const elapsedSec =
-                      (startMs + currentTime * 1000 - clip.startMs) / 1000;
-                    progressAnim.setValue(
-                      Math.min(1, Math.max(0, elapsedSec / clip.durationSec)),
-                    );
-                  }}
-                  onEnd={() => {
-                    if (sessionRef.current?.sessionId !== playbackSession.sessionId)
-                      return;
+                      // Phiên của "hôm nay" chỉ chạy tới thời điểm mở phiên. Playhead
+                      // tới sát mép đó tức đã bắt kịp hiện tại — sang xem trực tiếp,
+                      // thay vì phát tới hết rồi bị gateway đóng phiên và ăn onError.
+                      const sessionEndMs = sessionEndMsRef.current;
+                      const playbackStartMs = playbackStartMsRef.current;
+                      if (
+                        isSelectedToday &&
+                        sessionEndMs !== null &&
+                        playbackStartMs !== null &&
+                        // Đã phát được một đoạn: chọn đúng mốc sát hiện tại thì để nó
+                        // chạy chứ đừng đẩy về live ngay khi vừa bấm.
+                        currentTime >= PLAYBACK_CAUGHT_UP_MIN_PLAYED_SEC &&
+                        sessionEndMs - (playbackStartMs + currentTime * 1000) <=
+                          PLAYBACK_CAUGHT_UP_LEAD_SEC * 1000
+                      ) {
+                        handleBackToLive();
+                        return;
+                      }
 
-                    // Phiên chạy tới hết ngày nên onEnd chỉ nổ khi đầu ghi thật sự
-                    // dừng ở mép một bản ghi. Còn bản ghi sau thì mở phiên mới từ
-                    // đó, người dùng không phải bấm gì; hết hẳn mới dừng và cho
-                    // phát lại. Không tự nhảy khi màn hình đang ẩn hoặc đang tạm
-                    // dừng để không âm thầm tải tiếp.
-                    const startMs = playbackStartMsRef.current;
-                    const next =
-                      startMs === null || !isScreenVisible || isPaused
-                        ? null
-                        : findNextClipAfterMs(
-                            startMs + currentPositionRef.current * 1000,
-                          );
+                      // Đo tốc độ thật = thời gian media chạy được / thời gian thực.
+                      // Không có API đọc rate, và onPlaybackRateChange im lặng đúng
+                      // lúc lệnh bị nuốt, nên đây là cách duy nhất biết được sự thật.
+                      if (isPaused) {
+                        rateSampleRef.current = null;
+                      } else {
+                        const now = Date.now();
+                        const sample = rateSampleRef.current;
+                        if (!sample) {
+                          rateSampleRef.current = { mediaSec: currentTime, atMs: now };
+                        } else if (
+                          now - sample.atMs >=
+                          PLAYBACK_RATE_CHECK_WINDOW_MS
+                        ) {
+                          const effective =
+                            (currentTime - sample.mediaSec) /
+                            ((now - sample.atMs) / 1000);
+                          rateSampleRef.current = { mediaSec: currentTime, atMs: now };
 
-                    if (next) {
-                      setActiveGroupId(next.group.id);
-                      setActiveClipId(next.clip.id);
-                      startFrom(next.clip.startMs).catch(() => {});
-                      return;
-                    }
+                          if (
+                            Math.abs(effective - speed) <=
+                            speed * PLAYBACK_RATE_TOLERANCE
+                          ) {
+                            // Đúng tốc độ — mở lại hạn mức cho lần stall sau.
+                            rateRetryCountRef.current = 0;
+                          } else if (
+                            // Chạy trơn nhưng ở 1X: lệnh rate đã bị nuốt, ép lại.
+                            Math.abs(effective - 1) <= PLAYBACK_RATE_TOLERANCE &&
+                            rateRetryCountRef.current < PLAYBACK_RATE_MAX_RETRY &&
+                            now - lastRateApplyAtRef.current >=
+                              PLAYBACK_RATE_REAPPLY_THROTTLE_MS
+                          ) {
+                            rateRetryCountRef.current += 1;
+                            applyPlaybackRate(speed);
+                          }
+                          // Còn lại là chạy chậm hơn cả 1X, tức đói buffer (gateway
+                          // cấp dữ liệu theo thời gian thực) — ép rate không giải
+                          // quyết được, để yên cho player tự gom.
+                        }
+                      }
 
-                    setIsPaused(true);
-                    setIsClipEnded(true);
-                  }}
-                  onError={(error) => {
-                    if (sessionRef.current?.sessionId !== playbackSession.sessionId)
-                      return;
-                    warn("Playback video error:", error);
+                      const clip = activeClipRef.current;
+                      const startMs = playbackStartMsRef.current;
+                      if (!clip || startMs === null) return;
+                      const elapsedSec =
+                        (startMs + currentTime * 1000 - clip.startMs) / 1000;
+                      progressAnim.setValue(
+                        Math.min(1, Math.max(0, elapsedSec / clip.durationSec)),
+                      );
+                    }}
+                    onEnd={() => {
+                      if (sessionRef.current?.sessionId !== playbackSession.sessionId)
+                        return;
 
-                    // Lỗi cách lần trước đủ lâu thì coi là sự cố mới, mở lại hạn
-                    // mức thử. Nhờ vậy không bao giờ có vòng lặp load → lỗi → thử
-                    // lại vô hạn, mà cũng không mất khả năng phục hồi về sau.
-                    const errorAt = Date.now();
-                    if (
-                      errorAt - lastPlaybackErrorAtRef.current >
-                      PLAYBACK_ERROR_RETRY_RESET_MS
-                    )
-                      playbackRetryCountRef.current = 0;
-                    lastPlaybackErrorAtRef.current = errorAt;
+                      // Phiên chạy tới hết ngày nên onEnd chỉ nổ khi đầu ghi thật sự
+                      // dừng ở mép một bản ghi. Còn bản ghi sau thì mở phiên mới từ
+                      // đó, người dùng không phải bấm gì; hết hẳn mới dừng và cho
+                      // phát lại. Không tự nhảy khi màn hình đang ẩn hoặc đang tạm
+                      // dừng để không âm thầm tải tiếp.
+                      const startMs = playbackStartMsRef.current;
+                      const next =
+                        startMs === null || !isScreenVisible || isPaused
+                          ? null
+                          : findNextClipAfterMs(
+                              startMs + currentPositionRef.current * 1000,
+                            );
 
-                    const startMs = playbackStartMsRef.current;
-                    const resumeMs =
-                      startMs === null
-                        ? null
-                        : startMs + currentPositionRef.current * 1000;
+                      if (next) {
+                        setActiveGroupId(next.group.id);
+                        setActiveClipId(next.clip.id);
+                        startFrom(next.clip.startMs).catch(() => {});
+                        return;
+                      }
 
-                    // Lỗi giữa phiên thường là phiên bị server đóng hoặc mạng chớp,
-                    // không phải bản ghi hỏng. Tự mở lại phiên từ đúng vị trí đang
-                    // xem trước đã — khung hình giữ frame cuối kèm spinner nên
-                    // người dùng chỉ thấy một nhịp chờ, không bị đẩy về trực tiếp.
-                    if (
-                      resumeMs !== null &&
-                      isScreenVisible &&
-                      playbackRetryCountRef.current < PLAYBACK_ERROR_MAX_RETRY
-                    ) {
-                      const attempt = (playbackRetryCountRef.current += 1);
-                      stopCurrentSession(false);
-                      setIsConnecting(true);
-                      if (playbackRetryTimerRef.current)
-                        clearTimeout(playbackRetryTimerRef.current);
-                      playbackRetryTimerRef.current = setTimeout(() => {
-                        playbackRetryTimerRef.current = null;
-                        startFrom(resumeMs).catch(() => {});
-                      }, PLAYBACK_ERROR_RETRY_BASE_MS * attempt);
-                      return;
-                    }
+                      setIsPaused(true);
+                      setIsClipEnded(true);
+                    }}
+                    onError={(error) => {
+                      if (sessionRef.current?.sessionId !== playbackSession.sessionId)
+                        return;
+                      warn("Playback video error:", error);
 
-                    // Thử hết vẫn không được: về xem trực tiếp kèm thông báo. Ý
-                    // định phát lại vẫn nằm trong reconnectIntentRef cho trường hợp
-                    // có mạng trở lại.
-                    if (resumeMs !== null) {
-                      reconnectIntentRef.current = {
-                        mode: "playback",
-                        fromMs: resumeMs,
-                      };
-                    }
-                    // Bỏ cuộc: đưa cả màn hình về trực tiếp cho khớp với khung
-                    // hình — bỏ bản ghi đang chọn, cuộn timeline về mốc mới nhất
-                    // nên nút "Xem trực tiếp" tự ẩn. Giữ lại reconnect intent để
-                    // khi có mạng lại thì phát tiếp đúng chỗ.
-                    returnToLiveView({
-                      keepReconnectIntent: true,
-                      notice: "Không thể phát bản ghi.",
-                    });
-                  }}
-                />
+                      // Lỗi cách lần trước đủ lâu thì coi là sự cố mới, mở lại hạn
+                      // mức thử. Nhờ vậy không bao giờ có vòng lặp load → lỗi → thử
+                      // lại vô hạn, mà cũng không mất khả năng phục hồi về sau.
+                      const errorAt = Date.now();
+                      if (
+                        errorAt - lastPlaybackErrorAtRef.current >
+                        PLAYBACK_ERROR_RETRY_RESET_MS
+                      )
+                        playbackRetryCountRef.current = 0;
+                      lastPlaybackErrorAtRef.current = errorAt;
+
+                      const startMs = playbackStartMsRef.current;
+                      const resumeMs =
+                        startMs === null
+                          ? null
+                          : startMs + currentPositionRef.current * 1000;
+
+                      // Lỗi giữa phiên thường là phiên bị server đóng hoặc mạng chớp,
+                      // không phải bản ghi hỏng. Tự mở lại phiên từ đúng vị trí đang
+                      // xem trước đã — khung hình giữ frame cuối kèm spinner nên
+                      // người dùng chỉ thấy một nhịp chờ, không bị đẩy về trực tiếp.
+                      if (
+                        resumeMs !== null &&
+                        isScreenVisible &&
+                        playbackRetryCountRef.current < PLAYBACK_ERROR_MAX_RETRY
+                      ) {
+                        const attempt = (playbackRetryCountRef.current += 1);
+                        stopCurrentSession(false);
+                        setIsConnecting(true);
+                        if (playbackRetryTimerRef.current)
+                          clearTimeout(playbackRetryTimerRef.current);
+                        playbackRetryTimerRef.current = setTimeout(() => {
+                          playbackRetryTimerRef.current = null;
+                          startFrom(resumeMs).catch(() => {});
+                        }, PLAYBACK_ERROR_RETRY_BASE_MS * attempt);
+                        return;
+                      }
+
+                      // Thử hết vẫn không được: về xem trực tiếp kèm thông báo. Ý
+                      // định phát lại vẫn nằm trong reconnectIntentRef cho trường hợp
+                      // có mạng trở lại.
+                      if (resumeMs !== null) {
+                        reconnectIntentRef.current = {
+                          mode: "playback",
+                          fromMs: resumeMs,
+                        };
+                      }
+                      // Bỏ cuộc: đưa cả màn hình về trực tiếp cho khớp với khung
+                      // hình — bỏ bản ghi đang chọn, cuộn timeline về mốc mới nhất
+                      // nên nút "Xem trực tiếp" tự ẩn. Giữ lại reconnect intent để
+                      // khi có mạng lại thì phát tiếp đúng chỗ.
+                      returnToLiveView({
+                        keepReconnectIntent: true,
+                        notice: "Không thể phát bản ghi.",
+                      });
+                    }}
+                  />
+                ) : isPlaybackPending ? null : Platform.OS === "android" ? (
+                  <Video
+                    key={`live-${camera.iD_Camera}-${liveVideoKey}`}
+                    source={{
+                      uri: getCameraHlsUrl(camera.iD_Camera_Ma),
+                      headers: { Authorization: `Bearer ${cameraToken}` },
+                    }}
+                    style={StyleSheet.absoluteFill}
+                    resizeMode="contain"
+                    muted
+                    paused={!isScreenVisible || isPaused}
+                    rate={1}
+                    repeat
+                    controls={false}
+                    disableFocus
+                    useTextureView
+                    hideShutterView
+                    bufferConfig={{
+                      minBufferMs: 1000,
+                      maxBufferMs: 3000,
+                      bufferForPlaybackMs: 500,
+                      bufferForPlaybackAfterRebufferMs: 1000,
+                      backBufferDurationMs: 0,
+                    }}
+                    onLoad={() => {
+                      lastLiveProgressAtRef.current = Date.now();
+                      if (liveRetryTimerRef.current) {
+                        clearTimeout(liveRetryTimerRef.current);
+                        liveRetryTimerRef.current = null;
+                      }
+                    }}
+                    onReadyForDisplay={() => {
+                      lastLiveProgressAtRef.current = Date.now();
+                      liveErrorCountRef.current = 0;
+                      setIsVideoReady(true);
+                      setPlaybackError(null);
+                    }}
+                    onProgress={() => {
+                      lastLiveProgressAtRef.current = Date.now();
+                    }}
+                    onError={(error) => {
+                      warn("Live video error:", error);
+                      const attempt = (liveErrorCountRef.current += 1);
+                      setIsVideoReady(false);
+                      setPlaybackError(
+                        attempt >= ANDROID_LIVE_ERROR_NOTICE_AFTER
+                          ? "Không thể phát camera trực tiếp. Đang thử lại..."
+                          : null,
+                      );
+
+                      if (liveRetryTimerRef.current)
+                        clearTimeout(liveRetryTimerRef.current);
+                      liveRetryTimerRef.current = setTimeout(() => {
+                        liveRetryTimerRef.current = null;
+                        lastLiveProgressAtRef.current = Date.now();
+                        setLiveVideoKey((value) => value + 1);
+                      }, Math.min(ANDROID_LIVE_RETRY_MAX_MS, ANDROID_LIVE_RETRY_BASE_MS * 2 ** (attempt - 1)));
+                    }}
+                  />
+                ) : (
+                  <WebView
+                    ref={liveWebViewRef}
+                    key={`live-${camera.iD_Camera}-${cameraToken}`}
+                    source={{
+                      html: buildCameraFullscreenHTML(camera.iD_Camera_Ma),
+                      baseUrl: GO2RTC_HOST,
+                    }}
+                    style={StyleSheet.absoluteFill}
+                    javaScriptEnabled
+                    domStorageEnabled
+                    allowsInlineMediaPlayback
+                    mediaPlaybackRequiresUserAction={false}
+                    cacheEnabled={false}
+                    mixedContentMode="always"
+                    originWhitelist={["*"]}
+                    allowFileAccess
+                    allowUniversalAccessFromFileURLs
+                    scrollEnabled={false}
+                    scalesPageToFit={false}
+                    onLoad={() => {
+                      postCameraWebViewToken(liveWebViewRef.current, cameraToken);
+                      startCameraWebView(liveWebViewRef.current);
+                    }}
+                    onMessage={(event) => {
+                      const message = event.nativeEvent.data;
+                      if (message === "ready") {
+                        setIsVideoReady(true);
+                        setPlaybackError(null);
+                        return;
+                      }
+                      if (message === "token_expired") {
+                        fetchCameraTokenRef.current?.(true);
+                        return;
+                      }
+                      if (message === "close_fullscreen" && isFullscreen) {
+                        toggleFullscreen();
+                      }
+                    }}
+                  />
+                )}
               </Animated.View>
-            ) : isPlaybackPending ? null : Platform.OS === "android" ? (
-              <Video
-                key={`live-${camera.iD_Camera}-${liveVideoKey}`}
-                source={{
-                  uri: getCameraHlsUrl(camera.iD_Camera_Ma),
-                  headers: { Authorization: `Bearer ${cameraToken}` },
-                }}
-                style={StyleSheet.absoluteFill}
-                resizeMode="contain"
-                muted
-                paused={!isScreenVisible || isPaused}
-                rate={1}
-                repeat
-                controls={false}
-                disableFocus
-                useTextureView
-                hideShutterView
-                bufferConfig={{
-                  minBufferMs: 1000,
-                  maxBufferMs: 3000,
-                  bufferForPlaybackMs: 500,
-                  bufferForPlaybackAfterRebufferMs: 1000,
-                  backBufferDurationMs: 0,
-                }}
-                onLoad={() => {
-                  lastLiveProgressAtRef.current = Date.now();
-                  if (liveRetryTimerRef.current) {
-                    clearTimeout(liveRetryTimerRef.current);
-                    liveRetryTimerRef.current = null;
-                  }
-                }}
-                onReadyForDisplay={() => {
-                  lastLiveProgressAtRef.current = Date.now();
-                  liveErrorCountRef.current = 0;
-                  setIsVideoReady(true);
-                  setPlaybackError(null);
-                }}
-                onProgress={() => {
-                  lastLiveProgressAtRef.current = Date.now();
-                }}
-                onError={(error) => {
-                  warn("Live video error:", error);
-                  const attempt = (liveErrorCountRef.current += 1);
-                  setIsVideoReady(false);
-                  setPlaybackError(
-                    attempt >= ANDROID_LIVE_ERROR_NOTICE_AFTER
-                      ? "Không thể phát camera trực tiếp. Đang thử lại..."
-                      : null,
-                  );
-
-                  if (liveRetryTimerRef.current)
-                    clearTimeout(liveRetryTimerRef.current);
-                  liveRetryTimerRef.current = setTimeout(() => {
-                    liveRetryTimerRef.current = null;
-                    lastLiveProgressAtRef.current = Date.now();
-                    setLiveVideoKey((value) => value + 1);
-                  }, Math.min(ANDROID_LIVE_RETRY_MAX_MS, ANDROID_LIVE_RETRY_BASE_MS * 2 ** (attempt - 1)));
-                }}
-              />
-            ) : (
-              <WebView
-                ref={liveWebViewRef}
-                key={`live-${camera.iD_Camera}-${cameraToken}`}
-                source={{
-                  html: buildCameraFullscreenHTML(camera.iD_Camera_Ma),
-                  baseUrl: GO2RTC_HOST,
-                }}
-                style={StyleSheet.absoluteFill}
-                javaScriptEnabled
-                domStorageEnabled
-                allowsInlineMediaPlayback
-                mediaPlaybackRequiresUserAction={false}
-                cacheEnabled={false}
-                mixedContentMode="always"
-                originWhitelist={["*"]}
-                allowFileAccess
-                allowUniversalAccessFromFileURLs
-                scrollEnabled={false}
-                scalesPageToFit={false}
-                onLoad={() => {
-                  postCameraWebViewToken(liveWebViewRef.current, cameraToken);
-                  startCameraWebView(liveWebViewRef.current);
-                }}
-                onMessage={(event) => {
-                  const message = event.nativeEvent.data;
-                  if (message === "ready") {
-                    setIsVideoReady(true);
-                    setPlaybackError(null);
-                    return;
-                  }
-                  if (message === "token_expired") {
-                    fetchCameraTokenRef.current?.(true);
-                    return;
-                  }
-                  if (message === "close_fullscreen" && isFullscreen) {
-                    toggleFullscreen();
-                  }
-                }}
-              />
             )}
 
             {!cameraToken || isConnecting || !isVideoReady ? (
