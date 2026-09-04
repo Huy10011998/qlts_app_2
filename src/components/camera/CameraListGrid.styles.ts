@@ -38,6 +38,10 @@ export const makeStyles = (c: AppColors) =>
       paddingVertical: 3,
     },
     cellLabel: { color: "#fff", fontSize: 8 },
+    // WKWebView vẽ nền trắng mặc định cho tới khi HTML parse xong — trên nền
+    // đen của lưới thì đó là một cú chớp trắng trông như lỗi render. Phải đi
+    // kèm opaque={false}, không thì iOS bỏ qua backgroundColor này.
+    webViewSurface: { backgroundColor: "#000" },
     cellPlaceholder: {
       ...StyleSheet.absoluteFillObject,
       backgroundColor: "#1a1a1a",

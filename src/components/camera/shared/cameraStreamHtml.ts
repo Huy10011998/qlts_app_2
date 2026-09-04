@@ -1,4 +1,13 @@
+import { C } from "../../../utils/helpers/colors";
 import { GO2RTC_HOST } from "./cameraStreamConfig";
+
+/**
+ * Vòng chờ trong WebView phải cùng màu với ActivityIndicator của phần RN bọc
+ * ngoài, nếu không thì lúc WebView nạp xong người dùng thấy spinner đổi màu.
+ * Vành mờ là chính màu đó ở mức 25% (hex 8 ký tự — WebKit hiểu).
+ */
+const SPINNER_COLOR = C.red;
+const SPINNER_TRACK_COLOR = `${C.red}40`;
 
 export const buildCameraGridStreamHTML = (src: string) => `<!DOCTYPE html>
 <html><head>
@@ -14,8 +23,8 @@ video{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
 }
 #overlay.show{display:flex}
 .spin{
-  width:18px;height:18px;border:2px solid rgba(255,255,255,0.3);
-  border-top-color:#fff;border-radius:50%;
+  width:18px;height:18px;border:2px solid ${SPINNER_TRACK_COLOR};
+  border-top-color:${SPINNER_COLOR};border-radius:50%;
   animation:spin 0.8s linear infinite;
 }
 @keyframes spin{to{transform:rotate(360deg)}}

@@ -1142,7 +1142,7 @@ const CameraList: React.FC = () => {
                         <View style={styles.thumbOverlay} />
                         <ActivityIndicator
                           size="large"
-                          color="#fff"
+                          color={C.red}
                           style={styles.spinner}
                         />
                       </View>
@@ -1156,7 +1156,7 @@ const CameraList: React.FC = () => {
                 ) : fullscreenCamera ? (
                   <ActivityIndicator
                     size="large"
-                    color="#fff"
+                    color={C.red}
                     style={styles.spinner}
                   />
                 ) : null}
