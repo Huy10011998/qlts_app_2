@@ -268,6 +268,17 @@ let backoffMs=1000;const MAX_BACKOFF=10000;
 let lastTime=-1,connecting=false,stopped=false,stoppedByNetwork=false,notified=false,pcId=0;
 
 function notifyReady(){if(notified)return;notified=true;window.ReactNativeWebView.postMessage('ready');}
+// Kích thước thật của stream. Phía RN cần nó để kẹp thao tác kéo theo hộp ảnh
+// chứ không theo cả khung màn hình — kẹp theo khung là lôi vệt đen của
+// object-fit:contain vào giữa tầm nhìn.
+let sizeNotified=false;
+function notifySize(){
+  if(sizeNotified||!v.videoWidth||!v.videoHeight)return;
+  sizeNotified=true;
+  window.ReactNativeWebView&&window.ReactNativeWebView.postMessage('size:'+v.videoWidth+'x'+v.videoHeight);
+}
+v.addEventListener('loadedmetadata',notifySize);
+v.addEventListener('resize',notifySize);
 function clearTimers(){
   if(reconnectTimer){clearTimeout(reconnectTimer);reconnectTimer=null;}
   if(frozenTimer){clearTimeout(frozenTimer);frozenTimer=null;}
@@ -340,7 +351,7 @@ v.addEventListener('timeupdate',()=>{
     rafPending=false;
     if(v.currentTime!==lastTime){
       lastTime=v.currentTime;
-      if(v.currentTime>0){notifyReady();backoffMs=1000;}
+      if(v.currentTime>0){notifyReady();notifySize();backoffMs=1000;}
       resetFrozenWatchdog();
     }
   });
