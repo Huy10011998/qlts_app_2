@@ -773,17 +773,66 @@ const CameraPlayback: React.FC = () => {
   // Kích thước thật của khung hình, đo bằng onLayout — cần để giới hạn kéo sao
   // cho mép video không bị lôi vào trong khung.
   const playerFrameSizeRef = React.useRef({ width: 0, height: 0 });
+  // Tỷ lệ rộng/cao của ẢNH camera (không phải của khung màn hình). 0 = chưa
+  // biết. Nguồn: naturalSize của react-native-video, hoặc thông điệp "size:WxH"
+  // do HTML trong WebView gửi ra.
+  const videoAspectRef = React.useRef(0);
+
+  // Đổi nguồn hình có thể đổi tỷ lệ khung, mà mức phóng/kéo đang giữ lại được
+  // kẹp theo tỷ lệ cũ — kẹp lại ngay theo tỷ lệ mới.
+  const setVideoAspect = React.useCallback(
+    (width?: number, height?: number) => {
+      if (!width || !height) return;
+      const aspect = width / height;
+      if (!Number.isFinite(aspect) || aspect <= 0) return;
+      if (Math.abs(aspect - videoAspectRef.current) < 0.001) return;
+      videoAspectRef.current = aspect;
+      if (videoScaleRef.current > 1) {
+        const { x, y } = videoTranslateRef.current;
+        applyVideoTransformRef.current(videoScaleRef.current, x, y);
+      }
+    },
+    [],
+  );
   // Chỉ dùng để bật/tắt cử chỉ kéo. Chưa phóng mà vẫn bật kéo một ngón thì
   // RNGH giành mất chạm của lớp bật/tắt thanh điều khiển nằm trên.
   const [isVideoZoomed, setIsVideoZoomed] = React.useState(false);
 
-  // Phóng n lần thì phần thừa mỗi bên là (n-1)/2 của cạnh; kéo quá đó là để lộ
-  // nền đen.
+  /**
+   * Khung hình camera hiếm khi cùng tỷ lệ với màn hình, nên resizeMode
+   * "contain" luôn để lại vệt đen hai bên (hoặc trên/dưới) NGAY TRONG khung
+   * video. Kẹp theo cạnh khung màn hình là cho kéo tới mép hộp layout, tức lôi
+   * luôn vệt đen đó vào giữa tầm nhìn. Phải kẹp theo hộp ẢNH THẬT:
+   *
+   *   ảnh rộng contentW ở mức 1x → phóng s lần còn thừa (contentW*s - khung)/2
+   *
+   * Chưa phóng đủ để ảnh tràn khung thì biên ra 0 — không kéo được.
+   *
+   * Lưu ý: pinch trong HTML (clampTranslation của buildCameraFullscreenHTML)
+   * kẹp theo hộp phần tử <video>, tức vẫn kéo lộ được vệt đen. Chỗ này cố ý
+   * làm chặt hơn bản HTML, không phải mô phỏng nó.
+   */
   const clampVideoTranslate = React.useCallback(
     (x: number, y: number, scale: number) => {
       const { width, height } = playerFrameSizeRef.current;
-      const maxX = Math.max(0, ((scale - 1) * width) / 2);
-      const maxY = Math.max(0, ((scale - 1) * height) / 2);
+      const aspect = videoAspectRef.current;
+
+      // Chưa biết tỷ lệ khung camera (chưa onLoad / stream chưa báo) thì lấy cả
+      // khung làm hộp ảnh — về đúng cách kẹp cũ, thà kéo rộng hơn là kẹt.
+      let contentW = width;
+      let contentH = height;
+      if (aspect > 0 && width > 0 && height > 0) {
+        const frameAspect = width / height;
+        if (aspect > frameAspect) {
+          // Ảnh bẹt hơn khung: chạm hai mép ngang, thừa đen trên/dưới.
+          contentH = width / aspect;
+        } else {
+          contentW = height * aspect;
+        }
+      }
+
+      const maxX = Math.max(0, (contentW * scale - width) / 2);
+      const maxY = Math.max(0, (contentH * scale - height) / 2);
       return {
         x: Math.min(maxX, Math.max(-maxX, x)),
         y: Math.min(maxY, Math.max(-maxY, y)),
@@ -791,6 +840,11 @@ const CameraPlayback: React.FC = () => {
     },
     [],
   );
+
+  // setVideoAspect khai báo trước applyVideoTransform nên phải đi qua ref.
+  const applyVideoTransformRef = React.useRef<
+    (scale: number, x: number, y: number) => void
+  >(() => {});
 
   const applyVideoTransform = React.useCallback(
     (scale: number, x: number, y: number) => {
@@ -812,8 +866,10 @@ const CameraPlayback: React.FC = () => {
     ],
   );
 
-  // Bật mềm về vừa khung. Gọi cả khi thoát toàn màn hình và khi đổi phiên: giữ
-  // nguyên mức phóng qua các mốc đó sẽ thấy khung hình lệch mà không hiểu vì sao.
+  applyVideoTransformRef.current = applyVideoTransform;
+
+  // Bật mềm về vừa khung. Chỉ gọi khi thoát toàn màn hình hoặc rời màn hình:
+  // giữ mức phóng qua các mốc đó sẽ thấy khung hình lệch mà không hiểu vì sao.
   const resetVideoZoom = React.useCallback(
     (animated = true) => {
       videoScaleRef.current = 1;
@@ -1930,10 +1986,16 @@ const CameraPlayback: React.FC = () => {
                 style={[
                   StyleSheet.absoluteFill,
                   {
+                    // THỨ TỰ QUAN TRỌNG: translate phải đứng TRƯỚC scale.
+                    // Theo quy ước CSS mà RN dùng, phép sau chịu ảnh hưởng của
+                    // phép trước — để scale trước thì translate bị nhân thêm
+                    // scale lần, kéo đi xa gấp s lần mức đã kẹp và lôi vệt đen
+                    // vào khung. (Bản HTML giải bằng cách chia x cho s; ở đây
+                    // đổi thứ tự để phép kẹp tính thẳng bằng px màn hình.)
                     transform: [
-                      { scale: videoScaleAnim },
                       { translateX: videoTranslateXAnim },
                       { translateY: videoTranslateYAnim },
+                      { scale: videoScaleAnim },
                     ],
                   },
                 ]}
@@ -1973,7 +2035,8 @@ const CameraPlayback: React.FC = () => {
                       bufferForPlaybackAfterRebufferMs: 5000,
                       backBufferDurationMs: 90000,
                     }}
-                    onLoad={() => {
+                    onLoad={({ naturalSize }) => {
+                      setVideoAspect(naturalSize?.width, naturalSize?.height);
                       if (sessionRef.current?.sessionId !== playbackSession.sessionId)
                         return;
                       setIsVideoReady(true);
@@ -2186,7 +2249,8 @@ const CameraPlayback: React.FC = () => {
                       bufferForPlaybackAfterRebufferMs: 1000,
                       backBufferDurationMs: 0,
                     }}
-                    onLoad={() => {
+                    onLoad={({ naturalSize }) => {
+                      setVideoAspect(naturalSize?.width, naturalSize?.height);
                       lastLiveProgressAtRef.current = Date.now();
                       if (liveRetryTimerRef.current) {
                         clearTimeout(liveRetryTimerRef.current);
@@ -2247,6 +2311,13 @@ const CameraPlayback: React.FC = () => {
                     }}
                     onMessage={(event) => {
                       const message = event.nativeEvent.data;
+                      // "size:1920x1080" — HTML báo kích thước thật của stream
+                      // để phép kẹp kéo biết hộp ảnh nằm đâu trong khung.
+                      if (message.startsWith("size:")) {
+                        const [w, h] = message.slice(5).split("x").map(Number);
+                        setVideoAspect(w, h);
+                        return;
+                      }
                       if (message === "ready") {
                         setIsVideoReady(true);
                         setPlaybackError(null);
