@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 
-import type { Conditions } from "../types";
 import { getList } from "../services";
-import { SqlOperator, TypeProperty } from "../utils/Enum";
 import { isNetworkRequestError } from "../utils/helpers/api";
+import { useParentValuePairs } from "./parentValue/useParentValuePairs";
 import { error } from "../utils/Logger";
 import { useSafeAlert } from "./useSafeAlert";
 
@@ -19,6 +18,8 @@ type UseRelatedRecordCountParams = {
   nameClass?: string;
   /** Cột trỏ về cha ở class con. */
   propertyReference?: string;
+  /** Class CHA — để lấy trọn bộ cặp parent-value. */
+  nameClassRoot?: string;
 };
 
 /**
@@ -36,6 +37,7 @@ export function useRelatedRecordCount({
   idRoot,
   nameClass,
   propertyReference,
+  nameClassRoot,
 }: UseRelatedRecordCountParams) {
   const { isMounted } = useSafeAlert();
   const [count, setCount] = useState<number | null>(null);
@@ -43,6 +45,18 @@ export function useRelatedRecordCount({
   const isFirstFocusRef = useRef(true);
 
   const canCount = Boolean(enabled && idRoot && nameClass && propertyReference);
+
+  /* Đếm phải dùng ĐÚNG bộ điều kiện của danh sách, không thì con số trên thanh
+     đáy khác số dòng người dùng thấy khi mở ra (ca LinhKien: đếm cả linh kiện
+     của Server). Nhờ cache module-level, badge và danh sách chỉ tốn 1 request
+     parent-value cho cùng cặp (cha, con). */
+  const { conditions, isReady: isParentValueReady } = useParentValuePairs({
+    idRoot,
+    nameClass,
+    nameClassRoot,
+    propertyReference,
+    enabled: canCount,
+  });
 
   useFocusEffect(
     useCallback(() => {
@@ -58,20 +72,14 @@ export function useRelatedRecordCount({
   );
 
   useEffect(() => {
-    if (!canCount) {
+    // Chưa chốt được điều kiện thì giữ `null` = ẩn badge, đúng ngữ nghĩa
+    // "chưa biết" của hook này.
+    if (!canCount || !isParentValueReady) {
       setCount(null);
       return;
     }
 
     let active = true;
-    const conditions: Conditions[] = [
-      {
-        property: propertyReference!,
-        operator: SqlOperator.Equals,
-        value: String(idRoot),
-        type: TypeProperty.Int,
-      },
-    ];
 
     getList(nameClass!, "id desc", COUNT_PAGE_SIZE, 0, "", conditions, [])
       .then((response) => {
@@ -87,7 +95,14 @@ export function useRelatedRecordCount({
     return () => {
       active = false;
     };
-  }, [canCount, idRoot, isMounted, nameClass, propertyReference, reloadToken]);
+  }, [
+    canCount,
+    conditions,
+    isMounted,
+    isParentValueReady,
+    nameClass,
+    reloadToken,
+  ]);
 
   return count;
 }

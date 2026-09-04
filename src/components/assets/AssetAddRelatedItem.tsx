@@ -35,11 +35,11 @@ import {
 } from "../../store/AssetSlice";
 import { usePermission } from "../../hooks/usePermission";
 
-import { formatDateForBE, getDefaultValueForField } from "../../utils/Date";
+import { formatDateForBE } from "../../utils/Date";
 
 import { useAppDispatch } from "../../store/hooks";
 import { useCascadeForm } from "../../hooks/AssetAddItem/useCascadeForm";
-import { useDefaultDateTime } from "../../hooks/AssetAddItem/useDefaultDateTime";
+import { useFieldDefaults } from "../../hooks/AssetAddItem/useFieldDefaults";
 import { useAutoIncrementCode } from "../../hooks/AssetAddItem/useAutoIncrementCode";
 import { useEnumAndReferenceLoader } from "../../hooks/AssetAddItem/useEnumAndReferenceLoader";
 import { useTreeToForm } from "../../hooks/AssetAddItem/useTreeToForm";
@@ -57,6 +57,7 @@ import {
   getRequiredFieldErrors,
   getRequiredFieldsMessage,
 } from "./shared/assetFormValidation";
+import { stripReadOnlyFields } from "./shared/assetFormPayload";
 import { createAssetFormBaseStyles } from "./shared/assetFormStyles";
 import { ASSET_FORM_BRAND_RED } from "./shared/assetFormTheme";
 import { REVIEW_NAME_CLASSES_DANHGIA } from "../../constants/reviewNameClasses";
@@ -145,8 +146,16 @@ export default function AssetAddRelatedItem() {
     setReferenceData,
   );
 
+  /* Mục 4: các field prefill từ parent-value "nên để chỉ-đọc trên form (web
+     cũng vậy) - đổi tay là dòng con nhảy sang cha khác". Giữ giá trị trong ref
+     để chốt lại được sau khi cascade chạy. */
+  const lockedParentValuesRef = React.useRef<Record<string, any>>({});
+
   const handleChange = React.useCallback(
     (name: string, value: any) => {
+      // Field khoá không nhận thay đổi, kể cả gọi thẳng từ code.
+      if (name in lockedParentValuesRef.current) return;
+
       if (validationErrors[name]) {
         setValidationErrors((prev) => {
           const next = { ...prev };
@@ -156,8 +165,15 @@ export default function AssetAddRelatedItem() {
       }
 
       baseHandleChange(name, value);
+
+      /* Cascade xoá mọi field con của field vừa đổi. Cột parent-value có thể là
+         con của một field khác trong class con; bị xoá thì nó vừa khoá vừa rỗng
+         và dòng con lưu ra không thuộc cha nào. Chốt lại ngay sau cascade. */
+      if (Object.keys(lockedParentValuesRef.current).length) {
+        setFormData((prev) => ({ ...prev, ...lockedParentValuesRef.current }));
+      }
     },
-    [baseHandleChange, validationErrors],
+    [baseHandleChange, setFormData, validationErrors],
   );
 
   useTreeToForm({
@@ -188,9 +204,9 @@ export default function AssetAddRelatedItem() {
     setFormData,
   });
 
-  useDefaultDateTime(fieldActive, setFormData);
+  useFieldDefaults(fieldActive, setFormData);
 
-  useLoadParentValue({
+  const { parentFieldNames } = useLoadParentValue({
     idRoot,
     nameClassRoot,
     nameClass,
@@ -199,6 +215,23 @@ export default function AssetAddRelatedItem() {
     setReferenceData,
     setFormData,
   });
+
+  const lockedParentFields = React.useMemo(
+    () => new Set(parentFieldNames),
+    [parentFieldNames],
+  );
+
+  React.useEffect(() => {
+    if (!parentFieldNames.length) return;
+
+    lockedParentValuesRef.current = Object.fromEntries(
+      parentFieldNames
+        .filter((name) => formData[name] != null)
+        .map((name) => [name, formData[name]]),
+    );
+    // Chỉ chốt theo danh sách cột parent-value, không theo mọi lần đổi form.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parentFieldNames]);
 
   useImageLoader({
     fieldActive,
@@ -210,6 +243,7 @@ export default function AssetAddRelatedItem() {
 
   const { openReferenceModal, loadReferenceModalData } = useOpenReferenceModal({
     formData,
+    fieldActive,
     setActiveEnumField,
     setRefKeyword,
     setRefPage,
@@ -276,11 +310,6 @@ export default function AssetAddRelatedItem() {
         }
       });
 
-      const payload = {
-        entities: [payloadData],
-        saveHistory: true,
-      };
-
       const autoCodeField = propertyClass?.propertyTuDongTang;
       if (
         autoCodeField &&
@@ -289,8 +318,22 @@ export default function AssetAddRelatedItem() {
         payloadData[autoCodeField] = null;
       }
 
+      /* Mục 4b: không gửi field isReadOnly. Nhưng CHỪA các cột do parent-value
+         điền — mục 4 yêu cầu bản ghi con mang đủ bộ cặp (ví dụ insert có
+         ID_Complex/ID_Building/ID_Unit/ID_Room); loại đi là mất khoá ngoại tới
+         cha, dòng con không thuộc bản ghi cha nào. */
+      const entity = stripReadOnlyFields(fieldActive, payloadData, [
+        autoCodeField,
+        ...parentFieldNames,
+      ]);
+
+      const payload = {
+        entities: [entity],
+        saveHistory: true,
+      };
+
       await checkValidation(nameClass, {
-        data: payloadData,
+        data: entity,
         id: 0,
       });
 
@@ -466,7 +509,6 @@ export default function AssetAddRelatedItem() {
         collapsedGroups={collapsedGroups}
         enumData={enumData}
         formData={formData}
-        getDefaultValueForField={getDefaultValueForField}
         groupedFields={groupedFields}
         handleChange={handleChange}
         images={images}
@@ -480,6 +522,7 @@ export default function AssetAddRelatedItem() {
         setLoadingImages={setLoadingImages}
         styles={styles}
         toggleGroup={toggleGroup}
+        lockedFields={lockedParentFields}
       />
     </AssetFormScreenShell>
   );

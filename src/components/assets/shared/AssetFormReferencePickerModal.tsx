@@ -5,6 +5,8 @@ import EnumAndReferencePickerModal from "../../modal/EnumAndReferencePickerModal
 import { TypeProperty } from "../../../utils/Enum";
 import type { ReferenceDataMap } from "../../../types";
 import ReferenceQuickAddForm from "./ReferenceQuickAddForm";
+import { getParentGate } from "../../../utils/cascade/parentGate";
+import { buildQuickAddPrefill } from "./assetFormPayload";
 
 type AssetFormReferencePickerModalProps = {
   activeEnumField: any;
@@ -86,6 +88,19 @@ export default function AssetFormReferencePickerModal({
     : "";
   const canQuickAdd = Boolean(
     enableQuickAdd && quickAddNameClass && can(quickAddNameClass, "Insert"),
+  );
+
+  /* Chuỗi cấp cha của chính ô đang mở, để form thêm nhanh điền sẵn (web làm y
+     vậy ở DataClass_CheckSelectDialog). Đủ cấp mới truyền — prefill nửa vời là
+     bản ghi mới thuộc sai cha, mà lưu được và không báo gì.
+     Dùng lại `getParentGate` để luật "đủ cấp cha & parse int" chỉ có một bản. */
+  const quickAddPrefill = React.useMemo(
+    () =>
+      buildQuickAddPrefill(
+        isReferenceField ? getParentGate(activeEnumField, formData) : null,
+        formData,
+      ),
+    [activeEnumField, formData, isReferenceField],
   );
 
   /* Mỗi lần mở picker (hoặc đổi field) là một lượt mới: form thêm nhanh phải
@@ -192,6 +207,8 @@ export default function AssetFormReferencePickerModal({
           <ReferenceQuickAddForm
             nameClass={quickAddNameClass}
             fieldLabel={activeEnumField?.moTa}
+            prefilledValues={quickAddPrefill.values}
+            prefilledLabels={quickAddPrefill.labels}
             title={`Thêm ${
               activeEnumField?.moTa || activeEnumField?.name || "mới"
             }`}

@@ -18,6 +18,7 @@ import { parseLinkHtml } from "../../utils/Link";
 import { DatePicker, TimePicker } from "../dataPicker/DataPicker";
 import { makePickerFieldTriggerStyles } from "../dataPicker/shared/pickerFieldTriggerStyles";
 import { log } from "../../utils/Logger";
+import { getParentGateMessage } from "../../utils/cascade/parentGate";
 import {
   AppColors,
   useAppColors,
@@ -175,6 +176,10 @@ const makeLocalStyles = (c: AppColors) => ({
     borderColor: c.red,
     backgroundColor: c.redSurface,
   },
+  selectInputBlocked: {
+    opacity: 0.55,
+    backgroundColor: c.surfaceAlt,
+  },
   textAreaInvalid: {
     borderColor: c.red,
     backgroundColor: c.redSurface,
@@ -281,6 +286,9 @@ export const RenderInputByType = ({
   mode,
   disableNumberGrouping,
   openEnumReferanceModal,
+  parentGate,
+  parentGateMessage,
+  isLocked = false,
 }: RenderInputByTypeProps) => {
   const c = useAppColors();
   const localStyles = useThemeValue(makeLocalStyles);
@@ -372,6 +380,7 @@ export const RenderInputByType = ({
     >
       <TextInput
         ref={basicInputRef}
+        editable={!isLocked}
         style={[pickerFieldTriggerStyles.textInput, localStyles.textInput]}
         keyboardType={keyboardType}
         value={String(value ?? "")}
@@ -383,6 +392,49 @@ export const RenderInputByType = ({
 
       {f.prefix ? <Text style={localStyles.prefix}>{f.prefix}</Text> : null}
     </View>
+  );
+
+  /** Ô bấm-để-mở-danh-sách, dùng chung cho Enum và Reference. */
+  const renderPickerTrigger = ({
+    blocked = false,
+    blockedText,
+  }: { blocked?: boolean; blockedText?: string } = {}) => (
+    <TouchableOpacity
+      style={[
+        pickerFieldTriggerStyles.input,
+        { borderColor: strongBorderColor },
+        hasValidationError && localStyles.selectInputInvalid,
+        blocked && localStyles.selectInputBlocked,
+      ]}
+      disabled={blocked}
+      accessibilityState={{ disabled: blocked }}
+      onPress={() => {
+        keyboardContext?.dismissKeyboard();
+        openEnumReferanceModal?.(f);
+      }}
+    >
+      {/* Bị khoá mà ĐÃ có giá trị thì vẫn hiện giá trị (nhãn lấy từ
+          `<field>_MoTa`, không phụ thuộc danh sách): che nó bằng câu nhắc là
+          màn Sửa trông như đã mất dữ liệu. Câu nhắc chỉ thay chỗ placeholder. */}
+      <Text
+        style={[
+          pickerFieldTriggerStyles.text,
+          localStyles.selectText,
+          hasValue
+            ? localStyles.selectedValueText
+            : localStyles.placeholderValueText,
+        ]}
+      >
+        {blocked && !hasValue && blockedText ? blockedText : displayText}
+      </Text>
+
+      <Ionicons
+        name="chevron-down"
+        size={20}
+        color={blocked ? c.textMuted : c.textSecondary}
+        style={pickerFieldTriggerStyles.icon}
+      />
+    </TouchableOpacity>
   );
 
   switch (f.typeProperty) {
@@ -402,6 +454,7 @@ export const RenderInputByType = ({
         >
           <TextInput
             ref={numberInputRef}
+            editable={!isLocked}
             style={[pickerFieldTriggerStyles.textInput, localStyles.textInput]}
             keyboardType="numeric"
             value={formattedValue}
@@ -433,6 +486,7 @@ export const RenderInputByType = ({
 
           <Switch
             value={!!value}
+            disabled={isLocked}
             onValueChange={(v) => handleChange(f.name, v)}
             trackColor={{ false: c.borderStrong, true: c.red }}
             thumbColor={value ? "#ffffff" : "#f4f3f4"}
@@ -668,40 +722,27 @@ export const RenderInputByType = ({
       );
     }
 
+    /* Enum tách riêng khỏi Reference: Enum lấy danh sách bằng
+       `get-category-enum` (không có cấp cha) nên KHÔNG BAO GIỜ bị khoá vì thiếu
+       cấp cha — metadata có field Enum mang `parentsFields` rác. */
     case TypeProperty.Enum:
-    case TypeProperty.Reference:
-      return (
-        <TouchableOpacity
-          style={[
-            pickerFieldTriggerStyles.input,
-            { borderColor: strongBorderColor },
-            hasValidationError && localStyles.selectInputInvalid,
-          ]}
-          onPress={() => {
-            keyboardContext?.dismissKeyboard();
-            openEnumReferanceModal?.(f);
-          }}
-        >
-          <Text
-            style={[
-              pickerFieldTriggerStyles.text,
-              localStyles.selectText,
-              hasValue
-                ? localStyles.selectedValueText
-                : localStyles.placeholderValueText,
-            ]}
-          >
-            {displayText}
-          </Text>
+      return renderPickerTrigger({ blocked: isLocked });
 
-          <Ionicons
-            name="chevron-down"
-            size={20}
-            color={c.textSecondary}
-            style={pickerFieldTriggerStyles.icon}
-          />
-        </TouchableOpacity>
-      );
+    case TypeProperty.Reference: {
+      /* Thiếu cấp cha thì khoá ô: chuỗi `lstParent` bị nối thẳng vào SelectSql
+         nên thiếu vế là lỗi SQL 500 hoặc khớp sai dòng có cấp cuối NULL — xem
+         `src/utils/cascade/parentGate.ts`. Loader cũng chặn, đây là lớp UI để
+         người dùng biết phải chọn cấp trên trước. */
+      const blocked =
+        isLocked || Boolean(parentGate?.hasParents && !parentGate.isReady);
+
+      return renderPickerTrigger({
+        blocked,
+        blockedText: blocked
+          ? parentGateMessage || getParentGateMessage(parentGate)
+          : undefined,
+      });
+    }
 
     default:
       return renderBasicInput({ keyboardType: "numeric" });

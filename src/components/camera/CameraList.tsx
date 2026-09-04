@@ -994,9 +994,7 @@ const CameraList: React.FC = () => {
             >
               <Ionicons name="chevron-back" size={22} color="#fff" />
             </TouchableOpacity>
-            <Text style={styles.fsTitle} numberOfLines={1}>
-              {fullscreenCamera?.iD_Camera_MoTa ?? "Camera"}
-            </Text>
+            <View style={styles.fsHeaderSpacer} />
             <TouchableOpacity
               style={styles.fsHeaderBtn}
               onPress={() => setIsFullMuted((v) => !v)}

@@ -69,6 +69,7 @@ export function buildChildClassActions({
                 idRoot,
                 nameClass: childClass.name,
                 propertyReference: childClass.propertyReference,
+                nameClassRoot: nameClass,
               },
               run: () =>
                 navigate(listRoute, {

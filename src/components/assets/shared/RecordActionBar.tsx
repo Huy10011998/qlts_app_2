@@ -83,6 +83,7 @@ export default function RecordActionBar({
     idRoot: primary?.review?.count?.idRoot,
     nameClass: primary?.review?.count?.nameClass,
     propertyReference: primary?.review?.count?.propertyReference,
+    nameClassRoot: primary?.review?.count?.nameClassRoot,
   });
 
   const runAction = useCallback(

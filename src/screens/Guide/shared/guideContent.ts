@@ -318,6 +318,16 @@ const TOPICS: GuideTopic[] = [
       "dau cong",
       "bang chon",
       "khong co trong danh sach",
+      "o chon mo",
+      "o chon xam",
+      "khong bam duoc",
+      "cap tren",
+      "cap cha",
+      "khu toa nha tang phong",
+      "dien san",
+      "tu dien",
+      "gia tri mac dinh",
+      "khong sua duoc",
     ],
     sections: [
       {
@@ -389,14 +399,47 @@ const TOPICS: GuideTopic[] = [
             kind: "steps",
             items: [
               "Ở màn danh sách, bấm Thêm mới.",
+              "Xem lại những ô app đã điền sẵn — form mở ra thường có vài ô có giá trị ngay.",
               "Điền các ô bắt buộc; ô nào chọn từ danh mục thì bấm vào để mở bảng chọn.",
               "Bấm lưu. Bản ghi mới hiện ngay trong danh sách.",
             ],
           },
           {
+            kind: "paragraph",
+            text: "Ô điền sẵn là giá trị mặc định do bộ phận quản lý khai cho từng loại tài sản: ngày nhập lấy ngày hôm nay, đơn vị tiền tệ lấy loại hay dùng nhất… Đây là giá trị gợi ý, sửa lại được bình thường trước khi lưu.",
+          },
+          {
+            kind: "note",
+            tone: "info",
+            text: "Mở màn Chỉnh sửa hay Bản sao thì app KHÔNG điền sẵn gì — giữ nguyên giá trị của bản ghi đang sửa, hoặc của bản ghi gốc đang nhân bản.",
+          },
+          {
             kind: "note",
             tone: "info",
             text: "Không thấy nút Thêm mới, Sửa hay Xoá nghĩa là tài khoản chưa có quyền tương ứng với loại tài sản đó, chứ không phải app lỗi.",
+          },
+        ],
+      },
+      {
+        id: "tai-san-o-chon-cap-tren",
+        heading: "Ô chọn theo cấp trên: phải chọn từ trên xuống",
+        blocks: [
+          {
+            kind: "paragraph",
+            text: "Một số ô chỉ có nghĩa khi biết cấp trên của nó, ví dụ chuỗi Khu → Toà nhà → Tầng → Phòng. Những ô này phải chọn lần lượt từ trên xuống.",
+          },
+          {
+            kind: "bullets",
+            items: [
+              "Chưa chọn đủ cấp trên thì ô nằm dưới bị làm mờ, bấm không mở, và ghi sẵn câu nhắc — ví dụ Vui lòng chọn Toà nhà, Tầng trước.",
+              "Chọn xong cấp trên là ô kế tiếp tự mở ra, danh sách bên trong đã lọc theo đúng cấp trên vừa chọn.",
+              "Đổi lại một cấp trên thì các ô bên dưới nó bị xoá về trống — vì giá trị cũ thuộc cấp trên khác. Chọn lại từ đó xuống.",
+            ],
+          },
+          {
+            kind: "note",
+            tone: "warn",
+            text: "App khoá ô thay vì cho bấm rồi hiện danh sách trống: thiếu một cấp trên thì máy chủ trả về danh sách của những mục không thuộc cấp nào, chọn vào là lưu sai chỗ mà không có báo lỗi nào.",
           },
         ],
       },
@@ -422,6 +465,10 @@ const TOPICS: GuideTopic[] = [
             kind: "note",
             tone: "info",
             text: "Bản ghi vừa tạo KHÔNG tự điền vào ô. Tạo được không có nghĩa là đã chọn, nên vẫn phải chạm chọn như mọi dòng khác — tránh việc app tự điền một giá trị mình chưa kịp xem lại.",
+          },
+          {
+            kind: "paragraph",
+            text: "Danh mục đang thêm mà có cấp trên (thêm một Phòng, trong lúc form ngoài đã chọn Khu / Toà nhà / Tầng) thì form thêm nhanh điền sẵn đúng chuỗi cấp trên đó và để mờ, không sửa được. Nhờ vậy bản ghi mới nằm đúng chỗ và hiện ngay trong danh sách sau khi lưu.",
           },
           {
             kind: "bullets",
@@ -454,6 +501,10 @@ const TOPICS: GuideTopic[] = [
               "Loại tài sản có nhiều danh mục con thì app hỏi thêm một bước: chọn danh mục cần thêm.",
               "Điền và bấm lưu. Lưu xong app mở danh sách con để thấy ngay bản ghi vừa tạo; bấm back là về lại đúng danh sách vừa vuốt.",
             ],
+          },
+          {
+            kind: "paragraph",
+            text: "Form thêm bản ghi con điền sẵn các ô chỉ ra bản ghi cha và để mờ, không sửa được — ví dụ thêm bình chữa cháy trong một phòng thì Khu, Toà nhà, Tầng, Phòng đã có sẵn. Cố ý khoá: sửa tay mấy ô đó là bản ghi con nhảy sang một thiết bị khác.",
           },
           {
             kind: "note",

@@ -2,6 +2,7 @@ import type { HandleCascadeChangeProps } from "../../types/components.d";
 import { TypeProperty } from "../Enum";
 import { fetchReferenceByFieldWithParent } from "./FetchReferenceByFieldWithParent";
 import { parseCsv } from "../helpers/string";
+import { getParentGate } from "./parentGate";
 
 export const handleCascadeChange = ({
   name,
@@ -62,19 +63,17 @@ export const handleCascadeChange = ({
       // STEP 3 — nếu parent invalid → STOP
       if (isInvalid) return;
 
-      // STEP 4 — check đủ parent chưa
-      const parentValues = parents
-        .map((p: string | number) => next[p])
-        .filter((v: string | null) => v != null && v !== "");
+      // STEP 4 — check đủ parent chưa (luật dùng chung, xem parentGate.ts)
+      const gate = getParentGate(f, next);
 
-      if (parentValues.length !== parents.length) return;
+      if (!gate.isReady) return;
 
       // STEP 5 — FETCH LẠI từ page 0
       if (f.referenceName) {
         fetchReferenceByFieldWithParent(
           f.referenceName,
           f.name,
-          parentValues.join(","),
+          gate.lstParent!,
           setReferenceData,
           {
             pageSize: 20,

@@ -21,7 +21,7 @@ import {
   useAppColors,
   useStyles,
 } from "../../utils/helpers/colors";
-import { fetchReferenceByFieldWithParent } from "../../utils/cascade/FetchReferenceByFieldWithParent";
+import { useCascadeParentReload } from "../../hooks/AssetAddItem/useCascadeParentReload";
 import { handleCascadeChange } from "../../utils/cascade/index";
 import { useImageLoader } from "../../hooks/useImageLoader";
 import { StackActions, useNavigation } from "@react-navigation/native";
@@ -29,7 +29,6 @@ import { setShouldRefreshList } from "../../store/AssetSlice";
 
 import {
   formatDateForBE,
-  getDefaultValueForField,
   normalizeDateFromBE,
 } from "../../utils/Date";
 
@@ -52,6 +51,7 @@ import {
   getRequiredFieldErrors,
   getRequiredFieldsMessage,
 } from "./shared/assetFormValidation";
+import { stripReadOnlyFields } from "./shared/assetFormPayload";
 import { createAssetFormBaseStyles } from "./shared/assetFormStyles";
 import { ASSET_FORM_BRAND_RED } from "./shared/assetFormTheme";
 import {
@@ -215,23 +215,7 @@ export default function AssetCloneItem() {
     setFormData,
   });
 
-  useEffect(() => {
-    fieldActive.forEach((f) => {
-      if (f.typeProperty === TypeProperty.Reference && f.parentsFields) {
-        const parents = parseCsv(f.parentsFields);
-        const haveAll = parents.every((p) => formData[p]);
-        if (haveAll) {
-          const parentValues = parents.map((p) => formData[p]).join(",");
-          fetchReferenceByFieldWithParent(
-            f.referenceName!,
-            f.name,
-            parentValues,
-            setReferenceData,
-          );
-        }
-      }
-    });
-  }, [fieldActive, formData]);
+  useCascadeParentReload(fieldActive, formData, setReferenceData);
 
   useImageLoader({
     fieldActive,
@@ -265,6 +249,7 @@ export default function AssetCloneItem() {
 
   const { openReferenceModal, loadReferenceModalData } = useOpenReferenceModal({
     formData,
+    fieldActive,
     setActiveEnumField,
     setRefKeyword,
     setRefPage,
@@ -346,13 +331,19 @@ export default function AssetCloneItem() {
         payloadData[autoCodeField] = null;
       }
 
+      /* Mục 4b: không gửi field isReadOnly. Lưu ý hệ quả ở bản sao — cột
+         readonly copy từ dòng gốc sẽ về NULL, server tự tính lại. */
+      const entity = stripReadOnlyFields(fieldActive, payloadData, [
+        autoCodeField,
+      ]);
+
       const payload = {
-        entities: [payloadData],
+        entities: [entity],
         saveHistory: true,
       };
 
       await checkValidation(nameClass, {
-        data: payloadData,
+        data: entity,
         id: 0,
       });
 
@@ -487,7 +478,6 @@ export default function AssetCloneItem() {
         collapsedGroups={collapsedGroups}
         enumData={enumData}
         formData={formData}
-        getDefaultValueForField={getDefaultValueForField}
         groupedFields={groupedFields}
         handleChange={handleChange}
         images={images}

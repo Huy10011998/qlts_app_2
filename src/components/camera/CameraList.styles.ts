@@ -147,6 +147,7 @@ export const makeStyles = (c: AppColors) =>
     fsHeader: {
       flexDirection: "row",
       alignItems: "center",
+      gap: 8,
       paddingHorizontal: 12,
       paddingBottom: 10,
       position: "absolute",
@@ -166,14 +167,7 @@ export const makeStyles = (c: AppColors) =>
       justifyContent: "center",
     },
     fsHeaderLandscape: { paddingTop: 48 },
-    fsTitle: {
-      flex: 1,
-      color: "#fff",
-      fontSize: 15,
-      fontWeight: "600",
-      textAlign: "center",
-      marginHorizontal: 4,
-    },
+    fsHeaderSpacer: { flex: 1 },
     fsVideoArea: { flex: 1, backgroundColor: "#000" },
     fsSwipeOverlay: {
       ...StyleSheet.absoluteFillObject,

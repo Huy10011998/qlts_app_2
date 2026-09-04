@@ -13,7 +13,7 @@ import { setShouldRefreshList } from "../../store/AssetSlice";
 
 import type { AssetAddItemNavigationProp } from "../../types/index";
 import { TypeProperty } from "../../utils/Enum";
-import { formatDateForBE, getDefaultValueForField } from "../../utils/Date";
+import { formatDateForBE } from "../../utils/Date";
 import { parseCsv } from "../../utils/helpers/string";
 import {
   getApiErrorMessage,
@@ -32,7 +32,7 @@ import { useGroupedFields } from "../../hooks/AssetAddItem/useGroupedFields";
 import { useCascadeForm } from "../../hooks/AssetAddItem/useCascadeForm";
 import { useTreeToForm } from "../../hooks/AssetAddItem/useTreeToForm";
 import { useEnumAndReferenceLoader } from "../../hooks/AssetAddItem/useEnumAndReferenceLoader";
-import { useDefaultDateTime } from "../../hooks/AssetAddItem/useDefaultDateTime";
+import { useFieldDefaults } from "../../hooks/AssetAddItem/useFieldDefaults";
 import { useAutoIncrementCode } from "../../hooks/AssetAddItem/useAutoIncrementCode";
 import { useModalItems } from "../../hooks/AssetAddItem/useModalItems";
 import { useOpenReferenceModal } from "../../hooks/AssetAddItem/useOpenReferenceModal";
@@ -47,6 +47,7 @@ import {
   getRequiredFieldErrors,
   getRequiredFieldsMessage,
 } from "./shared/assetFormValidation";
+import { stripReadOnlyFields } from "./shared/assetFormPayload";
 import { createAssetFormBaseStyles } from "./shared/assetFormStyles";
 import { ASSET_FORM_BRAND_RED } from "./shared/assetFormTheme";
 import { REVIEW_NAME_CLASSES_DANHGIA } from "../../constants/reviewNameClasses";
@@ -160,7 +161,7 @@ export default function AssetAddItemDetails() {
     referenceData
   );
 
-  useDefaultDateTime(fieldActive, setFormData);
+  useFieldDefaults(fieldActive, setFormData);
 
   const parentField = propertyClass?.prentTuDongTang;
   const parentValue = parentField ? formData[parentField] : undefined;
@@ -183,6 +184,7 @@ export default function AssetAddItemDetails() {
 
   const { openReferenceModal, loadReferenceModalData } = useOpenReferenceModal({
     formData,
+    fieldActive,
     setActiveEnumField,
     setRefKeyword,
     setRefPage,
@@ -258,13 +260,20 @@ export default function AssetAddItemDetails() {
         payloadData[autoCodeField] = null;
       }
 
+      /* Mục 4b: field isReadOnly bị loại khỏi form nên cũng không gửi lên.
+         Chừa cột mã tự tăng — giá trị của nó do `tu-dong-tang` sinh và ví dụ
+         insert trong tài liệu vẫn mang cột Ma. */
+      const entity = stripReadOnlyFields(fieldActive, payloadData, [
+        autoCodeField,
+      ]);
+
       await checkValidation(nameClass, {
-        data: payloadData,
+        data: entity,
         id: 0,
       });
 
       await insert(nameClass, {
-        entities: [payloadData],
+        entities: [entity],
         saveHistory: true,
       });
 
@@ -367,7 +376,6 @@ export default function AssetAddItemDetails() {
         collapsedGroups={collapsedGroups}
         enumData={enumData}
         formData={formData}
-        getDefaultValueForField={getDefaultValueForField}
         groupedFields={groupedFields}
         handleChange={handleChange}
         images={images}

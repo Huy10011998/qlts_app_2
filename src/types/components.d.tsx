@@ -6,6 +6,7 @@ import React, {
   SetStateAction,
 } from "react";
 import { Field, Item, ReferenceDataMap } from "./model.d";
+import type { ParentGate } from "../utils/cascade/parentGate";
 import { StyleProp, ViewStyle } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { TAB_ITEMS } from "../utils/helpers/ui";
@@ -303,8 +304,24 @@ export interface RenderInputByTypeProps {
   setLoadingImages: any;
 
   mode: "add" | "edit" | "clone";
-  getDefaultValueForField: (f: Field) => any;
   disableNumberGrouping?: boolean;
+  /**
+   * Trạng thái "đủ cấp cha" của field, tính ở nơi gọi (nơi có cả danh sách
+   * field) bằng `getParentGate`. Thiếu prop thì ô chọn hành xử như trước.
+   * Chỉ có nghĩa với field Reference — Enum không có cấp cha.
+   */
+  parentGate?: ParentGate | null;
+  /** Câu nhắc chọn cấp trên, đã thay tên cột bằng nhãn `moTa`. */
+  parentGateMessage?: string;
+  /**
+   * Field bị khoá vì đã được điền sẵn theo ngữ cảnh (chuỗi cấp cha của ô
+   * combobox đang mở, ở form thêm nhanh): HIỆN nhưng không cho sửa.
+   *
+   * Cố ý tách khỏi `isReadOnly` — đó là cột metadata và bị loại hẳn khỏi form,
+   * còn field khoá kiểu này phải thấy được (biết đang thêm Phòng thuộc Toà nhà
+   * nào) và giá trị vẫn phải được gửi lên lúc insert.
+   */
+  isLocked?: boolean;
 
   openEnumReferanceModal: (field: Field) => void;
 }

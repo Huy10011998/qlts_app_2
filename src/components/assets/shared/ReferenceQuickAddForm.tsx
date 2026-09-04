@@ -19,7 +19,7 @@ import {
 } from "../../../services";
 import type { Field, PropertyResponse } from "../../../types";
 import { TypeProperty } from "../../../utils/Enum";
-import { formatDateForBE, getDefaultValueForField } from "../../../utils/Date";
+import { formatDateForBE } from "../../../utils/Date";
 import {
   getApiErrorMessage,
   getApiValidationFieldErrors,
@@ -39,7 +39,8 @@ import { useEnumAndReferenceLoader } from "../../../hooks/AssetAddItem/useEnumAn
 import { useGroupedFields } from "../../../hooks/AssetAddItem/useGroupedFields";
 import { useModalItems } from "../../../hooks/AssetAddItem/useModalItems";
 import { useOpenReferenceModal } from "../../../hooks/AssetAddItem/useOpenReferenceModal";
-import { useDefaultDateTime } from "../../../hooks/AssetAddItem/useDefaultDateTime";
+import { useFieldDefaults } from "../../../hooks/AssetAddItem/useFieldDefaults";
+import { stripReadOnlyFields } from "./assetFormPayload";
 import { useImageLoader } from "../../../hooks/useImageLoader";
 import { useSafeAlert } from "../../../hooks/useSafeAlert";
 
@@ -99,6 +100,17 @@ type ReferenceQuickAddFormProps = {
   nameClass: string;
   /** Nhãn field đang chọn, chỉ dùng cho câu thông báo. */
   fieldLabel?: string;
+  /**
+   * Chuỗi cấp cha của chính ô combobox đang mở, dạng `{ tênCột: id }`.
+   *
+   * Đang chọn Room ở form ngoài thì Complex/Building/Unit đã chọn được truyền
+   * xuống đây để điền sẵn — bản ghi mới nằm đúng cha nên hiện ngay trong danh
+   * sách sau khi tạo (danh sách đó vẫn bị `lstParent` của cha lọc).
+   * Web làm y vậy ở `DataClass_CheckSelectDialog`.
+   */
+  prefilledValues?: Record<string, number>;
+  /** Nhãn của các cấp cha, để ô prefill hiện tên chứ không trơ số ID. */
+  prefilledLabels?: Record<string, string>;
   title: string;
   /** Quay lại danh sách chọn. */
   onCancel: () => void;
@@ -116,6 +128,8 @@ export default function ReferenceQuickAddForm({
   nameClass,
   fieldLabel,
   title,
+  prefilledValues,
+  prefilledLabels,
   onCancel,
   onCreated,
 }: ReferenceQuickAddFormProps) {
@@ -214,8 +228,15 @@ export default function ReferenceQuickAddForm({
     setReferenceData,
   );
 
+  /* Giá trị của các field prefill cấp cha, giữ trong ref để chốt lại được sau
+     khi cascade chạy — xem `handleChange` dưới. */
+    const lockedValuesRef = React.useRef<Record<string, any>>({});
+
   const handleChange = React.useCallback(
     (name: string, value: any) => {
+      // Field đã khoá thì không nhận thay đổi, kể cả gọi thẳng từ code.
+      if (name in lockedValuesRef.current) return;
+
       setValidationErrors((prev) => {
         if (!prev[name]) return prev;
 
@@ -225,8 +246,16 @@ export default function ReferenceQuickAddForm({
       });
 
       baseHandleChange(name, value);
+
+      /* Cascade xoá MỌI field con của field vừa đổi. Field prefill có thể là con
+         của một field khác trong class đích, và bị xoá thì nó vừa khoá vừa rỗng —
+         người dùng không sửa được, mà bản ghi lưu ra không thuộc cha nào. Chốt
+         lại ngay sau cascade. */
+      if (Object.keys(lockedValuesRef.current).length) {
+        setFormData((prev) => ({ ...prev, ...lockedValuesRef.current }));
+      }
     },
-    [baseHandleChange, setValidationErrors],
+    [baseHandleChange, setFormData, setValidationErrors],
   );
 
   useEnumAndReferenceLoader(
@@ -236,7 +265,53 @@ export default function ReferenceQuickAddForm({
     referenceData,
   );
 
-  useDefaultDateTime(fieldActive, setFormData);
+  useFieldDefaults(fieldActive, setFormData);
+
+  /* Điền sẵn chuỗi cấp cha, SAU default để ghi đè nếu trùng tên field — đúng
+     thứ tự web đang làm (default từ field, rồi bộ cặp cấp cha).
+     Lọc theo `fieldActive` của class ĐÍCH: `parentsFields` là tên cột trên
+     class đang nhập, không chắc trùng tên cột ở đây.
+     Điền qua `handleChange` theo đúng thứ tự khai để cascade chạy — set thẳng
+     `setFormData` thì ô con của cấp prefill sẽ không có danh mục. */
+  const prefillDoneRef = React.useRef(false);
+  const [lockedFields, setLockedFields] = React.useState<Set<string>>(
+    () => new Set(),
+  );
+
+  React.useEffect(() => {
+    if (prefillDoneRef.current) return;
+    if (!fieldActive.length) return;
+
+    prefillDoneRef.current = true;
+
+    const applicable = Object.keys(prefilledValues ?? {}).filter((name) =>
+      fieldActive.some((field) => field.name === name),
+    );
+
+    if (!applicable.length) return;
+
+    applicable.forEach((name) => {
+      handleChange(name, prefilledValues![name]);
+
+      const label = prefilledLabels?.[name];
+      if (label) {
+        setFormData((prev) => ({ ...prev, [`${name}_MoTa`]: label }));
+      }
+    });
+
+    /* Chốt khoá SAU khi điền: `handleChange` chặn field đã khoá, ghi ref trước
+       là chính vòng lặp prefill không điền được gì. */
+    applicable.forEach((name) => {
+      lockedValuesRef.current[name] = prefilledValues![name];
+    });
+    setLockedFields(new Set(applicable));
+  }, [
+    fieldActive,
+    handleChange,
+    prefilledLabels,
+    prefilledValues,
+    setFormData,
+  ]);
 
   useImageLoader({
     fieldActive,
@@ -246,14 +321,20 @@ export default function ReferenceQuickAddForm({
     setLoadingImages,
   });
 
-  /* Mã tự động: chỉ sinh một lần lúc mở form. Không theo cha như màn thêm mới —
-     form này không có cây danh mục để suy ra giá trị cha. */
+  /* Mã tự động: chỉ sinh một lần lúc mở form, và phải CHỜ prefill cấp cha xong —
+     sinh trước thì mã ra theo cha rỗng, mà sai kiểu đó vẫn lưu được, không báo
+     lỗi gì. */
   const autoCodeField = config?.propertyClass?.propertyTuDongTang;
   const autoCodeRequestedRef = React.useRef(false);
+  const autoCodeParentField = config?.propertyClass?.prentTuDongTang;
+  const autoCodeParentValue = autoCodeParentField
+    ? prefilledValues?.[autoCodeParentField]
+    : undefined;
 
   React.useEffect(() => {
     if (autoCodeRequestedRef.current) return;
     if (!config?.propertyClass?.isTuDongTang || !autoCodeField) return;
+    if (!prefillDoneRef.current) return;
 
     autoCodeRequestedRef.current = true;
 
@@ -261,7 +342,8 @@ export default function ReferenceQuickAddForm({
       propertyTuDongTang: autoCodeField,
       formatTuDongTang: config.propertyClass.formatTuDongTang,
       prentTuDongTang: config.propertyClass.prentTuDongTang,
-      prentTuDongTang_Value: "",
+      prentTuDongTang_Value:
+        autoCodeParentValue != null ? String(autoCodeParentValue) : "",
       prefix: config.propertyClass.prefix,
     })
       .then((res) => {
@@ -272,10 +354,19 @@ export default function ReferenceQuickAddForm({
       .catch((error) => {
         log("[ReferenceQuickAddForm] auto code error:", error);
       });
-  }, [autoCodeField, config?.propertyClass, isMounted, nameClass, setFormData]);
+  }, [
+    autoCodeField,
+    autoCodeParentValue,
+    config?.propertyClass,
+    isMounted,
+    lockedFields,
+    nameClass,
+    setFormData,
+  ]);
 
   const { openReferenceModal, loadReferenceModalData } = useOpenReferenceModal({
     formData,
+    fieldActive,
     setActiveEnumField,
     setRefKeyword,
     setRefPage,
@@ -306,7 +397,7 @@ export default function ReferenceQuickAddForm({
       return;
     }
 
-    const payload: Record<string, any> = { ...formData };
+    let payload: Record<string, any> = { ...formData };
 
     Object.keys(payload).forEach((key) => {
       if (key.endsWith("_MoTa")) delete payload[key];
@@ -322,6 +413,13 @@ export default function ReferenceQuickAddForm({
     if (autoCodeField && isEffectivelyEmptyCodeValue(payload[autoCodeField])) {
       payload[autoCodeField] = null;
     }
+
+    /* Mục 4b: không gửi field isReadOnly. Chừa cột mã tự tăng và các cột prefill
+       chuỗi cấp cha — bỏ chúng là bản ghi danh mục mới không thuộc cha nào. */
+    payload = stripReadOnlyFields(fieldActive, payload, [
+      autoCodeField,
+      ...lockedFields,
+    ]);
 
     if (!Object.keys(payload).length) {
       showAlertIfActive("Thông báo", "Vui lòng nhập ít nhất một trường!");
@@ -415,7 +513,6 @@ export default function ReferenceQuickAddForm({
           collapsedGroups={collapsedGroups}
           enumData={enumData}
           formData={formData}
-          getDefaultValueForField={getDefaultValueForField}
           groupedFields={groupedFields}
           handleChange={handleChange}
           images={images}
@@ -429,6 +526,7 @@ export default function ReferenceQuickAddForm({
           setLoadingImages={setLoadingImages}
           styles={styles}
           toggleGroup={toggleGroup}
+          lockedFields={lockedFields}
         />
       </ScrollView>
     );
