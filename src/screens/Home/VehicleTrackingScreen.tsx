@@ -19,6 +19,7 @@ import { useIsFocused, useNavigation } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { DatePicker } from "../../components/dataPicker/DataPicker";
 import EnumAndReferencePickerModal from "../../components/modal/EnumAndReferencePickerModal";
+import VehicleFilterSkeleton from "./shared/VehicleFilterSkeleton";
 import EmptyState from "../../components/ui/EmptyState";
 import {
   getPhuongTien,
@@ -261,10 +262,12 @@ export default function VehicleTrackingScreen() {
 
   if (loading)
     return (
-      <View style={styles.center}>
-        <ActivityIndicator color={c.red} />
-        <Text style={styles.loadingText}>Đang tải phương tiện...</Text>
-      </View>
+      <VehicleFilterSkeleton
+        hasDateRange
+        actionLabels={["Đóng tất cả", "Xem bản đồ"]}
+        actionColors={["#737373", "#1976D2"]}
+        hasListArea
+      />
     );
 
   return (
@@ -472,12 +475,6 @@ const makeStyles = (c: AppColors) =>
       paddingHorizontal: 16,
       paddingTop: 8,
       paddingBottom: 32,
-    },
-    center: {
-      flex: 1,
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: c.surfaceAlt,
     },
     loadingText: { marginTop: 9, fontSize: 14, color: c.textSecondary },
 

@@ -210,7 +210,15 @@ export default function XacNhanViTriTuLanhLichSuScreen() {
       isEmpty: items.length === 0,
     })
   )
-    return <RecordListSkeleton hasSummaryCard hasBanner lines={4} />;
+    return (
+      <RecordListSkeleton
+        hasSummaryCard
+        hasBanner
+        hasFilterCard
+        hasFab={canThemXacNhanViTri}
+        lines={4}
+      />
+    );
 
   if (!canXemXacNhanViTri) {
     return (

@@ -12,6 +12,9 @@ import { AppColors, useStyles } from "../../../utils/helpers/colors";
 
 const FAB_SIZE = 64;
 const FAB_OFFSET = 16;
+/** Cho khung chờ dựng lại đúng nút này — xem `RecordListSkeleton`. */
+export const ADD_FAB_SIZE = FAB_SIZE;
+export const ADD_FAB_OFFSET = FAB_OFFSET;
 let cachedBottomInset = 0;
 
 /**

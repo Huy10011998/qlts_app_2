@@ -603,7 +603,12 @@ const HomeScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
         ) : (
-          <HomeStatTiles tiles={statTiles} isLoading={isFirstDashboardLoad} />
+          <HomeStatTiles
+            tiles={statTiles}
+            isLoading={isFirstDashboardLoad}
+            // Quyền đã đọc xong ở nhánh này, nên khung chờ ra đúng số ô sắp hiện.
+            skeletonCount={canViewAttendance ? 4 : 3}
+          />
         )}
       </>
     ),

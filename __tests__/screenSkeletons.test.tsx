@@ -7,12 +7,26 @@ import ProfileScreenSkeleton from "../src/screens/Profile/ProfileScreenSkeleton"
 import CameraNotificationSkeleton from "../src/screens/Settings/shared/CameraNotificationSkeleton";
 import ShareholdersMeetingSkeleton from "../src/screens/ShareholdersMeeting/shared/ShareholdersMeetingSkeleton";
 
+// `ShareholdersMeetingSkeleton` chạy vòng nhấp nháy, chỉ dừng khi unmount — còn
+// sống thì Jest không thoát được worker. Hai file test khung chờ kia đã có sẵn
+// phần tháo này; file này thiếu.
+let mounted: ReactTestRenderer.ReactTestRenderer[] = [];
+
+afterEach(async () => {
+  await ReactTestRenderer.act(async () => {
+    mounted.forEach((tree) => tree.unmount());
+  });
+  mounted = [];
+});
+
 const mount = async (element: React.ReactElement) => {
   let tree: ReactTestRenderer.ReactTestRenderer;
 
   await ReactTestRenderer.act(async () => {
     tree = ReactTestRenderer.create(<ThemeProvider>{element}</ThemeProvider>);
   });
+
+  mounted.push(tree!);
 
   return tree!;
 };

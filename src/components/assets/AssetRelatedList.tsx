@@ -204,6 +204,9 @@ export default function AssetRelatedList() {
     return null;
   }
 
+  // Một điều kiện duy nhất cho cả nút và khoảng chừa ở đáy danh sách.
+  const showAddFab = Boolean(loaded && can(nameClass, "Insert"));
+
   if (
     shouldShowListSkeleton({
       /* Lúc chờ parent-value, `useRelatedAssetListData` đang ở nhánh
@@ -215,7 +218,9 @@ export default function AssetRelatedList() {
       isSearching,
     })
   ) {
-    return <RecordListSkeleton hasSearchBar hasSummaryCard />;
+    return (
+      <RecordListSkeleton hasSearchBar hasSummaryCard hasFab={showAddFab} />
+    );
   }
 
   if (loadErrorMessage) {
@@ -231,8 +236,6 @@ export default function AssetRelatedList() {
   }
 
   const isEmpty = data.length === 0;
-  // Một điều kiện duy nhất cho cả nút và khoảng chừa ở đáy danh sách.
-  const showAddFab = Boolean(loaded && can(nameClass, "Insert"));
 
   return (
     <View style={styles.container}>

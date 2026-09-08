@@ -46,7 +46,7 @@ import { useSafeAlert } from "../../../hooks/useSafeAlert";
 
 import AssetFormGroupedFields from "./AssetFormGroupedFields";
 import AssetFormReferencePickerModal from "./AssetFormReferencePickerModal";
-import IsLoading from "../../ui/IconLoading";
+import AssetFormSkeleton from "./AssetFormSkeleton";
 import EmptyState from "../../ui/EmptyState";
 import { createAssetFormBaseStyles } from "./assetFormStyles";
 import {
@@ -482,8 +482,9 @@ export default function ReferenceQuickAddForm({
 
     if (!config) {
       return (
-        <View style={styles.centerBlock}>
-          <IsLoading size="small" />
+        // `body` cho flex:1 như vùng cuộn thật, `bodyContent` cho đúng lề của nó.
+        <View style={[styles.body, styles.bodyContent]}>
+          <AssetFormSkeleton />
         </View>
       );
     }

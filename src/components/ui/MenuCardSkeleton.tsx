@@ -8,8 +8,14 @@ import {
 } from "../../utils/helpers/colors";
 import { useSkeletonAutoFill } from "./useSkeletonAutoFill";
 
-/** Chiều cao một thẻ, gồm cả khoảng cách xuống thẻ dưới — xem `makeStyles`. */
-const ROW_HEIGHT = 58 + 6;
+/**
+ * Chiều cao một thẻ, gồm cả khoảng cách xuống thẻ dưới — xem `makeStyles`.
+ *
+ * Xuất ra ngoài cho chỗ phải tự tính số thẻ vì khung không đo được (panel trượt
+ * của `AssetList`), để hai bên không lệch số đo.
+ */
+export const MENU_CARD_ROW_HEIGHT = 58 + 6;
+const ROW_HEIGHT = MENU_CARD_ROW_HEIGHT;
 
 /**
  * Khung xám nhấp nháy đúng hình dáng thẻ menu, dùng trong lúc tải.
@@ -27,7 +33,26 @@ const ROW_HEIGHT = 58 + 6;
  * đừng chỉ hỏi "đang gọi API không": tải lại lúc danh sách đã có dữ liệu phải
  * diễn ra âm thầm.
  */
-export default function MenuCardSkeleton({ rows }: { rows?: number }) {
+export default function MenuCardSkeleton({
+  rows,
+  hasSearchBar = false,
+  hasGroupHeader = false,
+}: {
+  rows?: number;
+  /**
+   * Thanh tìm kiếm cố định trên đầu ba màn cây menu (`MenuTreeSearchBar`).
+   *
+   * Chỉ dựng ô nhập, KHÔNG dựng hàng badge "N kết quả" / "Thu tất cả" bên dưới:
+   * hàng đó chỉ hiện khi đã gõ từ khoá hoặc đã mở nhóm, mà lúc khung chờ chạy
+   * thì cả hai đều chưa xảy ra — vẽ thêm là dựng một khối màn thật không có.
+   */
+  hasSearchBar?: boolean;
+  /**
+   * Tiêu đề nhóm phía trên các thẻ — danh sách báo cáo gom thẻ theo nhóm. Chỉ
+   * dựng MỘT tiêu đề: số nhóm chỉ biết sau khi có dữ liệu.
+   */
+  hasGroupHeader?: boolean;
+}) {
   const styles = useStyles(makeStyles);
   const hairlineBorderColor = useHairlineBorderColor();
   const { onLayout, opacity, rowCount } = useSkeletonAutoFill(ROW_HEIGHT, rows);
@@ -38,9 +63,30 @@ export default function MenuCardSkeleton({ rows }: { rows?: number }) {
       onLayout={onLayout}
       accessibilityLabel="Đang tải danh sách"
     >
+      {hasSearchBar ? (
+        <Animated.View
+          style={[styles.searchBar, { borderColor: hairlineBorderColor, opacity }]}
+        >
+          <View style={styles.searchIcon} />
+          <View style={styles.searchText} />
+        </Animated.View>
+      ) : null}
+
+      {hasGroupHeader ? (
+        <Animated.View style={[styles.groupHeader, { opacity }]}>
+          <View style={styles.groupIcon} />
+          <View style={styles.groupTitle} />
+          <View style={styles.groupCount} />
+        </Animated.View>
+      ) : null}
+
       {Array.from({ length: rowCount }).map((_, index) => (
         <Animated.View
           key={index}
+          // Đếm được thẻ mà không phụ thuộc vị trí trong cây: các khối header ở
+          // trên là tuỳ chọn, đếm theo con trực tiếp của khung là sai ngay khi
+          // thêm một khối mới.
+          testID="menu-card-skeleton-card"
           style={[styles.card, { borderColor: hairlineBorderColor, opacity }]}
         >
           <View style={styles.icon} />
@@ -63,6 +109,60 @@ const makeStyles = (c: AppColors) =>
       overflow: "hidden",
       paddingHorizontal: 14,
       paddingTop: 4,
+    },
+    // Ô tìm kiếm thật là hộp TRẮNG có viền (`SearchBar` cardBox), chỉ chữ bên
+    // trong mới xám — vẽ thành khối xám đặc là lệch hình dáng.
+    searchBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      minHeight: 48,
+      // Cộng với `paddingTop` của khung là đúng 14 của `MenuTreeSearchBar`.
+      marginTop: 10,
+      marginBottom: 8,
+      paddingHorizontal: 12,
+      borderRadius: 14,
+      borderWidth: StyleSheet.hairlineWidth,
+      backgroundColor: c.surface,
+    },
+    searchIcon: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      backgroundColor: c.skeleton,
+    },
+    searchText: {
+      width: "56%",
+      height: 12,
+      borderRadius: 6,
+      backgroundColor: c.skeleton,
+    },
+    groupHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: 12,
+      marginBottom: 9,
+    },
+    groupIcon: {
+      width: 26,
+      height: 26,
+      borderRadius: 8,
+      marginRight: 8,
+      backgroundColor: c.skeleton,
+    },
+    groupTitle: {
+      flex: 1,
+      height: 13,
+      maxWidth: "46%",
+      borderRadius: 6,
+      backgroundColor: c.skeleton,
+    },
+    groupCount: {
+      width: 66,
+      height: 20,
+      marginLeft: "auto",
+      borderRadius: 999,
+      backgroundColor: c.skeleton,
     },
     card: {
       flexDirection: "row",

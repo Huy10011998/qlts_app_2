@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   InteractionManager,
+  useWindowDimensions,
 } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type {
@@ -27,7 +28,9 @@ import {
   getBuildTree,
 } from "../../services";
 import RecordListSkeleton from "../list/RecordListSkeleton";
-import MenuCardSkeleton from "../ui/MenuCardSkeleton";
+import MenuCardSkeleton, {
+  MENU_CARD_ROW_HEIGHT,
+} from "../ui/MenuCardSkeleton";
 import { shouldShowListSkeleton } from "../ui/shouldShowListSkeleton";
 import ListCardAsset from "../../components/list/ListCardAsset";
 import SwipeableListRow from "../../components/list/SwipeableListRow";
@@ -90,6 +93,7 @@ function AssetListMenuButton({ onPress }: { onPress: () => void }) {
 
 export default function AssetList() {
   const styles = useStyles(makeStyles);
+  const { height: windowHeight } = useWindowDimensions();
   const navigation = useNavigation<StackNavigation<"AssetList">>();
   const {
     nameClass,
@@ -562,14 +566,16 @@ export default function AssetList() {
       width={MENU_WIDTH}
     >
       {/*
-        Truyền số dòng cố định: thân panel là ScrollView nên chiều cao khung do
-        chính nội dung quyết định, không đo ra được như khi khung chờ chiếm cả màn.
+        Tự tính số dòng: thân panel là ScrollView nên chiều cao khung do chính nội
+        dung quyết định, khung chờ không đo ra được như khi nó chiếm cả màn. Panel
+        cao đúng bằng màn hình (`height: "100%"`) nên lấy chiều cao cửa sổ là đủ —
+        số cố định 8 dòng như trước bỏ trống hẳn một mảng dưới đáy panel.
       */}
-      {/*
-        Truyền số dòng cố định: thân panel là ScrollView nên chiều cao khung do
-        chính nội dung quyết định, không đo ra được như khi khung chờ chiếm cả màn.
-      */}
-      {showTreeSkeleton ? <MenuCardSkeleton rows={8} /> : null}
+      {showTreeSkeleton ? (
+        <MenuCardSkeleton
+          rows={Math.ceil(windowHeight / MENU_CARD_ROW_HEIGHT)}
+        />
+      ) : null}
       {!showTreeSkeleton && treeErrorMessage ? (
         <AssetListEmptyState
           iconName="cloud-offline-outline"
@@ -598,6 +604,10 @@ export default function AssetList() {
     </SlideInSidePanel>
   );
 
+  // Một điều kiện duy nhất cho cả nút và khoảng chừa ở đáy danh sách, để không
+  // bao giờ lệch nhau.
+  const showAddFab = Boolean(loaded && nameClass && can(nameClass, "Insert"));
+
   if (
     shouldShowListSkeleton({
       isFetching: isLoading || isLoadingMore,
@@ -611,6 +621,7 @@ export default function AssetList() {
         hasSearchBar
         hasSummaryCard
         hasBanner={hasChildClasses}
+        hasFab={showAddFab}
       />
     );
   }
@@ -633,9 +644,6 @@ export default function AssetList() {
   const isEmpty = assetItems.length === 0;
   const hasSearchOrFilter =
     Boolean(debouncedSearch.trim()) || Boolean(selectedNode);
-  // Một điều kiện duy nhất cho cả nút và khoảng chừa ở đáy danh sách, để không
-  // bao giờ lệch nhau.
-  const showAddFab = Boolean(loaded && nameClass && can(nameClass, "Insert"));
 
   return (
     <View style={styles.container}>

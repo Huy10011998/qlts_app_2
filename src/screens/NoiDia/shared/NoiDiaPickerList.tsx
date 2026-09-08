@@ -80,7 +80,26 @@ export default function NoiDiaPickerList<T>({
     })
   )
     return (
-      <RecordListSkeleton hasSearchBar variant="row" lines={2} trailing="chevron" />
+      /* Dòng ngữ cảnh ("NPP: ...") là tham số route, có ngay từ frame đầu — dựng
+         chữ THẬT chứ không tô xám, và không có nó thì lúc dữ liệu về cả danh
+         sách bị đẩy xuống một dòng.
+
+         Khung ngoài cố ý không lấy `paddingTop` của `root`: khoảng hở trên đã
+         nằm sẵn trong khối tìm kiếm của khung chờ, cộng cả hai là thừa. */
+      <View style={styles.skeletonRoot}>
+        {contextLabel ? (
+          <Text style={styles.contextLabel} numberOfLines={1}>
+            {contextLabel}
+          </Text>
+        ) : null}
+
+        <RecordListSkeleton
+          hasSearchBar
+          variant="row"
+          lines={2}
+          trailing="chevron"
+        />
+      </View>
     );
 
   return (
@@ -146,6 +165,9 @@ const makeStyles = (c: AppColors) =>
     root: {
       flex: 1,
       paddingTop: 12,
+    },
+    skeletonRoot: {
+      flex: 1,
     },
     contextLabel: {
       paddingHorizontal: 16,

@@ -4,11 +4,11 @@ import { useNavigation } from "@react-navigation/native";
 
 import type { HomeNavigationProp } from "../../types";
 import EmptyState from "../../components/ui/EmptyState";
-import MenuCardSkeleton from "../../components/ui/MenuCardSkeleton";
 import SearchBar from "../../components/ui/SearchBar";
 import { removeVietnameseTones } from "../../utils/helpers/string";
 import { useAppColors, useStyles } from "../../utils/helpers/colors";
 import FeatureTile, { type FeatureTileGroup } from "./shared/FeatureTile";
+import FeaturesScreenSkeleton from "./shared/FeaturesScreenSkeleton";
 import { HOME_BRAND_RED } from "./shared/homeTheme";
 import { useMenuScreenData } from "./shared/useMenuScreenData";
 import { makeFeatureStyles } from "./FeaturesScreen.styles";
@@ -132,11 +132,14 @@ const FeaturesScreen: React.FC = () => {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
+      {/* Ô tìm kiếm không đợi dữ liệu nào nên dựng luôn, cả lúc chờ lẫn lúc
+          xong — nằm ngoài nhánh thì nó không bị tháo ra dựng lại. */}
+      {searchBar}
+
       {isLoading ? (
-        <MenuCardSkeleton />
+        <FeaturesScreenSkeleton />
       ) : (
         <>
-          {searchBar}
           <ScrollView
             style={styles.scroll}
             contentContainerStyle={styles.scrollContent}

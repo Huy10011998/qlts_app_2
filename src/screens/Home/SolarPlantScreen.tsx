@@ -7,7 +7,6 @@ import React, {
   useState,
 } from "react";
 import {
-  ActivityIndicator,
   Animated,
   Easing,
   Modal,
@@ -101,6 +100,7 @@ import {
   WeatherIcon,
 } from "./SolarPlantScreen.visuals";
 import { getPlantScene } from "./shared/plantScenes";
+import SolarPlantSkeleton from "./shared/SolarPlantSkeleton";
 import {
   useSolarDashboard,
   type SolarBlockState,
@@ -217,28 +217,22 @@ const RefreshBar: React.FC = () => {
  * cấu hình nhà máy nào. Ba trạng thái này là thứ đầu tiên người dùng thấy khi vào
  * màn nên dùng chung một khung có nhận diện, không phải spinner trơ trên nền xám.
  */
+/* Chỉ còn dùng cho hai trạng thái ĐỨNG IM: không có quyền, và không lấy được
+   danh sách đồng hồ. Nhánh đang tải đã chuyển sang `SolarPlantSkeleton`, nên ở
+   đây không còn vòng xoay nào. */
 const SolarFullScreenState: React.FC<{
   action?: React.ReactNode;
   iconColor?: string;
   iconName: string;
-  isLoading?: boolean;
   message?: string | null;
-}> = ({ action, iconColor, iconName, isLoading, message }) => {
+}> = ({ action, iconColor, iconName, message }) => {
   const styles = useStyles(makeStyles);
-  const appColors = useAppColors();
 
   return (
     <View style={[styles.safe, styles.fullScreenState]}>
       <View style={styles.fullScreenBadge}>
         <Ionicons name={iconName} size={46} color={iconColor ?? C.amber} />
       </View>
-      {isLoading ? (
-        <ActivityIndicator
-          color={appColors.accent}
-          size="small"
-          style={styles.fullScreenSpinner}
-        />
-      ) : null}
       {message ? (
         <Text style={styles.fullScreenStateText}>{message}</Text>
       ) : null}
@@ -1627,13 +1621,7 @@ const SolarFullScreen: React.FC = () => {
   // Bước khởi tạo: chưa có danh sách config thì không được gọi API dữ liệu nào,
   // vì mọi endpoint đều cần ID_DongHoSolar lấy từ đây.
   if (!permissionsLoaded || siteStatus === "loading") {
-    return (
-      <SolarFullScreenState
-        iconName="sunny"
-        isLoading
-        message="Đang tải dữ liệu điện mặt trời…"
-      />
-    );
+    return <SolarPlantSkeleton />;
   }
 
   if (!hasSolarPermission || siteStatus === "forbidden") {

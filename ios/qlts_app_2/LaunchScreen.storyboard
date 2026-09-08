@@ -24,8 +24,16 @@
                         <color key="backgroundColor" red="0.8901960784313725" green="0.11764705882352941" blue="0.1411764705882353" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <color key="tintColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <constraints>
-                            <constraint firstItem="AppLogoImage" firstAttribute="centerX" secondItem="Bcu-3y-fUS" secondAttribute="centerX" id="centerX-logo"/>
-                            <constraint firstItem="AppLogoImage" firstAttribute="centerY" secondItem="Bcu-3y-fUS" secondAttribute="centerY" id="centerY-logo"/>
+                            <!-- Căn theo ROOT VIEW (Ze5-6b-2t3), KHÔNG theo safeArea (Bcu-3y-fUS).
+                                 Storyboard này được vẽ hai lần: một lần là launch screen do iOS dựng
+                                 (có safe area thật, top notch > bottom nên tâm safeArea thấp hơn tâm
+                                 màn hình), một lần là lớp phủ giữ splash trong holdSplashScreen() của
+                                 AppDelegate (view rời, VC ngoài hierarchy nên safeAreaInsets = 0).
+                                 Ràng vào safeArea làm hai lần vẽ lệch nhau (top - bottom)/2 → logo
+                                 nhảy. Ràng vào view thì cả hai đều là tâm màn hình, và khớp luôn với
+                                 Android (icon splash căn giữa cửa sổ vật lý). -->
+                            <constraint firstItem="AppLogoImage" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="centerX-logo"/>
+                            <constraint firstItem="AppLogoImage" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="centerY-logo"/>
                             <constraint firstItem="AppLogoImage" firstAttribute="height" constant="144" id="height-logo"/>
                             <constraint firstItem="AppLogoImage" firstAttribute="width" constant="144" id="width-logo"/>
                         </constraints>

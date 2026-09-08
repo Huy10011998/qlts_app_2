@@ -312,8 +312,10 @@ export default function HomeAttendanceDetailSheet({
       </View>
 
       {isLoading ? (
-        // Sheet cao cố định nên truyền số hàng, không đo được như khung chờ cả màn.
-        <RecordListSkeleton variant="row" lines={2} rows={6} />
+        /* KHÔNG truyền `rows`: sheet cao cố định 86% màn nên khung chờ `flex: 1`
+           đo được chiều cao thật, tự dựng đủ dòng phủ kín. Số hàng cứng trước đây
+           bỏ trống hẳn một mảng dưới đáy trên máy màn lớn. */
+        <RecordListSkeleton variant="plain" lines={2} trailing="status" />
       ) : errorMessage ? (
         <EmptyState
           iconName="cloud-offline-outline"

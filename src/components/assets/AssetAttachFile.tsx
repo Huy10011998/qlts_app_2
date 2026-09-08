@@ -149,7 +149,12 @@ export default function AssetListAttachFile() {
     shouldShowListSkeleton({ isFetching: isLoading, isEmpty: file.length === 0 })
   )
     return (
-      <RecordListSkeleton hasGroupHeader lines={2} trailing="button" />
+      <RecordListSkeleton
+        hasSummaryCard
+        hasGroupHeader
+        lines={2}
+        trailing="button"
+      />
     );
 
   if (loadErrorMessage) {

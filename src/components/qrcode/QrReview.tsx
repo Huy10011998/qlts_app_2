@@ -177,6 +177,9 @@ export default function QrReview() {
     return null;
   }
 
+  // Một điều kiện duy nhất cho cả nút và khoảng chừa ở đáy danh sách.
+  const showAddFab = Boolean(loaded && can(nameClass, "Insert"));
+
   if (
     shouldShowListSkeleton({
       isFetching: isLoading || isLoadingMore || isLoadingParentValue,
@@ -185,7 +188,9 @@ export default function QrReview() {
       isSearching,
     })
   ) {
-    return <RecordListSkeleton hasSearchBar hasSummaryCard />;
+    return (
+      <RecordListSkeleton hasSearchBar hasSummaryCard hasFab={showAddFab} />
+    );
   }
 
   if (loadErrorMessage) {
@@ -201,8 +206,6 @@ export default function QrReview() {
   }
 
   const isEmpty = data.length === 0;
-  // Một điều kiện duy nhất cho cả nút và khoảng chừa ở đáy danh sách.
-  const showAddFab = Boolean(loaded && can(nameClass, "Insert"));
 
   return (
     <View style={styles.container}>
