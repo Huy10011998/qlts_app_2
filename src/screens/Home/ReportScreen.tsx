@@ -408,7 +408,7 @@ export default function ReportScreen() {
     setIsSearching(search !== debouncedSearch);
   }, [debouncedSearch, search]);
 
-  if (!loaded) return <MenuCardSkeleton />;
+  if (!loaded) return <MenuCardSkeleton hasSearchBar hasGroupHeader />;
 
   if (!hasViewPermission) {
     return (
@@ -433,7 +433,7 @@ export default function ReportScreen() {
       isSearching: Boolean(debouncedSearch),
     })
   ) {
-    return <MenuCardSkeleton />;
+    return <MenuCardSkeleton hasSearchBar hasGroupHeader />;
   }
 
   if (loadErrorMessage) {

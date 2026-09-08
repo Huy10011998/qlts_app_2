@@ -22,6 +22,13 @@ export type HomeStatTile = {
 type HomeStatTilesProps = {
   tiles: HomeStatTile[];
   isLoading?: boolean;
+  /**
+   * Số ô của khung chờ. Mặc định 4 — ba ô thiết bị luôn có, ô điểm danh thì theo
+   * quyền, nên nơi gọi nào biết quyền thì truyền đúng số để hàng cuối không thừa
+   * một ô. Khung chờ cả Trang chủ (`HomeScreenSkeleton`) chạy trước lúc đọc xong
+   * quyền nên cứ để mặc định.
+   */
+  skeletonCount?: number;
 };
 
 const COLUMNS = 2;
@@ -63,16 +70,24 @@ function HomeStatTileSkeleton() {
 export default function HomeStatTiles({
   tiles,
   isLoading = false,
+  skeletonCount = 4,
 }: HomeStatTilesProps) {
   const styles = useStyles(makeStyles);
 
   if (isLoading && tiles.length === 0) {
+    /* Dựng qua `toRows` như lưới thật, không tự xếp: hai ô một hàng viết tay thì
+       khung chờ chỉ ra ĐÚNG MỘT hàng, trong khi lưới thật luôn hai hàng — vào
+       Trang chủ lần đầu là thấy hụt một hàng rồi bị đẩy xuống khi số về. */
     return (
       <View style={styles.grid}>
-        <View style={styles.row}>
-          <HomeStatTileSkeleton />
-          <HomeStatTileSkeleton />
-        </View>
+        {toRows(Array.from({ length: skeletonCount })).map((row, rowIndex) => (
+          <View key={`skeleton-row-${rowIndex}`} style={styles.row}>
+            {row.map((_, index) => (
+              <HomeStatTileSkeleton key={`skeleton-tile-${index}`} />
+            ))}
+            {row.length < COLUMNS ? <View style={styles.filler} /> : null}
+          </View>
+        ))}
       </View>
     );
   }

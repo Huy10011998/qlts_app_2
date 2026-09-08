@@ -765,10 +765,6 @@ export const makeStyles = (c: AppColors) =>
       backgroundColor: c.loadingOverlay,
       marginBottom: 22,
     },
-    fullScreenSpinner: {
-      marginBottom: 14,
-      height: 24,
-    },
     fullScreenStateText: {
       color: c.text,
       fontSize: 15,

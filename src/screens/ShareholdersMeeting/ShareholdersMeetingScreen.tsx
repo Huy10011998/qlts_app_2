@@ -343,7 +343,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
           />
         </View>
       ) : isVotingLoading && opinions.length === 0 ? (
-        <ShareholdersMeetingSkeleton variant="voting" />
+        <ShareholdersMeetingSkeleton variant="voting" withHeader={false} />
       ) : (
         <ScrollView
           style={styles.content}

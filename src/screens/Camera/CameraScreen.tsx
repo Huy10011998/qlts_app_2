@@ -191,7 +191,7 @@ export default function CameraScreen() {
   }, [search, debouncedSearch]);
   // Chờ quyền cũng dùng khung chờ như chờ dữ liệu: hai nhánh khác kiểu thì vào
   // màn thấy vòng xoay nhảy sang khung xám rồi mới ra nội dung.
-  if (!loaded) return <MenuCardSkeleton />;
+  if (!loaded) return <MenuCardSkeleton hasSearchBar />;
 
   if (!hasViewPermission) {
     return (
@@ -215,7 +215,7 @@ export default function CameraScreen() {
       isSearching: Boolean(debouncedSearch),
     })
   )
-    return <MenuCardSkeleton />;
+    return <MenuCardSkeleton hasSearchBar />;
 
   if (loadErrorMessage) {
     return (

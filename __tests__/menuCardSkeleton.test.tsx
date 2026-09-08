@@ -42,8 +42,14 @@ const layout = async (
   });
 };
 
+// Lọc `typeof node.type === "string"`: mỗi thẻ là một `Animated.View`, dựng ra
+// vài lớp bọc cùng mang testID — không lọc thì đếm gấp ba.
 const rowCountOf = (tree: ReactTestRenderer.ReactTestRenderer) =>
-  wrapOf(tree).props.children.length;
+  tree.root.findAll(
+    (node) =>
+      typeof node.type === "string" &&
+      node.props.testID === "menu-card-skeleton-card",
+  ).length;
 
 describe("khung chờ danh sách thẻ", () => {
   // Số dòng cố định để chừa vùng trống bên dưới trên màn lớn, nhìn như danh sách

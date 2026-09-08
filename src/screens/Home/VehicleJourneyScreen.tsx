@@ -26,6 +26,7 @@ import { error, log } from "../../utils/Logger";
 import { DatePicker } from "../../components/dataPicker/DataPicker";
 import EmptyState from "../../components/ui/EmptyState";
 import EnumAndReferencePickerModal from "../../components/modal/EnumAndReferencePickerModal";
+import VehicleFilterSkeleton from "./shared/VehicleFilterSkeleton";
 import type { HomeNavigationProp } from "../../types";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 
@@ -342,10 +343,12 @@ export default function VehicleJourneyScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centerState}>
-        <ActivityIndicator color={c.red} />
-        <Text style={styles.loadingText}>Đang tải phương tiện...</Text>
-      </View>
+      <VehicleFilterSkeleton
+        hasDateRange
+        actionLabels={["Đóng tất cả"]}
+        actionColors={["#737373"]}
+        hasListArea
+      />
     );
   }
 
@@ -643,12 +646,6 @@ const makeStyles = (c: AppColors) =>
       paddingHorizontal: 16,
       paddingTop: 8,
       paddingBottom: 32,
-    },
-    centerState: {
-      flex: 1,
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: c.surfaceAlt,
     },
     loadingText: { marginTop: 10, color: c.textSecondary, fontSize: 14 },
 

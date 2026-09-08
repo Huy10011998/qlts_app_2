@@ -151,7 +151,14 @@ export default function TrungChuyenTuLanhLichSuScreen() {
     !loaded ||
     shouldShowListSkeleton({ isFetching: isLoading, isEmpty: items.length === 0 })
   )
-    return <RecordListSkeleton hasSummaryCard variant="compact" lines={1} />;
+    return (
+      <RecordListSkeleton
+        hasSummaryCard
+        hasFab={canThemTrungChuyen}
+        variant="compact"
+        lines={1}
+      />
+    );
 
   if (!canXemTrungChuyen) {
     return (

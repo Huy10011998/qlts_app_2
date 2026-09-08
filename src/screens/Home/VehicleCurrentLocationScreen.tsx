@@ -16,6 +16,7 @@ import { useIsFocused } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import WebView from "react-native-webview";
 import EnumAndReferencePickerModal from "../../components/modal/EnumAndReferencePickerModal";
+import VehicleFilterSkeleton from "./shared/VehicleFilterSkeleton";
 import EmptyState from "../../components/ui/EmptyState";
 import {
   getPhuongTien,
@@ -292,12 +293,7 @@ export default function VehicleCurrentLocationScreen() {
   }, [pushLocationToMap]);
 
   if (vehiclesLoading) {
-    return (
-      <View style={styles.centerState}>
-        <ActivityIndicator color={c.red} />
-        <Text style={styles.loadingText}>Đang tải phương tiện...</Text>
-      </View>
-    );
+    return <VehicleFilterSkeleton />;
   }
 
   return (
@@ -446,12 +442,6 @@ export default function VehicleCurrentLocationScreen() {
 const makeStyles = (c: AppColors) =>
   StyleSheet.create({
     root: { flex: 1, backgroundColor: c.surfaceAlt },
-    centerState: {
-      flex: 1,
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: c.surfaceAlt,
-    },
     flexState: { flex: 1, alignItems: "center", justifyContent: "center" },
     loadingText: { color: c.textSecondary, fontSize: 13, marginTop: 9 },
     filterWrap: { paddingHorizontal: 16, paddingTop: 8 },

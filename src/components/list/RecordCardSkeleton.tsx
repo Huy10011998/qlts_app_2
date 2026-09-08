@@ -8,25 +8,34 @@ import {
 } from "../../utils/helpers/colors";
 
 /**
- * Ba dáng thẻ bản ghi có thật trong app — đo từ chính các thẻ đang chạy:
+ * Bốn dáng dòng bản ghi có thật trong app — đo từ chính các thẻ đang chạy:
  *
  * - `avatar`: avatar tròn 48 + N dòng field. Dùng cho 6 màn, vì
  *   `noiDiaListStyles.ts` cố ý copy đúng số đo của `ListCardAsset`.
  * - `compact`: một dòng, không avatar — thẻ gập/mở của lịch sử trung chuyển.
  * - `row`: không avatar, có chevron, khoảng cách bằng `gap` chứ margin — dòng
  *   chọn trong danh sách Nội địa.
+ * - `plain`: KHÔNG phải thẻ — dòng trong suốt ngăn nhau bằng một gạch mảnh, nằm
+ *   thẳng trên nền sheet. Danh sách nhân viên của sheet điểm danh.
  */
-export type RecordCardVariant = "avatar" | "compact" | "row";
+export type RecordCardVariant = "avatar" | "compact" | "row" | "plain";
 
 /**
- * Thứ nằm cuối thẻ: mũi nhọn mở chi tiết, nút bấm ("Xem" ở thẻ tệp), hoặc không
- * có gì. Một prop thay vì mỗi dáng một boolean, để thêm dáng mới không thành một
- * dãy cờ loại trừ nhau.
+ * Thứ nằm cuối thẻ: mũi nhọn mở chi tiết, nút bấm ("Xem" ở thẻ tệp), icon trạng
+ * thái kèm giờ, hoặc không có gì. Một prop thay vì mỗi dáng một boolean, để thêm
+ * dáng mới không thành một dãy cờ loại trừ nhau.
  */
-export type RecordCardTrailing = "none" | "chevron" | "button";
+export type RecordCardTrailing = "none" | "chevron" | "button" | "status";
 
 const LINE_HEIGHT = 21;
 const AVATAR_CARD_PADDING = 16 * 2 + 6 * 2;
+/** Vạch đầu là nhãn chính nên cao hơn — xem `lineTitle` trong `makeStyles`. */
+const LINE_TITLE_HEIGHT = 14;
+const LINE_GAP = 7;
+
+/** Chiều cao riêng cụm vạch chữ, KHÔNG gồm padding của thẻ. */
+const getLinesHeight = (lines: number) =>
+  LINE_TITLE_HEIGHT + Math.max(0, lines - 1) * (12 + LINE_GAP);
 
 /**
  * Chiều cao một thẻ **kể cả khoảng cách xuống thẻ dưới**, để bên ngoài đếm được
@@ -38,6 +47,11 @@ export const getRecordCardHeight = (
 ) => {
   if (variant === "compact") return 48 + 12;
   if (variant === "row") return Math.max(52, 24 + lines * LINE_HEIGHT) + 8;
+  /* `plain` không có lề ngoài nên chiều cao thẻ cũng chính là bước lặp — và vì
+     dòng thật chỉ cao hơn 52 một chút, ở đây đo đúng cụm vạch thay vì ước lượng
+     như hai dáng trên: lệch 9pt mỗi dòng là hụt hẳn một dòng cuối màn. */
+  if (variant === "plain")
+    return Math.max(52, 10 * 2 + getLinesHeight(lines));
 
   return Math.max(48, lines * LINE_HEIGHT) + AVATAR_CARD_PADDING;
 };
@@ -58,11 +72,17 @@ export default function RecordCardSkeleton({
   variant = "avatar",
   lines = 3,
   trailing = "none",
+  separator = false,
   opacity,
 }: {
   variant?: RecordCardVariant;
   lines?: number;
   trailing?: RecordCardTrailing;
+  /**
+   * Gạch ngăn phía trên. Chỉ dáng `plain` dùng — và dòng đầu KHÔNG có, giống
+   * `isFirst` của danh sách thật.
+   */
+  separator?: boolean;
   /** Nhịp nhấp nháy do danh sách cấp, để mọi thẻ sáng tối cùng nhau. */
   opacity: Animated.AnimatedInterpolation<number>;
 }) {
@@ -75,6 +95,11 @@ export default function RecordCardSkeleton({
         styles.card,
         variant === "compact" && styles.cardCompact,
         variant === "row" && styles.cardRow,
+        variant === "plain" && styles.cardPlain,
+        separator && {
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: colors.hairline,
+        },
         { borderColor: colors.hairline, opacity },
       ]}
     >
@@ -97,6 +122,12 @@ export default function RecordCardSkeleton({
 
       {trailing === "chevron" ? <View style={styles.chevron} /> : null}
       {trailing === "button" ? <View style={styles.button} /> : null}
+      {trailing === "status" ? (
+        <View style={styles.status}>
+          <View style={styles.statusIcon} />
+          <View style={styles.statusText} />
+        </View>
+      ) : null}
     </Animated.View>
   );
 }
@@ -124,6 +155,20 @@ const makeStyles = (c: AppColors) =>
       paddingVertical: 12,
       paddingHorizontal: 14,
       borderRadius: 14,
+    },
+    // Không nền, không viền, không bo góc: dòng thật nằm thẳng trên nền sheet và
+    // chỉ ngăn nhau bằng gạch mảnh, vẽ thành thẻ trắng là dựng ra một khối hộp
+    // mà lúc dữ liệu về sẽ biến mất.
+    cardPlain: {
+      gap: 10,
+      minHeight: 52,
+      marginHorizontal: 0,
+      marginVertical: 0,
+      paddingVertical: 10,
+      paddingHorizontal: 0,
+      borderRadius: 0,
+      borderWidth: 0,
+      backgroundColor: "transparent",
     },
     avatar: {
       width: 48,
@@ -158,6 +203,25 @@ const makeStyles = (c: AppColors) =>
       width: 46,
       height: 26,
       borderRadius: 8,
+      backgroundColor: c.skeleton,
+    },
+    status: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "flex-end",
+      gap: 5,
+      minWidth: 76,
+    },
+    statusIcon: {
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      backgroundColor: c.skeleton,
+    },
+    statusText: {
+      width: 42,
+      height: 13,
+      borderRadius: 6,
       backgroundColor: c.skeleton,
     },
   });
