@@ -1,8 +1,8 @@
 import { log } from "../../utils/Logger";
 import {
-  buildCameraMotionParams,
-  CAMERA_MOTION_ROUTE,
-  isCameraMotionPush,
+  buildCameraAiParams,
+  CAMERA_AI_ROUTE,
+  isCameraAiPush,
 } from "./cameraPush";
 import { TAP_DEDUPE_LIMIT } from "./constants";
 import { createDedupeStore } from "./dedupe";
@@ -39,9 +39,9 @@ const isAlreadyHandled = (payload: PushTapPayload) =>
 const resolveTapTarget = (
   data: Record<string, string>,
 ): { route: string; params?: Record<string, unknown> } | null => {
-  if (isCameraMotionPush(data)) {
-    const params = buildCameraMotionParams(data);
-    return params ? { route: CAMERA_MOTION_ROUTE, params } : null;
+  if (isCameraAiPush(data)) {
+    const params = buildCameraAiParams(data);
+    return params ? { route: CAMERA_AI_ROUTE, params } : null;
   }
 
   if (!data.route || !isKnownPushRoute(data.route)) return null;

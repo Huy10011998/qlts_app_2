@@ -13,9 +13,14 @@ import {
 import Ionicons from "react-native-vector-icons/Ionicons";
 import EmptyState from "../../components/ui/EmptyState";
 import CameraNotificationSkeleton from "./shared/CameraNotificationSkeleton";
+import CameraNotiPickerSheet from "./shared/CameraNotiPickerSheet";
 import { CameraNotiPhamVi } from "../../services/notifications/cameraNotiApi";
 import { C, useAppColors } from "../../utils/helpers/colors";
 import { useCameraNotiTamDung } from "./shared/useCameraNotiTamDung";
+import {
+  useDanhSachCameraNoti,
+  type CameraNotiChon,
+} from "./shared/useDanhSachCameraNoti";
 
 /**
  * Các mốc tạm dừng cố định.
@@ -59,6 +64,31 @@ export default function CameraNotificationScreen() {
   const [lyDo, setLyDo] = useState("");
   const [soPhutConLai, setSoPhutConLai] = useState<number | null>(null);
 
+  // Phạm vi camera của lệnh sắp tạo. null = mọi camera (mặc định của BE).
+  const [cameraChon, setCameraChon] = useState<CameraNotiChon | null>(null);
+  const [moChonCamera, setMoChonCamera] = useState(false);
+  const {
+    danhSach: danhSachCamera,
+    dangTai: dangTaiCamera,
+    loi: loiCamera,
+    tai: taiDanhSachCamera,
+  } = useDanhSachCameraNoti();
+
+  const phamViCameraLabel = cameraChon
+    ? `${cameraChon.ma} - ${cameraChon.ten}`
+    : "Tất cả camera";
+
+  const handleMoChonCamera = useCallback(() => {
+    // Chỉ gọi API khi người dùng thực sự cần chọn camera.
+    taiDanhSachCamera();
+    setMoChonCamera(true);
+  }, [taiDanhSachCamera]);
+
+  const handleChonCamera = useCallback((camera: CameraNotiChon | null) => {
+    setCameraChon(camera);
+    setMoChonCamera(false);
+  }, []);
+
   // Đếm ngược tại chỗ từ số phút SERVER trả về, đo bằng khoảng thời gian đã trôi
   // chứ không đọc giờ tuyệt đối của máy — giờ điện thoại hay lệch so với server.
   const mocDemNguocRef = useRef<{ batDau: number; soPhut: number } | null>(null);
@@ -100,24 +130,27 @@ export default function CameraNotificationScreen() {
       const ok = await tamDung({
         soPhut,
         phamVi: CameraNotiPhamVi.ChiToi,
+        idCamera: cameraChon?.id ?? null,
         lyDo,
       });
 
       if (ok) setLyDo("");
     },
-    [dangGui, lyDo, tamDung],
+    [cameraChon, dangGui, lyDo, tamDung],
   );
 
   const handleTamDungToanCongTy = useCallback(
     (soPhut: number) => {
       if (dangGui) return;
 
+      const thoiLuong = formatConLai(soPhut).replace("còn ", "");
+      const phamViMoTa = cameraChon
+        ? `thông báo của camera ${cameraChon.ma} - ${cameraChon.ten}`
+        : "thông báo camera";
+
       Alert.alert(
         "Tắt thông báo cả công ty?",
-        `Trong ${formatConLai(soPhut).replace(
-          "còn ",
-          "",
-        )} tới, MỌI NGƯỜI sẽ không nhận được thông báo camera, không riêng bạn.`,
+        `Trong ${thoiLuong} tới, MỌI NGƯỜI sẽ không nhận được ${phamViMoTa}, không riêng bạn.`,
         [
           { text: "Huỷ", style: "cancel" },
           {
@@ -127,6 +160,7 @@ export default function CameraNotificationScreen() {
               const ok = await tamDung({
                 soPhut,
                 phamVi: CameraNotiPhamVi.MoiNguoi,
+                idCamera: cameraChon?.id ?? null,
                 lyDo,
               });
 
@@ -136,7 +170,7 @@ export default function CameraNotificationScreen() {
         ],
       );
     },
-    [dangGui, lyDo, tamDung],
+    [cameraChon, dangGui, lyDo, tamDung],
   );
 
   const handleBatLai = useCallback(() => {
@@ -267,6 +301,44 @@ export default function CameraNotificationScreen() {
           { backgroundColor: colors.card, borderColor: colors.border },
         ]}
       >
+        {/* Phạm vi camera dùng chung cho cả lệnh cá nhân lẫn lệnh toàn công ty:
+            BE coi PhamVi và ID_Camera là hai trục độc lập. */}
+        <Text
+          style={[styles.inputLabel, styles.firstLabel, { color: colors.textSub }]}
+        >
+          Áp dụng cho
+        </Text>
+        <TouchableOpacity
+          style={[
+            styles.selectRow,
+            {
+              backgroundColor: colors.surfaceAlt,
+              borderColor: colors.borderStrong,
+            },
+            dangGui && styles.buttonDisabled,
+          ]}
+          disabled={dangGui}
+          onPress={handleMoChonCamera}
+          activeOpacity={0.85}
+        >
+          <Ionicons
+            name={cameraChon ? "videocam-outline" : "albums-outline"}
+            size={18}
+            color={colors.textSecondary}
+          />
+          <Text
+            style={[styles.selectText, { color: colors.text }]}
+            numberOfLines={1}
+          >
+            {phamViCameraLabel}
+          </Text>
+          <Ionicons
+            name="chevron-down"
+            size={16}
+            color={colors.textSecondary}
+          />
+        </TouchableOpacity>
+
         <View style={styles.chipRow}>
           {MOC_TAM_DUNG.map((moc) => (
             <TouchableOpacity
@@ -322,8 +394,9 @@ export default function CameraNotificationScreen() {
         ]}
       >
         <Text style={[styles.warningText, { color: colors.textSecondary }]}>
-          Mọi người trong công ty sẽ không nhận được thông báo camera trong
-          khoảng thời gian bạn chọn. Chỉ dùng khi thực sự cần.
+          {cameraChon
+            ? `Mọi người trong công ty sẽ không nhận được thông báo của camera ${cameraChon.ma} - ${cameraChon.ten} trong khoảng thời gian bạn chọn. Chỉ dùng khi thực sự cần.`
+            : "Mọi người trong công ty sẽ không nhận được thông báo camera trong khoảng thời gian bạn chọn. Chỉ dùng khi thực sự cần."}
         </Text>
         <View style={styles.chipRow}>
           {MOC_TAM_DUNG.map((moc) => (
@@ -346,6 +419,17 @@ export default function CameraNotificationScreen() {
           ))}
         </View>
       </View>
+
+      <CameraNotiPickerSheet
+        visible={moChonCamera}
+        danhSach={danhSachCamera}
+        dangTai={dangTaiCamera}
+        loi={loiCamera}
+        cameraChon={cameraChon}
+        onClose={() => setMoChonCamera(false)}
+        onSelect={handleChonCamera}
+        onRetry={() => taiDanhSachCamera(true)}
+      />
     </ScrollView>
   );
 }
@@ -410,4 +494,17 @@ const styles = StyleSheet.create({
     textAlignVertical: "top",
   },
   warningText: { fontSize: 13, lineHeight: 19, marginBottom: 14 },
+  /** Nhãn đầu tiên trong thẻ: bỏ khoảng cách trên của `inputLabel`. */
+  firstLabel: { marginTop: 0 },
+  selectRow: {
+    alignItems: "center",
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  selectText: { flex: 1, fontSize: 14, fontWeight: "600" },
 });

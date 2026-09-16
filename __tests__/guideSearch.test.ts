@@ -50,6 +50,35 @@ describe("tìm kiếm trong tài liệu hướng dẫn", () => {
     );
   });
 
+  // Nguồn thông báo camera đổi từ đầu ghi phát hiện chuyển động sang AI nhận
+  // dạng hình ảnh: người dùng giờ đi tìm bằng đúng chữ trên thông báo.
+  it("tra được thông báo camera theo loại sự kiện AI", () => {
+    ["hut thuoc", "chay khoi", "phat hien doi tuong"].forEach((tuKhoa) => {
+      expect(filterGuideTopics(tuKhoa).map((hit) => hit.topic.id)).toContain(
+        "camera",
+      );
+    });
+  });
+
+  // "Áp dụng cho" là nhãn thật trên màn Thông báo camera, nên đây là cách người
+  // dùng đi tra khi muốn tắt riêng một camera.
+  it("tra được cách tắt thông báo riêng một camera theo nhãn trên màn hình", () => {
+    const hits = filterGuideTopics("ap dung cho");
+
+    expect(hits.map((hit) => hit.topic.id)).toEqual(
+      expect.arrayContaining(["camera", "faq"]),
+    );
+    expect(
+      hits.find((hit) => hit.topic.id === "faq")?.matchedHeadings,
+    ).toContain("Chỉ muốn tắt thông báo của một camera, được không?");
+  });
+
+  it("tra được cách phóng to hình camera ở cả tài liệu lẫn câu hỏi thường gặp", () => {
+    const ids = filterGuideTopics("phong to").map((hit) => hit.topic.id);
+
+    expect(ids).toEqual(expect.arrayContaining(["camera", "faq"]));
+  });
+
   it("từ khoá không có trong tài liệu thì không ra kết quả", () => {
     expect(filterGuideTopics("khong-he-co-chu-nay")).toHaveLength(0);
   });

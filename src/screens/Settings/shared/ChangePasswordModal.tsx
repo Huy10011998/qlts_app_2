@@ -79,9 +79,15 @@ export default function ChangePasswordModal({
       statusBarTranslucent
       presentationStyle="overFullScreen"
     >
+      {/*
+        Android để trống `behavior`: RN set sẵn SOFT_INPUT_ADJUST_RESIZE cho
+        window của <Modal>, nên hệ thống đã co sẵn. `behavior="height"` sẽ co
+        lần hai rồi kẹt luôn ở chiều cao ngắn sau khi tắt bàn phím — xem chú
+        thích dài ở LoginScreen.
+      */}
       <KeyboardAvoidingView
         style={styles.overlay}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <View style={styles.backdrop} />
         <View

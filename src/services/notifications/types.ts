@@ -13,7 +13,7 @@ export type PushPlatform = "android" | "ios";
  * hình đích tự đọc.
  */
 export type KnownPushDataKeys = {
-  /** Phân loại nghiệp vụ. Hiện BE gửi "CAMERA_MOTION" (xem `cameraPush`). */
+  /** Phân loại nghiệp vụ. Hiện BE gửi "CAMERA_AI" (xem `cameraPush`). */
   type?: string;
   /** Tên route trong RootNavigator để mở khi user bấm vào thông báo. */
   route?: string;
@@ -29,26 +29,27 @@ export type KnownPushDataKeys = {
 };
 
 /**
- * Khối `data` của thông báo "đầu ghi phát hiện chuyển động".
+ * Khối `data` của thông báo "AI service phát hiện sự kiện" (bản BE 16/09/2026).
  *
  * FCM chỉ truyền string nên mọi số cũng là chuỗi — ép kiểu ở `cameraPush`,
  * đừng dùng thẳng. Luôn đọc theo key, ĐỪNG parse chuỗi title/body: BE có thể
  * đổi text bất cứ lúc nào.
  */
-export type CameraMotionPushData = {
-  type: "CAMERA_MOTION";
+export type CameraAiPushData = {
+  type: "CAMERA_AI";
   /** Khoá chính để mở live view. */
   ID_Camera: string;
   CameraMa: string;
   CameraTen: string;
   ViTri: string;
   VungCamera: string;
-  ID_DauGhi: string;
-  /** Số kênh trên đầu ghi. */
-  Kenh: string;
-  /** "VMD" = motion detection. */
+  /** "DETECT" | "FIRE_SMOKE" | "SMOKING" — đọc theo key, đừng suy từ title. */
   EventType: string;
-  /** "2026-08-27 09:13:58" — giờ server, không có timezone offset. */
+  /** Độ tin cậy 0..1 dạng chuỗi ("0.91"), có thể rỗng. */
+  DoTinCay: string;
+  /** Mô tả ngắn AI gửi kèm ("2 người"), có thể rỗng. */
+  GhiChu: string;
+  /** "2026-09-16 09:13:58" — giờ server, không có timezone offset. */
   ThoiGian: string;
   /** BE lặp lại title/body trong data cho tiện dựng noti lúc app đang mở. */
   title?: string;

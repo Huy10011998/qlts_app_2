@@ -77,13 +77,12 @@ import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { usePermission } from "../../hooks/usePermission";
 import {
   ANDROID_STORE_URL,
-  formatVersionWithBuild,
   getStoreVersionInfo,
   IOS_STORE_URL,
-  isNewerAppVersion,
   openStoreForUpdate,
   StoreVersionInfo,
 } from "../../utils/AppVersion";
+import { startAndroidFlexibleUpdate } from "../../services/appUpdate/androidInAppUpdate";
 
 const LOCAL_NETWORK_FALLBACK_STATE: StoredLocalNetworkPermissionState = {
   hasShownNotice: false,
@@ -98,10 +97,7 @@ const SettingScreen = () => {
   const { factor: textScaleFactor } = useTextScale();
   const [isLoading, setIsLoading] = useState(false);
   const [user, setUser] = useState<UserInfo>();
-  const appVersionLabel = `v${formatVersionWithBuild(
-    DeviceInfo.getVersion(),
-    DeviceInfo.getBuildNumber(),
-  )}`;
+  const appVersionLabel = `v${DeviceInfo.getVersion()}`;
   const [storeVersionInfo, setStoreVersionInfo] =
     useState<StoreVersionInfo | null>(null);
   const [isCheckingAppVersion, setIsCheckingAppVersion] = useState(false);
@@ -753,13 +749,20 @@ const SettingScreen = () => {
     }
   };
 
-  const hasNewAppVersion = storeVersionInfo
-    ? isNewerAppVersion(storeVersionInfo)
-    : false;
+  const hasNewAppVersion = storeVersionInfo?.hasUpdate ?? false;
+  /**
+   * Bản không cài từ store (debug, sideload) thì Play không dò được — đó là
+   * chuyện bình thường, ẩn hẳn dòng trạng thái thay vì hiện như một lỗi.
+   */
+  const shouldShowVersionStatus =
+    isCheckingAppVersion || !storeVersionInfo?.isCheckUnsupported;
   const appVersionStatus = isCheckingAppVersion
     ? "Đang kiểm tra phiên bản..."
     : hasNewAppVersion
-    ? `Đã có phiên bản ${storeVersionInfo?.latestVersion}`
+    ? // Android không có số: Play In-App Updates chỉ trả versionCode.
+      storeVersionInfo?.latestVersion
+      ? `Đã có phiên bản ${storeVersionInfo.latestVersion}`
+      : "Đã có phiên bản mới"
     : hasAppVersionCheckFailed
     ? "Chưa thể kiểm tra phiên bản trên Store"
     : "Phiên bản mới nhất";
@@ -768,11 +771,25 @@ const SettingScreen = () => {
     if (!storeVersionInfo || !hasNewAppVersion) return;
 
     try {
-      await openStoreForUpdate(
-        Platform.OS === "ios" ? IOS_STORE_URL : ANDROID_STORE_URL,
-      );
+      if (Platform.OS === "android") {
+        await startAndroidFlexibleUpdate();
+        return;
+      }
+
+      await openStoreForUpdate(IOS_STORE_URL);
     } catch (error) {
       warn("[Settings] Open app store failed:", error);
+
+      // Không mở được luồng cập nhật trong app thì vẫn còn đường ra store.
+      if (Platform.OS === "android") {
+        try {
+          await openStoreForUpdate(ANDROID_STORE_URL);
+          return;
+        } catch (linkError) {
+          warn("[Settings] Open Play Store failed:", linkError);
+        }
+      }
+
       Alert.alert(
         "Không thể mở Store",
         "Vui lòng mở Store và cập nhật ứng dụng thủ công.",
@@ -920,7 +937,7 @@ const SettingScreen = () => {
                 iconName="videocam-outline"
                 iconBg={C.rose}
                 label="Thông báo camera"
-                sublabel="Tạm dừng thông báo phát hiện chuyển động"
+                sublabel="Tạm dừng thông báo AI phát hiện"
                 onPress={() => navigation.navigate("CameraNotification")}
               />
             ) : null}
@@ -989,38 +1006,40 @@ const SettingScreen = () => {
                 >
                   Đã cài đặt: {appVersionLabel}
                 </Text>
-                <View style={styles.appVersionStatusRow}>
-                  {isCheckingAppVersion ? (
-                    <ActivityIndicator
-                      size="small"
-                      color={colors.textMuted}
-                      style={styles.appVersionSpinner}
-                    />
-                  ) : (
-                    <View
+                {shouldShowVersionStatus ? (
+                  <View style={styles.appVersionStatusRow}>
+                    {isCheckingAppVersion ? (
+                      <ActivityIndicator
+                        size="small"
+                        color={colors.textMuted}
+                        style={styles.appVersionSpinner}
+                      />
+                    ) : (
+                      <View
+                        style={[
+                          styles.appVersionStatusDot,
+                          {
+                            backgroundColor: hasNewAppVersion
+                              ? C.amber
+                              : hasAppVersionCheckFailed
+                              ? colors.textMuted
+                              : C.emerald,
+                          },
+                        ]}
+                      />
+                    )}
+                    <Text
                       style={[
-                        styles.appVersionStatusDot,
+                        styles.appVersionStatusText,
                         {
-                          backgroundColor: hasNewAppVersion
-                            ? C.amber
-                            : hasAppVersionCheckFailed
-                            ? colors.textMuted
-                            : C.emerald,
+                          color: hasNewAppVersion ? C.amber : colors.textMuted,
                         },
                       ]}
-                    />
-                  )}
-                  <Text
-                    style={[
-                      styles.appVersionStatusText,
-                      {
-                        color: hasNewAppVersion ? C.amber : colors.textMuted,
-                      },
-                    ]}
-                  >
-                    {appVersionStatus}
-                  </Text>
-                </View>
+                    >
+                      {appVersionStatus}
+                    </Text>
+                  </View>
+                ) : null}
               </View>
               {hasNewAppVersion ? (
                 <TouchableOpacity

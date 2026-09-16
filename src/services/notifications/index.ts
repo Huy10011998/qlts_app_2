@@ -16,7 +16,7 @@
  *                  └─ syncPushToken()     → xin quyền, lấy token, gửi BE
  *
  * Contract payload với BE: xem mục "Push Notification" trong README.md ở gốc repo.
- * Thông báo camera phát hiện chuyển động: xem `cameraPush` (định tuyến) và
+ * Thông báo camera AI phát hiện: xem `cameraPush` (định tuyến) và
  * `cameraNotiApi` (tạm dừng / bật lại).
  */
 export { ensureNotificationChannels, resolveChannelId } from "./channels";
@@ -37,11 +37,11 @@ export {
 export type { AppNotificationPermissionStatus } from "./permissions";
 export { isKnownPushRoute, navigateToPushRoute } from "./pushRoutes";
 export {
-  buildCameraMotionParams,
-  CAMERA_MOTION_ROUTE,
-  CAMERA_MOTION_TYPE,
-  getCameraMotionGroupId,
-  isCameraMotionPush,
+  buildCameraAiParams,
+  CAMERA_AI_ROUTE,
+  CAMERA_AI_TYPE,
+  getCameraAiGroupId,
+  isCameraAiPush,
 } from "./cameraPush";
 export {
   CameraNotiPhamVi,

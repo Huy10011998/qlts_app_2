@@ -171,6 +171,8 @@ dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
     implementation "androidx.core:core-splashscreen:1.0.1"
+    // In-App Updates: dò bản mới qua Play thay vì scrape HTML trang store.
+    implementation "com.google.android.play:app-update-ktx:2.1.0"
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")

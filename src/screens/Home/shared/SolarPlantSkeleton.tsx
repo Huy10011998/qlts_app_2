@@ -1,5 +1,11 @@
 import React from "react";
-import { Animated, StyleSheet, View, useWindowDimensions } from "react-native";
+import {
+  Animated,
+  ScrollView,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+} from "react-native";
 
 import {
   AppColors,
@@ -20,17 +26,14 @@ const SUMMARY_ITEMS = 4;
  * Trước đây chỗ này là vòng xoay giữa màn trắng — mà đây lại là màn chờ lâu
  * nhất app, tức là chỗ khung chờ đáng giá nhất thì lại không có.
  *
- * CỐ Ý chỉ dựng ba dải cấu trúc (vùng hero, thẻ sản lượng, thanh chọn kỳ) chứ
- * không vẽ lại khung cảnh nhà máy, ba bong bóng hay các khối biểu đồ:
+ * Dựng cả chiều dài màn: hero, thẻ sản lượng, thanh chọn kỳ, rồi bốn khối số
+ * liệu (cân bằng năng lượng, công suất, so sánh, lợi ích môi trường).
  *
- * - Khung cảnh là hình vẽ tĩnh, không phải dữ liệu — tô xám lên nó chỉ làm xấu.
- * - Các khối số liệu bên dưới đã có cách chờ riêng của màn: hiện nhãn thật với
- *   giá trị "—" và một vạch chạy trên viền khối (`RefreshBar`), cố ý KHÔNG che
- *   bằng khung xám. Dựng lại chúng ở đây là đi ngược cách đó, và thành hai bản
- *   sao của cùng một bố cục phải sửa song song.
+ * Riêng khung cảnh nhà máy trong hero thì CỐ Ý để trống — nó là hình vẽ tĩnh,
+ * không phải dữ liệu, tô xám lên chỉ làm xấu; chỗ đó chỉ chừa đúng chiều cao.
  *
- * Việc của khung chờ này chỉ là: giữ đúng chiều cao và màu nền của phần trên
- * màn, để lúc dữ liệu về nội dung thật không nhảy từ giữa màn ra.
+ * Lưu ý khi sửa: đây là bản sao bố cục của `SolarPlantScreen`, đổi bố cục khối
+ * nào bên đó thì ngó lại khối tương ứng ở đây.
  */
 export default function SolarPlantSkeleton() {
   const styles = useStyles(makeStyles);
@@ -41,8 +44,11 @@ export default function SolarPlantSkeleton() {
   const heroVisualHeight = getSceneHeight(width) + SCENE_TOP_SPACE;
 
   return (
-    <View
+    <ScrollView
       style={[styles.root, { backgroundColor: colors.bg }]}
+      contentContainerStyle={styles.rootContent}
+      scrollEnabled={false}
+      showsVerticalScrollIndicator={false}
       accessibilityLabel="Đang tải dữ liệu điện mặt trời"
     >
       <View style={[styles.hero, { backgroundColor: colors.solarHero }]}>
@@ -112,6 +118,94 @@ export default function SolarPlantSkeleton() {
         <Animated.View style={[styles.dateNavCenter, { opacity }]} />
         <Animated.View style={[styles.dateNavSide, { opacity }]} />
       </View>
+
+      {/* Khối "Cân bằng năng lượng" */}
+      <BlockShell colors={colors} styles={styles}>
+        <Animated.View style={[styles.blockTitle, { opacity }]} />
+        <Animated.View style={[styles.blockSubLabel, { opacity }]} />
+        <Animated.View style={[styles.blockBigValue, { opacity }]} />
+        <Animated.View style={[styles.balanceBar, { opacity }]} />
+
+        <View style={styles.donutRow}>
+          <Animated.View style={[styles.donut, { opacity }]} />
+          <View style={styles.legendCol}>
+            {[0, 1].map((index) => (
+              <View key={`legend-${index}`} style={styles.legendItem}>
+                <Animated.View style={[styles.legendDot, { opacity }]} />
+                <Animated.View style={[styles.legendLabel, { opacity }]} />
+                <Animated.View style={[styles.legendValue, { opacity }]} />
+              </View>
+            ))}
+          </View>
+        </View>
+      </BlockShell>
+
+      {/* Khối "Công suất" — biểu đồ đường */}
+      <BlockShell colors={colors} styles={styles}>
+        <Animated.View style={[styles.blockTitle, { opacity }]} />
+        <View style={styles.chipRow}>
+          {[0, 1, 2].map((index) => (
+            <Animated.View
+              key={`mode-${index}`}
+              style={[styles.modeChip, { opacity }]}
+            />
+          ))}
+        </View>
+        <Animated.View style={[styles.chartArea, { opacity }]} />
+      </BlockShell>
+
+      {/* Khối "So sánh" — biểu đồ cột */}
+      <BlockShell colors={colors} styles={styles}>
+        <Animated.View style={[styles.blockTitle, { opacity }]} />
+        <View style={styles.chipRow}>
+          {[0, 1].map((index) => (
+            <Animated.View
+              key={`compare-${index}`}
+              style={[styles.modeChip, { opacity }]}
+            />
+          ))}
+        </View>
+        <Animated.View style={[styles.chartArea, { opacity }]} />
+      </BlockShell>
+
+      {/* Khối "Lợi ích môi trường" */}
+      <BlockShell colors={colors} styles={styles}>
+        <Animated.View style={[styles.blockTitle, { opacity }]} />
+        <View style={styles.envRow}>
+          {[0, 1, 2].map((index) => (
+            <View key={`env-${index}`} style={styles.envItem}>
+              <Animated.View style={[styles.envIcon, { opacity }]} />
+              <Animated.View style={[styles.envValue, { opacity }]} />
+              <Animated.View style={[styles.envLabel, { opacity }]} />
+            </View>
+          ))}
+        </View>
+      </BlockShell>
+    </ScrollView>
+  );
+}
+
+/**
+ * Vỏ thẻ trắng dùng chung cho các khối số liệu bên dưới thanh chọn kỳ — cùng
+ * lề, bo góc và viền với `blockShell` của màn thật.
+ */
+function BlockShell({
+  children,
+  colors,
+  styles,
+}: {
+  children: React.ReactNode;
+  colors: AppColors;
+  styles: ReturnType<typeof makeStyles>;
+}) {
+  return (
+    <View
+      style={[
+        styles.block,
+        { backgroundColor: colors.surface, borderColor: colors.border },
+      ]}
+    >
+      {children}
     </View>
   );
 }
@@ -120,8 +214,9 @@ const makeStyles = (c: AppColors) =>
   StyleSheet.create({
     root: {
       flex: 1,
-      // Dải cuối dựng vượt đáy màn thì cắt, không đẩy khung dài ra.
-      overflow: "hidden",
+    },
+    rootContent: {
+      paddingBottom: 24,
     },
     hero: {
       overflow: "hidden",
@@ -246,6 +341,126 @@ const makeStyles = (c: AppColors) =>
       width: 168,
       height: 15,
       borderRadius: 6,
+      backgroundColor: c.skeleton,
+    },
+
+    // ─── Các khối số liệu bên dưới thanh chọn kỳ ────────────────────────────
+    block: {
+      marginHorizontal: 12,
+      marginTop: 12,
+      padding: 16,
+      borderRadius: 14,
+      borderWidth: StyleSheet.hairlineWidth,
+    },
+    blockTitle: {
+      width: 176,
+      height: 17,
+      borderRadius: 6,
+      backgroundColor: c.skeleton,
+    },
+    blockSubLabel: {
+      width: 74,
+      height: 12,
+      borderRadius: 5,
+      marginTop: 14,
+      backgroundColor: c.skeleton,
+    },
+    blockBigValue: {
+      width: 132,
+      height: 26,
+      borderRadius: 8,
+      marginTop: 8,
+      backgroundColor: c.skeleton,
+    },
+    balanceBar: {
+      width: "100%",
+      height: 12,
+      borderRadius: 6,
+      marginTop: 14,
+      backgroundColor: c.skeleton,
+    },
+    donutRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 16,
+      marginTop: 18,
+    },
+    donut: {
+      width: 90,
+      height: 90,
+      borderRadius: 45,
+      backgroundColor: c.skeleton,
+    },
+    legendCol: {
+      flex: 1,
+      gap: 12,
+    },
+    legendItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    legendDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: c.skeleton,
+    },
+    legendLabel: {
+      width: 70,
+      height: 12,
+      borderRadius: 5,
+      backgroundColor: c.skeleton,
+    },
+    legendValue: {
+      flex: 1,
+      height: 12,
+      borderRadius: 5,
+      backgroundColor: c.skeleton,
+    },
+    chipRow: {
+      flexDirection: "row",
+      gap: 8,
+      marginTop: 14,
+    },
+    modeChip: {
+      width: 78,
+      height: 26,
+      borderRadius: 13,
+      backgroundColor: c.skeleton,
+    },
+    chartArea: {
+      width: "100%",
+      height: 190,
+      borderRadius: 10,
+      marginTop: 14,
+      backgroundColor: c.skeleton,
+    },
+    envRow: {
+      flexDirection: "row",
+      marginTop: 16,
+    },
+    envItem: {
+      flex: 1,
+      alignItems: "center",
+      gap: 8,
+    },
+    envIcon: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      backgroundColor: c.skeleton,
+    },
+    envValue: {
+      width: 62,
+      height: 18,
+      borderRadius: 6,
+      backgroundColor: c.skeleton,
+    },
+    envLabel: {
+      width: 78,
+      height: 11,
+      borderRadius: 5,
       backgroundColor: c.skeleton,
     },
   });

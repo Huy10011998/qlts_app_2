@@ -6,23 +6,17 @@
 	<string>vi</string>
 	<key>CFBundleDisplayName</key>
 	<string>Cholimex Food</string>
-	<!--
-		Khai báo app hỗ trợ tiếng Việt để UI của hệ thống (nút Retake / Use Photo
-		của trình chụp ảnh, nút mặc định của hộp thoại quyền...) hiện tiếng Việt.
-		App không có thư mục .lproj nào nên iOS chỉ dựa vào khoá này; thiếu nó thì
-		app bị coi là English-only và hệ thống luôn trả tiếng Anh.
-	-->
-	<key>CFBundleLocalizations</key>
-	<array>
-		<string>vi</string>
-		<string>en</string>
-	</array>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>vi</string>
+		<string>en</string>
+	</array>
 	<key>CFBundleName</key>
 	<string>$(PRODUCT_NAME)</string>
 	<key>CFBundlePackageType</key>
@@ -63,28 +57,28 @@
 			</dict>
 		</dict>
 	</dict>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>Ứng dụng cần quyền truy cập thư viện media theo cấu hình quyền của hệ thống.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_http._tcp</string>
+	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>Ứng dụng cần dùng camera để quét QR code</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Ứng dụng cần sử dụng Face ID để đăng nhập nhanh.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Ứng dụng cần tìm thiết bị trên mạng nội bộ để kết nối đến máy chủ Cholimex trong hệ thống mạng công ty. Ví dụ: khi bạn đăng nhập hoặc đồng bộ dữ liệu, ứng dụng sẽ gửi yêu cầu đến server nội bộ đã cấu hình.</string>
-	<key>NSBonjourServices</key>
-	<array>
-		<string>_http._tcp</string>
-	</array>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Ứng dụng cần truy cập thư viện ảnh để chọn và tải ảnh lên khi làm việc.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Ứng dụng cần quyền lưu ảnh vào thư viện khi bạn thực hiện tải hoặc chụp ảnh.</string>
-	<key>NSAppleMusicUsageDescription</key>
-	<string>Ứng dụng cần quyền truy cập thư viện media theo cấu hình quyền của hệ thống.</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Ứng dụng cần sử dụng vị trí khi đang mở để hỗ trợ các chức năng liên quan đến địa điểm.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Ứng dụng cần sử dụng vị trí để hỗ trợ các chức năng liên quan đến địa điểm, kể cả khi chạy nền.</string>
 	<key>NSLocationUsageDescription</key>
 	<string>Ứng dụng cần sử dụng vị trí để hỗ trợ các chức năng liên quan đến địa điểm.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Ứng dụng cần sử dụng vị trí khi đang mở để hỗ trợ các chức năng liên quan đến địa điểm.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Ứng dụng cần quyền lưu ảnh vào thư viện khi bạn thực hiện tải hoặc chụp ảnh.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Ứng dụng cần truy cập thư viện ảnh để chọn và tải ảnh lên khi làm việc.</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UIAppFonts</key>
@@ -105,6 +99,25 @@
 		<string>Octicons.ttf</string>
 		<string>Zocial.ttf</string>
 	</array>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneClassName</key>
+					<string>UIWindowScene</string>
+					<key>UISceneConfigurationName</key>
+					<string>Default Configuration</string>
+					<key>UISceneDelegateClassName</key>
+					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

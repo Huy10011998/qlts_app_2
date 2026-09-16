@@ -26,6 +26,10 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     "quyen",
     "gps",
     "camera",
+    "phat lai",
+    "phong to",
+    "zoom",
+    "toan man hinh",
     "vuot the",
     "them nhanh",
     "thanh thao tac",
@@ -40,8 +44,13 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     "o chon van trong",
     "thong bao camera",
     "khong nhan duoc thong bao",
+    "ai phat hien",
+    "phat hien doi tuong",
+    "chay khoi",
+    "hut thuoc",
     "chuyen dong",
     "tam dung thong bao",
+    "tat rieng mot camera",
     "ca cong ty",
     "o chon mo",
     "o chon xam",
@@ -165,6 +174,24 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
             "Kiểm tra máy đang ở mạng nội bộ công ty — ra ngoài mạng là không xem được camera.",
             "Thoát màn camera rồi vào lại để app kết nối luồng hình mới.",
             "Xem lưới Live View nhiều camera một lúc trên mạng yếu thì hình dễ đứng; xem từng camera một sẽ mượt hơn.",
+          ],
+        },
+      ],
+    },
+    {
+      id: "faq-khong-phong-to-duoc-camera",
+      heading: "Chụm hai ngón mà hình camera không phóng to",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Phóng to bằng hai ngón chỉ dùng được ở màn Phát lại và khi đang bật toàn màn hình. Đang xem ở khung nhỏ hoặc đang ở lưới Live View thì thao tác này không có tác dụng.",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Ở lưới Live View: chạm hai lần vào một ô để phóng ô đó ra toàn màn hình, chạm hai lần nữa để về lưới.",
+            "Ở màn Phát lại: bật toàn màn hình rồi mới chụm hai ngón; kéo để xem phần bị che.",
+            "Thu nhỏ hết cỡ là hình tự trở về đúng khuôn ban đầu, không cần chỉnh tay.",
           ],
         },
       ],
@@ -445,7 +472,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
           items: [
             "Vào tab Cài đặt xem có dòng Thông báo camera không. Không thấy nghĩa là tài khoản chưa được cấp quyền — nhờ IT thêm quyền nhận thông báo camera.",
             "Vẫn ở Cài đặt, xem dòng Quyền thông báo đã ở trạng thái Đã cấp quyền chưa. Đang bị chặn thì bấm vào dòng đó để mở Cài đặt của điện thoại.",
-            "Mở Thông báo camera, xem phần trạng thái có đang Tạm dừng không — kể cả lệnh do người khác tắt cho cả công ty.",
+            "Mở Thông báo camera, xem phần trạng thái có đang Tạm dừng không — kể cả lệnh do người khác tắt cho cả công ty. Phần Phạm vi cho biết lệnh đang tắt tất cả camera hay chỉ một camera.",
             "Ba bước trên đều ổn mà vẫn không có thì đóng hẳn app rồi mở lại một lần, app sẽ đăng ký lại với máy chủ.",
           ],
         },
@@ -480,9 +507,27 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
         {
           kind: "bullets",
           items: [
-            "Đặt mốc mới trong lúc đang tạm dừng thì mốc cũ bị thay, không cộng dồn.",
+            "Đặt mốc mới cùng phạm vi với lệnh đang chạy thì mốc cũ bị thay, không cộng dồn. Khác phạm vi (một lệnh cho tất cả camera, một lệnh cho riêng một camera) thì hai lệnh chạy song song.",
             "Bấm Bật lại ngay là nhận lại ngay, không phải chờ hết giờ.",
             "Chỉ có bốn mốc 15 phút, 30 phút, 1 giờ và 4 giờ — cố ý không cho nhập số phút tự do để không ai lỡ tắt quá lâu rồi quên.",
+          ],
+        },
+      ],
+    },
+    {
+      id: "faq-tat-rieng-mot-camera",
+      heading: "Chỉ muốn tắt thông báo của một camera, được không?",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Được. Vào tab Cài đặt, chọn Thông báo camera, bấm ô Áp dụng cho rồi chọn camera cần tắt — tìm theo mã, tên hoặc tên khu vực, gõ không dấu cũng ra. Sau đó bấm mốc thời gian như bình thường.",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Các camera còn lại vẫn báo bình thường.",
+            "Muốn quay về tắt toàn bộ thì mở lại ô đó và chọn Tất cả camera.",
+            "Ô Áp dụng cho dùng chung cho cả khối TẮT CHO CẢ CÔNG TY: đang chọn một camera thì nút đỏ chỉ tắt camera đó, nhưng tắt cho mọi người.",
           ],
         },
       ],
@@ -493,7 +538,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
       blocks: [
         {
           kind: "paragraph",
-          text: "App mở thẳng hình trực tiếp của đúng camera vừa báo. Nếu app đang khoá bằng Face ID thì mở sau khi xác thực xong.",
+          text: "App mở thẳng hình trực tiếp của đúng camera vừa báo. Nếu app đang khoá bằng Face ID thì mở sau khi xác thực xong. Thông báo không kèm ảnh hiện trường, nên muốn biết chuyện gì thì phải mở xem trực tiếp.",
         },
         {
           kind: "paragraph",

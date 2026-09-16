@@ -285,13 +285,17 @@ export function useSolarDashboard({
           setSiteError(SOLAR_NO_PERMISSION_MESSAGE);
         }
 
+        // Hermes không cho closure lồng trong catch đọc thẳng biến catch, nên
+        // tính sẵn chuỗi lỗi ra ngoài trước khi đưa vào updater của setBlocks.
+        const message = getSolarErrorMessage(caught);
+
         // Giữ số cũ, chỉ gắn thêm hộp lỗi vào khối.
         setBlocks((current) => ({
           ...current,
           [key]: {
             ...current[key],
             isLoading: false,
-            error: getSolarErrorMessage(caught),
+            error: message,
           },
         }));
       }
