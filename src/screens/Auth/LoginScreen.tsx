@@ -481,10 +481,19 @@ export default function LoginScreen() {
   };
 
   return (
-    // KeyboardAvoidingView bao ngoài cùng — đây là key fix
+    /*
+      Android KHÔNG được dùng `behavior`: manifest đã để
+      `windowSoftInputMode="adjustResize"` nên hệ thống tự co window khi bàn
+      phím mở. Thêm `behavior="height"` là co lần thứ hai — KeyboardAvoidingView
+      đo `onLayout` ra chiều cao ĐÃ co rồi lại trừ tiếp chiều cao bàn phím, và
+      set cứng `{ height, flex: 0 }`. Tắt bàn phím thì window giãn về full nhưng
+      cây view còn kẹt ở chiều cao ngắn (flex: 0 nên không giãn lại), để lộ
+      `android:windowBackground` xám ở đáy màn hình.
+      Để trống `behavior` thì KeyboardAvoidingView chỉ còn là một View bọc ngoài.
+    */
     <KeyboardAvoidingView
       style={styles.kvRoot}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={0}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>

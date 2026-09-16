@@ -283,11 +283,14 @@ export default function AssetFormScreenShell({
         được lộ ra. `behavior` để trống thì KeyboardAvoidingView chỉ còn là một
         View bọc ngoài.
 
-        Android: giữ nguyên `behavior="height"` như cũ, chưa test nên không đổi.
+        Android: cũng để trống. Manifest đã có
+        `windowSoftInputMode="adjustResize"` nên hệ thống tự co window; thêm
+        `behavior="height"` là co lần hai và sau khi tắt bàn phím thì view kẹt
+        ở chiều cao ngắn, lộ nền xám `android:windowBackground` ở đáy.
       */}
       <KeyboardAvoidingView
         style={[styles.keyboardRoot, style]}
-        behavior={Platform.OS === "ios" ? undefined : "height"}
+        behavior={undefined}
         keyboardVerticalOffset={0}
       >
         <ScrollView

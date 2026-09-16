@@ -620,39 +620,65 @@ const ExpandedChartModal: React.FC<ExpandedChartModalProps> = ({
     Math.min(chartWidth, windowWidth - 36),
   );
   const canGoNext = canMoveToNextRange(period, dateRange);
+  /**
+   * Kỳ Hoá đơn không có kỳ trước/kỳ sau — `shiftDateRange` luôn trả về đúng kỳ
+   * đang chạy. Cho vuốt ở đây thì nội dung trượt đi rồi về mà ngày y nguyên,
+   * lại tốn thêm một lượt gọi API, nên tắt hẳn cử chỉ.
+   */
+  const canSwipeRange = !isComparative && period !== "Billing";
   const [contentViewportHeight, setContentViewportHeight] = useState(0);
   const swipeTranslateX = useRef(new Animated.Value(0)).current;
   const swipeGesture = useMemo(
     () =>
       Gesture.Pan()
         .runOnJS(true)
-        .enabled(!isComparative)
-        .activeOffsetX([-15, 15])
-        .failOffsetY([-10, 10])
+        .enabled(canSwipeRange)
+        // Android: ngón tay vuốt ngang bao giờ cũng lệch dọc vài chục pixel,
+        // mà `failOffsetY` nhỏ thì cử chỉ hỏng ngay từ nhịp đầu nên vuốt "không
+        // ăn". Nới ngưỡng dọc và hạ ngưỡng ngang để cử chỉ bắt được như iOS,
+        // vẫn đủ chặt để không cướp thao tác cuộn dọc của nội dung.
+        .activeOffsetX([-12, 12])
+        .failOffsetY([-40, 40])
         .onUpdate((event) => {
-          // Match the directions observed on-device: the user's right swipe
-          // reaches the negative translation branch, which must be the guarded
-          // next-range direction when the current range is Today.
+          // translationX âm = vuốt phải-sang-trái = đi tới kỳ sau; khi đang ở kỳ
+          // hiện tại thì không có kỳ sau nên chỉ cho kéo nhẹ rồi bật lại.
           const isPastCurrentRange = !canGoNext && event.translationX < 0;
           swipeTranslateX.setValue(
             isPastCurrentRange ? event.translationX * 0.2 : event.translationX,
           );
         })
         .onEnd((event) => {
-          const threshold = windowWidth * 0.3;
-          const moveToPrevious = event.translationX > threshold;
-          const moveToNext = event.translationX < -threshold && canGoNext;
+          const threshold = Math.min(windowWidth * 0.2, 90);
+          const isFlick = Math.abs(event.velocityX) > 550;
+          const distance = Math.abs(event.translationX) > threshold;
+          const moveToPrevious =
+            event.translationX > 0 && (distance || isFlick);
+          const moveToNext =
+            event.translationX < 0 && (distance || isFlick) && canGoNext;
 
           if (moveToNext || moveToPrevious) {
             Animated.timing(swipeTranslateX, {
               toValue: moveToPrevious ? windowWidth : -windowWidth,
-              duration: 250,
+              duration: 180,
               useNativeDriver: true,
-            }).start(({ finished }) => {
-              if (!finished) return;
-              swipeTranslateX.setValue(0);
+            }).start(() => {
+              // Đổi kỳ rồi cho nội dung trượt vào từ phía đối diện. Phải kết
+              // thúc bằng MỘT ANIMATION chứ không phải `setValue(0)`: trên
+              // Android, gán thẳng giá trị cho node đang do native driver giữ
+              // có lúc không đẩy xuống view, nội dung kẹt ngoài màn hình nên
+              // nhìn như "vuốt xong mất dữ liệu". Cũng không xét `finished`:
+              // animation bị cắt ngang thì vẫn phải đổi kỳ và trả view về chỗ.
               if (moveToNext) onNextRange();
               else onPreviousRange();
+
+              swipeTranslateX.setValue(
+                moveToPrevious ? -windowWidth : windowWidth,
+              );
+              Animated.timing(swipeTranslateX, {
+                toValue: 0,
+                duration: 180,
+                useNativeDriver: true,
+              }).start();
             });
           } else {
             Animated.spring(swipeTranslateX, {
@@ -665,7 +691,7 @@ const ExpandedChartModal: React.FC<ExpandedChartModalProps> = ({
         }),
     [
       canGoNext,
-      isComparative,
+      canSwipeRange,
       onNextRange,
       onPreviousRange,
       swipeTranslateX,

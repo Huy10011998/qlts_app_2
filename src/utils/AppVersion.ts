@@ -7,7 +7,6 @@ export {
   IOS_COUNTRY,
   IOS_LOOKUP_COUNTRIES,
   IOS_STORE_URL,
-  ANDROID_LOOKUP_LOCALES,
   ANDROID_PACKAGE_NAME,
   ANDROID_STORE_URL,
   UPDATE_REMINDER_KEY,
@@ -20,8 +19,9 @@ export {
   normalizeVersion,
   selectLatestVersionInfo,
 } from "./appVersion/version";
-export { extractAndroidVersion, getStoreVersionInfo } from "./appVersion/store";
+export { getStoreVersionInfo } from "./appVersion/store";
 export {
+  getUpdateReminderKey,
   openStoreForUpdate,
   shouldShowUpdateReminder,
   markUpdateReminderDismissed,

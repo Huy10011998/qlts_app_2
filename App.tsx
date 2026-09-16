@@ -23,6 +23,7 @@ import {
   useTextScale,
 } from "./src/context/FontScaleContext";
 import { navigationRef } from "./src/navigation/navigationService";
+import { resetImmersiveMode } from "./src/services/immersive/immersiveMode";
 
 const LANDSCAPE_ALLOWED_ROUTES = new Set([
   "CameraList",
@@ -59,6 +60,13 @@ function AppContent() {
       LANDSCAPE_ALLOWED_ROUTES.has(routeName)
     ) {
       return;
+    }
+
+    // Rời hẳn nhánh camera: trả thanh hệ thống về và xoá bộ đếm immersive.
+    // Cleanup của useImmersiveMode đã lo đường thoát thường; chốt này để một
+    // lượt unmount bất thường (crash JS, reload) không kẹt app ở trạng thái ẩn.
+    if (!routeName || !LANDSCAPE_ALLOWED_ROUTES.has(routeName)) {
+      resetImmersiveMode();
     }
 
     Orientation.lockToPortrait();

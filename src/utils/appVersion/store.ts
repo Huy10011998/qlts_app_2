@@ -1,8 +1,6 @@
 import { Platform } from "react-native";
 import DeviceInfo from "react-native-device-info";
 import {
-  ANDROID_LOOKUP_LOCALES,
-  ANDROID_PACKAGE_NAME,
   ANDROID_STORE_URL,
   IOS_APP_ID,
   IOS_LOOKUP_COUNTRIES,
@@ -10,8 +8,9 @@ import {
 } from "./constants";
 import { log, warn } from "../Logger";
 import { StoreVersionInfo } from "./types";
-import { selectLatestVersionInfo } from "./version";
+import { isNewerAppVersion, selectLatestVersionInfo } from "./version";
 import { externalFetch } from "../../services/network/externalHttp";
+import { checkAndroidUpdate } from "../../services/appUpdate/androidInAppUpdate";
 
 type StoreLookupResult = {
   latestVersion: string;
@@ -64,84 +63,46 @@ const getIosStoreVersion = async () => {
   return latestVersion;
 };
 
-export const extractAndroidVersion = (html: string) => {
-  const patterns = [
-    /"softwareVersion":"([^"]+)"/i,
-    /\[\[\["([^"]+)"\]\],\[\["Current Version"\]\]/i,
-    /\[\[\["([^"]+)"\]\],\[\["Phiên bản hiện tại"\]\]/i,
-    /"141":\[\[\["([^"]+)"\]\]/i,
-  ];
-
-  for (const pattern of patterns) {
-    const matched = html.match(pattern)?.[1]?.trim();
-    if (matched && /\d/.test(matched)) {
-      return matched;
-    }
-  }
-
-  return null;
-};
-
-const getAndroidStoreVersionByLocale = async ({
-  hl,
-  gl,
-}: {
-  hl: string;
-  gl: string;
-}): Promise<StoreLookupResult> => {
-  const response = await fetchWithTimeout(
-    `https://play.google.com/store/apps/details?id=${ANDROID_PACKAGE_NAME}&hl=${hl}&gl=${gl}`,
-  );
-  const html = await response.text();
-  const latestVersion = extractAndroidVersion(html);
-
-  if (!latestVersion) {
-    throw new Error("Cannot resolve Android store version.");
-  }
-
-  return {
-    latestVersion,
-    storeUrl: ANDROID_STORE_URL,
-  };
-};
-
-const getAndroidStoreVersion = async () => {
-  const results = await Promise.allSettled(
-    ANDROID_LOOKUP_LOCALES.map(getAndroidStoreVersionByLocale),
-  );
-
-  const versions = results
-    .filter(
-      (result): result is PromiseFulfilledResult<StoreLookupResult> =>
-        result.status === "fulfilled",
-    )
-    .map((result) => result.value);
-
-  const latestVersion = selectLatestVersionInfo(versions);
-
-  if (!latestVersion) {
-    throw new Error("Cannot resolve Android store version.");
-  }
-
-  return latestVersion;
-};
-
+/**
+ * Dò bản mới và tự quyết luôn `hasUpdate`, vì hai nền tảng biết được những thứ
+ * khác nhau: iOS lấy được versionName trên App Store nên so sánh phía app, còn
+ * Play In-App Updates chỉ trả lời có/không kèm versionCode.
+ *
+ * @return null khi dò thất bại thật sự (mất mạng, store lỗi).
+ */
 export const getStoreVersionInfo =
   async (): Promise<StoreVersionInfo | null> => {
     const currentVersion = DeviceInfo.getVersion();
     const currentBuildNumber = DeviceInfo.getBuildNumber();
 
     try {
-      const storeInfo =
-        Platform.OS === "ios"
-          ? await getIosStoreVersion()
-          : await getAndroidStoreVersion();
+      if (Platform.OS === "ios") {
+        const storeInfo = await getIosStoreVersion();
+
+        return {
+          currentBuildNumber,
+          currentVersion,
+          hasUpdate: isNewerAppVersion({
+            currentBuildNumber,
+            currentVersion,
+            latestVersion: storeInfo.latestVersion,
+          }),
+          latestVersion: storeInfo.latestVersion,
+          source: "appStore",
+          storeUrl: storeInfo.storeUrl,
+        };
+      }
+
+      const androidResult = await checkAndroidUpdate();
 
       return {
+        availableVersionCode: androidResult.availableVersionCode ?? undefined,
         currentBuildNumber,
         currentVersion,
-        latestVersion: storeInfo.latestVersion,
-        storeUrl: storeInfo.storeUrl,
+        hasUpdate: androidResult.status === "available",
+        isCheckUnsupported: androidResult.status === "unsupported",
+        source: "playInApp",
+        storeUrl: ANDROID_STORE_URL,
       };
     } catch (err) {
       log("[Version] Skip update check", Platform.OS);

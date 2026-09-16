@@ -10,6 +10,12 @@ type TabBarBackgroundProps = {
 };
 
 /**
+ * SVG của cái mu chồng xuống dưới mép thanh tab một chút rồi mới hết, để chỗ
+ * nối với nền phẳng không hở ra một đường chỉ do làm tròn pixel.
+ */
+const HUMP_OVERLAP = 2;
+
+/**
  * Mép trên thanh tab: đoạn thẳng hai bên, ở giữa cong nhô lên bao lấy nút Quét
  * QR. Hai đoạn Bézier có điểm điều khiển nằm ngang tại chỗ nối nên tiếp tuyến
  * khớp với đoạn thẳng, đường cong không bị gãy khúc.
@@ -35,39 +41,44 @@ export const buildTopEdge = (width: number) => {
 
 /**
  * Nền của thanh tab. Được truyền qua option `tabBarBackground` nên
- * react-navigation tự đặt nó phủ kín thanh tab và không nhận touch. Chỉ cái mu
- * vẽ tràn lên trên thanh tab, phần còn lại phía trên vẫn trong suốt để không
- * che nội dung của màn hình.
+ * react-navigation tự đặt nó phủ kín thanh tab và không nhận touch — và cũng
+ * chính vì có nó mà react-navigation set `backgroundColor: "transparent"` cho
+ * thanh tab, tức đây là chỗ DUY NHẤT vẽ nền.
+ *
+ * Vì vậy mặt phẳng của thanh tab phải là `backgroundColor` của View chứ không
+ * vẽ bằng SVG: SVG hụt một nhịp là thanh tab trong suốt, nhìn xuyên xuống thấy
+ * nội dung màn hình phía sau (đã gặp trên Android). SVG chỉ còn lo đúng cái mu
+ * cong nhô lên trên mép — phần bắt buộc phải vẽ ngoài bounds — nên hỏng lắm thì
+ * cũng chỉ mất cái mu, không mất nền.
  */
 export default function TabBarBackground({
   backgroundColor,
   borderTopColor,
 }: TabBarBackgroundProps) {
-  const [size, setSize] = React.useState({ width: 0, height: 0 });
+  const [width, setWidth] = React.useState(0);
 
   const handleLayout = (event: LayoutChangeEvent) => {
-    const { width, height } = event.nativeEvent.layout;
-    setSize((current) =>
-      current.width === width && current.height === height
-        ? current
-        : { width, height },
-    );
+    const nextWidth = event.nativeEvent.layout.width;
+    setWidth((current) => (current === nextWidth ? current : nextWidth));
   };
 
-  const topEdge = size.width > 0 ? buildTopEdge(size.width) : "";
+  const topEdge = width > 0 ? buildTopEdge(width) : "";
 
   return (
-    <View style={styles.root} onLayout={handleLayout}>
+    <View
+      style={[styles.root, { backgroundColor }]}
+      onLayout={handleLayout}
+    >
       {topEdge ? (
         <Svg
-          width={size.width}
-          height={size.height + HUMP_RISE}
-          style={styles.canvas}
+          width={width}
+          height={HUMP_RISE + HUMP_OVERLAP}
+          style={styles.hump}
         >
-          {/* Phần nền: mép trên như trên, ba cạnh còn lại ăn ra hết thanh tab. */}
+          {/* Mu cong, khép đáy xuống dưới mép thanh tab để liền với nền phẳng. */}
           <Path
-            d={`${topEdge} L ${size.width} ${size.height + HUMP_RISE} L 0 ${
-              size.height + HUMP_RISE
+            d={`${topEdge} L ${width} ${HUMP_RISE + HUMP_OVERLAP} L 0 ${
+              HUMP_RISE + HUMP_OVERLAP
             } Z`}
             fill={backgroundColor}
           />
@@ -89,7 +100,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   // Tràn lên trên thanh tab đúng bằng độ cao cái mu.
-  canvas: {
+  hump: {
     position: "absolute",
     left: 0,
     top: -HUMP_RISE,

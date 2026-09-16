@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   Platform,
   StatusBar,
+  BackHandler,
   Animated,
   InteractionManager,
 } from "react-native";
@@ -36,6 +37,7 @@ import {
   useStyles,
 } from "../../utils/helpers/colors";
 import { makeStyles } from "./CameraList.styles";
+import { useImmersiveMode } from "../../hooks/useImmersiveMode";
 import {
   GestureHandlerRootView,
   GestureDetector,
@@ -57,11 +59,12 @@ import {
 } from "./shared/cameraWebViewMessaging";
 import {
   getCameraHlsUrl,
-  getCameraSnapshotUrl,
+  getCameraFullscreenSnapshotUrl,
   getVisiblePageIndexes,
 } from "./shared/cameraStreamUtils";
 import { useCameraViewToken } from "./shared/useCameraViewToken";
 import EmptyState from "../ui/EmptyState";
+import { createTabBarStyle } from "../../navigation/shared/tabBarTheme";
 
 const LANDSCAPE_BACK_FALLBACK_DELAY_MS = 120;
 
@@ -458,7 +461,7 @@ const CameraList: React.FC = () => {
       Orientation.lockToLandscape();
       setIsLandscape(true);
       setPendingThumbUrl(
-        getCameraSnapshotUrl(item.iD_Camera_Ma, thumbTimestamp),
+        getCameraFullscreenSnapshotUrl(item.iD_Camera_Ma, thumbTimestamp),
       );
       setVideoReady(false);
       setAndroidVideoKey(0);
@@ -487,6 +490,66 @@ const CameraList: React.FC = () => {
     }
     StatusBar.setBackgroundColor(C.red, false);
   }, [fullscreenCamera, isClosingFullscreen]);
+
+  // Giữ cả lúc đang đóng để lớp phủ không tắt trước khi máy xoay xong về dọc.
+  const isFullscreenActive = fullscreenCamera !== null || isClosingFullscreen;
+
+  // Ẩn status bar và navigation bar/taskbar trong lúc xem toàn màn hình.
+  useImmersiveMode(isFullscreenActive);
+
+  // Fullscreen giờ là lớp phủ trong cùng cây React (không còn Modal), nên phải
+  // tự giấu header/tabBar thì nó mới phủ kín như Modal trước đây.
+  React.useEffect(() => {
+    navigation.setOptions({ headerShown: !isFullscreenActive });
+    return () => navigation.setOptions({ headerShown: true });
+  }, [isFullscreenActive, navigation]);
+
+  React.useEffect(() => {
+    const tabNavigation = navigation.getParent();
+    if (!tabNavigation) return;
+
+    tabNavigation.setOptions({
+      tabBarStyle: isFullscreenActive
+        ? { display: "none" }
+        : [createTabBarStyle({ bottomInset: insets.bottom })],
+    });
+
+    return () => {
+      tabNavigation.setOptions({
+        tabBarStyle: [createTabBarStyle({ bottomInset: insets.bottom })],
+      });
+    };
+  }, [insets.bottom, isFullscreenActive, navigation]);
+
+  /**
+   * Nút back cứng khi đang fullscreen: đóng lớp phủ chứ không pop màn.
+   *
+   * Trước đây `<Modal onRequestClose>` lo việc này; lớp phủ thường không nhận
+   * được back nên phải tự đăng ký, nếu không back sẽ rời thẳng danh sách trong
+   * lúc máy còn đang xoay ngang.
+   */
+  React.useEffect(() => {
+    if (!isFullscreenActive) return;
+
+    const subscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        closeFullscreen();
+        return true;
+      },
+    );
+
+    return () => subscription.remove();
+  }, [closeFullscreen, isFullscreenActive]);
+
+  /**
+   * Khoảng chừa dưới hàng dot phân trang.
+   *
+   * Chỉ Android mới cần: thanh điều hướng của nó đặc và che hẳn hàng dot. Home
+   * indicator của iOS chỉ là vạch mỏng nằm đè lên, chừa theo insets.bottom
+   * (34px) sẽ thừa ra một dải trắng và đẩy dot lên cao.
+   */
+  const paginationBottomInset = Platform.OS === "android" ? insets.bottom : 0;
 
   const numColumns = layoutCount === 1 ? 1 : 2;
   const itemWidth = screenWidth / numColumns - 16;
@@ -585,7 +648,10 @@ const CameraList: React.FC = () => {
   const displayThumbUrl =
     pendingThumbUrl ??
     (fullscreenCamera
-      ? getCameraSnapshotUrl(fullscreenCamera.iD_Camera_Ma, thumbTimestamp)
+      ? getCameraFullscreenSnapshotUrl(
+          fullscreenCamera.iD_Camera_Ma,
+          thumbTimestamp,
+        )
       : null);
   const visiblePageIndexes = React.useMemo(
     () => getVisiblePageIndexes(page, totalPages),
@@ -653,7 +719,7 @@ const CameraList: React.FC = () => {
       clearAndroidTimers();
 
       setPendingThumbUrl(
-        getCameraSnapshotUrl(nextCam.iD_Camera_Ma, thumbTimestamp),
+        getCameraFullscreenSnapshotUrl(nextCam.iD_Camera_Ma, thumbTimestamp),
       );
       setVideoReady(false);
       setAndroidVideoKey(0);
@@ -850,7 +916,10 @@ const CameraList: React.FC = () => {
             <View
               style={[
                 styles.paginationRow,
-                { backgroundColor: colors.surface },
+                {
+                  backgroundColor: colors.surface,
+                  paddingBottom: 10 + paginationBottomInset,
+                },
               ]}
             >
               {visiblePageIndexes.map((i) => (
@@ -959,27 +1028,13 @@ const CameraList: React.FC = () => {
         </TouchableWithoutFeedback>
       </Modal>
 
-      {/* Fullscreen Modal */}
-      <Modal
-        visible={fullscreenCamera !== null || isClosingFullscreen}
-        animationType="fade"
-        transparent={false}
-        statusBarTranslucent={false}
-        hardwareAccelerated
-        supportedOrientations={[
-          "portrait",
-          "landscape-left",
-          "landscape-right",
-        ]}
-        onRequestClose={closeFullscreen}
-      >
-        <StatusBar
-          hidden={false}
-          translucent={false}
-          backgroundColor="#000"
-          barStyle="light-content"
-        />
-        <View style={styles.fullscreenContainer}>
+      {/* Lớp phủ trong cùng cây React thay cho <Modal>: mỗi Modal là một Dialog
+          có window riêng, mà lệnh ẩn thanh hệ thống chỉ áp được lên window của
+          Activity — để nguyên Modal thì Android vẫn chừa dải status bar và
+          navigation bar/taskbar quanh video. */}
+      {isFullscreenActive && (
+        <View style={styles.fullscreenOverlay}>
+          <StatusBar hidden backgroundColor="#000" barStyle="light-content" />
           <View
             style={[
               styles.fsHeader,
@@ -1176,7 +1231,7 @@ const CameraList: React.FC = () => {
             )}
           </View>
         </View>
-      </Modal>
+      )}
     </GestureHandlerRootView>
   );
 };

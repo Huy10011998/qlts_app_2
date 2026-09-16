@@ -12,7 +12,6 @@ import {
   SUPPORT_PHONE_LINK,
 } from "../../constants/support";
 import type { GuideNavigationProp } from "../../types";
-import { formatVersionWithBuild } from "../../utils/AppVersion";
 import { C, useStyles } from "../../utils/helpers/colors";
 import { makeGuideStyles } from "./GuideScreen.styles";
 import { filterGuideTopics } from "./shared/guideSearch";
@@ -42,10 +41,7 @@ export default function GuideScreen() {
     })).filter((entry) => entry.hits.length > 0);
   }, [hits]);
 
-  const appVersionLabel = `v${formatVersionWithBuild(
-    DeviceInfo.getVersion(),
-    DeviceInfo.getBuildNumber(),
-  )}`;
+  const appVersionLabel = `v${DeviceInfo.getVersion()}`;
 
   const openSupportEmail = () =>
     Linking.openURL(

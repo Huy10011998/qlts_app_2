@@ -1,5 +1,6 @@
 import React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import TextSizeSlider from "../../components/ui/TextSizeSlider";
 import { useTextScale } from "../../context/FontScaleContext";
 import { useColorScheme } from "../../hooks/useColorScheme";
@@ -35,6 +36,7 @@ const SPECIMEN = [
 export default function TextSizeScreen() {
   const isDark = useColorScheme() === "dark";
   const { step, factor: appliedFactor, setStep } = useTextScale();
+  const insets = useSafeAreaInsets();
   const [previewStep, setPreviewStep] = React.useState(step);
 
   const colors = isDark
@@ -141,7 +143,11 @@ export default function TextSizeScreen() {
         </View>
       </ScrollView>
 
-      <View style={styles.bottom}>
+      {/*
+        Khối thanh trượt ghim đáy màn, nên phải cộng thêm inset: thanh điều
+        hướng của Android nằm đè lên và che mất dòng chú thích phần trăm.
+      */}
+      <View style={{ paddingBottom: insets.bottom + 20 }}>
         <View
           style={[
             styles.card,
@@ -223,7 +229,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 3,
   },
-  bottom: { paddingBottom: 20 },
   sliderCard: {
     flexDirection: "row",
     alignItems: "center",

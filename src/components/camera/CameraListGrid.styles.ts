@@ -70,10 +70,11 @@ export const makeStyles = (c: AppColors) =>
       justifyContent: "center",
       alignItems: "center",
       width: "100%",
-      height: 28,
+      minHeight: 28,
       backgroundColor: c.surface,
       gap: 4,
       paddingHorizontal: 12,
+      paddingVertical: 10,
     },
     dot: {
       width: 7,
@@ -198,7 +199,17 @@ export const makeStyles = (c: AppColors) =>
       alignItems: "center",
     },
     closeText: { fontSize: 16, fontWeight: "600", color: c.text },
-    fsContainer: { flex: 1, backgroundColor: "#000" },
+    /**
+     * Lớp phủ fullscreen 1 camera. Phủ tuyệt đối thay vì `flex: 1` vì nó nằm
+     * chung cây với lưới chứ không còn trong <Modal> riêng; `elevation` để trên
+     * Android nó nằm trên các view phía trước nó trong cùng cây.
+     */
+    fsOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "#000",
+      zIndex: 20,
+      elevation: 20,
+    },
     fsVideoArea: { flex: 1, backgroundColor: "#000" },
     fsSwipeOverlay: {
       ...StyleSheet.absoluteFillObject,

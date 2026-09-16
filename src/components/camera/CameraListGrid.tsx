@@ -12,6 +12,7 @@ import {
   Alert,
   PermissionsAndroid,
   StatusBar,
+  BackHandler,
   useWindowDimensions,
   InteractionManager,
   TouchableWithoutFeedback,
@@ -38,6 +39,7 @@ import {
   useStyles,
 } from "../../utils/helpers/colors";
 import { makeStyles } from "./CameraListGrid.styles";
+import { useImmersiveMode } from "../../hooks/useImmersiveMode";
 import { externalFetch } from "../../services/network/externalHttp";
 import Video from "react-native-video";
 import WebView from "react-native-webview";
@@ -69,7 +71,7 @@ import {
 import {
   getCameraHlsUrl,
   getCameraLayoutLabel,
-  getCameraSnapshotUrl,
+  getCameraFullscreenSnapshotUrl,
   getVisiblePageIndexes,
 } from "./shared/cameraStreamUtils";
 import { useCameraViewToken } from "./shared/useCameraViewToken";
@@ -378,6 +380,12 @@ const CameraListGrid: React.FC = () => {
   // bấm nút (máy còn dọc), grid bị re-layout fullscreen ở hướng dọc trong ~300ms
   // chờ rotation → trông như "xoay dọc rồi mới xoay ngang lại".
   const isGridFullscreenMode = isGridLandscapeFullscreen && isLandscape;
+  // Fullscreen 1 camera: giữ cả lúc đang đóng để lớp phủ không biến mất trước
+  // khi máy xoay xong về dọc.
+  const isSingleFullscreen = fullscreenCam !== null || isClosingFullscreen;
+  // Cả hai chế độ đều phải ẩn thanh hệ thống. Bộ đếm trong immersiveMode lo ca
+  // chồng nhau (mở 1 camera từ lưới đang toàn màn hình).
+  useImmersiveMode(isGridFullscreenMode || isSingleFullscreen);
   const effectiveLayoutCount = layoutCount;
   const [cols, rows] = LAYOUT_OPTIONS[effectiveLayoutCount] ?? [4, 4];
   const perPage = cols * rows;
@@ -415,7 +423,10 @@ const CameraListGrid: React.FC = () => {
   const displayThumbUrl =
     pendingThumbUrl ??
     (fullscreenCam && thumbTimestamp
-      ? getCameraSnapshotUrl(fullscreenCam.iD_Camera_Ma, thumbTimestamp)
+      ? getCameraFullscreenSnapshotUrl(
+          fullscreenCam.iD_Camera_Ma,
+          thumbTimestamp,
+        )
       : null);
   const visiblePageIndexes = React.useMemo(
     () => getVisiblePageIndexes(page, totalPages),
@@ -501,16 +512,20 @@ const CameraListGrid: React.FC = () => {
     };
   }, [clearCloseFullscreenTimeout, navigation]);
 
+  // Fullscreen 1 camera giờ là lớp phủ trong cùng cây React (không còn Modal),
+  // nên phải tự giấu header/tabBar thì nó mới phủ kín như Modal trước đây.
+  const isAnyFullscreen = isGridFullscreenMode || isSingleFullscreen;
+
   React.useEffect(() => {
-    navigation.setOptions({ headerShown: !isGridFullscreenMode });
-  }, [isGridFullscreenMode, navigation]);
+    navigation.setOptions({ headerShown: !isAnyFullscreen });
+  }, [isAnyFullscreen, navigation]);
 
   React.useEffect(() => {
     const tabNavigation = navigation.getParent();
     if (!tabNavigation) return;
 
     tabNavigation.setOptions({
-      tabBarStyle: isGridFullscreenMode
+      tabBarStyle: isAnyFullscreen
         ? { display: "none" }
         : [createTabBarStyle({ bottomInset: insets.bottom })],
     });
@@ -520,7 +535,7 @@ const CameraListGrid: React.FC = () => {
         tabBarStyle: [createTabBarStyle({ bottomInset: insets.bottom })],
       });
     };
-  }, [colors.surface, insets.bottom, isGridFullscreenMode, navigation]);
+  }, [colors.surface, insets.bottom, isAnyFullscreen, navigation]);
 
   const stopAllStreams = React.useCallback(() => {
     if (startStreamsTimeoutRef.current) {
@@ -1005,7 +1020,7 @@ const CameraListGrid: React.FC = () => {
       // lúc mở.
       Orientation.lockToLandscape();
       setPendingThumbUrl(
-        getCameraSnapshotUrl(cam.iD_Camera_Ma, thumbTimestamp),
+        getCameraFullscreenSnapshotUrl(cam.iD_Camera_Ma, thumbTimestamp),
       );
       setActiveIndex(idx);
       setVideoReady(false);
@@ -1053,7 +1068,7 @@ const CameraListGrid: React.FC = () => {
       const nextLocalIndex = nextIndex % perPage;
 
       setPendingThumbUrl(
-        getCameraSnapshotUrl(nextCam.iD_Camera_Ma, thumbTimestamp),
+        getCameraFullscreenSnapshotUrl(nextCam.iD_Camera_Ma, thumbTimestamp),
       );
       setVideoReady(false);
       setFsVideoKey(0);
@@ -1282,6 +1297,27 @@ const CameraListGrid: React.FC = () => {
     fsTranslateX,
   ]);
 
+  /**
+   * Nút back cứng khi đang fullscreen 1 camera: đóng lớp phủ chứ không pop màn.
+   *
+   * Trước đây `<Modal onRequestClose>` lo việc này; lớp phủ thường không nhận
+   * được back nên phải tự đăng ký, nếu không back sẽ rời thẳng màn lưới trong
+   * lúc máy còn đang xoay ngang.
+   */
+  React.useEffect(() => {
+    if (!isSingleFullscreen) return;
+
+    const subscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        closeFullscreen();
+        return true;
+      },
+    );
+
+    return () => subscription.remove();
+  }, [closeFullscreen, isSingleFullscreen]);
+
   // ─── KEY CHANGE: toggleFullscreenOrientation không set isLandscape state ─
   const toggleFullscreenOrientation = React.useCallback(() => {
     if (isLandscape) {
@@ -1344,10 +1380,8 @@ const CameraListGrid: React.FC = () => {
       onLayout={handleContentLayout}
     >
       <StatusBar
-        hidden={isGridFullscreenMode}
-        backgroundColor={
-          fullscreenCam !== null || isClosingFullscreen ? "#000" : c.red
-        }
+        hidden={isAnyFullscreen}
+        backgroundColor={isSingleFullscreen ? "#000" : c.red}
         barStyle="light-content"
       />
 
@@ -1593,26 +1627,12 @@ const CameraListGrid: React.FC = () => {
         </TouchableWithoutFeedback>
       </Modal>
 
-      <Modal
-        visible={fullscreenCam !== null || isClosingFullscreen}
-        animationType="fade"
-        transparent={false}
-        statusBarTranslucent={false}
-        hardwareAccelerated
-        supportedOrientations={[
-          "portrait",
-          "landscape-left",
-          "landscape-right",
-        ]}
-        onRequestClose={closeFullscreen}
-      >
-        <StatusBar
-          hidden={false}
-          translucent={false}
-          backgroundColor="#000"
-          barStyle="light-content"
-        />
-        <View style={styles.fsContainer}>
+      {/* Lớp phủ trong cùng cây React thay cho <Modal>: mỗi Modal là một Dialog
+          có window riêng, mà lệnh ẩn thanh hệ thống chỉ áp được lên window của
+          Activity — để nguyên Modal thì Android vẫn chừa dải status bar và
+          navigation bar/taskbar quanh video. */}
+      {isSingleFullscreen && (
+        <View style={styles.fsOverlay}>
           <View
             style={[
               styles.fsHeader,
@@ -1833,7 +1853,7 @@ const CameraListGrid: React.FC = () => {
             )}
           </View>
         </View>
-      </Modal>
+      )}
     </GestureHandlerRootView>
   );
 };

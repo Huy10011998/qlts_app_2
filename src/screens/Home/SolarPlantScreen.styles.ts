@@ -187,6 +187,7 @@ export const makeStyles = (c: AppColors) =>
     },
     tabItem: { flexShrink: 1, minWidth: 0, alignItems: "center" },
     tabChip: {
+      backgroundColor: "transparent",
       borderRadius: 18,
       paddingHorizontal: 9,
       paddingVertical: 6,

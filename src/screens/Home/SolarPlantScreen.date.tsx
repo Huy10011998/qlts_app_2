@@ -112,7 +112,12 @@ export const PeriodHeader: React.FC<PeriodHeaderProps> = ({
                 Trước đây chỉ tab đang chọn mới có đệm nên riêng nó hụt mất 20px
                 bề ngang, đủ để "Tháng này" xuống dòng trong khi các tab khác thì
                 không. */}
+            {/* `collapsable={false}`: trên Android (kiến trúc cũ) View chỉ có
+                bo góc mà không có nền sẽ bị gộp vào cha, đến khi tab được chọn
+                thì view dựng lại chỉ nhận mỗi nền mới nên chip xanh mất bo 4
+                góc. Giữ view luôn tồn tại thì bo góc không rơi. */}
             <View
+              collapsable={false}
               style={[
                 styles.tabChip,
                 activeTab === tab && styles.tabChipActive,

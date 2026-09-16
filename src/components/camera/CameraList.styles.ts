@@ -72,10 +72,13 @@ export const makeStyles = (c: AppColors) =>
       flexDirection: "row",
       justifyContent: "center",
       alignItems: "center",
-      height: 28,
+      // minHeight chứ không phải height: hàng này còn cộng thêm paddingBottom
+      // theo safe area, chiều cao cố định sẽ bóp mất phần chừa đó.
+      minHeight: 28,
       backgroundColor: c.surface,
       gap: 4,
       paddingHorizontal: 12,
+      paddingVertical: 10,
     },
     dot: {
       width: 7,
@@ -143,7 +146,17 @@ export const makeStyles = (c: AppColors) =>
       alignItems: "center",
     },
     closeText: { fontSize: 16, fontWeight: "600", color: c.text },
-    fullscreenContainer: { flex: 1, backgroundColor: "#000" },
+    /**
+     * Lớp phủ fullscreen. Phủ tuyệt đối thay vì `flex: 1` vì nó nằm chung cây
+     * với danh sách chứ không còn trong <Modal> riêng; `elevation` để trên
+     * Android nó nằm trên các view phía trước nó trong cùng cây.
+     */
+    fullscreenOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "#000",
+      zIndex: 20,
+      elevation: 20,
+    },
     fsHeader: {
       flexDirection: "row",
       alignItems: "center",

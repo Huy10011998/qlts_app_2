@@ -4,14 +4,29 @@ import {
   UPDATE_REMINDER_DELAY_MS,
   UPDATE_REMINDER_KEY,
 } from "./constants";
-import { UpdateReminderState } from "./types";
+import { StoreVersionInfo, UpdateReminderState } from "./types";
 import { warn } from "../Logger";
 
 export const openStoreForUpdate = async (storeUrl: string) => {
   await Linking.openURL(storeUrl);
 };
 
-export const shouldShowUpdateReminder = async (latestVersion: string) => {
+/**
+ * Khoá dùng để nhớ "đã nhắc bản này rồi". iOS lấy được versionName của bản mới,
+ * Android chỉ có versionCode — nên khoá phải chọn theo nền tảng thay vì mặc
+ * định lấy `latestVersion` như trước.
+ */
+export const getUpdateReminderKey = ({
+  availableVersionCode,
+  latestVersion,
+}: Pick<
+  StoreVersionInfo,
+  "availableVersionCode" | "latestVersion"
+>): string | null =>
+  latestVersion ??
+  (availableVersionCode != null ? String(availableVersionCode) : null);
+
+export const shouldShowUpdateReminder = async (reminderKey: string) => {
   try {
     const rawValue = await AsyncStorage.getItem(UPDATE_REMINDER_KEY);
     if (!rawValue) return true;
@@ -19,7 +34,7 @@ export const shouldShowUpdateReminder = async (latestVersion: string) => {
     const parsed = JSON.parse(rawValue) as UpdateReminderState;
     if (!parsed?.latestVersion || !parsed?.dismissedAt) return true;
 
-    if (parsed.latestVersion !== latestVersion) {
+    if (parsed.latestVersion !== reminderKey) {
       return true;
     }
 
@@ -30,11 +45,11 @@ export const shouldShowUpdateReminder = async (latestVersion: string) => {
   }
 };
 
-export const markUpdateReminderDismissed = async (latestVersion: string) => {
+export const markUpdateReminderDismissed = async (reminderKey: string) => {
   try {
     const nextState: UpdateReminderState = {
       dismissedAt: Date.now(),
-      latestVersion,
+      latestVersion: reminderKey,
     };
 
     await AsyncStorage.setItem(UPDATE_REMINDER_KEY, JSON.stringify(nextState));
