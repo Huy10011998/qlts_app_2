@@ -11,6 +11,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   var reactNativeDelegate: ReactNativeDelegate?
   var reactNativeFactory: RCTReactNativeFactory?
 
+  /// SceneDelegate mới là nơi dựng window nên phải giữ lại launchOptions ở đây
+  /// để truyền sang, vì scene không nhận được tham số này.
+  var launchOptions: [UIApplication.LaunchOptionsKey: Any]?
+
   /// Thời gian tối thiểu giữ splash screen. Nếu app khởi động lâu hơn mức này
   /// thì splash vẫn tắt đúng mốc, không cộng dồn thêm.
   /// Giữ đồng bộ với SPLASH_MIN_DURATION_MS trong MainActivity.kt.
@@ -37,16 +41,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     reactNativeDelegate = delegate
     reactNativeFactory = factory
+    self.launchOptions = launchOptions
 
-    window = UIWindow(frame: UIScreen.main.bounds)
-
-    factory.startReactNative(
-      withModuleName: "qlts_app_2",
-      in: window,
-      launchOptions: launchOptions
-    )
-
-    holdSplashScreen()
+    // Window và startReactNative đã chuyển sang SceneDelegate.scene(_:willConnectTo:options:)
 
     return true
   }
@@ -55,9 +52,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   /// giữ lại. Nên ta dựng lại chính storyboard đó thành một lớp phủ trên window
   /// rồi mờ dần gỡ xuống sau splashHoldSeconds — người dùng thấy liền mạch một
   /// màn splash duy nhất.
-  private func holdSplashScreen() {
+  func holdSplashScreen(on window: UIWindow) {
     guard
-      let window = window,
       let launchViewController = UIStoryboard(name: "LaunchScreen", bundle: nil)
         .instantiateInitialViewController(),
       let overlay = launchViewController.view

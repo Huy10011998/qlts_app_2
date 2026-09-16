@@ -1,6 +1,6 @@
 import notifee, { AndroidImportance } from "@notifee/react-native";
 import { log, warn } from "../../utils/Logger";
-import { getCameraMotionGroupId } from "./cameraPush";
+import { getCameraAiGroupId } from "./cameraPush";
 import { ensureNotificationChannels } from "./channels";
 import {
   ANDROID_SMALL_ICON,
@@ -48,8 +48,9 @@ export const displayPushNotification = async (
       data: message.data,
       android: {
         channelId: message.channelId,
-        // Nhiều camera cùng có chuyển động sẽ dồn noti một lúc → gom theo camera.
-        groupId: getCameraMotionGroupId(message.data),
+        // Server không chặn dội, noti của một camera có thể dồn liên tiếp →
+        // gom theo camera.
+        groupId: getCameraAiGroupId(message.data),
         smallIcon: ANDROID_SMALL_ICON,
         color: NOTIFICATION_COLOR,
         importance:

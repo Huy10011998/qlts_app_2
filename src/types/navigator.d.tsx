@@ -148,7 +148,7 @@ export type RootStackParamList = {
   Appearance: undefined;
   /** Chọn trần phóng to cỡ chữ cho toàn ứng dụng. */
   TextSize: undefined;
-  /** Tạm dừng / bật lại thông báo camera phát hiện chuyển động. */
+  /** Tạm dừng / bật lại thông báo camera AI phát hiện. */
   CameraNotification: undefined;
   /** Mục lục tài liệu hướng dẫn sử dụng. */
   Guide: undefined;

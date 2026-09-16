@@ -191,6 +191,14 @@ target 'qlts_app_2' do
         build_config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'x86_64'
         build_config.build_settings['ENABLE_MODULE_VERIFIER'] = 'NO'
 
+        # Xcode 27 chỉ còn hỗ trợ deployment target từ 15.0 trở lên. Một số pod
+        # (và nhất là các resource bundle *_Privacy) vẫn khai báo 9.0–13.4 nên
+        # phải kéo lên bằng min_ios_version_supported của project.
+        pod_target = build_config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+        if pod_target.nil? || Gem::Version.new(pod_target.to_s) < Gem::Version.new(min_ios_version_supported)
+          build_config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = min_ios_version_supported
+        end
+
         defs = build_config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] || ['$(inherited)']
         defs = [defs] unless defs.is_a?(Array)
         defs << 'FMT_USE_CONSTEVAL=0' unless defs.include?('FMT_USE_CONSTEVAL=0')

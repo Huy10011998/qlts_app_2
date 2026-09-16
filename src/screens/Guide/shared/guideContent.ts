@@ -654,12 +654,22 @@ const TOPICS: GuideTopic[] = [
       "live view",
       "xem lai",
       "playback",
+      "phat lai",
+      "phong to",
+      "zoom",
+      "toan man hinh",
+      "chup anh",
       "thong bao",
       "noti",
+      "ai",
+      "phat hien doi tuong",
+      "chay khoi",
+      "hut thuoc",
       "chuyen dong",
       "tam dung",
       "bao dong",
       "dau ghi",
+      "rieng mot camera",
     ],
     sections: [
       {
@@ -672,13 +682,45 @@ const TOPICS: GuideTopic[] = [
               "Vào tab Camera để xem các khu vực; gõ ô tìm kiếm nếu nhiều khu vực.",
               "Chọn một khu vực để ra Danh sách Camera.",
               "Bấm một camera để xem trực tiếp, hoặc chọn Live View Camera để xem nhiều camera cùng lúc dạng lưới.",
-              "Xoay ngang máy để hình lớn hơn.",
+              "Ở lưới, chạm hai lần vào một ô để phóng ô đó ra toàn màn hình; chạm hai lần nữa để trở về lưới.",
+              "Đang toàn màn hình thì vuốt trái/phải để chuyển sang camera kế tiếp, hoặc xoay ngang máy cho hình lớn hơn.",
             ],
           },
           {
             kind: "note",
             tone: "info",
             text: "Camera chỉ xem được khi máy đang ở mạng nội bộ công ty. Ra ngoài mạng thì hình không lên, không phải camera hỏng.",
+          },
+        ],
+      },
+      {
+        id: "camera-phat-lai",
+        heading: "Xem lại (Phát lại)",
+        blocks: [
+          {
+            kind: "paragraph",
+            text: "Muốn xem chuyện đã xảy ra chứ không phải hình đang chiếu, dùng nút Phát lại ở thanh dưới màn Live View — nó mở bản ghi của đúng camera đang chọn.",
+          },
+          {
+            kind: "steps",
+            items: [
+              "Mở Live View Camera, chạm chọn camera cần xem.",
+              "Bấm nút Phát lại ở thanh dưới màn hình.",
+              "Chọn ngày và giờ cần xem; kéo thanh thời gian để tới nhanh đoạn mong muốn.",
+              "Đổi tốc độ tua nếu muốn xem nhanh hơn hay chậm lại.",
+            ],
+          },
+          {
+            kind: "bullets",
+            items: [
+              "Bật toàn màn hình rồi chụm hai ngón để phóng to hình, kéo để xem phần bị che; thu nhỏ hết cỡ là hình tự trở về như cũ.",
+              "Nút hình máy ảnh ở thanh dưới màn Live View chụp lại khung hình đang xem và lưu vào máy.",
+            ],
+          },
+          {
+            kind: "note",
+            tone: "info",
+            text: "Chụm hai ngón chỉ phóng to được khi đang ở chế độ toàn màn hình. Đang xem ở khung nhỏ thì thao tác này không có tác dụng.",
           },
         ],
       },
@@ -694,11 +736,11 @@ const TOPICS: GuideTopic[] = [
       },
       {
         id: "camera-thong-bao",
-        heading: "Thông báo phát hiện chuyển động",
+        heading: "Thông báo AI phát hiện",
         blocks: [
           {
             kind: "paragraph",
-            text: "Khi đầu ghi phát hiện chuyển động ở camera đã được bật theo dõi, app hiện thông báo kèm tên camera, vị trí và thời điểm.",
+            text: "Hệ thống nhận dạng hình ảnh theo dõi các camera được bật; phát hiện thì app hiện thông báo kèm tên camera, vị trí và thời điểm. Có ba loại: phát hiện đối tượng, phát hiện cháy khói và phát hiện hút thuốc — tiêu đề thông báo ghi rõ loại nào.",
           },
           {
             kind: "steps",
@@ -712,7 +754,7 @@ const TOPICS: GuideTopic[] = [
             items: [
               "Thông báo không kèm ảnh chụp hiện trường; muốn biết chuyện gì thì phải mở xem trực tiếp.",
               "App không lưu lịch sử thông báo — vuốt bỏ rồi thì không xem lại được trong app.",
-              "Một camera chỉ báo tối đa một lần mỗi 10 giây, nhưng nhiều camera cùng có chuyển động thì vẫn dồn nhiều thông báo một lúc.",
+              "Sự kiện dồn dập thì thông báo cũng dồn theo — hệ thống không gộp giúp. Đang thi công hay có việc làm camera báo liên tục thì dùng Tạm dừng thông báo.",
             ],
           },
           {
@@ -734,6 +776,7 @@ const TOPICS: GuideTopic[] = [
             kind: "steps",
             items: [
               "Vào tab Cài đặt, chọn Thông báo camera.",
+              "Ở ô Áp dụng cho, để nguyên Tất cả camera, hoặc bấm vào để chọn đúng một camera cần tắt.",
               "Điền lý do — không bắt buộc, nhưng nên có để sau này biết ai tắt và vì sao.",
               "Bấm một trong bốn mốc 15 phút, 30 phút, 1 giờ hoặc 4 giờ.",
               "Hết giờ app tự nhận thông báo trở lại; muốn nhận sớm hơn thì bấm Bật lại ngay.",
@@ -741,12 +784,12 @@ const TOPICS: GuideTopic[] = [
           },
           {
             kind: "paragraph",
-            text: "Khối trên cùng cho biết đang nhận hay đang tạm dừng, còn bao lâu, ai tắt và lý do. Đặt mốc mới trong lúc đang tạm dừng thì mốc cũ bị thay chứ không cộng dồn.",
+            text: "Khối trên cùng cho biết đang nhận hay đang tạm dừng, còn bao lâu, ai tắt, lý do và lệnh đang áp cho tất cả camera hay riêng một camera. Đặt mốc mới cùng phạm vi với lệnh đang chạy thì mốc cũ bị thay chứ không cộng dồn.",
           },
           {
             kind: "note",
             tone: "warn",
-            text: "Khối TẮT CHO CẢ CÔNG TY viền đỏ ở cuối màn áp dụng cho MỌI NGƯỜI, không riêng bạn — app hỏi xác nhận trước khi tắt. Bốn nút phía trên chỉ tắt cho riêng bạn.",
+            text: "Khối TẮT CHO CẢ CÔNG TY viền đỏ ở cuối màn áp dụng cho MỌI NGƯỜI, không riêng bạn — app hỏi xác nhận trước khi tắt. Bốn nút phía trên chỉ tắt cho riêng bạn. Ô Áp dụng cho dùng chung cho cả hai khối: đang chọn một camera thì bấm nút đỏ là tắt camera đó cho cả công ty.",
           },
           {
             kind: "paragraph",
@@ -917,7 +960,7 @@ const TOPICS: GuideTopic[] = [
               "Quyền mạng nội bộ: cần có để kết nối máy chủ trong công ty.",
               "Quyền camera: cần có để quét QR và chụp ảnh xác nhận.",
               "Quyền thông báo: nhận thông báo từ hệ thống.",
-              "Thông báo camera: tạm dừng thông báo phát hiện chuyển động trong một khoảng thời gian. Dòng này chỉ hiện với tài khoản được cấp quyền nhận thông báo camera.",
+              "Thông báo camera: tạm dừng thông báo AI phát hiện trong một khoảng thời gian, cho tất cả camera hoặc riêng một camera. Dòng này chỉ hiện với tài khoản được cấp quyền nhận thông báo camera.",
             ],
           },
           {

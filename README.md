@@ -112,51 +112,45 @@ Firebase project: **qlts-2fe12** (sender id `658864459072`) — dùng chung cho 
 
 ---
 
-## 1. Bật phần gọi API (việc cần làm khi BE xong)
+## 1. Trạng thái tích hợp
 
-Trong [src/config/api.tsx](src/config/api.tsx):
-
-1. Sửa 2 endpoint cho đúng path thật:
-   - `REGISTER_DEVICE_TOKEN`
-   - `UNREGISTER_DEVICE_TOKEN`
-2. Đổi `PUSH_NOTIFICATION_API_READY` thành `true`.
-
-Trước khi bật, app vẫn xin quyền / lấy FCM token / hiển thị / điều hướng bình
-thường — chỉ bỏ qua bước gửi token lên server và ghi log, nên không bị spam lỗi 404.
+Phần gọi API đã bật (`PUSH_NOTIFICATION_API_READY = true` trong
+[src/config/api.tsx](src/config/api.tsx)) và trỏ đúng endpoint thật. Không còn
+việc gì phải bật thêm.
 
 ---
 
-## 2. Endpoint app sẽ gọi
+## 2. Endpoint app gọi
 
 Cả hai đều là `POST`, có `Authorization: Bearer <accessToken>` (tự động thêm bởi
-`callApi`), nên BE lấy user từ token.
+`callApi`), nên BE lấy `ID_User` từ token — app không gửi kèm.
 
-### Đăng ký token — gọi sau khi đăng nhập thành công
-
-```json
-{
-  "token": "<FCM registration token>",
-  "platform": "android",
-  "deviceId": "a1b2c3…",
-  "deviceName": "SM-A546E",
-  "osVersion": "14",
-  "appVersion": "2.28",
-  "buildNumber": "53"
-}
-```
-
-App chỉ gọi lại khi `token`, `appVersion` hoặc `buildNumber` thay đổi (có cache
-local), nên BE cứ xử lý upsert theo `(userId, token)`.
-
-### Huỷ đăng ký — gọi khi logout
+### `POST /api/Common/update-fcm-token` — map token ↔ user
 
 ```json
-{ "token": "<FCM registration token>" }
+{ "FcmToken": "<FCM registration token>", "Platform": "android" }
 ```
 
-Sau khi nhận, BE phải ngừng gửi thông báo của user đó tới token này — quan trọng
-với thiết bị dùng chung. App **không** xoá FCM token nên token vẫn hợp lệ cho user
-đăng nhập tiếp theo.
+Gọi sau khi đăng nhập, mỗi lần Firebase cấp token mới, và mỗi lần app quay lại
+foreground. App có cache local nên chỉ gọi lại khi `token`, `appVersion` hoặc
+`buildNumber` đổi — BE cứ upsert theo `(userId, token)`.
+
+> BE trả `{ "message": "", "data": -1 }` khi thành công (proc bật `SET NOCOUNT ON`).
+> App coi HTTP 200 là thành công, **không** kiểm giá trị `data`.
+
+### `POST /api/Common/logout-fcm-token` — gọi khi logout
+
+```json
+{ "FcmToken": "<FCM registration token>" }
+```
+
+Gọi **trước** khi xoá access token (request cần `Authorization`). Body rỗng `{}`
+sẽ tắt mọi thiết bị của user — app chỉ dùng dạng có `FcmToken` để tắt đúng máy
+đang đăng xuất. BE chỉ tắt cờ `IsActive`, không xoá dòng; app **không** gọi FCM
+`deleteToken()` nên token vẫn hợp lệ cho user đăng nhập tiếp theo.
+
+Không gọi API này lúc logout = máy đó vẫn nhận noti của user cũ (lỗi lộ thông tin
+với điện thoại dùng chung).
 
 ---
 
@@ -244,10 +238,62 @@ không hoạt động khi user đã swipe tắt app trên iOS.
 | `route` | Không | Tên màn hình mở khi user bấm. Phải nằm trong whitelist (mục 4). Thiếu/sai → chỉ mở app, không crash. |
 | `params` | Không | Params của route, **dạng JSON string**. JSON sai → bỏ qua params, vẫn mở được route. |
 | `channelId` | Không | `default` \| `urgent` \| `silent`. Mặc định `default`. Alias lạ → `default`. |
-| `type` | Không | Nhãn phân loại nghiệp vụ, app không xử lý, để dành cho báo cáo/thống kê. |
+| `type` | Không | Nhãn phân loại nghiệp vụ. `CAMERA_AI` được xử lý riêng (mục 3.1); các giá trị khác app không đọc. |
 | `title`, `body` | Chỉ khi data-only | Nội dung thông báo. |
 
 Field lạ khác vẫn được giữ nguyên và truyền tới màn hình đích.
+
+### 3.1 Noti camera `CAMERA_AI` (bản BE 16/09/2026)
+
+Sự kiện do **AI service nhận dạng hình ảnh** (không còn là đầu ghi phát hiện
+chuyển động như bản 27/08/2026). BE gửi cả `notification` lẫn `data`; loại noti
+này **không** gửi `route`/`params` — app tự suy ra đích đến từ `type` + `ID_Camera`
+(xem [cameraPush.ts](src/services/notifications/cameraPush.ts)).
+
+| Field | Ví dụ | App dùng để |
+|---|---|---|
+| `type` | `CAMERA_AI` | Nhận diện loại noti. |
+| `ID_Camera` | `"2568"` | Khoá chính. Không phải số dương → chỉ mở app, không điều hướng. |
+| `CameraMa` | `"CAM0492"` | Ghép URL stream. Rỗng → chỉ mở app. |
+| `CameraTen` | `"CAM 24-CLF24"` | Tên hiển thị trên lưới. |
+| `ViTri` | `"Vòng ngoài sauce 3-Vp CBTP"` | Tên vùng trên header. |
+| `VungCamera` | `"BẢO VỆ - VÒNG NGOÀI…"` | Dự phòng khi `ViTri` rỗng. |
+| `EventType` | `DETECT` \| `FIRE_SMOKE` \| `SMOKING` | Giữ trong `data`, hiện chưa đổi UI. |
+| `DoTinCay` | `"0.91"` | Giữ trong `data`, có thể rỗng. |
+| `GhiChu` | `"2 người"` | Giữ trong `data`, có thể rỗng. |
+| `ThoiGian` | `"2026-09-16 09:13:58"` | Giờ server, không có timezone offset. |
+
+Bấm vào noti → mở `CameraListGrid` với lưới 1 ô đúng camera đó.
+
+> **Legacy**: app vẫn chấp nhận `type = "CAMERA_MOTION"` (bản 27/08/2026, kèm
+> `ID_DauGhi` / `Kenh` / `EventType = "VMD"`) để release trước/sau BE đều chạy.
+> Xoá `LEGACY_CAMERA_MOTION_TYPE` trong `cameraPush.ts` sau khi BE deploy xong.
+
+**Server không chặn dội** — AI báo bao nhiêu sự kiện thì đẩy bấy nhiêu noti. App
+chịu nhịp dồn bằng cách gom nhóm theo `CAMERA_AI:<ID_Camera>` trên thanh thông
+báo và không tự mở màn hình cho từng noti.
+
+### 3.2 API tạm dừng thông báo camera
+
+Ba API dưới đây cần quyền `Class.Camera.NotiCameraMobile` (thiếu quyền → HTTP 403,
+app hiểu là "chưa được cấp quyền" chứ không báo lỗi). Màn hình:
+[CameraNotificationScreen.tsx](src/screens/Settings/CameraNotificationScreen.tsx).
+
+| Endpoint | Body | Trả về |
+|---|---|---|
+| `POST /api/Camera/noti-tam-dung` | `{ SoPhut, PhamVi, ID_Camera, LyDo }` | Lệnh vừa tạo |
+| `POST /api/Camera/noti-trang-thai` | `{}` | Mảng lệnh đang ảnh hưởng tới người gọi |
+| `POST /api/Camera/noti-huy-tam-dung` | `{ ID }` (null = huỷ mọi lệnh của mình) | Số lệnh đã huỷ |
+
+`PhamVi` và `ID_Camera` là hai trục độc lập, app làm đủ cả 4 tổ hợp: chọn phạm vi
+camera ("Tất cả camera" hoặc 1 camera cụ thể) dùng chung cho cả nút tạm dừng cá
+nhân lẫn khối "tắt cho cả công ty". Danh sách camera lấy từ
+`get-vung-camera-steam` (BE chưa có API trả danh sách phẳng) và chỉ gọi khi người
+dùng mở ô chọn.
+
+> Response theo camelCase mặc định của .NET nên cột `ID_Xxx` thành `iD_Xxx`
+> (chữ `i` thường, `D` hoa). Đếm ngược lấy từ `soPhutConLai`/`denThoiGian` của
+> server, **không** cộng `SoPhut` vào giờ máy.
 
 ---
 

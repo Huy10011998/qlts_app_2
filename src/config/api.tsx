@@ -81,7 +81,7 @@ export const API_ENDPOINTS = {
   UPDATE_FCM_TOKEN: `${BASE_URL}/Common/update-fcm-token`,
   LOGOUT_FCM_TOKEN: `${BASE_URL}/Common/logout-fcm-token`,
 
-  // NOTI CAMERA — tạm dừng thông báo phát hiện chuyển động.
+  // NOTI CAMERA — tạm dừng thông báo AI phát hiện sự kiện.
   // Cả 3 API yêu cầu quyền Class.Camera.NotiCameraMobile, thiếu quyền trả 403.
   CAMERA_NOTI_TAM_DUNG: `${BASE_URL}/Camera/noti-tam-dung`,
   CAMERA_NOTI_TRANG_THAI: `${BASE_URL}/Camera/noti-trang-thai`,

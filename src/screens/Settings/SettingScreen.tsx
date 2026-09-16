@@ -937,7 +937,7 @@ const SettingScreen = () => {
                 iconName="videocam-outline"
                 iconBg={C.rose}
                 label="Thông báo camera"
-                sublabel="Tạm dừng thông báo phát hiện chuyển động"
+                sublabel="Tạm dừng thông báo AI phát hiện"
                 onPress={() => navigation.navigate("CameraNotification")}
               />
             ) : null}
