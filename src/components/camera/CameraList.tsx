@@ -68,6 +68,25 @@ import { createTabBarStyle } from "../../navigation/shared/tabBarTheme";
 
 const LANDSCAPE_BACK_FALLBACK_DELAY_MS = 120;
 
+/** Quá hạn này mà máy vẫn chưa xoay ngang thì cứ mở fullscreen ở chiều dọc. */
+const OPEN_FULLSCREEN_FALLBACK_DELAY_MS = 700;
+
+/**
+ * Cơ chế dựng fullscreen, tách theo platform.
+ *
+ * Android (true): lớp phủ nằm chung cây React với danh sách. Bắt buộc, vì mỗi
+ * <Modal> là một Dialog có window riêng mà lệnh ẩn thanh hệ thống chỉ áp được
+ * lên window của Activity — để nguyên Modal thì Android vẫn chừa dải status
+ * bar và navigation bar/taskbar quanh video.
+ *
+ * iOS (false): giữ nguyên <Modal> như bản 2.36. iOS không có thanh điều hướng
+ * cần ẩn, nên lớp phủ chỉ tổ làm việc xoay ngang kém mượt: nó bắt RN re-layout
+ * cả FlatList phía dưới cùng lúc với video, lại kéo theo header/tabBar phải
+ * ẩn/hiện qua navigation.setOptions ở mỗi lần mở đóng. Modal tránh được cả hai
+ * vì nó tự phủ lên trên và nằm ở window riêng.
+ */
+const USE_FULLSCREEN_OVERLAY = Platform.OS === "android";
+
 const CameraList: React.FC = () => {
   const styles = useStyles(makeStyles);
   const colors = useAppColors();
@@ -90,6 +109,15 @@ const CameraList: React.FC = () => {
   const [isFullMuted, setIsFullMuted] = React.useState(false);
   const [isLandscape, setIsLandscape] = React.useState(false);
   const [isClosingFullscreen, setIsClosingFullscreen] = React.useState(false);
+  /**
+   * Đã phủ đen toàn màn hình nhưng máy chưa xoay ngang xong.
+   *
+   * Chỉ nhánh lớp phủ (Android) dùng. Trước đây lớp phủ chỉ mount sau khi
+   * Dimensions xác nhận đã ngang, nên suốt lúc xoay người dùng nhìn thẳng vào
+   * danh sách đang xoay rồi fullscreen mới bụp ra. Các app camera phủ đen ngay
+   * lúc chạm rồi mới xoay, nên chỉ thấy nền đen quay — đây là cờ để làm vậy.
+   */
+  const [isFullscreenPending, setIsFullscreenPending] = React.useState(false);
   const [videoReady, setVideoReady] = React.useState(false);
   const [focusKey, setFocusKey] = React.useState(0);
   const [pendingThumbUrl, setPendingThumbUrl] = React.useState<string | null>(
@@ -111,6 +139,9 @@ const CameraList: React.FC = () => {
   > | null>(null);
   const pendingBackActionRef = React.useRef<any>(null);
   const closeFullscreenTimeoutRef = React.useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
+  const openFullscreenTimeoutRef = React.useRef<ReturnType<
     typeof setTimeout
   > | null>(null);
 
@@ -167,6 +198,13 @@ const CameraList: React.FC = () => {
     }
   }, []);
 
+  const clearOpenFullscreenTimeout = React.useCallback(() => {
+    if (openFullscreenTimeoutRef.current) {
+      clearTimeout(openFullscreenTimeoutRef.current);
+      openFullscreenTimeoutRef.current = null;
+    }
+  }, []);
+
   const clearPendingBackTimeout = React.useCallback(() => {
     if (pendingBackTimeoutRef.current) {
       clearTimeout(pendingBackTimeoutRef.current);
@@ -194,6 +232,7 @@ const CameraList: React.FC = () => {
     if (!isWindowLandscape()) {
       setFullscreenCamera(null);
       setIsClosingFullscreen(false);
+      setIsFullscreenPending(false);
       isClosingFullscreenRef.current = false;
       return;
     }
@@ -202,6 +241,7 @@ const CameraList: React.FC = () => {
       closeFullscreenTimeoutRef.current = null;
       setFullscreenCamera(null);
       setIsClosingFullscreen(false);
+      setIsFullscreenPending(false);
       isClosingFullscreenRef.current = false;
     }, 500);
   }, [clearCloseFullscreenTimeout, isWindowLandscape]);
@@ -210,9 +250,11 @@ const CameraList: React.FC = () => {
     const pendingCamera = pendingFullscreenCameraRef.current;
     if (!pendingCamera) return;
 
+    clearOpenFullscreenTimeout();
+    setIsFullscreenPending(false);
     pendingFullscreenCameraRef.current = null;
     setFullscreenCamera(pendingCamera);
-  }, []);
+  }, [clearOpenFullscreenTimeout]);
 
   React.useEffect(() => {
     isClosingFullscreenRef.current = isClosingFullscreen;
@@ -302,6 +344,7 @@ const CameraList: React.FC = () => {
     return () => {
       clearCloseFullscreenTimeout();
       clearPendingBackTimeout();
+      clearOpenFullscreenTimeout();
       pendingFullscreenCameraRef.current = null;
       Orientation.lockToPortrait();
       clearAndroidTimers();
@@ -309,6 +352,7 @@ const CameraList: React.FC = () => {
   }, [
     clearAndroidTimers,
     clearCloseFullscreenTimeout,
+    clearOpenFullscreenTimeout,
     clearPendingBackTimeout,
   ]);
 
@@ -370,6 +414,8 @@ const CameraList: React.FC = () => {
 
   const closeFullscreen = React.useCallback(() => {
     pendingFullscreenCameraRef.current = null;
+    clearOpenFullscreenTimeout();
+    setIsFullscreenPending(false);
     Orientation.lockToPortrait();
     clearAndroidTimers();
     fsTranslateX.setValue(0);
@@ -378,7 +424,12 @@ const CameraList: React.FC = () => {
     isClosingFullscreenRef.current = true;
     setIsClosingFullscreen(true);
     hideFullscreenAfterPortrait();
-  }, [clearAndroidTimers, fsTranslateX, hideFullscreenAfterPortrait]);
+  }, [
+    clearAndroidTimers,
+    clearOpenFullscreenTimeout,
+    fsTranslateX,
+    hideFullscreenAfterPortrait,
+  ]);
 
   const toggleOrientation = React.useCallback(() => {
     if (isLandscape) {
@@ -467,15 +518,33 @@ const CameraList: React.FC = () => {
       setAndroidVideoKey(0);
       androidErrorCountRef.current = 0;
       lastProgressRef.current = Date.now();
-      // Chờ Dimensions/orientation listener xác nhận đã ngang rồi mới mount
-      // Modal. Nhờ vậy frame đầu không còn hiện fullscreen dọc.
       if (isWindowLandscape()) {
         presentPendingFullscreen();
+        return;
       }
+
+      if (!USE_FULLSCREEN_OVERLAY) {
+        // iOS: chờ Dimensions/orientation listener xác nhận đã ngang rồi mới
+        // mount Modal. Nhờ vậy frame đầu không còn hiện fullscreen dọc.
+        return;
+      }
+
+      // Android: phủ đen ngay rồi mới xoay, đừng để người dùng nhìn danh sách
+      // xoay theo. Video vẫn chờ xoay xong mới mount (xem `fullscreenCamera`),
+      // nên nhịp xoay không phải gánh thêm việc dựng player.
+      setIsFullscreenPending(true);
+      clearOpenFullscreenTimeout();
+      openFullscreenTimeoutRef.current = setTimeout(() => {
+        openFullscreenTimeoutRef.current = null;
+        // Lưới an toàn: máy không xoay được (người dùng khoá xoay, hoặc hệ
+        // thống bỏ qua lệnh) thì vẫn phải mở fullscreen chứ không kẹt màn đen.
+        presentPendingFullscreen();
+      }, OPEN_FULLSCREEN_FALLBACK_DELAY_MS);
     },
     [
       clearAndroidTimers,
       clearCloseFullscreenTimeout,
+      clearOpenFullscreenTimeout,
       isWindowLandscape,
       presentPendingFullscreen,
       thumbTimestamp,
@@ -491,20 +560,50 @@ const CameraList: React.FC = () => {
     StatusBar.setBackgroundColor(C.red, false);
   }, [fullscreenCamera, isClosingFullscreen]);
 
-  // Giữ cả lúc đang đóng để lớp phủ không tắt trước khi máy xoay xong về dọc.
-  const isFullscreenActive = fullscreenCamera !== null || isClosingFullscreen;
+  // Giữ cả lúc đang chờ xoay ngang lẫn lúc đang đóng, để nền đen phủ suốt hai
+  // đầu: người dùng không thấy danh sách xoay theo ở cả lượt mở và lượt đóng.
+  const isFullscreenActive =
+    fullscreenCamera !== null || isClosingFullscreen || isFullscreenPending;
 
   // Ẩn status bar và navigation bar/taskbar trong lúc xem toàn màn hình.
-  useImmersiveMode(isFullscreenActive);
+  // Chỉ nhánh lớp phủ cần: iOS đã có Modal phủ kín.
+  useImmersiveMode(USE_FULLSCREEN_OVERLAY && isFullscreenActive);
 
-  // Fullscreen giờ là lớp phủ trong cùng cây React (không còn Modal), nên phải
-  // tự giấu header/tabBar thì nó mới phủ kín như Modal trước đây.
+  /**
+   * Khôi phục danh sách ngay khi đóng lớp phủ fullscreen.
+   *
+   * Lớp phủ nằm cùng cây React nên đóng nó không làm màn hình blur, tức
+   * `useFocusEffect` không chạy lại. Nếu trước đó người dùng đã vuốt chuyển
+   * trang, `translateX` có thể còn treo ở ±screenWidth (cử chỉ bị huỷ giữa
+   * chừng thì `onEnd` không bắn) và `listArea` lại `overflow: hidden`, nên cả
+   * trang bị đẩy ra ngoài khung -> nhìn như danh sách trống. Trước đây phải
+   * rời màn rồi focus lại mới thấy.
+   *
+   * Chỉ kéo `translateX` về 0 chứ không bump `focusKey` như nhánh focus:
+   * danh sách vẫn mount nguyên vẹn dưới lớp phủ, mà `focusKey` nằm trong URL
+   * snapshot nên bump sẽ tải lại toàn bộ thumbnail một cách vô ích.
+   */
+  const wasFullscreenActiveRef = React.useRef(false);
   React.useEffect(() => {
+    const wasActive = wasFullscreenActiveRef.current;
+    wasFullscreenActiveRef.current = isFullscreenActive;
+    if (!wasActive || isFullscreenActive) return;
+
+    translateX.stopAnimation(() => {
+      translateX.setValue(0);
+    });
+  }, [isFullscreenActive, translateX]);
+
+  // Lớp phủ nằm chung cây nên phải tự giấu header/tabBar thì nó mới phủ kín
+  // như Modal. Nhánh iOS không đụng tới, Modal tự lo.
+  React.useEffect(() => {
+    if (!USE_FULLSCREEN_OVERLAY) return;
     navigation.setOptions({ headerShown: !isFullscreenActive });
     return () => navigation.setOptions({ headerShown: true });
   }, [isFullscreenActive, navigation]);
 
   React.useEffect(() => {
+    if (!USE_FULLSCREEN_OVERLAY) return;
     const tabNavigation = navigation.getParent();
     if (!tabNavigation) return;
 
@@ -524,12 +623,12 @@ const CameraList: React.FC = () => {
   /**
    * Nút back cứng khi đang fullscreen: đóng lớp phủ chứ không pop màn.
    *
-   * Trước đây `<Modal onRequestClose>` lo việc này; lớp phủ thường không nhận
+   * Ở nhánh iOS `<Modal onRequestClose>` lo việc này; lớp phủ thường không nhận
    * được back nên phải tự đăng ký, nếu không back sẽ rời thẳng danh sách trong
    * lúc máy còn đang xoay ngang.
    */
   React.useEffect(() => {
-    if (!isFullscreenActive) return;
+    if (!USE_FULLSCREEN_OVERLAY || !isFullscreenActive) return;
 
     const subscription = BackHandler.addEventListener(
       "hardwareBackPress",
@@ -551,8 +650,28 @@ const CameraList: React.FC = () => {
    */
   const paginationBottomInset = Platform.OS === "android" ? insets.bottom : 0;
 
+  /**
+   * Bề rộng dùng để dựng danh sách, tách khỏi `screenWidth`.
+   *
+   * Ở nhánh lớp phủ (Android) danh sách vẫn mount bên dưới fullscreen và bị
+   * che kín. Nếu để nó bám theo `screenWidth` thì mỗi lần xoay, `itemWidth`
+   * đổi -> `renderItem` đổi -> cả trang card kèm ảnh snapshot re-render, ngay
+   * giữa lúc máy đang chạy animation xoay. Đóng băng lại thì lúc xoay JS
+   * thread rảnh cho video, mà vẫn không phải unmount gì (không reload ảnh).
+   *
+   * Lưu ý không dùng giá trị này cho fullscreen: fullscreen cần bề rộng thật
+   * theo chiều ngang để tính ngưỡng vuốt và quãng trượt.
+   */
+  const [listWidth, setListWidth] = React.useState(
+    () => Dimensions.get("window").width,
+  );
+  React.useEffect(() => {
+    if (USE_FULLSCREEN_OVERLAY && isFullscreenActive) return;
+    setListWidth(screenWidth);
+  }, [isFullscreenActive, screenWidth]);
+
   const numColumns = layoutCount === 1 ? 1 : 2;
-  const itemWidth = screenWidth / numColumns - 16;
+  const itemWidth = listWidth / numColumns - 16;
   const totalPages = Math.ceil(cameras.length / layoutCount);
   const isScreenLandscape = screenWidth > Dimensions.get("window").height;
   const pagedCameras = cameras.slice(
@@ -679,10 +798,10 @@ const CameraList: React.FC = () => {
         .onEnd((e) => {
           const curPage = pageRef.current;
           const total = totalPagesRef.current;
-          const threshold = screenWidth * 0.3;
+          const threshold = listWidth * 0.3;
           if (e.translationX < -threshold && curPage < total - 1) {
             Animated.timing(translateX, {
-              toValue: -screenWidth,
+              toValue: -listWidth,
               duration: 250,
               useNativeDriver: true,
             }).start(() => {
@@ -691,7 +810,7 @@ const CameraList: React.FC = () => {
             });
           } else if (e.translationX > threshold && curPage > 0) {
             Animated.timing(translateX, {
-              toValue: screenWidth,
+              toValue: listWidth,
               duration: 250,
               useNativeDriver: true,
             }).start(() => {
@@ -706,8 +825,20 @@ const CameraList: React.FC = () => {
               friction: 10,
             }).start();
           }
+        })
+        // Cử chỉ bị huỷ (đổi hướng màn hình, mở fullscreen, handler khác
+        // giành quyền...) thì onEnd không chạy; không kéo về 0 ở đây thì
+        // danh sách kẹt ngoài khung nhìn.
+        .onFinalize((_e, success) => {
+          if (success) return;
+          Animated.spring(translateX, {
+            toValue: 0,
+            useNativeDriver: true,
+            tension: 100,
+            friction: 10,
+          }).start();
         }),
-    [changePage, screenWidth, translateX],
+    [changePage, listWidth, translateX],
   );
 
   const switchFullscreenCamera = React.useCallback(
@@ -866,6 +997,210 @@ const CameraList: React.FC = () => {
     );
   }
 
+  /**
+   * Thân fullscreen, dùng chung cho cả hai vỏ bên dưới. Chỉ vỏ khác nhau theo
+   * platform, nội dung và mọi cử chỉ bên trong thì giống hệt.
+   */
+  const fullscreenBody = isFullscreenActive ? (
+    <>
+      <View
+        style={[
+          styles.fsHeader,
+          isLandscape
+            ? [styles.fsHeaderLandscape, { paddingLeft: insets.left || 16 }]
+            : { paddingTop: insets.top || 48 },
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.fsHeaderBtn}
+          onPress={closeFullscreen}
+        >
+          <Ionicons name="chevron-back" size={22} color="#fff" />
+        </TouchableOpacity>
+        <View style={styles.fsHeaderSpacer} />
+        <TouchableOpacity
+          style={styles.fsHeaderBtn}
+          onPress={() => setIsFullMuted((v) => !v)}
+        >
+          <Ionicons
+            name={
+              isFullMuted ? "volume-mute-outline" : "volume-medium-outline"
+            }
+            size={22}
+            color="#fff"
+          />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.fsHeaderBtn}
+          onPress={toggleOrientation}
+        >
+          <MaterialCommunityIcons
+            name={
+              isLandscape
+                ? "phone-rotate-portrait"
+                : "phone-rotate-landscape"
+            }
+            size={22}
+            color="#fff"
+          />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.fsVideoArea}>
+        <GestureDetector gesture={fullscreenGesture}>
+          <Animated.View
+            style={[
+              StyleSheet.absoluteFill,
+              { transform: [{ translateX: fsTranslateX }] },
+            ]}
+          >
+            {isClosingFullscreen ? null : fullscreenCamera &&
+              cameraToken ? (
+              <>
+                {Platform.OS === "android" && (
+                  <Video
+                    key={`${fullscreenCamera.iD_Camera}-${androidVideoKey}`}
+                    source={{
+                      uri: getCameraHlsUrl(fullscreenCamera.iD_Camera_Ma),
+                      headers: { Authorization: `Bearer ${cameraToken}` },
+                    }}
+                    style={[
+                      StyleSheet.absoluteFill,
+                      videoReady ? styles.visibleVideo : styles.hiddenVideo,
+                    ]}
+                    resizeMode="contain"
+                    muted={isFullMuted}
+                    repeat
+                    controls={false}
+                    disableFocus
+                    useTextureView
+                    hideShutterView={true}
+                    bufferConfig={{
+                      minBufferMs: 1000,
+                      maxBufferMs: 3000,
+                      bufferForPlaybackMs: 500,
+                      bufferForPlaybackAfterRebufferMs: 1000,
+                      backBufferDurationMs: 0,
+                    }}
+                    onLoad={handleAndroidLoad}
+                    onReadyForDisplay={handleAndroidReady}
+                    onProgress={() =>
+                      (lastProgressRef.current = Date.now())
+                    }
+                    onError={() => {
+                      const attempt = (androidErrorCountRef.current += 1);
+                      setVideoReady(false);
+                      if (androidRetryRef.current)
+                        clearTimeout(androidRetryRef.current);
+                      androidRetryRef.current = setTimeout(() => {
+                        androidRetryRef.current = null;
+                        lastProgressRef.current = Date.now();
+                        setVideoReady(false);
+                        setAndroidVideoKey((k) => k + 1);
+                      }, Math.min(ANDROID_LIVE_RETRY_MAX_MS, ANDROID_LIVE_RETRY_BASE_MS * 2 ** (attempt - 1)));
+                    }}
+                  />
+                )}
+
+                {Platform.OS === "ios" && (
+                  <WebView
+                    key={fullscreenCamera.iD_Camera}
+                    ref={fullscreenWebViewRef}
+                    source={{
+                      html: buildCameraFullscreenHTML(
+                        fullscreenCamera.iD_Camera_Ma,
+                      ),
+                      baseUrl: GO2RTC_HOST,
+                    }}
+                    style={[
+                      StyleSheet.absoluteFill,
+                      videoReady ? styles.visibleVideo : styles.hiddenVideo,
+                    ]}
+                    javaScriptEnabled
+                    domStorageEnabled
+                    allowsInlineMediaPlayback
+                    mediaPlaybackRequiresUserAction={false}
+                    cacheEnabled={false}
+                    mixedContentMode="always"
+                    originWhitelist={["*"]}
+                    allowFileAccess
+                    allowUniversalAccessFromFileURLs
+                    scrollEnabled={false}
+                    scalesPageToFit={false}
+                    onLoad={() => {
+                      postCameraWebViewToken(
+                        fullscreenWebViewRef.current,
+                        cameraToken,
+                      );
+                    }}
+                    onMessage={(e) => {
+                      const data = e.nativeEvent.data;
+                      if (data === "ready") setVideoReady(true);
+                      else if (data === "token_expired")
+                        fetchCameraTokenRef.current?.(true);
+                      else if (data === "close_fullscreen")
+                        closeFullscreen();
+                      else if (data === "swipe_next")
+                        handleFullscreenSwipe("next");
+                      else if (data === "swipe_prev")
+                        handleFullscreenSwipe("prev");
+                    }}
+                  />
+                )}
+
+                {!videoReady && (
+                  <View style={StyleSheet.absoluteFill}>
+                    {displayThumbUrl && (
+                      <Image
+                        source={{
+                          uri: displayThumbUrl,
+                          headers: {
+                            Authorization: `Bearer ${cameraToken}`,
+                          },
+                        }}
+                        style={StyleSheet.absoluteFill}
+                        resizeMode="contain"
+                      />
+                    )}
+                    <View style={styles.thumbOverlay} />
+                    <ActivityIndicator
+                      size="large"
+                      color={C.red}
+                      style={styles.spinner}
+                    />
+                  </View>
+                )}
+                {Platform.OS === "android" && (
+                  <GestureDetector gesture={fullscreenGesture}>
+                    <View style={styles.fsSwipeOverlay} />
+                  </GestureDetector>
+                )}
+              </>
+            ) : fullscreenCamera ? (
+              <ActivityIndicator
+                size="large"
+                color={C.red}
+                style={styles.spinner}
+              />
+            ) : null}
+          </Animated.View>
+        </GestureDetector>
+        {fullscreenIndex >= 0 && cameras.length > 0 && (
+          <View
+            style={[
+              styles.fsPager,
+              { bottom: Math.max(insets.bottom, 16) + 20 },
+            ]}
+          >
+            <Text style={styles.fsPagerText}>
+              {fullscreenIndex + 1} / {cameras.length}
+            </Text>
+          </View>
+        )}
+      </View>
+    </>
+  ) : null;
+
   return (
     <GestureHandlerRootView
       style={[styles.container, { backgroundColor: colors.bg }]}
@@ -885,7 +1220,12 @@ const CameraList: React.FC = () => {
       </View>
 
       <GestureDetector gesture={swipeGesture}>
-        <View style={styles.listArea}>
+        <View
+          style={[
+            styles.listArea,
+            USE_FULLSCREEN_OVERLAY && isFullscreenActive && styles.listAreaHidden,
+          ]}
+        >
           <Animated.View
             style={[styles.listAnimated, { transform: [{ translateX }] }]}
           >
@@ -1032,205 +1372,37 @@ const CameraList: React.FC = () => {
           có window riêng, mà lệnh ẩn thanh hệ thống chỉ áp được lên window của
           Activity — để nguyên Modal thì Android vẫn chừa dải status bar và
           navigation bar/taskbar quanh video. */}
-      {isFullscreenActive && (
-        <View style={styles.fullscreenOverlay}>
-          <StatusBar hidden backgroundColor="#000" barStyle="light-content" />
-          <View
-            style={[
-              styles.fsHeader,
-              isLandscape
-                ? [styles.fsHeaderLandscape, { paddingLeft: insets.left || 16 }]
-                : { paddingTop: insets.top || 48 },
-            ]}
-          >
-            <TouchableOpacity
-              style={styles.fsHeaderBtn}
-              onPress={closeFullscreen}
-            >
-              <Ionicons name="chevron-back" size={22} color="#fff" />
-            </TouchableOpacity>
-            <View style={styles.fsHeaderSpacer} />
-            <TouchableOpacity
-              style={styles.fsHeaderBtn}
-              onPress={() => setIsFullMuted((v) => !v)}
-            >
-              <Ionicons
-                name={
-                  isFullMuted ? "volume-mute-outline" : "volume-medium-outline"
-                }
-                size={22}
-                color="#fff"
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.fsHeaderBtn}
-              onPress={toggleOrientation}
-            >
-              <MaterialCommunityIcons
-                name={
-                  isLandscape
-                    ? "phone-rotate-portrait"
-                    : "phone-rotate-landscape"
-                }
-                size={22}
-                color="#fff"
-              />
-            </TouchableOpacity>
+      {/* Vỏ fullscreen tách theo platform — xem USE_FULLSCREEN_OVERLAY ở đầu
+          file để biết vì sao Android phải dùng lớp phủ còn iOS giữ Modal. */}
+      {USE_FULLSCREEN_OVERLAY ? (
+        isFullscreenActive && (
+          <View style={styles.fullscreenOverlay}>
+            <StatusBar hidden backgroundColor="#000" barStyle="light-content" />
+            {fullscreenBody}
           </View>
-
-          <View style={styles.fsVideoArea}>
-            <GestureDetector gesture={fullscreenGesture}>
-              <Animated.View
-                style={[
-                  StyleSheet.absoluteFill,
-                  { transform: [{ translateX: fsTranslateX }] },
-                ]}
-              >
-                {isClosingFullscreen ? null : fullscreenCamera &&
-                  cameraToken ? (
-                  <>
-                    {Platform.OS === "android" && (
-                      <Video
-                        key={`${fullscreenCamera.iD_Camera}-${androidVideoKey}`}
-                        source={{
-                          uri: getCameraHlsUrl(fullscreenCamera.iD_Camera_Ma),
-                          headers: { Authorization: `Bearer ${cameraToken}` },
-                        }}
-                        style={[
-                          StyleSheet.absoluteFill,
-                          videoReady ? styles.visibleVideo : styles.hiddenVideo,
-                        ]}
-                        resizeMode="contain"
-                        muted={isFullMuted}
-                        repeat
-                        controls={false}
-                        disableFocus
-                        useTextureView
-                        hideShutterView={true}
-                        bufferConfig={{
-                          minBufferMs: 1000,
-                          maxBufferMs: 3000,
-                          bufferForPlaybackMs: 500,
-                          bufferForPlaybackAfterRebufferMs: 1000,
-                          backBufferDurationMs: 0,
-                        }}
-                        onLoad={handleAndroidLoad}
-                        onReadyForDisplay={handleAndroidReady}
-                        onProgress={() =>
-                          (lastProgressRef.current = Date.now())
-                        }
-                        onError={() => {
-                          const attempt = (androidErrorCountRef.current += 1);
-                          setVideoReady(false);
-                          if (androidRetryRef.current)
-                            clearTimeout(androidRetryRef.current);
-                          androidRetryRef.current = setTimeout(() => {
-                            androidRetryRef.current = null;
-                            lastProgressRef.current = Date.now();
-                            setVideoReady(false);
-                            setAndroidVideoKey((k) => k + 1);
-                          }, Math.min(ANDROID_LIVE_RETRY_MAX_MS, ANDROID_LIVE_RETRY_BASE_MS * 2 ** (attempt - 1)));
-                        }}
-                      />
-                    )}
-
-                    {Platform.OS === "ios" && (
-                      <WebView
-                        key={fullscreenCamera.iD_Camera}
-                        ref={fullscreenWebViewRef}
-                        source={{
-                          html: buildCameraFullscreenHTML(
-                            fullscreenCamera.iD_Camera_Ma,
-                          ),
-                          baseUrl: GO2RTC_HOST,
-                        }}
-                        style={[
-                          StyleSheet.absoluteFill,
-                          videoReady ? styles.visibleVideo : styles.hiddenVideo,
-                        ]}
-                        javaScriptEnabled
-                        domStorageEnabled
-                        allowsInlineMediaPlayback
-                        mediaPlaybackRequiresUserAction={false}
-                        cacheEnabled={false}
-                        mixedContentMode="always"
-                        originWhitelist={["*"]}
-                        allowFileAccess
-                        allowUniversalAccessFromFileURLs
-                        scrollEnabled={false}
-                        scalesPageToFit={false}
-                        onLoad={() => {
-                          postCameraWebViewToken(
-                            fullscreenWebViewRef.current,
-                            cameraToken,
-                          );
-                        }}
-                        onMessage={(e) => {
-                          const data = e.nativeEvent.data;
-                          if (data === "ready") setVideoReady(true);
-                          else if (data === "token_expired")
-                            fetchCameraTokenRef.current?.(true);
-                          else if (data === "close_fullscreen")
-                            closeFullscreen();
-                          else if (data === "swipe_next")
-                            handleFullscreenSwipe("next");
-                          else if (data === "swipe_prev")
-                            handleFullscreenSwipe("prev");
-                        }}
-                      />
-                    )}
-
-                    {!videoReady && (
-                      <View style={StyleSheet.absoluteFill}>
-                        {displayThumbUrl && (
-                          <Image
-                            source={{
-                              uri: displayThumbUrl,
-                              headers: {
-                                Authorization: `Bearer ${cameraToken}`,
-                              },
-                            }}
-                            style={StyleSheet.absoluteFill}
-                            resizeMode="contain"
-                          />
-                        )}
-                        <View style={styles.thumbOverlay} />
-                        <ActivityIndicator
-                          size="large"
-                          color={C.red}
-                          style={styles.spinner}
-                        />
-                      </View>
-                    )}
-                    {Platform.OS === "android" && (
-                      <GestureDetector gesture={fullscreenGesture}>
-                        <View style={styles.fsSwipeOverlay} />
-                      </GestureDetector>
-                    )}
-                  </>
-                ) : fullscreenCamera ? (
-                  <ActivityIndicator
-                    size="large"
-                    color={C.red}
-                    style={styles.spinner}
-                  />
-                ) : null}
-              </Animated.View>
-            </GestureDetector>
-            {fullscreenIndex >= 0 && cameras.length > 0 && (
-              <View
-                style={[
-                  styles.fsPager,
-                  { bottom: Math.max(insets.bottom, 16) + 20 },
-                ]}
-              >
-                <Text style={styles.fsPagerText}>
-                  {fullscreenIndex + 1} / {cameras.length}
-                </Text>
-              </View>
-            )}
-          </View>
-        </View>
+        )
+      ) : (
+        <Modal
+          visible={isFullscreenActive}
+          animationType="fade"
+          transparent={false}
+          statusBarTranslucent={false}
+          hardwareAccelerated
+          supportedOrientations={[
+            "portrait",
+            "landscape-left",
+            "landscape-right",
+          ]}
+          onRequestClose={closeFullscreen}
+        >
+          <StatusBar
+            hidden={false}
+            translucent={false}
+            backgroundColor="#000"
+            barStyle="light-content"
+          />
+          <View style={styles.fullscreenContainer}>{fullscreenBody}</View>
+        </Modal>
       )}
     </GestureHandlerRootView>
   );

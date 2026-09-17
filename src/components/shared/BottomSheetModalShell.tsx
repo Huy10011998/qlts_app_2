@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Easing,
@@ -78,7 +78,6 @@ export default function BottomSheetModalShell({
   const c = useAppColors();
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [overlayHeight, setOverlayHeight] = useState(0);
-  const [sheetHeight, setSheetHeight] = useState(0);
   const insets = useSafeAreaInsets();
 
   /**
@@ -100,6 +99,8 @@ export default function BottomSheetModalShell({
 
   const windowHeight = useWindowDimensions().height;
   const sheetHeightRef = useRef(0);
+  /** Chiều cao sheet lúc chưa có bàn phím — mốc để nâng `minHeight` khi mở phím. */
+  const baseSheetHeightRef = useRef(0);
   const isAnimatingRef = useRef(false);
   /**
    * Khoảng sheet phải trượt. Chỉ cập nhật khi KHÔNG đang animate: đổi giữa
@@ -194,12 +195,51 @@ export default function BottomSheetModalShell({
     };
   }, [avoidKeyboard, insets.bottom, keyboardOffset, visible]);
 
-  const maxVisibleOffset = Math.max(
-    0,
-    overlayHeight - sheetHeight - insets.top - 12,
-  );
-  const sheetMarginBottom =
-    keyboardHeight > 0 ? Math.min(keyboardHeight, maxVisibleOffset) : 0;
+  /**
+   * Trần chiều cao do nơi gọi đặt trong `sheetStyle`, quy ra điểm ảnh ("86%" của
+   * các sheet danh sách). `null` nghĩa là sheet tự co theo nội dung.
+   */
+  const sheetStyleHeightCap = useMemo(() => {
+    const flat = (StyleSheet.flatten(sheetStyle) ?? {}) as ViewStyle;
+    const raw = flat.maxHeight ?? flat.height;
+
+    if (typeof raw === "number") return raw;
+    if (typeof raw === "string" && raw.endsWith("%") && overlayHeight > 0) {
+      const percent = Number.parseFloat(raw);
+
+      return Number.isFinite(percent) ? (overlayHeight * percent) / 100 : null;
+    }
+
+    return null;
+  }, [overlayHeight, sheetStyle]);
+
+  /**
+   * Bàn phím mở: KHÔNG nhấc sheet lên khỏi đáy màn — nhấc thì hở một dải nền mờ
+   * dưới sheet, và với sheet cao cố định (86% màn) thì nhấc hết mức còn làm đỉnh
+   * sheet chui khỏi màn. Thay vào đó giữ sheet chạm đáy, chừa một khoảng trống
+   * bằng chiều cao bàn phím ở CUỐI thân sheet: phần thân vẫn phủ kín xuống dưới,
+   * còn nội dung `flex: 1` bên trong tự co lại nằm gọn trên bàn phím.
+   *
+   * Sheet phải cao thêm đúng khoảng vừa chừa, nếu không nội dung bị bóp lại mất
+   * một đoạn bằng bàn phím. `minHeight` nâng theo số đo lúc chưa có bàn phím,
+   * `maxHeight` chặn ở mép dưới thanh trạng thái.
+   */
+  const keyboardRoom = keyboardHeight;
+  const sheetHeightLimit =
+    keyboardRoom > 0 && overlayHeight > 0
+      ? Math.min(
+          // Trần thiết kế của chính sheet (phần lớn đặt theo %) được nâng đúng
+          // bằng khoảng chừa, để sheet không phình to hơn lúc chưa có bàn phím.
+          sheetStyleHeightCap !== null
+            ? sheetStyleHeightCap + keyboardRoom
+            : Number.POSITIVE_INFINITY,
+          Math.max(0, overlayHeight - insets.top - 12),
+        )
+      : null;
+  const sheetMinHeight =
+    sheetHeightLimit !== null && baseSheetHeightRef.current > 0
+      ? Math.min(baseSheetHeightRef.current + keyboardRoom, sheetHeightLimit)
+      : null;
 
   const sheetTranslateY = progress.interpolate({
     inputRange: [0, 1],
@@ -248,20 +288,22 @@ export default function BottomSheetModalShell({
           <View style={styles.backdrop} />
         )}
 
-        {/* marginBottom trên sheet — chỉ đẩy sheet lên, backdrop không bị ảnh hưởng */}
         <Animated.View
           testID="sheet-surface"
           style={[
             styles.sheet,
             sheetStyle,
-            sheetMarginBottom > 0 && { marginBottom: sheetMarginBottom },
+            sheetHeightLimit !== null && { maxHeight: sheetHeightLimit },
+            sheetMinHeight !== null && { minHeight: sheetMinHeight },
             { transform: [{ translateY: sheetTranslateY }] },
           ]}
           onLayout={(event) => {
             const { height } = event.nativeEvent.layout;
 
             sheetHeightRef.current = height;
-            setSheetHeight(height);
+            if (keyboardRoom === 0 && height > 0) {
+              baseSheetHeightRef.current = height;
+            }
             if (!isAnimatingRef.current && height > 0) {
               setTravel(height + insets.bottom);
             }
@@ -281,6 +323,9 @@ export default function BottomSheetModalShell({
           {safeAreaBottom && insets.bottom > 0 ? (
             <View style={{ height: insets.bottom }} />
           ) : null}
+          {/* Chỗ trống cho bàn phím, nằm TRONG thân sheet nên nền sheet vẫn liền
+              xuống tận đáy màn — `keyboardHeight` đã trừ safe area ở trên. */}
+          {keyboardRoom > 0 ? <View style={{ height: keyboardRoom }} /> : null}
         </Animated.View>
       </View>
     </Modal>

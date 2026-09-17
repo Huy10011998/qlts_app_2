@@ -3,8 +3,6 @@ import {
   ActivityIndicator,
   FlatList,
   Linking,
-  Modal,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -25,6 +23,7 @@ import {
   useCodeScanner,
 } from "react-native-vision-camera";
 
+import BottomSheetModalShell from "../../../components/shared/BottomSheetModalShell";
 import QrScannerGateView from "../../../components/qrcode/shared/QrScannerGateView";
 import QrScannerViewportOverlay from "../../../components/qrcode/shared/QrScannerViewportOverlay";
 import useQrScannerController from "../../../components/qrcode/shared/useQrScannerController";
@@ -418,71 +417,63 @@ export default function FridgeScannerView({
         ) : null}
       </View>
 
-      <Modal
+      <BottomSheetModalShell
         visible={isManualOpen}
-        animationType="slide"
-        transparent
-        statusBarTranslucent
-        onRequestClose={() => {
+        closeOnBackdropPress
+        onClose={() => {
           closeManualSearch();
           resumeScanner();
         }}
+        overlayStyle={sheetStyles.modalBackdrop}
+        sheetStyle={sheetStyles.modalSheet}
+        showHandle
+        avoidKeyboard
       >
-        <Pressable
-          style={sheetStyles.modalBackdrop}
-          onPress={() => {
-            closeManualSearch();
-            resumeScanner();
-          }}
+        <Text style={sheetStyles.modalTitle}>Tìm tủ lạnh theo seri</Text>
+
+        <SearchBar
+          value={searchText}
+          onChangeText={setSearchText}
+          placeholder="Nhập số seri, mã hoặc tên tủ"
+          isSearching={isSearching}
+          variant="plain"
+          style={sheetStyles.modalSearchBar}
         />
-        <View style={[sheetStyles.modalSheet, { paddingBottom: insets.bottom + 12 }]}>
-          <View style={sheetStyles.modalHandle} />
-          <Text style={sheetStyles.modalTitle}>Tìm tủ lạnh theo seri</Text>
 
-          <SearchBar
-            value={searchText}
-            onChangeText={setSearchText}
-            placeholder="Nhập số seri, mã hoặc tên tủ"
-            isSearching={isSearching}
-            variant="plain"
-            style={sheetStyles.modalSearchBar}
-          />
-
-          <FlatList
-            data={searchResults}
-            keyExtractor={(item) => String(item.id)}
-            keyboardShouldPersistTaps="handled"
-            style={sheetStyles.modalList}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={sheetStyles.resultRow}
-                onPress={() => handlePickFromSearch(item)}
-              >
-                <View style={sheetStyles.resultTextWrap}>
-                  <Text style={sheetStyles.resultTitle} numberOfLines={1}>
-                    {item.label}
-                  </Text>
-                  <Text style={sheetStyles.resultSubtitle} numberOfLines={1}>
-                    Seri: {item.serialNumber || "—"}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={c.textMuted} />
-              </TouchableOpacity>
-            )}
-            ListEmptyComponent={
-              <Text style={sheetStyles.modalEmpty}>
-                {searchText.trim().length < 2
-                  ? "Nhập ít nhất 2 ký tự để tìm."
-                  : isSearching
-                    ? "Đang tìm..."
-                    : hasSearched
-                      ? "Không tìm thấy tủ lạnh phù hợp."
-                      : ""}
-              </Text>
-            }
-          />
-        </View>
-      </Modal>
+        <FlatList
+          data={searchResults}
+          keyExtractor={(item) => String(item.id)}
+          keyboardShouldPersistTaps="handled"
+          style={sheetStyles.modalList}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={sheetStyles.resultRow}
+              onPress={() => handlePickFromSearch(item)}
+            >
+              <View style={sheetStyles.resultTextWrap}>
+                <Text style={sheetStyles.resultTitle} numberOfLines={1}>
+                  {item.label}
+                </Text>
+                <Text style={sheetStyles.resultSubtitle} numberOfLines={1}>
+                  Seri: {item.serialNumber || "—"}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={c.textMuted} />
+            </TouchableOpacity>
+          )}
+          ListEmptyComponent={
+            <Text style={sheetStyles.modalEmpty}>
+              {searchText.trim().length < 2
+                ? "Nhập ít nhất 2 ký tự để tìm."
+                : isSearching
+                  ? "Đang tìm..."
+                  : hasSearched
+                    ? "Không tìm thấy tủ lạnh phù hợp."
+                    : ""}
+            </Text>
+          }
+        />
+      </BottomSheetModalShell>
     </SafeAreaView>
   );
 }
@@ -602,28 +593,16 @@ const styles = StyleSheet.create({
 const makeSheetStyles = (c: AppColors) =>
   StyleSheet.create({
     modalBackdrop: {
-      ...StyleSheet.absoluteFillObject,
       backgroundColor: "rgba(0,0,0,0.4)",
     },
     modalSheet: {
-      position: "absolute",
-      left: 0,
-      right: 0,
-      bottom: 0,
       maxHeight: "78%",
       backgroundColor: c.surface,
       borderTopLeftRadius: 18,
       borderTopRightRadius: 18,
       paddingHorizontal: 16,
       paddingTop: 8,
-    },
-    modalHandle: {
-      alignSelf: "center",
-      width: 40,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: c.borderStrong,
-      marginBottom: 10,
+      paddingBottom: 12,
     },
     modalTitle: {
       fontSize: 16,
