@@ -129,6 +129,7 @@ export default function OpinionPickerModal({
       closeButtonStyle={styles.closeButton}
       showCloseButton
       showHandle
+      avoidKeyboard
     >
       <View style={styles.header}>
         <Text style={styles.title}>Chọn ý kiến</Text>

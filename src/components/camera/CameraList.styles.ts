@@ -11,6 +11,13 @@ export const makeStyles = (c: AppColors) =>
       paddingHorizontal: 32,
     },
     listArea: { flex: 1, overflow: "hidden" },
+    /**
+     * Tắt hẳn vùng danh sách trong lúc fullscreen ở nhánh lớp phủ (Android):
+     * nó bị che kín, để lại thì Android vẫn phải đo và dựng nó mỗi lần xoay.
+     * Dùng `display: "none"` chứ không gỡ khỏi cây để không phải mount lại —
+     * mount lại đồng nghĩa tải lại toàn bộ ảnh snapshot lúc đóng fullscreen.
+     */
+    listAreaHidden: { display: "none" },
     listAnimated: { flex: 1 },
     listContent: { paddingBottom: 8 },
     listContentEmpty: {
@@ -157,6 +164,11 @@ export const makeStyles = (c: AppColors) =>
       zIndex: 20,
       elevation: 20,
     },
+    /**
+     * Khung fullscreen của iOS. Ở đó fullscreen vẫn nằm trong <Modal> riêng
+     * (xem CameraList.tsx) nên chỉ cần `flex: 1`, không phải phủ tuyệt đối.
+     */
+    fullscreenContainer: { flex: 1, backgroundColor: "#000" },
     fsHeader: {
       flexDirection: "row",
       alignItems: "center",

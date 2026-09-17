@@ -117,6 +117,7 @@ export default function CameraNotiPickerSheet({
       closeButtonStyle={styles.closeButton}
       showCloseButton
       showHandle
+      avoidKeyboard
     >
       <View style={styles.header}>
         <Text style={styles.title}>Chọn camera</Text>
