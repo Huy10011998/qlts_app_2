@@ -1,15 +1,9 @@
-import React, { useCallback, useState, useEffect, useRef } from "react";
-import { useIsFocused } from "@react-navigation/native";
+import React from "react";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import ProfileScreenSkeleton from "./ProfileScreenSkeleton";
 import EmptyState from "../../components/ui/EmptyState";
-import { API_ENDPOINTS } from "../../config/index";
-import type { User } from "../../types/index";
-import { callApi } from "../../services/data/callApi";
-import { error } from "../../utils/Logger";
-import { useSafeAlert } from "../../hooks/useSafeAlert";
-import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
+import { useNhanVienInfo } from "../../hooks/useNhanVienInfo";
 import {
   AppColors,
   useAppColors,
@@ -135,66 +129,12 @@ const makeSecS = (c: AppColors) =>
 const ProfileScreen: React.FC = () => {
   const s = useStyles(makeS);
   const c = useAppColors();
-  const isFocused = useIsFocused();
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
-  const { isMounted } = useSafeAlert();
-  const loadingRef = useRef(false);
+  /* Cùng nguồn với màn Thông tin QrCode: danh thiếp nạp một lần lúc đăng nhập,
+     mở màn không gọi lại API. */
+  const { info: user, isLoading, errorMessage: loadErrorMessage } =
+    useNhanVienInfo();
 
-  const fetchUserInfo = useCallback(async () => {
-    if (loadingRef.current) return;
-    loadingRef.current = true;
-    if (isMounted()) setIsLoading(true);
-    try {
-      const res = await callApi<{ success: boolean; data: User }>(
-        "POST",
-        API_ENDPOINTS.GET_INFO,
-        {},
-      );
-      if (isMounted()) {
-        setUser(res.data);
-        setHasLoadedOnce(true);
-        setLoadErrorMessage(null);
-      }
-    } catch (e) {
-      error("API error:", e);
-      if (isMounted()) {
-        setUser(null);
-        setHasLoadedOnce(true);
-        setLoadErrorMessage(
-          "Vui lòng kiểm tra kết nối mạng hoặc mở lại màn hình này.",
-        );
-      }
-    } finally {
-      loadingRef.current = false;
-      if (isMounted()) setIsLoading(false);
-    }
-  }, [isMounted]);
-
-  useEffect(() => {
-    fetchUserInfo();
-  }, [fetchUserInfo]);
-
-  useNetworkAwareReload(
-    () => {
-      fetchUserInfo();
-    },
-    {
-      enabled: isFocused,
-      hasError: Boolean(loadErrorMessage),
-      onOffline: () => {
-        setUser(null);
-        setHasLoadedOnce(true);
-        setLoadErrorMessage(
-          "Vui lòng kiểm tra kết nối mạng hoặc mở lại màn hình này.",
-        );
-      },
-    },
-  );
-
-  if (isLoading || (!user && !hasLoadedOnce)) {
+  if (isLoading) {
     return <ProfileScreenSkeleton />;
   }
 
@@ -231,64 +171,71 @@ const ProfileScreen: React.FC = () => {
           iconBg={c.indigoSurface}
           iconColor="#3B5BDB"
           label="Họ và tên"
-          value={user.moTa}
+          value={user.ten}
+        />
+        <InfoRow
+          iconName="card-outline"
+          iconBg={c.slateLight}
+          iconColor={c.slate}
+          label="Mã nhân viên"
+          value={user.ma ?? undefined}
+        />
+        <InfoRow
+          iconName="call-outline"
+          iconBg={c.greenLight}
+          iconColor={c.emerald}
+          label="Điện thoại"
+          value={user.soDienThoai ?? undefined}
         />
         <InfoRow
           iconName="mail-outline"
           iconBg={c.pinkSurface}
           iconColor="#E64980"
           label="Email"
-          value={user.email}
+          value={user.email ?? undefined}
           isLast
         />
       </Section>
 
       <Section title="ĐƠN VỊ CÔNG TÁC">
         <InfoRow
-          iconName="business-outline"
-          iconBg={c.redSurface}
-          iconColor={c.red}
-          label="Đơn vị"
-          value={user.donVi}
-        />
-        <InfoRow
           iconName="layers-outline"
           iconBg={c.violetSurface}
           iconColor="#7048E8"
           label="Phòng ban"
-          value={user.phongBan}
+          value={user.phongBan ?? undefined}
         />
         <InfoRow
           iconName="git-branch-outline"
-          iconBg={c.greenLight}
-          iconColor={c.emerald}
+          iconBg={c.blueSurface}
+          iconColor="#3B5BDB"
           label="Bộ phận"
-          value={user.boPhan}
+          value={user.boPhan ?? undefined}
         />
         <InfoRow
           iconName="people-outline"
           iconBg={c.orangeSurface}
           iconColor="#E67700"
-          label="Tổ nhóm"
-          value={user.toNhom}
+          label="Tổ đội"
+          value={user.toDoi ?? undefined}
           isLast
         />
       </Section>
 
       <Section title="CHỨC VỤ & DANH HIỆU">
         <InfoRow
-          iconName="briefcase-outline"
-          iconBg={c.blueSurface}
-          iconColor="#3B5BDB"
-          label="Chức vụ"
-          value={user.chucVu}
+          iconName="albums-outline"
+          iconBg={c.tealSurface}
+          iconColor={c.green}
+          label="Chức vụ cơ cấu"
+          value={user.chucVuCoCau ?? undefined}
         />
         <InfoRow
           iconName="ribbon-outline"
           iconBg={c.pinkSurface}
           iconColor="#E64980"
           label="Chức danh"
-          value={user.chucDanh}
+          value={user.chucDanh ?? undefined}
           isLast
         />
       </Section>

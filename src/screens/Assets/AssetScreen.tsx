@@ -37,6 +37,7 @@ import { error, log } from "../../utils/Logger";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { useParams } from "../../hooks/useParams";
+import { useNavigation } from "@react-navigation/native";
 import AssetMenuDropdownItem from "./shared/AssetMenuDropdownItem";
 import MenuTreeRecents from "../../components/menuTree/MenuTreeRecents";
 import MenuTreeSearchBar from "../../components/menuTree/MenuTreeSearchBar";
@@ -44,6 +45,7 @@ import MenuCardSkeleton from "../../components/ui/MenuCardSkeleton";
 import { shouldShowListSkeleton } from "../../components/ui/shouldShowListSkeleton";
 import { useMenuTreeState } from "../../components/menuTree/useMenuTreeState";
 import { collectTreeNodes } from "../../components/menuTree/collectTreeNodes";
+import { findTreePath } from "../../components/menuTree/findTreePath";
 import {
   useAssetMenuNavigate,
   type AssetMenuTarget,
@@ -83,10 +85,12 @@ const buildReportPreviewEndpoint = (direct: string) => {
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function AssetScreen() {
   const colors = useAppColors();
+  const navigation = useNavigation();
   const {
     groupMenuId = 2,
     titleHeader = "Tài sản",
     viewPermission = "TaiSan",
+    rootMenuId,
   } = useParams<"Asset">();
   const { canView, isFullPermission, loaded, permissions } = usePermission();
   const hasViewPermission = loaded && canView(viewPermission);
@@ -253,23 +257,59 @@ export default function AssetScreen() {
     }
   );
 
+  // Mở từ ô số liệu Trang chủ thì chỉ hiện đúng nhánh được chỉ định (ví dụ
+  // "Thiết bị" hoặc "CNTT"), không hiện cả cây tài sản. Mục không còn trong cây
+  // (bị xoá bên quản trị hoặc bị lọc vì thiếu quyền) thì danh sách rỗng.
+  const rootNode = useMemo(() => {
+    if (rootMenuId == null) return null;
+
+    const path = findTreePath(data, rootMenuId);
+    return path.length ? path[path.length - 1] : null;
+  }, [data, rootMenuId]);
+  const visibleTree = useMemo(() => {
+    if (rootMenuId == null) return data;
+    if (!rootNode) return [];
+
+    // Nhánh có mục con thì hiện thẳng các mục con — người dùng đã chọn nhánh ở
+    // Trang chủ rồi, bắt mở thêm một cấp nữa là thừa. Nhánh là mục lá thì vẫn
+    // phải hiện chính nó để bấm vào.
+    return rootNode.children?.length ? rootNode.children : [rootNode];
+  }, [data, rootMenuId, rootNode]);
+  /** Tiêu đề header: nhãn của nhánh đang xem, lấy từ chính cây vừa tải. */
+  const screenTitle = rootNode?.label?.trim() || normalizedTitle;
+  const screenTitleLower = screenTitle.toLowerCase();
+
+  useEffect(() => {
+    if (rootMenuId == null) return;
+
+    navigation.setOptions({ title: screenTitle });
+  }, [navigation, rootMenuId, screenTitle]);
+
   // ── Search + auto expand ──
   const { filteredData, autoExpanded } = useMemo(
-    () => filterAssetMenuTree(data, debouncedSearch),
-    [debouncedSearch, data]
+    () => filterAssetMenuTree(visibleTree, debouncedSearch),
+    [debouncedSearch, visibleTree]
   );
   const hasSearch = Boolean(debouncedSearch.trim());
 
   // Trạng thái gập/mở: tập tạm khi đang tìm kiếm, tập đã lưu khi không — nên xoá
   // từ khoá là danh sách trở về đúng những nhóm người dùng tự mở trước đó.
   const { recents, rememberRecent, expandedIds, toggleExpanded, collapseAll } =
-    useMenuTreeState<AssetMenuTarget>(`asset:${groupMenuId}`, {
-      hasSearch,
-      autoExpanded,
-    });
+    useMenuTreeState<AssetMenuTarget>(
+      rootMenuId == null
+        ? `asset:${groupMenuId}`
+        : `asset:${groupMenuId}:${rootMenuId}`,
+      {
+        hasSearch,
+        autoExpanded,
+      }
+    );
 
   // Đối chiếu với cây đầy đủ (đã lọc quyền), không phải cây đang lọc theo từ khoá.
-  const availableNodes = useMemo(() => collectTreeNodes(data), [data]);
+  const availableNodes = useMemo(
+    () => collectTreeNodes(visibleTree),
+    [visibleTree]
+  );
 
   const handleCollapseAll = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -322,7 +362,7 @@ export default function AssetScreen() {
       >
         <EmptyState
           iconName="cloud-offline-outline"
-          title={`Không thể tải dữ liệu ${normalizedTitle}`}
+          title={`Không thể tải dữ liệu ${screenTitle}`}
           subtitle={loadErrorMessage}
         />
       </KeyboardAvoidingView>
@@ -388,12 +428,12 @@ export default function AssetScreen() {
             title={
               hasSearch
                 ? "Không tìm thấy kết quả"
-                : `Chưa có dữ liệu ${normalizedTitleLower}`
+                : `Chưa có dữ liệu ${screenTitleLower}`
             }
             subtitle={
               hasSearch
                 ? `Không có mục nào khớp "${debouncedSearch.trim()}".`
-                : `Danh sách ${normalizedTitleLower} sẽ hiển thị tại đây khi có dữ liệu.`
+                : `Danh sách ${screenTitleLower} sẽ hiển thị tại đây khi có dữ liệu.`
             }
             actionLabel={hasSearch ? "Xoá từ khoá" : undefined}
             onActionPress={hasSearch ? () => setSearch("") : undefined}

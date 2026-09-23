@@ -48,6 +48,7 @@ import TrungChuyenTuLanhXacNhanScreen from "../screens/NoiDia/TrungChuyenTuLanhX
 import AppearanceScreen from "../screens/Settings/AppearanceScreen";
 import CameraNotificationScreen from "../screens/Settings/CameraNotificationScreen";
 import TextSizeScreen from "../screens/Settings/TextSizeScreen";
+import QrCodeScreen from "../screens/Settings/QrCodeScreen";
 import ProfileScreen from "../screens/Profile/ProfileScreen";
 import GuideScreen from "../screens/Guide/GuideScreen";
 import GuideTopicScreen from "../screens/Guide/GuideTopicScreen";
@@ -388,6 +389,14 @@ export default function AppNavigator() {
         options={{
           title: "Hồ sơ cá nhân",
           ...headerWithBack,
+        }}
+      />
+      <Stack.Screen
+        name="QrCode"
+        component={QrCodeScreen}
+        options={{
+          // Màn tràn nền, tự vẽ nút quay lại — xem `QrCodeScreen`.
+          headerShown: false,
         }}
       />
       <Stack.Screen

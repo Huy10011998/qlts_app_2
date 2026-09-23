@@ -10,6 +10,12 @@ export const API_ENDPOINTS = {
   LOGIN: `${BASE_URL}/Authorization/login`,
   REFRESH_TOKEN: `${BASE_URL}/Authorization/refresh-token`,
   GET_INFO: `${BASE_URL}/Common/get-info`,
+  /**
+   * Danh thiếp của chính người đang đăng nhập — server tự dò nhân viên qua
+   * token, app không truyền ID. Trả 200 kèm `data: null` khi tài khoản chưa
+   * liên kết nhân viên, lúc đó `message` là câu để hiện thẳng cho người dùng.
+   */
+  GET_NHAN_VIEN_INFO: `${BASE_URL}/Common/get-nhan-vien-info`,
   CHANGE_PASSWORD: `${BASE_URL}/Authorization/change-password`,
   GET_FIELD_ACTIVE: `${BASE_URL}/Common/get-fields-active`,
   GET_CLASS_BY_NAME: `${BASE_URL}/Common/get-class-by-name`,
