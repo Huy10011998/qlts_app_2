@@ -36,3 +36,20 @@ export interface PermissionState {
   permissions: string[];
   loaded: boolean;
 }
+
+/**
+ * Danh thiếp nhân viên, nạp MỘT LẦN sau đăng nhập rồi dùng lại.
+ *
+ * BE khuyến cáo không gọi `get-nhan-vien-info` mỗi lần mở màn: ảnh đại diện và
+ * mã QR kèm theo nặng 16-72 KB, mà dữ liệu thì gần như không đổi.
+ *
+ * `accountMissing` là trường hợp riêng: server trả `data: null` nghĩa là tài
+ * khoản đã bị xoá dù token còn hạn — màn nào thấy cờ này thì mời đăng xuất.
+ */
+export interface NhanVienState {
+  info: import("./model.d").NhanVienInfo | null;
+  status: "idle" | "loading" | "loaded" | "error";
+  /** Câu hiện cho người dùng khi `status` là "error". */
+  errorMessage: string | null;
+  accountMissing: boolean;
+}

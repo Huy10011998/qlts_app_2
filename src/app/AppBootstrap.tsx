@@ -4,6 +4,7 @@ import { useBootstrapAuthRefs } from "./bootstrap/useBootstrapAuthRefs";
 import { useAppUpdateChecker } from "./bootstrap/useAppUpdateChecker";
 import { usePermissionReloader } from "./bootstrap/usePermissionReloader";
 import { useAppLifecycle } from "./bootstrap/useAppLifecycle";
+import { useNhanVienInfoLoader } from "./bootstrap/useNhanVienInfoLoader";
 import { usePushNotifications } from "./bootstrap/usePushNotifications";
 
 export default function AppBootstrap() {
@@ -36,6 +37,12 @@ export default function AppBootstrap() {
     safeReloadRef,
     checkAppUpdateRef,
     retryTimer,
+  });
+
+  useNhanVienInfoLoader({
+    isAuthenticated,
+    authReady,
+    iosAuthenticated,
   });
 
   usePushNotifications({

@@ -13,12 +13,18 @@ import {
  * không phải dữ liệu BE, nên khung chờ nói được luôn "sắp hiện những mục này".
  */
 const SECTIONS = [
-  { title: "THÔNG TIN CƠ BẢN", labels: ["Họ và tên", "Email"] },
+  {
+    title: "THÔNG TIN CƠ BẢN",
+    labels: ["Họ và tên", "Mã nhân viên", "Điện thoại", "Email"],
+  },
   {
     title: "ĐƠN VỊ CÔNG TÁC",
-    labels: ["Đơn vị", "Phòng ban", "Bộ phận", "Tổ nhóm"],
+    labels: ["Phòng ban", "Bộ phận", "Tổ đội"],
   },
-  { title: "CHỨC VỤ & DANH HIỆU", labels: ["Chức vụ", "Chức danh"] },
+  {
+    title: "CHỨC VỤ & DANH HIỆU",
+    labels: ["Chức vụ cơ cấu", "Chức danh"],
+  },
 ];
 
 /**

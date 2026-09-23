@@ -12,7 +12,7 @@ import type { GuideTopic } from "./guideTypes";
 export const GUIDE_FAQ_TOPIC: GuideTopic = {
   id: "faq",
   title: "Câu hỏi thường gặp",
-  summary: "Lỗi kết nối, hết phiên, quyền, GPS, camera, ô chọn bị mờ",
+  summary: "Lỗi kết nối, hết phiên, quyền, GPS, camera, danh thiếp QR",
   iconName: "help-circle-outline",
   iconBg: C.violet,
   group: "Trợ giúp",
@@ -66,6 +66,15 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     "o xam nhap nhay",
     "khung cho",
     "dang tai",
+    "danh thiep",
+    "thong tin qrcode",
+    "khong co ma qr",
+    "luu danh ba",
+    "ho so sai",
+    "thong tin cu",
+    "khong tim thay tai khoan",
+    "o so lieu",
+    "chi hien mot nhanh",
   ],
   sections: [
     {
@@ -543,6 +552,80 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
         {
           kind: "paragraph",
           text: "Camera chỉ xem được khi máy đang ở mạng nội bộ công ty. Đang dùng 4G thì thông báo vẫn tới nhưng hình không lên — không phải camera hỏng.",
+        },
+      ],
+    },
+    {
+      id: "faq-danh-thiep-khong-co-ma-qr",
+      heading: "Màn Thông tin QrCode không có mã QR",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Mã QR chỉ hiện khi tài khoản đã được gán hồ sơ nhân viên trên hệ thống. Chưa gán thì màn chỉ còn họ tên, chỗ mã QR để trống — quét cũng không có gì để lưu.",
+        },
+        {
+          kind: "paragraph",
+          text: "Liên hệ IT, nói rõ tên tài khoản để được gán vào đúng hồ sơ nhân viên. Gán xong thì đăng xuất và đăng nhập lại là mã hiện ra.",
+        },
+      ],
+    },
+    {
+      id: "faq-quet-danh-thiep",
+      heading: "Người khác quét danh thiếp của tôi mà không ra thẻ liên hệ",
+      blocks: [
+        {
+          kind: "bullets",
+          items: [
+            "Phải quét bằng camera có sẵn của điện thoại (hoặc Zalo, ứng dụng quét QR bất kỳ). Nút Quét QR trong app này chỉ đọc tem tài sản nên sẽ báo Mã QR không hợp lệ.",
+            "Tăng độ sáng màn hình và giữ máy yên cho mã nằm gọn trong khung.",
+            "Máy nhận ra thẻ liên hệ thì bấm lưu là vào danh bạ, gồm cả số di động, email và link trang danh thiếp của bạn.",
+          ],
+        },
+      ],
+    },
+    {
+      id: "faq-ho-so-chua-cap-nhat",
+      heading: "Hồ sơ cá nhân / danh thiếp hiện thông tin cũ hoặc sai",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Thông tin lấy từ hồ sơ nhân viên trên hệ thống, app không sửa được. Sai chỗ nào thì báo IT hoặc bộ phận nhân sự cập nhật trên web.",
+        },
+        {
+          kind: "paragraph",
+          text: "App tải hồ sơ một lần lúc đăng nhập rồi dùng lại cho cả Hồ sơ cá nhân lẫn Thông tin QrCode. Đã sửa trên hệ thống mà app chưa đổi thì đăng xuất rồi đăng nhập lại.",
+        },
+        {
+          kind: "note",
+          tone: "info",
+          text: "Hồ sơ cá nhân giờ gồm Mã nhân viên, Điện thoại, Tổ đội, Chức vụ cơ cấu; không còn dòng Đơn vị. Dòng nào hiện trống là hồ sơ nhân viên chưa khai mục đó.",
+        },
+      ],
+    },
+    {
+      id: "faq-khong-tim-thay-tai-khoan",
+      heading: 'App báo "Không tìm thấy tài khoản" và chỉ có nút Đăng xuất',
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Tài khoản đã bị xoá hoặc khoá trên hệ thống trong lúc bạn vẫn đang đăng nhập. Bấm Đăng xuất, rồi liên hệ IT nếu bạn vẫn cần dùng tài khoản đó.",
+        },
+      ],
+    },
+    {
+      id: "faq-o-so-lieu-mot-nhanh",
+      heading: "Bấm ô Thiết bị ở Trang chủ chỉ thấy một phần danh sách tài sản",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Đúng như thiết kế. Ô Thiết bị máy móc đang quản lý chỉ mở nhánh máy móc, ô Thiết bị CNTT chỉ mở nhánh CNTT — tiêu đề thanh đỏ ghi đúng tên nhánh đang xem.",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Muốn xem cả cây tài sản: vào tab Chức năng rồi chọn Tài sản.",
+            "Mở ra danh sách trống: nhánh đó chưa có dữ liệu hoặc tài khoản không có quyền xem các mục trong nhánh — liên hệ IT.",
+          ],
         },
       ],
     },

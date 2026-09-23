@@ -74,6 +74,13 @@ import {
   getHomeShortcutVisiblePageIndexes,
 } from "./shared/homeShortcutPages";
 
+/**
+ * Nhánh trong cây menu Tài sản mà hai ô đếm thiết bị ở khối SỐ LIỆU TOÀN CÔNG TY
+ * mở ra. Id do quản trị khai bên web, dùng chung cho mọi tài khoản.
+ */
+const ASSET_MENU_ID_MACHINE = 177;
+const ASSET_MENU_ID_IT = 67;
+
 const HomeScreen: React.FC = () => {
   const styles = useStyles(makeStyles);
   const navigation = useNavigation<HomeNavigationProp>();
@@ -121,6 +128,21 @@ const HomeScreen: React.FC = () => {
   const [isCustomizeVisible, setIsCustomizeVisible] = useState(false);
   const [shortcutPage, setShortcutPage] = useState(0);
   const shortcutPagerRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  /** Vị trí khối điểm danh trong trang — đo bằng onLayout vì thứ tự khối đổi được. */
+  const attendanceBlockYRef = useRef<number | null>(null);
+  // Ô "Đã điểm danh hôm nay" chỉ là số tổng; chi tiết theo bộ phận nằm ở khối
+  // điểm danh phía dưới nên bấm vào ô là trượt xuống đó.
+  const scrollToAttendanceBlock = useCallback(() => {
+    const y = attendanceBlockYRef.current;
+    if (y == null) return;
+
+    scrollRef.current?.scrollTo({
+      // Chừa một chút để dòng tiêu đề khối không dính sát mép trên.
+      y: Math.max(y - 8, 0),
+      animated: true,
+    });
+  }, []);
   const openCustomizeSheet = useCallback(() => setIsCustomizeVisible(true), []);
   const closeCustomizeSheet = useCallback(
     () => setIsCustomizeVisible(false),
@@ -293,6 +315,24 @@ const HomeScreen: React.FC = () => {
     [canView, loaded],
   );
   const canViewAttendance = canViewBlock(dashboard?.attendance?.viewPermission);
+  // Hai ô thiết bị mở màn Tài sản nhưng chỉ hiện đúng nhánh của nó: máy móc là
+  // mục 177, CNTT là mục 67 (id do quản trị khai, không đổi theo tài khoản).
+  // Không tra được mục Tài sản (mất quyền) thì ô không bấm được như trước.
+  const openAssetBranch = useCallback(
+    (rootMenuId: number) => {
+      const assetItem = menuItemByPermission.get("TaiSan");
+      if (!assetItem) return undefined;
+
+      return () =>
+        navigation.navigate("Asset", {
+          groupMenuId: assetItem.groupMenuId,
+          titleHeader: assetItem.label,
+          viewPermission: assetItem.viewPermission,
+          rootMenuId,
+        });
+    },
+    [menuItemByPermission, navigation],
+  );
   const statTiles = useMemo<HomeStatTile[]>(() => {
     if (!dashboard) return [];
 
@@ -309,7 +349,7 @@ const HomeScreen: React.FC = () => {
       iconColor: colors.redLight,
       label: "Thiết bị máy móc đang quản lý",
       value: formatHomeNumber(devices.machines),
-      onPress: menuItemByPermission.get("TaiSan")?.onPress,
+      onPress: openAssetBranch(ASSET_MENU_ID_MACHINE),
     });
 
     tiles.push({
@@ -322,7 +362,7 @@ const HomeScreen: React.FC = () => {
       // Camera đếm riêng ở ô dưới, tổng CNTT của API không gồm camera — ghi rõ
       // để không ai cộng hai ô lại rồi thắc mắc lệch số.
       sub: "Chưa gồm camera",
-      onPress: menuItemByPermission.get("TaiSan")?.onPress,
+      onPress: openAssetBranch(ASSET_MENU_ID_IT),
     });
 
     tiles.push({
@@ -351,11 +391,20 @@ const HomeScreen: React.FC = () => {
                 attendance.total,
               )}`,
         sub: attendance.total == null ? undefined : "người",
+        // Không có khối điểm danh phía dưới thì không có chỗ nào để trượt tới.
+        onPress: attendance ? scrollToAttendanceBlock : undefined,
       });
     }
 
     return tiles;
-  }, [canViewAttendance, colors, dashboard, menuItemByPermission]);
+  }, [
+    canViewAttendance,
+    colors,
+    dashboard,
+    menuItemByPermission,
+    openAssetBranch,
+    scrollToAttendanceBlock,
+  ]);
   const canViewItStructure = canViewBlock(
     dashboard?.itStructure?.viewPermission,
   );
@@ -804,6 +853,7 @@ const HomeScreen: React.FC = () => {
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
       <ScrollView
+        ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -817,7 +867,18 @@ const HomeScreen: React.FC = () => {
         }
       >
         {visibleBlockKeys.map((key) => (
-          <React.Fragment key={key}>{blockNodes[key]}</React.Fragment>
+          <View
+            key={key}
+            onLayout={
+              key === "attendance"
+                ? (event) => {
+                    attendanceBlockYRef.current = event.nativeEvent.layout.y;
+                  }
+                : undefined
+            }
+          >
+            {blockNodes[key]}
+          </View>
         ))}
       </ScrollView>
 

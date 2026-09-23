@@ -143,6 +143,52 @@ export interface User {
   avatarUrl?: string;
 }
 
+/**
+ * Danh thiếp nhân viên (`get-nhan-vien-info`).
+ *
+ * Mọi trường đều có thể null TRỪ `iD_User` và `ten` — BE nói rõ vậy, nên đừng
+ * bỏ optional ở các trường còn lại. Tài khoản chưa được gán nhân viên vẫn trả
+ * về object hợp lệ: có `ten` (lấy mô tả tài khoản), phần còn lại null.
+ *
+ * Tên `iD_User` là do camelCase của .NET biến đổi `ID_User`, không phải gõ nhầm.
+ */
+export interface NhanVienInfo {
+  iD_User: number;
+  userName?: string | null;
+
+  /** Null khi tài khoản chưa liên kết nhân viên. */
+  id?: number | null;
+  ma?: string | null;
+  ten: string;
+  /** Họ tên không dấu, dùng khi app chạy tiếng Anh. */
+  ten_Eng?: string | null;
+
+  soDienThoai?: string | null;
+  zalo?: string | null;
+  viber?: string | null;
+  whatsApp?: string | null;
+  wechat?: string | null;
+  email?: string | null;
+
+  /** Chữ tự do — đây mới là dòng in lên danh thiếp, không phải `chucDanh`. */
+  chucVu?: string | null;
+  chucVu_Eng?: string | null;
+
+  phongBan?: string | null;
+  boPhan?: string | null;
+  toDoi?: string | null;
+  /** Chức vụ theo danh mục cơ cấu, khác `chucVu` là chữ tự do. */
+  chucVuCoCau?: string | null;
+  chucDanh?: string | null;
+
+  /** Đã là data URL đầy đủ, gán thẳng vào `Image`. */
+  hinhAnh?: string | null;
+  /** Link danh thiếp công khai, xem được không cần đăng nhập. */
+  qrUrl?: string | null;
+  /** Ảnh PNG 360x360 của `qrUrl`, cũng là data URL đầy đủ. */
+  qrCode?: string | null;
+}
+
 // Thông tin người dùng rút gọn
 export interface UserInfo {
   userName?: string;

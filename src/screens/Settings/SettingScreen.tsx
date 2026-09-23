@@ -18,10 +18,8 @@ import LinearGradient from "react-native-linear-gradient";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useAuth } from "../../context/AuthContext";
 import { changePasswordApi } from "../../services";
-import { API_ENDPOINTS } from "../../config/index";
-import type { StackNavigation, UserInfo } from "../../types";
+import type { StackNavigation } from "../../types";
 import {
-  callApi,
   clearTokenStorage,
   hardResetApi,
   resetAuthState,
@@ -50,6 +48,7 @@ import SettingSectionGroup from "./shared/SettingSectionGroup";
 import { SettingRowItem, SettingSwitchRow } from "./shared/SettingRowItem";
 import ChangePasswordModal from "./shared/ChangePasswordModal";
 import { useColorScheme } from "../../hooks/useColorScheme";
+import { useNhanVienInfo } from "../../hooks/useNhanVienInfo";
 import { readStoredAuthTokens } from "../../context/authStorage";
 import {
   getLocalNetworkPermissionLabel,
@@ -96,7 +95,6 @@ const SettingScreen = () => {
   const colors = useAppColors();
   const { factor: textScaleFactor } = useTextScale();
   const [isLoading, setIsLoading] = useState(false);
-  const [user, setUser] = useState<UserInfo>();
   const appVersionLabel = `v${DeviceInfo.getVersion()}`;
   const [storeVersionInfo, setStoreVersionInfo] =
     useState<StoreVersionInfo | null>(null);
@@ -138,10 +136,11 @@ const SettingScreen = () => {
   const isFocused = useIsFocused();
   const dispatch = useAppDispatch();
   const insets = useSafeAreaInsets();
+  /* Danh thiếp nạp sẵn lúc đăng nhập — nguồn của tên + ảnh trên đầu màn. */
+  const { info: nhanVien, isLoading: isLoadingNhanVien } = useNhanVienInfo();
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
 
-  const userRef = useRef<UserInfo | undefined>(undefined);
   const hasLoadedOnceRef = useRef(false);
   const loadingRef = useRef(false);
   const isLoggingOutRef = useRef(false);
@@ -221,7 +220,7 @@ const SettingScreen = () => {
   const fetchData = React.useCallback(async () => {
     if (loadingRef.current) return;
 
-    const isInitialLoad = !hasLoadedOnceRef.current && !userRef.current;
+    const isInitialLoad = !hasLoadedOnceRef.current;
 
     // Lượt tải đầu được phép chạy khi màn chưa focus — xem effect theo
     // `isFocused` bên dưới. Các lượt sau vẫn phải đúng màn đang xem, để lần quay
@@ -233,22 +232,15 @@ const SettingScreen = () => {
     blockingLoaderActiveRef.current = shouldShowBlockingLoader;
     if (isMountedRef.current && shouldShowBlockingLoader) setIsLoading(true);
     try {
-      const [userResponse, faceIdFlag] = await Promise.all([
-        callApi<{ success: boolean; data: UserInfo }>(
-          "POST",
-          API_ENDPOINTS.GET_INFO,
-          {},
-        ),
-        readFaceIdEnabled(),
-      ]);
+      /* Tên và ảnh đại diện lấy từ danh thiếp đã nạp sẵn lúc đăng nhập
+         (`useNhanVienInfo`), màn này không gọi API người dùng nữa. */
+      const faceIdFlag = await readFaceIdEnabled();
       // SettingScreen remains mounted underneath Appearance. The request may
       // finish while Appearance has focus, and its data is still valid for the
       // mounted Settings screen. Dropping it here can leave the blocking loader
       // active when returning while a second fetch is rejected by loadingRef.
       if (!canCommitRequest()) return;
-      userRef.current = userResponse.data;
       hasLoadedOnceRef.current = true;
-      setUser(userResponse.data);
       setHasLoadedOnce(true);
       setLoadErrorMessage(null);
       setIsFaceIdEnabled(faceIdFlag);
@@ -312,7 +304,7 @@ const SettingScreen = () => {
       // focus mới tải thì lúc người dùng back về, vòng xoay chặn màn nhảy ra
       // ngay giữa animation — thấy rõ như một cú giật. Nạp sẵn ở đây; dữ liệu
       // về lúc chưa focus vẫn nhận được (`canCommitRequest`).
-      if (!hasLoadedOnceRef.current && !userRef.current) fetchData();
+      if (!hasLoadedOnceRef.current) fetchData();
 
       return;
     }
@@ -797,7 +789,7 @@ const SettingScreen = () => {
     }
   };
 
-  if (isLoading || (!user && !hasLoadedOnce)) {
+  if (isLoading || isLoadingNhanVien || !hasLoadedOnce) {
     return <SettingScreenSkeleton safeTop={insets.top} />;
   }
 
@@ -817,7 +809,7 @@ const SettingScreen = () => {
     );
   }
 
-  if (!user) {
+  if (!nhanVien) {
     return (
       <View style={[styles.emptyStateRoot, { backgroundColor: colors.bg }]}>
         <StatusBar
@@ -848,8 +840,8 @@ const SettingScreen = () => {
           style={styles.redZone}
         >
           <SettingProfileHeader
-            name={user?.moTa}
-            avatarUrl={user?.avatarUrl}
+            name={nhanVien.ten}
+            avatarUrl={nhanVien.hinhAnh ?? undefined}
             safeTop={insets.top}
           />
           <SettingWaveDivider />
@@ -863,6 +855,13 @@ const SettingScreen = () => {
               label="Hồ sơ cá nhân"
               sublabel="Xem và chỉnh sửa thông tin"
               onPress={() => navigation.navigate("Profile")}
+            />
+            <SettingRowItem
+              iconName="qr-code-outline"
+              iconBg={C.emerald}
+              label="Thông tin QrCode"
+              sublabel="Danh thiếp QR của bạn"
+              onPress={() => navigation.navigate("QrCode")}
             />
             <SettingRowItem
               iconName="lock-closed-outline"

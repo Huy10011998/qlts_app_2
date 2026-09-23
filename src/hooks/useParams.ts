@@ -24,6 +24,7 @@ export function useParams<RouteName extends keyof RootStackParamList>() {
     groupMenuId: params?.groupMenuId,
     viewPermission: params?.viewPermission,
     assetTitleHeader: params?.assetTitleHeader,
+    rootMenuId: params?.rootMenuId,
     prefix: params?.propertyClass?.prefix,
     itemData: params?.itemData,
   };

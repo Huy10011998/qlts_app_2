@@ -120,7 +120,7 @@ const TOPICS: GuideTopic[] = [
               "Chức năng: danh mục đầy đủ mọi chức năng, có ô tìm kiếm.",
               "Quét QR: nút to ở giữa, mở máy quét tem QR.",
               "Camera: hệ thống camera theo khu vực.",
-              "Cài đặt: hồ sơ, mật khẩu, giao diện, quyền và tài liệu hướng dẫn này.",
+              "Cài đặt: hồ sơ, danh thiếp QR, mật khẩu, giao diện, quyền và tài liệu hướng dẫn này.",
             ],
           },
         ],
@@ -157,7 +157,18 @@ const TOPICS: GuideTopic[] = [
     iconName: "home-outline",
     iconBg: C.emerald,
     group: "Bắt đầu",
-    keywords: ["trang chu", "home", "truy cap nhanh", "tuy chinh", "sap xep", "diem danh"],
+    keywords: [
+      "trang chu",
+      "home",
+      "truy cap nhanh",
+      "tuy chinh",
+      "sap xep",
+      "diem danh",
+      "so lieu",
+      "thiet bi may moc",
+      "thiet bi cntt",
+      "bam o so lieu",
+    ],
     sections: [
       {
         id: "trang-chu-khoi",
@@ -166,12 +177,35 @@ const TOPICS: GuideTopic[] = [
           {
             kind: "bullets",
             items: [
-              "SỐ LIỆU TOÀN CÔNG TY: số thiết bị máy móc, thiết bị CNTT, camera đang hoạt động, số người đã điểm danh hôm nay.",
+              "SỐ LIỆU TOÀN CÔNG TY: số thiết bị máy móc, thiết bị CNTT, camera đang hoạt động, số người đã điểm danh hôm nay. Bấm vào ô để xem chi tiết — xem mục bên dưới.",
               "TRUY CẬP NHANH: các chức năng bạn tự ghim.",
               "Cơ cấu tài sản: lật qua từng trang để xem tỷ lệ.",
               "ĐIỂM DANH NHÂN SỰ HÔM NAY: đang làm việc / đã điểm danh / chưa điểm danh, bấm vào để xem chi tiết theo phòng ban.",
               "Các khối tiêu thụ: điện, điện mặt trời, nước cấp, nước thải, hơi.",
             ],
+          },
+        ],
+      },
+      {
+        id: "trang-chu-o-so-lieu",
+        heading: "Bấm vào ô số liệu",
+        blocks: [
+          {
+            kind: "bullets",
+            items: [
+              "Thiết bị máy móc đang quản lý: mở màn Tài sản nhưng chỉ hiện đúng nhánh thiết bị máy móc, tiêu đề thanh đỏ đổi theo tên nhánh.",
+              "Thiết bị CNTT: tương tự, chỉ hiện nhánh CNTT. Số trên ô chưa gồm camera — camera đếm riêng ở ô khác.",
+              "Đã điểm danh hôm nay: trượt xuống khối ĐIỂM DANH NHÂN SỰ HÔM NAY ngay trên Trang chủ, nơi có số theo từng phòng ban.",
+            ],
+          },
+          {
+            kind: "note",
+            tone: "info",
+            text: "Muốn xem cả cây tài sản thì vào từ tab Chức năng như bình thường. Ô Đã điểm danh hôm nay chỉ trượt được khi khối điểm danh đang bật ở Sắp xếp.",
+          },
+          {
+            kind: "paragraph",
+            text: "Ô nào bấm không có phản ứng là tài khoản chưa có quyền xem chức năng đó.",
           },
         ],
       },
@@ -929,11 +963,11 @@ const TOPICS: GuideTopic[] = [
   {
     id: "cai-dat",
     title: "Cài đặt & quyền",
-    summary: "Hồ sơ, mật khẩu, giao diện, quyền, phiên bản",
+    summary: "Hồ sơ, danh thiếp QR, mật khẩu, giao diện, quyền",
     iconName: "settings-outline",
     iconBg: C.amber,
     group: "Trợ giúp",
-    keywords: ["cai dat", "quyen", "ho so", "doi mat khau", "giao dien", "sang toi", "phien ban", "dang xuat", "thong bao camera", "tam dung thong bao"],
+    keywords: ["cai dat", "quyen", "ho so", "doi mat khau", "giao dien", "sang toi", "phien ban", "dang xuat", "thong bao camera", "tam dung thong bao", "thong tin qrcode", "danh thiep", "card visit", "vcard", "luu danh ba", "ma nhan vien"],
     sections: [
       {
         id: "cai-dat-tai-khoan",
@@ -942,10 +976,50 @@ const TOPICS: GuideTopic[] = [
           {
             kind: "bullets",
             items: [
-              "Hồ sơ cá nhân: họ tên, email, đơn vị, phòng ban, bộ phận, tổ nhóm, chức vụ.",
+              "Hồ sơ cá nhân: họ và tên, mã nhân viên, điện thoại, email, phòng ban, bộ phận, tổ đội, chức vụ cơ cấu, chức danh.",
+              "Thông tin QrCode: danh thiếp của bạn kèm mã QR để người khác lưu vào danh bạ — xem mục bên dưới.",
               "Đổi mật khẩu: nhập mật khẩu cũ, mật khẩu mới và nhập lại mật khẩu mới.",
               "Đăng nhập FaceID (chỉ iPhone/iPad): bật để lần sau đăng nhập bằng khuôn mặt.",
             ],
+          },
+        ],
+      },
+      {
+        id: "cai-dat-danh-thiep",
+        heading: "Danh thiếp QR (Thông tin QrCode)",
+        blocks: [
+          {
+            kind: "paragraph",
+            text: "Màn này dựng theo mặt sau card visit giấy: mã QR ở góc trên, họ tên, chức vụ, số điện thoại ở giữa, thông tin công ty ở dưới.",
+          },
+          {
+            kind: "steps",
+            items: [
+              "Vào tab Cài đặt, chọn Thông tin QrCode.",
+              "Đưa màn hình cho người cần lưu liên hệ.",
+              "Người đó mở camera có sẵn của điện thoại, quét mã QR — máy hiện ngay thẻ liên hệ, bấm lưu là vào danh bạ.",
+            ],
+          },
+          {
+            kind: "paragraph",
+            text: "Thẻ liên hệ gồm họ tên, chức vụ, số di động, số công ty, email, địa chỉ công ty, link trang danh thiếp của bạn và trang chủ công ty.",
+          },
+          {
+            kind: "bullets",
+            items: [
+              "Bấm số điện thoại để gọi, bấm Email để soạn thư, bấm Website để mở trang công ty.",
+              "Không thấy mã QR (chỉ còn tên): tài khoản chưa được gán hồ sơ nhân viên trên hệ thống — liên hệ IT.",
+            ],
+          },
+          {
+            kind: "note",
+            tone: "info",
+            text: "Quét bằng camera của điện thoại, không phải nút Quét QR trong app — nút đó chỉ đọc tem tài sản nên sẽ báo Mã QR không hợp lệ.",
+          },
+          {
+            kind: "note",
+            tone: "info",
+            text: "Hồ sơ và danh thiếp được tải một lần lúc đăng nhập. Vừa cập nhật thông tin trên hệ thống mà app chưa đổi thì đăng xuất rồi đăng nhập lại.",
           },
         ],
       },

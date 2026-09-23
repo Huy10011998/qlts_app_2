@@ -1,10 +1,12 @@
 import { configureStore } from "@reduxjs/toolkit";
 import assetReducer from "./AssetSlice";
+import nhanVienReducer from "./NhanVienSlice";
 import permissionReducer from "./PermissionSlice";
 
 export const store = configureStore({
   reducer: {
     asset: assetReducer,
+    nhanVien: nhanVienReducer,
     permission: permissionReducer,
   },
 });

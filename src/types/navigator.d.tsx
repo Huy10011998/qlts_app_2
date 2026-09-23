@@ -56,6 +56,7 @@ export type OptionalParams = {
   groupMenuId?: number;
   viewPermission?: string;
   assetTitleHeader?: string;
+  rootMenuId?: number | string;
 };
 
 // =====================================================
@@ -148,6 +149,8 @@ export type RootStackParamList = {
   Appearance: undefined;
   /** Chọn trần phóng to cỡ chữ cho toàn ứng dụng. */
   TextSize: undefined;
+  /** Danh thiếp vCard dạng mã QR của tài khoản đang đăng nhập. */
+  QrCode: undefined;
   /** Tạm dừng / bật lại thông báo camera AI phát hiện. */
   CameraNotification: undefined;
   /** Mục lục tài liệu hướng dẫn sử dụng. */
@@ -161,6 +164,11 @@ export type RootStackParamList = {
         groupMenuId?: number;
         titleHeader?: string;
         viewPermission?: string;
+        /**
+         * Chỉ hiện cây con của mục này (id trong cây menu) thay vì cả cây tài
+         * sản — dùng khi mở từ một ô số liệu ở Trang chủ.
+         */
+        rootMenuId?: number | string;
       }
     | undefined;
   Report:
