@@ -58,7 +58,7 @@ react {
 /**
  * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
  */
-def enableProguardInReleaseBuilds = false
+def enableProguardInReleaseBuilds = true
 
 /**
  * The preferred build flavor of JavaScriptCore (JSC)
@@ -137,8 +137,8 @@ android {
         applicationId "com.qlts_app_2"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 133
-        versionName "2.39"
+        versionCode 134
+        versionName "2.40"
     }
     signingConfigs {
         release {
@@ -152,8 +152,11 @@ android {
     buildTypes {
         release {
             signingConfig signingConfigs.release
-            minifyEnabled false
+            // R8: thu gọn + làm rối code (Play yêu cầu Obfuscation >= 25%).
+            minifyEnabled enableProguardInReleaseBuilds
+            // Giữ false: notifee/icon tra resource theo tên từ JS, shrink có thể xoá nhầm.
             shrinkResources false
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
     }
 }

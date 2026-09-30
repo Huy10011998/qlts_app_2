@@ -10,57 +10,29 @@ import {
 import { useRoute } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import Orientation from "react-native-orientation-locker";
-import WebView from "react-native-webview";
+import MapView, { Polyline, Region } from "react-native-maps";
 import type { StackRoute } from "../../types";
-import { VEHICLE_MAP_CONTROL_CSS } from "./shared/vehicleMapControlStyles";
-import { useForegroundWebViewRemount } from "./shared/useForegroundWebViewRemount";
+import MapDotMarker from "./shared/MapDotMarker";
+import VehicleMapControls from "./shared/VehicleMapControls";
+import {
+  DEFAULT_REGION,
+  fitMapTo,
+  toLatLng,
+  zoomMap,
+} from "./shared/vehicleMap";
 import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
-
-type MapCoordinate = { lat: number; lng: number };
-
-const buildMapHtml = (coordinates: MapCoordinate[]) => `<!doctype html>
-<html><head>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5,user-scalable=yes" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<style>
-html,body,#map{height:100%;width:100%;margin:0;background:#e2e8f0;overflow:hidden}
-${VEHICLE_MAP_CONTROL_CSS}
-.leaflet-control-attribution{font-size:9px}
-</style></head><body><div id="map"></div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-const points=${JSON.stringify(coordinates)};
-const map=L.map('map',{zoomControl:true,touchZoom:true,doubleClickZoom:true,scrollWheelZoom:true});
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(map);
-let bounds=null;
-if(points.length){
- const latlngs=points.map(p=>[p.lat,p.lng]);
- const line=L.polyline(latlngs,{color:'#1976d2',weight:5,opacity:.88,lineJoin:'round'}).addTo(map);
- L.circleMarker(latlngs[0],{radius:8,color:'#fff',weight:3,fillColor:'#4caf50',fillOpacity:1}).addTo(map).bindPopup('Xuất phát');
- L.circleMarker(latlngs[latlngs.length-1],{radius:8,color:'#fff',weight:3,fillColor:'#f44336',fillOpacity:1}).addTo(map).bindPopup('Kết thúc');
- bounds=line.getBounds();
- if(latlngs.length===1) map.setView(latlngs[0],17); else map.fitBounds(bounds,{padding:[35,35]});
-} else map.setView([10.7769,106.7009],11);
-const Fit=L.Control.extend({options:{position:'topleft'},onAdd:function(){
- const button=L.DomUtil.create('button','vehicle-map-action');button.innerHTML='⌖';button.title='Về toàn tuyến';
- L.DomEvent.disableClickPropagation(button);button.onclick=function(){if(bounds)map.fitBounds(bounds,{padding:[35,35]});};return button;
-}});new Fit().addTo(map);
-window.addEventListener('resize',function(){setTimeout(function(){map.invalidateSize();if(bounds)map.fitBounds(bounds,{padding:[35,35]});},180);});
-</script></body></html>`;
 
 export default function VehicleJourneyMapScreen() {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
   const [mapLoading, setMapLoading] = useState(true);
-  const { remountWebView, renderKey } = useForegroundWebViewRemount(() =>
-    setMapLoading(true)
-  );
   const route = useRoute<StackRoute<"VehicleJourneyMap">>();
-  const webViewRef = useRef<WebView>(null);
+  const mapRef = useRef<MapView>(null);
+  const regionRef = useRef<Region | null>(null);
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
-  const html = useMemo(
-    () => buildMapHtml(route.params.coordinates),
+  const points = useMemo(
+    () => route.params.coordinates.map(toLatLng),
     [route.params.coordinates]
   );
 
@@ -69,13 +41,12 @@ export default function VehicleJourneyMapScreen() {
     return () => Orientation.lockToPortrait();
   }, []);
 
-  // Xoay chỉ đổi khung layout, WebView giữ nguyên (không remount, không tải lại
-  // Leaflet/tile). Bảo Leaflet đo lại khung mới là đủ.
+  // Xoay màn hình thì khung bản đồ đổi kích thước: canh lại toàn tuyến.
   useEffect(() => {
-    webViewRef.current?.injectJavaScript(
-      "window.dispatchEvent(new Event('resize'));true;"
-    );
-  }, [width, height]);
+    if (mapLoading) return;
+    const timer = setTimeout(() => fitMapTo(mapRef.current, points), 250);
+    return () => clearTimeout(timer);
+  }, [width, height, mapLoading, points]);
 
   const toggleOrientation = () => {
     if (isLandscape) {
@@ -85,43 +56,63 @@ export default function VehicleJourneyMapScreen() {
     }
   };
 
+  const start = points[0];
+  const end = points[points.length - 1];
+
   return (
     <View style={styles.root}>
-      <WebView
-        ref={webViewRef}
-        key={renderKey}
-        originWhitelist={["*"]}
-        source={{ html }}
+      <MapView
+        ref={mapRef}
         style={styles.map}
-        javaScriptEnabled
-        domStorageEnabled
-        mixedContentMode="always"
-        allowsInlineMediaPlayback
-        onLoadStart={() => setMapLoading(true)}
-        onLoadEnd={() => setMapLoading(false)}
-        onContentProcessDidTerminate={remountWebView}
-        onRenderProcessGone={remountWebView}
-      />
+        initialRegion={DEFAULT_REGION}
+        toolbarEnabled={false}
+        onMapReady={() => setMapLoading(false)}
+        onRegionChangeComplete={(region) => {
+          regionRef.current = region;
+        }}
+      >
+        {points.length > 1 ? (
+          <Polyline
+            coordinates={points}
+            strokeColor="#1976d2"
+            strokeWidth={5}
+            lineJoin="round"
+            lineCap="round"
+          />
+        ) : null}
+        {start && points.length > 1 ? (
+          <MapDotMarker coordinate={start} color="#4caf50" size={18} title="Xuất phát" />
+        ) : null}
+        {end ? (
+          <MapDotMarker coordinate={end} color="#f44336" size={18} title="Kết thúc" />
+        ) : null}
+      </MapView>
       {mapLoading ? (
         <View pointerEvents="none" style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color={c.red} />
           <Text style={styles.loadingText}>Đang tải bản đồ hành trình...</Text>
         </View>
-      ) : null}
-      {!mapLoading ? (
-        <TouchableOpacity
-          style={styles.rotateButton}
-          onPress={toggleOrientation}
-        >
-          <Ionicons
-            name={
-              isLandscape ? "phone-portrait-outline" : "phone-landscape-outline"
-            }
-            size={23}
-            color={c.text}
+      ) : (
+        <>
+          <VehicleMapControls
+            onZoomIn={() => zoomMap(mapRef.current, regionRef.current, 0.5)}
+            onZoomOut={() => zoomMap(mapRef.current, regionRef.current, 2)}
+            onAction={() => fitMapTo(mapRef.current, points)}
           />
-        </TouchableOpacity>
-      ) : null}
+          <TouchableOpacity
+            style={styles.rotateButton}
+            onPress={toggleOrientation}
+          >
+            <Ionicons
+              name={
+                isLandscape ? "phone-portrait-outline" : "phone-landscape-outline"
+              }
+              size={23}
+              color={c.text}
+            />
+          </TouchableOpacity>
+        </>
+      )}
     </View>
   );
 }
