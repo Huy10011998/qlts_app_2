@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { useIsFocused } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import MapView, { MapMarker, Region } from "react-native-maps";
+import WebView from "react-native-webview";
 import EnumAndReferencePickerModal from "../../components/modal/EnumAndReferencePickerModal";
 import VehicleFilterSkeleton from "./shared/VehicleFilterSkeleton";
 import EmptyState from "../../components/ui/EmptyState";
@@ -23,17 +23,9 @@ import {
   getPhuongTienCurrentLocation,
 } from "../../services/data/callApi";
 import { error, log } from "../../utils/Logger";
-import MapDotMarker from "./shared/MapDotMarker";
-import VehicleMapControls from "./shared/VehicleMapControls";
-import {
-  DEFAULT_REGION,
-  NEIGHBORHOOD_DELTA,
-  distanceInMeters,
-  regionAround,
-  toLatLng,
-  zoomMap,
-} from "./shared/vehicleMap";
+import { VEHICLE_MAP_CONTROL_CSS } from "./shared/vehicleMapControlStyles";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
+import { useForegroundWebViewRemount } from "./shared/useForegroundWebViewRemount";
 import {
   AppColors,
   useAppColors,
@@ -56,6 +48,40 @@ type CurrentLocation = {
 type CurrentLocationResponse =
   | CurrentLocation
   | { data?: CurrentLocation | null };
+
+const MAP_HTML = `<!doctype html>
+<html><head>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5,user-scalable=yes" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>html,body,#map{height:100%;width:100%;margin:0;background:#e2e8f0}${VEHICLE_MAP_CONTROL_CSS}</style>
+</head><body><div id="map"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const map=L.map('map',{touchZoom:true,doubleClickZoom:true,scrollWheelZoom:true});
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(map);
+map.setView([10.7769,106.7009],11);
+let marker=null;
+const icon=L.divIcon({className:'',html:'<div style="width:20px;height:20px;border-radius:50%;background:#1976d2;border:3px solid white;box-shadow:0 1px 7px rgba(0,0,0,.45)"></div>',iconSize:[20,20],iconAnchor:[10,10]});
+function escapeHtml(value){return String(value == null ? '' : value).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
+window.updateVehicleLocation=function(location){
+ if(!location)return;const position=[location.lat,location.lng];
+ const statusLine=location.statusText?'<span style="color:#1976d2;font-weight:600">'+escapeHtml(location.statusText)+'</span> · '+escapeHtml(location.velocity)+' km/h<br/>':'';
+ const popup='<div style="font-size:12px;min-width:190px"><b style="color:#1976d2">Vị trí hiện tại</b><br/>'+statusLine+'<span>'+escapeHtml(location.address)+'</span><br/><span style="color:#888">'+escapeHtml(location.dateTime)+'</span></div>';
+ if(!marker){
+  marker=L.marker(position,{icon}).addTo(map);map.setView(position,16);
+ }else{
+  const nextPosition=L.latLng(position);
+  const hasMoved=map.distance(marker.getLatLng(),nextPosition)>=3;
+  if(hasMoved){
+   marker.setLatLng(nextPosition);
+   map.panTo(nextPosition,{animate:true,duration:.8});
+  }
+ }
+ marker.bindPopup(popup);
+};
+const Focus=L.Control.extend({options:{position:'topleft'},onAdd:function(){const button=L.DomUtil.create('button','vehicle-map-action');button.innerHTML='◎';button.title='Focus vị trí hiện tại';L.DomEvent.disableClickPropagation(button);button.onclick=()=>{if(marker){map.flyTo(marker.getLatLng(),17,{duration:.8});marker.openPopup();}};return button;}});new Focus().addTo(map);
+window.addEventListener('resize',()=>setTimeout(()=>map.invalidateSize(),180));
+</script></body></html>`;
 
 const textOf = (item: Record<string, unknown>, keys: string[]) => {
   for (const key of keys) {
@@ -135,14 +161,9 @@ export default function VehicleCurrentLocationScreen() {
   const c = useAppColors();
   const isFocused = useIsFocused();
   const strongBorderColor = useStrongBorderColor();
-  const mapRef = useRef<MapView>(null);
-  const regionRef = useRef<Region | null>(null);
-  const markerRef = useRef<MapMarker>(null);
-  const lastCenterRef = useRef<{ latitude: number; longitude: number } | null>(
-    null,
-  );
-  const [mapReady, setMapReady] = useState(false);
+  const webViewRef = useRef<WebView>(null);
   const networkAvailableRef = useRef(true);
+  const { remountWebView, renderKey } = useForegroundWebViewRemount();
   const requestVersionRef = useRef(0);
   const pollingRef = useRef(false);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -257,38 +278,19 @@ export default function VehicleCurrentLocationScreen() {
     },
   );
 
-  // Bản đồ bị unmount mỗi khi chưa có vị trí (đổi xe, lỗi tải lần đầu):
-  // lần có vị trí kế tiếp phải zoom lại từ đầu.
-  useEffect(() => {
-    if (location) return;
-    lastCenterRef.current = null;
-    setMapReady(false);
+  const pushLocationToMap = useCallback(() => {
+    if (!location) return;
+    webViewRef.current?.injectJavaScript(
+      `window.updateVehicleLocation(${JSON.stringify({
+        ...location,
+        dateTime: formatLocationTime(location.dateTime),
+      })});true;`,
+    );
   }, [location]);
 
-  // Lần đầu zoom vào xe; các lần cập nhật sau chỉ kéo bản đồ theo khi xe đã
-  // dịch chuyển >= 3m để khỏi giật khi GPS dao động tại chỗ.
   useEffect(() => {
-    if (!location || !mapReady) return;
-    const position = toLatLng(location);
-    const lastCenter = lastCenterRef.current;
-    if (!lastCenter) {
-      mapRef.current?.animateToRegion(
-        regionAround(position, NEIGHBORHOOD_DELTA),
-        400,
-      );
-    } else if (distanceInMeters(lastCenter, position) >= 3) {
-      mapRef.current?.animateCamera({ center: position }, { duration: 800 });
-    } else {
-      return;
-    }
-    lastCenterRef.current = position;
-  }, [location, mapReady]);
-
-  const focusVehicle = () => {
-    if (!location) return;
-    mapRef.current?.animateToRegion(regionAround(toLatLng(location)), 500);
-    setTimeout(() => markerRef.current?.showCallout(), 600);
-  };
+    pushLocationToMap();
+  }, [pushLocationToMap]);
 
   if (vehiclesLoading) {
     return <VehicleFilterSkeleton />;
@@ -389,38 +391,19 @@ export default function VehicleCurrentLocationScreen() {
               <Text style={styles.liveText}>Tự động cập nhật mỗi 5 giây</Text>
             </View>
           </View>
-          <View style={styles.map}>
-            <MapView
-              ref={mapRef}
-              style={StyleSheet.absoluteFill}
-              initialRegion={DEFAULT_REGION}
-              toolbarEnabled={false}
-              onMapReady={() => setMapReady(true)}
-              onRegionChangeComplete={(region) => {
-                regionRef.current = region;
-              }}
-            >
-              <MapDotMarker
-                ref={markerRef}
-                coordinate={toLatLng(location)}
-                color="#1976d2"
-                size={20}
-                title="Vị trí hiện tại"
-                lines={[
-                  location.statusText
-                    ? `${location.statusText} · ${location.velocity} km/h`
-                    : null,
-                  location.address,
-                  formatLocationTime(location.dateTime),
-                ]}
-              />
-            </MapView>
-            <VehicleMapControls
-              onZoomIn={() => zoomMap(mapRef.current, regionRef.current, 0.5)}
-              onZoomOut={() => zoomMap(mapRef.current, regionRef.current, 2)}
-              onAction={focusVehicle}
-            />
-          </View>
+          <WebView
+            key={renderKey}
+            ref={webViewRef}
+            originWhitelist={["*"]}
+            source={{ html: MAP_HTML }}
+            style={styles.map}
+            javaScriptEnabled
+            domStorageEnabled
+            mixedContentMode="always"
+            onLoadEnd={pushLocationToMap}
+            onContentProcessDidTerminate={remountWebView}
+            onRenderProcessGone={remountWebView}
+          />
         </>
       )}
 
