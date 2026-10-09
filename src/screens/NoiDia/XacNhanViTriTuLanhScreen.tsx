@@ -251,6 +251,9 @@ export default function XacNhanViTriTuLanhScreen() {
         mediaType: "photo",
         cameraType: "back",
         saveToPhotos: false,
+        // iOS mặc định mở dạng thẻ (`pageSheet`), hở mép trên — mở tràn màn
+        // cho giống màn chụp của field ảnh base64. Android vốn đã tràn màn.
+        presentationStyle: "fullScreen",
         quality: PHOTO_QUALITY,
         maxWidth: PHOTO_MAX_DIMENSION,
         maxHeight: PHOTO_MAX_DIMENSION,
