@@ -51,7 +51,10 @@ import {
   getRequiredFieldErrors,
   getRequiredFieldsMessage,
 } from "./shared/assetFormValidation";
-import { stripReadOnlyFields } from "./shared/assetFormPayload";
+import {
+  normalizeBase64ImageFields,
+  stripReadOnlyFields,
+} from "./shared/assetFormPayload";
 import { createAssetFormBaseStyles } from "./shared/assetFormStyles";
 import { ASSET_FORM_BRAND_RED } from "./shared/assetFormTheme";
 import {
@@ -333,9 +336,13 @@ export default function AssetCloneItem() {
 
       /* Mục 4b: không gửi field isReadOnly. Lưu ý hệ quả ở bản sao — cột
          readonly copy từ dòng gốc sẽ về NULL, server tự tính lại. */
-      const entity = stripReadOnlyFields(fieldActive, payloadData, [
-        autoCodeField,
-      ]);
+      const entity = stripReadOnlyFields(
+        fieldActive,
+        normalizeBase64ImageFields(fieldActive, payloadData),
+        [
+          autoCodeField,
+        ],
+      );
 
       const payload = {
         entities: [entity],

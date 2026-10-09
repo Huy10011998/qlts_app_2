@@ -4,7 +4,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { getList } from "../services";
 import { isNetworkRequestError } from "../utils/helpers/api";
 import { useParentValuePairs } from "./parentValue/useParentValuePairs";
-import { error } from "../utils/Logger";
+import { error, warn } from "../utils/Logger";
 import { useSafeAlert } from "./useSafeAlert";
 
 /** Chỉ cần con số, không cần bản ghi nào — xin đúng 1 dòng cho nhẹ. */
@@ -88,7 +88,15 @@ export function useRelatedRecordCount({
         setCount(response?.data?.totalCount || 0);
       })
       .catch((e) => {
-        if (!isNetworkRequestError(e)) error("Đếm bản ghi liên quan lỗi:", e);
+        /* 404 = server không có `get-list` cho class con này (lỗi khai báo
+           phía BE). Đếm là thông tin phụ nên chỉ cảnh báo, không bật màn đỏ. */
+        if (e?.response?.status === 404) {
+          warn(
+            `Đếm bản ghi liên quan: /${nameClass}/get-list trả 404 — class con chưa có API trên server.`,
+          );
+        } else if (!isNetworkRequestError(e)) {
+          error("Đếm bản ghi liên quan lỗi:", e);
+        }
         if (active) setCount(null);
       });
 

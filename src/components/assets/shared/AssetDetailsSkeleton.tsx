@@ -77,7 +77,8 @@ export default function AssetDetailsSkeleton({
                 <Text style={styles.label} numberOfLines={1}>
                   {field.moTa}
                 </Text>
-                {field.typeProperty === TypeProperty.Image ? (
+                {field.typeProperty === TypeProperty.Image ||
+                field.typeProperty === TypeProperty.ImageBase64 ? (
                   <Animated.View
                     style={[
                       styles.imageValue,

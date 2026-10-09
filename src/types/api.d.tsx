@@ -14,6 +14,8 @@ export interface ViewActiveItem {
   icon?: string | null;
   longLabel?: string | null;
   iconMobile?: string | null;
+  /** Group không mở màn Asset mặc định — app có view viết riêng cho nó. */
+  isGroupWeb?: boolean | number | string | null;
 }
 
 export type GetViewActiveResponse = ApiResponse<ViewActiveItem[]>;

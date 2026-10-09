@@ -967,7 +967,7 @@ const TOPICS: GuideTopic[] = [
     iconName: "settings-outline",
     iconBg: C.amber,
     group: "Trợ giúp",
-    keywords: ["cai dat", "quyen", "ho so", "doi mat khau", "giao dien", "sang toi", "phien ban", "dang xuat", "thong bao camera", "tam dung thong bao", "thong tin qrcode", "danh thiep", "card visit", "vcard", "luu danh ba", "ma nhan vien"],
+    keywords: ["cai dat", "quyen", "ho so", "doi mat khau", "giao dien", "sang toi", "phien ban", "dang xuat", "thong bao camera", "tam dung thong bao", "thong tin qrcode", "danh thiep", "card visit", "vcard", "luu danh ba", "ma nhan vien", "anh dai dien", "doi anh", "avatar"],
     sections: [
       {
         id: "cai-dat-tai-khoan",
@@ -977,6 +977,7 @@ const TOPICS: GuideTopic[] = [
             kind: "bullets",
             items: [
               "Hồ sơ cá nhân: họ và tên, mã nhân viên, điện thoại, email, phòng ban, bộ phận, tổ đội, chức vụ cơ cấu, chức danh.",
+              "Ảnh đại diện (ở đầu màn Hồ sơ cá nhân): Chụp ảnh hoặc chọn từ Thư viện, cắt khung vuông rồi bấm Xong là lưu ngay. Cắt lại để chỉnh khung ảnh đang có, Xoá để bỏ ảnh. Ảnh này cũng hiện trên web và danh thiếp.",
               "Thông tin QrCode: danh thiếp của bạn kèm mã QR để người khác lưu vào danh bạ — xem mục bên dưới.",
               "Đổi mật khẩu: nhập mật khẩu cũ, mật khẩu mới và nhập lại mật khẩu mới.",
               "Đăng nhập FaceID (chỉ iPhone/iPad): bật để lần sau đăng nhập bằng khuôn mặt.",

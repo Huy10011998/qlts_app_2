@@ -10,6 +10,8 @@ export enum TypeProperty {
   Time, // 8
   Image, // 9
   Enum, // 10
+  /** Số 11 BE chưa dùng — gán tường minh để 12 không trôi. */
+  ImageBase64 = 12,
 }
 
 export enum SqlOperator {

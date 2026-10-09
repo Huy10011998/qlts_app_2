@@ -23,6 +23,10 @@ const nhanVienSlice = createSlice({
       state.errorMessage = null;
       state.accountMissing = false;
     },
+    /** Vá vài field sau khi lưu thành công (vd đổi ảnh đại diện) — khỏi gọi lại API. */
+    patchNhanVienInfo(state, action: PayloadAction<Partial<NhanVienInfo>>) {
+      if (state.info) state.info = { ...state.info, ...action.payload };
+    },
     setNhanVienError(state, action: PayloadAction<string>) {
       /* Giữ nguyên `info` cũ: mất mạng giữa chừng thì vẫn còn danh thiếp đã nạp
          để xem, chỉ những ai chưa nạp được lần nào mới thấy màn lỗi. */
@@ -45,6 +49,7 @@ const nhanVienSlice = createSlice({
 export const {
   setNhanVienLoading,
   setNhanVienInfo,
+  patchNhanVienInfo,
   setNhanVienError,
   setNhanVienAccountMissing,
   clearNhanVien,

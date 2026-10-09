@@ -10,12 +10,15 @@ import {
   Linking,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import QRCode from "react-native-qrcode-svg";
 import type { GroupListProps } from "../../types";
 import { TypeProperty } from "../../utils/Enum";
 import IsLoading from "../ui/IconLoading";
 import { fetchImage } from "../../utils/Image";
 import { parseLink } from "../../utils/Link";
 import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
+import { getComputedQrUrl } from "../../utils/imageBase64";
+import Base64ImageThumb from "../ui/Base64ImageThumb";
 
 export default function AssetGroupList({
   groupedFields,
@@ -108,6 +111,16 @@ export default function AssetGroupList({
 
                 const isEmpty = currentValue === "---";
                 const isLast = fieldIndex === fields.length - 1;
+                const isBase64 =
+                  field.typeProperty === TypeProperty.ImageBase64;
+                /* Field tính sẵn của web (QRCode): API không trả giá trị, app tự
+                   sinh từ `qrUrl`; không có `qrUrl` thì ẩn hẳn dòng. */
+                const computedQrUrl = isBase64
+                  ? getComputedQrUrl(item, field, currentValue)
+                  : "";
+                if (isBase64 && isEmpty && !computedQrUrl && field.isReadOnly) {
+                  return null;
+                }
 
                 return (
                   <View
@@ -118,7 +131,37 @@ export default function AssetGroupList({
                         một dòng thì chữ bị ngắt lung tung, mỗi dòng lệch một kiểu. */}
                     <Text style={styles.label}>{field.moTa}</Text>
 
-                    {field.typeProperty === TypeProperty.Image ? (
+                    {isBase64 ? (
+                      computedQrUrl ? (
+                        <View style={styles.qrWrap}>
+                          <QRCode value={computedQrUrl} size={96} ecl="M" />
+                        </View>
+                      ) : (
+                        /* Ảnh nằm sẵn trong dòng — không gọi API. Lịch sử có đổi
+                           ảnh thì hiện cả ảnh cũ -> ảnh mới, đừng in chuỗi. */
+                        <View style={styles.base64Row}>
+                          {changed ? (
+                            <>
+                              <Base64ImageThumb
+                                value={prevValue === "---" ? null : String(prevValue)}
+                                size={64}
+                                accessibilityLabel={`Xem ${field.moTa} cũ`}
+                              />
+                              <Ionicons
+                                name="arrow-forward"
+                                size={16}
+                                color={c.textMuted}
+                              />
+                            </>
+                          ) : null}
+                          <Base64ImageThumb
+                            value={isEmpty ? null : String(currentValue)}
+                            size={64}
+                            accessibilityLabel={`Xem ${field.moTa}`}
+                          />
+                        </View>
+                      )
+                    ) : field.typeProperty === TypeProperty.Image ? (
                       currentValue !== "---" ? (
                         loadingImages[field.name] ? (
                           <View style={styles.imageLoading}>
@@ -308,6 +351,21 @@ const makeStyles = (c: AppColors) =>
 
     fieldRow: {
       paddingVertical: 9,
+    },
+
+    base64Row: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      marginTop: 2,
+    },
+
+    qrWrap: {
+      alignSelf: "flex-start",
+      padding: 6,
+      marginTop: 2,
+      borderRadius: 6,
+      backgroundColor: "#FFFFFF",
     },
 
     fieldDivider: {

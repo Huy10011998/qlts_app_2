@@ -50,7 +50,11 @@ import {
   getRequiredFieldErrors,
   getRequiredFieldsMessage,
 } from "./shared/assetFormValidation";
-import { getReadOnlyFieldNames } from "./shared/assetFormPayload";
+import {
+  getUpdateExcludeFieldNames,
+  normalizeBase64ImageFields,
+} from "./shared/assetFormPayload";
+import { toBase64FieldPayload } from "../../utils/imageBase64";
 import { createAssetFormBaseStyles } from "./shared/assetFormStyles";
 import { ASSET_FORM_BRAND_RED } from "./shared/assetFormTheme";
 
@@ -79,6 +83,11 @@ const normalizeUpdateFieldValue = (field: Field, value: any) => {
       return value === "" || value === null || value === undefined
         ? null
         : value;
+
+    /* Ảnh lưu thẳng trong cột: giữ nguyên data URL đã nhận (cách 5c của BE —
+       gửi trọn dòng), chỉ ép giá trị rỗng / lỗi về null. */
+    case TypeProperty.ImageBase64:
+      return toBase64FieldPayload(value);
 
     case TypeProperty.Image:
       if (value === "---") return "";
@@ -340,8 +349,12 @@ export default function AssetEditItem() {
         return;
       }
 
-      const entity: Record<string, any> = { ...currentEntity };
-      const readOnlyFieldNames = getReadOnlyFieldNames(fieldActive);
+      /* Bỏ field ảnh tính sẵn của web (QRCode) — không phải cột của bảng. */
+      const entity: Record<string, any> = normalizeBase64ImageFields(
+        fieldActive,
+        currentEntity,
+      );
+      const readOnlyFieldNames = getUpdateExcludeFieldNames(fieldActive);
 
       const autoCodeField = item?.propertyClass?.propertyTuDongTang;
       if (autoCodeField && isEffectivelyEmptyCodeValue(entity[autoCodeField])) {

@@ -47,7 +47,10 @@ import {
   getRequiredFieldErrors,
   getRequiredFieldsMessage,
 } from "./shared/assetFormValidation";
-import { stripReadOnlyFields } from "./shared/assetFormPayload";
+import {
+  normalizeBase64ImageFields,
+  stripReadOnlyFields,
+} from "./shared/assetFormPayload";
 import { createAssetFormBaseStyles } from "./shared/assetFormStyles";
 import { ASSET_FORM_BRAND_RED } from "./shared/assetFormTheme";
 import { REVIEW_NAME_CLASSES_DANHGIA } from "../../constants/reviewNameClasses";
@@ -263,9 +266,13 @@ export default function AssetAddItemDetails() {
       /* Mục 4b: field isReadOnly bị loại khỏi form nên cũng không gửi lên.
          Chừa cột mã tự tăng — giá trị của nó do `tu-dong-tang` sinh và ví dụ
          insert trong tài liệu vẫn mang cột Ma. */
-      const entity = stripReadOnlyFields(fieldActive, payloadData, [
-        autoCodeField,
-      ]);
+      const entity = stripReadOnlyFields(
+        fieldActive,
+        normalizeBase64ImageFields(fieldActive, payloadData),
+        [
+          autoCodeField,
+        ],
+      );
 
       await checkValidation(nameClass, {
         data: entity,

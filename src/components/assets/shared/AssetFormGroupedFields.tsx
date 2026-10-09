@@ -67,6 +67,12 @@ export default function AssetFormGroupedFields({
       {Object.entries(groupedFields).map(([groupName, fields]) => {
         const collapsed = collapsedGroups[groupName];
 
+        /* Field readonly bị loại khỏi form, nên nhóm chỉ toàn field readonly
+           (vd nhóm "QR" của NhanVien) sẽ thành một khung trống — ẩn luôn. */
+        if (!(fields as Field[]).some((field) => !field.isReadOnly)) {
+          return null;
+        }
+
         return (
           <View
             key={groupName}

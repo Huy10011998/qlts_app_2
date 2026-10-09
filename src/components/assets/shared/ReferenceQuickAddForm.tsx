@@ -40,7 +40,10 @@ import { useGroupedFields } from "../../../hooks/AssetAddItem/useGroupedFields";
 import { useModalItems } from "../../../hooks/AssetAddItem/useModalItems";
 import { useOpenReferenceModal } from "../../../hooks/AssetAddItem/useOpenReferenceModal";
 import { useFieldDefaults } from "../../../hooks/AssetAddItem/useFieldDefaults";
-import { stripReadOnlyFields } from "./assetFormPayload";
+import {
+  normalizeBase64ImageFields,
+  stripReadOnlyFields,
+} from "./assetFormPayload";
 import { useImageLoader } from "../../../hooks/useImageLoader";
 import { useSafeAlert } from "../../../hooks/useSafeAlert";
 
@@ -416,10 +419,14 @@ export default function ReferenceQuickAddForm({
 
     /* Mục 4b: không gửi field isReadOnly. Chừa cột mã tự tăng và các cột prefill
        chuỗi cấp cha — bỏ chúng là bản ghi danh mục mới không thuộc cha nào. */
-    payload = stripReadOnlyFields(fieldActive, payload, [
-      autoCodeField,
-      ...lockedFields,
-    ]);
+    payload = stripReadOnlyFields(
+      fieldActive,
+      normalizeBase64ImageFields(fieldActive, payload),
+      [
+        autoCodeField,
+        ...lockedFields,
+      ],
+    );
 
     if (!Object.keys(payload).length) {
       showAlertIfActive("Thông báo", "Vui lòng nhập ít nhất một trường!");

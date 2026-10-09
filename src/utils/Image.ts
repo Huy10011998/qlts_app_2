@@ -126,21 +126,34 @@ export const hasLocalPreview = (fieldName: string, value: string) =>
   localPreviews.get(fieldName) === value;
 
 /**
+ * Một câu báo chung khi không mở được camera (máy ảo, máy không có camera, lỗi
+ * hệ thống) — dùng cho mọi chỗ chụp ảnh trong app.
+ *
+ * Không hiện `errorMessage` của thư viện: nó là tiếng Anh, mỗi thư viện một kiểu.
+ * Màn nào cần chặn alert khi đã rời màn thì truyền `showAlert` của nó vào.
+ */
+export const alertCameraUnavailable = (
+  showAlert: (title: string, message: string) => void = (title, message) =>
+    Alert.alert(title, message),
+) =>
+  showAlert(
+    "Không mở được camera",
+    "Thiết bị không mở được camera. Vui lòng thử lại trên máy thật.",
+  );
+
+/**
  * Xin quyền camera trước khi mở, giống tab Quét QR và màn xác nhận vị trí tủ.
  *
  * `launchCamera` bị từ chối quyền thì chỉ trả `errorCode` chứ không tự hỏi lại,
  * người dùng bấm mãi không ra gì — nên phải hỏi trước, và khi đã bị chặn hẳn thì
  * chỉ đường vào Cài đặt.
  */
-const ensureCameraPermission = async () => {
+export const ensureCameraPermission = async () => {
   const currentStatus = await checkCameraPermission();
   if (currentStatus === "granted") return true;
 
   if (currentStatus === "unavailable") {
-    Alert.alert(
-      "Thiết bị không có camera",
-      "Không mở được camera trên thiết bị này. Bạn có thể chọn ảnh từ thư viện.",
-    );
+    alertCameraUnavailable();
     return false;
   }
 
@@ -198,11 +211,15 @@ export const pickImage = async (
 
     if (res.errorCode) {
       // Quyền camera đã xin ở trên, tới đây gần như chỉ còn máy ảo / lỗi hệ thống.
-      Alert.alert(
-        source === "camera" ? "Không mở được camera" : "Không mở được thư viện",
-        res.errorMessage ||
-          "Thiết bị không mở được. Vui lòng thử lại trên máy thật.",
-      );
+      if (source === "camera") {
+        alertCameraUnavailable();
+      } else {
+        Alert.alert(
+          "Không mở được thư viện",
+          res.errorMessage ||
+            "Thiết bị không mở được. Vui lòng thử lại trên máy thật.",
+        );
+      }
       setLoadingImages((p) => ({ ...p, [fieldName]: false }));
       return null;
     }
