@@ -8,13 +8,14 @@ import type {
 import { HOME_MEETING_INFO } from "./homeData";
 import { useHomeMenuContext } from "./HomeMenuProvider";
 import {
-  STATIC_VIEW_ORDER_NUMBERS,
   VEHICLE_CURRENT_LOCATION_FEATURE_ID,
   VEHICLE_JOURNEY_FEATURE_ID,
   VEHICLE_TRACKING_FEATURE_ID,
   getViewIconName,
   getViewMenuItemId,
   getViewOrderNumber,
+  isGroupWebView,
+  normalizeViewCode,
 } from "./homeMenuHelpers";
 
 export { DEFAULT_HOME_FEATURE_IDS, normalizeHomeFeatureId } from "./homeMenuHelpers";
@@ -27,6 +28,24 @@ export interface HomeMenuItem extends MenuItemComponent {
   id: string;
   viewPermission?: string;
 }
+
+/**
+ * View viết riêng trên app (không dùng màn Asset mặc định).
+ *
+ * Vị trí lấy theo `stt` của group isGroupWeb có Mã (`ma`) trùng
+ * `viewPermission` — với group mặc định hai giá trị này vốn là một. Không có
+ * group nào khớp thì nằm ở `fallbackOrder` (đúng chỗ cũ trước khi BE có
+ * isGroupWeb).
+ * `id` cố định thì dùng luôn — Điện mặt trời đã được ghim bằng id chữ; không
+ * đặt thì theo stt của group như các ô mặc định, để ghim cũ của Camera/ĐHCĐ
+ * ("3"/"4") vẫn còn.
+ */
+type CustomMenuView = Omit<HomeMenuItem, "id"> & {
+  fallbackOrder: number;
+  id?: string;
+};
+
+type OrderedMenuItem = { item: HomeMenuItem; order: number };
 
 type ParentNavigation = {
   navigate: (screen: string, params?: any) => void;
@@ -97,29 +116,35 @@ export function useHomeMenuItems(
     [tabsNavigation],
   );
 
-  const createStaticMenuItem = useCallback(
-    (view: ViewActiveItem): HomeMenuItem => {
-      if (getViewOrderNumber(view) === 3) {
-        return {
-          id: getViewMenuItemId(view),
-          label: "Camera",
-          iconName: "camera-outline",
-          viewPermission: "Camera",
-          description: "Giám sát hệ thống",
-          onPress: openCameraScreen,
-        };
-      }
-
-      return {
-        id: getViewMenuItemId(view),
+  const customMenuViews = useMemo<CustomMenuView[]>(
+    () => [
+      {
+        id: "solar-dashboard",
+        label: "Điện mặt trời",
+        iconName: "sunny-outline",
+        viewPermission: "Solar_Dashboard",
+        description: "Giám sát sản lượng và tiêu thụ",
+        fallbackOrder: 0,
+        onPress: openSolarPlantScreen,
+      },
+      {
+        label: "Camera",
+        iconName: "camera-outline",
+        viewPermission: "Camera",
+        description: "Giám sát hệ thống",
+        fallbackOrder: 3,
+        onPress: openCameraScreen,
+      },
+      {
         label: "Đại hội cổ đông",
         iconName: "people-outline",
         viewPermission: "DHCD",
         description: "Quản lý cổ đông",
+        fallbackOrder: 4,
         onPress: openMeetingScreen,
-      };
-    },
-    [openCameraScreen, openMeetingScreen],
+      },
+    ],
+    [openCameraScreen, openMeetingScreen, openSolarPlantScreen],
   );
 
   const createApiMenuItem = useCallback(
@@ -198,21 +223,43 @@ export function useHomeMenuItems(
     [apiViews, navigation],
   );
 
+  // Group isGroupWeb không có màn mặc định nên không tự thành ô; chỉ cho view
+  // viết riêng mượn stt. Ô xếp chung một trục stt, trùng stt thì view viết
+  // riêng đứng trước (sort ổn định, view riêng được đưa vào mảng trước).
+  const featureMenuItems = useMemo<HomeMenuItem[]>(() => {
+    const groupWebViews = apiViews.filter(isGroupWebView);
+
+    const customItems = customMenuViews.map<OrderedMenuItem>(
+      ({ fallbackOrder, id, ...view }) => {
+        const code = normalizeViewCode(view.viewPermission);
+        const group = code
+          ? groupWebViews.find((item) => normalizeViewCode(item.ma) === code)
+          : undefined;
+
+        return {
+          item: {
+            ...view,
+            id: id ?? (group ? getViewMenuItemId(group) : String(fallbackOrder)),
+          },
+          order: group ? getViewOrderNumber(group) : fallbackOrder,
+        };
+      },
+    );
+    const defaultItems = apiViews
+      .filter((view) => !isGroupWebView(view))
+      .map<OrderedMenuItem>((view) => ({
+        item: createApiMenuItem(view),
+        order: getViewOrderNumber(view),
+      }));
+
+    return [...customItems, ...defaultItems]
+      .sort((a, b) => a.order - b.order)
+      .map(({ item }) => item);
+  }, [apiViews, createApiMenuItem, customMenuViews]);
+
   const menuItems = useMemo<HomeMenuItem[]>(
     () => [
-      {
-        id: "solar-dashboard",
-        label: "Điện mặt trời",
-        iconName: "sunny-outline",
-        viewPermission: "Solar_Dashboard",
-        description: "Giám sát sản lượng và tiêu thụ",
-        onPress: openSolarPlantScreen,
-      },
-      ...apiViews.map((view) =>
-        STATIC_VIEW_ORDER_NUMBERS.has(getViewOrderNumber(view))
-          ? createStaticMenuItem(view)
-          : createApiMenuItem(view),
-      ),
+      ...featureMenuItems,
       ...(vehicleJourneyMenuItem
         ? [createVehicleJourneyMenuItem(vehicleJourneyMenuItem)]
         : []),
@@ -228,13 +275,10 @@ export function useHomeMenuItems(
         : []),
     ],
     [
-      apiViews,
-      createApiMenuItem,
-      createStaticMenuItem,
       createVehicleJourneyMenuItem,
       createVehicleTrackingMenuItem,
       createVehicleCurrentLocationMenuItem,
-      openSolarPlantScreen,
+      featureMenuItems,
       vehicleJourneyMenuItem,
       vehicleTrackingMenuItem,
       vehicleCurrentLocationMenuItem,

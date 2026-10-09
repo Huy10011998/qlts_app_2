@@ -75,10 +75,13 @@ import {
 } from "./shared/homeShortcutPages";
 
 /**
- * Nhánh trong cây menu Tài sản mà hai ô đếm thiết bị ở khối SỐ LIỆU TOÀN CÔNG TY
- * mở ra. Id do quản trị khai bên web, dùng chung cho mọi tài khoản.
+ * Nhóm chức năng + nhánh trong cây menu mà hai ô đếm thiết bị ở khối SỐ LIỆU
+ * TOÀN CÔNG TY mở ra. Mã nhóm và id do quản trị khai bên web, dùng chung cho
+ * mọi tài khoản. CNTT đã được BE chuyển từ nhóm Tài sản sang nhóm IT.
  */
+const ASSET_VIEW_MACHINE = "TaiSan";
 const ASSET_MENU_ID_MACHINE = 177;
+const ASSET_VIEW_IT = "IT";
 const ASSET_MENU_ID_IT = 67;
 
 const HomeScreen: React.FC = () => {
@@ -315,12 +318,13 @@ const HomeScreen: React.FC = () => {
     [canView, loaded],
   );
   const canViewAttendance = canViewBlock(dashboard?.attendance?.viewPermission);
-  // Hai ô thiết bị mở màn Tài sản nhưng chỉ hiện đúng nhánh của nó: máy móc là
-  // mục 177, CNTT là mục 67 (id do quản trị khai, không đổi theo tài khoản).
-  // Không tra được mục Tài sản (mất quyền) thì ô không bấm được như trước.
+  // Hai ô thiết bị mở màn Asset của nhóm tương ứng nhưng chỉ hiện đúng nhánh
+  // của nó: máy móc là mục 177 nhóm Tài sản, CNTT là mục 67 nhóm IT (id do quản
+  // trị khai, không đổi theo tài khoản). Không tra được nhóm (mất quyền) thì ô
+  // không bấm được như trước.
   const openAssetBranch = useCallback(
-    (rootMenuId: number) => {
-      const assetItem = menuItemByPermission.get("TaiSan");
+    (viewPermission: string, rootMenuId: number) => {
+      const assetItem = menuItemByPermission.get(viewPermission);
       if (!assetItem) return undefined;
 
       return () =>
@@ -349,7 +353,7 @@ const HomeScreen: React.FC = () => {
       iconColor: colors.redLight,
       label: "Thiết bị máy móc đang quản lý",
       value: formatHomeNumber(devices.machines),
-      onPress: openAssetBranch(ASSET_MENU_ID_MACHINE),
+      onPress: openAssetBranch(ASSET_VIEW_MACHINE, ASSET_MENU_ID_MACHINE),
     });
 
     tiles.push({
@@ -362,7 +366,7 @@ const HomeScreen: React.FC = () => {
       // Camera đếm riêng ở ô dưới, tổng CNTT của API không gồm camera — ghi rõ
       // để không ai cộng hai ô lại rồi thắc mắc lệch số.
       sub: "Chưa gồm camera",
-      onPress: openAssetBranch(ASSET_MENU_ID_IT),
+      onPress: openAssetBranch(ASSET_VIEW_IT, ASSET_MENU_ID_IT),
     });
 
     tiles.push({

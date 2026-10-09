@@ -1,5 +1,7 @@
 import type { Field } from "../../../types/model.d";
 import type { ParentGate } from "../../../utils/cascade/parentGate";
+import { TypeProperty } from "../../../utils/Enum";
+import { toBase64FieldPayload } from "../../../utils/imageBase64";
 
 /**
  * Field `isReadOnly` đã bị loại khỏi form (`AssetFormGroupedFields`) nên giá trị
@@ -42,6 +44,50 @@ export const stripReadOnlyFields = (
   getReadOnlyFieldNames(fields).forEach((name) => {
     if (keep.has(name)) return;
     delete next[name];
+  });
+
+  return next;
+};
+
+/**
+ * Field ảnh base64 (`typeProperty = 12`) mà `isReadOnly` là cột tính sẵn của
+ * web (vd `NhanVien.QRCode`) — KHÔNG phải cột của bảng. Tài liệu BE (ảnh
+ * base64, mục 7): không gửi khi insert / update, kể cả trong
+ * `lstExcludeProperties`.
+ */
+const isComputedImageField = (field: Field) =>
+  field?.typeProperty === TypeProperty.ImageBase64 && !!field.isReadOnly;
+
+/** `getReadOnlyFieldNames` cho update, bỏ các field tính sẵn ở trên. */
+export const getUpdateExcludeFieldNames = (fields: Field[]): string[] =>
+  getReadOnlyFieldNames(
+    (fields ?? []).filter((field) => !isComputedImageField(field)),
+  );
+
+/**
+ * Chuẩn hoá field ảnh base64 trước khi gửi:
+ *   · giá trị là data URL đầy đủ thì gửi nguyên, còn lại (`""`, `"---"`, chuỗi
+ *     lỗi) là `null` — server không kiểm định dạng, gửi gì lưu nấy.
+ *   · bỏ hẳn field tính sẵn (xem `isComputedImageField`).
+ * Không đụng key nào payload chưa có, để update không vô tình ghi NULL.
+ */
+export const normalizeBase64ImageFields = (
+  fields: Field[],
+  payload: Record<string, any>,
+): Record<string, any> => {
+  const next = { ...payload };
+  const keys = Object.keys(next);
+
+  (fields ?? []).forEach((field) => {
+    if (field?.typeProperty !== TypeProperty.ImageBase64 || !field.name) return;
+
+    const target = field.name.toLowerCase();
+    keys
+      .filter((key) => key.toLowerCase() === target)
+      .forEach((key) => {
+        if (isComputedImageField(field)) delete next[key];
+        else next[key] = toBase64FieldPayload(next[key]);
+      });
   });
 
   return next;

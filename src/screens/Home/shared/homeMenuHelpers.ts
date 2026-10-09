@@ -11,8 +11,6 @@ export const VEHICLE_TRACKING_FEATURE_ID = "tracking-phuong-tien-mobile";
 export const VEHICLE_CURRENT_LOCATION_FEATURE_ID =
   "vi-tri-hien-tai-phuong-tien-mobile";
 
-export const STATIC_VIEW_ORDER_NUMBERS = new Set([3, 4]);
-
 const LEGACY_PINNED_FEATURE_ID_MAP: Record<string, string> = {
   "1": "2",
   "2": "5",
@@ -104,6 +102,15 @@ export const getViewMenuItemId = (item: ViewActiveItem) =>
 
 const isEnabledFlag = (value: Item["isViewWeb"]) =>
   value === true || value === 1 || value === "1" || value === "true";
+
+// Group có isGroupWeb thì app không mở màn Asset mặc định cho nó; nó chỉ còn
+// tác dụng giữ chỗ (stt) cho view viết riêng có cùng Mã.
+export const isGroupWebView = (item: ViewActiveItem) =>
+  isEnabledFlag(item.isGroupWeb);
+
+// Mã do người nhập trên web nên không phân biệt hoa thường/khoảng trắng thừa.
+export const normalizeViewCode = (code?: string | null) =>
+  code?.trim().toLowerCase() ?? "";
 
 const matchesGroupTwoMobileView = (item: Item, mobileView: string) =>
   Number(item.iD_GroupMenu) === 2 &&

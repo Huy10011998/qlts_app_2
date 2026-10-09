@@ -8,6 +8,7 @@ import {
   Linking,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import QRCode from "react-native-qrcode-svg";
 import type { CardItemProps } from "../../types";
 import { TypeProperty } from "../../utils/Enum";
 import { convertToResizePath, fetchImage } from "../../utils/Image";
@@ -15,6 +16,8 @@ import { getFieldValue } from "../../utils/fields/GetFieldValue";
 import { parseLink } from "../../utils/Link";
 import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
 import { normalizeIconImageUri } from "../../utils/iconImage";
+import { getComputedQrUrl } from "../../utils/imageBase64";
+import Base64ImageThumb from "../ui/Base64ImageThumb";
 
 function ListCardAsset({
   item,
@@ -78,6 +81,31 @@ function ListCardAsset({
                 ) : (
                   <Text style={styles.text}>---</Text>
                 )}
+              </View>
+            );
+          }
+
+          /* Ảnh nằm sẵn trong dòng, không gọi API. Field tính sẵn của web
+             (QRCode) không có giá trị thì tự sinh từ `qrUrl`, không có nữa
+             thì ẩn dòng. */
+          if (field.typeProperty === TypeProperty.ImageBase64) {
+            const qrUrl = getComputedQrUrl(item, field, rawValue);
+            if (rawValue === "---" && !qrUrl && field.isReadOnly) return null;
+
+            return (
+              <View key={field.name} style={styles.block}>
+                <Text style={styles.label}>{field.moTa}:</Text>
+                <View style={styles.base64Wrap}>
+                  {qrUrl ? (
+                    <QRCode value={qrUrl} size={56} ecl="M" />
+                  ) : (
+                    <Base64ImageThumb
+                      value={rawValue === "---" ? null : String(rawValue)}
+                      size={56}
+                      accessibilityLabel={`Xem ${field.moTa}`}
+                    />
+                  )}
+                </View>
               </View>
             );
           }
@@ -155,6 +183,8 @@ const makeStyles = (c: AppColors) =>
       marginTop: 4,
       resizeMode: "cover",
     },
+
+    base64Wrap: { marginTop: 4, alignSelf: "flex-start" },
 
     text: {
       fontSize: 14,

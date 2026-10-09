@@ -14,6 +14,7 @@ import { TypeProperty } from "../../utils/Enum";
 import type { RenderInputByTypeProps } from "../../types/components.d";
 import { formatVND, unFormatVND } from "../../utils/helpers/number";
 import IsLoading from "../ui/IconLoading";
+import Base64ImageField from "./Base64ImageField";
 import { parseLinkHtml } from "../../utils/Link";
 import { DatePicker, TimePicker } from "../dataPicker/DataPicker";
 import { makePickerFieldTriggerStyles } from "../dataPicker/shared/pickerFieldTriggerStyles";
@@ -711,6 +712,17 @@ export const RenderInputByType = ({
         </View>
       );
     }
+
+    /* Ảnh lưu thẳng trong cột: giá trị form chính là data URL, không upload. */
+    case TypeProperty.ImageBase64:
+      return (
+        <Base64ImageField
+          field={f}
+          value={value}
+          onChange={handleChange}
+          hasValidationError={hasValidationError}
+        />
+      );
 
     case TypeProperty.Link: {
       return (

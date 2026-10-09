@@ -56,6 +56,7 @@ import { useWatermarkAccountName } from "./shared/useWatermarkAccountName";
 import { EMPTY_VALUE, formatNoiDiaDateTime } from "./shared/noiDiaFormat";
 import NoiDiaFormScroll from "./shared/NoiDiaFormScroll";
 import NoiDiaNoteCard from "./shared/NoiDiaNoteCard";
+import { alertCameraUnavailable } from "../../utils/Image";
 
 /**
  * Ảnh gửi lên chỉ để web xem lại, không cần độ phân giải gốc. Ảnh 4-8MB rất dễ
@@ -219,10 +220,7 @@ export default function XacNhanViTriTuLanhScreen() {
     if (currentStatus === "granted") return true;
 
     if (currentStatus === "unavailable") {
-      showAlertIfActive(
-        "Thiết bị không có camera",
-        "Chức năng này cần camera để chụp ảnh xác nhận tại chỗ.",
-      );
+      alertCameraUnavailable(showAlertIfActive);
       return false;
     }
 
@@ -263,11 +261,7 @@ export default function XacNhanViTriTuLanhScreen() {
       if (result.errorCode) {
         // Quyền đã xin ở trên, tới đây gần như chỉ còn máy ảo / máy không có
         // camera, hoặc lỗi hệ thống.
-        showAlertIfActive(
-          "Không mở được camera",
-          result.errorMessage ||
-            "Thiết bị không mở được camera. Vui lòng thử lại trên máy thật.",
-        );
+        alertCameraUnavailable(showAlertIfActive);
         return;
       }
 

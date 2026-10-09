@@ -50,6 +50,17 @@ export default function ProfileScreenSkeleton() {
       showsVerticalScrollIndicator={false}
       accessibilityLabel="Đang tải hồ sơ"
     >
+      {/* Khối ảnh đại diện — kích thước khớp `ProfileAvatarCard`. */}
+      <View style={styles.avatarWrap}>
+        <View style={styles.avatar} />
+        <View style={styles.avatarCaption} />
+        <View style={styles.avatarActions}>
+          {[0, 1, 2, 3].map((i) => (
+            <View key={i} style={styles.avatarAction} />
+          ))}
+        </View>
+      </View>
+
       {SECTIONS.map((section) => (
         <View key={section.title} style={styles.group}>
           <View style={styles.titleRow}>
@@ -92,6 +103,34 @@ const makeStyles = (c: AppColors) =>
   StyleSheet.create({
     root: { flex: 1, backgroundColor: c.bg },
     content: { paddingTop: 16, paddingBottom: 32 },
+    avatarWrap: { alignItems: "center", marginHorizontal: 16, marginBottom: 20 },
+    avatar: {
+      width: 96,
+      height: 96,
+      borderRadius: 48,
+      backgroundColor: c.skeleton,
+    },
+    /* Dòng "Ảnh đã lưu (xx KB)": cỡ chữ 12 + marginTop 8. */
+    avatarCaption: {
+      width: 110,
+      height: 12,
+      marginTop: 10,
+      marginBottom: 2,
+      borderRadius: 6,
+      backgroundColor: c.skeleton,
+    },
+    avatarActions: {
+      flexDirection: "row",
+      gap: 8,
+      marginTop: 12,
+      alignSelf: "stretch",
+    },
+    avatarAction: {
+      flex: 1,
+      height: 40,
+      borderRadius: 10,
+      backgroundColor: c.skeleton,
+    },
     group: { marginHorizontal: 16, marginBottom: 16 },
     titleRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
     pill: {

@@ -1,6 +1,7 @@
 import type { Field } from "../../types/model.d";
 import { getMatchedKey } from "../Helper";
 import { TypeProperty } from "../Enum";
+import { isDataUrlImage } from "../imageBase64";
 
 // Lấy giá trị từ Field
 export const getFieldValue = (
@@ -62,6 +63,11 @@ export const getFieldValue = (
 
       return uri;
     }
+
+    /* Trả nguyên data URL để nơi gọi tự vẽ ảnh — đừng bao giờ in chuỗi này ra
+       Text (vài chục KB). Không bắt đầu bằng `data:` là dữ liệu lỗi. */
+    case TypeProperty.ImageBase64:
+      return isDataUrlImage(rawValue) ? rawValue : "---";
 
     case TypeProperty.Link: {
       const link = String(rawValue);

@@ -57,7 +57,10 @@ import {
   getRequiredFieldErrors,
   getRequiredFieldsMessage,
 } from "./shared/assetFormValidation";
-import { stripReadOnlyFields } from "./shared/assetFormPayload";
+import {
+  normalizeBase64ImageFields,
+  stripReadOnlyFields,
+} from "./shared/assetFormPayload";
 import { createAssetFormBaseStyles } from "./shared/assetFormStyles";
 import { ASSET_FORM_BRAND_RED } from "./shared/assetFormTheme";
 import { REVIEW_NAME_CLASSES_DANHGIA } from "../../constants/reviewNameClasses";
@@ -322,10 +325,14 @@ export default function AssetAddRelatedItem() {
          điền — mục 4 yêu cầu bản ghi con mang đủ bộ cặp (ví dụ insert có
          ID_Complex/ID_Building/ID_Unit/ID_Room); loại đi là mất khoá ngoại tới
          cha, dòng con không thuộc bản ghi cha nào. */
-      const entity = stripReadOnlyFields(fieldActive, payloadData, [
-        autoCodeField,
-        ...parentFieldNames,
-      ]);
+      const entity = stripReadOnlyFields(
+        fieldActive,
+        normalizeBase64ImageFields(fieldActive, payloadData),
+        [
+          autoCodeField,
+          ...parentFieldNames,
+        ],
+      );
 
       const payload = {
         entities: [entity],

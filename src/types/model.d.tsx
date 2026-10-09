@@ -185,7 +185,10 @@ export interface NhanVienInfo {
   hinhAnh?: string | null;
   /** Link danh thiếp công khai, xem được không cần đăng nhập. */
   qrUrl?: string | null;
-  /** Ảnh PNG 360x360 của `qrUrl`, cũng là data URL đầy đủ. */
+  /**
+   * KHÔNG dùng: tài liệu BE (ảnh base64, mục 7) — API không trả field này, app
+   * tự sinh QR từ `qrUrl`. Cũng không gửi khi insert / update.
+   */
   qrCode?: string | null;
 }
 

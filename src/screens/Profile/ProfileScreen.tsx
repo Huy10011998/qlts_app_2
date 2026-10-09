@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import ProfileScreenSkeleton from "./ProfileScreenSkeleton";
+import ProfileAvatarCard from "./ProfileAvatarCard";
 import EmptyState from "../../components/ui/EmptyState";
 import { useNhanVienInfo } from "../../hooks/useNhanVienInfo";
 import {
@@ -165,6 +166,8 @@ const ProfileScreen: React.FC = () => {
       contentContainerStyle={s.content}
       showsVerticalScrollIndicator={false}
     >
+      <ProfileAvatarCard user={user} />
+
       <Section title="THÔNG TIN CƠ BẢN">
         <InfoRow
           iconName="person-outline"
