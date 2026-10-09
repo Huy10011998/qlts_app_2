@@ -200,6 +200,9 @@ export const pickImage = async (
             mediaType: "photo",
             cameraType: "back",
             saveToPhotos: false,
+            // iOS mặc định mở dạng thẻ (`pageSheet`), hở mép trên — mở tràn màn
+            // cho giống màn chụp của field ảnh base64. Android vốn đã tràn màn.
+            presentationStyle: "fullScreen",
             quality: IMAGE_QUALITY,
             maxWidth: CAMERA_MAX_DIMENSION,
             maxHeight: CAMERA_MAX_DIMENSION,
