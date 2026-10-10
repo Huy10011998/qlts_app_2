@@ -262,6 +262,7 @@ export default function AssetAddRelatedItem() {
     referenceData,
     enumData,
     formData,
+    refKeyword,
   );
   const { isMounted, showAlertIfActive } = useSafeAlert();
 

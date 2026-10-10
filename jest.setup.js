@@ -142,6 +142,20 @@ jest.mock('react-native-share', () => ({
   default: { open: jest.fn(async () => ({})) },
 }));
 
+// Field ảnh base64 (Base64ImageField) cắt ảnh bằng crop-picker — module native.
+jest.mock('react-native-image-crop-picker', () => ({
+  __esModule: true,
+  default: {
+    openPicker: jest.fn(),
+    openCamera: jest.fn(),
+    clean: jest.fn(async () => undefined),
+  },
+}));
+
+// Chọn tài liệu đính kèm của view Workflow — dùng mock chính chủ của thư viện.
+// Nạp theo đường dẫn file: `exports` của gói không mở đường dẫn con `jest/`.
+require('./node_modules/@react-native-documents/picker/jest/build/jest/setup.js');
+
 jest.mock('react-native-image-picker', () => ({
   launchCamera: jest.fn(),
   launchImageLibrary: jest.fn(),

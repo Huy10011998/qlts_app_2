@@ -16,7 +16,10 @@ export const useModalItems = (
   referenceData: Record<string, { items: ModalItem[] }>,
   enumData: Record<string, ModalItem[]>,
   formData?: Record<string, any>,
+  keyword = "",
 ): ModalItem[] => {
+  const isKeywordSearch = keyword.trim() !== "";
+
   return useMemo(() => {
     if (!activeEnumField) return [];
 
@@ -39,24 +42,26 @@ export const useModalItems = (
         ? parseCsv(String(selectedText))
         : [String(selectedText ?? "").trim()];
 
-    const selectedItem = hasSelectedValue
-      ? selectedValues
-          .filter(
-            (value, index) =>
-              value !== "" &&
-              hasDisplayText(selectedTexts[index]) &&
-              !base.some((item) => String(item.value) === String(value)),
-          )
-          .map((value, index) => ({
-            value,
-            text: selectedTexts[index],
-          }))
-      : [];
+    /* Giá trị đang lưu mà trang hiện tại không có thì chèn vào để vẫn thấy nó.
+       Đang tìm theo từ khoá thì thôi: chèn vào là hiện cả dòng không khớp từ
+       khoá, kể cả dòng người dùng vừa bỏ chọn trong picker. */
+    const selectedItem =
+      hasSelectedValue && !isKeywordSearch
+        ? selectedValues
+            // Ghép text theo vị trí gốc trước khi lọc, lọc rồi thì index lệch.
+            .map((value, index) => ({ value, text: selectedTexts[index] }))
+            .filter(
+              (item) =>
+                item.value !== "" &&
+                hasDisplayText(item.text) &&
+                !base.some((baseItem) => String(baseItem.value) === item.value),
+            )
+        : [];
 
     return [
       { value: "", text: activeEnumField.moTa },
       ...selectedItem,
       ...base,
     ];
-  }, [activeEnumField, referenceData, enumData, formData]);
+  }, [activeEnumField, referenceData, enumData, formData, isKeywordSearch]);
 };

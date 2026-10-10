@@ -6,6 +6,7 @@ import type {
   ViewActiveItem,
 } from "../../../types";
 import { HOME_MEETING_INFO } from "./homeData";
+import { WORKFLOW_VIEW_CODE } from "../../Workflow/workflowMenu";
 import { useHomeMenuContext } from "./HomeMenuProvider";
 import {
   VEHICLE_CURRENT_LOCATION_FEATURE_ID,
@@ -111,6 +112,11 @@ export function useHomeMenuItems(
     [navigation],
   );
 
+  const openWorkflowScreen = useCallback(
+    () => navigation.navigate("Workflow"),
+    [navigation],
+  );
+
   const openSettingScreen = useCallback(
     () => tabsNavigation?.navigate("SettingTab"),
     [tabsNavigation],
@@ -143,8 +149,19 @@ export function useHomeMenuItems(
         fallbackOrder: 4,
         onPress: openMeetingScreen,
       },
+      {
+        // Id chữ cố định như Điện mặt trời: ghim không trôi theo stt của group.
+        id: "workflow",
+        label: "Workflow",
+        iconName: "git-network-outline",
+        viewPermission: WORKFLOW_VIEW_CODE,
+        description: "Phiếu đề nghị, công việc, kế hoạch",
+        // Chưa có group isGroupWeb Mã "Workflow" thì đứng cuối danh sách.
+        fallbackOrder: 999,
+        onPress: openWorkflowScreen,
+      },
     ],
-    [openCameraScreen, openMeetingScreen, openSolarPlantScreen],
+    [openCameraScreen, openMeetingScreen, openSolarPlantScreen, openWorkflowScreen],
   );
 
   const createApiMenuItem = useCallback(

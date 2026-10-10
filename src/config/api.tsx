@@ -92,6 +92,35 @@ export const API_ENDPOINTS = {
   CAMERA_NOTI_TAM_DUNG: `${BASE_URL}/Camera/noti-tam-dung`,
   CAMERA_NOTI_TRANG_THAI: `${BASE_URL}/Camera/noti-trang-thai`,
   CAMERA_NOTI_HUY_TAM_DUNG: `${BASE_URL}/Camera/noti-huy-tam-dung`,
+
+  // WORKFLOW — PHIẾU ĐỀ NGHỊ. Các API còn lại nằm dưới `/{TenBang}/flow-*`,
+  // đường dẫn dựng theo tên bảng trong `services/data/flowApi.ts`.
+  GET_FLOW_FIELDS: `${BASE_URL}/Common/get-flow-fields`,
+
+  // WORKFLOW — CÔNG VIỆC. CRUD generic (get-list, insert, update...) của bảng
+  // này bị server chặn — chỉ gọi các API cv-* dưới đây.
+  CV_GET_LIST: `${BASE_URL}/CV_CongViec/cv-get-list`,
+  CV_DEM_TAB: `${BASE_URL}/CV_CongViec/cv-dem-tab`,
+  CV_THONG_TIN: `${BASE_URL}/CV_CongViec/cv-thong-tin`,
+  CV_CHI_TIET: `${BASE_URL}/CV_CongViec/cv-chi-tiet`,
+  CV_NHAN_VIEN: `${BASE_URL}/CV_CongViec/cv-nhan-vien`,
+  CV_THEM: `${BASE_URL}/CV_CongViec/cv-them`,
+  CV_SUA: `${BASE_URL}/CV_CongViec/cv-sua`,
+  CV_CHUYEN_TRANG_THAI: `${BASE_URL}/CV_CongViec/cv-chuyen-trang-thai`,
+  CV_TAI_FILE_LICH_SU: `${BASE_URL}/CV_CongViec/cv-tai-file-lich-su`,
+  CV_GIA_HAN: `${BASE_URL}/CV_CongViec/cv-gia-han`,
+  CV_DOI_CHU_TRI: `${BASE_URL}/CV_CongViec/cv-doi-chu-tri`,
+  CV_LICH_SU: `${BASE_URL}/CV_CongViec/cv-lich-su`,
+  CV_DELETE: `${BASE_URL}/CV_CongViec/delete`,
+  // Thông báo của view Workflow (công việc + phiếu chờ duyệt), mới → cũ.
+  CV_THONG_BAO: `${BASE_URL}/CV_CongViec/cv-thong-bao`,
+
+  // WORKFLOW — KẾ HOẠCH. CRUD generic cũng bị chặn.
+  KH_GET_LIST: `${BASE_URL}/CV_KeHoach/kh-get-list`,
+  KH_CHI_TIET: `${BASE_URL}/CV_KeHoach/kh-chi-tiet`,
+  KH_THEM: `${BASE_URL}/CV_KeHoach/kh-them`,
+  KH_SUA: `${BASE_URL}/CV_KeHoach/kh-sua`,
+  KH_XOA: `${BASE_URL}/CV_KeHoach/kh-xoa`,
 };
 
 export const PUSH_NOTIFICATION_API_READY = true;

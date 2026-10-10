@@ -19,7 +19,12 @@ import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
 import { buildPdfViewerHtml } from "./pdfViewerHtml";
 
-export default function FileView({ visible, onClose, params }: ViewerProps) {
+export default function FileView({
+  visible,
+  onClose,
+  params,
+  loadFile,
+}: ViewerProps) {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
   const [fileData, setFileData] = useState<string | null>(null);
@@ -60,21 +65,26 @@ export default function FileView({ visible, onClose, params }: ViewerProps) {
       const ext = name.split(".").pop()?.toLowerCase() || "pdf";
       setFileType(ext);
 
-      const { data } = await getPreviewAttachFile(name, path, nameClass);
+      const data = loadFile
+        ? await loadFile()
+        : (await getPreviewAttachFile(name, path, nameClass)).data;
       setFileData(data);
     } catch (err) {
       error("Fetch file error:", err);
       showAlertIfActive(
         "Lỗi",
-        "Không thể tải file. Sử dụng fallback URL cho PDF.",
+        loadFile
+          ? "Không thể tải file."
+          : "Không thể tải file. Sử dụng fallback URL cho PDF.",
       );
-      if (isMounted()) {
+      // URL dự phòng chỉ có nghĩa với file tài sản (`preview-attach-file`).
+      if (isMounted() && !loadFile) {
         setUseUrlFallback(true);
       }
     } finally {
       fadeOut();
     }
-  }, [fadeIn, fadeOut, isMounted, params, showAlertIfActive]);
+  }, [fadeIn, fadeOut, isMounted, loadFile, params, showAlertIfActive]);
 
   useEffect(() => {
     if (visible && params) {

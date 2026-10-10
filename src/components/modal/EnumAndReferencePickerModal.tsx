@@ -10,7 +10,7 @@ import {
   UIManager,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import type { PropsEnum } from "../../types/components.d";
+import type { EnumItem, PropsEnum } from "../../types/components.d";
 import { useDebounce } from "../../hooks/useDebounce";
 import IsLoading from "../ui/IconLoading";
 import SearchBar from "../ui/SearchBar";
@@ -51,6 +51,25 @@ type ExtraProps = {
   onQuickAddClose?: () => void;
 };
 
+type PinnedSelection = {
+  values: string[];
+  /** Ô tìm kiếm trống thì kéo cả mục đã chọn mà trang hiện tại chưa tải về. */
+  includeUnloaded: boolean;
+};
+
+const parseSelectedValues = (value: any, isMulti?: boolean): string[] => {
+  if (value === null || value === undefined) return [];
+
+  const raw = String(value).trim();
+  if (!raw) return [];
+  if (!isMulti) return [raw];
+
+  return raw
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+
 export default function EnumAndReferencePickerModal({
   visible,
   title,
@@ -78,38 +97,50 @@ export default function EnumAndReferencePickerModal({
   const [multiSelectedValues, setMultiSelectedValues] = useState<string[]>([]);
   const debouncedSearch = useDebounce(searchText, 600);
   const lastSearchRef = useRef("");
+  /* Các mục được đẩy lên đầu danh sách. Chỉ chụp lại lúc mở và lúc tìm kiếm
+     đổi/xoá — tick trong lúc đang xem thì dòng giữ nguyên chỗ, không nhảy dưới
+     tay người dùng. */
+  const [pinned, setPinned] = useState<PinnedSelection>({
+    values: [],
+    includeUnloaded: false,
+  });
+  /* Mục đã thấy trong lượt mở này: xoá ô tìm kiếm thì trang đầu tải lại có thể
+     không còn mục vừa tick, phải lấy từ đây để vẫn hiện nó trên đầu. */
+  const knownItemsRef = useRef(new Map<string, EnumItem>());
+  const currentSelectionRef = useRef<string[]>([]);
+  currentSelectionRef.current = isMulti
+    ? multiSelectedValues
+    : parseSelectedValues(selectedValue);
   const loaded =
     loadedCount ?? items?.filter((i) => i.value !== "").length ?? 0;
   const orderedItems = useMemo(() => {
     if (!Array.isArray(items)) return [];
-    if (
-      selectedValue === null ||
-      selectedValue === undefined ||
-      String(selectedValue).trim() === ""
-    ) {
-      return items;
-    }
+    if (!pinned.values.length) return items;
 
-    const selectedValues = String(selectedValue ?? "")
-      .split(",")
-      .map((value) => value.trim())
-      .filter(Boolean);
-    const selectedItems = items.filter((item) =>
-      isMulti
-        ? selectedValues.includes(String(item.value))
-        : String(item.value) === String(selectedValue),
+    const loadedByValue = new Map(
+      items.map((item) => [String(item.value), item] as const),
+    );
+    const pinnedItems = pinned.values
+      .map(
+        (value) =>
+          loadedByValue.get(value) ??
+          (pinned.includeUnloaded
+            ? knownItemsRef.current.get(value)
+            : undefined),
+      )
+      .filter((item): item is EnumItem => Boolean(item));
+
+    if (!pinnedItems.length) return items;
+
+    const pinnedValues = new Set(pinned.values);
+    // Dòng "không chọn" (value rỗng) vẫn đứng đầu, mục đã chọn nằm ngay dưới.
+    const emptyItems = items.filter((item) => item.value === "");
+    const remainingItems = items.filter(
+      (item) => item.value !== "" && !pinnedValues.has(String(item.value)),
     );
 
-    if (!selectedItems.length) return items;
-
-    const remainingItems = items.filter((item) =>
-      isMulti
-        ? !selectedValues.includes(String(item.value))
-        : String(item.value) !== String(selectedValue),
-    );
-
-    return [...selectedItems, ...remainingItems];
-  }, [isMulti, items, selectedValue]);
+    return [...emptyItems, ...pinnedItems, ...remainingItems];
+  }, [items, pinned]);
   const hasRealItems = orderedItems.some((item) => item.value !== "");
   const isSearchEmpty =
     searchText.trim().length > 0 && total === 0 && !isSearching;
@@ -121,11 +152,19 @@ export default function EnumAndReferencePickerModal({
   const hasSearchText = searchText.trim().length > 0;
   const showSearchSpinner = Boolean(isSearching && hasSearchText);
 
+  const pinCurrentSelection = (search: string) => {
+    setPinned({
+      values: currentSelectionRef.current,
+      includeUnloaded: search === "",
+    });
+  };
+
   const handleClearSearch = () => {
     setSearchText("");
 
     if (lastSearchRef.current !== "") {
       lastSearchRef.current = "";
+      pinCurrentSelection("");
       onSearch?.("");
     }
   };
@@ -137,6 +176,7 @@ export default function EnumAndReferencePickerModal({
     if (nextSearch === lastSearchRef.current) return;
 
     lastSearchRef.current = nextSearch;
+    pinCurrentSelection(nextSearch);
     onSearch?.(nextSearch);
   }, [debouncedSearch, visible, onSearch]);
 
@@ -145,19 +185,27 @@ export default function EnumAndReferencePickerModal({
       setSearchText("");
       lastSearchRef.current = "";
       setMultiSelectedValues([]);
+      knownItemsRef.current.clear();
     }
   }, [visible]);
 
   useEffect(() => {
-    if (!visible || !isMulti) return;
+    if (!visible) return;
 
-    setMultiSelectedValues(
-      String(selectedValue ?? "")
-        .split(",")
-        .map((value) => value.trim())
-        .filter(Boolean),
-    );
+    const values = parseSelectedValues(selectedValue, isMulti);
+    setPinned({ values, includeUnloaded: true });
+    if (isMulti) setMultiSelectedValues(values);
   }, [isMulti, selectedValue, visible]);
+
+  useEffect(() => {
+    if (!visible || !Array.isArray(items)) return;
+
+    items.forEach((item) => {
+      if (item.value !== "") {
+        knownItemsRef.current.set(String(item.value), item);
+      }
+    });
+  }, [items, visible]);
 
   useEffect(() => {
     if (!visible) return;

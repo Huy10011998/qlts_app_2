@@ -16,6 +16,7 @@ module.exports = {
       '|@react-native-community' +
       '|@react-native-firebase' +
       '|@react-native-async-storage' +
+      '|@react-native-documents' +
       '|@react-native-picker' +
       '|@react-navigation' +
       '|@notifee' +
