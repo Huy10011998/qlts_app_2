@@ -202,7 +202,8 @@ export default function AssetAddItemDetails() {
     activeEnumField,
     referenceData,
     enumData,
-    formData
+    formData,
+    refKeyword
   );
   const { isMounted, showAlertIfActive } = useSafeAlert();
 

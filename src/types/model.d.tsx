@@ -181,6 +181,16 @@ export interface NhanVienInfo {
   chucVuCoCau?: string | null;
   chucDanh?: string | null;
 
+  /**
+   * ID của 5 danh mục cơ cấu ở trên (null khi chưa khai). Dùng khi GỬI dữ liệu
+   * lên, vd lập phiếu đề nghị: `ID_PhongBan_Tao` = `iD_PhongBan`.
+   */
+  iD_PhongBan?: number | null;
+  iD_BoPhan?: number | null;
+  iD_ToDoi?: number | null;
+  iD_ChucVu?: number | null;
+  iD_ChucDanh?: number | null;
+
   /** Đã là data URL đầy đủ, gán thẳng vào `Image`. */
   hinhAnh?: string | null;
   /** Link danh thiếp công khai, xem được không cần đăng nhập. */

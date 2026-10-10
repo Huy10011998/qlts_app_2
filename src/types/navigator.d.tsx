@@ -6,6 +6,14 @@ import type {
 } from "../services/data/noiDiaApi";
 import type { FridgeSummary } from "../screens/NoiDia/shared/fridgeLookup";
 import type { GuideTopicId } from "../screens/Guide/shared/guideTypes";
+import type {
+  CongViecFormParams,
+  FlowFormParams,
+  FlowRecord,
+  FlowTab,
+  WorkflowCommentsParams,
+  WorkflowFilesParams,
+} from "./workflow.d";
 
 // =====================================================
 // COMMON TYPES
@@ -126,7 +134,10 @@ export type TabsParamList = {
   HomeTab: undefined;
   FeatureTab: undefined;
   ScanTab: NavigatorScreenParams<ScanTabParamList>;
+  /** Chỉ có khi user KHÔNG có view Workflow — xem `Tabs.tsx`. */
   CameraTab: undefined;
+  /** Lịch công việc, thay chỗ CameraTab khi user có view Workflow. */
+  LichTab: undefined;
   SettingTab: undefined;
 };
 
@@ -426,6 +437,32 @@ export type RootStackParamList = {
   /** ================= SHAREHOLDERS MEETING ================= */
   ShareholdersMeeting: ShareholdersMeetingParams;
   ShareholdersMeetingScanner: ShareholdersMeetingScannerParams;
+
+  /** ================= WORKFLOW =================
+   * View viết riêng (như Camera / ĐHCĐ): ô "Workflow" trên Trang chủ mở màn
+   * Workflow, từ đó mở Flow / CongViec / KeHoach — xem `workflowMenu.ts`.
+   */
+  Workflow: undefined;
+  /** Danh sách phiếu đề nghị — một màn cho mọi flow, `nameClass` = tên bảng. */
+  Flow: { nameClass?: string; titleHeader?: string; tab?: FlowTab } | undefined;
+  /** `id` có thể là chuỗi khi mở từ push (params là JSON). */
+  FlowChiTiet: { nameClass: string; id: number | string; item?: FlowRecord };
+  FlowForm: FlowFormParams;
+  FlowTienTrinh: { nameClass: string; id: number; item?: FlowRecord };
+  CongViec: { titleHeader?: string } | undefined;
+  CongViecChiTiet: { id: number | string };
+  CongViecForm: CongViecFormParams;
+  KeHoach: { titleHeader?: string } | undefined;
+  KeHoachChiTiet: { id: number | string };
+  KeHoachForm: { mode: "add" | "edit"; id?: number };
+  /** Bình luận dạng chat — dùng chung phiếu đề nghị và công việc. */
+  WorkflowBinhLuan: WorkflowCommentsParams;
+  /** File đính kèm — dùng chung phiếu đề nghị và công việc. */
+  WorkflowFile: WorkflowFilesParams;
+  /** Màn gốc của tab Lịch. */
+  LichCongViec: undefined;
+  /** Thông báo của view Workflow (cv-thong-bao) — mở từ chuông ở Trang chủ. */
+  ThongBao: undefined;
 };
 
 // =====================================================

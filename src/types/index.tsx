@@ -5,3 +5,4 @@ export type * from "./api.d";
 export type * from "./common.d";
 export type * from "./navigator.d";
 export type * from "./redux.d";
+export type * from "./workflow.d";

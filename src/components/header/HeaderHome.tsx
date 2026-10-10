@@ -16,6 +16,9 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import { useHomeMenuContext } from "../../screens/Home/shared/HomeMenuProvider";
+import { usePermission } from "../../hooks/usePermission";
+import { navigateFromRef } from "../../navigation/navigationService";
+import { WORKFLOW_VIEW_CODE } from "../../screens/Workflow/workflowMenu";
 import type { HeaderHomeProps } from "../../types/components.d";
 import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
 
@@ -79,11 +82,18 @@ export default function HeaderHome(_props: HeaderHomeProps) {
   const [now, setNow] = useState(new Date());
   const spin = useRef(new Animated.Value(0)).current;
   const greeting = getGreeting(now);
+  const { canView } = usePermission();
   const showComingSoonAlert = () => {
     Alert.alert(
       "Thông báo",
       "Chức năng sẽ được triển khai trong thời gian sắp tới."
     );
+  };
+  // Danh sách thông báo hiện chỉ có của Workflow (cv-thong-bao); tài khoản không
+  // có view này thì chuông giữ như cũ.
+  const openNotifications = () => {
+    if (canView(WORKFLOW_VIEW_CODE)) navigateFromRef("ThongBao");
+    else showComingSoonAlert();
   };
 
   useEffect(() => {
@@ -202,7 +212,9 @@ export default function HeaderHome(_props: HeaderHomeProps) {
           <TouchableOpacity
             style={styles.iconBtn}
             activeOpacity={0.75}
-            onPress={showComingSoonAlert}
+            onPress={openNotifications}
+            accessibilityRole="button"
+            accessibilityLabel="Thông báo"
           >
             <Ionicons name="notifications-outline" size={20} color="#fff" />
             <View style={styles.notifDot} />

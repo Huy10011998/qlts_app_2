@@ -36,6 +36,18 @@ const PUSH_ROUTES: Record<string, PushRouteContainer> = {
   ShareholdersMeeting: "root",
   Profile: "root",
   Appearance: "root",
+  // Workflow. BE chưa làm push FCM cho phiếu / công việc ("sẽ bổ sung sau") —
+  // khai sẵn route để khi BE gửi là mở được, hợp đồng app đề xuất:
+  //   phiếu      route "FlowChiTiet"     params {"nameClass":"Ticket_PhongBan","id":21}
+  //   công việc  route "CongViecChiTiet" params {"id":5}
+  //   kế hoạch   route "KeHoachChiTiet"  params {"id":3}
+  //   nhiều phiếu chờ   route "Flow"            params {"nameClass":"Ticket_PhongBan","tab":"ChoDuyet"}
+  //   danh sách thông báo route "ThongBao"      (không params)
+  FlowChiTiet: "root",
+  CongViecChiTiet: "root",
+  KeHoachChiTiet: "root",
+  Flow: "root",
+  ThongBao: "root",
 
   // Màn gốc của tab — phải đi qua Tabs mới chọn đúng tab.
   Home: "homeTab",

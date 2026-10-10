@@ -323,6 +323,7 @@ export default function AssetEditItem() {
     referenceData,
     enumData,
     formData,
+    refKeyword,
   );
   const { showAlertIfActive } = useSafeAlert();
 

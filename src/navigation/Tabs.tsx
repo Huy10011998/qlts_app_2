@@ -10,6 +10,7 @@ import { getFocusedRouteNameFromRoute } from "@react-navigation/native";
 import HomeStack from "./HomeStack";
 import FeatureStack from "./FeatureStack";
 import CameraStack from "./CameraStack";
+import LichStack from "./LichStack";
 import SettingStack from "./SettingStack";
 import ScanStack from "./ScanStack";
 import ScanTabButton from "./shared/ScanTabButton";
@@ -24,6 +25,8 @@ import {
 } from "./shared/tabBarTheme";
 import { useAppColors, useStrongBorderColor } from "../utils/helpers/colors";
 import { useColorScheme } from "../hooks/useColorScheme";
+import { usePermission } from "../hooks/usePermission";
+import { WORKFLOW_VIEW_CODE } from "../screens/Workflow/workflowMenu";
 
 const Tab = createBottomTabNavigator();
 
@@ -99,6 +102,12 @@ const CameraTabButton = createTabBarButton({
   iconOutline: "videocam-outline",
 });
 
+const LichTabButton = createTabBarButton({
+  label: "Lịch",
+  icon: "calendar",
+  iconOutline: "calendar-outline",
+});
+
 const SettingTabButton = createTabBarButton({
   label: "Cài đặt",
   icon: "settings",
@@ -110,6 +119,12 @@ export default function Tabs() {
   const colors = useAppColors();
   const tabBorderColor = useStrongBorderColor();
   const colorScheme = useColorScheme();
+  const { canView, loaded: permissionsLoaded } = usePermission();
+  /* Có quyền xem view Workflow thì ô Camera đổi thành Lịch công việc.
+     Quyền nạp SAU khi khung điều hướng đã dựng: trong lúc chờ giữ Camera như
+     cũ, nên user có view Workflow thấy Camera → Lịch đổi một lần lúc mở app.
+     Luôn 5 ô để nền cong quanh nút Quét nằm đúng giữa. */
+  const showLichTab = permissionsLoaded && canView(WORKFLOW_VIEW_CODE);
 
   React.useEffect(() => {
     Keyboard.dismiss();
@@ -174,11 +189,20 @@ export default function Tabs() {
           }}
         />
 
-        <Tab.Screen
-          name="CameraTab"
-          component={CameraStack}
-          options={{ title: "Camera", tabBarButton: CameraTabButton }}
-        />
+        {showLichTab ? (
+          <Tab.Screen
+            name="LichTab"
+            component={LichStack}
+            // Không nạp lịch lúc mở app — chỉ khi người dùng vào tab.
+            options={{ title: "Lịch", tabBarButton: LichTabButton, lazy: true }}
+          />
+        ) : (
+          <Tab.Screen
+            name="CameraTab"
+            component={CameraStack}
+            options={{ title: "Camera", tabBarButton: CameraTabButton }}
+          />
+        )}
 
         <Tab.Screen
           name="SettingTab"

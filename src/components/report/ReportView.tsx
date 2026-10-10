@@ -272,6 +272,7 @@ const ReportView: React.FC<ReportViewProps> = ({
     referenceData,
     enumData,
     parameterValues,
+    refKeyword,
   );
 
   const getRequiredLabel = (parameter: ReportConfigParameter) =>

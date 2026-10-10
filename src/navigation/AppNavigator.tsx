@@ -52,6 +52,20 @@ import QrCodeScreen from "../screens/Settings/QrCodeScreen";
 import ProfileScreen from "../screens/Profile/ProfileScreen";
 import GuideScreen from "../screens/Guide/GuideScreen";
 import GuideTopicScreen from "../screens/Guide/GuideTopicScreen";
+import WorkflowScreen from "../screens/Workflow/WorkflowScreen";
+import FlowListScreen from "../screens/Workflow/Flow/FlowListScreen";
+import FlowDetailScreen from "../screens/Workflow/Flow/FlowDetailScreen";
+import FlowFormScreen from "../screens/Workflow/Flow/FlowFormScreen";
+import FlowProcessScreen from "../screens/Workflow/Flow/FlowProcessScreen";
+import CongViecListScreen from "../screens/Workflow/CongViec/CongViecListScreen";
+import CongViecDetailScreen from "../screens/Workflow/CongViec/CongViecDetailScreen";
+import CongViecFormScreen from "../screens/Workflow/CongViec/CongViecFormScreen";
+import KeHoachListScreen from "../screens/Workflow/KeHoach/KeHoachListScreen";
+import KeHoachDetailScreen from "../screens/Workflow/KeHoach/KeHoachDetailScreen";
+import KeHoachFormScreen from "../screens/Workflow/KeHoach/KeHoachFormScreen";
+import WorkflowCommentsScreen from "../screens/Workflow/Common/WorkflowCommentsScreen";
+import WorkflowFilesScreen from "../screens/Workflow/Common/WorkflowFilesScreen";
+import WorkflowThongBaoScreen from "../screens/Workflow/ThongBao/WorkflowThongBaoScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -420,6 +434,99 @@ export default function AppNavigator() {
         component={GuideTopicScreen}
         options={({ route }) => ({
           title: getScreenTitle(route.params?.titleHeader, "Hướng dẫn"),
+          ...headerWithBack,
+        })}
+      />
+
+      {/* WORKFLOW — view viết riêng như Camera / ĐHCĐ (group isGroupWeb Mã
+          "Workflow" chỉ giữ chỗ trên Trang chủ). */}
+      <Stack.Screen
+        name="Workflow"
+        component={WorkflowScreen}
+        options={{ headerShown: true, title: "Workflow", ...headerWithBack }}
+      />
+      <Stack.Screen
+        name="Flow"
+        component={FlowListScreen}
+        options={({ route }) => ({
+          headerShown: true,
+          title: getScreenTitle(route.params?.titleHeader, "Phiếu đề nghị"),
+          ...headerWithBack,
+        })}
+      />
+      <Stack.Screen
+        name="FlowChiTiet"
+        component={FlowDetailScreen}
+        options={{ headerShown: true, title: "Chi tiết phiếu", ...headerWithBack }}
+      />
+      <Stack.Screen
+        name="FlowForm"
+        component={FlowFormScreen}
+        options={{ headerShown: true, title: "Lập phiếu", ...headerWithBack }}
+      />
+      <Stack.Screen
+        name="FlowTienTrinh"
+        component={FlowProcessScreen}
+        options={{ headerShown: true, title: "Quy trình", ...headerWithBack }}
+      />
+      <Stack.Screen
+        name="CongViec"
+        component={CongViecListScreen}
+        options={({ route }) => ({
+          headerShown: true,
+          title: getScreenTitle(route.params?.titleHeader, "Công việc"),
+          ...headerWithBack,
+        })}
+      />
+      <Stack.Screen
+        name="CongViecChiTiet"
+        component={CongViecDetailScreen}
+        options={{ headerShown: true, title: "Chi tiết công việc", ...headerWithBack }}
+      />
+      <Stack.Screen
+        name="CongViecForm"
+        component={CongViecFormScreen}
+        options={{ headerShown: true, title: "Công việc", ...headerWithBack }}
+      />
+      <Stack.Screen
+        name="KeHoach"
+        component={KeHoachListScreen}
+        options={({ route }) => ({
+          headerShown: true,
+          title: getScreenTitle(route.params?.titleHeader, "Kế hoạch"),
+          ...headerWithBack,
+        })}
+      />
+      <Stack.Screen
+        name="KeHoachChiTiet"
+        component={KeHoachDetailScreen}
+        options={{ headerShown: true, title: "Chi tiết kế hoạch", ...headerWithBack }}
+      />
+      <Stack.Screen
+        name="KeHoachForm"
+        component={KeHoachFormScreen}
+        options={{ headerShown: true, title: "Kế hoạch", ...headerWithBack }}
+      />
+      <Stack.Screen
+        name="WorkflowBinhLuan"
+        component={WorkflowCommentsScreen}
+        options={({ route }) => ({
+          headerShown: true,
+          title: route.params?.titleHeader ? `Bình luận · ${route.params.titleHeader}` : "Bình luận",
+          ...headerWithBack,
+        })}
+      />
+      <Stack.Screen
+        name="ThongBao"
+        component={WorkflowThongBaoScreen}
+        options={{ headerShown: true, title: "Thông báo", ...headerWithBack }}
+      />
+      <Stack.Screen
+        name="WorkflowFile"
+        component={WorkflowFilesScreen}
+        options={({ route }) => ({
+          headerShown: true,
+          title: route.params?.titleHeader ? `File · ${route.params.titleHeader}` : "File đính kèm",
           ...headerWithBack,
         })}
       />

@@ -222,6 +222,12 @@ export interface ViewerProps {
     path: string;
     nameClass: string;
   };
+  /**
+   * Tự tải nội dung file (base64) thay cho `preview-attach-file` của tài sản —
+   * dùng cho file của view Workflow (`flow-xem-file`). Có prop này thì `path` /
+   * `nameClass` không được dùng.
+   */
+  loadFile?: () => Promise<string>;
 }
 
 export type IsLoadingProps = {
