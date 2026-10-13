@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Image, Text, View, type ImageSourcePropType } from "react-native";
 
 import { useStyles } from "../../../utils/helpers/colors";
@@ -10,6 +10,10 @@ import { makeGuideStyles } from "../GuideScreen.styles";
  * Ảnh rộng hết bề ngang thẻ và cao theo `aspectRatio` chứ không theo pixel thật:
  * screenshot điện thoại to hơn bề ngang thẻ nhiều lần, để nguyên là tràn màn.
  * Mặc định 0.5 — tỷ lệ xấp xỉ của một ảnh chụp dọc.
+ *
+ * Kích thước tính từ bề ngang đo được của khung bọc chứ không dùng
+ * `width: "100%"` + `aspectRatio`: ảnh `require()` mang sẵn kích thước pixel
+ * gốc, iOS lấy đúng kích thước đó và ảnh tràn ra ngoài thẻ.
  */
 export default function GuideImage({
   source,
@@ -21,16 +25,19 @@ export default function GuideImage({
   aspectRatio?: number;
 }) {
   const styles = useStyles(makeGuideStyles);
+  const [width, setWidth] = useState(0);
 
   return (
-    <View>
-      <Image
-        source={source}
-        style={[styles.image, { aspectRatio }]}
-        resizeMode="contain"
-        accessible
-        accessibilityLabel={caption ?? "Ảnh minh hoạ hướng dẫn"}
-      />
+    <View onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
+      {width > 0 ? (
+        <Image
+          source={source}
+          style={[styles.image, { width, height: width / aspectRatio }]}
+          resizeMode="contain"
+          accessible
+          accessibilityLabel={caption ?? "Ảnh minh hoạ hướng dẫn"}
+        />
+      ) : null}
       {caption ? <Text style={styles.imageCaption}>{caption}</Text> : null}
     </View>
   );

@@ -68,13 +68,21 @@ export default function FlowBulkApproveSheet({
       .then((result) => {
         if (alive) setTaoCongViecIds((result ?? []).filter((id) => ids.includes(id)));
       })
-      .catch(() => undefined)
+      .catch((err) => {
+        // Không biết phiếu nào đang ở lượt "Tạo công việc" thì KHÔNG cho duyệt
+        // nhiều — duyệt rồi là mất bước giao việc, không quay lại được.
+        if (!alive) return;
+        Alert.alert("Không kiểm tra được phiếu", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
+        onClose();
+      })
       .finally(() => {
         if (alive) setChecking(false);
       });
     return () => {
       alive = false;
     };
+    // onClose đổi tham chiếu mỗi lần render của màn gọi — chỉ chạy khi mở.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ids, nameClass, visible]);
 
   const submit = async () => {
@@ -128,7 +136,7 @@ export default function FlowBulkApproveSheet({
       }
     >
       <Text style={styles.confirm}>
-        Duyệt {ids.length} phiếu đang chờ bạn
+        Duyệt {ids.length} phiếu
         {skippedNotAllowed > 0 ? ` (bỏ qua ${skippedNotAllowed} phiếu không làm được)` : ""}.
       </Text>
 

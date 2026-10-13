@@ -297,6 +297,11 @@ export const RenderInputByType = ({
   const keyboardContext = useAssetFormKeyboard();
   const strongBorderColor = useStrongBorderColor();
   const basicInputRef = React.useRef<TextInput>(null);
+  const textMaxLength =
+    (f.typeProperty === TypeProperty.String || f.typeProperty === TypeProperty.Text) &&
+    Number(f.maxLength) > 0
+      ? Number(f.maxLength)
+      : undefined;
   const numberInputRef = React.useRef<TextInput>(null);
   const textAreaWrapRef = React.useRef<View>(null);
   const textAreaRef = React.useRef<TextInput>(null);
@@ -387,6 +392,8 @@ export const RenderInputByType = ({
         value={String(value ?? "")}
         placeholder={`Nhập ${f.moTa ?? f.name}`}
         placeholderTextColor={c.textMuted}
+        // "tối đa maxLength" của metadata (độ dài cột); số thì không áp.
+        maxLength={textMaxLength}
         onFocus={() => handleInputFocus(basicInputRef.current)}
         onChangeText={(t) => handleChange(f.name, t)}
       />
@@ -531,6 +538,7 @@ export const RenderInputByType = ({
             value={String(value ?? "")}
             placeholder={`Nhập ${f.moTa ?? f.name}`}
             placeholderTextColor={c.textMuted}
+            maxLength={textMaxLength}
             onFocus={() => handleInputFocus(textAreaWrapRef.current)}
             onChangeText={(t) => handleChange(f.name, t)}
           />

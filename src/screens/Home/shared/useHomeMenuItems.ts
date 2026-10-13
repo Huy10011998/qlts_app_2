@@ -76,6 +76,7 @@ export function useHomeMenuItems(
     vehicleCurrentLocationMenuItem,
     vehicleJourneyMenuItem,
     vehicleTrackingMenuItem,
+    workflowTileCount,
   } = useHomeMenuContext();
 
   const openMeetingScreen = useCallback(
@@ -158,10 +159,17 @@ export function useHomeMenuItems(
         description: "Phiếu đề nghị, công việc, kế hoạch",
         // Chưa có group isGroupWeb Mã "Workflow" thì đứng cuối danh sách.
         fallbackOrder: 999,
+        notificationCount: workflowTileCount,
         onPress: openWorkflowScreen,
       },
     ],
-    [openCameraScreen, openMeetingScreen, openSolarPlantScreen, openWorkflowScreen],
+    [
+      openCameraScreen,
+      openMeetingScreen,
+      openSolarPlantScreen,
+      openWorkflowScreen,
+      workflowTileCount,
+    ],
   );
 
   const createApiMenuItem = useCallback(

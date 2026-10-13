@@ -21,6 +21,7 @@ import { navigateFromRef } from "../../navigation/navigationService";
 import { WORKFLOW_VIEW_CODE } from "../../screens/Workflow/workflowMenu";
 import type { HeaderHomeProps } from "../../types/components.d";
 import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
+import { COMPACT_TEXT_MAX_SCALE } from "../../utils/helpers/textScaling";
 
 const { width: W } = Dimensions.get("window");
 
@@ -76,24 +77,23 @@ export default function HeaderHome(_props: HeaderHomeProps) {
   const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const colors = useAppColors();
-  const { isHomeRefreshing, openBlockOrderSheet, refreshHome } =
-    useHomeMenuContext();
+  const {
+    isHomeRefreshing,
+    openBlockOrderSheet,
+    refreshHome,
+    workflowTileCount,
+  } = useHomeMenuContext();
+  const { canView, loaded: permissionLoaded } = usePermission();
+  const canViewWorkflow = permissionLoaded && canView(WORKFLOW_VIEW_CODE);
 
   const [now, setNow] = useState(new Date());
   const spin = useRef(new Animated.Value(0)).current;
   const greeting = getGreeting(now);
-  const { canView } = usePermission();
   const showComingSoonAlert = () => {
     Alert.alert(
       "Thông báo",
       "Chức năng sẽ được triển khai trong thời gian sắp tới."
     );
-  };
-  // Danh sách thông báo hiện chỉ có của Workflow (cv-thong-bao); tài khoản không
-  // có view này thì chuông giữ như cũ.
-  const openNotifications = () => {
-    if (canView(WORKFLOW_VIEW_CODE)) navigateFromRef("ThongBao");
-    else showComingSoonAlert();
   };
 
   useEffect(() => {
@@ -209,10 +209,39 @@ export default function HeaderHome(_props: HeaderHomeProps) {
             <Ionicons name="swap-vertical-outline" size={20} color="#fff" />
           </TouchableOpacity>
 
+          {/* Việc cần xử lý (cv-thong-bao): bảng tổng hợp việc, không phải thông
+              báo nên có nút riêng cạnh chuông. Số cùng lượt tải với ô Workflow. */}
+          {canViewWorkflow ? (
+            <TouchableOpacity
+              style={styles.iconBtn}
+              activeOpacity={0.75}
+              onPress={() => navigateFromRef("ViecCanXuLy")}
+              accessibilityRole="button"
+              accessibilityLabel={
+                workflowTileCount
+                  ? `Việc cần xử lý, ${workflowTileCount} việc`
+                  : "Việc cần xử lý"
+              }
+            >
+              <Ionicons name="file-tray-full-outline" size={20} color="#fff" />
+              {workflowTileCount > 0 ? (
+                <View style={styles.countBadge}>
+                  <Text
+                    style={styles.countBadgeText}
+                    maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
+                  >
+                    {workflowTileCount > 99 ? "99+" : workflowTileCount}
+                  </Text>
+                </View>
+              ) : null}
+            </TouchableOpacity>
+          ) : null}
+
           <TouchableOpacity
             style={styles.iconBtn}
             activeOpacity={0.75}
-            onPress={openNotifications}
+            // Chờ BE làm thông báo thật (có ID, trạng thái đã đọc).
+            onPress={showComingSoonAlert}
             accessibilityRole="button"
             accessibilityLabel="Thông báo"
           >
@@ -349,6 +378,27 @@ const makeStyles = (c: AppColors) =>
       backgroundColor: "#FFD60A",
       borderWidth: 1.5,
       borderColor: c.red,
+    },
+    // Cùng màu chấm của chuông để hàng nút trên header một kiểu.
+    countBadge: {
+      position: "absolute",
+      top: -5,
+      right: -5,
+      minWidth: 18,
+      height: 18,
+      paddingHorizontal: 4,
+      borderRadius: 9,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "#FFD60A",
+      borderWidth: 1.5,
+      borderColor: c.red,
+    },
+    countBadgeText: {
+      fontSize: 10,
+      lineHeight: 12,
+      fontWeight: "800",
+      color: c.red,
     },
 
     greetRow: {

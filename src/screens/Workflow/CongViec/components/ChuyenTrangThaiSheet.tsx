@@ -72,6 +72,10 @@ export default function ChuyenTrangThaiSheet({
 
       const idLichSu = result.iD_LichSus?.[0];
       const failed: string[] = [];
+      if (!idLichSu && files.length) {
+        // Không có mốc lịch sử để gắn — báo, đừng bỏ file lặng lẽ.
+        files.forEach((file) => failed.push(`- ${file.name}: không có mốc lịch sử để gắn file`));
+      }
       if (idLichSu && files.length) {
         for (const file of files) {
           try {

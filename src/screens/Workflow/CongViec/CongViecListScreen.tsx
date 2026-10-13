@@ -153,6 +153,24 @@ export default function CongViecListScreen() {
               fields={cardFields}
               info={infos[item.id]}
               onPress={() => navigation.navigate("CongViecChiTiet", { id: item.id })}
+              // Cùng tham số với nút ở màn chi tiết: cv-thong-tin trả sẵn cờ quyền
+              // như cv-chi-tiet, `duocTraoDoi` quyết định gửi bình luận / sửa file.
+              onOpenComments={() =>
+                navigation.navigate("WorkflowBinhLuan", {
+                  apiBase: CV_CONG_VIEC_NAME_CLASS,
+                  idHoSo: item.id,
+                  canSend: !!infos[item.id]?.duocTraoDoi,
+                  titleHeader: item.soCongViec ?? undefined,
+                })
+              }
+              onOpenFiles={() =>
+                navigation.navigate("WorkflowFile", {
+                  apiBase: CV_CONG_VIEC_NAME_CLASS,
+                  idHoSo: item.id,
+                  canEdit: !!infos[item.id]?.duocTraoDoi,
+                  titleHeader: item.soCongViec ?? undefined,
+                })
+              }
             />
           )}
           contentContainerStyle={styles.listContent}

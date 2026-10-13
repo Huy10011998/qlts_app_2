@@ -1,8 +1,15 @@
 import type { WorkflowThongBao } from "../../../types/index";
 import { formatDay, formatTime, isSameDay, parseBeDate, addDays } from "../shared/workflowDate";
 
-/** Nhãn + icon + màu theo loại thông báo (cv-thong-bao). */
-export const THONG_BAO_LOAI = [
+/**
+ * "Việc cần xử lý" = dữ liệu của cv-thong-bao (mục 10, 4-Mobile-CongViec). BE
+ * gọi là thông báo nhưng đó là bảng tổng hợp lúc gọi: không ID, không trạng
+ * thái đã đọc, dòng phiếu gộp cả bảng — nên app không đặt nó ở chuông mà mở
+ * từ nút riêng cạnh chuông ở Trang chủ.
+ */
+
+/** Nhãn + icon + màu theo loại. */
+export const VIEC_LOAI = [
   { key: "Flow", label: "Phiếu chờ duyệt", icon: "document-text-outline", color: "#7C3AED" },
   { key: "Giao", label: "Được giao", icon: "briefcase-outline", color: "#1e88e5" },
   { key: "SapHan", label: "Sắp đến hạn", icon: "alarm-outline", color: "#fb8c00" },
@@ -10,24 +17,24 @@ export const THONG_BAO_LOAI = [
   { key: "BinhLuan", label: "Bình luận", icon: "chatbubble-ellipses-outline", color: "#0EA5E9" },
 ] as const;
 
-const FALLBACK_LOAI = { key: "", label: "Thông báo", icon: "notifications-outline", color: "#78909c" };
+const FALLBACK_LOAI = { key: "", label: "Khác", icon: "list-outline", color: "#78909c" };
 
-export const getThongBaoLoai = (loai: unknown) =>
-  THONG_BAO_LOAI.find((item) => item.key === loai) ?? FALLBACK_LOAI;
+export const getViecLoai = (loai: unknown) =>
+  VIEC_LOAI.find((item) => item.key === loai) ?? FALLBACK_LOAI;
 
-export type ThongBaoTarget =
+export type ViecTarget =
   | { route: "FlowChiTiet"; params: { nameClass: string; id: number } }
   | { route: "Flow"; params: { nameClass: string; tab: "ChoDuyet" } }
   | { route: "CongViecChiTiet"; params: { id: number } };
 
 /**
- * Bấm 1 thông báo mở đâu (mục 10, 4-Mobile-CongViec):
+ * Bấm 1 dòng mở đâu (mục 10, 4-Mobile-CongViec):
  *   · loại Flow: đúng 1 phiếu chờ (iD_HoSo) → mở thẳng phiếu; nhiều phiếu → màn
  *     phiếu của bảng đó ở tab Chờ duyệt;
  *   · có iD_CongViec → chi tiết công việc;
  *   · còn lại không mở gì.
  */
-export const resolveThongBaoTarget = (item: WorkflowThongBao): ThongBaoTarget | null => {
+export const resolveViecTarget = (item: WorkflowThongBao): ViecTarget | null => {
   if (item.loai === "Flow" && item.tenBang) {
     return item.iD_HoSo
       ? { route: "FlowChiTiet", params: { nameClass: item.tenBang, id: Number(item.iD_HoSo) } }
@@ -40,7 +47,7 @@ export const resolveThongBaoTarget = (item: WorkflowThongBao): ThongBaoTarget | 
 };
 
 /** "Hôm nay 08:30" / "Hôm qua 17:05" / "09/10/2026 08:30". */
-export const formatThongBaoTime = (raw: unknown, now = new Date()) => {
+export const formatViecTime = (raw: unknown, now = new Date()) => {
   const date = parseBeDate(raw);
   if (!date) return "";
   if (isSameDay(date, now)) return `Hôm nay ${formatTime(date)}`;

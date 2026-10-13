@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   FlatList,
+  Image,
   Keyboard,
   Platform,
   StyleSheet,
@@ -27,10 +28,11 @@ import type {
 } from "../../../types/index";
 import { AppColors, useAppColors, useStyles } from "../../../utils/helpers/colors";
 import { useAttachmentPicker } from "../shared/components/AttachmentPicker";
+import WorkflowFileImage from "../shared/components/WorkflowFileImage";
 import { useWorkflowFileOpener } from "../shared/useWorkflowFileOpener";
 import { useWorkflowMe } from "../shared/useWorkflowMe";
 import { useMarkWorkflowChanged } from "../shared/useWorkflowVersion";
-import { formatFileSizeKb } from "../shared/workflowAttachments";
+import { formatFileSizeKb, isImageFileName } from "../shared/workflowAttachments";
 import { formatBeDate } from "../shared/workflowDate";
 import { getWorkflowErrorMessage } from "../shared/workflowErrors";
 
@@ -111,41 +113,69 @@ export default function WorkflowCommentsScreen() {
 
   const renderItem = ({ item }: { item: WorkflowComment }) => {
     const mine = !!me.iD_NhanVien && Number(item.iD_NhanVien) === me.iD_NhanVien;
+    // Ảnh (chụp / chọn từ máy) đứng riêng ngoài bong bóng như Zalo / Messenger;
+    // chữ và file khác vẫn nằm trong bong bóng.
+    const isImage = !!item.iD_File && isImageFileName(item.tenFile);
+    const hasBubble = !!item.noiDung || (!!item.iD_File && !isImage);
+    const time = formatBeDate(item.ngayTao, true);
 
     return (
       <View style={[styles.messageRow, mine && styles.messageRowMine]}>
-        <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleOther]}>
-          {!mine ? <Text style={styles.author}>{item.iD_NhanVien_MoTa}</Text> : null}
-          {item.noiDung ? (
-            <Text style={[styles.messageText, mine && styles.messageTextMine]}>
-              {item.noiDung}
-            </Text>
+        <View style={[styles.stack, mine && styles.stackMine]}>
+          {!mine && (isImage || !hasBubble) ? (
+            <Text style={[styles.author, styles.authorBare]}>{item.iD_NhanVien_MoTa}</Text>
           ) : null}
-          {item.iD_File ? (
-            <TouchableOpacity
-              style={[styles.fileChip, mine && styles.fileChipMine]}
+          {isImage ? (
+            <WorkflowFileImage
+              apiBase={apiBase}
+              fileId={Number(item.iD_File)}
+              name={item.tenFile}
               onPress={() =>
                 fileOpener.openFile(apiBase, { id: Number(item.iD_File), name: item.tenFile })
               }
+            />
+          ) : null}
+          {hasBubble ? (
+            <View
+              style={[
+                styles.bubble,
+                mine ? styles.bubbleMine : styles.bubbleOther,
+                isImage && styles.bubbleAfterImage,
+              ]}
             >
-              <Ionicons name="document-attach-outline" size={16} color={mine ? "#FFFFFF" : c.accent} />
-              <Text
-                style={[styles.fileName, mine && styles.messageTextMine]}
-                numberOfLines={1}
-                ellipsizeMode="middle"
-              >
-                {item.tenFile ?? "Tệp đính kèm"}
-              </Text>
-              {item.fileSize ? (
-                <Text style={[styles.fileSize, mine && styles.messageTextMine]}>
-                  {formatFileSizeKb(item.fileSize)}
+              {!mine && !isImage ? <Text style={styles.author}>{item.iD_NhanVien_MoTa}</Text> : null}
+              {item.noiDung ? (
+                <Text style={[styles.messageText, mine && styles.messageTextMine]}>
+                  {item.noiDung}
                 </Text>
               ) : null}
-            </TouchableOpacity>
-          ) : null}
-          <Text style={[styles.time, mine && styles.timeMine]}>
-            {formatBeDate(item.ngayTao, true)}
-          </Text>
+              {item.iD_File && !isImage ? (
+                <TouchableOpacity
+                  style={[styles.fileChip, mine && styles.fileChipMine]}
+                  onPress={() =>
+                    fileOpener.openFile(apiBase, { id: Number(item.iD_File), name: item.tenFile })
+                  }
+                >
+                  <Ionicons name="document-attach-outline" size={16} color={mine ? "#FFFFFF" : c.accent} />
+                  <Text
+                    style={[styles.fileName, mine && styles.messageTextMine]}
+                    numberOfLines={1}
+                    ellipsizeMode="middle"
+                  >
+                    {item.tenFile ?? "Tệp đính kèm"}
+                  </Text>
+                  {item.fileSize ? (
+                    <Text style={[styles.fileSize, mine && styles.messageTextMine]}>
+                      {formatFileSizeKb(item.fileSize)}
+                    </Text>
+                  ) : null}
+                </TouchableOpacity>
+              ) : null}
+              <Text style={[styles.time, mine && styles.timeMine]}>{time}</Text>
+            </View>
+          ) : (
+            <Text style={[styles.time, styles.timeBare]}>{time}</Text>
+          )}
         </View>
       </View>
     );
@@ -184,7 +214,11 @@ export default function WorkflowCommentsScreen() {
         >
           {file ? (
             <View style={styles.pendingFile}>
-              <Ionicons name="document-attach-outline" size={16} color={c.accent} />
+              {isImageFileName(file.name) || file.type?.startsWith("image/") ? (
+                <Image source={{ uri: file.uri }} style={styles.pendingThumb} />
+              ) : (
+                <Ionicons name="document-attach-outline" size={16} color={c.accent} />
+              )}
               <Text style={styles.pendingName} numberOfLines={1} ellipsizeMode="middle">
                 {file.name}
               </Text>
@@ -247,11 +281,20 @@ const makeStyles = (c: AppColors) =>
     messageRowMine: {
       justifyContent: "flex-end",
     },
-    bubble: {
+    stack: {
       maxWidth: "82%",
+      alignItems: "flex-start",
+    },
+    stackMine: {
+      alignItems: "flex-end",
+    },
+    bubble: {
       borderRadius: 16,
       paddingHorizontal: 12,
       paddingVertical: 8,
+    },
+    bubbleAfterImage: {
+      marginTop: 4,
     },
     bubbleOther: {
       backgroundColor: c.surface,
@@ -266,6 +309,9 @@ const makeStyles = (c: AppColors) =>
       fontWeight: "700",
       color: c.accent,
       marginBottom: 2,
+    },
+    authorBare: {
+      marginLeft: 4,
     },
     messageText: {
       fontSize: 15,
@@ -306,6 +352,11 @@ const makeStyles = (c: AppColors) =>
     timeMine: {
       color: "rgba(255,255,255,0.8)",
     },
+    // Giờ dưới ảnh đứng riêng: chữ xám trên nền màn, không có bong bóng.
+    timeBare: {
+      alignSelf: "auto",
+      marginHorizontal: 4,
+    },
     composer: {
       backgroundColor: c.surface,
       borderTopWidth: StyleSheet.hairlineWidth,
@@ -327,6 +378,12 @@ const makeStyles = (c: AppColors) =>
       flex: 1,
       fontSize: 13,
       color: c.accent,
+    },
+    pendingThumb: {
+      width: 40,
+      height: 40,
+      borderRadius: 8,
+      backgroundColor: c.surfaceAlt,
     },
     inputRow: {
       flexDirection: "row",

@@ -6,6 +6,7 @@ import type { CongViecItem, CongViecThongTin } from "../../../../types/index";
 import { AppColors, useAppColors, useStyles } from "../../../../utils/helpers/colors";
 import { elevation } from "../../../../utils/helpers/tokens";
 import StatusBadge from "../../shared/components/StatusBadge";
+import WorkflowCounter from "../../shared/components/WorkflowCounter";
 import WorkflowFieldLines from "../../shared/components/WorkflowFieldLines";
 import { getCongViecTrangThai, getMaMauColor } from "../../shared/workflowConstants";
 import { findWorkflowField, WorkflowField } from "../../shared/workflowFields";
@@ -16,6 +17,9 @@ type Props = {
   fields: WorkflowField[];
   info?: CongViecThongTin;
   onPress: () => void;
+  /** Bấm số bình luận / số file mở thẳng màn đó; không truyền thì bấm như bấm thẻ. */
+  onOpenComments?: () => void;
+  onOpenFiles?: () => void;
 };
 
 /** Hai field đứng ở đầu thẻ thay vì thành dòng "Nhãn: giá trị". */
@@ -26,7 +30,14 @@ const HEADER_FIELDS = ["SoCongViec", "TieuDe"];
  * trì (cột tính, không có trong metadata), các field động, số bình luận / file.
  * Số và tiêu đề chỉ hiện khi metadata cho hiện trên mobile.
  */
-export default function CongViecCard({ item, fields, info, onPress }: Props) {
+export default function CongViecCard({
+  item,
+  fields,
+  info,
+  onPress,
+  onOpenComments,
+  onOpenFiles,
+}: Props) {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
   const trangThai = getCongViecTrangThai(item.trangThai);
@@ -72,14 +83,20 @@ export default function CongViecCard({ item, fields, info, onPress }: Props) {
           <View style={styles.footer}>
             {info ? (
               <>
-                <View style={styles.counter}>
-                  <Ionicons name="chatbubble-ellipses-outline" size={14} color={c.textSub} />
-                  <Text style={styles.counterText}>{info.soBinhLuan ?? 0}</Text>
-                </View>
-                <View style={styles.counter}>
-                  <Ionicons name="attach-outline" size={15} color={c.textSub} />
-                  <Text style={styles.counterText}>{info.soFile ?? 0}</Text>
-                </View>
+                <WorkflowCounter
+                  icon="chatbubble-ellipses-outline"
+                  iconSize={14}
+                  count={info.soBinhLuan ?? 0}
+                  label="Bình luận"
+                  onPress={onOpenComments}
+                />
+                <WorkflowCounter
+                  icon="attach-outline"
+                  iconSize={15}
+                  count={info.soFile ?? 0}
+                  label="File"
+                  onPress={onOpenFiles}
+                />
               </>
             ) : null}
             {item.iD_DinhKy ? (
@@ -152,7 +169,7 @@ const makeStyles = (c: AppColors) =>
     footer: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 14,
+      gap: 8,
       marginTop: 8,
       paddingTop: 8,
       borderTopWidth: StyleSheet.hairlineWidth,

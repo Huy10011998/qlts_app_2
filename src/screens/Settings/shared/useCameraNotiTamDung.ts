@@ -93,6 +93,21 @@ export function useCameraNotiTamDung() {
     }
   }, []);
 
+  /**
+   * Kéo để làm mới. Vòng xoay RefreshControl chỉ theo lượt người dùng kéo —
+   * lượt tải lúc vào màn / quay lại app / sau khi gửi chạy im lặng: bật vòng
+   * xoay bằng code khi không ai kéo, iOS đẩy trang xuống một khoảng, có khi kẹt.
+   */
+  const [dangLamMoi, setDangLamMoi] = useState(false);
+  const lamMoi = useCallback(async () => {
+    setDangLamMoi(true);
+    try {
+      await taiTrangThai();
+    } finally {
+      if (isMountedRef.current) setDangLamMoi(false);
+    }
+  }, [taiTrangThai]);
+
   useFocusEffect(
     useCallback(() => {
       taiTrangThai();
@@ -179,5 +194,5 @@ export function useCameraNotiTamDung() {
     [taiTrangThai],
   );
 
-  return { ...state, taiTrangThai, tamDung, huyTamDung };
+  return { ...state, dangLamMoi, lamMoi, taiTrangThai, tamDung, huyTamDung };
 }

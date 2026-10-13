@@ -37,13 +37,16 @@ export function useWorkflowPagedList<T>(
   onPageRef.current = onPage;
 
   const load = useCallback(
-    async (mode: "initial" | "refresh" | "more") => {
+    async (mode: "initial" | "refresh" | "more" | "silent") => {
       const requestId = ++requestIdRef.current;
       const skip = mode === "more" ? itemsRef.current.length : 0;
 
       if (mode === "initial") setLoading(true);
       if (mode === "refresh") setRefreshing(true);
       if (mode === "more") setLoadingMore(true);
+      // "silent": không bật chỉ báo nào. Bật `refreshing` của RefreshControl bằng
+      // code (người dùng không kéo) lúc vừa quay lại màn, iOS đẩy danh sách xuống
+      // một khoảng chừa vòng xoay và có khi kẹt luôn tới khi kéo tay.
 
       try {
         const result = await fetchRef.current(skip, pageSize);
@@ -77,8 +80,8 @@ export function useWorkflowPagedList<T>(
   }, [enabled, load, queryKey]);
 
   const refresh = useCallback(() => load("refresh"), [load]);
-  /** Nạp lại im lặng (không hiện khung chờ) — dùng khi quay lại màn có thay đổi. */
-  const reload = useCallback(() => load(itemsRef.current.length ? "refresh" : "initial"), [load]);
+  /** Nạp lại im lặng (không vòng xoay, không khung chờ) — dùng khi quay lại màn có thay đổi. */
+  const reload = useCallback(() => load(itemsRef.current.length ? "silent" : "initial"), [load]);
 
   const loadMore = useCallback(() => {
     if (loading || loadingMore || refreshing) return;

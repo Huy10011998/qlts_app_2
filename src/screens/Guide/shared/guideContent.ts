@@ -119,8 +119,8 @@ const TOPICS: GuideTopic[] = [
               "Trang chủ: số liệu toàn công ty và các lối vào nhanh bạn tự chọn.",
               "Chức năng: danh mục đầy đủ mọi chức năng, có ô tìm kiếm.",
               "Quét QR: nút to ở giữa, mở máy quét tem QR.",
-              "Camera: hệ thống camera theo khu vực.",
-              "Cài đặt: hồ sơ, danh thiếp QR, mật khẩu, giao diện, quyền và tài liệu hướng dẫn này.",
+              "Camera: hệ thống camera theo khu vực. Tài khoản dùng Workflow thấy tab Lịch ở chỗ này — xem chủ đề Lịch & thông báo.",
+              "Cài đặt: hồ sơ, danh thiếp QR, mật khẩu, giao diện, cỡ chữ, quyền và tài liệu hướng dẫn này.",
             ],
           },
         ],
@@ -168,6 +168,11 @@ const TOPICS: GuideTopic[] = [
       "thiet bi may moc",
       "thiet bi cntt",
       "bam o so lieu",
+      "chuong",
+      "thong bao",
+      "tong quan cong viec",
+      "dashboard",
+      "hoan tat trong nam",
     ],
     sections: [
       {
@@ -179,10 +184,15 @@ const TOPICS: GuideTopic[] = [
             items: [
               "SỐ LIỆU TOÀN CÔNG TY: số thiết bị máy móc, thiết bị CNTT, camera đang hoạt động, số người đã điểm danh hôm nay. Bấm vào ô để xem chi tiết — xem mục bên dưới.",
               "TRUY CẬP NHANH: các chức năng bạn tự ghim.",
+              "TỔNG QUAN CÔNG VIỆC (tài khoản có quyền Workflow), giống Home trên web: % công việc đã hoàn tất trong năm; số việc Tháng hiện tại so với tháng trước (vd +200%); Đã quá hạn / Chưa đến hạn / Hoàn tất trễ hạn / Hoàn tất đúng hạn kèm thanh tỉ lệ; cột 6 tháng gần nhất (Công việc · Hoàn thành) — bấm một tháng để xem số của tháng đó. Bấm Xem chi tiết để mở danh sách công việc.",
               "Cơ cấu tài sản: lật qua từng trang để xem tỷ lệ.",
               "ĐIỂM DANH NHÂN SỰ HÔM NAY: đang làm việc / đã điểm danh / chưa điểm danh, bấm vào để xem chi tiết theo phòng ban.",
               "Các khối tiêu thụ: điện, điện mặt trời, nước cấp, nước thải, hơi.",
             ],
+          },
+          {
+            kind: "paragraph",
+            text: "Hình chuông trên thanh đầu Trang chủ dành cho thông báo của hệ thống — phần này đang được hoàn thiện, bấm vào sẽ thấy báo chức năng sắp triển khai. Việc Workflow đang chờ bạn thì xem bằng nút Việc cần xử lý (hình khay giấy) ngay cạnh chuông.",
           },
         ],
       },
@@ -194,14 +204,14 @@ const TOPICS: GuideTopic[] = [
             kind: "bullets",
             items: [
               "Thiết bị máy móc đang quản lý: mở màn Tài sản nhưng chỉ hiện đúng nhánh thiết bị máy móc, tiêu đề thanh đỏ đổi theo tên nhánh.",
-              "Thiết bị CNTT: tương tự, chỉ hiện nhánh CNTT. Số trên ô chưa gồm camera — camera đếm riêng ở ô khác.",
+              "Thiết bị CNTT đang sử dụng: mở nhóm IT (thiết bị CNTT đã chuyển từ nhóm Tài sản sang nhóm này), chỉ hiện nhánh CNTT. Số trên ô chưa gồm camera — camera đếm riêng ở ô khác.",
               "Đã điểm danh hôm nay: trượt xuống khối ĐIỂM DANH NHÂN SỰ HÔM NAY ngay trên Trang chủ, nơi có số theo từng phòng ban.",
             ],
           },
           {
             kind: "note",
             tone: "info",
-            text: "Muốn xem cả cây tài sản thì vào từ tab Chức năng như bình thường. Ô Đã điểm danh hôm nay chỉ trượt được khi khối điểm danh đang bật ở Sắp xếp.",
+            text: "Muốn xem cả cây thì vào từ tab Chức năng như bình thường: máy móc ở nhóm Tài sản, CNTT ở nhóm IT. Ô Đã điểm danh hôm nay chỉ trượt được khi khối điểm danh đang bật ở Sắp xếp.",
           },
           {
             kind: "paragraph",
@@ -362,6 +372,15 @@ const TOPICS: GuideTopic[] = [
       "tu dien",
       "gia tri mac dinh",
       "khong sua duoc",
+      "o anh",
+      "chup anh",
+      "anh nhan vien",
+      "ho so nhan vien",
+      "nhan su",
+      "hr",
+      "cat lai",
+      "hoan tac",
+      "tim trong bang chon",
     ],
     sections: [
       {
@@ -448,9 +467,39 @@ const TOPICS: GuideTopic[] = [
             text: "Mở màn Chỉnh sửa hay Bản sao thì app KHÔNG điền sẵn gì — giữ nguyên giá trị của bản ghi đang sửa, hoặc của bản ghi gốc đang nhân bản.",
           },
           {
+            kind: "bullets",
+            items: [
+              "Trong bảng chọn, gõ vào ô tìm kiếm để lọc — chỉ còn những dòng khớp chữ vừa gõ.",
+              "Giá trị đang chọn luôn được đưa lên đầu danh sách (ngay dưới dòng bỏ chọn), kể cả khi danh sách dài nhiều trang. Tích thêm trong lúc đang xem thì dòng giữ nguyên chỗ, không nhảy.",
+            ],
+          },
+          {
             kind: "note",
             tone: "info",
             text: "Không thấy nút Thêm mới, Sửa hay Xoá nghĩa là tài khoản chưa có quyền tương ứng với loại tài sản đó, chứ không phải app lỗi.",
+          },
+        ],
+      },
+      {
+        id: "tai-san-o-anh",
+        heading: "Ô ảnh trong bản ghi",
+        blocks: [
+          {
+            kind: "paragraph",
+            text: "Một số loại hồ sơ (ví dụ hồ sơ nhân viên) có ô ảnh lưu thẳng trong bản ghi. Ở danh sách và màn chi tiết, ảnh hiện thu nhỏ; bấm vào để xem lớn. Ở Chi tiết lịch sử, lần nào đổi ảnh thì hiện cả ảnh cũ → ảnh mới.",
+          },
+          {
+            kind: "bullets",
+            items: [
+              "Chụp ảnh: chụp mới bằng camera.",
+              "Thư viện: chọn ảnh có sẵn trong máy.",
+              "Cắt lại: chỉnh khung của ảnh đang có.",
+              "Xoá: bỏ ảnh khỏi ô.",
+            ],
+          },
+          {
+            kind: "paragraph",
+            text: "Dưới ảnh ghi Ảnh đã lưu (xx KB), hoặc Chưa có ảnh. Đang sửa mà đổi ý thì bấm Hoàn tác về ảnh gốc để lấy lại ảnh lúc mở form.",
           },
         ],
       },
@@ -674,6 +723,550 @@ const TOPICS: GuideTopic[] = [
     ],
   },
 
+  // ─── Công việc & phê duyệt ─────────────────────────────────────────────────
+  {
+    id: "phieu-de-nghi",
+    title: "Phiếu đề nghị",
+    summary: "Lập phiếu, duyệt / từ chối, xem quy trình duyệt",
+    iconName: "document-text-outline",
+    iconBg: C.violet,
+    group: "Công việc & phê duyệt",
+    keywords: [
+      "workflow",
+      "phieu de nghi",
+      "ticket",
+      "ticket phong ban",
+      "flow",
+      "lap phieu",
+      "duyet",
+      "phe duyet",
+      "tu choi",
+      "khong y kien",
+      "tra buoc",
+      "ly do tra buoc",
+      "duyet tat ca",
+      "duyet nhieu",
+      "chon nhieu",
+      "nguoi duyet",
+      "quy trinh",
+      "so do",
+      "luu nhap",
+      "nhan ban",
+      "dinh kem",
+      "binh luan",
+      "tao cong viec",
+      "giao viec",
+      "viec can xu ly",
+      "xem tat ca",
+    ],
+    sections: [
+      {
+        id: "phieu-mo-workflow",
+        heading: "Mở Workflow",
+        blocks: [
+          {
+            kind: "steps",
+            items: [
+              "Vào tab Chức năng, chọn ô Workflow. Hay dùng thì ghim ô này lên khối TRUY CẬP NHANH ở Trang chủ.",
+              "Màn Workflow chia hai nhóm: Flow có Ticket phòng ban — phiếu đề nghị theo quy trình duyệt; Công việc có Công việc và Kế hoạch.",
+              "Chọn Ticket phòng ban để vào danh sách phiếu.",
+            ],
+          },
+          {
+            kind: "image",
+            source: require("../../../assets/images/guide/phieu-de-nghi-01.png"),
+            caption: "Màn Workflow: số nhắc dưới tên từng chức năng",
+            aspectRatio: 0.78,
+          },
+          {
+            kind: "paragraph",
+            text: "Dưới tên mỗi chức năng là các số giống số trên tab khi mở vào: Ticket phòng ban có chờ duyệt, đang xử lý, nháp; Công việc có chưa xong, đến hạn (hạn là hôm nay), quá hạn, gia hạn, mới hôm nay. Số 0 thì không hiện. Số chưa xong đã gồm cả việc đến hạn, quá hạn và gia hạn. Kéo màn hình xuống để cập nhật số.",
+          },
+          {
+            kind: "note",
+            tone: "info",
+            text: "Không thấy ô Workflow, hoặc vào thì báo \"Bạn không có quyền truy cập\" là tài khoản chưa được cấp quyền xem Workflow. Vào được mà báo \"Chưa có chức năng\" là chưa được cấp quyền xem phiếu đề nghị, công việc hay kế hoạch. Cả hai đều nhờ IT cấp.",
+          },
+        ],
+      },
+      {
+        id: "phieu-viec-can-xu-ly",
+        heading: "Việc cần xử lý",
+        blocks: [
+          {
+            kind: "paragraph",
+            text: "Trên thanh đầu Trang chủ, cạnh hình chuông có nút Việc cần xử lý (hình khay giấy). Bấm vào để xem phiếu đang chờ bạn duyệt, việc được giao, việc sắp đến hạn, việc quá hạn và bình luận mới. Số trên nút cũng là số đỏ trên ô Workflow.",
+          },
+          {
+            kind: "bullets",
+            items: [
+              "Hàng tab trên cùng lọc theo loại: Tất cả, Phiếu chờ duyệt, Được giao, Sắp đến hạn, Quá hạn, Bình luận. Chỉ hiện những loại đang có việc.",
+              "Bấm một dòng để mở thẳng phiếu, danh sách phiếu chờ duyệt, hoặc công việc liên quan.",
+              "Phiếu chờ duyệt của cùng một loại phiếu gộp thành một dòng, ví dụ \"3 phiếu Ticket phòng ban đang chờ bạn duyệt\".",
+              "Số chỉ giảm khi việc được xử lý — duyệt phiếu, làm xong việc — chứ không phải khi bạn đã xem. Kéo màn hình xuống để tải lại.",
+              "Nút chỉ có ở tài khoản được cấp quyền Workflow.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "phieu-danh-sach",
+        heading: "Danh sách phiếu",
+        blocks: [
+          {
+            kind: "bullets",
+            items: [
+              "Chờ duyệt (mở sẵn): phiếu đang tới lượt bạn duyệt.",
+              "Đang xử lý, Đã hoàn tất: phiếu đang đi qua các bước, và phiếu đã xong.",
+              "Nháp: phiếu bạn đã lưu nháp, chưa nộp.",
+              "Hồ sơ của tôi: phiếu do bạn lập. Tất cả: mọi phiếu bạn được xem.",
+            ],
+          },
+          {
+            kind: "paragraph",
+            text: "Gõ vào ô Tìm kiếm phiếu... để lọc. Mỗi thẻ có nhãn tình trạng tô màu (Nháp, Chờ duyệt, Đang xử lý, Đã hoàn tất, Đã từ chối, Đã hủy), tên bước hiện tại (bước có nhiều phòng duyệt song song thì ghi tên bước lớn) — chữ đỏ khi tới lượt bạn — và số bình luận, số file đính kèm. Bấm thẳng vào số bình luận hay số file để mở màn Bình luận hay File đính kèm của phiếu đó, khỏi vào chi tiết phiếu. Số file mờ đi giống nút Đính kèm ở chi tiết khi phiếu chưa có file mà bạn không thêm được.",
+          },
+          {
+            kind: "paragraph",
+            text: "Phiếu tới lượt bạn có sẵn các nút Trả bước / Từ chối / Không ý kiến / Duyệt ngay trên thẻ, không phải mở chi tiết. Nút Không ý kiến và Trả bước chỉ có ở bước cho phép.",
+          },
+          {
+            kind: "image",
+            source: require("../../../assets/images/guide/phieu-de-nghi-02.png"),
+            caption: "Tab Chờ duyệt: nút Duyệt nhiều (n), dòng bước hiện tại và nút duyệt ngay trên thẻ",
+            aspectRatio: 0.73,
+          },
+        ],
+      },
+      {
+        id: "phieu-lap",
+        heading: "Lập phiếu",
+        blocks: [
+          {
+            kind: "steps",
+            items: [
+              "Ở danh sách phiếu, bấm nút + màu đỏ ở góc dưới để mở màn Lập phiếu.",
+              "Chọn Loại đề nghị, nhập Tiêu đề và Mô tả. Ô có dấu * đỏ là bắt buộc.",
+              "Ở mục Đính kèm, bấm Chọn file nếu cần gửi kèm: Chụp ảnh, Ảnh trong máy hoặc Tài liệu (PDF, Word, Excel...).",
+              "Mục Người duyệt hiện ra sau khi chọn Loại đề nghị (nếu loại đó cần chọn người). Bấm vào từng bước để chọn người; mỗi bước phải có ít nhất 1 người, thiếu thì app báo Thiếu người duyệt và tô đỏ bước còn trống.",
+              "Bấm Lưu phiếu để nộp đi duyệt, hoặc Lưu nháp để giữ lại sửa tiếp.",
+            ],
+          },
+          {
+            kind: "image",
+            source: require("../../../assets/images/guide/phieu-de-nghi-03.png"),
+            caption: "Màn Lập phiếu: Lưu nháp để giữ lại, Lưu phiếu để nộp đi duyệt",
+            aspectRatio: 0.46,
+          },
+          {
+            kind: "bullets",
+            items: [
+              "Mỗi file tối đa 20MB. File được tải lên khi lưu, không phải lúc chọn.",
+              "Phiếu nháp nằm ở tab Nháp. Mở ra bấm Sửa để sửa tiếp, rồi Lưu phiếu khi đã xong.",
+              "Nộp không được thì app báo Chưa nộp được kèm lý do — phiếu vẫn được giữ ở dạng nháp, không mất.",
+            ],
+          },
+          {
+            kind: "note",
+            tone: "info",
+            text: "Không thấy nút + hoặc màn báo \"Chưa liên kết nhân viên\": tài khoản phải được gắn với một hồ sơ nhân viên trên hệ thống mới lập được phiếu. Liên hệ IT.",
+          },
+        ],
+      },
+      {
+        id: "phieu-duyet",
+        heading: "Duyệt, từ chối, không ý kiến",
+        blocks: [
+          {
+            kind: "steps",
+            items: [
+              "Bấm Duyệt (xanh), Từ chối (đỏ) hoặc Không ý kiến (xám xanh) — trên thẻ ở danh sách, hoặc ở màn Chi tiết phiếu (dòng Bước hiện tại chữ đỏ).",
+              "Ghi Ý kiến. Duyệt thì để trống cũng được; Từ chối thì nên ghi lý do.",
+              "Bước kế tiếp cần chọn người thì bảng hiện thêm mục Chọn người duyệt cho bước kế tiếp — phải chọn mỗi bước ít nhất 1 người.",
+              "Bấm nút xác nhận ở cuối bảng.",
+            ],
+          },
+          {
+            kind: "note",
+            tone: "warn",
+            text: "Từ chối sẽ đóng phiếu, không quay lại được. App hỏi xác nhận một lần trước khi gửi. Lỡ từ chối nhầm thì người lập phải lập phiếu mới — dùng Nhân bản cho nhanh. Chỉ cần bước trước làm lại thì dùng Trả bước.",
+          },
+          {
+            kind: "paragraph",
+            text: "Phiếu duyệt song song: người khác vừa duyệt, trả bước hay từ chối trước bạn thì app báo \"Phiếu không còn chờ bạn xử lý...\" rồi tự tải lại, nút Duyệt tự ẩn.",
+          },
+        ],
+      },
+      {
+        id: "phieu-tra-buoc",
+        heading: "Trả bước",
+        blocks: [
+          {
+            kind: "paragraph",
+            text: "Trả bước đưa phiếu lùi về bước trước để làm lại, thay vì từ chối đóng phiếu. Nút Trả bước màu cam, đứng trước Từ chối, chỉ có ở bước cho phép trả bước.",
+          },
+          {
+            kind: "steps",
+            items: [
+              "Bấm Trả bước trên thẻ hoặc ở màn Chi tiết phiếu.",
+              "Hộp Xác nhận trả bước ghi phiếu đang ở bước nào và sẽ về bước nào.",
+              "Nhập Lý do trả bước — bắt buộc — rồi bấm Trả bước.",
+            ],
+          },
+          {
+            kind: "bullets",
+            items: [
+              "Trả bước tính theo bước lớn: phiếu lùi về bước lớn liền trước và chạy lại từ đầu bước đó. Bấm ở bước con 2.2 cũng về bước 1, không về 2.1.",
+              "Các bước con đang mở cùng bước (song song) cũng dừng, chạy lại sau. Người ở các bước bị chạy lại phải duyệt lại.",
+              "Bước lớn đầu tiên không trả được. Chọn nhiều phiếu thì không có Trả bước — làm từng phiếu.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "phieu-tao-cong-viec",
+        heading: "Bước cuối: Duyệt hay Tạo công việc",
+        blocks: [
+          {
+            kind: "paragraph",
+            text: "Với loại đề nghị có giao việc, ở lượt duyệt cuối bảng duyệt có hai lựa chọn:",
+          },
+          {
+            kind: "bullets",
+            items: [
+              "Duyệt: duyệt phiếu như thường.",
+              "Tạo công việc: duyệt phiếu và giao việc luôn — từ đó tình trạng phiếu đi theo công việc. Bấm xong app mở màn Tạo công việc, đã điền sẵn từ phiếu.",
+            ],
+          },
+          {
+            kind: "image",
+            source: require("../../../assets/images/guide/phieu-de-nghi-04.png"),
+            caption: "Lượt duyệt cuối của loại có giao việc: chọn Duyệt hoặc Tạo công việc",
+            aspectRatio: 0.99,
+          },
+          {
+            kind: "note",
+            tone: "warn",
+            text: "Ở màn Tạo công việc, bấm nút Tạo công việc ở cuối form mới là duyệt phiếu. Đóng form mà không lưu thì phiếu chưa được duyệt.",
+          },
+        ],
+      },
+      {
+        id: "phieu-duyet-nhieu",
+        heading: "Duyệt nhiều phiếu một lần",
+        blocks: [
+          {
+            kind: "steps",
+            items: [
+              "Ở tab Chờ duyệt, nhấn giữ một phiếu để bật chế độ chọn nhiều.",
+              "Chạm thêm các phiếu khác, hoặc bấm Chọn hết. Thanh dưới đáy ghi Đã chọn x/y; bấm Huỷ để thoát.",
+              "Bấm Duyệt nhiều (n), ghi Ý kiến chung rồi bấm Duyệt.",
+            ],
+          },
+          {
+            kind: "image",
+            source: require("../../../assets/images/guide/phieu-de-nghi-05.png"),
+            caption: "Đang chọn nhiều: thanh dưới ghi Đã chọn x/y, có Chọn hết, Huỷ và Duyệt nhiều (n)",
+            aspectRatio: 0.46,
+          },
+          {
+            kind: "paragraph",
+            text: "Muốn duyệt hết danh sách thì bấm Duyệt nhiều (n) ngay dưới các tab (lúc chưa chọn phiếu nào) — duyệt mọi phiếu đang chờ bạn, không cần chọn từng phiếu.",
+          },
+          {
+            kind: "bullets",
+            items: [
+              "Chọn nhiều chỉ để Duyệt. Từ chối, Không ý kiến và Trả bước phải làm từng phiếu.",
+              "Mỗi lượt duyệt tối đa 500 phiếu. Còn nhiều hơn thì app báo và duyệt phần đầu; bấm Duyệt nhiều lần nữa cho phần còn lại.",
+              "Phiếu đang ở lượt cuối có Tạo công việc: chọn Bỏ qua các phiếu này để duyệt riêng từng phiếu mà giao việc, hoặc Vẫn duyệt như thường (không tạo công việc).",
+              "Phiếu cần chọn người duyệt cho bước tiếp theo sẽ chưa được duyệt — mở từng phiếu, chọn người rồi bấm Duyệt.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "phieu-quy-trinh",
+        heading: "Xem quy trình và lịch sử duyệt",
+        blocks: [
+          {
+            kind: "paragraph",
+            text: "Ở màn Chi tiết phiếu, bấm Quy trình. Màn có hai tab:",
+          },
+          {
+            kind: "bullets",
+            items: [
+              "Quy trình: sơ đồ ngang từ Lập phiếu tới bước cuối, mỗi bước lớn một điểm. Xanh có dấu ✓ là Đã duyệt, xanh dương có số là Đang xử lý, viền đứt là Chờ xử lý, đỏ là Đã từ chối, cam là Trả bước. Bước có bước con ghi thêm chấm nhỏ cho từng con và số con đã xong, vd 1/2. Sơ đồ rộng thì vuốt ngang để xem.",
+              "Phiếu từng bị trả bước thì sơ đồ có nhiều dòng Lần 1, Lần 2...: mỗi dòng là một lượt chạy, nối nhau bằng nét đứt cam ghi Trả bước lần n. Bấm vào nhãn đó để xem ai trả và lý do.",
+              "Bấm một điểm để xem chi tiết bên dưới: từng bước con, người xử lý, trạng thái, giờ và ý kiến. Điểm cam ghi thêm ai trả, về bước nào và lý do. Mở màn là app chọn sẵn bước đang xử lý.",
+              "Lịch sử: từng việc đã xảy ra theo thời gian — Thêm mới (lập phiếu), Chờ xử lý (bước mở, giao cho ai), Duyệt / Từ chối / Không ý kiến kèm người và ý kiến, Bỏ qua, Trả bước (lần n) kèm lý do, Tạo công việc.",
+            ],
+          },
+          {
+            kind: "image",
+            source: require("../../../assets/images/guide/phieu-de-nghi-06.png"),
+            caption: "Tab Quy trình: mỗi dòng một lượt chạy, nét đứt cam là trả bước; bấm một điểm để xem chi tiết bên dưới",
+            aspectRatio: 0.46,
+          },
+          {
+            kind: "paragraph",
+            text: "Phiếu đã giao việc thì sơ đồ có thêm điểm Công việc ở cuối; bấm vào xem Chủ trì, Hạn và mở công việc đó.",
+          },
+        ],
+      },
+      {
+        id: "phieu-thao-tac-khac",
+        heading: "Bình luận, đính kèm, sửa, nhân bản, xoá",
+        blocks: [
+          {
+            kind: "bullets",
+            items: [
+              "Bình luận (n): trao đổi về phiếu. Ai xem được phiếu thì bình luận được — gõ vào ô Viết bình luận..., mỗi bình luận gửi kèm được 1 file. Ảnh chụp hay ảnh chọn từ máy hiện thẳng trong khung chat, bấm vào để xem to; file khác hiện tên file, bấm để mở.",
+              "Đính kèm (n): xem và mở các file của phiếu. Chỉ người lập thêm hoặc xoá file được, và chỉ khi phiếu còn nháp.",
+              "Sửa: chỉ có ở phiếu nháp của chính bạn.",
+              "Nhân bản: tạo phiếu mới lấy sẵn nội dung phiếu đang xem.",
+              "Xoá: chỉ người lập, khi phiếu chưa hoàn tất. App hỏi xác nhận — thao tác không hoàn tác được.",
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "cong-viec",
+    title: "Công việc & kế hoạch",
+    summary: "Giao việc, cập nhật tiến độ, việc định kỳ, kế hoạch",
+    iconName: "checkbox-outline",
+    iconBg: C.blue,
+    group: "Công việc & phê duyệt",
+    keywords: [
+      "workflow",
+      "cong viec",
+      "giao viec",
+      "ke hoach",
+      "chu tri",
+      "phoi hop",
+      "de biet",
+      "nguoi tham gia",
+      "chuyen trang thai",
+      "hoan thanh",
+      "huy",
+      "gia han",
+      "doi chu tri",
+      "qua han",
+      "den han",
+      "dinh ky",
+      "lap lai",
+      "tien do",
+      "file ket qua",
+    ],
+    sections: [
+      {
+        id: "cong-viec-danh-sach",
+        heading: "Danh sách công việc",
+        blocks: [
+          {
+            kind: "paragraph",
+            text: "Vào Workflow → Công việc. Danh sách chỉ có việc của bạn: việc bạn tạo, hoặc có tên trong người tham gia.",
+          },
+          {
+            kind: "bullets",
+            items: [
+              "Các tab: Chưa xong (mở sẵn), Đến hạn, Quá hạn, Gia hạn, Mới hôm nay, Tất cả, Đã hủy.",
+              "Hàng chip màu bên dưới lọc thêm theo tình trạng: Quá hạn, Gia hạn, Đang xử lý, Mới, Hoàn thành, Hủy.",
+              "Ô tìm kiếm tìm theo số, tiêu đề, mô tả.",
+              "Mỗi thẻ ghi Chủ trì, số bình luận, số file; việc sinh từ lịch định kỳ ghi Định kỳ · lần n. Bấm thẳng vào số bình luận hay số file để mở màn đó, khỏi vào chi tiết việc.",
+            ],
+          },
+          {
+            kind: "image",
+            source: require("../../../assets/images/guide/cong-viec-01.png"),
+            caption: "Hàng tab theo hạn, hàng chip màu để lọc; viền trái thẻ cùng màu với chip (đỏ là quá hạn)",
+            aspectRatio: 0.54,
+          },
+        ],
+      },
+      {
+        id: "cong-viec-them",
+        heading: "Thêm công việc",
+        blocks: [
+          {
+            kind: "steps",
+            items: [
+              "Ở danh sách, bấm nút + màu đỏ để mở màn Thêm công việc.",
+              "Nhập Tiêu đề (bắt buộc); chọn Loại công việc, Kế hoạch nếu việc thuộc một kế hoạch; ghi Mô tả; chọn mức Khẩn cấp và Quan trọng.",
+              "Mục Thời gian: chọn Từ ngày và Đến ngày (có cả giờ).",
+              "Mục Người tham gia: chọn đúng 1 người Chủ trì, thêm người Phối hợp và Để biết nếu cần. Mỗi người chỉ giữ một vai trò. Bảng chọn người tìm được theo tên, mã, phòng ban.",
+              "Mục Đính kèm: chọn file nếu cần (tối đa 20MB mỗi file).",
+              "Bấm Lưu.",
+            ],
+          },
+          {
+            kind: "paragraph",
+            text: "Công tắc Không được chuyển người chủ trì: bật thì chủ trì không tự đổi chủ trì được. Chỉ người tạo việc đổi được ô này.",
+          },
+        ],
+      },
+      {
+        id: "cong-viec-dinh-ky",
+        heading: "Công việc định kỳ",
+        blocks: [
+          {
+            kind: "paragraph",
+            text: "Việc lặp lại đều đặn (kiểm tra hằng tuần, báo cáo hằng tháng…) thì tạo một lần, app sinh sẵn đủ các lần.",
+          },
+          {
+            kind: "steps",
+            items: [
+              "Ở màn Thêm công việc, mục Định kỳ, bật Lặp lại định kỳ.",
+              "Chọn Ngày / Tuần / Tháng / Năm và Lặp mỗi bao nhiêu. Lặp theo tuần thì chọn thêm thứ (T2 … CN).",
+              "Chọn Ngày bắt đầu.",
+              "Ở Kết thúc, chọn Sau số lần (tối đa 366) hoặc Vào ngày.",
+              "Xem dòng Sẽ tạo n công việc… bên dưới để chắc ngày các lần là đúng, rồi bấm Lưu.",
+            ],
+          },
+          {
+            kind: "image",
+            source: require("../../../assets/images/guide/cong-viec-02.png"),
+            caption: "Ví dụ: lặp T2, T4, T6 mỗi tuần, 6 lần — dòng xem trước liệt kê đủ 6 ngày",
+            aspectRatio: 0.46,
+          },
+          {
+            kind: "bullets",
+            items: [
+              "Giờ và thời lượng mỗi lần lấy theo Từ ngày / Đến ngày ở mục Thời gian.",
+              "Định kỳ chỉ có khi thêm mới. Sửa một việc đã có, hoặc tạo việc từ phiếu đề nghị, thì không có mục này.",
+              "File đính kèm của việc định kỳ chỉ gắn vào lần đầu.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "cong-viec-cap-nhat",
+        heading: "Cập nhật tiến độ",
+        blocks: [
+          {
+            kind: "paragraph",
+            text: "Mở một việc để vào màn Chi tiết công việc. Các nút ở đây tuỳ vai trò của bạn trong việc:",
+          },
+          {
+            kind: "bullets",
+            items: [
+              "Chuyển trạng thái: chọn Mới, Đang xử lý, Hoàn thành hoặc Hủy; ghi chú tiến độ, gắn File kết quả. Hủy bắt buộc ghi lý do.",
+              "Gia hạn: chọn Hạn mới và ghi lý do. Việc đã gia hạn hiện thêm dòng Hạn ban đầu.",
+              "Đổi chủ trì: chọn chủ trì mới và ghi lý do bàn giao.",
+              "Sửa, Xoá: Xoá chỉ có khi việc còn Mới, do bạn tạo và không sinh từ phiếu.",
+              "Bình luận (n), File (n): trao đổi và gửi file trong việc. Không có quyền trao đổi thì màn bình luận ghi Bạn chỉ xem được bình luận.",
+            ],
+          },
+          {
+            kind: "image",
+            source: require("../../../assets/images/guide/cong-viec-03.png"),
+            caption: "Bảng Chuyển trạng thái: chọn trạng thái mới, ghi chú, gắn File kết quả rồi Lưu",
+            aspectRatio: 0.89,
+          },
+          {
+            kind: "paragraph",
+            text: "Tab Thông tin có Người tham gia chia theo Chủ trì / Phối hợp / Để biết, và phần Định kỳ nếu có. Tab Lịch sử ghi lại từng lần tạo, chuyển trạng thái, gia hạn, đổi chủ trì.",
+          },
+          {
+            kind: "note",
+            tone: "info",
+            text: "Thấy dòng \"Bạn đang xem ở chế độ chỉ xem.\" là bạn chỉ được xem việc này, không làm gì được trên nó. Việc ghi Sinh từ phiếu đề nghị thì không xoá được; muốn bỏ việc thì Chuyển trạng thái → Hủy.",
+          },
+        ],
+      },
+      {
+        id: "cong-viec-ke-hoach",
+        heading: "Kế hoạch",
+        blocks: [
+          {
+            kind: "paragraph",
+            text: "Kế hoạch gom nhiều công việc về một mối để theo dõi phần trăm hoàn thành. Vào Workflow → Kế hoạch.",
+          },
+          {
+            kind: "bullets",
+            items: [
+              "Các tab: Tất cả, Tôi chủ trì, Tôi tham gia.",
+              "Bấm nút + để Thêm kế hoạch. Chủ trì là người tạo kế hoạch, không cần chọn; chỉ chọn thêm người tham gia.",
+              "Màn chi tiết có vòng tiến độ x/y việc. Tab Công việc liệt kê các việc trong kế hoạch; bấm Thêm công việc để tạo việc đã gắn sẵn vào kế hoạch này.",
+              "Không phải chủ trì thì tab Công việc chỉ hiện việc bạn tham gia.",
+              "Mỗi thẻ việc trong kế hoạch có số bình luận, số file — bấm thẳng vào để mở màn Bình luận / File của việc đó, như ở danh sách Công việc.",
+            ],
+          },
+          {
+            kind: "note",
+            tone: "info",
+            text: "Chỉ chủ trì kế hoạch mới thấy nút Sửa và Xoá. Nút Xoá bị mờ khi kế hoạch còn công việc — chỉ xoá được kế hoạch không còn việc nào.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "lich-thong-bao",
+    title: "Lịch công việc",
+    summary: "Tab Lịch công việc của Workflow",
+    iconName: "calendar-outline",
+    iconBg: C.sky,
+    group: "Công việc & phê duyệt",
+    keywords: [
+      "lich",
+      "lich cong viec",
+      "tab lich",
+      "thang",
+      "tuan",
+      "hom nay",
+      "phieu cho duyet",
+      "duoc giao",
+      "sap den han",
+      "qua han",
+      "binh luan",
+      "mat tab camera",
+    ],
+    sections: [
+      {
+        id: "lich-tab",
+        heading: "Tab Lịch thay chỗ tab Camera",
+        blocks: [
+          {
+            kind: "paragraph",
+            text: "Tài khoản được cấp quyền Workflow sẽ thấy tab Lịch ở thanh dưới, đúng chỗ tab Camera cũ. Camera không mất: vẫn mở từ ô Camera ở tab Chức năng.",
+          },
+          {
+            kind: "note",
+            tone: "info",
+            text: "Lúc mới mở app, tab có thể hiện Camera trong giây lát rồi đổi thành Lịch. Đó là lúc app vừa tải xong quyền của tài khoản, không phải lỗi.",
+          },
+        ],
+      },
+      {
+        id: "lich-xem",
+        heading: "Xem lịch công việc",
+        blocks: [
+          {
+            kind: "bullets",
+            items: [
+              "Chọn Tháng hoặc Tuần ở trên cùng. Bấm Hôm nay để về ngày hiện tại; mũi tên hai bên để sang tháng / tuần trước hoặc sau.",
+              "Xem theo Tháng: bấm một ngày trên lưới, việc của ngày đó hiện ngay bên dưới. Xem theo Tuần: các ngày xếp dọc, ngày nào cũng có danh sách việc.",
+              "Trên lưới Tháng, mỗi việc là một vạch màu dưới ngày, màu theo tình trạng. Ngày đang chọn ghi n việc, hoặc Không có việc. Hàng chip màu lọc theo tình trạng như ở danh sách công việc.",
+              "Bấm một việc để mở chi tiết công việc.",
+            ],
+          },
+          {
+            kind: "image",
+            source: require("../../../assets/images/guide/lich-thong-bao-01.png"),
+            caption: "Xem theo Tháng: bấm một ngày, việc của ngày đó hiện bên dưới lưới",
+            aspectRatio: 0.46,
+          },
+          {
+            kind: "paragraph",
+            text: "Bấm dấu + bên cạnh một ngày để thêm việc cho ngày đó — ngày chưa có việc thì bấm luôn dòng Không có việc · Bấm để thêm việc. Form điền sẵn từ 08:00 đến 17:00, chủ trì là bạn, sửa lại được.",
+          },
+        ],
+      },
+    ],
+  },
+
   // ─── Theo dõi & báo cáo ────────────────────────────────────────────────────
   {
     id: "camera",
@@ -840,7 +1433,7 @@ const TOPICS: GuideTopic[] = [
     iconName: "bar-chart-outline",
     iconBg: C.emerald,
     group: "Theo dõi & báo cáo",
-    keywords: ["bao cao", "report", "dien mat troi", "solar", "san luong", "loc"],
+    keywords: ["bao cao", "report", "dien mat troi", "solar", "san luong", "loc", "nhan su", "hr", "dieu kien", "tim trong bang chon"],
     sections: [
       {
         id: "bao-cao-xem",
@@ -853,6 +1446,13 @@ const TOPICS: GuideTopic[] = [
               "Chọn báo cáo cần xem.",
               "Bấm nút lọc để chọn điều kiện (khoảng thời gian, đơn vị…).",
               "Kéo màn hình xuống để tải lại số liệu mới nhất.",
+            ],
+          },
+          {
+            kind: "bullets",
+            items: [
+              "Điều kiện chọn từ danh sách dài (phòng ban, nhân viên…): gõ vào ô tìm kiếm trong bảng chọn để lọc, chỉ còn những dòng khớp chữ vừa gõ.",
+              "Những giá trị đã chọn luôn nằm trên đầu bảng, mở lại lần sau vẫn thấy ngay, không phải cuộn tìm.",
             ],
           },
         ],
@@ -876,7 +1476,7 @@ const TOPICS: GuideTopic[] = [
     iconName: "car-outline",
     iconBg: C.blue,
     group: "Theo dõi & báo cáo",
-    keywords: ["phuong tien", "xe", "hanh trinh", "dung do", "vi tri", "ban do", "gps"],
+    keywords: ["phuong tien", "xe", "hanh trinh", "dung do", "vi tri", "ban do", "gps", "phong to", "thu nho", "xuat phat", "ket thuc", "mau diem dung"],
     sections: [
       {
         id: "phuong-tien-ba-chuc-nang",
@@ -908,6 +1508,27 @@ const TOPICS: GuideTopic[] = [
             kind: "note",
             tone: "info",
             text: "Chọn khoảng ngày quá dài thì bản đồ nhiều điểm, tải chậm. Xem theo từng ngày hoặc vài ngày cho nhẹ.",
+          },
+        ],
+      },
+      {
+        id: "phuong-tien-ban-do",
+        heading: "Thao tác trên bản đồ",
+        blocks: [
+          {
+            kind: "bullets",
+            items: [
+              "Nút + và − ở góc trái trên để phóng to, thu nhỏ; chụm hai ngón cũng được.",
+              "Trên iPhone có thêm nút ngay bên dưới: ở Hành trình và Dừng đỗ là thu cả tuyến vào khung; ở Vị trí hiện tại là đưa bản đồ về đúng chỗ xe.",
+              "Hành trình: chấm xanh là Xuất phát, chấm đỏ là Kết thúc.",
+              "Dừng đỗ: màu chấm theo thời gian dừng — đỏ là trên 30 phút, cam là trên 10 phút, xanh là ngắn hơn. Bấm vào chấm để xem địa chỉ và thời gian Dừng.",
+              "Vị trí hiện tại: tự cập nhật mỗi 5 giây, không cần kéo tải lại.",
+            ],
+          },
+          {
+            kind: "note",
+            tone: "info",
+            text: "iPhone dùng bản đồ Apple, Android dùng bản đồ riêng trong app, nên hai máy nhìn hơi khác nhau. Bản đồ trên iPhone trắng trơn thì cập nhật app lên bản mới nhất.",
           },
         ],
       },
@@ -963,11 +1584,11 @@ const TOPICS: GuideTopic[] = [
   {
     id: "cai-dat",
     title: "Cài đặt & quyền",
-    summary: "Hồ sơ, danh thiếp QR, mật khẩu, giao diện, quyền",
+    summary: "Hồ sơ, danh thiếp QR, mật khẩu, giao diện, cỡ chữ, quyền",
     iconName: "settings-outline",
     iconBg: C.amber,
     group: "Trợ giúp",
-    keywords: ["cai dat", "quyen", "ho so", "doi mat khau", "giao dien", "sang toi", "phien ban", "dang xuat", "thong bao camera", "tam dung thong bao", "thong tin qrcode", "danh thiep", "card visit", "vcard", "luu danh ba", "ma nhan vien", "anh dai dien", "doi anh", "avatar"],
+    keywords: ["cai dat", "quyen", "ho so", "doi mat khau", "giao dien", "sang toi", "phien ban", "dang xuat", "thong bao camera", "tam dung thong bao", "thong tin qrcode", "danh thiep", "card visit", "vcard", "luu danh ba", "ma nhan vien", "anh dai dien", "doi anh", "avatar", "co chu", "chu to", "chu nho", "phong chu"],
     sections: [
       {
         id: "cai-dat-tai-khoan",
@@ -998,18 +1619,19 @@ const TOPICS: GuideTopic[] = [
             items: [
               "Vào tab Cài đặt, chọn Thông tin QrCode.",
               "Đưa màn hình cho người cần lưu liên hệ.",
-              "Người đó mở camera có sẵn của điện thoại, quét mã QR — máy hiện ngay thẻ liên hệ, bấm lưu là vào danh bạ.",
+              "Người đó mở camera có sẵn của điện thoại, quét mã QR — máy mở trang danh thiếp của bạn trên web.",
+              "Trên trang đó có nút tải thẻ liên hệ (vCard) để lưu vào danh bạ, và nút đổi tiếng Việt / tiếng Anh.",
             ],
           },
           {
             kind: "paragraph",
-            text: "Thẻ liên hệ gồm họ tên, chức vụ, số di động, số công ty, email, địa chỉ công ty, link trang danh thiếp của bạn và trang chủ công ty.",
+            text: "Mã QR mang đường link tới trang danh thiếp, không chứa sẵn thẻ liên hệ như trước. Nhờ vậy thông tin cập nhật trên hệ thống là trang danh thiếp đổi theo, không phải in lại mã.",
           },
           {
             kind: "bullets",
             items: [
               "Bấm số điện thoại để gọi, bấm Email để soạn thư, bấm Website để mở trang công ty.",
-              "Không thấy mã QR (chỉ còn tên): tài khoản chưa được gán hồ sơ nhân viên trên hệ thống — liên hệ IT.",
+              "Không thấy mã QR (chỉ còn tên): tài khoản chưa được gán hồ sơ nhân viên, hoặc hồ sơ chưa có trang danh thiếp — liên hệ IT.",
             ],
           },
           {
@@ -1032,11 +1654,18 @@ const TOPICS: GuideTopic[] = [
             kind: "bullets",
             items: [
               "Hiển thị: chọn giao diện Sáng, Tối, hoặc để app theo cài đặt của thiết bị.",
+              "Cỡ chữ: kéo thanh trượt giữa hai chữ A để chọn cỡ chữ cho toàn ứng dụng, từ 85% đến 150% (mặc định 100%). Đoạn mô tả và khối MẪU CHỮ đổi ngay theo để xem trước. Cỡ này nhân thêm vào cỡ chữ đang đặt trong điện thoại, và chỉ áp dụng trên máy đang dùng.",
               "Quyền mạng nội bộ: cần có để kết nối máy chủ trong công ty.",
               "Quyền camera: cần có để quét QR và chụp ảnh xác nhận.",
               "Quyền thông báo: nhận thông báo từ hệ thống.",
               "Thông báo camera: tạm dừng thông báo AI phát hiện trong một khoảng thời gian, cho tất cả camera hoặc riêng một camera. Dòng này chỉ hiện với tài khoản được cấp quyền nhận thông báo camera.",
             ],
+          },
+          {
+            kind: "image",
+            source: require("../../../assets/images/guide/cai-dat-01.png"),
+            caption: "Màn Cỡ chữ: kéo thanh trượt, khối MẪU CHỮ đổi theo để xem trước",
+            aspectRatio: 0.46,
           },
           {
             kind: "note",

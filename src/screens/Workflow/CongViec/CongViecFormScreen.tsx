@@ -10,6 +10,7 @@ import { cvChiTiet, cvNhanVien, cvSua, cvThem } from "../../../services/data/con
 import { flowTaoCongViec } from "../../../services/data/flowApi";
 import {
   CV_CONG_VIEC_NAME_CLASS,
+  isWorkflowNotFound,
   uploadWorkflowFile,
 } from "../../../services/data/workflowApi";
 import type {
@@ -141,12 +142,21 @@ export default function CongViecFormScreen() {
         }
       })
       .catch((err) => {
-        if (alive) setLoadError(getWorkflowErrorMessage(err, "Không tải được form."));
+        if (!alive) return;
+        if (isWorkflowNotFound(err)) {
+          Alert.alert("Thông báo", "Không tìm thấy công việc.", [
+            { text: "OK", onPress: () => navigation.goBack() },
+          ]);
+          return;
+        }
+        setLoadError(getWorkflowErrorMessage(err, "Không tải được form."));
       });
 
     return () => {
       alive = false;
     };
+    // navigation ổn định suốt đời màn — chỉ chạy lại khi đổi việc đang sửa.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEdit, params.id]);
 
   // Ngày bắt đầu định kỳ chưa sửa tay thì đi theo ngày của Từ ngày.
@@ -307,6 +317,9 @@ export default function CongViecFormScreen() {
         : await cvThem(payload);
 
       if (result.loi || !(result.id > 0)) {
+        // Giao việc từ phiếu bị từ chối (vd người khác vừa xử lý phiếu — mục 8e
+        // phiếu): nạp lại phiếu / danh sách khi quay về để nút Duyệt tự ẩn.
+        if (fromFlow) markChanged();
         Alert.alert("Không lưu được", result.loi || "Vui lòng thử lại.");
         return;
       }
@@ -315,7 +328,7 @@ export default function CongViecFormScreen() {
       markChanged();
 
       const title = fromFlow
-        ? "Đã duyệt và giao việc"
+        ? "Đã tạo công việc"
         : isEdit
         ? "Đã lưu công việc"
         : result.soLuong > 1
@@ -350,7 +363,7 @@ export default function CongViecFormScreen() {
       modal={<WorkflowFormPickerModal form={form} />}
       footer={
         <WorkflowButton
-          label={fromFlow ? "Duyệt và giao việc" : "Lưu"}
+          label={fromFlow ? "Tạo công việc" : "Lưu"}
           icon="checkmark-circle-outline"
           onPress={handleSave}
           disabled={submitting}

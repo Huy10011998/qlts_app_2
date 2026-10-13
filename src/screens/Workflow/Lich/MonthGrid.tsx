@@ -74,7 +74,11 @@ export default function MonthGrid({ anchor, range, tasksByDay, selected, onSelec
                       ]}
                     />
                   ))}
-                  {extra > 0 ? <Text style={styles.more}>+{extra}</Text> : null}
+                  {extra > 0 ? (
+                    <Text style={styles.more} numberOfLines={1}>
+                      +{extra} việc
+                    </Text>
+                  ) : null}
                 </View>
               </TouchableOpacity>
             );

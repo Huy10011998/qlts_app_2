@@ -45,7 +45,8 @@ const TITLES: Record<FlowKetQua, string> = {
  * sheet ngay, che "Đang kiểm tra phiếu..." và hỏi server flow-chon-nguoi-duyet:
  *   · có `buocs`     → phải chọn người cho bước kế, chọn đủ mới cho gửi;
  *   · có `taoCongViec` (chỉ Duyệt) → (•) Duyệt  ( ) Tạo công việc.
- * Từ chối đóng phiếu, không quay lại — hỏi xác nhận.
+ * Từ chối đóng phiếu, không quay lại — hỏi xác nhận. Trả bước là sheet riêng
+ * (`FlowTraBuocSheet`).
  */
 export default function FlowApproveSheet({
   visible,
@@ -118,7 +119,9 @@ export default function FlowApproveSheet({
 
       const loi = getThaoTacError(result);
       if (loi) {
-        Alert.alert("Không gửi được", loi);
+        // Mục 8e: người khác vừa duyệt / trả bước / từ chối trước, hoặc phiếu đã
+        // kết thúc — báo nguyên văn rồi nạp lại để nút Duyệt tự ẩn.
+        Alert.alert("Không gửi được", loi, [{ text: "OK", onPress: onDone }]);
         return;
       }
       if ((result.soCanChonNguoi ?? 0) > 0) {
@@ -179,12 +182,22 @@ export default function FlowApproveSheet({
           <WorkflowButton
             label={submitLabel}
             flex
-            variant={ketQua === FLOW_KET_QUA.TuChoi ? "danger" : choice === "taoCongViec" ? "primary" : "success"}
+            variant={
+              ketQua === FLOW_KET_QUA.TuChoi
+                ? "danger"
+                : choice === "taoCongViec"
+                ? "primary"
+                : ketQua === FLOW_KET_QUA.KhongYKien
+                ? "muted"
+                : "success"
+            }
             icon={
               choice === "taoCongViec"
                 ? "briefcase-outline"
                 : ketQua === FLOW_KET_QUA.TuChoi
                 ? "close-circle-outline"
+                : ketQua === FLOW_KET_QUA.KhongYKien
+                ? "remove-circle-outline"
                 : "checkmark-circle-outline"
             }
             disabled={checking}
@@ -208,13 +221,9 @@ export default function FlowApproveSheet({
                   size={20}
                   color={active ? c.red : c.textMuted}
                 />
+                {/* Đúng chữ PHỤ LỤC: (•) Duyệt  ( ) Tạo công việc — không thêm chữ phụ. */}
                 <View style={styles.choiceBody}>
                   <Text style={styles.choiceTitle}>{item === "duyet" ? "Duyệt" : "Tạo công việc"}</Text>
-                  <Text style={styles.choiceHint}>
-                    {item === "duyet"
-                      ? "Duyệt phiếu như thường."
-                      : "Duyệt và giao việc — tình trạng phiếu đi theo công việc."}
-                  </Text>
                 </View>
               </TouchableOpacity>
             );
@@ -266,11 +275,6 @@ const makeStyles = (c: AppColors) =>
       fontSize: 15,
       fontWeight: "700",
       color: c.text,
-    },
-    choiceHint: {
-      fontSize: 12,
-      color: c.textSub,
-      marginTop: 2,
     },
     sectionTitle: {
       fontSize: 13,

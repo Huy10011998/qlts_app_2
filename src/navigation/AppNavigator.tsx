@@ -53,6 +53,7 @@ import ProfileScreen from "../screens/Profile/ProfileScreen";
 import GuideScreen from "../screens/Guide/GuideScreen";
 import GuideTopicScreen from "../screens/Guide/GuideTopicScreen";
 import WorkflowScreen from "../screens/Workflow/WorkflowScreen";
+import ViecCanXuLyScreen from "../screens/Workflow/ViecCanXuLy/ViecCanXuLyScreen";
 import FlowListScreen from "../screens/Workflow/Flow/FlowListScreen";
 import FlowDetailScreen from "../screens/Workflow/Flow/FlowDetailScreen";
 import FlowFormScreen from "../screens/Workflow/Flow/FlowFormScreen";
@@ -65,7 +66,6 @@ import KeHoachDetailScreen from "../screens/Workflow/KeHoach/KeHoachDetailScreen
 import KeHoachFormScreen from "../screens/Workflow/KeHoach/KeHoachFormScreen";
 import WorkflowCommentsScreen from "../screens/Workflow/Common/WorkflowCommentsScreen";
 import WorkflowFilesScreen from "../screens/Workflow/Common/WorkflowFilesScreen";
-import WorkflowThongBaoScreen from "../screens/Workflow/ThongBao/WorkflowThongBaoScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -443,7 +443,12 @@ export default function AppNavigator() {
       <Stack.Screen
         name="Workflow"
         component={WorkflowScreen}
-        options={{ headerShown: true, title: "Workflow", ...headerWithBack }}
+        options={{ headerShown: true, title: "Workflow", ...headerWithBackAndHelp("phieu-de-nghi") }}
+      />
+      <Stack.Screen
+        name="ViecCanXuLy"
+        component={ViecCanXuLyScreen}
+        options={{ headerShown: true, title: "Việc cần xử lý", ...headerWithBackAndHelp("phieu-de-nghi") }}
       />
       <Stack.Screen
         name="Flow"
@@ -451,23 +456,23 @@ export default function AppNavigator() {
         options={({ route }) => ({
           headerShown: true,
           title: getScreenTitle(route.params?.titleHeader, "Phiếu đề nghị"),
-          ...headerWithBack,
+          ...headerWithBackAndHelp("phieu-de-nghi"),
         })}
       />
       <Stack.Screen
         name="FlowChiTiet"
         component={FlowDetailScreen}
-        options={{ headerShown: true, title: "Chi tiết phiếu", ...headerWithBack }}
+        options={{ headerShown: true, title: "Chi tiết phiếu", ...headerWithBackAndHelp("phieu-de-nghi") }}
       />
       <Stack.Screen
         name="FlowForm"
         component={FlowFormScreen}
-        options={{ headerShown: true, title: "Lập phiếu", ...headerWithBack }}
+        options={{ headerShown: true, title: "Lập phiếu", ...headerWithBackAndHelp("phieu-de-nghi") }}
       />
       <Stack.Screen
         name="FlowTienTrinh"
         component={FlowProcessScreen}
-        options={{ headerShown: true, title: "Quy trình", ...headerWithBack }}
+        options={{ headerShown: true, title: "Quy trình", ...headerWithBackAndHelp("phieu-de-nghi") }}
       />
       <Stack.Screen
         name="CongViec"
@@ -475,18 +480,18 @@ export default function AppNavigator() {
         options={({ route }) => ({
           headerShown: true,
           title: getScreenTitle(route.params?.titleHeader, "Công việc"),
-          ...headerWithBack,
+          ...headerWithBackAndHelp("cong-viec"),
         })}
       />
       <Stack.Screen
         name="CongViecChiTiet"
         component={CongViecDetailScreen}
-        options={{ headerShown: true, title: "Chi tiết công việc", ...headerWithBack }}
+        options={{ headerShown: true, title: "Chi tiết công việc", ...headerWithBackAndHelp("cong-viec") }}
       />
       <Stack.Screen
         name="CongViecForm"
         component={CongViecFormScreen}
-        options={{ headerShown: true, title: "Công việc", ...headerWithBack }}
+        options={{ headerShown: true, title: "Công việc", ...headerWithBackAndHelp("cong-viec") }}
       />
       <Stack.Screen
         name="KeHoach"
@@ -494,18 +499,18 @@ export default function AppNavigator() {
         options={({ route }) => ({
           headerShown: true,
           title: getScreenTitle(route.params?.titleHeader, "Kế hoạch"),
-          ...headerWithBack,
+          ...headerWithBackAndHelp("cong-viec"),
         })}
       />
       <Stack.Screen
         name="KeHoachChiTiet"
         component={KeHoachDetailScreen}
-        options={{ headerShown: true, title: "Chi tiết kế hoạch", ...headerWithBack }}
+        options={{ headerShown: true, title: "Chi tiết kế hoạch", ...headerWithBackAndHelp("cong-viec") }}
       />
       <Stack.Screen
         name="KeHoachForm"
         component={KeHoachFormScreen}
-        options={{ headerShown: true, title: "Kế hoạch", ...headerWithBack }}
+        options={{ headerShown: true, title: "Kế hoạch", ...headerWithBackAndHelp("cong-viec") }}
       />
       <Stack.Screen
         name="WorkflowBinhLuan"
@@ -515,11 +520,6 @@ export default function AppNavigator() {
           title: route.params?.titleHeader ? `Bình luận · ${route.params.titleHeader}` : "Bình luận",
           ...headerWithBack,
         })}
-      />
-      <Stack.Screen
-        name="ThongBao"
-        component={WorkflowThongBaoScreen}
-        options={{ headerShown: true, title: "Thông báo", ...headerWithBack }}
       />
       <Stack.Screen
         name="WorkflowFile"

@@ -107,7 +107,7 @@ export default function CongViecDetailScreen() {
   }, []);
 
   const load = useCallback(
-    async (mode: "initial" | "refresh" = "initial") => {
+    async (mode: "initial" | "refresh" | "silent" = "initial") => {
       if (mode === "refresh") setRefreshing(true);
       try {
         const [detail, infos, history] = await Promise.all([
@@ -139,7 +139,8 @@ export default function CongViecDetailScreen() {
     load();
   }, [load]);
 
-  useReloadOnWorkflowChange(() => load("refresh"));
+  // Im lặng: bật vòng xoay bằng code lúc quay lại màn làm iOS kẹt một khoảng trống.
+  useReloadOnWorkflowChange(() => load("silent"));
 
   const congViec = data?.congViec;
   const actions = getCongViecActions(congViec, data?.quyen, { canUpdate, canDelete });

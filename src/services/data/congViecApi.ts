@@ -1,6 +1,7 @@
 import { API_ENDPOINTS } from "../../config/index";
 import type {
   CongViecChiTiet,
+  CongViecDashboard,
   CongViecItem,
   CongViecLichSu,
   CongViecSavePayload,
@@ -139,3 +140,7 @@ export const cvDelete = (ids: number[]) =>
  */
 export const cvThongBao = () =>
   postWorkflow<WorkflowThongBao[]>(API_ENDPOINTS.CV_THONG_BAO, {}, []);
+
+/** Tổng quan + 6 tháng gần nhất cho khối Công việc ở Trang chủ (mục 10). */
+export const cvDashboard = () =>
+  postWorkflow<CongViecDashboard | null>(API_ENDPOINTS.CV_DASHBOARD, {}, null);

@@ -10,7 +10,7 @@ import {
 import { useAppColors } from "../../../../utils/helpers/colors";
 
 type Props = {
-  /** 0–100; null = chưa có việc → vòng xám, chữ "–". */
+  /** 0–100; null = chưa có việc → vòng xám, chữ "-" (5-Mobile-KeHoach mục 1). */
   percent: number | null | undefined;
   size?: number;
   strokeWidth?: number;
@@ -58,7 +58,7 @@ export default function ProgressRing({ percent, size = 48, strokeWidth = 5 }: Pr
           style={[styles.text, { color: c.text, fontSize }]}
           maxFontSizeMultiplier={1.1}
         >
-          {hasValue ? `${Math.round(value)}%` : "–"}
+          {hasValue ? `${Math.round(value)}%` : "-"}
         </Text>
       </View>
     </View>

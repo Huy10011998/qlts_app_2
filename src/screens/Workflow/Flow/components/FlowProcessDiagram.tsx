@@ -1,0 +1,357 @@
+import React, { useEffect, useRef } from "react";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import Svg, { Line, Path } from "react-native-svg";
+
+import { AppColors, useStyles } from "../../../../utils/helpers/colors";
+import { FLOW_TRA_BUOC_COLOR } from "../../shared/workflowConstants";
+import { FLOW_POINT_COLOR, FlowDiagram, FlowPoint } from "../flowProcessRules";
+
+type Props = {
+  diagram: FlowDiagram;
+  selectedKey: string | null;
+  onSelect: (point: FlowPoint) => void;
+};
+
+/** Mỗi cột tối thiểu ~130 (mục 6, "Màn hẹp"): rộng hơn màn thì cuộn ngang. */
+const MIN_COL_W = 130;
+const DOT = 30;
+const ROW_H = 112;
+/** Dải giữa 2 lượt chạy — chỗ cho nét đứt cam + nhãn "Trả bước lần r". */
+const GAP_H = 46;
+const PAD_X = 8;
+const PAD_TOP = 8;
+const RUN_LABEL_W = 46;
+const LINE_GREY = "#c8ced3";
+
+const pointIcon = (point: FlowPoint): string | null => {
+  switch (point.state) {
+    case "done":
+      return "checkmark";
+    case "reject":
+      return "close";
+    case "skip":
+      return "remove";
+    case "tra":
+      return "arrow-undo";
+    default:
+      return point.column.kind === "congViec" ? "briefcase-outline" : null;
+  }
+};
+
+const pointName = (point: FlowPoint) => {
+  const { column } = point;
+  if (column.kind === "lap") return "Lập phiếu";
+  if (column.kind === "congViec") return `Công việc ${column.link.soCongViec ?? ""}`.trim();
+  return column.buoc.ten;
+};
+
+/**
+ * Sơ đồ ngang (mục 6a–d): cột = Lập phiếu / bước lớn / Công việc, dòng = lượt
+ * chạy. Vẽ bằng một lớp Svg cho đường nối + nét đứt cam, các điểm là ô bấm
+ * được nằm đúng toạ độ cột / dòng.
+ */
+export default function FlowProcessDiagram({ diagram, selectedKey, onSelect }: Props) {
+  const styles = useStyles(makeStyles);
+  const { width: windowWidth } = useWindowDimensions();
+
+  const multiRun = diagram.runs.length > 1;
+  const labelW = multiRun ? RUN_LABEL_W : 0;
+  const colCount = diagram.columns.length;
+  // Trừ lề ScrollView (12 × 2) của màn.
+  const colW = Math.max(MIN_COL_W, Math.floor((windowWidth - 24 - labelW) / Math.max(colCount, 1)));
+  const width = labelW + colW * colCount;
+  const height = diagram.runs.length * ROW_H + (diagram.runs.length - 1) * GAP_H;
+
+  const colLeft = (col: number) => labelW + col * colW;
+  const rowTop = (run: number) => run * (ROW_H + GAP_H);
+  const dotX = (col: number) => colLeft(col) + PAD_X + DOT / 2;
+  const dotY = (run: number) => rowTop(run) + PAD_TOP + DOT / 2;
+
+  // Điểm đang chọn bị khuất (sơ đồ rộng hơn màn) thì cuộn tới giữa — mở màn là
+  // thấy ngay điểm đang xử lý, bấm nhãn trả bước là thấy điểm bấm trả.
+  const scrollRef = useRef<ScrollView>(null);
+  const offsetRef = useRef(0);
+  const viewportRef = useRef(0);
+  const selected = diagram.runs.flatMap((run) => run.points).find((point) => point.key === selectedKey);
+  const selectedCol = selected?.col ?? null;
+
+  const revealSelected = () => {
+    if (selectedCol == null || !viewportRef.current) return;
+    const left = colLeft(selectedCol);
+    const right = left + colW;
+    const offset = offsetRef.current;
+    if (left >= offset && right <= offset + viewportRef.current) return;
+    const x = Math.max(0, Math.min(left - (viewportRef.current - colW) / 2, width - viewportRef.current));
+    scrollRef.current?.scrollTo({ x, animated: true });
+  };
+
+  useEffect(revealSelected, [selectedCol, colW, labelW, width]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <ScrollView
+      ref={scrollRef}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.scroll}
+      scrollEventThrottle={32}
+      onScroll={(event) => {
+        offsetRef.current = event.nativeEvent.contentOffset.x;
+      }}
+      onLayout={(event) => {
+        viewportRef.current = event.nativeEvent.layout.width;
+        revealSelected();
+      }}
+    >
+      <View style={{ width, height }}>
+        {/* Ô đang chọn: nền nhạt sau điểm. */}
+        {diagram.runs.flatMap((run) =>
+          run.points
+            .filter((point) => point.key === selectedKey)
+            .map((point) => (
+              <View
+                key={`sel-${point.key}`}
+                style={[
+                  styles.selected,
+                  { left: colLeft(point.col) + 2, top: rowTop(run.index) + 2, width: colW - 4, height: ROW_H - 4 },
+                ]}
+              />
+            )),
+        )}
+
+        <Svg width={width} height={height} style={StyleSheet.absoluteFill}>
+          {diagram.runs.flatMap((run) =>
+            run.points.slice(0, -1).map((point, index) => {
+              const next = run.points[index + 1];
+              return (
+                <Line
+                  key={`line-${point.key}`}
+                  x1={dotX(point.col) + DOT / 2 + 4}
+                  y1={dotY(run.index)}
+                  x2={dotX(next.col) - DOT / 2 - 4}
+                  y2={dotY(run.index)}
+                  stroke={point.state === "done" ? FLOW_POINT_COLOR.done : LINE_GREY}
+                  strokeWidth={2}
+                />
+              );
+            }),
+          )}
+          {diagram.runs.slice(0, -1).map((run) => {
+            const tra = run.points.find((point) => point.state === "tra") ?? run.points[run.points.length - 1];
+            const nextStart = diagram.runs[run.index + 1]?.points[0];
+            if (!tra || !nextStart) return null;
+            const xa = dotX(tra.col);
+            const xb = dotX(nextStart.col);
+            const yTop = rowTop(run.index) + ROW_H - 6;
+            const yMid = rowTop(run.index) + ROW_H + GAP_H / 2 + 4;
+            const yEnd = rowTop(run.index + 1) + PAD_TOP - 2;
+            return (
+              <React.Fragment key={`tra-${run.index}`}>
+                <Path
+                  d={`M ${xa} ${yTop} V ${yMid} H ${xb} V ${yEnd - 5}`}
+                  stroke={FLOW_TRA_BUOC_COLOR}
+                  strokeWidth={1.6}
+                  strokeDasharray="4 3"
+                  fill="none"
+                />
+                <Path
+                  d={`M ${xb - 5} ${yEnd - 7} L ${xb} ${yEnd} L ${xb + 5} ${yEnd - 7} Z`}
+                  fill={FLOW_TRA_BUOC_COLOR}
+                />
+              </React.Fragment>
+            );
+          })}
+        </Svg>
+
+        {multiRun
+          ? diagram.runs.map((run) => (
+              <Text
+                key={`lan-${run.index}`}
+                style={[styles.runLabel, { top: rowTop(run.index) + PAD_TOP + 7 }, run.isLast && styles.runLabelLast]}
+              >
+                Lần {run.index + 1}
+              </Text>
+            ))
+          : null}
+
+        {diagram.runs.flatMap((run) =>
+          run.points.map((point) => {
+            const color = FLOW_POINT_COLOR[point.state];
+            const icon = pointIcon(point);
+            const number = point.column.kind === "buoc" ? point.column.buoc.buoc : null;
+            return (
+              <TouchableOpacity
+                key={point.key}
+                activeOpacity={0.7}
+                onPress={() => onSelect(point)}
+                style={[styles.cell, { left: colLeft(point.col), top: rowTop(run.index), width: colW }]}
+                accessibilityRole="button"
+                accessibilityLabel={`${pointName(point)}${point.sub ? `, ${point.sub}` : ""}`}
+              >
+                <View style={[styles.dotWrap, point.state === "doing" && { backgroundColor: `${color}33` }]}>
+                  <View
+                    style={[
+                      styles.dot,
+                      point.state === "wait"
+                        ? styles.dotWait
+                        : { backgroundColor: color, borderColor: color },
+                    ]}
+                  >
+                    {icon ? (
+                      <Ionicons name={icon} size={point.state === "tra" ? 15 : 17} color="#FFFFFF" />
+                    ) : (
+                      <Text style={[styles.dotNumber, point.state === "wait" && styles.dotNumberWait]}>
+                        {number ?? ""}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+                <Text
+                  style={[
+                    styles.name,
+                    point.state === "tra" && { color: FLOW_TRA_BUOC_COLOR },
+                    point.state === "doing" && { color },
+                  ]}
+                  numberOfLines={2}
+                >
+                  {pointName(point)}
+                </Text>
+                <View style={styles.subRow}>
+                  {point.childDots.map((dot) => (
+                    <View
+                      key={dot.id}
+                      style={[styles.childDot, { backgroundColor: FLOW_POINT_COLOR[dot.state] }]}
+                    />
+                  ))}
+                  <Text style={styles.sub} numberOfLines={1}>
+                    {point.sub}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          }),
+        )}
+
+        {/* Nhãn nét đứt chỉ ghi "Trả bước lần r" — ai trả, lý do nằm ở khung chi
+            tiết; bấm nhãn là chọn điểm bấm trả của lượt đó. */}
+        {diagram.runs.slice(0, -1).map((run) => {
+          const tra = run.points.find((point) => point.state === "tra");
+          const nextStart = diagram.runs[run.index + 1]?.points[0];
+          if (!tra || !nextStart || !run.traBuoc) return null;
+          const left = Math.min(dotX(tra.col), dotX(nextStart.col)) + 6;
+          const span = Math.max(Math.abs(dotX(tra.col) - dotX(nextStart.col)) - 12, colW - 12);
+          return (
+            <TouchableOpacity
+              key={`tra-label-${run.index}`}
+              activeOpacity={0.7}
+              onPress={() => onSelect(tra)}
+              style={[styles.traLabel, { left, width: span, top: rowTop(run.index) + ROW_H + 2 }]}
+            >
+              {/* Icon thay cho ký tự ↩ — iOS vẽ ký tự đó thành emoji ô xanh. */}
+              <Ionicons name="arrow-undo" size={12} color={FLOW_TRA_BUOC_COLOR} />
+              <Text style={styles.traLabelText} numberOfLines={1}>
+                Trả bước lần {run.index + 1}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </ScrollView>
+  );
+}
+
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    scroll: {
+      paddingVertical: 4,
+    },
+    selected: {
+      position: "absolute",
+      borderRadius: 12,
+      backgroundColor: c.accentLight,
+    },
+    runLabel: {
+      position: "absolute",
+      left: 0,
+      width: RUN_LABEL_W,
+      fontSize: 12,
+      color: c.textMuted,
+    },
+    runLabelLast: {
+      color: c.accent,
+      fontWeight: "700",
+    },
+    cell: {
+      position: "absolute",
+      height: ROW_H,
+      paddingTop: PAD_TOP - 4,
+      paddingHorizontal: PAD_X - 4,
+    },
+    dotWrap: {
+      width: DOT + 8,
+      height: DOT + 8,
+      borderRadius: (DOT + 8) / 2,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    dot: {
+      width: DOT,
+      height: DOT,
+      borderRadius: DOT / 2,
+      borderWidth: 1.5,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    dotWait: {
+      backgroundColor: c.surface,
+      borderColor: "#9da5b1",
+      borderStyle: "dashed",
+    },
+    dotNumber: {
+      fontSize: 14,
+      fontWeight: "800",
+      color: "#FFFFFF",
+    },
+    dotNumberWait: {
+      color: c.textSub,
+    },
+    name: {
+      marginTop: 4,
+      paddingRight: 4,
+      fontSize: 13,
+      fontWeight: "700",
+      color: c.text,
+    },
+    subRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 3,
+      marginTop: 3,
+      paddingRight: 4,
+    },
+    childDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+    sub: {
+      flexShrink: 1,
+      marginLeft: 2,
+      fontSize: 11.5,
+      color: c.textSub,
+    },
+    traLabel: {
+      position: "absolute",
+      height: 20,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 4,
+    },
+    traLabelText: {
+      flexShrink: 1,
+      fontSize: 11.5,
+      fontWeight: "700",
+      color: FLOW_TRA_BUOC_COLOR,
+    },
+  });

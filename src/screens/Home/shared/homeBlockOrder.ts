@@ -13,6 +13,7 @@ const HOME_BLOCK_ORDER_USER_KEY = `${HOME_BLOCK_ORDER_KEY}:user`;
 export type HomeBlockKey =
   | "stats"
   | "shortcuts"
+  | "workflow"
   | "assetStructure"
   | "attendance"
   | "utilities";
@@ -21,6 +22,8 @@ export type HomeBlockKey =
 export const DEFAULT_HOME_BLOCK_ORDER: HomeBlockKey[] = [
   "stats",
   "shortcuts",
+  // Tổng quan công việc (cv-dashboard) — chỉ hiện với quyền View.Workflow.
+  "workflow",
   "assetStructure",
   "attendance",
   "utilities",
@@ -38,6 +41,7 @@ export const HOME_BLOCK_META: Record<
 > = {
   stats: { label: "Số liệu toàn công ty", iconName: "stats-chart-outline" },
   shortcuts: { label: "Truy cập nhanh", iconName: "flash-outline" },
+  workflow: { label: "Tổng quan công việc", iconName: "briefcase-outline" },
   // Một khối, ba trang cuộn ngang: cơ cấu máy móc · tăng trưởng luỹ kế · cơ cấu
   // thiết bị CNTT. Bảng sắp xếp chỉ kéo được cả khối, không kéo từng trang.
   assetStructure: {

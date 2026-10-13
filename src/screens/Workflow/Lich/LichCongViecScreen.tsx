@@ -155,6 +155,13 @@ export default function LichCongViecScreen() {
           tasks.map((task) => (
             <LichTaskRow key={`${dayKey(day)}-${task.id}`} item={task} onPress={() => openTask(task)} />
           ))
+        ) : canAdd ? (
+          // Mục 4: bấm 1 ngày trống → thêm việc cho ngày đó (08:00–17:00, chủ trì là mình).
+          <TouchableOpacity onPress={() => addTask(day)} activeOpacity={0.7}>
+            <Text style={styles.noTask}>
+              Không có việc · <Text style={styles.noTaskAdd}>Bấm để thêm việc</Text>
+            </Text>
+          </TouchableOpacity>
         ) : (
           <Text style={styles.noTask}>Không có việc</Text>
         )}
@@ -193,7 +200,8 @@ export default function LichCongViecScreen() {
         </TouchableOpacity>
       </View>
 
-      <MaMauFilter value={mau} onChange={setMau} />
+      {/* Tab "Lich" = mọi việc TRỪ việc Hủy (6-Mobile-Lich mục 1) — chip Hủy chỉ ra lịch trống. */}
+      <MaMauFilter value={mau} onChange={setMau} exclude={["Huy"]} />
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -343,6 +351,10 @@ const makeStyles = (c: AppColors) =>
       fontSize: 13,
       color: c.textMuted,
       paddingVertical: 6,
+    },
+    noTaskAdd: {
+      fontWeight: "700",
+      color: c.red,
     },
     loadingOverlay: {
       ...StyleSheet.absoluteFillObject,

@@ -86,9 +86,6 @@ export default function AssetGroupList({
                 <Text style={styles.groupTitle}>{groupName}</Text>
               </View>
 
-              {/* Số trường trong nhóm: nhóm đang gập lại vẫn biết bên trong có gì. */}
-              <Text style={styles.groupCount}>{fields.length}</Text>
-
               <View style={styles.groupChevron}>
                 <Ionicons
                   name={isCollapsed ? "chevron-down" : "chevron-up"}
@@ -331,14 +328,6 @@ const makeStyles = (c: AppColors) =>
     },
 
     groupTitle: { flex: 1, fontSize: 15.5, fontWeight: "700", color: c.red },
-
-    groupCount: {
-      fontSize: 11,
-      fontWeight: "700",
-      color: c.textMuted,
-      minWidth: 18,
-      textAlign: "right",
-    },
 
     groupChevron: {
       width: 26,

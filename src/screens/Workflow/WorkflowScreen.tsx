@@ -11,7 +11,13 @@ import { flowDemTab } from "../../services/data/flowApi";
 import type { StackNavigation } from "../../types/index";
 import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
 import { elevation } from "../../utils/helpers/tokens";
-import { readTabCount, tint } from "./shared/workflowConstants";
+import {
+  CV_TABS,
+  FLOW_TABS,
+  readTabCount,
+  tint,
+  WorkflowTabDef,
+} from "./shared/workflowConstants";
 import {
   filterWorkflowMenu,
   WORKFLOW_MENU_GROUPS,
@@ -21,13 +27,39 @@ import {
 
 type Hint = { text: string; color: string };
 
-const HINT_RED = "#e53935";
-const HINT_BLUE = "#1e88e5";
+// Màu theo bảng màu BE (maMau công việc, tình trạng phiếu): quá hạn / chờ duyệt
+// đỏ, đến hạn / gia hạn cam, chưa xong / đang xử lý xanh, nháp / mới xám.
+const HINT_GREY = "#78909c";
+const HINT_COLOR: Record<string, string> = {
+  ChoDuyet: "#e53935",
+  DangXuLy: "#1e88e5",
+  Nhap: HINT_GREY,
+  ChuaXong: "#1e88e5",
+  DenHan: "#fb8c00",
+  QuaHan: "#e53935",
+  GiaHan: "#fb8c00",
+  MoiHomNay: HINT_GREY,
+};
+
+/**
+ * Mọi tab BE có trả số (`counted`) của màn danh sách, đúng chữ + thứ tự tab;
+ * số 0 thì bỏ. Thẻ ngoài vì thế luôn khớp số trên tab bên trong.
+ */
+const hintsFromTabs = (counts: Record<string, number>, tabs: WorkflowTabDef<string>[]): Hint[] =>
+  tabs
+    .filter((tab) => tab.counted)
+    .flatMap((tab) => {
+      const count = readTabCount(counts, tab.key);
+      return count
+        ? [{ text: `${count} ${tab.label.toLowerCase()}`, color: HINT_COLOR[tab.key] ?? HINT_GREY }]
+        : [];
+    });
 
 /**
  * Màn của view Workflow (view viết riêng, như Camera / ĐHCĐ): nhóm Flow
  * (Ticket phòng ban) và nhóm Công việc (Công việc, Kế hoạch). Mỗi chức năng
- * kèm số nhắc việc lấy từ dem-tab của chính màn đó.
+ * kèm số lấy từ dem-tab của chính màn đó — hiện đủ các số BE trả (cùng số
+ * trên tab bên trong), không tự lọc. Kế hoạch BE không có API đếm.
  */
 export default function WorkflowScreen() {
   const styles = useStyles(makeStyles);
@@ -48,17 +80,10 @@ export default function WorkflowScreen() {
   const loadHint = useCallback(async (item: WorkflowMenuItem): Promise<Hint[]> => {
     try {
       if (item.route === "Flow") {
-        const choDuyet = readTabCount(await flowDemTab(item.nameClass), "ChoDuyet");
-        return choDuyet ? [{ text: `${choDuyet} chờ duyệt`, color: HINT_RED }] : [];
+        return hintsFromTabs(await flowDemTab(item.nameClass), FLOW_TABS);
       }
       if (item.route === "CongViec") {
-        const counts = await cvDemTab();
-        const quaHan = readTabCount(counts, "QuaHan");
-        const chuaXong = readTabCount(counts, "ChuaXong");
-        return [
-          ...(quaHan ? [{ text: `${quaHan} quá hạn`, color: HINT_RED }] : []),
-          ...(chuaXong ? [{ text: `${chuaXong} chưa xong`, color: HINT_BLUE }] : []),
-        ];
+        return hintsFromTabs(await cvDemTab(), CV_TABS);
       }
     } catch {
       // Không có số nhắc vẫn mở được chức năng.

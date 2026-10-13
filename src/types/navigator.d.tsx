@@ -461,8 +461,8 @@ export type RootStackParamList = {
   WorkflowFile: WorkflowFilesParams;
   /** Màn gốc của tab Lịch. */
   LichCongViec: undefined;
-  /** Thông báo của view Workflow (cv-thong-bao) — mở từ chuông ở Trang chủ. */
-  ThongBao: undefined;
+  /** Việc cần xử lý (cv-thong-bao) — nút cạnh chuông ở Trang chủ. */
+  ViecCanXuLy: undefined;
 };
 
 // =====================================================

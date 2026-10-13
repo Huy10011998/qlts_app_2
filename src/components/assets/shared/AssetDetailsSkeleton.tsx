@@ -63,7 +63,6 @@ export default function AssetDetailsSkeleton({
               <Text style={styles.groupTitle} numberOfLines={1}>
                 {groupName}
               </Text>
-              <Text style={styles.groupCount}>{fields.length}</Text>
             </View>
 
             {fields.map((field, index) => (
@@ -151,13 +150,6 @@ const makeStyles = (c: AppColors) =>
       backgroundColor: c.red,
     },
     groupTitle: { flex: 1, fontSize: 15.5, fontWeight: "700", color: c.red },
-    groupCount: {
-      fontSize: 11,
-      fontWeight: "700",
-      color: c.textMuted,
-      minWidth: 18,
-      textAlign: "right",
-    },
     fieldRow: {
       paddingVertical: 9,
     },

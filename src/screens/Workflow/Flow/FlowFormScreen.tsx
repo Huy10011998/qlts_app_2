@@ -81,7 +81,7 @@ export default function FlowFormScreen() {
   const { nameClass, mode, item } = route.params;
   const isEdit = mode === "edit";
   const { meta, errorMessage: metaError, loading: metaLoading } = useFlowMeta(nameClass);
-  const { me, loading: meLoading } = useWorkflowMe();
+  const { me, loading: meLoading, phongBanLoading } = useWorkflowMe();
   const markChanged = useMarkWorkflowChanged();
 
   // Phiếu đã có trên server: sửa nháp từ đầu, hoặc phiếu mới sau lần lưu đầu.
@@ -274,7 +274,7 @@ export default function FlowFormScreen() {
     return <EmptyState iconName="alert-circle-outline" title="Không mở được form" subtitle={metaError} />;
   }
 
-  if (metaLoading || meLoading || !meta) return <IsLoading />;
+  if (metaLoading || meLoading || phongBanLoading || !meta) return <IsLoading />;
 
   if (!me.iD_NhanVien) {
     return (

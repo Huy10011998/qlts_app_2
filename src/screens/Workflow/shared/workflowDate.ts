@@ -9,7 +9,7 @@
 const pad = (value: number) => String(value).padStart(2, "0");
 
 const LOCAL_DATE_TIME =
-  /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?)?$/;
+  /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?(?:\.(\d+))?)?$/;
 
 /** Date → "yyyy-MM-ddTHH:mm:ss" theo giờ máy. */
 export const toBeDateTime = (date: Date) =>
@@ -23,7 +23,8 @@ export const toBeDate = (date: Date) =>
 /**
  * Chuỗi ngày của server → Date. Chuỗi không offset đọc là giờ địa phương (tự
  * tách số, không phụ thuộc cách engine JS hiểu chuỗi ISO thiếu offset); có Z /
- * offset thì để `Date` tự đổi.
+ * offset thì để `Date` tự đổi. Giữ phần mili giây: nhiều mốc của một phiếu
+ * rơi cùng một giây, bỏ đi thì xếp theo thời gian bị lẫn.
  */
 export const parseBeDate = (raw: unknown): Date | null => {
   if (raw == null || raw === "") return null;
@@ -33,7 +34,7 @@ export const parseBeDate = (raw: unknown): Date | null => {
   const match = LOCAL_DATE_TIME.exec(text);
 
   if (match) {
-    const [, y, m, d, hh = "0", mm = "0", ss = "0"] = match;
+    const [, y, m, d, hh = "0", mm = "0", ss = "0", frac = ""] = match;
     const date = new Date(
       Number(y),
       Number(m) - 1,
@@ -41,6 +42,7 @@ export const parseBeDate = (raw: unknown): Date | null => {
       Number(hh),
       Number(mm),
       Number(ss),
+      Math.round(Number(`0.${frac || "0"}`) * 1000),
     );
     return isNaN(date.getTime()) ? null : date;
   }
