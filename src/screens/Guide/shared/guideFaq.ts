@@ -621,11 +621,15 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-chuong-sap-trien-khai",
-      heading: 'Bấm chuông thì báo "Chức năng sẽ được triển khai trong thời gian sắp tới."',
+      heading: "Số trên chuông khác số trên nút Việc cần xử lý / ô Workflow",
       blocks: [
         {
           kind: "paragraph",
-          text: "Màn Thông báo đang được hoàn thiện, nên hiện mọi tài khoản bấm chuông đều thấy câu này. Phiếu chờ duyệt, việc được giao, sắp hạn, quá hạn và bình luận của Workflow xem bằng nút Việc cần xử lý (hình khay giấy) ngay cạnh chuông.",
+          text: "Hai số đếm hai thứ khác nhau. Số trên chuông là thông báo bạn CHƯA ĐỌC — giảm ngay khi bạn bấm xem hoặc Đánh dấu tất cả đã đọc. Số trên nút Việc cần xử lý (hình khay giấy) và ô Workflow là việc còn chờ bạn làm — chỉ giảm khi phiếu được duyệt, việc được làm xong.",
+        },
+        {
+          kind: "paragraph",
+          text: "Chuông không có số dù có việc mới thường là tài khoản chưa được liên kết với nhân viên — nhờ IT kiểm tra.",
         },
         {
           kind: "paragraph",
@@ -766,7 +770,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
       blocks: [
         {
           kind: "paragraph",
-          text: "Hiện hệ thống chưa gửi thông báo đẩy cho phiếu đề nghị và công việc — phần này sẽ được bổ sung sau. Trong lúc chờ, mở nút Việc cần xử lý cạnh chuông ở Trang chủ hoặc tab Chờ duyệt của Ticket phòng ban để xem việc mới.",
+          text: "Hiện hệ thống chưa gửi thông báo đẩy cho phiếu đề nghị và công việc khi app đang tắt — phần này sẽ được bổ sung sau. Đang mở app thì thông báo hiện ngay ở chuông Trang chủ; mở lại app thì số trên chuông cũng tự cập nhật.",
         },
         {
           kind: "paragraph",

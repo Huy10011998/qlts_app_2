@@ -7,7 +7,7 @@ import {
 import { setupURLPolyfill } from "react-native-url-polyfill";
 
 import { BASE_URL } from "../../config/index";
-import type { WorkflowComment } from "../../types/index";
+import type { ThongBaoItem, WorkflowComment } from "../../types/index";
 import { readAccessToken } from "../auth/tokenStore";
 import { refreshTokenFlow, shouldRefreshAccessToken } from "../data/httpClient";
 import { warn } from "../../utils/Logger";
@@ -19,6 +19,10 @@ import { warn } from "../../utils/Logger";
  *
  * Cả app dùng 1 kết nối: mở khi có khung bình luận đầu tiên, đóng khi khung
  * cuối cùng thoát. Phòng = 1 phiếu / 1 công việc (tenBang + idHoSo).
+ *
+ * Thông báo chuông (8-Mobile-ThongBao mục 3) đi chung kết nối này: kết nối xong
+ * server tự cho vào nhóm thông báo của chính mình. Còn người nghe thông báo
+ * (lúc đã đăng nhập) thì giữ kết nối dù không có khung bình luận nào.
  */
 
 // URL sẵn có của React Native không cho gán pathname — bước negotiate của
@@ -52,7 +56,19 @@ export type TraoDoiRoomHandlers = {
 
 type Room = { tenBang: string; idHoSo: number; handlers: Set<TraoDoiRoomHandlers> };
 
+export type ThongBaoHubHandlers = {
+  onThongBaoMoi?: (thongBao: ThongBaoItem, soChuaDoc: number | null) => void;
+  /** Số chưa đọc đổi do đánh dấu đọc ở máy / tab khác. */
+  onSoChuaDoc?: (soChuaDoc: number) => void;
+  /** Nối lại sau khi rớt mạng — có thể đã lỡ thông báo, gọi lại get-list để bù. */
+  onReconnected?: () => void;
+};
+
 const rooms = new Map<string, Room>();
+const thongBaoListeners = new Set<ThongBaoHubHandlers>();
+const hasListeners = () => rooms.size > 0 || thongBaoListeners.size > 0;
+const toCount = (value: unknown) =>
+  value == null || isNaN(Number(value)) ? null : Number(value);
 let connection: HubConnection | null = null;
 let starting: Promise<void> | null = null;
 
@@ -88,6 +104,8 @@ const rejoinAll = () => {
     vaoPhong(room);
     room.handlers.forEach((handler) => handler.onReconnected());
   });
+  // Nhóm thông báo server tự vào lại; chỉ cần bù thông báo đã lỡ.
+  thongBaoListeners.forEach((handler) => handler.onReconnected?.());
 };
 
 const getConnection = () => {
@@ -106,13 +124,23 @@ const getConnection = () => {
   next.on("DangNhap", (event: DangNhapEvent) => {
     roomOf(event)?.handlers.forEach((handler) => handler.onDangNhap(event));
   });
+  next.on("ThongBaoMoi", (event: { thongBao?: ThongBaoItem; soChuaDoc?: number }) => {
+    if (!event?.thongBao) return;
+    const soChuaDoc = toCount(event.soChuaDoc);
+    thongBaoListeners.forEach((handler) => handler.onThongBaoMoi?.(event.thongBao!, soChuaDoc));
+  });
+  next.on("ThongBaoSoChuaDoc", (event: { soChuaDoc?: number }) => {
+    const soChuaDoc = toCount(event?.soChuaDoc);
+    if (soChuaDoc == null) return;
+    thongBaoListeners.forEach((handler) => handler.onSoChuaDoc?.(soChuaDoc));
+  });
   // Nối lại = kết nối mới ở server: phải vào lại phòng (mục 1).
   next.onreconnected(rejoinAll);
-  // Tự nối lại đã bỏ cuộc (mất mạng lâu) mà khung bình luận còn mở: thử lại sau.
+  // Tự nối lại đã bỏ cuộc (mất mạng lâu) mà còn người nghe: thử lại sau.
   next.onclose(() => {
-    if (connection !== next || !rooms.size) return;
+    if (connection !== next || !hasListeners()) return;
     setTimeout(() => {
-      if (connection !== next || !rooms.size) return;
+      if (connection !== next || !hasListeners()) return;
       ensureConnected()
         .then((hub) => hub && rejoinAll())
         .catch(() => undefined);
@@ -135,7 +163,7 @@ const ensureConnected = async () => {
 };
 
 const stopIfIdle = () => {
-  if (rooms.size || !connection) return;
+  if (hasListeners() || !connection) return;
   const hub = connection;
   connection = null;
   hub.stop().catch(() => undefined);
@@ -186,4 +214,36 @@ export const joinTraoDoiRoom = (
 export const sendDangNhap = (tenBang: string, idHoSo: number, dangNhap: boolean) => {
   if (connection?.state !== HubConnectionState.Connected) return;
   connection.invoke("DangNhap", tenBang, idHoSo, dangNhap).catch(() => undefined);
+};
+
+/**
+ * Nghe thông báo chuông (ThongBaoMoi / ThongBaoSoChuaDoc). Gọi lúc đã đăng
+ * nhập; trả hàm bỏ nghe — người nghe cuối cùng bỏ (đăng xuất) thì đóng kết nối
+ * nếu không còn khung bình luận nào.
+ */
+export const subscribeThongBao = (handlers: ThongBaoHubHandlers) => {
+  thongBaoListeners.add(handlers);
+  ensureConnected().catch((err) => warn("[TraoDoiHub] connect error", err));
+
+  return () => {
+    thongBaoListeners.delete(handlers);
+    stopIfIdle();
+  };
+};
+
+/**
+ * Kết nối đã rớt hẳn (vd app nằm nền lâu, hệ điều hành cắt mạng) thì nối lại.
+ * Trả true nếu vừa phải nối lại — nơi gọi nạp lại danh sách để bù.
+ */
+export const reconnectTraoDoiIfNeeded = async () => {
+  if (!hasListeners()) return false;
+  const wasDisconnected = !connection || connection.state === HubConnectionState.Disconnected;
+  if (!wasDisconnected) return false;
+  try {
+    const hub = await ensureConnected();
+    if (hub) rejoinAll();
+    return !!hub;
+  } catch {
+    return false;
+  }
 };

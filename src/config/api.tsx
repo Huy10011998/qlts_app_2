@@ -115,7 +115,7 @@ export const API_ENDPOINTS = {
   // BE gọi là "thông báo" nhưng là bảng tổng hợp việc cần chú ý lúc gọi (phiếu
   // chờ duyệt, được giao, sắp hạn, quá hạn, bình luận) — app hiện thành "Việc
   // cần xử lý" (nút cạnh chuông ở Trang chủ) + số trên ô Workflow. Thông báo
-  // thật chờ BE.
+  // thật (chuông) là THONG_BAO_* bên dưới.
   CV_THONG_BAO: `${BASE_URL}/CV_CongViec/cv-thong-bao`,
   // Tổng quan công việc của tôi cho Trang chủ (4-Mobile-CongViec mục 10).
   CV_DASHBOARD: `${BASE_URL}/CV_CongViec/cv-dashboard`,
@@ -126,6 +126,11 @@ export const API_ENDPOINTS = {
   KH_THEM: `${BASE_URL}/CV_KeHoach/kh-them`,
   KH_SUA: `${BASE_URL}/CV_KeHoach/kh-sua`,
   KH_XOA: `${BASE_URL}/CV_KeHoach/kh-xoa`,
+
+  // THÔNG BÁO (chuông) — 8-Mobile-ThongBao. Chỉ cần đăng nhập, không theo quyền
+  // màn hình; realtime qua hub /hubs/trao-doi (traoDoiHub.ts).
+  THONG_BAO_GET_LIST: `${BASE_URL}/ThongBao/thong-bao-get-list`,
+  THONG_BAO_DA_DOC: `${BASE_URL}/ThongBao/thong-bao-da-doc`,
 };
 
 export const PUSH_NOTIFICATION_API_READY = true;

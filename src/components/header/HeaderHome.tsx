@@ -10,7 +10,6 @@ import {
   Linking,
   Text,
   Dimensions,
-  Alert,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,6 +18,8 @@ import { useHomeMenuContext } from "../../screens/Home/shared/HomeMenuProvider";
 import { usePermission } from "../../hooks/usePermission";
 import { navigateFromRef } from "../../navigation/navigationService";
 import { WORKFLOW_VIEW_CODE } from "../../screens/Workflow/workflowMenu";
+import ThongBaoBellPanel from "../../screens/ThongBao/ThongBaoBellPanel";
+import { useThongBaoContext } from "../../screens/ThongBao/ThongBaoProvider";
 import type { HeaderHomeProps } from "../../types/components.d";
 import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
 import { COMPACT_TEXT_MAX_SCALE } from "../../utils/helpers/textScaling";
@@ -85,16 +86,12 @@ export default function HeaderHome(_props: HeaderHomeProps) {
   } = useHomeMenuContext();
   const { canView, loaded: permissionLoaded } = usePermission();
   const canViewWorkflow = permissionLoaded && canView(WORKFLOW_VIEW_CODE);
+  const { soChuaDoc } = useThongBaoContext();
+  const [isBellOpen, setIsBellOpen] = useState(false);
 
   const [now, setNow] = useState(new Date());
   const spin = useRef(new Animated.Value(0)).current;
   const greeting = getGreeting(now);
-  const showComingSoonAlert = () => {
-    Alert.alert(
-      "Thông báo",
-      "Chức năng sẽ được triển khai trong thời gian sắp tới."
-    );
-  };
 
   useEffect(() => {
     const updateNow = () => setNow(new Date());
@@ -237,16 +234,29 @@ export default function HeaderHome(_props: HeaderHomeProps) {
             </TouchableOpacity>
           ) : null}
 
+          {/* Thông báo (8-Mobile-ThongBao): số = chưa đọc của mọi nhóm,
+              realtime qua hub; bấm mở bảng 20 thông báo mới nhất. Chỉ cần
+              đăng nhập, không theo quyền màn hình. */}
           <TouchableOpacity
             style={styles.iconBtn}
             activeOpacity={0.75}
-            // Chờ BE làm thông báo thật (có ID, trạng thái đã đọc).
-            onPress={showComingSoonAlert}
+            onPress={() => setIsBellOpen(true)}
             accessibilityRole="button"
-            accessibilityLabel="Thông báo"
+            accessibilityLabel={
+              soChuaDoc ? `Thông báo, ${soChuaDoc} chưa đọc` : "Thông báo"
+            }
           >
             <Ionicons name="notifications-outline" size={20} color="#fff" />
-            <View style={styles.notifDot} />
+            {soChuaDoc > 0 ? (
+              <View style={styles.countBadge}>
+                <Text
+                  style={styles.countBadgeText}
+                  maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
+                >
+                  {soChuaDoc > 99 ? "99+" : soChuaDoc}
+                </Text>
+              </View>
+            ) : null}
           </TouchableOpacity>
         </View>
       </View>
@@ -284,6 +294,11 @@ export default function HeaderHome(_props: HeaderHomeProps) {
       <View style={styles.waveContainer}>
         <HeaderWave bottomFill={colors.bg} />
       </View>
+
+      <ThongBaoBellPanel
+        visible={isBellOpen}
+        onClose={() => setIsBellOpen(false)}
+      />
     </View>
   );
 }
@@ -368,18 +383,7 @@ const makeStyles = (c: AppColors) =>
       borderWidth: 1,
       borderColor: "rgba(255,255,255,0.22)",
     },
-    notifDot: {
-      position: "absolute",
-      top: 7,
-      right: 7,
-      width: 7,
-      height: 7,
-      borderRadius: 4,
-      backgroundColor: "#FFD60A",
-      borderWidth: 1.5,
-      borderColor: c.red,
-    },
-    // Cùng màu chấm của chuông để hàng nút trên header một kiểu.
+    // Chuông và nút Việc cần xử lý dùng chung kiểu số để hàng nút một kiểu.
     countBadge: {
       position: "absolute",
       top: -5,

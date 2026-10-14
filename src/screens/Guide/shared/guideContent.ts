@@ -192,7 +192,32 @@ const TOPICS: GuideTopic[] = [
           },
           {
             kind: "paragraph",
-            text: "Hình chuông trên thanh đầu Trang chủ dành cho thông báo của hệ thống — phần này đang được hoàn thiện, bấm vào sẽ thấy báo chức năng sắp triển khai. Việc Workflow đang chờ bạn thì xem bằng nút Việc cần xử lý (hình khay giấy) ngay cạnh chuông.",
+            text: "Hình chuông trên thanh đầu Trang chủ là thông báo của phiếu đề nghị, công việc và kế hoạch — xem mục Chuông thông báo bên dưới. Việc Workflow đang chờ bạn thì xem bằng nút Việc cần xử lý (hình khay giấy) ngay cạnh chuông.",
+          },
+        ],
+      },
+      {
+        id: "trang-chu-chuong",
+        heading: "Chuông thông báo",
+        blocks: [
+          {
+            kind: "paragraph",
+            text: "Số trên chuông là số thông báo bạn chưa đọc. Bấm chuông để xem 20 thông báo mới nhất; bấm Xem tất cả ở cuối bảng để mở màn Thông báo với đầy đủ thông báo cũ hơn.",
+          },
+          {
+            kind: "bullets",
+            items: [
+              "Có thông báo khi: phiếu chờ bạn duyệt hoặc gửi bạn để biết; phiếu bạn lập hoàn tất, bị từ chối, bị trả bước hoặc có bình luận; bạn được giao việc hay đổi vai trò; việc chuyển trạng thái, được gia hạn, có bình luận, sắp tới hạn (trong 24 giờ) hoặc vừa quá hạn; bạn được thêm vào kế hoạch, kế hoạch bạn chủ trì có việc mới.",
+              "Thông báo chưa đọc có nền xanh nhạt, tiêu đề đậm và chấm xanh bên phải. Bấm một thông báo để đánh dấu đã đọc và mở luôn phiếu, công việc hoặc kế hoạch đó.",
+              "Ở màn Thông báo, hàng tab trên cùng lọc theo Phiếu / Công việc / Kế hoạch; bật Chỉ chưa đọc để ẩn thông báo đã xem. Đánh dấu tất cả đã đọc (có ở cả bảng chuông) đưa số trên chuông về 0.",
+              "Đang mở app thì thông báo mới hiện ngay (trễ vài giây): một khung nhỏ nổi trên đầu màn hình, bấm vào để mở luôn. Đọc ở máy khác hay trên web thì số trên chuông cũng giảm theo.",
+              "Việc do chính bạn làm không tạo thông báo cho bạn. Thông báo đã đọc quá 180 ngày sẽ tự xoá.",
+            ],
+          },
+          {
+            kind: "note",
+            tone: "info",
+            text: "Mở thông báo mà báo Không tìm thấy là phiếu / việc đó đã bị xoá, hoặc bạn không còn quyền xem.",
           },
         ],
       },

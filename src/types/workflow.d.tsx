@@ -460,6 +460,34 @@ export type WorkflowThongBao = {
   iD_HoSo?: number | null;
 };
 
+/** Nhóm của thông báo chuông (8-Mobile-ThongBao). */
+export type ThongBaoNhom = "Flow" | "CongViec" | "KeHoach";
+
+/** 1 thông báo chuông (thong-bao-get-list / sự kiện hub "ThongBaoMoi"). */
+export type ThongBaoItem = {
+  id: number;
+  nhom: ThongBaoNhom | string;
+  loai: string;
+  tieuDe?: string | null;
+  noiDung?: string | null;
+  /** "CV_CongViec" / "CV_KeHoach" / tên bảng phiếu (vd "Ticket_PhongBan"). */
+  tenBang?: string | null;
+  iD_DoiTuong?: number | null;
+  iD_NhanVien_Gui?: number | null;
+  /** null = hệ thống (vd nhắc hạn). */
+  nguoiGui?: string | null;
+  ngayTao?: string | null;
+  daDoc?: boolean | null;
+};
+
+export type ThongBaoListResult = {
+  items: ThongBaoItem[];
+  /** Theo bộ lọc — để phân trang. */
+  totalCount: number;
+  /** Số chưa đọc của MỌI nhóm (số trên chuông), không theo bộ lọc. */
+  soChuaDoc: number;
+};
+
 // =====================================================
 // KẾ HOẠCH
 // =====================================================

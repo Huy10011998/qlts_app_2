@@ -54,6 +54,8 @@ import GuideScreen from "../screens/Guide/GuideScreen";
 import GuideTopicScreen from "../screens/Guide/GuideTopicScreen";
 import WorkflowScreen from "../screens/Workflow/WorkflowScreen";
 import ViecCanXuLyScreen from "../screens/Workflow/ViecCanXuLy/ViecCanXuLyScreen";
+import ThongBaoScreen from "../screens/ThongBao/ThongBaoScreen";
+import { ThongBaoProvider } from "../screens/ThongBao/ThongBaoProvider";
 import FlowListScreen from "../screens/Workflow/Flow/FlowListScreen";
 import FlowDetailScreen from "../screens/Workflow/Flow/FlowDetailScreen";
 import FlowFormScreen from "../screens/Workflow/Flow/FlowFormScreen";
@@ -69,7 +71,17 @@ import WorkflowFilesScreen from "../screens/Workflow/Common/WorkflowFilesScreen"
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+// Số chuông + realtime thông báo: sống cùng phiên đăng nhập, cả Trang chủ
+// (chuông) lẫn màn Thông báo trên stack này cùng đọc.
 export default function AppNavigator() {
+  return (
+    <ThongBaoProvider>
+      <AppStack />
+    </ThongBaoProvider>
+  );
+}
+
+function AppStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Tabs" component={Tabs} />
@@ -449,6 +461,11 @@ export default function AppNavigator() {
         name="ViecCanXuLy"
         component={ViecCanXuLyScreen}
         options={{ headerShown: true, title: "Việc cần xử lý", ...headerWithBackAndHelp("phieu-de-nghi") }}
+      />
+      <Stack.Screen
+        name="ThongBao"
+        component={ThongBaoScreen}
+        options={{ headerShown: true, title: "Thông báo", ...headerWithBackAndHelp("trang-chu") }}
       />
       <Stack.Screen
         name="Flow"
