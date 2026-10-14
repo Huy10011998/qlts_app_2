@@ -42,12 +42,10 @@ const PUSH_ROUTES: Record<string, PushRouteContainer> = {
   //   công việc  route "CongViecChiTiet" params {"id":5}
   //   kế hoạch   route "KeHoachChiTiet"  params {"id":3}
   //   nhiều phiếu chờ   route "Flow"            params {"nameClass":"Ticket_PhongBan","tab":"ChoDuyet"}
-  //   danh sách thông báo route "ThongBao"      (không params)
   FlowChiTiet: "root",
   CongViecChiTiet: "root",
   KeHoachChiTiet: "root",
   Flow: "root",
-  ThongBao: "root",
 
   // Màn gốc của tab — phải đi qua Tabs mới chọn đúng tab.
   Home: "homeTab",

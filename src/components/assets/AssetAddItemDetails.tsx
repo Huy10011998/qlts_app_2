@@ -339,7 +339,6 @@ export default function AssetAddItemDetails() {
       contentContainerStyle={styles.scrollContent}
       isSubmitting={isSubmitting}
       loadingOverlayStyle={styles.loadingOverlay}
-      refLoadingMore={refLoadingMore}
       style={styles.container}
       modal={
         <AssetFormReferencePickerModal

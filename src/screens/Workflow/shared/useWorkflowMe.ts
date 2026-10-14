@@ -39,7 +39,7 @@ const loadWorkflowMe = (token: string | null) => {
  */
 export function useWorkflowMe() {
   const { token } = useAuth();
-  const { info: nhanVien } = useNhanVienInfo();
+  const { info: nhanVien, isLoading: nhanVienLoading } = useNhanVienInfo();
   const [getInfo, setGetInfo] = useState<GetInfoResult | null>(null);
   const [failed, setFailed] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -77,5 +77,7 @@ export function useWorkflowMe() {
     iD_PhongBan: nhanVien?.iD_PhongBan ?? null,
   };
 
-  return { me, loading };
+  // Riêng form lập phiếu cần chờ: ID_PhongBan_Tao lấy từ danh thiếp. Lỗi thì
+  // thôi chờ — mục 3 cho phép null khi không biết.
+  return { me, loading, phongBanLoading: nhanVienLoading };
 }

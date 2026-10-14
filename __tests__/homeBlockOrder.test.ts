@@ -44,11 +44,13 @@ describe("normalizeHomeBlockOrder", () => {
         "attendance",
         "assetStructure",
       ])
-    ).toEqual(["utilities", "shortcuts", "stats", "attendance", "assetStructure"]);
+      // "workflow" (khối mới) không có trong dữ liệu cũ → chèn ngay sau "shortcuts".
+    ).toEqual(["utilities", "shortcuts", "workflow", "stats", "attendance", "assetStructure"]);
   });
 
   it("khối mới của bản app sau chèn vào đúng chỗ mặc định, không dồn xuống cuối", () => {
-    // Thứ tự cũ thiếu "assetStructure" — mặc định nó đứng ngay sau "shortcuts".
+    // Thứ tự cũ thiếu "workflow" và "assetStructure" — mặc định "workflow" đứng
+    // ngay sau "shortcuts", "assetStructure" ngay sau "workflow".
     expect(
       normalizeHomeBlockOrder([
         "utilities",
@@ -56,10 +58,10 @@ describe("normalizeHomeBlockOrder", () => {
         "stats",
         "shortcuts",
       ])
-    ).toEqual(["utilities", "attendance", "stats", "shortcuts", "assetStructure"]);
+    ).toEqual(["utilities", "attendance", "stats", "shortcuts", "workflow", "assetStructure"]);
     expect(
       normalizeHomeBlockOrder(["stats", "shortcuts", "attendance", "utilities"])
-    ).toEqual(["stats", "shortcuts", "assetStructure", "attendance", "utilities"]);
+    ).toEqual(["stats", "shortcuts", "workflow", "assetStructure", "attendance", "utilities"]);
   });
 });
 
@@ -74,7 +76,7 @@ describe("moveHomeBlock", () => {
         fromIndex: 0,
         toIndex: 2,
       })
-    ).toEqual(["shortcuts", "assetStructure", "stats", "attendance", "utilities"]);
+    ).toEqual(["shortcuts", "workflow", "stats", "assetStructure", "attendance", "utilities"]);
   });
 
   it("kéo lên đầu danh sách", () => {
@@ -82,14 +84,14 @@ describe("moveHomeBlock", () => {
       moveHomeBlock({
         order: fullOrder,
         visibleKeys: fullOrder,
-        fromIndex: 4,
+        fromIndex: 5,
         toIndex: 0,
       })
-    ).toEqual(["utilities", "stats", "shortcuts", "assetStructure", "attendance"]);
+    ).toEqual(["utilities", "stats", "shortcuts", "workflow", "assetStructure", "attendance"]);
   });
 
   it("khối đang bị ẩn vẫn giữ đúng chỗ tương đối", () => {
-    // "assetStructure" và "attendance" bị ẩn (thiếu quyền / chưa có dữ liệu).
+    // "workflow", "assetStructure" và "attendance" bị ẩn (thiếu quyền / chưa có dữ liệu).
     const visibleKeys: HomeBlockKey[] = ["stats", "shortcuts", "utilities"];
 
     expect(
@@ -99,8 +101,8 @@ describe("moveHomeBlock", () => {
         fromIndex: 2,
         toIndex: 1,
       })
-      // "utilities" về ngay sau "stats"; hai khối ẩn vẫn nằm sau "shortcuts".
-    ).toEqual(["stats", "utilities", "shortcuts", "assetStructure", "attendance"]);
+      // "utilities" về ngay sau "stats"; các khối ẩn vẫn nằm sau "shortcuts".
+    ).toEqual(["stats", "utilities", "shortcuts", "workflow", "assetStructure", "attendance"]);
   });
 
   it("kéo khối đang hiện lên đầu thì chèn trước khối hiện kế tiếp, không nhảy qua khối ẩn", () => {

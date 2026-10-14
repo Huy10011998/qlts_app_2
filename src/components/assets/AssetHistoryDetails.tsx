@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { View, StyleSheet } from "react-native";
 import { useRoute } from "@react-navigation/native";
-import IsLoading from "../../components/ui/IconLoading";
 import type { DetailsHistoryProps, Field, StackRoute } from "../../types/index";
 import { getDetailsHistory } from "../../services/data/callApi";
 import { error } from "../../utils/Logger";
@@ -9,16 +8,17 @@ import { getFieldValue } from "../../utils/fields/GetFieldValue";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { useDetailViewState } from "../../hooks/useDetailViewState";
-import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
+import { AppColors, useStyles } from "../../utils/helpers/colors";
 import EmptyState from "../ui/EmptyState";
+import AssetDetailsSkeleton from "./shared/AssetDetailsSkeleton";
 
 export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
   const styles = useStyles(makeStyles);
-  const c = useAppColors();
   const route = useRoute<StackRoute<"AssetHistoryDetail">>();
   const { id, id_previous, nameClass, field } = route.params;
 
-  const [isLoading, setIsLoading] = useState(false);
+  // true ngay từ đầu: effect gọi tải ở frame sau, đừng để frame đầu vẽ field trống.
+  const [isLoading, setIsLoading] = useState(true);
   const [item, setItem] = useState<any>(null);
   const [previousItem, setPreviousItem] = useState<any>(null);
   const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
@@ -94,14 +94,13 @@ export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
     return String(currentValue ?? "") !== String(prevValue ?? "");
   };
 
+  // Như `AssetDetails`: nhãn field đã có sẵn từ route, chỉ giá trị phải chờ.
+  if (isLoading && !item && !loadErrorMessage) {
+    return <AssetDetailsSkeleton groupedFields={groupedFields} tabCount={0} />;
+  }
+
   return (
     <View style={styles.container}>
-      {isLoading && (
-        <View style={styles.loadingOverlay}>
-          <IsLoading size="small" color={c.red} />
-        </View>
-      )}
-
       {loadErrorMessage ? (
         <View style={styles.emptyStateRoot}>
           <EmptyState
@@ -132,12 +131,6 @@ const makeStyles = (c: AppColors) =>
     container: {
       flex: 1,
       backgroundColor: c.surfaceAlt,
-    },
-    loadingOverlay: {
-      position: "absolute",
-      top: 8,
-      right: 8,
-      zIndex: 10,
     },
     emptyStateRoot: {
       flex: 1,

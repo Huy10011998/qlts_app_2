@@ -12,7 +12,8 @@ import {
 import Ionicons from "react-native-vector-icons/Ionicons";
 import type { EnumItem, PropsEnum } from "../../types/components.d";
 import { useDebounce } from "../../hooks/useDebounce";
-import IsLoading from "../ui/IconLoading";
+import SkeletonBlock from "../ui/SkeletonBlock";
+import { useSkeletonPulse } from "../ui/useSkeletonAutoFill";
 import SearchBar from "../ui/SearchBar";
 import EmptyState from "../ui/EmptyState";
 import BottomSheetModalShell from "../shared/BottomSheetModalShell";
@@ -373,11 +374,7 @@ export default function EnumAndReferencePickerModal({
         onEndReached={onLoadMore}
         onEndReachedThreshold={0.4}
         ListFooterComponent={
-          loadingMore ? (
-            <View style={styles.footerLoading}>
-              <IsLoading size="small" />
-            </View>
-          ) : null
+          loadingMore ? <PickerRowsSkeleton borderColor={separatorColor} /> : null
         }
         ListHeaderComponent={null}
         ListEmptyComponent={
@@ -395,6 +392,28 @@ export default function EnumAndReferencePickerModal({
   );
 }
 
+
+/**
+ * Khung chờ ở đáy danh sách lúc nạp trang kế: vài dòng lựa chọn xám, cùng lề và
+ * gạch ngăn với dòng thật (`modalItem`), thay vòng xoay nhỏ.
+ */
+function PickerRowsSkeleton({ borderColor }: { borderColor: string }) {
+  const styles = useStyles(makeStyles);
+  const opacity = useSkeletonPulse();
+
+  return (
+    <View accessibilityLabel="Đang tải thêm">
+      {["62%", "44%"].map((width) => (
+        <View key={width} style={[styles.modalItem, { borderColor }]}>
+          <SkeletonBlock
+            opacity={opacity}
+            style={[styles.footerSkeletonText, { width: width as `${number}%` }]}
+          />
+        </View>
+      ))}
+    </View>
+  );
+}
 const makeStyles = (c: AppColors) =>
   StyleSheet.create({
     modalContainer: {
@@ -476,8 +495,10 @@ const makeStyles = (c: AppColors) =>
       flex: 1,
       minHeight: 0,
     },
-    footerLoading: {
-      paddingVertical: 16,
+    footerSkeletonText: {
+      height: 14,
+      marginVertical: 2,
+      borderRadius: 6,
     },
 
     listContent: {

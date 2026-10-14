@@ -853,7 +853,7 @@ const SettingScreen = () => {
               iconName="person-outline"
               iconBg={C.blue}
               label="Hồ sơ cá nhân"
-              sublabel="Xem và chỉnh sửa thông tin"
+              sublabel="Xem thông tin, đổi ảnh đại diện"
               onPress={() => navigation.navigate("Profile")}
             />
             <SettingRowItem
@@ -971,7 +971,7 @@ const SettingScreen = () => {
               iconName="help-circle-outline"
               iconBg={C.violet}
               label="Câu hỏi thường gặp"
-              sublabel="Lỗi kết nối, quyền, Face ID"
+              sublabel="Lỗi kết nối, quyền, Face ID, Workflow"
               isLast
               onPress={() =>
                 navigation.navigate("GuideTopic", {

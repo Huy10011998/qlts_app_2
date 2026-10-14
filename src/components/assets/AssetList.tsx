@@ -27,6 +27,7 @@ import {
   getPropertyClass,
   getBuildTree,
 } from "../../services";
+import RecordListFooterSkeleton from "../list/RecordListFooterSkeleton";
 import RecordListSkeleton from "../list/RecordListSkeleton";
 import MenuCardSkeleton, {
   MENU_CARD_ROW_HEIGHT,
@@ -34,7 +35,6 @@ import MenuCardSkeleton, {
 import { shouldShowListSkeleton } from "../ui/shouldShowListSkeleton";
 import ListCardAsset from "../../components/list/ListCardAsset";
 import SwipeableListRow from "../../components/list/SwipeableListRow";
-import IsLoading from "../../components/ui/IconLoading";
 import { useDebounce } from "../../hooks/useDebounce";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { AddItem } from "../add/AddItem";
@@ -695,7 +695,7 @@ export default function AssetList() {
           removeClippedSubviews={Platform.OS === "android"}
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
-          ListFooterComponent={isLoadingMore ? <IsLoading /> : null}
+          ListFooterComponent={isLoadingMore ? <RecordListFooterSkeleton /> : null}
           ListHeaderComponent={null}
           stickyHeaderIndices={[]}
           contentContainerStyle={[

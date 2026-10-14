@@ -79,6 +79,19 @@ describe("tìm kiếm trong tài liệu hướng dẫn", () => {
     expect(ids).toEqual(expect.arrayContaining(["camera", "faq"]));
   });
 
+  // Workflow có ba chủ đề riêng; người dùng tra bằng đúng chữ trên nút / tab.
+  it("tra được Workflow theo nhãn trên màn hình", () => {
+    const duyetTatCa = filterGuideTopics("duyet tat ca").map((hit) => hit.topic.id);
+    expect(duyetTatCa).toEqual(expect.arrayContaining(["phieu-de-nghi", "faq"]));
+
+    expect(filterGuideTopics("dinh ky").map((hit) => hit.topic.id)).toContain(
+      "cong-viec",
+    );
+    expect(filterGuideTopics("tab lich").map((hit) => hit.topic.id)).toEqual(
+      expect.arrayContaining(["lich-thong-bao", "faq"]),
+    );
+  });
+
   it("từ khoá không có trong tài liệu thì không ra kết quả", () => {
     expect(filterGuideTopics("khong-he-co-chu-nay")).toHaveLength(0);
   });
@@ -90,6 +103,14 @@ describe("mục lục hướng dẫn", () => {
 
     expect(new Set(ids).size).toBe(ids.length);
     ids.forEach((id) => expect(getGuideTopic(id)?.id).toBe(id));
+  });
+
+  it("id mục không trùng nhau giữa các chủ đề", () => {
+    const sectionIds = GUIDE_TOPICS.flatMap((topic) =>
+      topic.sections.map((section) => section.id),
+    );
+
+    expect(new Set(sectionIds).size).toBe(sectionIds.length);
   });
 
   // Nút dấu hỏi trên header trỏ tới chủ đề bằng id; chủ đề rỗng thì bấm vào ra

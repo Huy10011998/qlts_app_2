@@ -17,7 +17,7 @@ import QrCodeBackButton from "./shared/QrCodeBackButton";
 import QrCodeScreenSkeleton from "./shared/QrCodeScreenSkeleton";
 
 /** Thông tin công ty ở chân card — cố định trong code, không API nào trả về. */
-const COMPANY_NAME = "CHOLIMEX FOODS JOINT STOCK COMPANY";
+const COMPANY_NAME = "CÔNG TY CỔ PHẦN THỰC PHẨM CHOLIMEX";
 const COMPANY_ADDRESS =
   "Đường số 7, Khu công nghiệp Vĩnh Lộc, P. Bình Chánh, Thành phố Hồ Chí Minh, Việt Nam";
 const COMPANY_WEBSITE = "https://cholimexfood.com.vn/";

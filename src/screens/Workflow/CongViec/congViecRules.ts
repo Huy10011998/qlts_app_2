@@ -67,9 +67,10 @@ export const getCongViecActions = (
 
   return {
     sua: !!quyen.duocQuanLy && chuaXong && perms.canUpdate,
-    chuyenTrangThai: !!quyen.duocChuyenTrangThai,
-    giaHan: !!quyen.duocQuanLy && chuaXong,
-    doiChuTri: !!quyen.duocDoiChuTri && chuaXong,
+    // Bản 14/10: chuyển trạng thái / gia hạn / đổi chủ trì cũng đòi .Update (thiếu là 403).
+    chuyenTrangThai: !!quyen.duocChuyenTrangThai && perms.canUpdate,
+    giaHan: !!quyen.duocQuanLy && chuaXong && perms.canUpdate,
+    doiChuTri: !!quyen.duocDoiChuTri && chuaXong && perms.canUpdate,
     xoa: !!quyen.duocXoa && perms.canDelete,
     traoDoi: !!quyen.duocTraoDoi,
   };

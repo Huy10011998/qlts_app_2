@@ -4,8 +4,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import EmptyState from "../../../components/ui/EmptyState";
-import IsLoading from "../../../components/ui/IconLoading";
-import { cvGetList } from "../../../services/data/congViecApi";
+import { cvGetList, cvThongTin } from "../../../services/data/congViecApi";
 import { khChiTiet, khXoa } from "../../../services/data/keHoachApi";
 import {
   CV_CONG_VIEC_NAME_CLASS,
@@ -15,6 +14,7 @@ import {
 } from "../../../services/data/workflowApi";
 import type {
   CongViecItem,
+  CongViecThongTin,
   KeHoachChiTiet,
   StackNavigation,
   StackRoute,
@@ -27,6 +27,7 @@ import { CV_CARD_CUSTOM_FIELDS } from "../CongViec/congViecRules";
 import ProgressRing from "../shared/components/ProgressRing";
 import WorkflowButton from "../shared/components/WorkflowButton";
 import WorkflowDetailFields from "../shared/components/WorkflowDetailFields";
+import WorkflowDetailSkeleton from "../shared/components/WorkflowDetailSkeleton";
 import WorkflowSection from "../shared/components/WorkflowSection";
 import WorkflowTabBar from "../shared/components/WorkflowTabBar";
 import { useWorkflowMe } from "../shared/useWorkflowMe";
@@ -35,6 +36,7 @@ import {
   useMarkWorkflowChanged,
   useReloadOnWorkflowChange,
 } from "../shared/useWorkflowVersion";
+import { useOnWorkflowInfoStale } from "../shared/workflowInfoRefresh";
 import { formatBeDate } from "../shared/workflowDate";
 import { getWorkflowErrorMessage } from "../shared/workflowErrors";
 import { getCardFields, getDetailFields, WorkflowField } from "../shared/workflowFields";
@@ -63,6 +65,10 @@ export default function KeHoachDetailScreen() {
 
   const [data, setData] = useState<KeHoachChiTiet | null>(null);
   const [congViecs, setCongViecs] = useState<CongViecItem[]>([]);
+  /** Danh sách việc tải lỗi — đừng hiện thành "Chưa có công việc". */
+  const [congViecError, setCongViecError] = useState<string | null>(null);
+  /** cv-thong-tin của các việc đang hiện: số bình luận / file + cờ quyền. */
+  const [cvInfos, setCvInfos] = useState<Record<number, CongViecThongTin>>({});
   const [khFields, setKhFields] = useState<WorkflowField[]>([]);
   const [cvFields, setCvFields] = useState<WorkflowField[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,8 +83,9 @@ export default function KeHoachDetailScreen() {
   }, []);
 
   const load = useCallback(
-    async (mode: "initial" | "refresh" = "initial") => {
+    async (mode: "initial" | "refresh" | "silent" = "initial") => {
       if (mode === "refresh") setRefreshing(true);
+      let cvLoi: string | null = null;
       try {
         const [detail, list] = await Promise.all([
           khChiTiet(id),
@@ -94,10 +101,19 @@ export default function KeHoachDetailScreen() {
                 Type: TypeProperty.Int,
               },
             ],
-          }).catch(() => ({ items: [] as CongViecItem[], totalCount: 0 })),
+          }).catch((err) => {
+            cvLoi = getWorkflowErrorMessage(err, "Không tải được công việc của kế hoạch.");
+            return { items: [] as CongViecItem[], totalCount: 0 };
+          }),
         ]);
         setData(detail);
         setCongViecs(list.items ?? []);
+        setCongViecError(cvLoi);
+        // Như danh sách Công việc: 1 lần cho các việc đang hiện; lỗi thì thẻ
+        // chỉ thiếu số bình luận / file, không chặn màn.
+        const ids = (list.items ?? []).map((item) => item.id);
+        const infos = ids.length ? await cvThongTin(ids).catch(() => [] as CongViecThongTin[]) : [];
+        setCvInfos(Object.fromEntries(infos.map((info) => [info.id, info])));
         setErrorMessage(null);
       } catch (err) {
         if (isWorkflowNotFound(err)) {
@@ -120,7 +136,17 @@ export default function KeHoachDetailScreen() {
   }, [load]);
 
   // Quay về từ màn công việc mà có thay đổi → nạp lại để cập nhật số / %.
-  useReloadOnWorkflowChange(() => load("refresh"));
+  // Im lặng: bật vòng xoay bằng code lúc quay lại màn làm iOS kẹt một khoảng trống.
+  useReloadOnWorkflowChange(() => load("silent"));
+
+  // Đóng màn Bình luận / Đính kèm của 1 thẻ việc → nạp lại số trên các thẻ.
+  useOnWorkflowInfoStale((apiBase) => {
+    const ids = congViecs.map((item) => item.id);
+    if (apiBase !== CV_CONG_VIEC_NAME_CLASS || !ids.length) return;
+    cvThongTin(ids)
+      .then((infos) => setCvInfos(Object.fromEntries(infos.map((info) => [info.id, info]))))
+      .catch(() => undefined);
+  });
 
   const detailFields = useMemo(() => getDetailFields(khFields, "true"), [khFields]);
   const cvCardFields = useMemo(
@@ -158,7 +184,7 @@ export default function KeHoachDetailScreen() {
     ]);
   };
 
-  if (loading) return <IsLoading />;
+  if (loading) return <WorkflowDetailSkeleton variant="keHoach" fields={detailFields} />;
 
   if (!keHoach) {
     return (
@@ -285,9 +311,36 @@ export default function KeHoachDetailScreen() {
                 key={item.id}
                 item={item}
                 fields={cvCardFields}
+                info={cvInfos[item.id]}
                 onPress={() => navigation.navigate("CongViecChiTiet", { id: item.id })}
+                // Cùng tham số với danh sách Công việc: duocTraoDoi quyết định gửi / sửa file.
+                onOpenComments={() =>
+                  navigation.navigate("WorkflowBinhLuan", {
+                    apiBase: CV_CONG_VIEC_NAME_CLASS,
+                    idHoSo: item.id,
+                    canSend: !!cvInfos[item.id]?.duocTraoDoi,
+                    titleHeader: item.soCongViec ?? undefined,
+                  })
+                }
+                onOpenFiles={() =>
+                  navigation.navigate("WorkflowFile", {
+                    apiBase: CV_CONG_VIEC_NAME_CLASS,
+                    idHoSo: item.id,
+                    canEdit: !!cvInfos[item.id]?.duocTraoDoi,
+                    titleHeader: item.soCongViec ?? undefined,
+                  })
+                }
               />
             ))
+          ) : congViecError ? (
+            <EmptyState
+              iconName="cloud-offline-outline"
+              title="Không tải được công việc"
+              subtitle={congViecError}
+              actionLabel="Thử lại"
+              onActionPress={() => load("refresh")}
+              style={styles.tabEmpty}
+            />
           ) : (
             <EmptyState iconName="checkbox-outline" title="Chưa có công việc" style={styles.tabEmpty} />
           )}

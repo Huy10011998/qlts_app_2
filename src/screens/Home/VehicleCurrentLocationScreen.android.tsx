@@ -6,7 +6,6 @@ import React, {
   useState,
 } from "react";
 import {
-  ActivityIndicator,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -17,6 +16,7 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import WebView from "react-native-webview";
 import EnumAndReferencePickerModal from "../../components/modal/EnumAndReferencePickerModal";
 import VehicleFilterSkeleton from "./shared/VehicleFilterSkeleton";
+import VehicleLocationSkeleton from "./shared/VehicleLocationSkeleton";
 import EmptyState from "../../components/ui/EmptyState";
 import {
   getPhuongTien,
@@ -337,10 +337,7 @@ export default function VehicleCurrentLocationScreen() {
           />
         </View>
       ) : locationLoading ? (
-        <View style={styles.flexState}>
-          <ActivityIndicator color={c.red} />
-          <Text style={styles.loadingText}>Đang tải vị trí hiện tại...</Text>
-        </View>
+        <VehicleLocationSkeleton vehicleName={vehicleLabel(selectedVehicle)} />
       ) : !location ? (
         <View style={styles.flexState}>
           <EmptyState
@@ -443,7 +440,6 @@ const makeStyles = (c: AppColors) =>
   StyleSheet.create({
     root: { flex: 1, backgroundColor: c.surfaceAlt },
     flexState: { flex: 1, alignItems: "center", justifyContent: "center" },
-    loadingText: { color: c.textSecondary, fontSize: 13, marginTop: 9 },
     filterWrap: { paddingHorizontal: 16, paddingTop: 8 },
     label: { color: c.text, fontSize: 13, fontWeight: "600", marginBottom: 7 },
     select: {

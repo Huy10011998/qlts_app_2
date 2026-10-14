@@ -85,6 +85,15 @@ describe("formatWorkflowValue", () => {
   it("Enum hiện tên ở <name>_MoTa, không có thì hiện số", () => {
     expect(formatWorkflowValue({ tinhTrang: 1, tinhTrang_MoTa: "Chờ duyệt" }, enumField)).toBe("Chờ duyệt");
     expect(formatWorkflowValue({ tinhTrang: 1 }, enumField)).toBe("1");
+
+    // cv-chi-tiet trả mucDoKhan_MoTa là số → dùng chữ cứng của tài liệu.
+    const khan = { ...enumField, name: "MucDoKhan" };
+    const quanTrong = { ...enumField, name: "MucDoQuanTrong" };
+    expect(formatWorkflowValue({ mucDoKhan: 0, mucDoKhan_MoTa: 0 }, khan)).toBe("Thường");
+    expect(formatWorkflowValue({ mucDoKhan: 1, mucDoKhan_MoTa: 1 }, khan)).toBe("Khẩn");
+    expect(formatWorkflowValue({ mucDoQuanTrong: 1, mucDoQuanTrong_MoTa: 1 }, quanTrong)).toBe("Quan trọng");
+    // BE trả chữ thì vẫn dùng chữ của BE.
+    expect(formatWorkflowValue({ mucDoKhan: 1, mucDoKhan_MoTa: "Rất khẩn" }, khan)).toBe("Rất khẩn");
   });
 
   it("Date đọc theo giờ địa phương, kèm giờ khi showTime", () => {

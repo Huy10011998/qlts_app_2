@@ -3,7 +3,18 @@ import { formatDateForBE, normalizeDateFromBE } from "../../../utils/Date";
 import { TypeProperty } from "../../../utils/Enum";
 import { getFieldValue } from "../../../utils/fields/GetFieldValue";
 import { getMatchedKey } from "../../../utils/helpers/field";
+import { CV_MUC_DO_KHAN, CV_MUC_DO_QUAN_TRONG } from "./workflowConstants";
 import { formatBeDate } from "./workflowDate";
+
+/**
+ * Chữ của Enum khi `<name>_MoTa` không có chữ — cv-chi-tiet đang trả
+ * mucDoKhan_MoTa = 0 (số) thay vì "Thường". Tài liệu cho dùng chữ cứng:
+ * "0 Thường / 1 Khẩn | Quan trọng" (4-Mobile-CongViec mục 4, PHỤ LỤC).
+ */
+const ENUM_LABELS: Record<string, Array<{ value: number; label: string }>> = {
+  mucdokhan: CV_MUC_DO_KHAN,
+  mucdoquantrong: CV_MUC_DO_QUAN_TRONG,
+};
 
 /**
  * Phần ĐỘNG của view Workflow: dựng thẻ / chi tiết / form từ metadata
@@ -162,10 +173,16 @@ export const formatWorkflowValue = (
   if (!item || !field) return "---";
 
   if (field.typeProperty === TypeProperty.Enum) {
-    const text = readItemValue(item, `${field.name}_MoTa`);
-    if (text != null && text !== "") return String(text);
-
     const raw = readItemValue(item, field.name);
+    const text = readItemValue(item, `${field.name}_MoTa`);
+    // _MoTa là số (trùng giá trị) thì coi như không có chữ.
+    if (text != null && text !== "" && typeof text !== "number") return String(text);
+
+    const known = ENUM_LABELS[field.name.toLowerCase()]?.find(
+      (option) => option.value === Number(raw ?? text),
+    );
+    if (known) return known.label;
+    if (text != null && text !== "") return String(text);
     return raw == null || raw === "" ? "---" : String(raw);
   }
 

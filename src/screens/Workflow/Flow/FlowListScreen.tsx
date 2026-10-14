@@ -3,9 +3,9 @@ import { Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, Vi
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import RecordListFooterSkeleton from "../../../components/list/RecordListFooterSkeleton";
 import RecordListSkeleton from "../../../components/list/RecordListSkeleton";
 import EmptyState from "../../../components/ui/EmptyState";
-import IsLoading from "../../../components/ui/IconLoading";
 import InlineToast from "../../../components/ui/InlineToast";
 import SearchBar from "../../../components/ui/SearchBar";
 import { useDebounce } from "../../../hooks/useDebounce";
@@ -28,10 +28,12 @@ import {
   useMarkWorkflowChanged,
   useReloadOnWorkflowChange,
 } from "../shared/useWorkflowVersion";
+import { useOnWorkflowInfoStale } from "../shared/workflowInfoRefresh";
 import { FLOW_KET_QUA, FLOW_TABS, readTabCount } from "../shared/workflowConstants";
 import { getWorkflowErrorMessage } from "../shared/workflowErrors";
 import { getCardFields } from "../shared/workflowFields";
 import FlowApproveSheet, { FlowKetQua } from "./components/FlowApproveSheet";
+import FlowTraBuocSheet from "./components/FlowTraBuocSheet";
 import FlowBulkApproveSheet, { FlowBulkOutcome } from "./components/FlowBulkApproveSheet";
 import FlowCard from "./components/FlowCard";
 import {
@@ -43,12 +45,13 @@ import {
 import { useFlowMeta } from "./useFlowMeta";
 
 /**
- * Trần số phiếu của một lượt "Duyệt tất cả" — lấy hết phiếu của tab Chờ duyệt
+ * Trần số phiếu của một lượt "Duyệt nhiều (n)" ở đầu tab Chờ duyệt (duyệt hết,
+ * không cần chọn từng phiếu) — lấy hết phiếu của tab Chờ duyệt
  * trong 1 lần gọi. Vượt trần thì duyệt phần đầu, phần còn lại bấm lại lần nữa.
  */
 const DUYET_TAT_CA_MAX = 500;
 
-type ApproveState = { record: FlowRecord; ketQua: FlowKetQua };
+type ApproveState = { record: FlowRecord; ketQua: FlowKetQua | typeof FLOW_KET_QUA.TraBuoc };
 type BulkState = { records: FlowRecord[]; skippedNotAllowed: number };
 type ToastState = { message: string; detail?: string; tone: "success" | "warning" };
 
@@ -141,6 +144,11 @@ export default function FlowListScreen() {
     loadCounts();
   });
 
+  // Đóng màn Bình luận / Đính kèm → số bình luận / file của các dòng đang hiện.
+  useOnWorkflowInfoStale((apiBase) => {
+    if (apiBase === nameClass && list.items.length) loadInfos(list.items);
+  });
+
   const tabs = useMemo(
     () =>
       FLOW_TABS.map((item) => ({
@@ -201,7 +209,7 @@ export default function FlowListScreen() {
   };
 
   /**
-   * Duyệt tất cả phiếu đang chờ tôi (tab Chờ duyệt, theo từ khoá đang tìm) —
+   * Duyệt nhiều = mọi phiếu đang chờ tôi (tab Chờ duyệt, theo từ khoá đang tìm) —
    * kể cả trang chưa cuộn tới, nên hỏi lại server thay vì chỉ lấy các dòng đã
    * tải, rồi đi đúng đường duyệt nhiều.
    */
@@ -218,13 +226,13 @@ export default function FlowListScreen() {
       const records = result.items ?? [];
 
       if (!records.length) {
-        Alert.alert("Không còn phiếu", "Không có phiếu nào đang chờ bạn duyệt.");
+        Alert.alert("Không còn phiếu", "Không có phiếu nào chờ duyệt.");
         return;
       }
       if (result.totalCount > records.length) {
         Alert.alert(
-          "Duyệt theo đợt",
-          `Có ${result.totalCount} phiếu chờ duyệt; lượt này duyệt ${records.length} phiếu đầu, phần còn lại bấm Duyệt tất cả lần nữa.`,
+          "Duyệt nhiều",
+          `Có ${result.totalCount} phiếu chờ duyệt; lượt này duyệt ${records.length} phiếu đầu, phần còn lại bấm Duyệt nhiều lần nữa.`,
         );
       }
       await startBulkApprove(records);
@@ -250,7 +258,7 @@ export default function FlowListScreen() {
     const soCanChonNguoi = result.soCanChonNguoi ?? 0;
     const loi = (result.loi ?? []).filter(Boolean);
     const boQua = skippedTaoCongViec
-      ? `Đã bỏ qua ${skippedTaoCongViec} phiếu ở lượt cuối "Tạo công việc" - duyệt từng phiếu để tạo công việc.`
+      ? `Đã bỏ qua ${skippedTaoCongViec} phiếu ở lượt cuối "Tạo công việc" - duyệt từng phiếu để tạo công việc`
       : "";
 
     if (soCanChonNguoi > 0) {
@@ -289,13 +297,13 @@ export default function FlowListScreen() {
     }
   };
 
-  if (metaLoading) return <IsLoading />;
-
-  if (metaError || !meta) {
+  // Đang nạp cấu hình phiếu: vẫn dựng ô tìm kiếm + hàng tab thật, danh sách là
+  // khung chờ — giống hệt lúc chờ trang đầu, khỏi thêm một nhịp vòng xoay trước.
+  if (!metaLoading && (metaError || !meta)) {
     return <EmptyState iconName="alert-circle-outline" title="Không mở được phiếu" subtitle={metaError ?? undefined} />;
   }
 
-  if (perms.loaded && !perms.canRead) {
+  if (meta && perms.loaded && !perms.canRead) {
     return (
       <EmptyState
         iconName="lock-closed-outline"
@@ -334,7 +342,9 @@ export default function FlowListScreen() {
             compact
             variant="success"
             icon="checkmark-done"
-            label={`Duyệt tất cả (${list.totalCount})`}
+            // Đúng chữ PHỤ LỤC ("Duyệt nhiều"); chỉ hiện khi chưa chọn phiếu nào, nên
+            // không trùng với thanh "Duyệt nhiều (n)" lúc đang chọn.
+            label={`Duyệt nhiều (${list.totalCount})`}
             loading={preparingBulk}
             onPress={approveAll}
           />
@@ -347,7 +357,7 @@ export default function FlowListScreen() {
         onDismiss={() => setToast(null)}
       />
 
-      {list.loading && !list.items.length ? (
+      {(metaLoading || list.loading) && !list.items.length ? (
         <RecordListSkeleton hasSearchBar={false} rows={5} />
       ) : (
         <FlatList
@@ -371,6 +381,33 @@ export default function FlowListScreen() {
                 onApprove={() => setApprove({ record: item, ketQua: FLOW_KET_QUA.Duyet })}
                 onReject={() => setApprove({ record: item, ketQua: FLOW_KET_QUA.TuChoi })}
                 onNoOpinion={() => setApprove({ record: item, ketQua: FLOW_KET_QUA.KhongYKien })}
+                onTraBuoc={() => setApprove({ record: item, ketQua: FLOW_KET_QUA.TraBuoc })}
+                // Cùng tham số với nút ở màn chi tiết; đang chọn nhiều thì bấm là chọn.
+                onOpenComments={
+                  selecting
+                    ? undefined
+                    : () =>
+                        navigation.navigate("WorkflowBinhLuan", {
+                          apiBase: nameClass,
+                          idHoSo: item.id,
+                          // Ai xem được phiếu thì bình luận được.
+                          canSend: true,
+                          titleHeader: getFlowLabel(item, soPhieuField),
+                        })
+                }
+                // Cùng luật nút Đính kèm ở chi tiết (tắt khi 0 file, trừ nháp của tôi).
+                filesDisabled={!selecting && !actions.dinhKem}
+                onOpenFiles={
+                  selecting || !actions.dinhKem
+                    ? undefined
+                    : () =>
+                        navigation.navigate("WorkflowFile", {
+                          apiBase: nameClass,
+                          idHoSo: item.id,
+                          canEdit: actions.suaFile,
+                          titleHeader: getFlowLabel(item, soPhieuField),
+                        })
+                }
               />
             );
           }}
@@ -387,7 +424,7 @@ export default function FlowListScreen() {
             />
           }
           ListFooterComponent={
-            list.loadingMore ? <IsLoading size="small" style={styles.footerLoading} /> : null
+            list.loadingMore ? <RecordListFooterSkeleton cardStyle={styles.footerCard} /> : null
           }
           ListEmptyComponent={
             <EmptyState
@@ -432,7 +469,18 @@ export default function FlowListScreen() {
         <WorkflowFab onPress={() => navigation.navigate("FlowForm", { nameClass, mode: "add" })} />
       ) : null}
 
-      {approve ? (
+      {approve?.ketQua === FLOW_KET_QUA.TraBuoc ? (
+        <FlowTraBuocSheet
+          visible
+          nameClass={nameClass}
+          idHoSo={approve.record.id}
+          phieuLabel={getFlowLabel(approve.record, soPhieuField)}
+          buocHienTai={infos[approve.record.id]?.buocHienTai}
+          traVe={infos[approve.record.id]?.traVe}
+          onClose={() => setApprove(null)}
+          onDone={finishAction}
+        />
+      ) : approve ? (
         <FlowApproveSheet
           visible
           nameClass={nameClass}
@@ -504,8 +552,9 @@ const makeStyles = (c: AppColors) =>
     listWithBar: {
       paddingBottom: 150,
     },
-    footerLoading: {
-      paddingVertical: 16,
+    // Danh sách đã có lề ngang 12 — thẻ chờ khỏi thụt thêm lần nữa.
+    footerCard: {
+      marginHorizontal: 0,
     },
     bulkBar: {
       position: "absolute",

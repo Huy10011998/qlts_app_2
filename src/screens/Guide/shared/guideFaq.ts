@@ -12,7 +12,7 @@ import type { GuideTopic } from "./guideTypes";
 export const GUIDE_FAQ_TOPIC: GuideTopic = {
   id: "faq",
   title: "Câu hỏi thường gặp",
-  summary: "Lỗi kết nối, hết phiên, quyền, GPS, camera, danh thiếp QR",
+  summary: "Lỗi kết nối, hết phiên, quyền, GPS, camera, Workflow, danh thiếp QR",
   iconName: "help-circle-outline",
   iconBg: C.violet,
   group: "Trợ giúp",
@@ -75,6 +75,34 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     "khong tim thay tai khoan",
     "o so lieu",
     "chi hien mot nhanh",
+    "workflow",
+    "khong thay workflow",
+    "tab lich",
+    "mat tab camera",
+    "chuong thong bao",
+    "sap trien khai",
+    "chua lien ket nhan vien",
+    "phieu de nghi",
+    "khong co nut duyet",
+    "tu choi nham",
+    "duyet tat ca",
+    "duyet theo dot",
+    "cong viec",
+    "gia han",
+    "doi chu tri",
+    "xoa cong viec",
+    "xoa ke hoach",
+    "file qua lon",
+    "20mb",
+    "thong bao day",
+    "da doc",
+    "viec cua dong nghiep",
+    "dinh ky",
+    "ban do trang",
+    "ban do iphone",
+    "co chu",
+    "chu nho",
+    "chu to",
   ],
   sections: [
     {
@@ -556,29 +584,255 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
       ],
     },
     {
+      id: "faq-khong-thay-workflow",
+      heading: "Không thấy Workflow hoặc tab Lịch",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Ô Workflow ở tab Chức năng và tab Lịch ở thanh dưới chỉ hiện với tài khoản được cấp quyền xem Workflow. Liên hệ IT để được cấp.",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Vào Workflow mà báo \"Bạn không có quyền truy cập\": chưa có quyền xem Workflow.",
+            "Vào được nhưng báo \"Chưa có chức năng\": có quyền vào Workflow nhưng chưa được cấp quyền xem phiếu đề nghị, công việc hay kế hoạch.",
+            "Thấy Công việc mà không thấy Kế hoạch (hoặc ngược lại): mỗi chức năng cấp quyền riêng.",
+          ],
+        },
+        {
+          kind: "paragraph",
+          text: "IT vừa cấp quyền mà app chưa đổi thì đăng xuất rồi đăng nhập lại.",
+        },
+      ],
+    },
+    {
+      id: "faq-tab-camera-thanh-lich",
+      heading: "Tab Camera biến thành Lịch, giờ xem camera ở đâu?",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Tài khoản dùng Workflow có tab Lịch ở đúng chỗ tab Camera cũ. Camera vẫn còn: vào tab Chức năng, chọn ô Camera. Hay xem thì ghim ô Camera lên khối TRUY CẬP NHANH ở Trang chủ.",
+        },
+        {
+          kind: "paragraph",
+          text: "Lúc mới mở app thấy tab Camera rồi tự đổi thành Lịch là bình thường — app vừa tải xong quyền của tài khoản.",
+        },
+      ],
+    },
+    {
+      id: "faq-chuong-sap-trien-khai",
+      heading: 'Bấm chuông thì báo "Chức năng sẽ được triển khai trong thời gian sắp tới."',
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Màn Thông báo đang được hoàn thiện, nên hiện mọi tài khoản bấm chuông đều thấy câu này. Phiếu chờ duyệt, việc được giao, sắp hạn, quá hạn và bình luận của Workflow xem bằng nút Việc cần xử lý (hình khay giấy) ngay cạnh chuông.",
+        },
+        {
+          kind: "paragraph",
+          text: "Thông báo camera không nằm ở chuông: chúng hiện thẳng trên điện thoại như thông báo bình thường.",
+        },
+      ],
+    },
+    {
+      id: "faq-khong-thay-tong-quan-cong-viec",
+      heading: "Không thấy khối Tổng quan công việc ở Trang chủ",
+      blocks: [
+        {
+          kind: "bullets",
+          items: [
+            "Khối chỉ hiện với tài khoản được cấp quyền Workflow. Chưa có quyền thì nhờ IT cấp.",
+            "Khối có thể đang nằm ở chỗ khác: bấm nút sắp xếp trên thanh đầu Trang chủ để xem và kéo khối lên.",
+            "Khối báo không tải được thì kiểm tra mạng nội bộ rồi bấm Thử lại, hoặc kéo Trang chủ xuống để tải lại.",
+          ],
+        },
+      ],
+    },
+    {
+      id: "faq-chua-lien-ket-nhan-vien",
+      heading: 'Lập phiếu thì báo "Chưa liên kết nhân viên"',
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Phiếu và công việc gắn với người lập, người duyệt, người chủ trì theo hồ sơ nhân viên. Tài khoản chưa được gắn với một hồ sơ nhân viên trên hệ thống thì chỉ xem được, không lập phiếu, không duyệt, không thêm việc được — các nút đó ẩn hẳn.",
+        },
+        {
+          kind: "paragraph",
+          text: "Liên hệ IT, nói rõ tên tài khoản để được gắn vào đúng hồ sơ nhân viên, rồi đăng xuất và đăng nhập lại.",
+        },
+      ],
+    },
+    {
+      id: "faq-phieu-khong-co-nut-duyet",
+      heading: "Phiếu không có nút Duyệt",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Nút Duyệt / Từ chối chỉ hiện khi phiếu đang tới lượt bạn — dòng Bước hiện tại ở màn Chi tiết phiếu và tên bước trên thẻ ở danh sách hiện chữ đỏ.",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Phiếu đang chờ bước của người khác: bấm Quy trình để xem đang chờ ai.",
+            "Bạn đã duyệt bước của mình rồi: phiếu không còn ở tab Chờ duyệt — tìm ở tab Tất cả.",
+            "Tài khoản chưa liên kết nhân viên: nút duyệt ẩn hẳn — xem câu \"Chưa liên kết nhân viên\".",
+            "Thấy Duyệt mà không thấy Không ý kiến: bước này không cho chọn Không ý kiến.",
+          ],
+        },
+      ],
+    },
+    {
+      id: "faq-tu-choi-nham",
+      heading: "Lỡ bấm Từ chối một phiếu",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Từ chối là đóng phiếu, không mở lại được — vì vậy app hỏi \"Từ chối sẽ đóng phiếu, không quay lại được. Tiếp tục?\" trước khi gửi.",
+        },
+        {
+          kind: "paragraph",
+          text: "Đã lỡ thì báo người lập phiếu. Họ mở phiếu cũ, bấm Nhân bản để có phiếu mới cùng nội dung rồi nộp lại, không phải nhập từ đầu.",
+        },
+      ],
+    },
+    {
+      id: "faq-duyet-tat-ca-con-phieu",
+      heading: "Bấm Duyệt nhiều mà vẫn còn phiếu chờ",
+      blocks: [
+        {
+          kind: "bullets",
+          items: [
+            "Mỗi lượt duyệt tối đa 500 phiếu. Nhiều hơn thì app báo và duyệt phần đầu — bấm Duyệt nhiều (nút ngay dưới các tab, bản trước ghi Duyệt tất cả) thêm lần nữa cho phần còn lại.",
+            "Phiếu cần chọn người duyệt cho bước tiếp theo không duyệt hàng loạt được. Mở từng phiếu, chọn người rồi bấm Duyệt.",
+            "Phiếu ở lượt cuối có Tạo công việc mà bạn chọn Bỏ qua các phiếu này thì phải mở từng phiếu, chọn Tạo công việc.",
+          ],
+        },
+        {
+          kind: "paragraph",
+          text: "Bảng Kết quả duyệt sau mỗi lượt ghi rõ bao nhiêu phiếu đã duyệt và vì sao những phiếu còn lại chưa duyệt.",
+        },
+      ],
+    },
+    {
+      id: "faq-khong-thay-nut-cong-viec",
+      heading: "Không thấy nút Sửa / Gia hạn / Đổi chủ trì / Xoá ở công việc",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Nút nào hiện là do hệ thống tính theo vai trò của bạn trong từng việc, không phải do app lỗi.",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Sửa, Gia hạn, Đổi chủ trì: chỉ khi việc chưa xong. Việc đã Hoàn thành hoặc Hủy thì các nút này ẩn.",
+            "Xoá: chỉ người tạo, khi việc còn Mới và không sinh từ phiếu đề nghị. Việc sinh từ phiếu muốn bỏ thì Chuyển trạng thái → Hủy.",
+            "Bạn là chủ trì mà không có Đổi chủ trì: người tạo việc đã bật Không được chuyển người chủ trì.",
+            "Có dòng \"Bạn đang xem ở chế độ chỉ xem.\": bạn chỉ được xem việc này (ví dụ chủ trì kế hoạch chứa việc), không thao tác được.",
+          ],
+        },
+      ],
+    },
+    {
+      id: "faq-khong-xoa-duoc-ke-hoach",
+      heading: "Nút Xoá kế hoạch bị mờ",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Kế hoạch còn công việc thì không xoá được — xoá là mất mối gom các việc đó. Chỉ kế hoạch không còn việc nào mới xoá được, và chỉ chủ trì kế hoạch thấy nút Xoá.",
+        },
+      ],
+    },
+    {
+      id: "faq-file-qua-lon",
+      heading: "Đính kèm file thì báo \"File quá lớn\"",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Mỗi file đính kèm ở phiếu, công việc và bình luận tối đa 20MB; file lớn hơn bị bỏ qua, các file còn lại vẫn được thêm.",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Ảnh chụp: chọn Chụp ảnh hoặc Ảnh trong máy — app tự nén nhỏ hơn ảnh gốc.",
+            "Tài liệu: xuất PDF thay vì gửi file gốc nặng, hoặc tách thành nhiều file.",
+            "Lưu phiếu mà có file chưa tải lên được: app báo Đã lưu nháp — phiếu vẫn là nháp, CHƯA nộp. Mở lại nháp ở tab Nháp, bấm Sửa, thêm lại file rồi Lưu phiếu.",
+            "Lưu công việc mà có file chưa tải lên được: việc đã lưu rồi, mở File (n) ở màn chi tiết để thêm lại file đó.",
+          ],
+        },
+      ],
+    },
+    {
+      id: "faq-khong-co-thong-bao-day-workflow",
+      heading: "Có phiếu chờ duyệt mà điện thoại không báo",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Hiện hệ thống chưa gửi thông báo đẩy cho phiếu đề nghị và công việc — phần này sẽ được bổ sung sau. Trong lúc chờ, mở nút Việc cần xử lý cạnh chuông ở Trang chủ hoặc tab Chờ duyệt của Ticket phòng ban để xem việc mới.",
+        },
+        {
+          kind: "paragraph",
+          text: "Số đỏ trên ô Workflow ở Trang chủ / tab Chức năng cho biết bạn đang có bao nhiêu việc cần xử lý; bấm nút Việc cần xử lý cạnh chuông để xem các việc đó, còn số n chờ duyệt ở màn Workflow cho biết còn bao nhiêu phiếu đang đợi bạn.",
+        },
+      ],
+    },
+    {
+      id: "faq-khong-thay-viec-dong-nghiep",
+      heading: "Không thấy công việc của đồng nghiệp",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Danh sách Công việc và tab Lịch chỉ có việc của bạn: việc bạn tạo, hoặc có tên trong người tham gia (Chủ trì, Phối hợp, Để biết).",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Cần theo dõi một việc thì nhờ người tạo thêm bạn vào mục Để biết.",
+            "Chủ trì kế hoạch xem được mọi việc trong kế hoạch của mình ở tab Công việc của kế hoạch.",
+          ],
+        },
+      ],
+    },
+    {
+      id: "faq-khong-thay-dinh-ky",
+      heading: "Không thấy mục Định kỳ khi tạo việc",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Mục Định kỳ chỉ có ở màn Thêm công việc. Sửa một việc đã có, hoặc tạo việc từ phiếu đề nghị (màn Tạo công việc), thì không có mục này.",
+        },
+        {
+          kind: "paragraph",
+          text: "Mỗi lần lặp sinh ra là một việc riêng, thẻ ghi Định kỳ · lần n. Sửa, gia hạn hay chuyển trạng thái từng lần như việc thường.",
+        },
+      ],
+    },
+    {
       id: "faq-danh-thiep-khong-co-ma-qr",
       heading: "Màn Thông tin QrCode không có mã QR",
       blocks: [
         {
           kind: "paragraph",
-          text: "Mã QR chỉ hiện khi tài khoản đã được gán hồ sơ nhân viên trên hệ thống. Chưa gán thì màn chỉ còn họ tên, chỗ mã QR để trống — quét cũng không có gì để lưu.",
+          text: "Mã QR là đường link tới trang danh thiếp của bạn, nên chỉ hiện khi tài khoản đã được gán hồ sơ nhân viên và hồ sơ đó đã có trang danh thiếp trên hệ thống. Thiếu một trong hai thì màn chỉ còn họ tên, chỗ mã QR để trống.",
         },
         {
           kind: "paragraph",
-          text: "Liên hệ IT, nói rõ tên tài khoản để được gán vào đúng hồ sơ nhân viên. Gán xong thì đăng xuất và đăng nhập lại là mã hiện ra.",
+          text: "Liên hệ IT, nói rõ tên tài khoản để được gán vào đúng hồ sơ nhân viên và tạo trang danh thiếp. Xong thì đăng xuất và đăng nhập lại là mã hiện ra.",
         },
       ],
     },
     {
       id: "faq-quet-danh-thiep",
-      heading: "Người khác quét danh thiếp của tôi mà không ra thẻ liên hệ",
+      heading: "Người khác quét danh thiếp của tôi thì ra gì?",
       blocks: [
+        {
+          kind: "paragraph",
+          text: "Máy của họ mở trang danh thiếp của bạn trên web — không còn hiện ngay thẻ liên hệ như bản cũ. Trên trang có nút tải thẻ liên hệ (vCard) để lưu vào danh bạ, và nút đổi tiếng Việt / tiếng Anh.",
+        },
         {
           kind: "bullets",
           items: [
             "Phải quét bằng camera có sẵn của điện thoại (hoặc Zalo, ứng dụng quét QR bất kỳ). Nút Quét QR trong app này chỉ đọc tem tài sản nên sẽ báo Mã QR không hợp lệ.",
+            "Quét ra link mà không mở được trang: máy người quét cần có mạng; thử mở lại link bằng trình duyệt.",
             "Tăng độ sáng màn hình và giữ máy yên cho mã nằm gọn trong khung.",
-            "Máy nhận ra thẻ liên hệ thì bấm lưu là vào danh bạ, gồm cả số di động, email và link trang danh thiếp của bạn.",
           ],
         },
       ],
@@ -618,14 +872,50 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
       blocks: [
         {
           kind: "paragraph",
-          text: "Đúng như thiết kế. Ô Thiết bị máy móc đang quản lý chỉ mở nhánh máy móc, ô Thiết bị CNTT chỉ mở nhánh CNTT — tiêu đề thanh đỏ ghi đúng tên nhánh đang xem.",
+          text: "Đúng như thiết kế. Ô Thiết bị máy móc đang quản lý chỉ mở nhánh máy móc trong nhóm Tài sản, ô Thiết bị CNTT đang sử dụng chỉ mở nhánh CNTT trong nhóm IT — tiêu đề thanh đỏ ghi đúng tên nhóm đang xem.",
         },
         {
           kind: "bullets",
           items: [
-            "Muốn xem cả cây tài sản: vào tab Chức năng rồi chọn Tài sản.",
+            "Muốn xem cả cây: vào tab Chức năng rồi chọn Tài sản (máy móc) hoặc IT (thiết bị CNTT). CNTT đã chuyển từ nhóm Tài sản sang nhóm IT nên không còn nằm trong Tài sản.",
             "Mở ra danh sách trống: nhánh đó chưa có dữ liệu hoặc tài khoản không có quyền xem các mục trong nhánh — liên hệ IT.",
           ],
+        },
+      ],
+    },
+    {
+      id: "faq-ban-do-trang",
+      heading: "Bản đồ phương tiện trắng trơn trên iPhone",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Bản cũ trên iPhone tải nền bản đồ từ một nguồn bị một số nhà mạng chặn, nên có chỗ chỉ thấy nền trắng và vài chấm. Từ bản 2.40, iPhone dùng bản đồ Apple nên không còn gặp.",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Cập nhật app lên bản mới nhất — xem câu Làm sao biết app đã là bản mới nhất? ngay dưới.",
+            "Đã là bản mới mà vẫn trắng: kiểm tra mạng, rồi thoát màn bản đồ vào lại.",
+          ],
+        },
+      ],
+    },
+    {
+      id: "faq-co-chu",
+      heading: "Chữ trong app quá nhỏ hoặc quá to",
+      blocks: [
+        {
+          kind: "steps",
+          items: [
+            "Vào tab Cài đặt, chọn Cỡ chữ.",
+            "Kéo thanh trượt về phía chữ A lớn để chữ to hơn, về phía chữ A nhỏ để chữ nhỏ lại. Đoạn chữ phía trên đổi ngay để xem trước.",
+            "Nhấc tay khỏi thanh trượt là cả app đổi theo ngay, không cần mở lại app.",
+          ],
+        },
+        {
+          kind: "note",
+          tone: "info",
+          text: "Cỡ chữ của app nhân thêm vào cỡ chữ đã đặt trong điện thoại. Đã kéo về 100% mà chữ vẫn to (hoặc nhỏ) bất thường thì xem lại cỡ chữ trong Cài đặt của điện thoại.",
         },
       ],
     },

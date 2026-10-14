@@ -50,6 +50,9 @@ import {
 import { useHomeDashboard } from "./shared/useHomeDashboard";
 import { useHomeMenuContext } from "./shared/HomeMenuProvider";
 import { useHomeMenuItems } from "./shared/useHomeMenuItems";
+import WorkflowDashboardCard from "../Workflow/Dashboard/WorkflowDashboardCard";
+import { WORKFLOW_VIEW_CODE } from "../Workflow/workflowMenu";
+import { navigateFromRef } from "../../navigation/navigationService";
 import { createReportActions } from "./shared/homeMenuHelpers";
 import EmptyState from "../../components/ui/EmptyState";
 import { useAppDispatch } from "../../store/hooks";
@@ -203,22 +206,27 @@ const HomeScreen: React.FC = () => {
     },
   );
 
-  const refreshHomeData = useCallback(async () => {
-    setIsRefreshing(true);
-    // Dashboard nằm cùng lượt kéo-để-làm-mới nhưng lỗi của nó không được gộp
-    // vào `hasLoadError` — hook tự giữ lỗi bên trong.
-    await Promise.all([
-      loadPermissions({ isRefresh: true }),
-      fetchHomeMenuItems(),
-      refreshDashboard(),
-    ]);
-    setIsRefreshing(false);
-  }, [fetchHomeMenuItems, loadPermissions, refreshDashboard]);
+  const refreshHomeData = useCallback(
+    async (options?: { silent?: boolean }) => {
+      const showSpinner = !options?.silent;
+      if (showSpinner) setIsRefreshing(true);
+      // Dashboard nằm cùng lượt kéo-để-làm-mới nhưng lỗi của nó không được gộp
+      // vào `hasLoadError` — hook tự giữ lỗi bên trong.
+      await Promise.all([
+        loadPermissions({ isRefresh: showSpinner }),
+        fetchHomeMenuItems(),
+        refreshDashboard(),
+      ]);
+      if (showSpinner) setIsRefreshing(false);
+    },
+    [fetchHomeMenuItems, loadPermissions, refreshDashboard],
+  );
 
-  // Nút làm mới trên header dùng đúng lượt làm mới của kéo-để-tải-lại, nên vòng
-  // xoay của RefreshControl cũng chạy theo — không có hai đường tải khác nhau.
+  // Nút làm mới trên header dùng đúng lượt tải của kéo-để-tải-lại nhưng KHÔNG
+  // bật vòng xoay RefreshControl (icon trên header tự xoay): bật vòng xoay bằng
+  // code khi người dùng không kéo, iOS đẩy trang xuống một khoảng, có khi kẹt.
   useEffect(
-    () => registerHomeRefresh(refreshHomeData),
+    () => registerHomeRefresh(() => refreshHomeData({ silent: true })),
     [refreshHomeData, registerHomeRefresh],
   );
 
@@ -536,12 +544,14 @@ const HomeScreen: React.FC = () => {
   // Thứ tự user đã lưu, lọc còn lại đúng những khối đang hiện. Khối bị ẩn vì
   // thiếu quyền / chưa có dữ liệu vẫn nằm trong `blockOrder` để lần sau hiện lại
   // đúng chỗ cũ.
-  const visibleBlockKeys = useMemo<HomeBlockKey[]>(() => {
+  const orderedBlockKeys = useMemo<HomeBlockKey[]>(() => {
     const isBlockVisible: Record<HomeBlockKey, boolean> = {
       stats: hasStatSection,
       // Truy cập nhanh luôn có mặt: không quyền thì hiện thẻ giải thích, chưa
       // ghim thì hiện lời mời ghim.
       shortcuts: true,
+      // Lọc theo quyền View.Workflow ngay dưới (ngoài memo).
+      workflow: true,
       assetStructure: hasAssetStructureSection,
       attendance: attendance !== null,
       utilities: hasUtilitySection,
@@ -555,6 +565,10 @@ const HomeScreen: React.FC = () => {
     hasStatSection,
     hasUtilitySection,
   ]);
+  const canViewWorkflow = loaded && canView(WORKFLOW_VIEW_CODE);
+  const visibleBlockKeys = canViewWorkflow
+    ? orderedBlockKeys
+    : orderedBlockKeys.filter((key) => key !== "workflow");
   const handleMoveBlock = useCallback(
     ({
       fromIndex,
@@ -585,7 +599,7 @@ const HomeScreen: React.FC = () => {
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
-            onRefresh={refreshHomeData}
+            onRefresh={() => refreshHomeData()}
             colors={[HOME_BRAND_RED]}
             tintColor={HOME_BRAND_RED}
           />
@@ -818,6 +832,17 @@ const HomeScreen: React.FC = () => {
         resetToken={dashboard?.updatedAt ?? ""}
       />
     ),
+    workflow: canViewWorkflow ? (
+      <>
+        <HomeSectionTitle
+          label="TỔNG QUAN CÔNG VIỆC"
+          action="Xem chi tiết"
+          onAction={() => navigateFromRef("CongViec")}
+        />
+        {/* Tự tải; Trang chủ làm mới (dashboard đổi updatedAt) là tải lại theo. */}
+        <WorkflowDashboardCard reloadKey={dashboard?.updatedAt ?? ""} />
+      </>
+    ) : null,
     attendance: (
       <>
         <HomeSectionTitle label="ĐIỂM DANH NHÂN SỰ HÔM NAY" />
@@ -864,7 +889,7 @@ const HomeScreen: React.FC = () => {
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
-            onRefresh={refreshHomeData}
+            onRefresh={() => refreshHomeData()}
             colors={[HOME_BRAND_RED]}
             tintColor={HOME_BRAND_RED}
           />

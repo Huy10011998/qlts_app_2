@@ -19,6 +19,8 @@ export type WorkflowButtonVariant =
   | "primary"
   | "success"
   | "danger"
+  | "muted"
+  | "warning"
   | "neutral"
   | "outline";
 
@@ -35,10 +37,14 @@ type Props = {
   style?: StyleProp<ViewStyle>;
 };
 
+// success / danger / muted / warning là bốn nút duyệt phiếu, đúng màu PHỤ LỤC
+// của 3-Mobile-PhieuDeNghi-Flow: Duyệt · Từ chối · Không ý kiến · Trả bước.
 const VARIANT_COLORS: Record<WorkflowButtonVariant, (c: AppColors) => { bg: string; fg: string; border: string }> = {
   primary: (c) => ({ bg: c.red, fg: c.onBrand, border: c.red }),
-  success: () => ({ bg: "#2eb85c", fg: "#FFFFFF", border: "#2eb85c" }),
-  danger: () => ({ bg: "#5c6873", fg: "#FFFFFF", border: "#5c6873" }),
+  success: () => ({ bg: "#2e7d32", fg: "#FFFFFF", border: "#2e7d32" }),
+  danger: () => ({ bg: "#c62828", fg: "#FFFFFF", border: "#c62828" }),
+  muted: () => ({ bg: "#607d8b", fg: "#FFFFFF", border: "#607d8b" }),
+  warning: () => ({ bg: "#f9a825", fg: "#FFFFFF", border: "#f9a825" }),
   // Nền trắng + viền xám: nền xám nhạt cũ (surfaceAlt) gần trùng nền trang,
   // nút trông như chữ trơn.
   neutral: (c) => ({ bg: c.surface, fg: c.textSecondary, border: c.borderStrong }),

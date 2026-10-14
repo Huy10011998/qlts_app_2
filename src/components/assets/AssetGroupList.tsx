@@ -13,7 +13,7 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import QRCode from "react-native-qrcode-svg";
 import type { GroupListProps } from "../../types";
 import { TypeProperty } from "../../utils/Enum";
-import IsLoading from "../ui/IconLoading";
+import { SkeletonFill } from "../ui/SkeletonBlock";
 import { fetchImage } from "../../utils/Image";
 import { parseLink } from "../../utils/Link";
 import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
@@ -85,9 +85,6 @@ export default function AssetGroupList({
                 <View style={styles.groupBullet} />
                 <Text style={styles.groupTitle}>{groupName}</Text>
               </View>
-
-              {/* Số trường trong nhóm: nhóm đang gập lại vẫn biết bên trong có gì. */}
-              <Text style={styles.groupCount}>{fields.length}</Text>
 
               <View style={styles.groupChevron}>
                 <Ionicons
@@ -165,7 +162,7 @@ export default function AssetGroupList({
                       currentValue !== "---" ? (
                         loadingImages[field.name] ? (
                           <View style={styles.imageLoading}>
-                            <IsLoading size="small" />
+                            <SkeletonFill />
                           </View>
                         ) : images[field.name] ? (
                           <TouchableOpacity
@@ -332,14 +329,6 @@ const makeStyles = (c: AppColors) =>
 
     groupTitle: { flex: 1, fontSize: 15.5, fontWeight: "700", color: c.red },
 
-    groupCount: {
-      fontSize: 11,
-      fontWeight: "700",
-      color: c.textMuted,
-      minWidth: 18,
-      textAlign: "right",
-    },
-
     groupChevron: {
       width: 26,
       height: 26,
@@ -434,9 +423,7 @@ const makeStyles = (c: AppColors) =>
       width: "100%",
       aspectRatio: 4 / 3,
       borderRadius: 12,
-      backgroundColor: c.surfaceAlt,
-      alignItems: "center",
-      justifyContent: "center",
+      overflow: "hidden",
     },
 
     modalContainer: {

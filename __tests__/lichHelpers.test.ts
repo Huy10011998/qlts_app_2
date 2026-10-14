@@ -7,6 +7,7 @@ import {
   getWeekRange,
   groupTasksByDay,
   isAllDayTask,
+  isRangeLoaded,
 } from "../src/screens/Workflow/Lich/lichHelpers";
 import { toBeDate } from "../src/screens/Workflow/shared/workflowDate";
 
@@ -65,5 +66,28 @@ describe("vẽ việc lên ngày", () => {
     expect(byDay.get("2026-10-06")?.map((t) => t.id)).toEqual([1, 2]);
     expect(byDay.has("2026-10-04")).toBe(false);
     expect(byDay.has("2026-10-07")).toBe(false);
+  });
+});
+
+describe("đổi khoảng không chờ khi dữ liệu đã có", () => {
+  const thang10 = getMonthRange(new Date(2026, 9, 1));
+  const daTai = { from: thang10.from, to: thang10.to, mau: "" };
+
+  it("Tháng → Tuần trong cùng lưới tháng: đã đủ dữ liệu", () => {
+    expect(isRangeLoaded(daTai, getWeekRange(new Date(2026, 9, 13)), [])).toBe(true);
+    // Tuần cuối lưới (02/11 – 08/11) vẫn nằm trong khoảng tới 09/11.
+    expect(isRangeLoaded(daTai, getWeekRange(new Date(2026, 10, 5)), [])).toBe(true);
+  });
+
+  it("sang tháng / tuần ngoài lưới, đổi lọc màu hoặc chưa tải lần nào: phải tải", () => {
+    expect(isRangeLoaded(daTai, getMonthRange(new Date(2026, 10, 1)), [])).toBe(false);
+    expect(isRangeLoaded(daTai, getWeekRange(new Date(2026, 10, 10)), [])).toBe(false);
+    expect(isRangeLoaded(daTai, getWeekRange(new Date(2026, 9, 13)), ["QuaHan"])).toBe(false);
+    expect(isRangeLoaded(null, getWeekRange(new Date(2026, 9, 13)), [])).toBe(false);
+  });
+
+  it("Tuần → Tháng: tuần không phủ cả tháng nên phải tải", () => {
+    const tuan = getWeekRange(new Date(2026, 9, 13));
+    expect(isRangeLoaded({ from: tuan.from, to: tuan.to, mau: "" }, thang10, [])).toBe(false);
   });
 });

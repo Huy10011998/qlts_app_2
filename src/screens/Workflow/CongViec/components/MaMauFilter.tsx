@@ -8,6 +8,8 @@ import { CV_MA_MAU, tint } from "../../shared/workflowConstants";
 type Props = {
   value: string[];
   onChange: (next: string[]) => void;
+  /** Màu không bao giờ có trong danh sách đang xem (vd lịch không trả việc Hủy). */
+  exclude?: string[];
 };
 
 /**
@@ -17,7 +19,7 @@ type Props = {
  * cùng danh sách (flex 1) là bị bóp thấp, chip mất nửa dưới chữ — nên phải
  * chốt `flexGrow: 0, flexShrink: 0` để cao đúng bằng nội dung.
  */
-export default function MaMauFilter({ value, onChange }: Props) {
+export default function MaMauFilter({ value, onChange, exclude }: Props) {
   const styles = useStyles(makeStyles);
 
   const toggle = (key: string) =>
@@ -30,7 +32,7 @@ export default function MaMauFilter({ value, onChange }: Props) {
       style={styles.scroll}
       contentContainerStyle={styles.content}
     >
-      {CV_MA_MAU.map((item) => {
+      {CV_MA_MAU.filter((item) => !exclude?.includes(item.key)).map((item) => {
         const active = value.includes(item.key);
         return (
           <TouchableOpacity

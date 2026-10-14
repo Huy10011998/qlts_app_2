@@ -1,6 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   FlatList,
   Platform,
   StyleSheet,
@@ -12,6 +11,8 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import BottomSheetModalShell from "../../../components/shared/BottomSheetModalShell";
 import EmptyState from "../../../components/ui/EmptyState";
 import SearchBar from "../../../components/ui/SearchBar";
+import SkeletonBlock from "../../../components/ui/SkeletonBlock";
+import { useSkeletonPulse } from "../../../components/ui/useSkeletonAutoFill";
 import {
   AppColors,
   useAppColors,
@@ -159,9 +160,7 @@ export default function CameraNotiPickerSheet({
       </TouchableOpacity>
 
       {dangTai ? (
-        <View style={styles.loadingBox}>
-          <ActivityIndicator color={c.accent} />
-        </View>
+        <CameraRowsSkeleton />
       ) : loi ? (
         <View style={styles.loadingBox}>
           <Text style={styles.errorText}>{loi}</Text>
@@ -193,6 +192,39 @@ export default function CameraNotiPickerSheet({
         />
       )}
     </BottomSheetModalShell>
+  );
+}
+
+/** Số dòng dựng sẵn: vừa phần sheet còn lại dưới ô "Tất cả camera". */
+const SKELETON_ROWS = 5;
+
+/**
+ * Khung chờ danh sách camera: cùng thẻ có viền, cùng khoảng cách và nút chọn
+ * tròn với dòng thật — chỉ tên + mô tả là khối xám.
+ */
+function CameraRowsSkeleton() {
+  const styles = useStyles(makeStyles);
+  const hairlineBorderColor = useHairlineBorderColor();
+  const opacity = useSkeletonPulse();
+
+  return (
+    <View style={styles.listView} accessibilityLabel="Đang tải danh sách camera">
+      {Array.from({ length: SKELETON_ROWS }).map((_, index) => (
+        <View key={index}>
+          {index > 0 ? <CameraSeparator /> : null}
+          <View style={[styles.item, { borderColor: hairlineBorderColor }]}>
+            <View style={styles.itemTextWrap}>
+              <SkeletonBlock
+                opacity={opacity}
+                style={[styles.skeletonTitle, index % 2 === 1 && styles.skeletonTitleShort]}
+              />
+              <SkeletonBlock opacity={opacity} style={styles.skeletonDesc} />
+            </View>
+            <SkeletonBlock opacity={opacity} style={styles.skeletonRadio} />
+          </View>
+        </View>
+      ))}
+    </View>
   );
 }
 
@@ -265,6 +297,10 @@ const makeStyles = (c: AppColors) =>
       marginTop: 4,
     },
     separator: { height: 8 },
+    skeletonTitle: { width: "58%", height: 13, borderRadius: 6 },
+    skeletonTitleShort: { width: "42%" },
+    skeletonDesc: { width: "74%", height: 11, borderRadius: 5, marginTop: 6 },
+    skeletonRadio: { width: 20, height: 20, borderRadius: 10 },
     loadingBox: {
       flex: 1,
       alignItems: "center",

@@ -1,7 +1,6 @@
 import React from "react";
 import { scaledLineHeight } from "../../utils/helpers/textScaling";
 import {
-  ActivityIndicator,
   FlatList,
   RefreshControl,
   ScrollView,
@@ -15,6 +14,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import EmptyState from "../../components/ui/EmptyState";
 import SearchBar from "../../components/ui/SearchBar";
+import SkeletonBlock from "../../components/ui/SkeletonBlock";
+import { useSkeletonPulse } from "../../components/ui/useSkeletonAutoFill";
 import {
   AppColors,
   useAccentBorderColors,
@@ -31,6 +32,36 @@ import OpinionPickerModal from "./shared/OpinionPickerModal";
 import { makeVotingOptions } from "./shared/shareholdersMeetingHelpers";
 import { useShareholdersMeetingController } from "./shared/useShareholdersMeetingController";
 import { useColorScheme } from "../../hooks/useColorScheme";
+
+/**
+ * Khung chờ ô chọn ý kiến lúc đang tải danh sách ý kiến: dòng hướng dẫn và
+ * khung nút chọn là thật, chỉ số mục, icon và chữ trong nút là khối xám.
+ */
+function OpinionSelectorSkeleton() {
+  const voteStyles = useStyles(makeVoteStyles);
+  const hairlineBorderColor = useHairlineBorderColor();
+  const opacity = useSkeletonPulse();
+
+  return (
+    <View accessibilityLabel="Đang tải ý kiến">
+      <View style={voteStyles.opinionSelectorHeader}>
+        <Text style={voteStyles.opinionSelectorLabel}>
+          Mở danh sách để chọn đúng ý kiến cần ghi nhận
+        </Text>
+        <SkeletonBlock opacity={opacity} style={voteStyles.opinionCountSkeleton} />
+      </View>
+      <View style={[voteStyles.opinionPickerButton, { borderColor: hairlineBorderColor }]}>
+        <View style={voteStyles.opinionPickerButtonLeft}>
+          <SkeletonBlock opacity={opacity} style={voteStyles.opinionIconSkeleton} />
+          <View style={voteStyles.opinionPickerTextWrap}>
+            <SkeletonBlock opacity={opacity} style={voteStyles.opinionLabelSkeleton} />
+            <SkeletonBlock opacity={opacity} style={voteStyles.opinionValueSkeleton} />
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+}
 
 function AttendanceSeparator() {
   const attStyles = useStyles(makeAttStyles);
@@ -383,10 +414,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
               ]}
             >
               {isVotingLoading ? (
-                <View style={voteStyles.loadingWrap}>
-                  <ActivityIndicator size="small" color={c.red} />
-                  <Text style={voteStyles.loadingText}>Đang tải ý kiến...</Text>
-                </View>
+                <OpinionSelectorSkeleton />
               ) : opinions.length > 0 ? (
                 <>
                   <View style={voteStyles.opinionSelectorHeader}>
@@ -814,16 +842,26 @@ const makeVoteStyles = (c: AppColors) =>
       fontSize: 13,
       fontWeight: "600",
     },
-    loadingWrap: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      paddingVertical: 18,
-      gap: 8,
+    opinionCountSkeleton: {
+      width: 56,
+      height: 24,
+      borderRadius: 999,
     },
-    loadingText: {
-      color: c.textSecondary,
-      fontSize: 13,
+    opinionIconSkeleton: {
+      width: 20,
+      height: 20,
+      borderRadius: 6,
+    },
+    opinionLabelSkeleton: {
+      width: 72,
+      height: 10,
+      borderRadius: 5,
+      marginBottom: 6,
+    },
+    opinionValueSkeleton: {
+      width: "74%",
+      height: 12,
+      borderRadius: 6,
     },
     selectedInfoBox: {
       marginTop: 12,

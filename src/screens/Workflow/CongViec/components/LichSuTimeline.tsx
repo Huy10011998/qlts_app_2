@@ -28,9 +28,9 @@ const describe = (item: CongViecLichSu) => {
     case 1:
       return `Trạng thái: Mới · hạn ${formatBeDate(item.denNgayMoi, true)}`;
     case 2:
-      return trangThaiCu && trangThaiCu !== trangThaiMoi
-        ? `${trangThaiCu} → ${trangThaiMoi}`
-        : trangThaiMoi;
+      // Mục 7: luôn "{cũ} -> {mới}" — chuyển lặp mốc cùng trạng thái (mục 5)
+      // cũng ghi "Đang xử lý → Đang xử lý" để thấy đó là một mốc mới.
+      return trangThaiCu ? `${trangThaiCu} → ${trangThaiMoi}` : trangThaiMoi;
     case 3:
       return `${formatBeDate(item.denNgayCu, true)} → ${formatBeDate(item.denNgayMoi, true)}`;
     case 4:

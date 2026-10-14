@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
+import { SkeletonFill } from "../../../components/ui/SkeletonBlock";
 import { getNoiDiaImageBase64 } from "../../../services/data/callApi";
 import { warn } from "../../../utils/Logger";
 import { useAppColors } from "../../../utils/helpers/colors";
@@ -108,7 +109,7 @@ export function NoiDiaThumbnail({
       {source ? (
         <Image source={{ uri: source }} style={boxStyle} resizeMode="cover" />
       ) : isLoading ? (
-        <ActivityIndicator size="small" color={c.red} />
+        <SkeletonFill style={styles.thumbnailSkeleton} />
       ) : (
         <Ionicons
           name={hasError ? "image-outline" : "hourglass-outline"}
@@ -168,6 +169,10 @@ export function NoiDiaPhotoViewer({
 }
 
 const styles = StyleSheet.create({
+  // Bo đúng góc của ô ảnh (`boxStyle`), không thì khối xám lòi ra bốn góc.
+  thumbnailSkeleton: {
+    borderRadius: 8,
+  },
   thumbnailBox: {
     alignItems: "center",
     justifyContent: "center",

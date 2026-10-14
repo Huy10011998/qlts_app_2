@@ -14,6 +14,7 @@ import { readStoredAuthUsername } from "../../../context/authStorage";
 import { callApi } from "../../../services/data/callApi";
 import type { GetViewActiveResponse, Item, ViewActiveItem } from "../../../types";
 import { error, log } from "../../../utils/Logger";
+import { useWorkflowTileCount } from "../../Workflow/useWorkflowTileCount";
 import { useHomeBlockOrder } from "./useHomeBlockOrder";
 import type { HomeBlockKey } from "./homeBlockOrder";
 import {
@@ -84,6 +85,8 @@ type HomeMenuContextValue = {
   vehicleCurrentLocationMenuItem: Item | null;
   vehicleJourneyMenuItem: Item | null;
   vehicleTrackingMenuItem: Item | null;
+  /** Số trên ô Workflow — cùng một lượt tải cho Trang chủ lẫn tab Chức năng. */
+  workflowTileCount: number;
 };
 
 const HomeMenuContext = createContext<HomeMenuContextValue | null>(null);
@@ -118,6 +121,8 @@ export function HomeMenuProvider({ children }: React.PropsWithChildren) {
     useState(true);
   const fetchingRef = useRef(false);
   const { blockOrder, moveBlock } = useHomeBlockOrder();
+  const { count: workflowTileCount, reload: reloadWorkflowTileCount } =
+    useWorkflowTileCount();
   // Nút mở bảng sắp xếp nằm trên header (do navigator dựng), còn bảng thì nằm
   // trong HomeScreen — nên trạng thái mở/đóng phải ở trên cả hai.
   const [isBlockOrderSheetVisible, setIsBlockOrderSheetVisible] =
@@ -163,6 +168,8 @@ export function HomeMenuProvider({ children }: React.PropsWithChildren) {
     if (fetchingRef.current) return;
 
     fetchingRef.current = true;
+    // Kéo làm mới ở Trang chủ hay tab Chức năng đều đi qua đây.
+    reloadWorkflowTileCount();
     setIsMenuLoading(true);
 
     try {
@@ -210,7 +217,7 @@ export function HomeMenuProvider({ children }: React.PropsWithChildren) {
       setIsMenuLoading(false);
       setHasLoadedMenuOnce(true);
     }
-  }, []);
+  }, [reloadWorkflowTileCount]);
 
   useEffect(() => {
     fetchHomeMenuItems();
@@ -310,6 +317,7 @@ export function HomeMenuProvider({ children }: React.PropsWithChildren) {
       vehicleCurrentLocationMenuItem,
       vehicleJourneyMenuItem,
       vehicleTrackingMenuItem,
+      workflowTileCount,
     }),
     [
       apiViews,
@@ -331,6 +339,7 @@ export function HomeMenuProvider({ children }: React.PropsWithChildren) {
       vehicleCurrentLocationMenuItem,
       vehicleJourneyMenuItem,
       vehicleTrackingMenuItem,
+      workflowTileCount,
     ]
   );
 

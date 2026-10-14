@@ -112,8 +112,13 @@ export const API_ENDPOINTS = {
   CV_DOI_CHU_TRI: `${BASE_URL}/CV_CongViec/cv-doi-chu-tri`,
   CV_LICH_SU: `${BASE_URL}/CV_CongViec/cv-lich-su`,
   CV_DELETE: `${BASE_URL}/CV_CongViec/delete`,
-  // Thông báo của view Workflow (công việc + phiếu chờ duyệt), mới → cũ.
+  // BE gọi là "thông báo" nhưng là bảng tổng hợp việc cần chú ý lúc gọi (phiếu
+  // chờ duyệt, được giao, sắp hạn, quá hạn, bình luận) — app hiện thành "Việc
+  // cần xử lý" (nút cạnh chuông ở Trang chủ) + số trên ô Workflow. Thông báo
+  // thật chờ BE.
   CV_THONG_BAO: `${BASE_URL}/CV_CongViec/cv-thong-bao`,
+  // Tổng quan công việc của tôi cho Trang chủ (4-Mobile-CongViec mục 10).
+  CV_DASHBOARD: `${BASE_URL}/CV_CongViec/cv-dashboard`,
 
   // WORKFLOW — KẾ HOẠCH. CRUD generic cũng bị chặn.
   KH_GET_LIST: `${BASE_URL}/CV_KeHoach/kh-get-list`,

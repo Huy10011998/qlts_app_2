@@ -4,7 +4,6 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import EmptyState from "../../../components/ui/EmptyState";
-import IsLoading from "../../../components/ui/IconLoading";
 import { flowDelete, flowGetById, flowThongTin } from "../../../services/data/flowApi";
 import type { FlowRecord, FlowThongTin, StackNavigation, StackRoute } from "../../../types/index";
 import { AppColors, useAppColors, useStyles } from "../../../utils/helpers/colors";
@@ -12,19 +11,23 @@ import { elevation } from "../../../utils/helpers/tokens";
 import StatusBadge from "../shared/components/StatusBadge";
 import WorkflowButton from "../shared/components/WorkflowButton";
 import WorkflowDetailFields from "../shared/components/WorkflowDetailFields";
+import WorkflowDetailSkeleton from "../shared/components/WorkflowDetailSkeleton";
 import { useWorkflowMe } from "../shared/useWorkflowMe";
 import { useWorkflowPermissions } from "../shared/useWorkflowPermissions";
 import {
   useMarkWorkflowChanged,
   useReloadOnWorkflowChange,
 } from "../shared/useWorkflowVersion";
+import { useOnWorkflowInfoStale } from "../shared/workflowInfoRefresh";
 import { FLOW_KET_QUA, getFlowTinhTrang as getTinhTrangOption } from "../shared/workflowConstants";
 import { getWorkflowErrorMessage } from "../shared/workflowErrors";
 import { getDetailFields } from "../shared/workflowFields";
 import FlowApproveSheet, { FlowKetQua } from "./components/FlowApproveSheet";
+import FlowTraBuocSheet from "./components/FlowTraBuocSheet";
 import {
   FLOW_CARD_CUSTOM_FIELDS,
   getFlowActions,
+  getFlowHeading,
   getFlowLabel,
   getFlowSoPhieu,
   getFlowTinhTrang,
@@ -56,23 +59,33 @@ export default function FlowDetailScreen() {
   const [loading, setLoading] = useState(!route.params.item);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [approve, setApprove] = useState<FlowKetQua | null>(null);
+  const [approve, setApprove] = useState<FlowKetQua | typeof FLOW_KET_QUA.TraBuoc | null>(null);
   const [deleting, setDeleting] = useState(false);
   const recordRef = useRef(record);
   recordRef.current = record;
 
   const load = useCallback(
-    async (mode: "initial" | "refresh" = "initial") => {
+    async (mode: "initial" | "refresh" | "silent" = "initial") => {
       if (mode === "refresh") setRefreshing(true);
       try {
         const [fresh, infos] = await Promise.all([
-          flowGetById(nameClass, id).catch(() => null),
+          // Lỗi mạng / quyền rơi xuống catch dưới — không giả làm "Không tìm thấy".
+          flowGetById(nameClass, id),
           flowThongTin(nameClass, [id]).catch(() => [] as FlowThongTin[]),
         ]);
-        if (fresh) setRecord(fresh);
-        else if (!recordRef.current) {
-          setErrorMessage("Không tìm thấy phiếu.");
+        if (!fresh) {
+          // Mục 5: items rỗng = phiếu không còn tới tôi / đã xoá.
+          if (recordRef.current) {
+            Alert.alert("Thông báo", "Không tìm thấy phiếu.", [
+              { text: "OK", onPress: () => navigation.goBack() },
+            ]);
+          } else {
+            setErrorMessage("Không tìm thấy phiếu.");
+          }
+          return;
         }
+        setRecord(fresh);
+        setErrorMessage(null);
         setInfo(infos[0] ?? null);
       } catch (err) {
         setErrorMessage(getWorkflowErrorMessage(err, "Không tải được phiếu."));
@@ -81,14 +94,23 @@ export default function FlowDetailScreen() {
         setRefreshing(false);
       }
     },
-    [id, nameClass],
+    [id, nameClass, navigation],
   );
 
   useEffect(() => {
     load();
   }, [load]);
 
-  useReloadOnWorkflowChange(() => load("refresh"));
+  // Im lặng: bật vòng xoay bằng code lúc quay lại màn làm iOS kẹt một khoảng trống.
+  useReloadOnWorkflowChange(() => load("silent"));
+
+  // Đóng màn Bình luận / Đính kèm → số trên 2 nút.
+  useOnWorkflowInfoStale((apiBase) => {
+    if (apiBase !== nameClass) return;
+    flowThongTin(nameClass, [id])
+      .then((infos) => infos[0] && setInfo(infos[0]))
+      .catch(() => undefined);
+  });
 
   const detailFields = useMemo(
     () => getDetailFields(meta?.fields ?? [], "notFalse", FLOW_CARD_CUSTOM_FIELDS),
@@ -120,7 +142,7 @@ export default function FlowDetailScreen() {
       },
     ]);
 
-  if (loading) return <IsLoading />;
+  if (loading) return <WorkflowDetailSkeleton variant="flow" fields={detailFields} />;
 
   if (!record) {
     return (
@@ -142,7 +164,7 @@ export default function FlowDetailScreen() {
       >
         <View style={styles.hero}>
           <View style={styles.heroTop}>
-            <Text style={styles.flowName}>{meta?.flow.ten ?? ""}</Text>
+            <Text style={styles.flowName}>{getFlowHeading(record, meta?.flow.ten)}</Text>
             {tinhTrang ? (
               <StatusBadge label={tinhTrang.label} color={tinhTrang.color} solid />
             ) : null}
@@ -153,37 +175,37 @@ export default function FlowDetailScreen() {
               <Ionicons name="git-commit-outline" size={16} color={info.isToiLuot ? c.red : c.textSub} />
               <Text style={[styles.stepText, info.isToiLuot && styles.stepMine]}>
                 Bước hiện tại: {info.buocHienTai}
-                {info.isToiLuot ? " · đang chờ bạn" : ""}
               </Text>
             </View>
           ) : null}
         </View>
 
         {actions.duyet ? (
+          // Thứ tự mục 4: Trả bước (cam) · Từ chối · Không ý kiến · Duyệt. Đủ 4 nút
+          // thì xếp 2 × 2 — 4 nút một hàng nhãn bị bóp nhỏ quá.
           <View style={styles.approveRow}>
-            <WorkflowButton
-              flex
-              variant="danger"
-              icon="close-circle-outline"
-              label="Từ chối"
-              onPress={() => setApprove(FLOW_KET_QUA.TuChoi)}
-            />
-            {actions.khongYKien ? (
-              <WorkflowButton
-                flex
-                variant="neutral"
-                icon="remove-circle-outline"
-                label="Không ý kiến"
-                onPress={() => setApprove(FLOW_KET_QUA.KhongYKien)}
-              />
-            ) : null}
-            <WorkflowButton
-              flex
-              variant="success"
-              icon="checkmark-circle-outline"
-              label="Duyệt"
-              onPress={() => setApprove(FLOW_KET_QUA.Duyet)}
-            />
+            {[
+              actions.traBuoc
+                ? { key: "traBuoc", variant: "warning" as const, icon: "arrow-undo-outline", label: "Trả bước", ketQua: FLOW_KET_QUA.TraBuoc }
+                : null,
+              { key: "tuChoi", variant: "danger" as const, icon: "close-circle-outline", label: "Từ chối", ketQua: FLOW_KET_QUA.TuChoi },
+              actions.khongYKien
+                ? { key: "khongYKien", variant: "muted" as const, icon: "remove-circle-outline", label: "Không ý kiến", ketQua: FLOW_KET_QUA.KhongYKien }
+                : null,
+              { key: "duyet", variant: "success" as const, icon: "checkmark-circle-outline", label: "Duyệt", ketQua: FLOW_KET_QUA.Duyet },
+            ]
+              .filter((button): button is NonNullable<typeof button> => !!button)
+              .map((button, _index, buttons) => (
+                <WorkflowButton
+                  key={button.key}
+                  flex
+                  variant={button.variant}
+                  icon={button.icon}
+                  label={button.label}
+                  style={buttons.length > 3 ? styles.approveHalf : undefined}
+                  onPress={() => setApprove(button.ketQua)}
+                />
+              ))}
           </View>
         ) : null}
 
@@ -257,7 +279,21 @@ export default function FlowDetailScreen() {
         {detailFields.length ? <WorkflowDetailFields item={record} fields={detailFields} /> : null}
       </ScrollView>
 
-      {approve ? (
+      {approve === FLOW_KET_QUA.TraBuoc ? (
+        <FlowTraBuocSheet
+          visible
+          nameClass={nameClass}
+          idHoSo={id}
+          phieuLabel={phieuLabel}
+          buocHienTai={info?.buocHienTai}
+          traVe={info?.traVe}
+          onClose={() => setApprove(null)}
+          onDone={() => {
+            setApprove(null);
+            markChanged();
+          }}
+        />
+      ) : approve ? (
         <FlowApproveSheet
           visible
           nameClass={nameClass}
@@ -342,8 +378,12 @@ const makeStyles = (c: AppColors) =>
     },
     approveRow: {
       flexDirection: "row",
+      flexWrap: "wrap",
       gap: 8,
       marginBottom: 10,
+    },
+    approveHalf: {
+      flexBasis: "45%",
     },
     actions: {
       flexDirection: "row",

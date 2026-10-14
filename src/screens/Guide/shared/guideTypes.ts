@@ -16,6 +16,9 @@ export type GuideTopicId =
   | "tai-san"
   | "xac-nhan-tu-lanh"
   | "trung-chuyen-tu-lanh"
+  | "phieu-de-nghi"
+  | "cong-viec"
+  | "lich-thong-bao"
   | "camera"
   | "bao-cao"
   | "phuong-tien"
@@ -27,12 +30,14 @@ export type GuideTopicId =
 export type GuideGroup =
   | "Bắt đầu"
   | "Nghiệp vụ"
+  | "Công việc & phê duyệt"
   | "Theo dõi & báo cáo"
   | "Trợ giúp";
 
 export const GUIDE_GROUP_ORDER: GuideGroup[] = [
   "Bắt đầu",
   "Nghiệp vụ",
+  "Công việc & phê duyệt",
   "Theo dõi & báo cáo",
   "Trợ giúp",
 ];

@@ -10,7 +10,13 @@ import type {
  * (3-Mobile-PhieuDeNghi-Flow, 4-Mobile-CongViec, 5-Mobile-KeHoach).
  */
 
-export type WorkflowOption = { value: number; label: string; color: string };
+export type WorkflowOption = {
+  value: number;
+  label: string;
+  color: string;
+  /** Chữ trên nền đặc khi khác chữ trắng (nền quá nhạt). */
+  textColor?: string;
+};
 
 export type WorkflowTabDef<K extends string> = {
   key: K;
@@ -46,33 +52,47 @@ export const FLOW_TINH_TRANG: WorkflowOption[] = [
 export const FLOW_TINH_TRANG_NHAP = 0;
 export const FLOW_TINH_TRANG_HOAN_TAT = 3;
 
-/** Tình trạng BƯỚC — màu sơ đồ quy trình. */
+/** Tình trạng BƯỚC — nhãn nền đặc trên sơ đồ, chữ trắng (trừ Chờ xử lý: chữ tối). */
 export const FLOW_BUOC_TINH_TRANG: WorkflowOption[] = [
-  { value: 0, label: "Chưa tới", color: "#c8ced3" },
-  { value: 1, label: "Đang chờ", color: "#e55353" },
+  { value: 0, label: "Chờ xử lý", color: "#c8ced3", textColor: "#4f5d73" },
+  { value: 1, label: "Đang xử lý", color: "#e55353" },
   { value: 2, label: "Đã duyệt", color: "#2eb85c" },
-  { value: 3, label: "Từ chối", color: "#5c6873" },
+  { value: 3, label: "Đã từ chối", color: "#5c6873" },
   { value: 4, label: "Không ý kiến", color: "#9da5b1" },
 ];
+
+export const FLOW_BUOC_CHO_XU_LY = 0;
+export const FLOW_BUOC_DANG_XU_LY = 1;
+/** Không ý kiến, hoặc Bỏ qua khi không ai bấm Không ý kiến. */
+export const FLOW_BUOC_KHONG_Y_KIEN = 4;
 
 export const FLOW_KET_QUA = {
   Duyet: 1,
   TuChoi: 2,
   KhongYKien: 3,
+  /** Chỉ từng phiếu, YKien = lý do bắt buộc (mục 8d). */
+  TraBuoc: 4,
 } as const;
 
 export const FLOW_KET_QUA_LABEL: Record<number, string> = {
   1: "Duyệt",
   2: "Từ chối",
   3: "Không ý kiến",
+  4: "Trả bước",
 };
+
+/** Màu cam của Trả bước: nút, nét đứt trên sơ đồ, dòng lịch sử. */
+export const FLOW_TRA_BUOC_COLOR = "#f9a825";
+
+/** Người duyệt chưa bấm gì (ketQua null). */
+export const FLOW_KET_QUA_CHO_XU_LY = "Chờ xử lý";
 
 export const FLOW_TABS: WorkflowTabDef<FlowTab>[] = [
   { key: "ChoDuyet", label: "Chờ duyệt", counted: true },
   { key: "DangXuLy", label: "Đang xử lý", counted: true },
-  { key: "HoanTat", label: "Hoàn tất" },
+  { key: "HoanTat", label: "Đã hoàn tất" },
   { key: "Nhap", label: "Nháp", counted: true },
-  { key: "CuaToi", label: "Của tôi" },
+  { key: "CuaToi", label: "Hồ sơ của tôi" },
   { key: "TatCa", label: "Tất cả" },
 ];
 

@@ -162,14 +162,18 @@ export const deleteWorkflowFile = (apiBase: WorkflowApiBase, idFile: number) =>
 /**
  * Nội dung file (server trả THẲNG file, không vỏ JSON) dưới dạng base64. Dùng
  * chung cho file đính kèm, file bình luận và file kết quả lịch sử công việc.
+ *
+ * `thuNho` (64–1600): chỉ với ảnh — server trả ảnh thu nhỏ cạnh dài tối đa
+ * thuNho px, giữ tỉ lệ (JPEG giữ JPEG, còn lại PNG). Bỏ trống = file gốc.
  */
 export const viewWorkflowFile = async (
   apiBase: WorkflowApiBase,
   idFile: number,
+  thuNho?: number,
 ) => {
   const res = await api.post(
     `/${apiBase}/flow-xem-file`,
-    { ID: idFile },
+    thuNho ? { ID: idFile, ThuNho: thuNho } : { ID: idFile },
     { responseType: "arraybuffer", timeout: UPLOAD_TIMEOUT },
   );
 

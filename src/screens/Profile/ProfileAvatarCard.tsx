@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Alert,
   Image,
@@ -39,7 +39,10 @@ export default function ProfileAvatarCard({ user }: Props) {
   const s = useStyles(makeStyles);
   const c = useAppColors();
   const dispatch = useAppDispatch();
-  const [busy, setBusy] = useState(false);
+  const [saving, setSaving] = useState(false);
+  /* Khoá bấm chồng suốt lượt chọn → cắt → lưu. Để ở ref chứ không ở state: lúc
+     màn chọn / cắt còn mở thì ảnh chưa đổi gì, không được phủ "đang tải" lên. */
+  const busyRef = useRef(false);
   const [previewUri, setPreviewUri] = useState<string | null>(null);
 
   const current = isDataUrlImage(user.hinhAnh) ? user.hinhAnh : null;
@@ -58,19 +61,22 @@ export default function ProfileAvatarCard({ user }: Props) {
   };
 
   const run = async (task: () => Promise<string | null | undefined>) => {
-    if (busy) return;
-    setBusy(true);
+    if (busyRef.current) return;
+    busyRef.current = true;
     try {
       // `undefined` = huỷ ở bước chọn / cắt: giữ nguyên ảnh cũ, không lưu gì.
       const next = await task();
-      if (next !== undefined) await save(next);
+      if (next === undefined) return;
+      setSaving(true);
+      await save(next);
     } catch (err) {
       Alert.alert(
         "Lỗi",
         getApiErrorMessage(err, "Không thể lưu ảnh đại diện. Vui lòng thử lại."),
       );
     } finally {
-      setBusy(false);
+      busyRef.current = false;
+      setSaving(false);
     }
   };
 
@@ -134,7 +140,7 @@ export default function ProfileAvatarCard({ user }: Props) {
           <Ionicons name="person" size={44} color={c.textMuted} />
         )}
 
-        {busy ? (
+        {saving ? (
           <View style={s.busyOverlay}>
             <IsLoading size="small" color="#fff" />
           </View>
@@ -150,7 +156,7 @@ export default function ProfileAvatarCard({ user }: Props) {
       {canEdit ? (
         <View style={s.actions}>
           {actions.map((a) => {
-            const disabled = busy || a.disabled;
+            const disabled = saving || a.disabled;
             return (
               <TouchableOpacity
                 key={a.key}

@@ -7,6 +7,7 @@ import { AppColors, useAppColors, useStyles } from "../../../../utils/helpers/co
 import { elevation } from "../../../../utils/helpers/tokens";
 import StatusBadge from "../../shared/components/StatusBadge";
 import WorkflowButton from "../../shared/components/WorkflowButton";
+import WorkflowCounter from "../../shared/components/WorkflowCounter";
 import WorkflowFieldLines from "../../shared/components/WorkflowFieldLines";
 import { getFlowTinhTrang as getTinhTrangOption } from "../../shared/workflowConstants";
 import { WorkflowField } from "../../shared/workflowFields";
@@ -27,13 +28,20 @@ type Props = {
   onApprove?: () => void;
   onReject?: () => void;
   onNoOpinion?: () => void;
+  onTraBuoc?: () => void;
+  /** Bấm số bình luận / số file mở thẳng màn đó; không truyền thì bấm như bấm thẻ. */
+  onOpenComments?: () => void;
+  onOpenFiles?: () => void;
+  /** Số file mờ, không bấm được — khi nút Đính kèm ở chi tiết cũng tắt. */
+  filesDisabled?: boolean;
 };
 
 /**
  * Thẻ phiếu: KHÔNG ghi cứng field của flow nào (mỗi flow một bộ field). Dòng
  * tiêu đề là số phiếu (tên cột lấy từ server, nháp chưa có số thì "#<id>"),
  * phần động còn lại là "Nhãn: giá trị". Vẽ riêng: nhãn tình trạng, bước hiện
- * tại, số bình luận / file, nút Duyệt / Không ý kiến / Từ chối khi tới lượt tôi.
+ * tại, số bình luận / file, nút Trả bước / Từ chối / Không ý kiến / Duyệt khi
+ * tới lượt tôi (đúng thứ tự mục 4).
  */
 export default function FlowCard({
   item,
@@ -48,6 +56,10 @@ export default function FlowCard({
   onApprove,
   onReject,
   onNoOpinion,
+  onTraBuoc,
+  onOpenComments,
+  onOpenFiles,
+  filesDisabled,
 }: Props) {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
@@ -84,7 +96,6 @@ export default function FlowCard({
         <View style={styles.stepRow}>
           <Ionicons name="git-commit-outline" size={15} color={info.isToiLuot ? c.red : c.textSub} />
           <Text style={[styles.stepText, info.isToiLuot && styles.stepMine]} numberOfLines={1}>
-            {info.isToiLuot ? "Chờ tôi · " : ""}
             {info.buocHienTai}
           </Text>
         </View>
@@ -94,20 +105,30 @@ export default function FlowCard({
 
       <View style={styles.footer}>
         <View style={styles.counters}>
-          <View style={styles.counter}>
-            <Ionicons name="chatbubble-ellipses-outline" size={14} color={c.textSub} />
-            <Text style={styles.counterText}>{info?.soBinhLuan ?? 0}</Text>
-          </View>
-          <View style={styles.counter}>
-            <Ionicons name="attach-outline" size={15} color={c.textSub} />
-            <Text style={styles.counterText}>{info?.soFile ?? 0}</Text>
-          </View>
+          <WorkflowCounter
+            icon="chatbubble-ellipses-outline"
+            iconSize={14}
+            count={info?.soBinhLuan ?? 0}
+            label="Bình luận"
+            onPress={onOpenComments}
+          />
+          <WorkflowCounter
+            icon="attach-outline"
+            iconSize={15}
+            count={info?.soFile ?? 0}
+            label="File đính kèm"
+            onPress={onOpenFiles}
+            disabled={filesDisabled}
+          />
         </View>
         {actions.duyet && !selectable ? (
           <View style={styles.quickActions}>
+            {actions.traBuoc ? (
+              <WorkflowButton compact variant="warning" label="Trả bước" onPress={onTraBuoc ?? onPress} />
+            ) : null}
             <WorkflowButton compact variant="danger" label="Từ chối" onPress={onReject ?? onPress} />
             {actions.khongYKien ? (
-              <WorkflowButton compact variant="neutral" label="Không ý kiến" onPress={onNoOpinion ?? onPress} />
+              <WorkflowButton compact variant="muted" label="Không ý kiến" onPress={onNoOpinion ?? onPress} />
             ) : null}
             <WorkflowButton compact variant="success" label="Duyệt" onPress={onApprove ?? onPress} />
           </View>
@@ -174,19 +195,12 @@ const makeStyles = (c: AppColors) =>
     },
     counters: {
       flexDirection: "row",
-      gap: 14,
-    },
-    counter: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 4,
-    },
-    counterText: {
-      fontSize: 12,
-      color: c.textSub,
+      gap: 8,
     },
     quickActions: {
       flexDirection: "row",
       gap: 6,
+      // Máy hẹp thì hàng nút xuống dòng — vẫn bám mép phải như lúc chung hàng.
+      marginLeft: "auto",
     },
   });

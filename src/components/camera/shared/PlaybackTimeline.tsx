@@ -1,10 +1,11 @@
 import React from "react";
 import { UnscaledText } from "../../../utils/helpers/textScaling";
-import { Animated, FlatList, Text, TouchableOpacity, View } from "react-native";
+import { Animated, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { C, useAppColors, useStyles } from "../../../utils/helpers/colors";
 import EmptyState from "../../ui/EmptyState";
-import IsLoading from "../../ui/IconLoading";
+import SkeletonBlock from "../../ui/SkeletonBlock";
+import { useSkeletonPulse } from "../../ui/useSkeletonAutoFill";
 import BottomSheetModalShell from "../../shared/BottomSheetModalShell";
 import {
   formatClock,
@@ -280,6 +281,68 @@ const ClipGridGroup = React.memo(function ClipGridGroup({
   );
 });
 
+/** Số giờ dựng sẵn lúc chờ — đủ phủ phần nhìn thấy dưới khung phát. */
+const TIMELINE_SKELETON_ROWS = 3;
+
+/**
+ * Khung chờ timeline bản ghi: đúng cột nhãn giờ, rail và thẻ clip của
+ * `TimelineRow` — rail giữ màu thật, chỉ nhãn giờ và ruột thẻ là khối xám.
+ */
+function TimelineSkeleton({ rowHeight }: { rowHeight: number }) {
+  const styles = useStyles(makeStyles);
+  const opacity = useSkeletonPulse();
+
+  return (
+    <View style={styles.timeline} accessibilityLabel="Đang tải bản ghi">
+      {Array.from({ length: TIMELINE_SKELETON_ROWS }).map((_, index) => (
+        <View key={index} style={[styles.timelineRow, { height: rowHeight }]}>
+          <View style={styles.timelineLabelCol}>
+            <View style={styles.timelineLabelDash} />
+            <SkeletonBlock opacity={opacity} style={skeletonStyles.label} />
+          </View>
+          <View style={styles.timelineRailCol} />
+          <View style={styles.timelineClipCol}>
+            <View style={[styles.clipCard, skeletonStyles.card]}>
+              <SkeletonBlock opacity={opacity} style={skeletonStyles.play} />
+              <View style={styles.clipCardBody}>
+                <SkeletonBlock opacity={opacity} style={skeletonStyles.time} />
+                <SkeletonBlock opacity={opacity} style={skeletonStyles.meta} />
+              </View>
+            </View>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+const skeletonStyles = StyleSheet.create({
+  label: {
+    width: 46,
+    height: 13,
+    borderRadius: 6,
+    marginBottom: 2,
+  },
+  card: {
+    width: 176,
+  },
+  play: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+  },
+  time: {
+    width: "86%",
+    height: 12,
+    borderRadius: 6,
+  },
+  meta: {
+    width: "56%",
+    height: 10,
+    borderRadius: 5,
+  },
+});
+
 /**
  * Đồng hồ live/tiến trình phát làm CameraPlayback re-render mỗi giây (và mỗi
  * frame khi cuộn). Không memo thì toàn bộ row + thumbnail bị dựng lại theo.
@@ -344,14 +407,7 @@ function PlaybackTimeline({
   }, [openedGroup]);
 
   if (groups.length === 0 && isLoading) {
-    return (
-      <View style={styles.timelineLoading}>
-        <IsLoading size="small" />
-        <Text style={styles.timelineLoadingText}>
-          Đang tải bản ghi...
-        </Text>
-      </View>
-    );
+    return <TimelineSkeleton rowHeight={rowHeight} />;
   }
 
   if (groups.length === 0 && errorMessage) {

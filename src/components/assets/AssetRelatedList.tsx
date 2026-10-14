@@ -17,10 +17,10 @@ import {
 } from "@react-navigation/native";
 import type { AssetDetailsNavigationProp, StackRoute } from "../../types/index";
 import { mapPropertyResponseToPropertyClass } from "../../utils/helpers/propertyClass";
+import RecordListFooterSkeleton from "../../components/list/RecordListFooterSkeleton";
 import RecordListSkeleton from "../../components/list/RecordListSkeleton";
 import { shouldShowListSkeleton } from "../../components/ui/shouldShowListSkeleton";
 import ListCardAsset from "../../components/list/ListCardAsset";
-import IsLoading from "../../components/ui/IconLoading";
 import { AddItem } from "../add/AddItem";
 import { useDebounce } from "../../hooks/useDebounce";
 import { useParentValuePairs } from "../../hooks/parentValue/useParentValuePairs";
@@ -287,7 +287,7 @@ export default function AssetRelatedList() {
           removeClippedSubviews={Platform.OS === "android"}
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
-          ListFooterComponent={isLoadingMore ? <IsLoading /> : null}
+          ListFooterComponent={isLoadingMore ? <RecordListFooterSkeleton /> : null}
           ListHeaderComponent={null}
           stickyHeaderIndices={[]}
           contentContainerStyle={[

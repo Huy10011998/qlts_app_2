@@ -83,7 +83,9 @@ export const formatWeekday = (date: Date) =>
  * Điều kiện "nằm trong khoảng" = GIAO với khoảng: DenNgay >= Từ VÀ TuNgay < Đến
  * (việc kéo dài nhiều ngày, bắt đầu trước khoảng vẫn hiện).
  */
-export const buildRangeConditions = (range: LichRange): WorkflowCondition[] => [
+export const buildRangeConditions = (
+  range: Pick<LichRange, "from" | "to">,
+): WorkflowCondition[] => [
   {
     Property: "DenNgay",
     Operator: SqlOperator.GreaterThanOrEqual,
@@ -97,6 +99,25 @@ export const buildRangeConditions = (range: LichRange): WorkflowCondition[] => [
     Type: TypeProperty.Date,
   },
 ];
+
+/** Khoảng + bộ lọc màu của lần tải xong gần nhất. */
+export type LichLoaded = { from: Date; to: Date; mau: string };
+
+export const toMauKey = (mau: string[]) => [...mau].sort().join(",");
+
+/**
+ * Khoảng mới nằm gọn trong khoảng vừa tải, cùng bộ lọc (vd Tháng → Tuần trong
+ * cùng lưới tháng): dữ liệu đã đủ trên màn, chỉ cần làm mới ngầm.
+ */
+export const isRangeLoaded = (
+  loaded: LichLoaded | null,
+  range: Pick<LichRange, "from" | "to">,
+  mau: string[],
+) =>
+  !!loaded &&
+  loaded.mau === toMauKey(mau) &&
+  loaded.from.getTime() <= range.from.getTime() &&
+  range.to.getTime() <= loaded.to.getTime();
 
 const isMidnight = (date: Date) =>
   date.getHours() === 0 && date.getMinutes() === 0 && date.getSeconds() === 0;

@@ -136,8 +136,13 @@ export type FlowThongTin = {
   /** 0 = nháp, chưa có quy trình. */
   soBuoc: number;
   isToiLuot: boolean;
+  /** Bước con đang mở thì là tên bước cha; song song khác nhau nối ", ". */
   buocHienTai?: string | null;
   duocKhongYKien?: boolean;
+  /** Bước đang chờ tôi có tick "Có thể trả bước" và có bước trước (mục 8d). */
+  duocTraBuoc?: boolean;
+  /** Bước sẽ mở lại nếu bấm Trả bước, vd "1. Trưởng bộ phận duyệt". */
+  traVe?: string | null;
 };
 
 export type FlowBuoc = {
@@ -157,10 +162,47 @@ export type FlowNguoiDuyet = {
   iD_NhanVien?: number | null;
   iD_NhanVien_MoTa?: string | null;
   coCau_MoTa?: string | null;
-  /** null chưa xử lý · 1 duyệt · 2 từ chối · 3 không ý kiến. */
+  /** null chưa xử lý · 1 duyệt · 2 từ chối · 3 không ý kiến (4 trả bước chỉ ở nguoiDuyetCus). */
   ketQua: number | null;
   ngayDuyet?: string | null;
   yKien?: string | null;
+  isChiXem?: boolean | null;
+};
+
+/** Một lần trả bước (traBuocs, theo `lan`). */
+export type FlowTraBuoc = {
+  lan: number;
+  iD_Flow_HoSo_Buoc_Tu: number;
+  iD_Flow_HoSo_Buoc_Ve: number;
+  /** "3.2. Phòng Sản xuất" */
+  tenBuocTu?: string | null;
+  tenBuocVe?: string | null;
+  iD_NhanVien?: number | null;
+  iD_NhanVien_MoTa?: string | null;
+  lyDo?: string | null;
+  ngayTra?: string | null;
+};
+
+/**
+ * Kết quả của lượt BỊ CHẠY LẠI (đã xoá khỏi nguoiDuyets khi trả), hiệu lực tới
+ * lần trả `lan`. Có cả dòng ketQua 4 của người bấm trả.
+ */
+export type FlowNguoiDuyetCu = FlowNguoiDuyet & {
+  iD_TraBuoc?: number | null;
+  lan: number;
+  tenBuoc?: string | null;
+};
+
+/** Người / nhóm khai cho bước chưa mở (luatNguois) — hiện mờ ở bước đó. */
+export type FlowLuatNguoi = {
+  iD_Flow_HoSo_Buoc: number;
+  iD_NhanVien_MoTa?: string | null;
+  nhanVien_CoCau_MoTa?: string | null;
+  iD_PhongBan_MoTa?: string | null;
+  iD_BoPhan_MoTa?: string | null;
+  iD_ToDoi_MoTa?: string | null;
+  iD_ChucVu_MoTa?: string | null;
+  iD_ChucDanh_MoTa?: string | null;
   isChiXem?: boolean | null;
 };
 
@@ -172,15 +214,20 @@ export type FlowCongViecLink = {
   trangThai?: number | null;
   chuTri?: string | null;
   phoiHop?: string | null;
+  tuNgay?: string | null;
   denNgay?: string | null;
   ngayHoanThanh?: string | null;
+  nguoiTao?: string | null;
+  ngayTao?: string | null;
 };
 
 export type FlowTienTrinh = {
   buocs: FlowBuoc[];
   nguoiDuyets: FlowNguoiDuyet[];
-  luatNguois?: unknown[];
+  luatNguois?: FlowLuatNguoi[];
   congViec: FlowCongViecLink | null;
+  traBuocs?: FlowTraBuoc[];
+  nguoiDuyetCus?: FlowNguoiDuyetCu[];
 };
 
 export type FlowChonNguoiBuoc = {
@@ -217,7 +264,7 @@ export type FlowChonNguoi = {
 
 export type FlowDuyetPayload = {
   IDs: number[];
-  /** 1 Duyệt · 2 Từ chối · 3 Không ý kiến. */
+  /** 1 Duyệt · 2 Từ chối · 3 Không ý kiến · 4 Trả bước (YKien = lý do, bắt buộc). */
   KetQua: number;
   YKien?: string | null;
   Chons?: Array<{ ID_Buoc: number; ID_NhanVien: number }>;
@@ -376,6 +423,28 @@ export type CongViecSavePayload = {
 };
 
 /** Loại thông báo của cv-thong-bao. */
+/** cv-dashboard (4-Mobile-CongViec mục 10): tổng quan công việc của tôi. */
+export type CongViecDashboard = {
+  tongQuan: {
+    /** % việc đã hoàn tất trong năm. */
+    phanTramHoanTatNam?: number | null;
+    soThangNay?: number | null;
+    soThangTruoc?: number | null;
+    quaHan?: number | null;
+    chuaDenHan?: number | null;
+    hoanTatTreHan?: number | null;
+    hoanTatDungHan?: number | null;
+  } | null;
+  /** 6 tháng gần nhất, cũ → mới. `nhan` ("10/26") BE trả kèm, có thể thiếu. */
+  sauThang: Array<{
+    nam: number;
+    thang: number;
+    soViec?: number | null;
+    soHoanThanh?: number | null;
+    nhan?: string | null;
+  }> | null;
+};
+
 export type WorkflowThongBaoLoai = "Flow" | "Giao" | "SapHan" | "QuaHan" | "BinhLuan";
 
 export type WorkflowThongBao = {
@@ -450,6 +519,11 @@ export type CongViecFormParams = {
   ngay?: string;
   /** Thêm từ kế hoạch. */
   keHoach?: { id: number; text?: string | null };
+  /**
+   * Nhân bản (4-Mobile-CongViec mục 4b): thêm mới, chép từ cv-chi-tiet của việc
+   * này — trừ số, trạng thái, lịch sử, bình luận, file, định kỳ cũ.
+   */
+  cloneId?: number;
   /** Tạo công việc ở lượt duyệt cuối của phiếu đề nghị. */
   fromFlow?: {
     nameClass: string;

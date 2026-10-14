@@ -701,17 +701,6 @@ export const makeStyles = (c: AppColors) =>
       marginTop: spacing.xl,
     },
     timelineEmpty: { paddingVertical: spacing.xxl },
-    timelineLoading: {
-      minHeight: 180,
-      alignItems: "center",
-      justifyContent: "center",
-      gap: spacing.sm,
-    },
-    timelineLoadingText: {
-      color: c.textSecondary,
-      fontSize: 14,
-      fontWeight: "500",
-    },
 
     /* ── Bản ghi dạng lưới ──────────────────────────────────────────── */
     playbackGrid: {

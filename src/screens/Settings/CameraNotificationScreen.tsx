@@ -56,6 +56,8 @@ export default function CameraNotificationScreen() {
     dangTai,
     dangGui,
     loi,
+    dangLamMoi,
+    lamMoi,
     taiTrangThai,
     tamDung,
     huyTamDung,
@@ -223,7 +225,7 @@ export default function CameraNotificationScreen() {
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
       refreshControl={
-        <RefreshControl refreshing={dangTai} onRefresh={taiTrangThai} />
+        <RefreshControl refreshing={dangLamMoi} onRefresh={lamMoi} />
       }
     >
       {loi ? (

@@ -1,11 +1,10 @@
-import { C } from "../../../utils/helpers/colors";
 import React from "react";
 import {
-  ActivityIndicator,
   Image,
   StyleSheet,
   View,
 } from "react-native";
+import { SkeletonFill } from "../../ui/SkeletonBlock";
 import { getCameraSnapshotUrl } from "./cameraStreamUtils";
 
 type CameraSnapshotThumbnailProps = {
@@ -52,9 +51,7 @@ export default React.memo(function CameraSnapshotThumbnail({
   return (
     <View style={styles.preview}>
       {showLoadingIndicator && !isLoaded && (
-        <View style={styles.previewLoading}>
-          <ActivityIndicator size="small" color={C.red} />
-        </View>
+        <SkeletonFill style={CAMERA_SKELETON_STYLE} />
       )}
       <Image
         key={`thumb-${cameraId}-${focusKey}-${retryCount}`}
@@ -83,15 +80,17 @@ export default React.memo(function CameraSnapshotThumbnail({
   );
 });
 
+/**
+ * Khung chờ trên khung hình camera: xám TỐI thay `c.skeleton` (xám sáng) — khung
+ * hình nền đen, khối sáng nhá lên giữa lưới camera tối rồi tắt trông như chớp.
+ * `zIndex` để nằm trên `Image` đang tải phía sau.
+ */
+export const CAMERA_SKELETON_STYLE = { backgroundColor: "#2B3038", zIndex: 1 };
+
 const styles = StyleSheet.create({
   preview: {
     flex: 1,
     backgroundColor: "#111",
   },
-  previewLoading: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1,
-  },
+
 });

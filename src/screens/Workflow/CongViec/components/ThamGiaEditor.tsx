@@ -14,6 +14,11 @@ type Props = {
   /** Tên dự phòng khi người tham gia cũ không còn trong danh sách chọn. */
   fallbackNames?: Record<number, string>;
   error?: string | null;
+  /**
+   * Sửa việc mà quyen.duocDoiChuTri = false: khoá ô Chủ trì, vẫn sửa Phối hợp /
+   * Để biết (4-Mobile-CongViec mục 4 — gửi Chủ trì khác thì server từ chối).
+   */
+  lockChuTri?: boolean;
 };
 
 /**
@@ -26,6 +31,7 @@ export default function ThamGiaEditor({
   onChange,
   fallbackNames,
   error,
+  lockChuTri = false,
 }: Props) {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
@@ -61,14 +67,21 @@ export default function ThamGiaEditor({
                 {role.label}
                 {isChuTri ? <Text style={styles.required}> *</Text> : null}
               </Text>
-              <TouchableOpacity
-                style={styles.pickButton}
-                onPress={() => setPickingRole(role.value)}
-                hitSlop={8}
-              >
-                <Ionicons name={isChuTri ? "swap-horizontal" : "add"} size={15} color={c.red} />
-                <Text style={styles.pickText}>{isChuTri && ids.length ? "Đổi" : "Chọn"}</Text>
-              </TouchableOpacity>
+              {isChuTri && lockChuTri ? (
+                <View style={styles.lockedNote}>
+                  <Ionicons name="lock-closed-outline" size={13} color={c.textSub} />
+                  <Text style={styles.lockedText}>Không được đổi</Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.pickButton}
+                  onPress={() => setPickingRole(role.value)}
+                  hitSlop={8}
+                >
+                  <Ionicons name={isChuTri ? "swap-horizontal" : "add"} size={15} color={c.red} />
+                  <Text style={styles.pickText}>{isChuTri && ids.length ? "Đổi" : "Chọn"}</Text>
+                </TouchableOpacity>
+              )}
             </View>
             <View style={styles.chips}>
               {ids.length ? (
@@ -132,6 +145,15 @@ const makeStyles = (c: AppColors) =>
     },
     required: {
       color: c.red,
+    },
+    lockedNote: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    lockedText: {
+      fontSize: 12.5,
+      color: c.textSub,
     },
     pickButton: {
       flexDirection: "row",

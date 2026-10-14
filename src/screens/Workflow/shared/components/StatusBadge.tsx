@@ -10,20 +10,22 @@ type Props = {
   dot?: boolean;
   /** Nền đặc, chữ trắng — nhãn tình trạng phiếu theo tài liệu BE. */
   solid?: boolean;
+  /** Chữ trên nền đặc khi khác chữ trắng (nền quá nhạt). */
+  textColor?: string;
   style?: StyleProp<ViewStyle>;
 };
 
 const SOLID_TEXT = "#FFFFFF";
 
 /** Nhãn màu dạng viên thuốc: mặc định chữ màu đậm trên nền nhạt cùng màu. */
-export default function StatusBadge({ label, color, dot, solid, style }: Props) {
-  const textColor = solid ? SOLID_TEXT : color;
+export default function StatusBadge({ label, color, dot, solid, textColor, style }: Props) {
+  const labelColor = solid ? textColor ?? SOLID_TEXT : color;
 
   return (
     <View style={[styles.badge, { backgroundColor: solid ? color : tint(color) }, style]}>
       {dot ? <View style={[styles.dot, { backgroundColor: color }]} /> : null}
       <Text
-        style={[styles.text, { color: textColor }]}
+        style={[styles.text, { color: labelColor }]}
         numberOfLines={1}
         maxFontSizeMultiplier={1.3}
       >
