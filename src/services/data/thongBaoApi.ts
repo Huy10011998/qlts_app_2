@@ -1,5 +1,6 @@
 import { API_ENDPOINTS } from "../../config/index";
 import type { ThongBaoListResult, ThongBaoNhom } from "../../types/index";
+import { removeThongBaoFromTray } from "../notifications/thongBaoPush";
 import { postWorkflow } from "./workflowApi";
 
 /**
@@ -39,5 +40,7 @@ export const thongBaoDaDoc = async (ids: number[]) => {
     { IDs: ids },
     null,
   );
+  // Đã đọc thì gỡ push của nó khỏi khay (rỗng = tất cả).
+  removeThongBaoFromTray(ids.length ? ids : "all");
   return left == null || isNaN(Number(left)) ? null : Number(left);
 };

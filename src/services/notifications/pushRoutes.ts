@@ -36,8 +36,8 @@ const PUSH_ROUTES: Record<string, PushRouteContainer> = {
   ShareholdersMeeting: "root",
   Profile: "root",
   Appearance: "root",
-  // Workflow. BE chưa làm push FCM cho phiếu / công việc ("sẽ bổ sung sau") —
-  // khai sẵn route để khi BE gửi là mở được, hợp đồng app đề xuất:
+  // Workflow. Push thông báo chuông (type "THONG_BAO", 8-Mobile-ThongBao mục 6)
+  // tự suy route ở thongBaoPush.ts; các route dưới cũng mở được qua data.route:
   //   phiếu      route "FlowChiTiet"     params {"nameClass":"Ticket_PhongBan","id":21}
   //   công việc  route "CongViecChiTiet" params {"id":5}
   //   kế hoạch   route "KeHoachChiTiet"  params {"id":3}
@@ -46,7 +46,7 @@ const PUSH_ROUTES: Record<string, PushRouteContainer> = {
   CongViecChiTiet: "root",
   KeHoachChiTiet: "root",
   Flow: "root",
-  // Màn Thông báo (chuông) — 8-Mobile-ThongBao; push FCM BE chưa làm.
+  // Màn Thông báo (chuông) — 8-Mobile-ThongBao.
   ThongBao: "root",
 
   // Màn gốc của tab — phải đi qua Tabs mới chọn đúng tab.

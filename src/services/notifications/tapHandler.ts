@@ -1,4 +1,5 @@
-import { log } from "../../utils/Logger";
+import { thongBaoDaDoc } from "../data/thongBaoApi";
+import { log, warn } from "../../utils/Logger";
 import {
   buildCameraAiParams,
   CAMERA_AI_ROUTE,
@@ -8,6 +9,12 @@ import { TAP_DEDUPE_LIMIT } from "./constants";
 import { createDedupeStore } from "./dedupe";
 import { parseNotificationParams } from "./payload";
 import { isKnownPushRoute, navigateToPushRoute } from "./pushRoutes";
+import {
+  buildThongBaoPushTarget,
+  emitThongBaoPush,
+  getThongBaoPushId,
+  isThongBaoPush,
+} from "./thongBaoPush";
 import type { PushTapPayload } from "./types";
 
 /**
@@ -43,6 +50,9 @@ const resolveTapTarget = (
     const params = buildCameraAiParams(data);
     return params ? { route: CAMERA_AI_ROUTE, params } : null;
   }
+
+  // Thông báo chuông (8-Mobile-ThongBao mục 6): mở như bấm trong chuông.
+  if (isThongBaoPush(data)) return buildThongBaoPushTarget(data);
 
   if (!data.route || !isKnownPushRoute(data.route)) return null;
 
@@ -81,7 +91,20 @@ const routePendingTap = (): boolean => {
 
   handledTaps.claim(payload.id);
   pendingTap = null;
+  markThongBaoPushRead(payload.data);
   return true;
+};
+
+/**
+ * Bấm push thông báo = đánh dấu đọc thông báo đó (mục 6). Chỉ gọi lúc đã điều
+ * hướng được — tức đã đăng nhập, có token. Lỗi thì chuông vẫn còn chưa đọc.
+ */
+const markThongBaoPushRead = (data: Record<string, string>) => {
+  const id = isThongBaoPush(data) ? getThongBaoPushId(data) : null;
+  if (!id) return;
+  thongBaoDaDoc([id])
+    .then((left) => left != null && emitThongBaoPush({ kind: "read", soChuaDoc: left }))
+    .catch((err) => warn("[Push] Đánh dấu đã đọc thông báo thất bại", err));
 };
 
 /**

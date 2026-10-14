@@ -3,6 +3,13 @@ import { AppState } from "react-native";
 
 import { navigateFromRef, navigationRef } from "../../navigation/navigationService";
 import { thongBaoDaDoc, thongBaoGetList } from "../../services/data/thongBaoApi";
+import {
+  claimThongBaoToast,
+  getPushSoChuaDoc,
+  syncThongBaoBadge,
+  subscribeThongBaoPush,
+  thongBaoItemFromPush,
+} from "../../services/notifications/thongBaoPush";
 import { reconnectTraoDoiIfNeeded, subscribeThongBao } from "../../services/realtime/traoDoiHub";
 import type { ThongBaoItem } from "../../types/index";
 import { warn } from "../../utils/Logger";
@@ -43,6 +50,8 @@ export function ThongBaoProvider({ children }: React.PropsWithChildren) {
     // Số từ realtime / đánh dấu đọc mới hơn lượt get-list đang chờ.
     requestRef.current += 1;
     setSoChuaDocState(Math.max(0, value));
+    // Số trên icon app đi theo số chuông (mục 6) — đặt, không xoá về 0.
+    syncThongBaoBadge(value);
   }, []);
 
   const refreshSoChuaDoc = useCallback(async () => {
@@ -50,7 +59,9 @@ export function ThongBaoProvider({ children }: React.PropsWithChildren) {
     try {
       const result = await thongBaoGetList({ pageSize: 1 });
       if (requestId === requestRef.current) {
-        setSoChuaDocState(Math.max(0, Number(result?.soChuaDoc) || 0));
+        const next = Math.max(0, Number(result?.soChuaDoc) || 0);
+        setSoChuaDocState(next);
+        syncThongBaoBadge(next);
       }
     } catch (err) {
       // Giữ số cũ: mất mạng thoáng qua không làm chuông mất số.
@@ -81,19 +92,38 @@ export function ThongBaoProvider({ children }: React.PropsWithChildren) {
   useEffect(() => {
     refreshSoChuaDoc();
 
+    // 1 toast mỗi thông báo: hub và push foreground có thể cùng tới. Đang xem
+    // danh sách thì dòng mới đã chèn lên đầu — khỏi toast.
+    const showToast = (item: ThongBaoItem) => {
+      if (!claimThongBaoToast(item.id)) return;
+      const onList =
+        bellOpenRef.current ||
+        (navigationRef.isReady() && navigationRef.getCurrentRoute()?.name === "ThongBao");
+      if (!onList) setToast(item);
+    };
+
     const unsubscribe = subscribeThongBao({
       onThongBaoMoi: (thongBao, next) => {
         if (next != null) setSoChuaDoc(next);
-        else setSoChuaDocState((prev) => prev + 1);
-
-        // Đang xem danh sách thì dòng mới đã chèn lên đầu — khỏi toast.
-        const onList =
-          bellOpenRef.current ||
-          (navigationRef.isReady() && navigationRef.getCurrentRoute()?.name === "ThongBao");
-        if (!onList) setToast(thongBao);
+        else refreshSoChuaDoc();
+        showToast(thongBao);
       },
       onSoChuaDoc: setSoChuaDoc,
       onReconnected: refreshSoChuaDoc,
+    });
+
+    // Push THONG_BAO lúc app đang mở (usePushNotifications không hiện banner hệ
+    // thống): cập nhật số + toast nếu hub chưa kịp báo. Bấm push đã đọc → số mới.
+    const unsubscribePush = subscribeThongBaoPush((event) => {
+      if (event.kind === "read") {
+        setSoChuaDoc(event.soChuaDoc);
+        return;
+      }
+      const next = getPushSoChuaDoc(event.data);
+      if (next != null) setSoChuaDoc(next);
+      else refreshSoChuaDoc();
+      const item = thongBaoItemFromPush(event.data);
+      if (item) showToast(item);
     });
 
     // Nằm nền lâu thì kết nối có thể đã rớt hẳn và đã lỡ thông báo.
@@ -105,7 +135,10 @@ export function ThongBaoProvider({ children }: React.PropsWithChildren) {
 
     return () => {
       unsubscribe();
+      unsubscribePush();
       subscription.remove();
+      // Rời phiên (đăng xuất): icon + khay không còn thông báo của người cũ.
+      syncThongBaoBadge(0);
     };
   }, [refreshSoChuaDoc, setSoChuaDoc]);
 
