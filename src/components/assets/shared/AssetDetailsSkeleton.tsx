@@ -32,7 +32,10 @@ export default function AssetDetailsSkeleton({
   tabCount,
 }: {
   groupedFields: Record<string, Field[]>;
-  /** Số tab thật của màn, để thanh tab không đổi bề rộng ô khi dữ liệu về. */
+  /**
+   * Số tab thật của màn, để thanh tab không đổi bề rộng ô khi dữ liệu về. 0 =
+   * màn không có thanh tab.
+   */
   tabCount: number;
 }) {
   const styles = useStyles(makeStyles);
@@ -42,14 +45,17 @@ export default function AssetDetailsSkeleton({
 
   return (
     <View style={styles.container} accessibilityLabel="Đang tải chi tiết">
-      <View style={styles.tabsShell}>
-        {Array.from({ length: tabCount }).map((_, index) => (
-          <Animated.View
-            key={`tab-${index}`}
-            style={[styles.tab, { backgroundColor: colors.skeleton, opacity }]}
-          />
-        ))}
-      </View>
+      {/* Màn không có thanh tab (chi tiết lịch sử) thì cũng không chừa chỗ. */}
+      {tabCount > 0 ? (
+        <View style={styles.tabsShell}>
+          {Array.from({ length: tabCount }).map((_, index) => (
+            <Animated.View
+              key={`tab-${index}`}
+              style={[styles.tab, { backgroundColor: colors.skeleton, opacity }]}
+            />
+          ))}
+        </View>
+      ) : null}
 
       <ScrollView
         contentContainerStyle={styles.content}

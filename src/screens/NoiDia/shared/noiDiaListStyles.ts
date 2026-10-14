@@ -147,11 +147,6 @@ export const makeNoiDiaListStyles = (c: AppColors) =>
       fontStyle: "italic",
       color: c.textSub,
     },
-    /** Spinner thay chevron trong thẻ lọc lúc đang tải lại theo bộ lọc. */
-    inlineSpinner: {
-      flex: 0,
-      width: 16,
-    },
     filterActions: {
       marginTop: 10,
       flexDirection: "row",

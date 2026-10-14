@@ -17,10 +17,10 @@ import {
 } from "@react-navigation/native";
 import type { QrReviewNavigationProp, StackRoute } from "../../types/index";
 import { mapPropertyResponseToPropertyClass } from "../../utils/helpers/propertyClass";
+import RecordListFooterSkeleton from "../list/RecordListFooterSkeleton";
 import RecordListSkeleton from "../list/RecordListSkeleton";
 import { shouldShowListSkeleton } from "../ui/shouldShowListSkeleton";
 import ListCardAsset from "../list/ListCardAsset";
-import IsLoading from "../ui/IconLoading";
 import { AddItem } from "../add/AddItem";
 import { useDebounce } from "../../hooks/useDebounce";
 import { useParentValuePairs } from "../../hooks/parentValue/useParentValuePairs";
@@ -255,7 +255,7 @@ export default function QrReview() {
           removeClippedSubviews={Platform.OS === "android"}
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
-          ListFooterComponent={isLoadingMore ? <IsLoading /> : null}
+          ListFooterComponent={isLoadingMore ? <RecordListFooterSkeleton /> : null}
           ListHeaderComponent={null}
           stickyHeaderIndices={[]}
           contentContainerStyle={[

@@ -177,6 +177,7 @@ export type FlowTraBuoc = {
   /** "3.2. Phòng Sản xuất" */
   tenBuocTu?: string | null;
   tenBuocVe?: string | null;
+  iD_NhanVien?: number | null;
   iD_NhanVien_MoTa?: string | null;
   lyDo?: string | null;
   ngayTra?: string | null;
@@ -518,6 +519,11 @@ export type CongViecFormParams = {
   ngay?: string;
   /** Thêm từ kế hoạch. */
   keHoach?: { id: number; text?: string | null };
+  /**
+   * Nhân bản (4-Mobile-CongViec mục 4b): thêm mới, chép từ cv-chi-tiet của việc
+   * này — trừ số, trạng thái, lịch sử, bình luận, file, định kỳ cũ.
+   */
+  cloneId?: number;
   /** Tạo công việc ở lượt duyệt cuối của phiếu đề nghị. */
   fromFlow?: {
     nameClass: string;

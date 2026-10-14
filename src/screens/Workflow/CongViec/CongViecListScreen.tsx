@@ -3,8 +3,8 @@ import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 
 import EmptyState from "../../../components/ui/EmptyState";
-import IsLoading from "../../../components/ui/IconLoading";
 import SearchBar from "../../../components/ui/SearchBar";
+import RecordListFooterSkeleton from "../../../components/list/RecordListFooterSkeleton";
 import RecordListSkeleton from "../../../components/list/RecordListSkeleton";
 import { useDebounce } from "../../../hooks/useDebounce";
 import { cvDemTab, cvGetList, cvThongTin } from "../../../services/data/congViecApi";
@@ -22,6 +22,7 @@ import { useWorkflowMe } from "../shared/useWorkflowMe";
 import { useWorkflowPagedList } from "../shared/useWorkflowPagedList";
 import { useWorkflowPermissions } from "../shared/useWorkflowPermissions";
 import { useReloadOnWorkflowChange } from "../shared/useWorkflowVersion";
+import { useOnWorkflowInfoStale } from "../shared/workflowInfoRefresh";
 import { CV_TABS, readTabCount } from "../shared/workflowConstants";
 import { getCardFields, WorkflowField } from "../shared/workflowFields";
 import { loadClassFields } from "../shared/workflowMetadata";
@@ -103,6 +104,11 @@ export default function CongViecListScreen() {
     loadCounts();
   });
 
+  // Đóng màn Bình luận / Đính kèm → số bình luận / file của các dòng đang hiện.
+  useOnWorkflowInfoStale((apiBase) => {
+    if (apiBase === CV_CONG_VIEC_NAME_CLASS && list.items.length) loadInfos(list.items);
+  });
+
   const tabs = useMemo(
     () =>
       CV_TABS.map((item) => ({
@@ -180,7 +186,7 @@ export default function CongViecListScreen() {
             <RefreshControl refreshing={list.refreshing} onRefresh={refreshAll} />
           }
           ListFooterComponent={
-            list.loadingMore ? <IsLoading size="small" style={styles.footerLoading} /> : null
+            list.loadingMore ? <RecordListFooterSkeleton cardStyle={styles.footerCard} /> : null
           }
           ListEmptyComponent={
             <EmptyState
@@ -217,7 +223,8 @@ const makeStyles = (c: AppColors) =>
       paddingBottom: 96,
       flexGrow: 1,
     },
-    footerLoading: {
-      paddingVertical: 16,
+    // Danh sách đã có lề ngang 12 — thẻ chờ khỏi thụt thêm lần nữa.
+    footerCard: {
+      marginHorizontal: 0,
     },
   });

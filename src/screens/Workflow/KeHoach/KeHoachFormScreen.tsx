@@ -6,7 +6,6 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import AssetFormScreenShell from "../../../components/assets/shared/AssetFormScreenShell";
 import { createAssetFormBaseStyles } from "../../../components/assets/shared/assetFormStyles";
 import EmptyState from "../../../components/ui/EmptyState";
-import IsLoading from "../../../components/ui/IconLoading";
 import { cvNhanVien } from "../../../services/data/congViecApi";
 import { khChiTiet, khSua, khThem } from "../../../services/data/keHoachApi";
 import { CV_KE_HOACH_NAME_CLASS } from "../../../services/data/workflowApi";
@@ -24,6 +23,7 @@ import {
   WorkflowFormFields,
   WorkflowFormPickerModal,
 } from "../shared/components/WorkflowFormFields";
+import WorkflowFormSkeleton from "../shared/components/WorkflowFormSkeleton";
 import WorkflowSection from "../shared/components/WorkflowSection";
 import { useWorkflowDynamicForm } from "../shared/useWorkflowDynamicForm";
 import { useWorkflowMe } from "../shared/useWorkflowMe";
@@ -187,7 +187,7 @@ export default function KeHoachFormScreen() {
     return <EmptyState iconName="alert-circle-outline" title="Không mở được form" subtitle={loadError} />;
   }
 
-  if (!fields || meLoading || (isEdit && !detail)) return <IsLoading />;
+  if (!fields || meLoading || (isEdit && !detail)) return <WorkflowFormSkeleton />;
 
   return (
     <AssetFormScreenShell
@@ -195,7 +195,6 @@ export default function KeHoachFormScreen() {
       contentContainerStyle={styles.scrollContent}
       isSubmitting={submitting}
       loadingOverlayStyle={styles.loadingOverlay}
-      refLoadingMore={form.refLoadingMore}
       style={styles.container}
       modal={<WorkflowFormPickerModal form={form} />}
       footer={

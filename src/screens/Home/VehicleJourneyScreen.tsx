@@ -27,6 +27,7 @@ import { DatePicker } from "../../components/dataPicker/DataPicker";
 import EmptyState from "../../components/ui/EmptyState";
 import EnumAndReferencePickerModal from "../../components/modal/EnumAndReferencePickerModal";
 import VehicleFilterSkeleton from "./shared/VehicleFilterSkeleton";
+import VehicleTimelineSkeleton from "./shared/VehicleTimelineSkeleton";
 import type { HomeNavigationProp } from "../../types";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 
@@ -425,10 +426,7 @@ export default function VehicleJourneyScreen() {
               style={styles.journeyLoading}
             />
           ) : journeyLoading ? (
-            <View style={styles.journeyLoading}>
-              <ActivityIndicator color={c.red} />
-              <Text style={styles.loadingText}>Đang tải hành trình...</Text>
-            </View>
+            <VehicleTimelineSkeleton variant="journey" />
           ) : vehicles.length === 0 ? (
             <EmptyState
               iconName="car-outline"
@@ -647,7 +645,6 @@ const makeStyles = (c: AppColors) =>
       paddingTop: 8,
       paddingBottom: 32,
     },
-    loadingText: { marginTop: 10, color: c.textSecondary, fontSize: 14 },
 
     fieldLabel: {
       color: c.text,

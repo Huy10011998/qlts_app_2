@@ -5,7 +5,6 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import AssetFormScreenShell from "../../../components/assets/shared/AssetFormScreenShell";
 import { createAssetFormBaseStyles } from "../../../components/assets/shared/assetFormStyles";
 import EmptyState from "../../../components/ui/EmptyState";
-import IsLoading from "../../../components/ui/IconLoading";
 import { cvChiTiet, cvNhanVien, cvSua, cvThem } from "../../../services/data/congViecApi";
 import { flowTaoCongViec } from "../../../services/data/flowApi";
 import {
@@ -30,6 +29,7 @@ import {
   WorkflowFormFields,
   WorkflowFormPickerModal,
 } from "../shared/components/WorkflowFormFields";
+import WorkflowFormSkeleton from "../shared/components/WorkflowFormSkeleton";
 import WorkflowSection from "../shared/components/WorkflowSection";
 import { useWorkflowDynamicForm } from "../shared/useWorkflowDynamicForm";
 import { useWorkflowMe } from "../shared/useWorkflowMe";
@@ -88,6 +88,9 @@ export default function CongViecFormScreen() {
   const params = route.params;
   const isEdit = params.mode === "edit";
   const fromFlow = params.fromFlow;
+  // Nhân bản = thêm mới, điền sẵn từ việc gốc (cv-them, ra việc Mới, số mới).
+  const cloneId = !isEdit && !fromFlow ? params.cloneId : undefined;
+  const sourceId = isEdit ? params.id : cloneId;
   const { me, loading: meLoading } = useWorkflowMe();
   const markChanged = useMarkWorkflowChanged();
 
@@ -108,9 +111,15 @@ export default function CongViecFormScreen() {
 
   useEffect(() => {
     navigation.setOptions({
-      title: fromFlow ? "Tạo công việc" : isEdit ? "Sửa công việc" : "Thêm công việc",
+      title: fromFlow
+        ? "Tạo công việc"
+        : isEdit
+        ? "Sửa công việc"
+        : cloneId
+        ? "Nhân bản công việc"
+        : "Thêm công việc",
     });
-  }, [fromFlow, isEdit, navigation]);
+  }, [cloneId, fromFlow, isEdit, navigation]);
 
   useEffect(() => {
     let alive = true;
@@ -118,7 +127,7 @@ export default function CongViecFormScreen() {
     Promise.all([
       loadClassFields(CV_CONG_VIEC_NAME_CLASS),
       cvNhanVien().catch(() => [] as WorkflowEmployee[]),
-      isEdit && params.id ? cvChiTiet(params.id) : Promise.resolve(null),
+      sourceId ? cvChiTiet(sourceId) : Promise.resolve(null),
     ])
       .then(([metadata, staff, chiTiet]) => {
         if (!alive) return;
@@ -155,9 +164,9 @@ export default function CongViecFormScreen() {
     return () => {
       alive = false;
     };
-    // navigation ổn định suốt đời màn — chỉ chạy lại khi đổi việc đang sửa.
+    // navigation ổn định suốt đời màn — chỉ chạy lại khi đổi việc đang sửa / nhân bản.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEdit, params.id]);
+  }, [sourceId]);
 
   // Ngày bắt đầu định kỳ chưa sửa tay thì đi theo ngày của Từ ngày.
   useEffect(() => {
@@ -198,17 +207,13 @@ export default function CongViecFormScreen() {
       };
     }
 
+    // Mục 9: "Giao công việc từ phiếu …" chỉ là banner trên đầu form, KHÔNG ghi
+    // vào MoTa — MoTa điền sẵn đúng taoCongViec.moTa.
     const prefill = fromFlow?.prefill;
-    const soPhieu = prefill?.soPhieu ?? fromFlow?.soPhieu;
-    const dongDau = soPhieu
-      ? `Giao công việc từ phiếu ${soPhieu}`
-      : fromFlow
-      ? "Giao công việc từ phiếu đề nghị"
-      : "";
 
     return {
       TieuDe: prefill?.tieuDe ?? "",
-      MoTa: [dongDau, prefill?.moTa].filter(Boolean).join("\n") || null,
+      MoTa: prefill?.moTa || null,
       ID_LoaiCongViec: prefill?.iD_LoaiCongViec ?? null,
       ID_KeHoach: params.keHoach?.id ?? null,
       MucDoKhan: 0,
@@ -350,7 +355,7 @@ export default function CongViecFormScreen() {
     return <EmptyState iconName="alert-circle-outline" title="Không mở được form" subtitle={loadError} />;
   }
 
-  if (!fields || meLoading || (isEdit && !detail)) return <IsLoading />;
+  if (!fields || meLoading || (sourceId && !detail)) return <WorkflowFormSkeleton />;
 
   return (
     <AssetFormScreenShell
@@ -358,7 +363,6 @@ export default function CongViecFormScreen() {
       contentContainerStyle={styles.scrollContent}
       isSubmitting={submitting}
       loadingOverlayStyle={styles.loadingOverlay}
-      refLoadingMore={form.refLoadingMore}
       style={styles.container}
       modal={<WorkflowFormPickerModal form={form} />}
       footer={
@@ -370,6 +374,13 @@ export default function CongViecFormScreen() {
         />
       }
     >
+      {fromFlow ? (
+        <Text style={styles.flowBanner}>
+          {(fromFlow.prefill?.soPhieu ?? fromFlow.soPhieu)
+            ? `Giao công việc từ phiếu ${fromFlow.prefill?.soPhieu ?? fromFlow.soPhieu}`
+            : "Giao công việc từ phiếu đề nghị"}
+        </Text>
+      ) : null}
       {fromFlow ? (
         <Text style={styles.notice}>
           Lưu công việc này là DUYỆT phiếu và giao việc. Đóng form không lưu thì phiếu chưa được
@@ -397,6 +408,7 @@ export default function CongViecFormScreen() {
           onChange={setThamGias}
           fallbackNames={fallbackNames}
           error={errors.thamGia}
+          lockChuTri={isEdit && !detail?.quyen.duocDoiChuTri}
         />
         <View style={styles.switchRow}>
           <View style={styles.switchBody}>
@@ -441,6 +453,18 @@ export default function CongViecFormScreen() {
 const makeStyles = (c: AppColors) =>
   StyleSheet.create({
     ...createAssetFormBaseStyles(c),
+    // Khung xanh trên cùng form (mục 9), chỉ để hiển thị.
+    flowBanner: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: c.accent,
+      backgroundColor: c.accentLight,
+      borderColor: c.accent,
+      borderWidth: 1,
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 10,
+    },
     notice: {
       fontSize: 13,
       color: c.textSecondary,

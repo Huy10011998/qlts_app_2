@@ -7,7 +7,6 @@ import {
 } from "../../utils/helpers/colors";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -20,6 +19,7 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { DatePicker } from "../../components/dataPicker/DataPicker";
 import EnumAndReferencePickerModal from "../../components/modal/EnumAndReferencePickerModal";
 import VehicleFilterSkeleton from "./shared/VehicleFilterSkeleton";
+import VehicleTimelineSkeleton from "./shared/VehicleTimelineSkeleton";
 import EmptyState from "../../components/ui/EmptyState";
 import {
   getPhuongTien,
@@ -326,9 +326,7 @@ export default function VehicleTrackingScreen() {
 
         <View style={[styles.list, { borderColor: hairlineBorderColor }]}>
           {stopLoading ? (
-            <View style={styles.listState}>
-              <ActivityIndicator color={c.red} />
-            </View>
+            <VehicleTimelineSkeleton variant="stops" />
           ) : loadError ? (
             <EmptyState
               iconName="cloud-offline-outline"
@@ -476,7 +474,6 @@ const makeStyles = (c: AppColors) =>
       paddingTop: 8,
       paddingBottom: 32,
     },
-    loadingText: { marginTop: 9, fontSize: 14, color: c.textSecondary },
 
     title: { fontSize: 19, fontWeight: "700", color: c.text },
     subtitle: { fontSize: 13, color: c.textSecondary, marginTop: 2 },

@@ -1,5 +1,5 @@
 import React from "react";
-import { Animated, StyleSheet, View } from "react-native";
+import { Animated, StyleProp, StyleSheet, View, ViewStyle } from "react-native";
 
 import {
   AppColors,
@@ -74,6 +74,7 @@ export default function RecordCardSkeleton({
   trailing = "none",
   separator = false,
   opacity,
+  style,
 }: {
   variant?: RecordCardVariant;
   lines?: number;
@@ -85,6 +86,8 @@ export default function RecordCardSkeleton({
   separator?: boolean;
   /** Nhịp nhấp nháy do danh sách cấp, để mọi thẻ sáng tối cùng nhau. */
   opacity: Animated.AnimatedInterpolation<number>;
+  /** Chỉnh lề ngoài cho khớp danh sách chứa nó (vd danh sách đã có lề ngang). */
+  style?: StyleProp<ViewStyle>;
 }) {
   const styles = useStyles(makeStyles);
   const colors = useAppColors();
@@ -101,6 +104,7 @@ export default function RecordCardSkeleton({
           borderTopColor: colors.hairline,
         },
         { borderColor: colors.hairline, opacity },
+        style,
       ]}
     >
       {variant === "avatar" ? <View style={styles.avatar} /> : null}

@@ -426,7 +426,6 @@ export default function AssetEditItem() {
     <AssetFormScreenShell
       brandColor={BRAND_RED}
       contentContainerStyle={styles.scrollContent}
-      refLoadingMore={refLoadingMore}
       style={styles.container}
       modal={
         <AssetFormReferencePickerModal

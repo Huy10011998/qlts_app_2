@@ -2,6 +2,8 @@ import React, { useMemo, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
+import SkeletonBlock from "../../../../components/ui/SkeletonBlock";
+import { useSkeletonPulse } from "../../../../components/ui/useSkeletonAutoFill";
 import type { FlowChonNguoi, FlowChonNguoiBuoc, FlowChonNguoiPair } from "../../../../types/index";
 import { AppColors, useAppColors, useStyles } from "../../../../utils/helpers/colors";
 import EmployeePickerModal from "../../shared/components/EmployeePickerModal";
@@ -111,6 +113,57 @@ export default function ApproverStepPicker({ data, value, onChange, showErrors }
   );
 }
 
+
+/**
+ * Khung chờ lúc đang hỏi máy chủ các bước phải chọn người duyệt — cùng khung
+ * bước (nền, lề, nút "Chọn", hàng chip) với lưới thật để lúc dữ liệu về không
+ * nhảy. Chưa biết số bước nên dựng sẵn 2.
+ */
+export function ApproverStepPickerSkeleton({ steps = 2 }: { steps?: number }) {
+  const styles = useStyles(makeStyles);
+  const opacity = useSkeletonPulse();
+
+  return (
+    <View accessibilityLabel="Đang tải bước duyệt">
+      {Array.from({ length: steps }).map((_, index) => (
+        <View key={index} style={styles.step}>
+          <View style={styles.stepHeader}>
+            <View style={styles.stepTitleWrap}>
+              <SkeletonBlock
+                opacity={opacity}
+                style={[skeletonStyles.title, index % 2 === 1 && skeletonStyles.titleShort]}
+              />
+            </View>
+            <SkeletonBlock opacity={opacity} style={skeletonStyles.pick} />
+          </View>
+          <SkeletonBlock opacity={opacity} style={skeletonStyles.chip} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
+const skeletonStyles = StyleSheet.create({
+  title: {
+    width: "62%",
+    height: 14,
+    marginVertical: 2,
+    borderRadius: 6,
+  },
+  titleShort: {
+    width: "44%",
+  },
+  pick: {
+    width: 66,
+    height: 26,
+    borderRadius: 999,
+  },
+  chip: {
+    width: 128,
+    height: 26,
+    borderRadius: 999,
+  },
+});
 const makeStyles = (c: AppColors) =>
   StyleSheet.create({
     step: {

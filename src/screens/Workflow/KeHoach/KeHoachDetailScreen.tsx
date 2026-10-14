@@ -4,7 +4,6 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import EmptyState from "../../../components/ui/EmptyState";
-import IsLoading from "../../../components/ui/IconLoading";
 import { cvGetList, cvThongTin } from "../../../services/data/congViecApi";
 import { khChiTiet, khXoa } from "../../../services/data/keHoachApi";
 import {
@@ -28,6 +27,7 @@ import { CV_CARD_CUSTOM_FIELDS } from "../CongViec/congViecRules";
 import ProgressRing from "../shared/components/ProgressRing";
 import WorkflowButton from "../shared/components/WorkflowButton";
 import WorkflowDetailFields from "../shared/components/WorkflowDetailFields";
+import WorkflowDetailSkeleton from "../shared/components/WorkflowDetailSkeleton";
 import WorkflowSection from "../shared/components/WorkflowSection";
 import WorkflowTabBar from "../shared/components/WorkflowTabBar";
 import { useWorkflowMe } from "../shared/useWorkflowMe";
@@ -36,6 +36,7 @@ import {
   useMarkWorkflowChanged,
   useReloadOnWorkflowChange,
 } from "../shared/useWorkflowVersion";
+import { useOnWorkflowInfoStale } from "../shared/workflowInfoRefresh";
 import { formatBeDate } from "../shared/workflowDate";
 import { getWorkflowErrorMessage } from "../shared/workflowErrors";
 import { getCardFields, getDetailFields, WorkflowField } from "../shared/workflowFields";
@@ -138,6 +139,15 @@ export default function KeHoachDetailScreen() {
   // Im lặng: bật vòng xoay bằng code lúc quay lại màn làm iOS kẹt một khoảng trống.
   useReloadOnWorkflowChange(() => load("silent"));
 
+  // Đóng màn Bình luận / Đính kèm của 1 thẻ việc → nạp lại số trên các thẻ.
+  useOnWorkflowInfoStale((apiBase) => {
+    const ids = congViecs.map((item) => item.id);
+    if (apiBase !== CV_CONG_VIEC_NAME_CLASS || !ids.length) return;
+    cvThongTin(ids)
+      .then((infos) => setCvInfos(Object.fromEntries(infos.map((info) => [info.id, info]))))
+      .catch(() => undefined);
+  });
+
   const detailFields = useMemo(() => getDetailFields(khFields, "true"), [khFields]);
   const cvCardFields = useMemo(
     () => getCardFields(cvFields, CV_CARD_CUSTOM_FIELDS),
@@ -174,7 +184,7 @@ export default function KeHoachDetailScreen() {
     ]);
   };
 
-  if (loading) return <IsLoading />;
+  if (loading) return <WorkflowDetailSkeleton variant="keHoach" fields={detailFields} />;
 
   if (!keHoach) {
     return (

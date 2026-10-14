@@ -14,6 +14,7 @@ import { TypeProperty } from "../../utils/Enum";
 import type { RenderInputByTypeProps } from "../../types/components.d";
 import { formatVND, unFormatVND } from "../../utils/helpers/number";
 import IsLoading from "../ui/IconLoading";
+import { SkeletonFill } from "../ui/SkeletonBlock";
 import Base64ImageField from "./Base64ImageField";
 import { parseLinkHtml } from "../../utils/Link";
 import { DatePicker, TimePicker } from "../dataPicker/DataPicker";
@@ -104,11 +105,6 @@ const makeLocalStyles = (c: AppColors) => ({
     backgroundColor: c.surfaceAlt,
     borderWidth: 1,
     borderColor: c.border,
-  },
-  imageCardLoading: {
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-    borderStyle: "dashed" as const,
   },
   imagePreview: {
     width: "100%" as const,
@@ -606,13 +602,13 @@ export const RenderInputByType = ({
         </TouchableOpacity>
       ) : null;
 
-      /* Chưa có ảnh nào thì mới thay cả ô bằng vòng xoay; có ảnh rồi thì giữ ảnh
-         cũ và chỉ phủ mờ lên trên, thay được thì mới đổi. */
+      /* Chưa có ảnh nào thì cả ô là khung chờ; có ảnh rồi thì giữ ảnh cũ và chỉ
+         phủ mờ + vòng xoay lên trên (đang tải ảnh mới lên), thay được thì mới đổi. */
       if (loading && !imgUrl) {
         return (
           <View style={localStyles.imageWrap}>
-            <View style={[localStyles.imageCard, localStyles.imageCardLoading]}>
-              <IsLoading size="small" />
+            <View style={localStyles.imageCard}>
+              <SkeletonFill />
             </View>
           </View>
         );

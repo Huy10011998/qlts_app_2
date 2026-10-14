@@ -185,3 +185,24 @@ describe("getFlowHistory có Trả bước", () => {
     expect(duyet.map((event) => event.content)).toContain("2.1. Kế toán viên");
   });
 });
+
+describe("tab Lịch sử: tên mình in đậm", () => {
+  it("so iD_NhanVien của nguoiDuyets / traBuocs và người lập", () => {
+    const data = {
+      buocs: [{ id: 1, buoc: 1, buocCon: null, ten: "Trưởng bộ phận", tinhTrang: 2 }],
+      nguoiDuyets: [
+        { iD_Flow_HoSo_Buoc: 1, iD_NhanVien: 7, iD_NhanVien_MoTa: "Tôi", ketQua: 1, ngayDuyet: "2026-10-02T09:00:00" },
+        { iD_Flow_HoSo_Buoc: 1, iD_NhanVien: 8, iD_NhanVien_MoTa: "Người khác", ketQua: 1, ngayDuyet: "2026-10-02T10:00:00" },
+      ],
+      traBuocs: [{ lan: 1, iD_Flow_HoSo_Buoc_Tu: 1, iD_Flow_HoSo_Buoc_Ve: 1, iD_NhanVien: 7, iD_NhanVien_MoTa: "Tôi", ngayTra: "2026-10-03T08:00:00" }],
+    } as unknown as FlowTienTrinh;
+
+    const events = getFlowHistory(data, "2026-10-01T08:00:00", "Người khác", { iD_NhanVien: 7, nguoiLapId: 8 });
+    expect(events.map((event) => [event.by, !!event.byMe])).toEqual([
+      ["Người khác", false],
+      ["Tôi", true],
+      ["Người khác", false],
+      ["Tôi", true],
+    ]);
+  });
+});

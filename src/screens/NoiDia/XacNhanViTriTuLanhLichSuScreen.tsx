@@ -17,9 +17,9 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 
 import type { StackNavigation, StackRoute } from "../../types/index";
 import ScreenContainer from "../shared/ScreenContainer";
+import RecordListFooterSkeleton from "../../components/list/RecordListFooterSkeleton";
 import RecordListSkeleton from "../../components/list/RecordListSkeleton";
 import { shouldShowListSkeleton } from "../../components/ui/shouldShowListSkeleton";
-import IsLoading from "../../components/ui/IconLoading";
 import AssetListEmptyState from "../../components/assets/shared/AssetListEmptyState";
 import FridgeSummaryHeader from "./shared/FridgeSummaryHeader";
 import CapNhatToaDoKhachHangBanner from "./shared/CapNhatToaDoKhachHangBanner";
@@ -100,7 +100,7 @@ export default function XacNhanViTriTuLanhLichSuScreen() {
 
   const [items, setItems] = useState<XacNhanViTriTuLanhItem[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
-  // Đổi bộ lọc chỉ được quay spinner nhỏ, KHÔNG thay cả màn bằng loader — làm
+  // Đổi bộ lọc chỉ thay PHẦN DANH SÁCH bằng khung chờ, KHÔNG thay cả màn — làm
   // vậy thì bảng chọn ngày đang mở bị gỡ khỏi cây, nhìn như màn tự tải lại.
   const [isFiltering, setIsFiltering] = useState(false);
   const hasLoadedOnceRef = React.useRef(false);
@@ -289,19 +289,11 @@ export default function XacNhanViTriTuLanhLichSuScreen() {
               {dateSummary}
             </Text>
           </View>
-          {isFiltering ? (
-            <IsLoading
-              size="small"
-              color={BRAND_RED}
-              style={styles.inlineSpinner}
-            />
-          ) : (
-            <Ionicons
-              name={isFilterOpen ? "chevron-up" : "chevron-down"}
-              size={16}
-              color={c.textMuted}
-            />
-          )}
+          <Ionicons
+            name={isFilterOpen ? "chevron-up" : "chevron-down"}
+            size={16}
+            color={c.textMuted}
+          />
         </TouchableOpacity>
 
         {isFilterOpen ? (
@@ -350,7 +342,9 @@ export default function XacNhanViTriTuLanhLichSuScreen() {
   return (
     <ScreenContainer>
       <FlatList
-        data={items}
+        // Đang lọc: danh sách cũ là của khoảng ngày khác, giấu đi và để khung
+        // chờ thay chỗ; thẻ tủ + bộ lọc ở header vẫn đứng yên.
+        data={isFiltering ? [] : items}
         ListHeaderComponent={listHeader}
         keyExtractor={(item) => String(item.id)}
         // Không dùng emptyRoot ở đây: header nằm trong danh sách nên căn giữa
@@ -367,7 +361,7 @@ export default function XacNhanViTriTuLanhLichSuScreen() {
           />
         }
         ListFooterComponent={
-          items.length >= NOI_DIA_LICH_SU_TOP ? (
+          !isFiltering && items.length >= NOI_DIA_LICH_SU_TOP ? (
             <Text style={styles.capNotice}>
               Chỉ hiện {NOI_DIA_LICH_SU_TOP} lượt gần nhất. Thu hẹp khoảng ngày
               để xem các lượt cũ hơn.
@@ -375,26 +369,30 @@ export default function XacNhanViTriTuLanhLichSuScreen() {
           ) : null
         }
         ListEmptyComponent={
-          <AssetListEmptyState
-            iconName={
-              loadErrorMessage ? "cloud-offline-outline" : "camera-outline"
-            }
-            title={
-              loadErrorMessage
-                ? "Không thể tải lịch sử xác nhận"
-                : hasDateFilter
-                ? "Không có lượt xác nhận trong khoảng này"
-                : "Chưa có lượt xác nhận nào"
-            }
-            subtitle={
-              loadErrorMessage ??
-              (hasDateFilter
-                ? "Thử mở rộng khoảng thời gian."
-                : canThemXacNhanViTri
-                  ? "Bấm nút bên dưới để chụp ảnh xác nhận tủ này."
-                  : "Tủ này chưa được xác nhận vị trí lần nào.")
-            }
-          />
+          isFiltering ? (
+            <RecordListFooterSkeleton rows={4} lines={4} />
+          ) : (
+            <AssetListEmptyState
+              iconName={
+                loadErrorMessage ? "cloud-offline-outline" : "camera-outline"
+              }
+              title={
+                loadErrorMessage
+                  ? "Không thể tải lịch sử xác nhận"
+                  : hasDateFilter
+                  ? "Không có lượt xác nhận trong khoảng này"
+                  : "Chưa có lượt xác nhận nào"
+              }
+              subtitle={
+                loadErrorMessage ??
+                (hasDateFilter
+                  ? "Thử mở rộng khoảng thời gian."
+                  : canThemXacNhanViTri
+                    ? "Bấm nút bên dưới để chụp ảnh xác nhận tủ này."
+                    : "Tủ này chưa được xác nhận vị trí lần nào.")
+              }
+            />
+          )
         }
         renderItem={({ item }) => {
           const hasCoordinates = Boolean(item.lat && item.lng);

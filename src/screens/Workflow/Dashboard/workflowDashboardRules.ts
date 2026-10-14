@@ -7,12 +7,13 @@ export const DASHBOARD_SERIES = {
 } as const;
 
 /**
- * 4 dòng trạng thái của tongQuan, chữ + màu thanh như Home web: "Đã quá hạn"
- * đỏ, "Chưa đến hạn" cam, "Hoàn tất trễ hạn" hồng, "Hoàn tất đúng hạn" xanh lá.
+ * 4 dòng trạng thái của tongQuan, chữ + màu thanh như Home web: "Quá hạn
+ * (tháng này)" đỏ, "Chưa đến hạn" cam, "Hoàn tất trễ hạn" hồng, "Hoàn tất đúng hạn" xanh lá.
  * Thanh = tỉ lệ trên tổng 4 số (web vẽ vậy).
  */
 export const DASHBOARD_STATUS = [
-  { key: "quaHan", label: "Đã quá hạn", color: "#e53935" },
+  // quaHan chỉ tính việc bắt đầu THÁNG NÀY (khác tab Quá hạn) — BE dặn ghi rõ.
+  { key: "quaHan", label: "Quá hạn (tháng này)", color: "#e53935" },
   { key: "chuaDenHan", label: "Chưa đến hạn", color: "#fb8c00" },
   { key: "hoanTatTreHan", label: "Hoàn tất trễ hạn", color: "#ec407a" },
   { key: "hoanTatDungHan", label: "Hoàn tất đúng hạn", color: "#43a047" },

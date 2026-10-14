@@ -2,9 +2,9 @@ import React, { useEffect, useMemo, useState } from "react";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 
+import RecordListFooterSkeleton from "../../../components/list/RecordListFooterSkeleton";
 import RecordListSkeleton from "../../../components/list/RecordListSkeleton";
 import EmptyState from "../../../components/ui/EmptyState";
-import IsLoading from "../../../components/ui/IconLoading";
 import SearchBar from "../../../components/ui/SearchBar";
 import { useDebounce } from "../../../hooks/useDebounce";
 import { khGetList } from "../../../services/data/keHoachApi";
@@ -95,7 +95,7 @@ export default function KeHoachListScreen() {
           onEndReachedThreshold={0.5}
           refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={list.refresh} />}
           ListFooterComponent={
-            list.loadingMore ? <IsLoading size="small" style={styles.footerLoading} /> : null
+            list.loadingMore ? <RecordListFooterSkeleton cardStyle={styles.footerCard} /> : null
           }
           ListEmptyComponent={
             <EmptyState
@@ -132,7 +132,8 @@ const makeStyles = (c: AppColors) =>
       paddingBottom: 96,
       flexGrow: 1,
     },
-    footerLoading: {
-      paddingVertical: 16,
+    // Danh sách đã có lề ngang 12 — thẻ chờ khỏi thụt thêm lần nữa.
+    footerCard: {
+      marginHorizontal: 0,
     },
   });

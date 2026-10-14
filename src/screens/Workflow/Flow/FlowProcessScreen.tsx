@@ -3,7 +3,6 @@ import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native
 import { useNavigation, useRoute } from "@react-navigation/native";
 
 import EmptyState from "../../../components/ui/EmptyState";
-import IsLoading from "../../../components/ui/IconLoading";
 import { flowTienTrinh } from "../../../services/data/flowApi";
 import type { FlowTienTrinh, StackNavigation, StackRoute } from "../../../types/index";
 import { AppColors, useStyles } from "../../../utils/helpers/colors";
@@ -15,6 +14,7 @@ import { getWorkflowErrorMessage } from "../shared/workflowErrors";
 import { readItemValue } from "../shared/workflowFields";
 import FlowProcessDetail from "./components/FlowProcessDetail";
 import FlowProcessDiagram from "./components/FlowProcessDiagram";
+import FlowProcessSkeleton from "./components/FlowProcessSkeleton";
 import {
   buildFlowDiagram,
   FLOW_POINT_COLOR,
@@ -22,6 +22,7 @@ import {
   getInitialFlowPoint,
 } from "./flowProcessRules";
 import { FLOW_FIELD, getFlowHistory } from "./flowRules";
+import { useWorkflowMe } from "../shared/useWorkflowMe";
 
 type Tab = "quyTrinh" | "lichSu";
 
@@ -43,6 +44,7 @@ export default function FlowProcessScreen() {
   const navigation = useNavigation<StackNavigation<"FlowTienTrinh">>();
   const route = useRoute<StackRoute<"FlowTienTrinh">>();
   const { nameClass, id, item } = route.params;
+  const { me } = useWorkflowMe();
 
   const [data, setData] = useState<FlowTienTrinh | null>(null);
   const [loading, setLoading] = useState(true);
@@ -83,11 +85,14 @@ export default function FlowProcessScreen() {
     [data, diagram, selected],
   );
 
-  const history = useMemo(() => getFlowHistory(data, ngayLap, nguoiLap), [data, ngayLap, nguoiLap]);
+  // Tên người ở dòng lịch sử là chính mình thì in đậm (mục 6, Tab Lịch sử).
+  const nguoiLapId = readItemValue(item, FLOW_FIELD.ID_NhanVien_Tao);
+  const history = useMemo(
+    () => getFlowHistory(data, ngayLap, nguoiLap, { iD_NhanVien: me.iD_NhanVien, nguoiLapId }),
+    [data, me.iD_NhanVien, ngayLap, nguoiLap, nguoiLapId],
+  );
 
-  if (loading) return <IsLoading />;
-
-  if (!data) {
+  if (!loading && !data) {
     return <EmptyState iconName="git-network-outline" title="Không tải được quy trình" subtitle={errorMessage ?? undefined} />;
   }
 
@@ -129,23 +134,31 @@ export default function FlowProcessScreen() {
                 </View>
               ) : null}
             </View>
-            <View style={styles.diagramCard}>
-              <FlowProcessDiagram
-                diagram={diagram}
-                selectedKey={selected?.key ?? null}
-                onSelect={(point) => setSelectedKey(point.key)}
-              />
-            </View>
-            {selected ? (
-              <FlowProcessDetail
-                point={selected}
-                detail={detail}
-                nguoiLap={nguoiLap ? String(nguoiLap) : null}
-                ngayLap={ngayLap}
-                onOpenCongViec={(link) => navigation.navigate("CongViecChiTiet", { id: link.iD_CongViec })}
-              />
-            ) : null}
+            {loading ? (
+              <FlowProcessSkeleton tab="quyTrinh" />
+            ) : (
+              <>
+                <View style={styles.diagramCard}>
+                  <FlowProcessDiagram
+                    diagram={diagram}
+                    selectedKey={selected?.key ?? null}
+                    onSelect={(point) => setSelectedKey(point.key)}
+                  />
+                </View>
+                {selected ? (
+                  <FlowProcessDetail
+                    point={selected}
+                    detail={detail}
+                    nguoiLap={nguoiLap ? String(nguoiLap) : null}
+                    ngayLap={ngayLap}
+                    onOpenCongViec={(link) => navigation.navigate("CongViecChiTiet", { id: link.iD_CongViec })}
+                  />
+                ) : null}
+              </>
+            )}
           </>
+        ) : loading ? (
+          <FlowProcessSkeleton tab="lichSu" />
         ) : history.length ? (
           history.map((event, index) => (
             <View key={`${event.time.getTime()}-${index}`} style={styles.historyRow}>
@@ -156,7 +169,9 @@ export default function FlowProcessScreen() {
               <View style={styles.historyBody}>
                 <Text style={styles.historyTitle}>{event.title}</Text>
                 {event.content ? <Text style={styles.historyContent}>{event.content}</Text> : null}
-                {event.by ? <Text style={styles.personName}>{event.by}</Text> : null}
+                {event.by ? (
+                  <Text style={[styles.personName, event.byMe && styles.personNameMe]}>{event.by}</Text>
+                ) : null}
                 {event.note ? (
                   <Text style={styles.opinion}>
                     {event.noteLabel ?? "Ý kiến"}: {event.note}
@@ -255,8 +270,10 @@ const makeStyles = (c: AppColors) =>
     },
     personName: {
       fontSize: 14,
-      fontWeight: "600",
       color: c.text,
+    },
+    personNameMe: {
+      fontWeight: "800",
     },
     personMeta: {
       fontSize: 12,

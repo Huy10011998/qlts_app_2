@@ -28,6 +28,8 @@ import type {
 } from "../../../types/index";
 import { AppColors, useAppColors, useStyles } from "../../../utils/helpers/colors";
 import { useAttachmentPicker } from "../shared/components/AttachmentPicker";
+import WorkflowCommentsSkeleton from "../shared/components/WorkflowCommentsSkeleton";
+import TypingIndicator from "../shared/components/TypingIndicator";
 import WorkflowFileImage from "../shared/components/WorkflowFileImage";
 import { useWorkflowFileOpener } from "../shared/useWorkflowFileOpener";
 import { useWorkflowMe } from "../shared/useWorkflowMe";
@@ -35,12 +37,21 @@ import { useMarkWorkflowChanged } from "../shared/useWorkflowVersion";
 import { formatFileSizeKb, isImageFileName } from "../shared/workflowAttachments";
 import { formatBeDate } from "../shared/workflowDate";
 import { getWorkflowErrorMessage } from "../shared/workflowErrors";
+import { useNotifyInfoStaleOnClose } from "../shared/workflowInfoRefresh";
+import { mergeRealtimeComment } from "./realtimeCommentRules";
+import { useRealtimeComments } from "./useRealtimeComments";
 
 /**
  * Bình luận dạng chat — dùng chung phiếu đề nghị (`/{TenBang}/flow-*`) và
  * công việc (`/CV_CongViec/flow-*`). Chỉ thêm, không sửa / xoá; bình luận của
  * mình dồn phải. Mỗi bình luận kèm tối đa 1 file 20MB.
+ *
+ * Realtime (7-Mobile-Realtime-BinhLuan): bình luận người khác gửi hiện ngay,
+ * "{Tên} đang nhập" cuối khung. Mất realtime thì vẫn chạy như cũ.
  */
+/** Cách cuối danh sách chừng này px vẫn coi là "đang ở cuối". */
+const NEAR_BOTTOM_PX = 80;
+
 export default function WorkflowCommentsScreen() {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
@@ -51,6 +62,10 @@ export default function WorkflowCommentsScreen() {
   const markChanged = useMarkWorkflowChanged();
   const fileOpener = useWorkflowFileOpener();
   const listRef = useRef<FlatList<WorkflowComment>>(null);
+  const inputRef = useRef<TextInput>(null);
+  // Đang ở (gần) cuối danh sách thì nội dung đổi cỡ mới kéo về cuối — người đang
+  // cuộn lên đọc tin cũ không bị giật xuống khi ảnh tải xong / có người nhập.
+  const atBottomRef = useRef(true);
 
   const [items, setItems] = useState<WorkflowComment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,6 +107,17 @@ export default function WorkflowCommentsScreen() {
     load();
   }, [load]);
 
+  // apiBase chính là tenBang của phòng ("Ticket_PhongBan" / "CV_CongViec").
+  const realtime = useRealtimeComments({
+    tenBang: apiBase,
+    idHoSo,
+    myId: me.iD_NhanVien,
+    onBinhLuanMoi: (comment) => setItems((prev) => mergeRealtimeComment(prev, comment)),
+    onReconnected: load,
+  });
+
+  useNotifyInfoStaleOnClose(apiBase);
+
   const send = async () => {
     const noiDung = text.trim();
     if (!noiDung && !file) return;
@@ -101,6 +127,10 @@ export default function WorkflowCommentsScreen() {
       await addWorkflowComment(apiBase, idHoSo, noiDung, file);
       setText("");
       setFile(null);
+      // Gửi xong thì hạ bàn phím, bỏ focus ô nhập (cũng là thôi "đang nhập").
+      inputRef.current?.blur();
+      Keyboard.dismiss();
+      atBottomRef.current = true;
       await load();
       markChanged();
       requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
@@ -181,29 +211,47 @@ export default function WorkflowCommentsScreen() {
     );
   };
 
-  if (loading) return <IsLoading />;
-
   const composerPaddingBottom = keyboardHeight ? 10 : Math.max(insets.bottom, 10);
 
   return (
     <View style={[styles.container, { paddingBottom: keyboardHeight }]}>
-      <FlatList
-        ref={listRef}
-        data={items}
-        keyExtractor={(item) => String(item.id)}
-        renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
-        onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
-        ListEmptyComponent={
-          <EmptyState
-            iconName="chatbubbles-outline"
-            title={errorMessage ? "Không tải được bình luận" : "Chưa có bình luận"}
-            subtitle={errorMessage ?? undefined}
-            actionLabel={errorMessage ? "Thử lại" : undefined}
-            onActionPress={errorMessage ? load : undefined}
-          />
-        }
-      />
+      {loading ? (
+        <WorkflowCommentsSkeleton />
+      ) : (
+        <FlatList
+          ref={listRef}
+          data={items}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContent}
+          onContentSizeChange={() => {
+            if (atBottomRef.current) listRef.current?.scrollToEnd({ animated: false });
+          }}
+          onScroll={({ nativeEvent }) => {
+            const { contentOffset, contentSize, layoutMeasurement } = nativeEvent;
+            atBottomRef.current =
+              contentOffset.y + layoutMeasurement.height >= contentSize.height - NEAR_BOTTOM_PX;
+          }}
+          scrollEventThrottle={64}
+          // Chạm vào vùng tin nhắn (bấm hay kéo) = bỏ focus ô nhập. onTouchStart
+          // không giành thao tác chạm nên cuộn và bấm ảnh / file vẫn như thường.
+          onTouchStart={Keyboard.dismiss}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          ListFooterComponent={
+            realtime.dangNhapLabel ? <TypingIndicator label={realtime.dangNhapLabel} /> : null
+          }
+          ListEmptyComponent={
+            <EmptyState
+              iconName="chatbubbles-outline"
+              title={errorMessage ? "Không tải được bình luận" : "Chưa có bình luận"}
+              subtitle={errorMessage ?? undefined}
+              actionLabel={errorMessage ? "Thử lại" : undefined}
+              onActionPress={errorMessage ? load : undefined}
+            />
+          }
+        />
+      )}
 
       {canSend ? (
         <View
@@ -232,8 +280,11 @@ export default function WorkflowCommentsScreen() {
               <Ionicons name="attach" size={22} color={c.textSub} />
             </TouchableOpacity>
             <TextInput
+              ref={inputRef}
               value={text}
               onChangeText={setText}
+              onFocus={() => realtime.setComposerFocused(true)}
+              onBlur={() => realtime.setComposerFocused(false)}
               placeholder="Viết bình luận..."
               placeholderTextColor={c.placeholder}
               multiline

@@ -14,8 +14,10 @@ import { AppColors, useStyles } from "../../../utils/helpers/colors";
 import { useAttachmentPicker } from "../shared/components/AttachmentPicker";
 import WorkflowFab from "../shared/components/WorkflowFab";
 import WorkflowFileRow from "../shared/components/WorkflowFileRow";
+import WorkflowFilesSkeleton from "../shared/components/WorkflowFilesSkeleton";
 import { useWorkflowFileOpener } from "../shared/useWorkflowFileOpener";
 import { useMarkWorkflowChanged } from "../shared/useWorkflowVersion";
+import { useNotifyInfoStaleOnClose } from "../shared/workflowInfoRefresh";
 import { formatFileSizeKb } from "../shared/workflowAttachments";
 import { formatBeDate } from "../shared/workflowDate";
 import { getWorkflowErrorMessage } from "../shared/workflowErrors";
@@ -28,6 +30,8 @@ export default function WorkflowFilesScreen() {
   const styles = useStyles(makeStyles);
   const route = useRoute<StackRoute<"WorkflowFile">>();
   const { apiBase, idHoSo, canEdit } = route.params;
+  // Đóng màn → danh sách / chi tiết bên dưới nạp lại số file.
+  useNotifyInfoStaleOnClose(apiBase);
   const markChanged = useMarkWorkflowChanged();
   const fileOpener = useWorkflowFileOpener();
 
@@ -92,7 +96,7 @@ export default function WorkflowFilesScreen() {
       },
     ]);
 
-  if (loading) return <IsLoading />;
+  if (loading) return <WorkflowFilesSkeleton />;
 
   return (
     <View style={styles.container}>

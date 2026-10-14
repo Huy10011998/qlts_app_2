@@ -13,7 +13,7 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import QRCode from "react-native-qrcode-svg";
 import type { GroupListProps } from "../../types";
 import { TypeProperty } from "../../utils/Enum";
-import IsLoading from "../ui/IconLoading";
+import { SkeletonFill } from "../ui/SkeletonBlock";
 import { fetchImage } from "../../utils/Image";
 import { parseLink } from "../../utils/Link";
 import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
@@ -162,7 +162,7 @@ export default function AssetGroupList({
                       currentValue !== "---" ? (
                         loadingImages[field.name] ? (
                           <View style={styles.imageLoading}>
-                            <IsLoading size="small" />
+                            <SkeletonFill />
                           </View>
                         ) : images[field.name] ? (
                           <TouchableOpacity
@@ -423,9 +423,7 @@ const makeStyles = (c: AppColors) =>
       width: "100%",
       aspectRatio: 4 / 3,
       borderRadius: 12,
-      backgroundColor: c.surfaceAlt,
-      alignItems: "center",
-      justifyContent: "center",
+      overflow: "hidden",
     },
 
     modalContainer: {

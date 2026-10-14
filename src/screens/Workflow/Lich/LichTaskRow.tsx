@@ -1,6 +1,8 @@
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
+import SkeletonBlock from "../../../components/ui/SkeletonBlock";
+import { useSkeletonPulse } from "../../../components/ui/useSkeletonAutoFill";
 import type { CongViecItem } from "../../../types/index";
 import { AppColors, useStyles } from "../../../utils/helpers/colors";
 import { getMaMauColor } from "../shared/workflowConstants";
@@ -41,6 +43,58 @@ export default function LichTaskRow({ item, onPress }: Props) {
   );
 }
 
+
+/**
+ * Khung chờ việc của một ngày lúc đang tải lịch — cùng thẻ, cùng ô màu bên trái
+ * và ba dòng (giờ, tiêu đề, số · chủ trì) với `LichTaskRow`.
+ */
+export function LichTaskRowSkeleton({ rows = 1 }: { rows?: number }) {
+  const styles = useStyles(makeStyles);
+  const opacity = useSkeletonPulse();
+
+  return (
+    <View accessibilityLabel="Đang tải việc">
+      {Array.from({ length: rows }).map((_, index) => (
+        <View key={index} style={styles.row}>
+          <SkeletonBlock opacity={opacity} style={styles.swatch} />
+          <View style={[styles.body, skeletonStyles.body]}>
+            <SkeletonBlock opacity={opacity} style={skeletonStyles.time} />
+            <SkeletonBlock
+              opacity={opacity}
+              style={[skeletonStyles.title, index % 2 === 1 && skeletonStyles.titleShort]}
+            />
+            <SkeletonBlock opacity={opacity} style={skeletonStyles.meta} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+const skeletonStyles = StyleSheet.create({
+  body: {
+    gap: 7,
+    paddingVertical: 10,
+  },
+  time: {
+    width: 84,
+    height: 10,
+    borderRadius: 5,
+  },
+  title: {
+    width: "68%",
+    height: 13,
+    borderRadius: 6,
+  },
+  titleShort: {
+    width: "48%",
+  },
+  meta: {
+    width: "54%",
+    height: 10,
+    borderRadius: 5,
+  },
+});
 const makeStyles = (c: AppColors) =>
   StyleSheet.create({
     row: {

@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, PixelRatio, StyleSheet, Text, TouchableOpacity } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import RNFS from "react-native-fs";
 
+import { SkeletonFill } from "../../../../components/ui/SkeletonBlock";
 import { viewWorkflowFile } from "../../../../services/data/workflowApi";
 import type { WorkflowApiBase } from "../../../../types/index";
 import { AppColors, useAppColors, useStyles } from "../../../../utils/helpers/colors";
 import { warn } from "../../../../utils/Logger";
+import { getThumbnailSize } from "../../Common/realtimeCommentRules";
 import { getFileExtension } from "../workflowAttachments";
 
 type Props = {
@@ -22,13 +24,17 @@ type Props = {
 const MIN_RATIO = 0.6;
 const MAX_RATIO = 1.8;
 
-const cachePath = (apiBase: string, fileId: number, name?: string | null) =>
-  `${RNFS.CachesDirectoryPath}/wf_${apiBase}_${fileId}.${getFileExtension(name) || "jpg"}`;
+/** Ảnh thu nhỏ: JPEG giữ JPEG, còn lại server trả PNG. Khoá theo id + cỡ xin. */
+const cachePath = (apiBase: string, fileId: number, thuNho: number, name?: string | null) => {
+  const ext = /^jpe?g$/i.test(getFileExtension(name) ?? "") ? "jpg" : "png";
+  return `${RNFS.CachesDirectoryPath}/wf_${apiBase}_${fileId}_t${thuNho}.${ext}`;
+};
 
 /**
- * Ảnh đính kèm hiện thẳng (như ảnh trong chat) thay cho dòng tên file. Tải 1
- * lần qua flow-xem-file rồi ghi vào bộ nhớ đệm — mở lại màn không tải nữa (file
- * đã gửi không sửa được nên khoá theo id là đủ). Lỗi thì hiện dòng bấm để mở.
+ * Ảnh đính kèm hiện thẳng (như ảnh trong chat) thay cho dòng tên file. Xin ẢNH
+ * THU NHỎ qua flow-xem-file + ThuNho (gấp mật độ điểm ảnh của màn — 7-Mobile-
+ * Realtime-BinhLuan mục 5) rồi ghi vào bộ nhớ đệm; bấm ảnh mới tải file gốc.
+ * File bình luận không sửa được nên khoá theo id là đủ. Lỗi thì hiện dòng bấm để mở.
  */
 export default function WorkflowFileImage({ apiBase, fileId, name, onPress, width = 240 }: Props) {
   const styles = useStyles(makeStyles);
@@ -39,12 +45,13 @@ export default function WorkflowFileImage({ apiBase, fileId, name, onPress, widt
 
   useEffect(() => {
     let alive = true;
-    const path = cachePath(apiBase, fileId, name);
+    const thuNho = getThumbnailSize(width, PixelRatio.get());
+    const path = cachePath(apiBase, fileId, thuNho, name);
 
     (async () => {
       try {
         if (!(await RNFS.exists(path))) {
-          const { base64 } = await viewWorkflowFile(apiBase, fileId);
+          const { base64 } = await viewWorkflowFile(apiBase, fileId, thuNho);
           await RNFS.writeFile(path, base64, "base64");
         }
         if (alive) setUri(`file://${path}`);
@@ -57,7 +64,7 @@ export default function WorkflowFileImage({ apiBase, fileId, name, onPress, widt
     return () => {
       alive = false;
     };
-  }, [apiBase, fileId, name]);
+  }, [apiBase, fileId, name, width]);
 
   if (failed) {
     return (
@@ -91,9 +98,7 @@ export default function WorkflowFileImage({ apiBase, fileId, name, onPress, widt
           onError={() => setFailed(true)}
         />
       ) : (
-        <View style={styles.loading}>
-          <ActivityIndicator color={c.textSub} />
-        </View>
+        <SkeletonFill />
       )}
     </TouchableOpacity>
   );
@@ -105,11 +110,6 @@ const makeStyles = (c: AppColors) =>
       borderRadius: 16,
       overflow: "hidden",
       backgroundColor: c.surfaceAlt,
-    },
-    loading: {
-      flex: 1,
-      alignItems: "center",
-      justifyContent: "center",
     },
     fallback: {
       flexDirection: "row",

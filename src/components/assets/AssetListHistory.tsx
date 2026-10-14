@@ -8,10 +8,10 @@ import {
   getPropertyClass,
   getListHistory,
 } from "../../services";
+import RecordListFooterSkeleton from "../list/RecordListFooterSkeleton";
 import RecordListSkeleton from "../list/RecordListSkeleton";
 import { shouldShowListSkeleton } from "../ui/shouldShowListSkeleton";
 import ListCardHistory from "../list/ListCardHistory";
-import IsLoading from "../ui/IconLoading";
 import orderBy from "lodash/orderBy";
 import { useNavigation } from "@react-navigation/native";
 import { error } from "../../utils/Logger";
@@ -237,7 +237,7 @@ export default function AssetListHistory({
         scrollEventThrottle={16}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
-        ListFooterComponent={isLoadingMore ? <IsLoading /> : null}
+        ListFooterComponent={isLoadingMore ? <RecordListFooterSkeleton lines={2} /> : null}
         ListEmptyComponent={
           <AssetListEmptyState
             iconName="time-outline"

@@ -11,7 +11,6 @@ import { useNavigation } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import EmptyState from "../../../components/ui/EmptyState";
-import IsLoading from "../../../components/ui/IconLoading";
 import { cvGetList } from "../../../services/data/congViecApi";
 import { CV_CONG_VIEC_NAME_CLASS } from "../../../services/data/workflowApi";
 import type { CongViecItem, StackNavigation } from "../../../types/index";
@@ -29,10 +28,13 @@ import {
   formatWeekday,
   getRange,
   groupTasksByDay,
+  isRangeLoaded,
+  LichLoaded,
   LichMode,
   shiftAnchor,
+  toMauKey,
 } from "./lichHelpers";
-import LichTaskRow from "./LichTaskRow";
+import LichTaskRow, { LichTaskRowSkeleton } from "./LichTaskRow";
 import MonthGrid from "./MonthGrid";
 
 /** Trần an toàn của tài liệu: lấy hết 1 lần, không phân trang. */
@@ -59,32 +61,42 @@ export default function LichCongViecScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const requestIdRef = useRef(0);
+  const loadRef = useRef<{ requestId: number; loaded: LichLoaded | null }>({
+    requestId: 0,
+    loaded: null,
+  });
 
   const range = useMemo(() => getRange(mode, anchor), [anchor, mode]);
   const tasksByDay = useMemo(() => groupTasksByDay(items, range), [items, range]);
 
   // Đổi tháng / tuần là gọi lại — không cache chéo khoảng vì việc có thể bị sửa ở web.
+  // Khoảng mới nằm trong khoảng vừa tải (Tháng → Tuần cùng lưới) thì việc đã đủ
+  // trên màn: tải lại ngầm CẢ khoảng cũ, quay về Tháng cũng khỏi chờ. Khoảng mới
+  // thật (sang tháng / tuần khác, đổi lọc màu) mới hiện khung chờ ở ngày trống.
   const load = useCallback(
     async (silent = false) => {
-      const requestId = ++requestIdRef.current;
-      if (!silent) setLoading(true);
+      const state = loadRef.current;
+      const requestId = ++state.requestId;
+      const covered = isRangeLoaded(state.loaded, range, mau);
+      const fetchRange = covered && state.loaded ? state.loaded : range;
+      if (!silent && !covered) setLoading(true);
       try {
         const result = await cvGetList({
           tab: "Lich",
           mau,
           pageSize: LICH_PAGE_SIZE,
           skipSize: 0,
-          conditions: buildRangeConditions(range),
+          conditions: buildRangeConditions(fetchRange),
         });
-        if (requestId !== requestIdRef.current) return;
+        if (requestId !== state.requestId) return;
+        state.loaded = { from: fetchRange.from, to: fetchRange.to, mau: toMauKey(mau) };
         setItems(result.items ?? []);
         setErrorMessage(null);
       } catch (err) {
-        if (requestId !== requestIdRef.current) return;
+        if (requestId !== state.requestId) return;
         setErrorMessage(getWorkflowErrorMessage(err, "Không tải được lịch."));
       } finally {
-        if (requestId === requestIdRef.current) {
+        if (requestId === state.requestId) {
           setLoading(false);
           setRefreshing(false);
         }
@@ -155,6 +167,8 @@ export default function LichCongViecScreen() {
           tasks.map((task) => (
             <LichTaskRow key={`${dayKey(day)}-${task.id}`} item={task} onPress={() => openTask(task)} />
           ))
+        ) : loading ? (
+          <LichTaskRowSkeleton rows={compact ? 1 : 2} />
         ) : canAdd ? (
           // Mục 4: bấm 1 ngày trống → thêm việc cho ngày đó (08:00–17:00, chủ trì là mình).
           <TouchableOpacity onPress={() => addTask(day)} activeOpacity={0.7}>
@@ -203,7 +217,10 @@ export default function LichCongViecScreen() {
       {/* Tab "Lich" = mọi việc TRỪ việc Hủy (6-Mobile-Lich mục 1) — chip Hủy chỉ ra lịch trống. */}
       <MaMauFilter value={mau} onChange={setMau} exclude={["Huy"]} />
 
+      {/* key theo khoảng: đổi Tháng / Tuần hay sang kỳ khác thì cuộn về đầu, khỏi
+          giữ vị trí cuộn của nội dung cũ (ngày đầu tuần bị khuất). */}
       <ScrollView
+        key={`${mode}-${dayKey(range.from)}`}
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
@@ -232,8 +249,6 @@ export default function LichCongViecScreen() {
           range.days.map((day) => renderDay(day, true))
         )}
       </ScrollView>
-
-      {loading ? <IsLoading style={styles.loadingOverlay} /> : null}
     </View>
   );
 }
@@ -355,10 +370,5 @@ const makeStyles = (c: AppColors) =>
     noTaskAdd: {
       fontWeight: "700",
       color: c.red,
-    },
-    loadingOverlay: {
-      ...StyleSheet.absoluteFillObject,
-      top: 110,
-      backgroundColor: "transparent",
     },
   });

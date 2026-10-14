@@ -4,7 +4,6 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import EmptyState from "../../../components/ui/EmptyState";
-import IsLoading from "../../../components/ui/IconLoading";
 import { flowDelete, flowGetById, flowThongTin } from "../../../services/data/flowApi";
 import type { FlowRecord, FlowThongTin, StackNavigation, StackRoute } from "../../../types/index";
 import { AppColors, useAppColors, useStyles } from "../../../utils/helpers/colors";
@@ -12,12 +11,14 @@ import { elevation } from "../../../utils/helpers/tokens";
 import StatusBadge from "../shared/components/StatusBadge";
 import WorkflowButton from "../shared/components/WorkflowButton";
 import WorkflowDetailFields from "../shared/components/WorkflowDetailFields";
+import WorkflowDetailSkeleton from "../shared/components/WorkflowDetailSkeleton";
 import { useWorkflowMe } from "../shared/useWorkflowMe";
 import { useWorkflowPermissions } from "../shared/useWorkflowPermissions";
 import {
   useMarkWorkflowChanged,
   useReloadOnWorkflowChange,
 } from "../shared/useWorkflowVersion";
+import { useOnWorkflowInfoStale } from "../shared/workflowInfoRefresh";
 import { FLOW_KET_QUA, getFlowTinhTrang as getTinhTrangOption } from "../shared/workflowConstants";
 import { getWorkflowErrorMessage } from "../shared/workflowErrors";
 import { getDetailFields } from "../shared/workflowFields";
@@ -103,6 +104,14 @@ export default function FlowDetailScreen() {
   // Im lặng: bật vòng xoay bằng code lúc quay lại màn làm iOS kẹt một khoảng trống.
   useReloadOnWorkflowChange(() => load("silent"));
 
+  // Đóng màn Bình luận / Đính kèm → số trên 2 nút.
+  useOnWorkflowInfoStale((apiBase) => {
+    if (apiBase !== nameClass) return;
+    flowThongTin(nameClass, [id])
+      .then((infos) => infos[0] && setInfo(infos[0]))
+      .catch(() => undefined);
+  });
+
   const detailFields = useMemo(
     () => getDetailFields(meta?.fields ?? [], "notFalse", FLOW_CARD_CUSTOM_FIELDS),
     [meta?.fields],
@@ -133,7 +142,7 @@ export default function FlowDetailScreen() {
       },
     ]);
 
-  if (loading) return <IsLoading />;
+  if (loading) return <WorkflowDetailSkeleton variant="flow" fields={detailFields} />;
 
   if (!record) {
     return (

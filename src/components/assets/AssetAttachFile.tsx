@@ -15,7 +15,7 @@ import { useParams } from "../../hooks/useParams";
 import type { Conditions, FileItem } from "../../types";
 import { SqlOperator, TypeProperty, CategoryFiles } from "../../utils/Enum";
 import { getListAttachFile } from "../../services";
-import IsLoading from "../ui/IconLoading";
+import RecordListFooterSkeleton from "../list/RecordListFooterSkeleton";
 import RecordListSkeleton from "../list/RecordListSkeleton";
 import { shouldShowListSkeleton } from "../ui/shouldShowListSkeleton";
 import ListCardAttachFile from "../list/ListCardAttachFile";
@@ -205,7 +205,7 @@ export default function AssetListAttachFile() {
         ]}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
-        ListFooterComponent={isLoadingMore ? <IsLoading /> : null}
+        ListFooterComponent={isLoadingMore ? <RecordListFooterSkeleton lines={2} trailing="button" /> : null}
         ListEmptyComponent={
           <AssetListEmptyState
             iconName="document-outline"

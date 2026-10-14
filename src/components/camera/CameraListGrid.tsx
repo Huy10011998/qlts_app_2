@@ -45,7 +45,9 @@ import Video from "react-native-video";
 import WebView from "react-native-webview";
 import type { CameraCellProps } from "../../types/components.d";
 import { useIsFocused } from "@react-navigation/native";
-import CameraSnapshotThumbnail from "./shared/CameraSnapshotThumbnail";
+import CameraSnapshotThumbnail, {
+  CAMERA_SKELETON_STYLE,
+} from "./shared/CameraSnapshotThumbnail";
 import {
   buildCameraFullscreenHTML,
   buildCameraGridStreamHTML,
@@ -75,6 +77,7 @@ import {
   getVisiblePageIndexes,
 } from "./shared/cameraStreamUtils";
 import { useCameraViewToken } from "./shared/useCameraViewToken";
+import { SkeletonFill } from "../ui/SkeletonBlock";
 import EmptyState from "../ui/EmptyState";
 import {
   TAB_HEIGHT,
@@ -211,13 +214,11 @@ const CameraCell = React.memo(
             />
           ) : (
             <View style={styles.cellPlaceholder}>
-              {!token && !isPaused ? (
-                <ActivityIndicator size="small" color={C.red} />
-              ) : !isPaused ? (
-                <Text style={styles.cellPlaceholderText}>
-                  {isSnapshotActive ? "Đang tải ảnh..." : "Nhấn đúp để xem"}
-                </Text>
-              ) : null}
+              {isPaused ? null : !token || isSnapshotActive ? (
+                <SkeletonFill style={CAMERA_SKELETON_STYLE} />
+              ) : (
+                <Text style={styles.cellPlaceholderText}>Nhấn đúp để xem</Text>
+              )}
             </View>
           )}
 

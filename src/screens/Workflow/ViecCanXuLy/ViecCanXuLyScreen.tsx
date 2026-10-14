@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 
+import RecordListSkeleton from "../../../components/list/RecordListSkeleton";
 import EmptyState from "../../../components/ui/EmptyState";
-import IsLoading from "../../../components/ui/IconLoading";
 import { usePermission } from "../../../hooks/usePermission";
 import { cvThongBao } from "../../../services/data/congViecApi";
 import type { WorkflowThongBao } from "../../../types/index";
@@ -74,7 +74,9 @@ export default function ViecCanXuLyScreen() {
     [filter, items],
   );
 
-  if (!loaded || (allowed && loading)) return <IsLoading />;
+  if (!loaded || (allowed && loading)) {
+    return <RecordListSkeleton rows={6} lines={3} trailing="chevron" />;
+  }
 
   if (!allowed) {
     return (

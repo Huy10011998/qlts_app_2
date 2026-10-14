@@ -43,7 +43,9 @@ import {
   GestureDetector,
   Gesture,
 } from "react-native-gesture-handler";
-import CameraSnapshotThumbnail from "./shared/CameraSnapshotThumbnail";
+import CameraSnapshotThumbnail, {
+  CAMERA_SKELETON_STYLE,
+} from "./shared/CameraSnapshotThumbnail";
 import { buildCameraFullscreenHTML } from "./shared/cameraStreamHtml";
 import {
   ANDROID_LIVE_RETRY_BASE_MS,
@@ -63,6 +65,7 @@ import {
   getVisiblePageIndexes,
 } from "./shared/cameraStreamUtils";
 import { useCameraViewToken } from "./shared/useCameraViewToken";
+import { SkeletonFill } from "../ui/SkeletonBlock";
 import EmptyState from "../ui/EmptyState";
 import { createTabBarStyle } from "../../navigation/shared/tabBarTheme";
 
@@ -745,7 +748,7 @@ const CameraList: React.FC = () => {
               />
             ) : (
               <View style={[styles.preview, styles.previewLoadingBackground]}>
-                <ActivityIndicator size="small" color={C.red} />
+                <SkeletonFill style={CAMERA_SKELETON_STYLE} />
               </View>
             )}
           </TouchableOpacity>

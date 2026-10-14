@@ -1,7 +1,6 @@
-import { useAppColors, useStyles } from "../../utils/helpers/colors";
+import { useStyles } from "../../utils/helpers/colors";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import {
-  ActivityIndicator,
   Animated,
   Easing,
   Image,
@@ -36,6 +35,8 @@ import {
   type EnergyBarBucket,
   type SolarComparativeBucket,
 } from "./SolarPlantScreen.helpers";
+import SkeletonBlock from "../../components/ui/SkeletonBlock";
+import { useSkeletonPulse } from "../../components/ui/useSkeletonAutoFill";
 import { makeStyles } from "./SolarPlantScreen.styles";
 import type { PlantScene } from "./shared/plantScenes";
 import {
@@ -1045,6 +1046,46 @@ export const ChartTransition: React.FC<{
   );
 };
 
+/** Tỉ lệ chiều cao các cột giả — lên xuống cho ra dáng số liệu thật. */
+const CHART_LOADING_BAR_SHARES = [0.42, 0.68, 0.54, 0.86, 0.6, 0.76, 0.48];
+
+/** Cột xám nhấp nháy đứng trên trục X của `ChartSkeleton` lúc đang tải. */
+const ChartLoadingBars: React.FC<{ axisY: number; width: number }> = ({
+  axisY,
+  width,
+}) => {
+  const styles = useStyles(makeStyles);
+  const opacity = useSkeletonPulse();
+  const left = 40;
+  const right = width - 8;
+  const slot = (right - left) / CHART_LOADING_BAR_SHARES.length;
+  const barWidth = Math.min(22, slot * 0.5);
+  const maxHeight = axisY - 16;
+
+  return (
+    <>
+      {CHART_LOADING_BAR_SHARES.map((share, index) => {
+        const barHeight = Math.round(maxHeight * share);
+        return (
+          <SkeletonBlock
+            key={index}
+            opacity={opacity}
+            style={[
+              styles.chartLoadingBar,
+              {
+                left: left + slot * index + (slot - barWidth) / 2,
+                top: axisY - barHeight,
+                width: barWidth,
+                height: barHeight,
+              },
+            ]}
+          />
+        );
+      })}
+    </>
+  );
+};
+
 /**
  * Khung chờ của biểu đồ: giữ ĐÚNG chiều cao mà biểu đồ sẽ chiếm, nên lúc dữ liệu
  * về không có cú đẩy trang xuống. Vẽ sẵn lưới trục mờ để người dùng nhận ra "chỗ
@@ -1052,13 +1093,12 @@ export const ChartTransition: React.FC<{
  */
 export const ChartSkeleton: React.FC<{
   height: number;
-  /** Đang tải thì hiện vòng xoay; đứng im với `message` khi thật sự không có dữ liệu. */
+  /** Đang tải thì hiện cột xám nhấp nháy; đứng im với `message` khi thật sự không có dữ liệu. */
   isLoading?: boolean;
   message: string;
   width: number;
 }> = ({ height, isLoading, message, width }) => {
   const styles = useStyles(makeStyles);
-  const colors = useAppColors();
   const gridRowCount = 5;
   const axisY = height - 28;
 
@@ -1089,14 +1129,11 @@ export const ChartSkeleton: React.FC<{
           strokeWidth={1}
         />
       </Svg>
-      {/* Đang tải: vòng xoay, không chữ — đổi kỳ (Tuần này/Tháng này) chỉ mất
-          một nhịp ngắn, một dòng chữ hiện rồi tắt ngay đọc như nhấp nháy. */}
+      {/* Đang tải: cột xám nhấp nháy trên lưới, không chữ — đổi kỳ (Tuần
+          này/Tháng này) chỉ mất một nhịp ngắn, một dòng chữ hiện rồi tắt ngay
+          đọc như nhấp nháy. */}
       {isLoading ? (
-        <ActivityIndicator
-          color={colors.textMuted}
-          size="small"
-          style={styles.chartSkeletonSpinner}
-        />
+        <ChartLoadingBars axisY={axisY} width={width} />
       ) : (
         <UnscaledText allowFontScaling={false} style={styles.chartSkeletonText}>
           {message}

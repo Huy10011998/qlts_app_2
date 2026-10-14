@@ -139,6 +139,8 @@ export type FlowHistoryEvent = {
   title: string;
   content?: string;
   by?: string;
+  /** Người ở dòng là chính người đăng nhập — tên in đậm. */
+  byMe?: boolean;
   note?: string;
   /** "Ý kiến" — Trả bước ghi "Lý do". */
   noteLabel?: string;
@@ -164,8 +166,12 @@ export const getFlowHistory = (
     | undefined,
   ngayLap: unknown,
   nguoiLap: unknown,
+  /** So tên in đậm: iD_NhanVien của tôi + ID_NhanVien_Tao của phiếu (dòng Lập phiếu). */
+  me?: { iD_NhanVien?: number | null; nguoiLapId?: unknown },
 ): FlowHistoryEvent[] => {
   const events: FlowHistoryEvent[] = [];
+  const isMe = (id: unknown) =>
+    me?.iD_NhanVien != null && id != null && Number(id) === Number(me.iD_NhanVien);
   const buocs = data?.buocs ?? [];
   const nguoiDuyets = data?.nguoiDuyets ?? [];
   const tenBuoc = formatFlowBuocTen;
@@ -177,6 +183,7 @@ export const getFlowHistory = (
       title: "Thêm mới",
       content: "Lập phiếu",
       by: nguoiLap ? String(nguoiLap) : undefined,
+      byMe: isMe(me?.nguoiLapId),
       color: FLOW_HISTORY_COLOR.ThemMoi,
     });
   }
@@ -225,6 +232,7 @@ export const getFlowHistory = (
       title: FLOW_KET_QUA_LABEL[nguoi.ketQua] ?? "",
       content: buoc ? tenBuoc(buoc) : nguoi.tenBuoc ?? undefined,
       by: tenNguoi(nguoi) || undefined,
+      byMe: isMe(nguoi.iD_NhanVien),
       note: nguoi.yKien ?? undefined,
       noteLabel: "Ý kiến",
       color:
@@ -244,6 +252,7 @@ export const getFlowHistory = (
       title: `Trả bước (lần ${tra.lan})`,
       content: [tra.tenBuocTu, tra.tenBuocVe].filter(Boolean).join(" → "),
       by: tra.iD_NhanVien_MoTa ?? undefined,
+      byMe: isMe(tra.iD_NhanVien),
       note: tra.lyDo ?? undefined,
       noteLabel: "Lý do",
       color: FLOW_HISTORY_COLOR.TraBuoc,

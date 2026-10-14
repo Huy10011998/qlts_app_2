@@ -180,7 +180,14 @@ describe("getCongViecActions", () => {
   });
 
   it("Sửa cần thêm quyền Class.CV_CongViec.Update; cờ toàn false = chỉ xem", () => {
-    expect(getCongViecActions({ trangThai: 0 }, quyen, { canUpdate: false, canDelete: true }).sua).toBe(false);
+    // Bản 14/10: chuyển trạng thái / gia hạn / đổi chủ trì cũng đòi .Update.
+    expect(getCongViecActions({ trangThai: 0 }, quyen, { canUpdate: false, canDelete: true })).toMatchObject({
+      sua: false,
+      chuyenTrangThai: false,
+      giaHan: false,
+      doiChuTri: false,
+      traoDoi: true,
+    });
     const chiXem = getCongViecActions(
       { trangThai: 0 },
       {

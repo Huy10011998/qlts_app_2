@@ -28,6 +28,7 @@ import { elevation } from "../../../utils/helpers/tokens";
 import StatusBadge from "../shared/components/StatusBadge";
 import WorkflowButton from "../shared/components/WorkflowButton";
 import WorkflowDetailFields from "../shared/components/WorkflowDetailFields";
+import WorkflowDetailSkeleton from "../shared/components/WorkflowDetailSkeleton";
 import WorkflowSection from "../shared/components/WorkflowSection";
 import WorkflowTabBar from "../shared/components/WorkflowTabBar";
 import { useWorkflowFileOpener } from "../shared/useWorkflowFileOpener";
@@ -36,6 +37,7 @@ import {
   useMarkWorkflowChanged,
   useReloadOnWorkflowChange,
 } from "../shared/useWorkflowVersion";
+import { useOnWorkflowInfoStale } from "../shared/workflowInfoRefresh";
 import {
   CV_KIEU_LAP,
   CV_MA_MAU,
@@ -85,7 +87,7 @@ export default function CongViecDetailScreen() {
   const navigation = useNavigation<StackNavigation<"CongViecChiTiet">>();
   const route = useRoute<StackRoute<"CongViecChiTiet">>();
   const id = Number(route.params?.id);
-  const { canUpdate, canDelete } = useWorkflowPermissions(CV_CONG_VIEC_NAME_CLASS);
+  const { canUpdate, canDelete, canInsert } = useWorkflowPermissions(CV_CONG_VIEC_NAME_CLASS);
   const markChanged = useMarkWorkflowChanged();
   const fileOpener = useWorkflowFileOpener();
 
@@ -142,6 +144,14 @@ export default function CongViecDetailScreen() {
   // Im lặng: bật vòng xoay bằng code lúc quay lại màn làm iOS kẹt một khoảng trống.
   useReloadOnWorkflowChange(() => load("silent"));
 
+  // Đóng màn Bình luận / Đính kèm → số trên 2 nút.
+  useOnWorkflowInfoStale((apiBase) => {
+    if (apiBase !== CV_CONG_VIEC_NAME_CLASS) return;
+    cvThongTin([id])
+      .then((infos) => infos[0] && setInfo(infos[0]))
+      .catch(() => undefined);
+  });
+
   const congViec = data?.congViec;
   const actions = getCongViecActions(congViec, data?.quyen, { canUpdate, canDelete });
   const isReadOnly = !!data && !Object.values(actions).some(Boolean);
@@ -187,7 +197,7 @@ export default function CongViecDetailScreen() {
     ]);
   };
 
-  if (loading) return <IsLoading />;
+  if (loading) return <WorkflowDetailSkeleton variant="congViec" fields={detailFields} />;
 
   if (!congViec) {
     return (
@@ -324,6 +334,16 @@ export default function CongViecDetailScreen() {
               icon="swap-horizontal-outline"
               label="Đổi chủ trì"
               onPress={() => setSheet("doiChuTri")}
+            />
+          ) : null}
+          {canInsert ? (
+            // Mục 4b: chép sang form THÊM (không chép file, lịch sử, bình luận, định kỳ cũ).
+            <WorkflowButton
+              compact
+              variant="neutral"
+              icon="copy-outline"
+              label="Nhân bản"
+              onPress={() => navigation.navigate("CongViecForm", { mode: "add", cloneId: id })}
             />
           ) : null}
           {actions.xoa ? (

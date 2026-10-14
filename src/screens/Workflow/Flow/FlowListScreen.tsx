@@ -3,9 +3,9 @@ import { Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, Vi
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import RecordListFooterSkeleton from "../../../components/list/RecordListFooterSkeleton";
 import RecordListSkeleton from "../../../components/list/RecordListSkeleton";
 import EmptyState from "../../../components/ui/EmptyState";
-import IsLoading from "../../../components/ui/IconLoading";
 import InlineToast from "../../../components/ui/InlineToast";
 import SearchBar from "../../../components/ui/SearchBar";
 import { useDebounce } from "../../../hooks/useDebounce";
@@ -28,6 +28,7 @@ import {
   useMarkWorkflowChanged,
   useReloadOnWorkflowChange,
 } from "../shared/useWorkflowVersion";
+import { useOnWorkflowInfoStale } from "../shared/workflowInfoRefresh";
 import { FLOW_KET_QUA, FLOW_TABS, readTabCount } from "../shared/workflowConstants";
 import { getWorkflowErrorMessage } from "../shared/workflowErrors";
 import { getCardFields } from "../shared/workflowFields";
@@ -141,6 +142,11 @@ export default function FlowListScreen() {
   useReloadOnWorkflowChange(() => {
     list.reload();
     loadCounts();
+  });
+
+  // Đóng màn Bình luận / Đính kèm → số bình luận / file của các dòng đang hiện.
+  useOnWorkflowInfoStale((apiBase) => {
+    if (apiBase === nameClass && list.items.length) loadInfos(list.items);
   });
 
   const tabs = useMemo(
@@ -291,13 +297,13 @@ export default function FlowListScreen() {
     }
   };
 
-  if (metaLoading) return <IsLoading />;
-
-  if (metaError || !meta) {
+  // Đang nạp cấu hình phiếu: vẫn dựng ô tìm kiếm + hàng tab thật, danh sách là
+  // khung chờ — giống hệt lúc chờ trang đầu, khỏi thêm một nhịp vòng xoay trước.
+  if (!metaLoading && (metaError || !meta)) {
     return <EmptyState iconName="alert-circle-outline" title="Không mở được phiếu" subtitle={metaError ?? undefined} />;
   }
 
-  if (perms.loaded && !perms.canRead) {
+  if (meta && perms.loaded && !perms.canRead) {
     return (
       <EmptyState
         iconName="lock-closed-outline"
@@ -351,7 +357,7 @@ export default function FlowListScreen() {
         onDismiss={() => setToast(null)}
       />
 
-      {list.loading && !list.items.length ? (
+      {(metaLoading || list.loading) && !list.items.length ? (
         <RecordListSkeleton hasSearchBar={false} rows={5} />
       ) : (
         <FlatList
@@ -418,7 +424,7 @@ export default function FlowListScreen() {
             />
           }
           ListFooterComponent={
-            list.loadingMore ? <IsLoading size="small" style={styles.footerLoading} /> : null
+            list.loadingMore ? <RecordListFooterSkeleton cardStyle={styles.footerCard} /> : null
           }
           ListEmptyComponent={
             <EmptyState
@@ -546,8 +552,9 @@ const makeStyles = (c: AppColors) =>
     listWithBar: {
       paddingBottom: 150,
     },
-    footerLoading: {
-      paddingVertical: 16,
+    // Danh sách đã có lề ngang 12 — thẻ chờ khỏi thụt thêm lần nữa.
+    footerCard: {
+      marginHorizontal: 0,
     },
     bulkBar: {
       position: "absolute",

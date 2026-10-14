@@ -184,7 +184,7 @@ const TOPICS: GuideTopic[] = [
             items: [
               "SỐ LIỆU TOÀN CÔNG TY: số thiết bị máy móc, thiết bị CNTT, camera đang hoạt động, số người đã điểm danh hôm nay. Bấm vào ô để xem chi tiết — xem mục bên dưới.",
               "TRUY CẬP NHANH: các chức năng bạn tự ghim.",
-              "TỔNG QUAN CÔNG VIỆC (tài khoản có quyền Workflow), giống Home trên web: % công việc đã hoàn tất trong năm; số việc Tháng hiện tại so với tháng trước (vd +200%); Đã quá hạn / Chưa đến hạn / Hoàn tất trễ hạn / Hoàn tất đúng hạn kèm thanh tỉ lệ; cột 6 tháng gần nhất (Công việc · Hoàn thành) — bấm một tháng để xem số của tháng đó. Bấm Xem chi tiết để mở danh sách công việc.",
+              "TỔNG QUAN CÔNG VIỆC (tài khoản có quyền Workflow), giống Home trên web: % công việc đã hoàn tất trong năm; số việc Tháng hiện tại so với tháng trước (vd +200%); Quá hạn (tháng này) / Chưa đến hạn / Hoàn tất trễ hạn / Hoàn tất đúng hạn kèm thanh tỉ lệ; cột 6 tháng gần nhất (Công việc · Hoàn thành) — bấm một tháng để xem số của tháng đó. Bấm Xem chi tiết để mở danh sách công việc.",
               "Cơ cấu tài sản: lật qua từng trang để xem tỷ lệ.",
               "ĐIỂM DANH NHÂN SỰ HÔM NAY: đang làm việc / đã điểm danh / chưa điểm danh, bấm vào để xem chi tiết theo phòng ban.",
               "Các khối tiêu thụ: điện, điện mặt trời, nước cấp, nước thải, hơi.",

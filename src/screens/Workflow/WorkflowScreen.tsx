@@ -4,13 +4,13 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import EmptyState from "../../components/ui/EmptyState";
-import IsLoading from "../../components/ui/IconLoading";
 import { usePermission } from "../../hooks/usePermission";
 import { cvDemTab } from "../../services/data/congViecApi";
 import { flowDemTab } from "../../services/data/flowApi";
 import type { StackNavigation } from "../../types/index";
 import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
 import { elevation } from "../../utils/helpers/tokens";
+import WorkflowMenuSkeleton from "./shared/components/WorkflowMenuSkeleton";
 import {
   CV_TABS,
   FLOW_TABS,
@@ -116,7 +116,7 @@ export default function WorkflowScreen() {
     }
   };
 
-  if (!loaded) return <IsLoading />;
+  if (!loaded) return <WorkflowMenuSkeleton />;
 
   if (!canView(WORKFLOW_VIEW_CODE)) {
     return (

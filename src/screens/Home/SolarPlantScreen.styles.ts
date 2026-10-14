@@ -733,13 +733,16 @@ export const makeStyles = (c: AppColors) =>
       justifyContent: "center",
       marginTop: 8,
     },
+    // Cột giả của khung chờ biểu đồ; vị trí / chiều cao tính theo khung lúc vẽ.
+    chartLoadingBar: {
+      position: "absolute",
+      borderTopLeftRadius: 5,
+      borderTopRightRadius: 5,
+    },
     chartSkeletonText: {
       position: "absolute",
       color: c.textMuted,
       fontSize: 13,
-    },
-    chartSkeletonSpinner: {
-      position: "absolute",
     },
     // Chỗ đặt vạch làm mới trong modal biểu đồ toàn màn: cao đúng 2px nên bật/tắt
     // không làm nội dung bên dưới nhích lên xuống.

@@ -5,7 +5,6 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import AssetFormScreenShell from "../../../components/assets/shared/AssetFormScreenShell";
 import { createAssetFormBaseStyles } from "../../../components/assets/shared/assetFormStyles";
 import EmptyState from "../../../components/ui/EmptyState";
-import IsLoading from "../../../components/ui/IconLoading";
 import {
   flowChonNguoi,
   flowCheckValidation,
@@ -30,6 +29,7 @@ import {
   WorkflowFormFields,
   WorkflowFormPickerModal,
 } from "../shared/components/WorkflowFormFields";
+import WorkflowFormSkeleton from "../shared/components/WorkflowFormSkeleton";
 import WorkflowSection from "../shared/components/WorkflowSection";
 import { useWorkflowDynamicForm } from "../shared/useWorkflowDynamicForm";
 import { useWorkflowMe } from "../shared/useWorkflowMe";
@@ -43,7 +43,7 @@ import {
   getFormFields,
   readItemValue,
 } from "../shared/workflowFields";
-import ApproverStepPicker from "./components/ApproverStepPicker";
+import ApproverStepPicker, { ApproverStepPickerSkeleton } from "./components/ApproverStepPicker";
 import {
   FLOW_FIELD,
   FLOW_FORM_SYSTEM_FIELDS,
@@ -274,7 +274,7 @@ export default function FlowFormScreen() {
     return <EmptyState iconName="alert-circle-outline" title="Không mở được form" subtitle={metaError} />;
   }
 
-  if (metaLoading || meLoading || phongBanLoading || !meta) return <IsLoading />;
+  if (metaLoading || meLoading || phongBanLoading || !meta) return <WorkflowFormSkeleton />;
 
   if (!me.iD_NhanVien) {
     return (
@@ -292,7 +292,6 @@ export default function FlowFormScreen() {
       contentContainerStyle={styles.scrollContent}
       isSubmitting={submitting}
       loadingOverlayStyle={styles.loadingOverlay}
-      refLoadingMore={form.refLoadingMore}
       style={styles.container}
       modal={<WorkflowFormPickerModal form={form} />}
       footer={
@@ -341,7 +340,9 @@ export default function FlowFormScreen() {
       </WorkflowSection>
 
       {loadingChon ? (
-        <IsLoading size="small" style={styles.chonLoading} />
+        <WorkflowSection title="Người duyệt" icon="people-outline">
+          <ApproverStepPickerSkeleton />
+        </WorkflowSection>
       ) : chonNguoi?.buocs.length ? (
         <WorkflowSection title="Người duyệt" icon="people-outline">
           <ApproverStepPicker
@@ -372,8 +373,5 @@ const makeStyles = (c: AppColors) =>
     existingFiles: {
       alignSelf: "flex-start",
       marginBottom: 10,
-    },
-    chonLoading: {
-      paddingVertical: 16,
     },
   });

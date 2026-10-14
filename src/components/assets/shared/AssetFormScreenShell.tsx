@@ -50,7 +50,6 @@ type AssetFormScreenShellProps = {
   contentContainerStyle: StyleProp<ViewStyle>;
   modal?: React.ReactNode;
   footer?: React.ReactNode;
-  refLoadingMore?: boolean;
   isSubmitting?: boolean;
   footerStyle?: StyleProp<ViewStyle>;
   keyboardBottomScrollBuffer?: number;
@@ -74,7 +73,6 @@ export default function AssetFormScreenShell({
   contentContainerStyle,
   modal,
   footer,
-  refLoadingMore = false,
   isSubmitting = false,
   footerStyle,
   keyboardBottomScrollBuffer = DEFAULT_KEYBOARD_BOTTOM_SCROLL_BUFFER,
@@ -337,7 +335,6 @@ export default function AssetFormScreenShell({
         ) : null}
 
         {modal}
-        {refLoadingMore && <IsLoading size="large" color={brandColor} />}
 
         {isSubmitting && (
           <View style={loadingOverlayStyle}>
