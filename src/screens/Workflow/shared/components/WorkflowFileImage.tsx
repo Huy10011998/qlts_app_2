@@ -17,12 +17,20 @@ type Props = {
   name?: string | null;
   /** Bấm ảnh — thường là mở xem toàn màn. */
   onPress: () => void;
-  width?: number;
+  /** Chưa tải ảnh (vd màn còn đang nhảy xuống tin cuối) — khung chờ vẫn đủ cỡ. */
+  defer?: boolean;
 };
 
-/** Ảnh dọc / ngang quá đà thì cắt bớt cho bong bóng chat không quá cao / quá dẹt. */
+/**
+ * Khung ảnh CAO CỐ ĐỊNH như web (7-Mobile-Realtime-BinhLuan mục 5): ảnh nạp sau
+ * chỉ đổi bề ngang, không đẩy nội dung lên / xuống. Rộng theo tỉ lệ, tối đa 280.
+ */
+const FRAME_HEIGHT = 180;
+const MAX_WIDTH = 280;
+/** Ảnh dọc quá đà thì cắt bớt cho khung không quá hẹp. */
 const MIN_RATIO = 0.6;
-const MAX_RATIO = 1.8;
+/** Chưa biết tỉ lệ: khung chờ 4:3 (240 × 180). */
+const PLACEHOLDER_RATIO = 4 / 3;
 
 /** Ảnh thu nhỏ: JPEG giữ JPEG, còn lại server trả PNG. Khoá theo id + cỡ xin. */
 const cachePath = (apiBase: string, fileId: number, thuNho: number, name?: string | null) => {
@@ -36,16 +44,19 @@ const cachePath = (apiBase: string, fileId: number, thuNho: number, name?: strin
  * Realtime-BinhLuan mục 5) rồi ghi vào bộ nhớ đệm; bấm ảnh mới tải file gốc.
  * File bình luận không sửa được nên khoá theo id là đủ. Lỗi thì hiện dòng bấm để mở.
  */
-export default function WorkflowFileImage({ apiBase, fileId, name, onPress, width = 240 }: Props) {
+export default function WorkflowFileImage({ apiBase, fileId, name, onPress, defer = false }: Props) {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
   const [uri, setUri] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
-  const [ratio, setRatio] = useState(4 / 3);
+  const [ratio, setRatio] = useState(PLACEHOLDER_RATIO);
+  const width = Math.min(MAX_WIDTH, Math.round(FRAME_HEIGHT * ratio));
 
   useEffect(() => {
+    if (defer) return;
     let alive = true;
-    const thuNho = getThumbnailSize(width, PixelRatio.get());
+    // Cạnh dài tối đa đang hiện là bề ngang tối đa của khung.
+    const thuNho = getThumbnailSize(MAX_WIDTH, PixelRatio.get());
     const path = cachePath(apiBase, fileId, thuNho, name);
 
     (async () => {
@@ -64,7 +75,7 @@ export default function WorkflowFileImage({ apiBase, fileId, name, onPress, widt
     return () => {
       alive = false;
     };
-  }, [apiBase, fileId, name, width]);
+  }, [apiBase, defer, fileId, name]);
 
   if (failed) {
     return (
@@ -84,7 +95,7 @@ export default function WorkflowFileImage({ apiBase, fileId, name, onPress, widt
       disabled={!uri}
       accessibilityRole="imagebutton"
       accessibilityLabel={name ?? "Ảnh đính kèm"}
-      style={[styles.frame, { width, aspectRatio: ratio }]}
+      style={[styles.frame, { width, height: FRAME_HEIGHT }]}
     >
       {uri ? (
         <Image
@@ -93,7 +104,7 @@ export default function WorkflowFileImage({ apiBase, fileId, name, onPress, widt
           resizeMode="cover"
           onLoad={(event) => {
             const { width: w, height: h } = event.nativeEvent.source;
-            if (w && h) setRatio(Math.min(MAX_RATIO, Math.max(MIN_RATIO, w / h)));
+            if (w && h) setRatio(Math.max(MIN_RATIO, w / h));
           }}
           onError={() => setFailed(true)}
         />

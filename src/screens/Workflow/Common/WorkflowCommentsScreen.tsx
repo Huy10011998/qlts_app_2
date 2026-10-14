@@ -66,6 +66,9 @@ export default function WorkflowCommentsScreen() {
   // Đang ở (gần) cuối danh sách thì nội dung đổi cỡ mới kéo về cuối — người đang
   // cuộn lên đọc tin cũ không bị giật xuống khi ảnh tải xong / có người nhập.
   const atBottomRef = useRef(true);
+  // Mở màn: nạp chữ, nhảy thẳng xuống tin cuối 1 lần (không animation) rồi mới
+  // nạp ảnh; sau đó tin mới đến thì cuộn trượt (tài liệu 7 mục 5).
+  const [jumpedToEnd, setJumpedToEnd] = useState(false);
 
   const [items, setItems] = useState<WorkflowComment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -157,6 +160,7 @@ export default function WorkflowCommentsScreen() {
           ) : null}
           {isImage ? (
             <WorkflowFileImage
+              defer={!jumpedToEnd}
               apiBase={apiBase}
               fileId={Number(item.iD_File)}
               name={item.tenFile}
@@ -225,7 +229,12 @@ export default function WorkflowCommentsScreen() {
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           onContentSizeChange={() => {
-            if (atBottomRef.current) listRef.current?.scrollToEnd({ animated: false });
+            if (!jumpedToEnd) {
+              listRef.current?.scrollToEnd({ animated: false });
+              requestAnimationFrame(() => setJumpedToEnd(true));
+              return;
+            }
+            if (atBottomRef.current) listRef.current?.scrollToEnd({ animated: true });
           }}
           onScroll={({ nativeEvent }) => {
             const { contentOffset, contentSize, layoutMeasurement } = nativeEvent;
