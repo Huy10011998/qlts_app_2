@@ -463,6 +463,8 @@ export type RootStackParamList = {
   LichCongViec: undefined;
   /** Việc cần xử lý (cv-thong-bao) — nút cạnh chuông ở Trang chủ. */
   ViecCanXuLy: undefined;
+  /** Thông báo chuông (8-Mobile-ThongBao) — chuông ở Trang chủ. */
+  ThongBao: undefined;
 };
 
 // =====================================================

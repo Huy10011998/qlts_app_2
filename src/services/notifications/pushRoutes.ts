@@ -46,6 +46,8 @@ const PUSH_ROUTES: Record<string, PushRouteContainer> = {
   CongViecChiTiet: "root",
   KeHoachChiTiet: "root",
   Flow: "root",
+  // Màn Thông báo (chuông) — 8-Mobile-ThongBao; push FCM BE chưa làm.
+  ThongBao: "root",
 
   // Màn gốc của tab — phải đi qua Tabs mới chọn đúng tab.
   Home: "homeTab",
