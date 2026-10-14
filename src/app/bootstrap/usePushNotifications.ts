@@ -10,8 +10,8 @@ import {
 } from "@react-native-firebase/messaging";
 import { log, warn } from "../../utils/Logger";
 import { canAccessAppNavigator } from "../../navigation/shared/rootNavigationHelpers";
+import { emitThongBaoPush, isThongBaoPush } from "../../services/notifications/thongBaoPush";
 import {
-  clearNotificationBadge,
   clearPendingPushTap,
   displayPushNotification,
   drainPendingPushTap,
@@ -75,10 +75,11 @@ export function usePushNotifications({
   const wasRegisteredRef = useRef(false);
   const hasHandledInitialRef = useRef(false);
 
-  // ===== CHANNELS + BADGE =====
+  // ===== CHANNELS =====
+  // Số trên icon app = số chưa đọc của chuông, do ThongBaoProvider đặt khi mở
+  // app / đọc (8-Mobile-ThongBao mục 6) — ở đây không xoá về 0 nữa.
   useEffect(() => {
     ensureNotificationChannels();
-    clearNotificationBadge();
   }, []);
 
   // ===== MESSAGE ĐẾN KHI APP ĐANG MỞ =====
@@ -88,6 +89,13 @@ export function usePushNotifications({
         const message = normalizeRemoteMessage(remoteMessage);
 
         log("[Push] Nhận message ở foreground", { id: message.id });
+
+        // Thông báo chuông: app đang mở thì toast trong app báo (hub hoặc chính
+        // push này) + cập nhật số chuông — không hiện thêm banner hệ thống.
+        if (isThongBaoPush(message.data)) {
+          emitThongBaoPush({ kind: "foreground", data: message.data });
+          return;
+        }
 
         // isForeground = true: cả Android và iOS đều KHÔNG tự hiện thông báo khi
         // app đang mở, nên app phải chủ động hiển thị.
@@ -276,8 +284,6 @@ export function usePushNotifications({
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextState) => {
       if (nextState !== "active") return;
-
-      clearNotificationBadge();
 
       // Bắt lại các trường hợp token đổi khi app ở background, hoặc lần đăng ký
       // trước thất bại vì mất mạng.
