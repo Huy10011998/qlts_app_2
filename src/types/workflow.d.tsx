@@ -86,6 +86,9 @@ export type WorkflowPickedFile = {
   type: string;
   /** Byte. Null khi hệ điều hành không báo. */
   size?: number | null;
+  /** Kích thước ảnh (px), chỉ có với ảnh chụp / ảnh trong máy. */
+  width?: number;
+  height?: number;
 };
 
 /**

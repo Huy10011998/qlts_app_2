@@ -14,6 +14,7 @@ import {
   emitThongBaoPush,
   getThongBaoPushId,
   isThongBaoPush,
+  THONG_BAO_BADGE_NOTIFICATION_ID,
 } from "./thongBaoPush";
 import type { PushTapPayload } from "./types";
 
@@ -32,9 +33,12 @@ let pendingTap: PushTapPayload | null = null;
 
 const handledTaps = createDedupeStore(TAP_DEDUPE_LIMIT);
 
-/** Cùng một thông báo có thể tới từ nhiều listener (FCM + notifee) → chỉ xử lý 1 lần. */
+/**
+ * Cùng một thông báo có thể tới từ nhiều listener (FCM + notifee) → chỉ xử lý 1 lần.
+ * Trừ thông báo tóm tắt số chưa đọc (Android): id cố định, nằm lại khay, bấm bao lần cũng mở chuông.
+ */
 const isAlreadyHandled = (payload: PushTapPayload) =>
-  handledTaps.has(payload.id);
+  payload.id !== THONG_BAO_BADGE_NOTIFICATION_ID && handledTaps.has(payload.id);
 
 /**
  * Đích đến của một thông báo.

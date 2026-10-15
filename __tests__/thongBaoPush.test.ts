@@ -4,8 +4,12 @@ jest.mock("@notifee/react-native", () => ({
     setBadgeCount: jest.fn(),
     getDisplayedNotifications: jest.fn(),
     cancelDisplayedNotification: jest.fn(),
+    displayNotification: jest.fn(),
   },
+  AndroidImportance: { LOW: 2 },
 }));
+
+import { Platform } from "react-native";
 
 import notifee from "@notifee/react-native";
 import {
@@ -14,7 +18,10 @@ import {
   getPushSoChuaDoc,
   isThongBaoPush,
   removeThongBaoFromTray,
+  handleThongBaoBadgeDismissed,
+  showThongBaoInTray,
   setAppBadgeCount,
+  THONG_BAO_BADGE_NOTIFICATION_ID,
   thongBaoItemFromPush,
 } from "../src/services/notifications/thongBaoPush";
 
@@ -88,5 +95,78 @@ describe("push THONG_BAO", () => {
     cancel.mockClear();
     await removeThongBaoFromTray("all");
     expect(cancel.mock.calls).toEqual([["a"], ["b"]]);
+  });
+
+  describe("số trên icon Android (thông báo tóm tắt bù số)", () => {
+    const display = notifee.displayNotification as jest.Mock;
+    const cancel = notifee.cancelDisplayedNotification as jest.Mock;
+    const shownMock = notifee.getDisplayedNotifications as jest.Mock;
+
+    beforeEach(() => {
+      Platform.OS = "android";
+      display.mockClear();
+      cancel.mockClear();
+      (notifee.setBadgeCount as jest.Mock).mockClear();
+    });
+    afterAll(() => {
+      Platform.OS = "ios";
+    });
+
+    it("khay trống: tóm tắt mang đủ số chưa đọc, không gọi setBadgeCount", async () => {
+      shownMock.mockResolvedValue([]);
+      await setAppBadgeCount(6);
+      expect(notifee.setBadgeCount).not.toHaveBeenCalled();
+      expect(display.mock.calls[0][0]).toMatchObject({
+        id: THONG_BAO_BADGE_NOTIFICATION_ID,
+        android: { badgeCount: 6 },
+      });
+    });
+
+    it("trừ các thông báo khác đang trên khay (không trừ chính nó)", async () => {
+      shownMock.mockResolvedValue([
+        { id: THONG_BAO_BADGE_NOTIFICATION_ID, notification: {} },
+        { id: "a", notification: { data: { type: "THONG_BAO", iD_ThongBao: "167" } } },
+        { id: "b", notification: {} },
+      ]);
+      await setAppBadgeCount(5);
+      expect(display.mock.calls[0][0].android.badgeCount).toBe(3);
+    });
+
+    it("khay đã đủ số hoặc về 0: gỡ tóm tắt", async () => {
+      shownMock.mockResolvedValue([{ id: "a", notification: {} }]);
+      await setAppBadgeCount(1);
+      await setAppBadgeCount(0);
+      expect(display).not.toHaveBeenCalled();
+      expect(cancel.mock.calls).toEqual([[THONG_BAO_BADGE_NOTIFICATION_ID], [THONG_BAO_BADGE_NOTIFICATION_ID]]);
+    });
+
+    it("xoá khay (tóm tắt bị xoá): mở lại app không dựng lại; đọc hết thì bật lại", async () => {
+      shownMock.mockResolvedValue([]);
+      await handleThongBaoBadgeDismissed({ id: THONG_BAO_BADGE_NOTIFICATION_ID });
+      await setAppBadgeCount(11);
+      expect(display).not.toHaveBeenCalled();
+      expect(cancel).toHaveBeenLastCalledWith(THONG_BAO_BADGE_NOTIFICATION_ID);
+
+      await setAppBadgeCount(0);
+      await setAppBadgeCount(2);
+      expect(display.mock.calls[0][0].android.badgeCount).toBe(2);
+    });
+
+    it("push lúc đang mở app: đặt im lặng lên khay trước rồi tóm tắt mới bù", async () => {
+      shownMock.mockResolvedValue([]);
+      await setAppBadgeCount(5);
+      expect(display.mock.calls[0][0].android.badgeCount).toBe(5);
+
+      shownMock.mockResolvedValue([{ id: "push-1", notification: {} }]);
+      await setAppBadgeCount(6);
+      await showThongBaoInTray({ id: "push-1", title: congViec.title, data: congViec });
+      const push = display.mock.calls.find(([n]) => n.id === "push-1")?.[0];
+      expect(push).toMatchObject({ data: congViec, android: { channelId: "qlts_silent" } });
+      // Push 1 + tóm tắt 5 = 6 trên icon.
+      expect(display.mock.calls.at(-1)[0]).toMatchObject({
+        id: THONG_BAO_BADGE_NOTIFICATION_ID,
+        android: { badgeCount: 5 },
+      });
+    });
   });
 });

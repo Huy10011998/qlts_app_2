@@ -7,6 +7,13 @@ import {
   useHairlineBorderColor,
   useStyles,
 } from "../../../utils/helpers/colors";
+import { getTextScaleFactor } from "../../../utils/helpers/textScaling";
+
+/**
+ * Bề rộng tối thiểu để nhãn đứng cạnh icon. Ô hẹp hơn (màn nhỏ, bật Thu phóng,
+ * chữ to) thì nhãn xuống dưới icon thay vì bị cắt còn "Thiết bị máy m…".
+ */
+const INLINE_LABEL_MIN_WIDTH = 88;
 
 const makeTrendStyles = (c: AppColors) =>
   StyleSheet.create({
@@ -142,6 +149,7 @@ const makeStyles = (c: AppColors) =>
     titleWrap: {
       flex: 1,
       flexDirection: "row",
+      flexWrap: "wrap",
       alignItems: "center",
       gap: 8,
       paddingRight: 8,
@@ -182,6 +190,7 @@ const makeStyles = (c: AppColors) =>
       color: c.textSecondary,
       fontWeight: "700",
       flex: 1,
+      minWidth: INLINE_LABEL_MIN_WIDTH * getTextScaleFactor(),
     },
     sub: {
       fontSize: 11.5,

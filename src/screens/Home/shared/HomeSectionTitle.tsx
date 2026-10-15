@@ -51,7 +51,7 @@ export default function HomeSectionTitle({
       {note ? (
         <Text
           style={[styles.note, { color: colors.textMuted }]}
-          numberOfLines={1}
+          numberOfLines={2}
         >
           {note}
         </Text>
@@ -96,6 +96,9 @@ const makeStyles = (c: AppColors) =>
     },
     label: {
       flex: 1,
+      // Màn hẹp (bật Thu phóng) hay chữ to: chú thích và nút bên phải co lại
+      // trước, tiêu đề không bị ép xuống còn vài chữ một dòng.
+      minWidth: "45%",
       fontSize: 12,
       fontWeight: "700",
       color: c.textSecondary,
@@ -107,7 +110,8 @@ const makeStyles = (c: AppColors) =>
       fontWeight: "600",
       color: c.textMuted,
       marginLeft: 8,
-      flexShrink: 0,
+      flexShrink: 1,
+      textAlign: "right",
     },
     actionButton: {
       flexDirection: "row",

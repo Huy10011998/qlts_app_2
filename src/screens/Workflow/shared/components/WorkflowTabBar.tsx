@@ -2,7 +2,6 @@ import React from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import { AppColors, useStyles } from "../../../../utils/helpers/colors";
-import { COMPACT_TEXT_MAX_SCALE } from "../../../../utils/helpers/textScaling";
 
 export type WorkflowTabItem = {
   key: string;
@@ -51,7 +50,6 @@ export default function WorkflowTabBar({ tabs, activeKey, onChange, embedded }: 
             >
               <Text
                 style={[styles.label, embedded && styles.labelEmbedded, active && styles.labelActive]}
-                maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
               >
                 {tab.label}
               </Text>
@@ -59,7 +57,6 @@ export default function WorkflowTabBar({ tabs, activeKey, onChange, embedded }: 
                 <View style={[styles.count, active && styles.countActive]}>
                   <Text
                     style={[styles.countText, active && styles.countTextActive]}
-                    maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                   >
                     {formatCount(tab.count)}
                   </Text>

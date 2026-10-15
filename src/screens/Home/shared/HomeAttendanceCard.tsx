@@ -290,9 +290,11 @@ export default function HomeAttendanceCard({
                         : undefined
                     }
                   >
+                    {/* Hai dòng: màn hẹp (bật Thu phóng) còn chưa tới 100pt cho tên,
+                        một dòng thì "Phòng Kế hoạch" chỉ còn "Phòng Kế ho…". */}
                     <Text
                       style={[styles.deptName, { color: colors.textSecondary }]}
-                      numberOfLines={1}
+                      numberOfLines={2}
                     >
                       {dept.name}
                     </Text>
@@ -479,7 +481,10 @@ const makeStyles = (c: AppColors) =>
       color: c.textSecondary,
     },
     deptCount: {
-      width: 80,
+      // `minWidth` chứ không `width`: các dòng vẫn thẳng cột, nhưng chữ to thì ô
+      // nở ra thay vì bẻ "106/117" làm hai dòng.
+      minWidth: 80,
+      flexShrink: 0,
       textAlign: "right",
       fontSize: 14,
       fontWeight: "800",

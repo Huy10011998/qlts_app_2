@@ -132,7 +132,9 @@ export default function WorkflowDashboardCard({ reloadKey }: Props) {
           const value = getDashboardCount(tongQuan[status.key]);
           return (
             <View key={status.key} style={styles.statusItem}>
-              <Text style={styles.statusLabel} numberOfLines={1}>
+              {/* Hai dòng thay vì cắt "…": màn hẹp (bật Thu phóng) hay chữ to thì
+                  nhãn dài như "Quá hạn (tháng này)" vẫn không nuốt mất con số. */}
+              <Text style={styles.statusLabel} numberOfLines={2}>
                 {status.label}: <Text style={styles.statusValue}>{value}</Text>
               </Text>
               <View style={[styles.statusTrack, { backgroundColor: tint(status.color, "33") }]}>
@@ -194,7 +196,14 @@ export default function WorkflowDashboardCard({ reloadKey }: Props) {
                       />
                     ))}
                   </View>
-                  <Text style={[styles.monthLabel, isSelected && styles.monthLabelSelected]}>
+                  {/* Sáu cột chia đều bề ngang: màn hẹp hay chữ to thì "10/26" co lại
+                      cho vừa cột, không tràn sang dính vào nhãn bên cạnh. */}
+                  <Text
+                    style={[styles.monthLabel, isSelected && styles.monthLabelSelected]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.6}
+                  >
                     {month.label}
                   </Text>
                 </TouchableOpacity>
@@ -299,6 +308,8 @@ const makeStyles = (c: AppColors) =>
     statusItem: {
       flexBasis: "45%",
       flexGrow: 1,
+      // Nhãn một ô xuống hai dòng thì thanh tỉ lệ vẫn thẳng hàng với ô bên cạnh.
+      justifyContent: "space-between",
     },
     statusLabel: {
       fontSize: 13,
@@ -320,6 +331,7 @@ const makeStyles = (c: AppColors) =>
     },
     chartHeader: {
       flexDirection: "row",
+      flexWrap: "wrap",
       alignItems: "center",
       justifyContent: "space-between",
       gap: 8,
@@ -333,6 +345,7 @@ const makeStyles = (c: AppColors) =>
     },
     legend: {
       flexDirection: "row",
+      flexWrap: "wrap",
       gap: 10,
     },
     legendItem: {

@@ -1,26 +1,14 @@
 import React from "react";
-import { PixelRatio, StyleSheet, Text, TextInput } from "react-native";
+import { StyleSheet, Text } from "react-native";
 
 /**
  * Cỡ chữ cuối cùng của một đoạn text = `fontSize` trong style
- *   × hệ số người dùng chọn trong Cài đặt › Cỡ chữ  (`TEXT_SCALE_STEPS`)
- *   × cỡ chữ của thiết bị, kẹp trần ở `READABLE_TEXT_MAX_SCALE`.
+ *   × hệ số người dùng chọn trong Cài đặt › Cỡ chữ  (`TEXT_SCALE_STEPS`).
  *
- * Hai tầng tách bạch có chủ ý: tầng thiết bị là thứ React Native tự lo và app
- * chỉ kẹp trần cho khỏi vỡ layout; tầng người dùng là thanh trượt trong app,
- * luôn có tác dụng kể cả trên máy để cỡ chữ mặc định.
+ * Cỡ chữ cài trong điện thoại bị bỏ qua hoàn toàn, cả chiều to lẫn chiều nhỏ:
+ * người dùng để cỡ lớn nhất của máy thì các màn dày số liệu vỡ bố cục, nên cỡ
+ * chữ chỉ còn một nguồn duy nhất là thanh trượt trong app.
  */
-
-/** Trần cho phần phóng to đến từ cài đặt của thiết bị. */
-export const READABLE_TEXT_MAX_SCALE = 1.3;
-
-/**
- * Trần thấp hơn cho những chỗ chật (chip, banner, ô nhập trong sheet).
- *
- * Chỉ hạ phần thiết bị — hệ số người dùng chọn vẫn áp dụng đầy đủ, vì nó nhân
- * thẳng vào `fontSize` chứ không đi qua `maxFontSizeMultiplier`.
- */
-export const COMPACT_TEXT_MAX_SCALE = 1.15;
 
 /**
  * Bảy nấc của thanh trượt cỡ chữ, xếp theo thứ tự trái sang phải.
@@ -53,37 +41,17 @@ export const setTextScaleFactor = (factor: number) => {
   activeFactor = factor;
 };
 
-type ScalableTextComponent = {
-  defaultProps?: Record<string, unknown>;
-};
-
 /**
- * Đặt trần phóng to theo thiết bị cho mọi `Text`/`TextInput` không khai báo
- * riêng. Trần này là hằng số, không đổi theo lựa chọn của người dùng.
- */
-export function configureTextScalingDefaults(
-  textComponent: ScalableTextComponent = Text as ScalableTextComponent,
-  textInputComponent: ScalableTextComponent = TextInput as ScalableTextComponent
-) {
-  textComponent.defaultProps = {
-    ...textComponent.defaultProps,
-    maxFontSizeMultiplier:
-      textComponent.defaultProps?.maxFontSizeMultiplier ??
-      READABLE_TEXT_MAX_SCALE,
-  };
-
-  textInputComponent.defaultProps = {
-    ...textInputComponent.defaultProps,
-    maxFontSizeMultiplier:
-      textInputComponent.defaultProps?.maxFontSizeMultiplier ??
-      READABLE_TEXT_MAX_SCALE,
-  };
-}
-
-/**
- * Bọc `Text` / `TextInput` để nhân `fontSize` theo hệ số người dùng chọn.
+ * Bọc `Text` / `TextInput` để nhân `fontSize` theo hệ số người dùng chọn, và
+ * luôn truyền `allowFontScaling={false}` xuống component gốc để cỡ chữ của điện
+ * thoại không tác động — `maxFontSizeMultiplier` chỉ chặn chiều to, máy để cỡ
+ * nhỏ thì chữ vẫn co lại.
  *
- * Hai trường hợp được để nguyên:
+ * Phải ép bằng prop ở đây chứ không dùng `defaultProps`: từ React 19, JSX bỏ qua
+ * `defaultProps` của function component, và `Text` của React Native là function
+ * component.
+ *
+ * Hai trường hợp giữ nguyên cỡ chữ:
  *
  * 1. `allowFontScaling={false}` — prop này nghĩa là "chữ này không co giãn",
  *    nên nó phải chặn cả hệ số của app chứ không riêng cỡ chữ thiết bị. Nhờ vậy
@@ -101,10 +69,11 @@ const withTextScale = <P extends { style?: unknown; allowFontScaling?: boolean }
   Base: React.ComponentType<P>,
   displayName: string
 ) => {
-  const Scaled = (props: P) => {
+  const Scaled = (incomingProps: P) => {
     const factor = activeFactor;
+    const props: P = { ...incomingProps, allowFontScaling: false };
 
-    if (factor === 1 || props.allowFontScaling === false)
+    if (factor === 1 || incomingProps.allowFontScaling === false)
       return React.createElement(Base, props);
 
     const flattened = StyleSheet.flatten(props.style as never) as
@@ -128,9 +97,9 @@ const withTextScale = <P extends { style?: unknown; allowFontScaling?: boolean }
 /**
  * `Text` không đi theo cỡ chữ người dùng chọn.
  *
- * `allowFontScaling={false}` chỉ chặn tầng thiết bị, không chặn hệ số nhân của
- * app — dùng component này cho những chỗ cỡ chữ là một phần của hình học và
- * không được phép xê dịch:
+ * Dùng component này cho những chỗ cỡ chữ là một phần của hình học và
+ * không được phép xê dịch. Luôn kèm `allowFontScaling={false}` — đây là `Text`
+ * gốc, không đi qua lớp bọc nên không tự chặn cỡ chữ của điện thoại:
  *
  * - chữ nung vào ảnh chụp (cỡ tính từ kích thước ảnh, không liên quan tới UI);
  * - nhãn thanh tab (khớp `TAB_HEIGHT` và SVG nền);
@@ -168,10 +137,6 @@ export function installTextScaling() {
 
   UnscaledText = BaseText;
 
-  // Trần thiết bị đặt trên component *gốc*, không phải bản bọc: bản bọc chỉ
-  // truyền props xuống nên React vẫn điền defaultProps của gốc như thường.
-  configureTextScalingDefaults(BaseText, BaseTextInput);
-
   const ScaledText = withTextScale(BaseText, "Text");
   const ScaledTextInput = withTextScale(BaseTextInput, "TextInput");
 
@@ -193,27 +158,19 @@ export function installTextScaling() {
  * helper này khi leading rộng là chủ ý — đoạn văn dài trong Hướng dẫn sử dụng
  * chẳng hạn — vì để platform tự tính sẽ cho leading chặt hơn hẳn.
  *
- * Trả về leading đã tính cả hai tầng scale, nên gọi được trong `StyleSheet`
+ * Trả về leading đã nhân hệ số cỡ chữ của app, nên gọi được trong `StyleSheet`
  * dựng lúc render: đổi cỡ chữ trong app sẽ remount cây điều hướng và dựng lại
- * style, còn đổi cỡ chữ ở Cài đặt hệ thống thì Activity/app khởi động lại.
+ * style.
  */
-export const scaledLineHeight = (
-  fontSize: number,
-  ratio: number,
-  deviceCap: number = READABLE_TEXT_MAX_SCALE
-) =>
-  fontSize *
-  activeFactor *
-  Math.min(PixelRatio.getFontScale(), deviceCap) *
-  ratio;
+export const scaledLineHeight = (fontSize: number, ratio: number) =>
+  fontSize * activeFactor * ratio;
 
 /**
  * Cỡ chữ cho chữ vẽ bên trong `<Svg>` (nhãn trục biểu đồ).
  *
  * `Text` của `react-native-svg` là component riêng, không đi qua lớp bọc mà
  * `installTextScaling` cài lên module `react-native`, nên phải nhân hệ số bằng
- * tay. Chỉ nhân tầng người dùng: chữ SVG nằm trong hệ toạ độ của khung vẽ, tầng
- * thiết bị mà cộng vào nữa là nhãn tràn ra ngoài trục.
+ * tay.
  *
  * Chỗ gọi phải tự nới lề trục theo `getTextScaleFactor()` cho nhãn có chỗ đứng —
  * xem `SolarPlantScreen.visuals` và `HomeMachineGrowthCard`.

@@ -6,7 +6,6 @@ import {
   useAppColors,
   useHairlineBorderColor,
 } from "../../../utils/helpers/colors";
-import { COMPACT_TEXT_MAX_SCALE } from "../../../utils/helpers/textScaling";
 
 type SettingPasswordInputProps = {
   hasError?: boolean;
@@ -43,7 +42,6 @@ export default function SettingPasswordInput({
         secureTextEntry={!show}
         value={value}
         onChangeText={onChangeText}
-        maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
       />
       <TouchableOpacity
         onPress={() => setShow((current) => !current)}

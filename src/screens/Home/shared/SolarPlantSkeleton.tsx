@@ -13,7 +13,7 @@ import {
   useStyles,
 } from "../../../utils/helpers/colors";
 import { useSkeletonAutoFill } from "../../../components/ui/useSkeletonAutoFill";
-import { getSceneHeight, SCENE_TOP_SPACE } from "../SolarPlantScreen.visuals";
+import { getSceneHeight, getSceneTopSpace } from "../SolarPlantScreen.visuals";
 
 /** Bốn ô số của thẻ "Sản lượng tích luỹ" — xem `EnergyProducedSummary`. */
 const SUMMARY_ITEMS = 4;
@@ -41,7 +41,7 @@ export default function SolarPlantSkeleton() {
   const { width } = useWindowDimensions();
   const { opacity } = useSkeletonAutoFill(1, 1);
   // Cùng phép tính của `SolarHeroSection`, để dải hero cao đúng bằng lúc thật.
-  const heroVisualHeight = getSceneHeight(width) + SCENE_TOP_SPACE;
+  const heroVisualHeight = getSceneHeight(width) + getSceneTopSpace(width);
 
   return (
     <ScrollView

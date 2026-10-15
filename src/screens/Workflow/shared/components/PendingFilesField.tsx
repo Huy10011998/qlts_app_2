@@ -4,7 +4,8 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 
 import type { WorkflowPickedFile } from "../../../../types/index";
 import { AppColors, useAppColors, useStyles } from "../../../../utils/helpers/colors";
-import { formatFileSizeKb } from "../workflowAttachments";
+import { useWorkflowFileOpener } from "../useWorkflowFileOpener";
+import { formatFileSizeKb, isImageFileName } from "../workflowAttachments";
 import { useAttachmentPicker } from "./AttachmentPicker";
 import WorkflowFileRow from "./WorkflowFileRow";
 
@@ -33,6 +34,7 @@ export default function PendingFilesField({
     (picked) => onChange(multiple ? [...files, ...picked] : picked.slice(0, 1)),
     multiple,
   );
+  const fileOpener = useWorkflowFileOpener();
 
   return (
     <View style={styles.block}>
@@ -50,10 +52,15 @@ export default function PendingFilesField({
           name={file.name}
           meta={file.size != null ? formatFileSizeKb(file.size / 1024) : undefined}
           pending
+          thumbnailUri={
+            isImageFileName(file.name) || file.type?.startsWith("image/") ? file.uri : undefined
+          }
+          onPress={() => fileOpener.openLocalFile(file)}
           onRemove={() => onChange(files.filter((_, i) => i !== index))}
         />
       ))}
       {picker.sheet}
+      {fileOpener.viewer}
     </View>
   );
 }

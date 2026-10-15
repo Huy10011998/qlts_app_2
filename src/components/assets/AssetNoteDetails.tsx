@@ -87,6 +87,7 @@ export default function AssetNoteDetails({
   return (
     <View style={styles.container}>
       <WebView
+        textZoom={100}
         key={webViewKey}
         originWhitelist={["*"]}
         source={{ html: htmlContent }}

@@ -175,12 +175,13 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-gps",
-      heading: "Không lấy được toạ độ khi xác nhận vị trí tủ lạnh",
+      heading: "Không lấy được toạ độ (xác nhận tủ lạnh, ảnh chụp có dòng Không lấy được toạ độ)",
       blocks: [
         {
           kind: "bullets",
           items: [
             "Bật Định vị / Location của điện thoại, và cho ứng dụng quyền vị trí khi máy hỏi.",
+            "Vào Cài đặt của app xem dòng Quyền vị trí: phải là Đã cấp quyền. Đang chặn hoặc chỉ vị trí gần đúng thì bấm vào dòng đó để mở Cài đặt của điện thoại.",
             "Đứng chỗ thoáng trời vài giây — trong kho kín hoặc giữa nhà cao tầng thì máy rất lâu mới có toạ độ.",
             "Toạ độ hiện ra rồi hãy bấm Gửi, để bản ghi có đúng vị trí nơi bạn đang đứng.",
           ],
@@ -625,7 +626,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
       blocks: [
         {
           kind: "paragraph",
-          text: "Hai số đếm hai thứ khác nhau. Số trên chuông là thông báo bạn CHƯA ĐỌC — giảm ngay khi bạn bấm xem hoặc Đánh dấu tất cả đã đọc. Số trên nút Việc cần xử lý (hình khay giấy) và ô Workflow là việc còn chờ bạn làm — chỉ giảm khi phiếu được duyệt, việc được làm xong.",
+          text: "Hai số đếm hai thứ khác nhau. Số trên chuông là thông báo bạn CHƯA ĐỌC — giảm ngay khi bạn bấm xem hoặc Đánh dấu tất cả đã đọc. Số trên nút Việc cần xử lý (hình bảng kẹp giấy có dấu tích) và ô Workflow là việc còn chờ bạn làm — chỉ giảm khi phiếu được duyệt, việc được làm xong.",
         },
         {
           kind: "paragraph",
@@ -634,6 +635,24 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
         {
           kind: "paragraph",
           text: "Thông báo camera không nằm ở chuông: chúng hiện thẳng trên điện thoại như thông báo bình thường.",
+        },
+      ],
+    },
+    {
+      id: "faq-so-tren-bieu-tuong-app",
+      heading: "Số trên biểu tượng app khác số trên chuông (Android)",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Android không cho app tự đặt số trên biểu tượng như iPhone: điện thoại tự đếm các thông báo của app đang nằm trong danh sách thông báo. App thêm một dòng Thông báo chưa đọc vào danh sách đó để số trên biểu tượng bằng số trên chuông.",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Bấm Xoá danh sách thông báo (hoặc vuốt bỏ dòng Thông báo chưa đọc) thì biểu tượng hết số, chỉ đếm lại các thông báo mới tới sau đó — nên số có thể nhỏ hơn số trên chuông. Đọc hết thông báo thì lần sau mọi thứ lại như bình thường.",
+            "Máy Pixel và một số máy Android chỉ hiện chấm, không hiện số. Máy Samsung: vào Cài đặt > Thông báo > Cài đặt nâng cao > Huy hiệu biểu tượng ứng dụng, chọn kiểu có số.",
+            "Số chính xác luôn là số trên chuông trong app.",
+          ],
         },
       ],
     },
@@ -770,7 +789,16 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
       blocks: [
         {
           kind: "paragraph",
-          text: "Hiện hệ thống chưa gửi thông báo đẩy cho phiếu đề nghị và công việc khi app đang tắt — phần này sẽ được bổ sung sau. Đang mở app thì thông báo hiện ngay ở chuông Trang chủ; mở lại app thì số trên chuông cũng tự cập nhật.",
+          text: "Phiếu đề nghị, công việc và kế hoạch có thông báo trên điện thoại cả khi app đang tắt (trễ vài giây). Đang mở app thì thông báo hiện ở khung nhỏ trên đầu màn hình và ở chuông Trang chủ.",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Vào Cài đặt của app, xem dòng Quyền thông báo đã ở trạng thái Đã cấp quyền chưa. Đang bị chặn thì bấm vào dòng đó để mở Cài đặt của điện thoại.",
+            "Đăng xuất thì máy không nhận thông báo nữa — đăng nhập lại là nhận tiếp.",
+            "Máy Xiaomi, Oppo, Vivo, Realme: vuốt tắt app trong đa nhiệm có thể làm máy chặn luôn thông báo. Bật Tự khởi động cho app, hoặc khoá app trong đa nhiệm.",
+            "Việc do chính bạn làm không tạo thông báo cho bạn.",
+          ],
         },
         {
           kind: "paragraph",
@@ -919,7 +947,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
         {
           kind: "note",
           tone: "info",
-          text: "Cỡ chữ của app nhân thêm vào cỡ chữ đã đặt trong điện thoại. Đã kéo về 100% mà chữ vẫn to (hoặc nhỏ) bất thường thì xem lại cỡ chữ trong Cài đặt của điện thoại.",
+          text: "App không theo cỡ chữ trong Cài đặt của điện thoại — chỉnh cỡ chữ của máy sẽ không làm chữ trong app to hay nhỏ đi. Muốn đổi cỡ chữ thì dùng thanh trượt ở màn này.",
         },
       ],
     },

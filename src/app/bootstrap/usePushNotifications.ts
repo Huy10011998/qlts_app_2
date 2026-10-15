@@ -10,7 +10,12 @@ import {
 } from "@react-native-firebase/messaging";
 import { log, warn } from "../../utils/Logger";
 import { canAccessAppNavigator } from "../../navigation/shared/rootNavigationHelpers";
-import { emitThongBaoPush, isThongBaoPush } from "../../services/notifications/thongBaoPush";
+import {
+  emitThongBaoPush,
+  handleThongBaoBadgeDismissed,
+  isThongBaoPush,
+  showThongBaoInTray,
+} from "../../services/notifications/thongBaoPush";
 import {
   clearPendingPushTap,
   displayPushNotification,
@@ -91,8 +96,10 @@ export function usePushNotifications({
         log("[Push] Nhận message ở foreground", { id: message.id });
 
         // Thông báo chuông: app đang mở thì toast trong app báo (hub hoặc chính
-        // push này) + cập nhật số chuông — không hiện thêm banner hệ thống.
+        // push này) + cập nhật số chuông — không banner hệ thống, nhưng Android
+        // vẫn đặt im lặng lên khay để số trên icon đếm được.
         if (isThongBaoPush(message.data)) {
+          showThongBaoInTray(message);
           emitThongBaoPush({ kind: "foreground", data: message.data });
           return;
         }
@@ -127,6 +134,10 @@ export function usePushNotifications({
     // Thông báo do notifee hiển thị, bấm khi app đang mở.
     const unsubscribeForeground = notifee.onForegroundEvent(
       ({ type, detail }) => {
+        if (type === EventType.DISMISSED) {
+          handleThongBaoBadgeDismissed(detail.notification);
+          return;
+        }
         if (type !== EventType.PRESS) return;
 
         const notification = detail.notification;

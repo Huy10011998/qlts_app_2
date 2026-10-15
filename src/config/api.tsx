@@ -85,6 +85,8 @@ export const API_ENDPOINTS = {
   // PUSH NOTIFICATION — map FCM token ↔ user đang đăng nhập.
   // Server tự lấy ID_User từ access token, app chỉ gửi token + platform.
   UPDATE_FCM_TOKEN: `${BASE_URL}/Common/update-fcm-token`,
+  // Địa chỉ từ toạ độ GPS (9-Mobile-DiaChiTuToaDo) — ghi lên dải thông tin ảnh chụp.
+  DIA_CHI_TU_TOA_DO: `${BASE_URL}/Common/dia-chi-tu-toa-do`,
   LOGOUT_FCM_TOKEN: `${BASE_URL}/Common/logout-fcm-token`,
 
   // NOTI CAMERA — tạm dừng thông báo AI phát hiện sự kiện.

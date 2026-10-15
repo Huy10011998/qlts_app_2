@@ -12,6 +12,7 @@ import {
   Dimensions,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import { useHomeMenuContext } from "../../screens/Home/shared/HomeMenuProvider";
@@ -22,7 +23,6 @@ import ThongBaoBellPanel from "../../screens/ThongBao/ThongBaoBellPanel";
 import { useThongBaoContext } from "../../screens/ThongBao/ThongBaoProvider";
 import type { HeaderHomeProps } from "../../types/components.d";
 import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
-import { COMPACT_TEXT_MAX_SCALE } from "../../utils/helpers/textScaling";
 
 const { width: W } = Dimensions.get("window");
 
@@ -220,12 +220,14 @@ export default function HeaderHome(_props: HeaderHomeProps) {
                   : "Việc cần xử lý"
               }
             >
-              <Ionicons name="file-tray-full-outline" size={20} color="#fff" />
+              <MaterialCommunityIcons name="clipboard-check-outline" size={21} color="#fff" />
               {workflowTileCount > 0 ? (
                 <View style={styles.countBadge}>
+                  {/* Số nằm trong viên cao cố định 18pt: không theo cỡ chữ của
+                      app, phóng to là xén mất đầu số. */}
                   <Text
                     style={styles.countBadgeText}
-                    maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
+                    allowFontScaling={false}
                   >
                     {workflowTileCount > 99 ? "99+" : workflowTileCount}
                   </Text>
@@ -251,7 +253,7 @@ export default function HeaderHome(_props: HeaderHomeProps) {
               <View style={styles.countBadge}>
                 <Text
                   style={styles.countBadgeText}
-                  maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
+                  allowFontScaling={false}
                 >
                   {soChuaDoc > 99 ? "99+" : soChuaDoc}
                 </Text>

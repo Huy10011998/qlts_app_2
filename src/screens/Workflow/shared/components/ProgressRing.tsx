@@ -56,7 +56,6 @@ export default function ProgressRing({ percent, size = 48, strokeWidth = 5 }: Pr
       <View style={[StyleSheet.absoluteFill, styles.center]}>
         <Text
           style={[styles.text, { color: c.text, fontSize }]}
-          maxFontSizeMultiplier={1.1}
         >
           {hasValue ? `${Math.round(value)}%` : "-"}
         </Text>

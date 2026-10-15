@@ -2,7 +2,6 @@ import React from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import { AppColors, useStyles } from "../../../../utils/helpers/colors";
-import { COMPACT_TEXT_MAX_SCALE } from "../../../../utils/helpers/textScaling";
 import { CV_MA_MAU, tint } from "../../shared/workflowConstants";
 
 type Props = {
@@ -47,7 +46,6 @@ export default function MaMauFilter({ value, onChange, exclude }: Props) {
             <View style={[styles.dot, { backgroundColor: item.color }]} />
             <Text
               style={[styles.text, active && { color: item.color }]}
-              maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
             >
               {item.label}
             </Text>

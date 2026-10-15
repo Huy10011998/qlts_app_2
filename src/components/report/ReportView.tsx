@@ -769,6 +769,7 @@ const ReportView: React.FC<ReportViewProps> = ({
           ]}
         >
           <WebView
+            textZoom={100}
             key={webViewRenderKey}
             ref={webViewRef}
             originWhitelist={["*"]}

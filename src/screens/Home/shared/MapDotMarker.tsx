@@ -74,6 +74,6 @@ const styles = StyleSheet.create({
   },
   callout: { width: 220, paddingVertical: 2 },
   title: { color: "#1976d2", fontSize: 13, fontWeight: "700", marginBottom: 2 },
-  line: { color: "#222222", fontSize: 12, lineHeight: 17 },
-  muted: { color: "#777777", fontSize: 12, lineHeight: 17 },
+  line: { color: "#222222", fontSize: 12 },
+  muted: { color: "#777777", fontSize: 12 },
 });

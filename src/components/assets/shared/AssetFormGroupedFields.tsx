@@ -32,6 +32,8 @@ type AssetFormGroupedFieldsProps = {
   validationErrors?: Record<string, string>;
   /** Field điền sẵn theo ngữ cảnh: hiện nhưng không cho sửa (xem `isLocked`). */
   lockedFields?: Set<string>;
+  /** Xem `RenderInputByTypeProps.stampCameraPhotos` — chỉ form Workflow bật. */
+  stampCameraPhotos?: boolean;
 };
 
 export default function AssetFormGroupedFields({
@@ -52,6 +54,7 @@ export default function AssetFormGroupedFields({
   toggleGroup,
   validationErrors = {},
   lockedFields,
+  stampCameraPhotos,
 }: AssetFormGroupedFieldsProps) {
   const hairlineBorderColor = useHairlineBorderColor();
 
@@ -133,6 +136,7 @@ export default function AssetFormGroupedFields({
                       mode={mode}
                       styles={styles}
                       isLocked={lockedFields?.has(field.name)}
+                      stampCameraPhotos={stampCameraPhotos}
                       parentGate={parentGate}
                       parentGateMessage={
                         parentGate

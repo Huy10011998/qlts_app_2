@@ -3,11 +3,9 @@ import ReactTestRenderer from "react-test-renderer";
 import { PixelRatio, StyleSheet } from "react-native";
 import {
   clampTextScaleStep,
-  configureTextScalingDefaults,
   getTextScaleFactor,
   getTextScaleFactorForStep,
   installTextScaling,
-  READABLE_TEXT_MAX_SCALE,
   scaledLineHeight,
   setTextScaleFactor,
   TEXT_SCALE_DEFAULT_STEP,
@@ -165,46 +163,42 @@ describe("nhân cỡ chữ toàn cục", () => {
   });
 });
 
-describe("trần phóng to theo thiết bị", () => {
-  it("đặt trần mặc định cho cả Text và TextInput", () => {
-    configureTextScalingDefaults();
+describe("bỏ qua cỡ chữ của thiết bị", () => {
+  const scalingOf = (node: unknown) =>
+    (node as { props: { allowFontScaling?: boolean } }).props.allowFontScaling;
 
-    const readDefault = (component: unknown) =>
-      (component as { defaultProps?: Record<string, unknown> }).defaultProps
-        ?.maxFontSizeMultiplier;
+  it("tắt allowFontScaling ở props render thật của Text và TextInput", async () => {
+    const text = await render(<Text>xin chào</Text>);
+    const input = await render(<TextInput value="xin chào" />);
 
-    expect(readDefault(Text)).toBe(READABLE_TEXT_MAX_SCALE);
-    expect(readDefault(TextInput)).toBe(READABLE_TEXT_MAX_SCALE);
+    expect(scalingOf(text.toJSON())).toBe(false);
+    expect(scalingOf(input.toJSON())).toBe(false);
   });
 
-  it("tới được props render thật, không chỉ nằm trên object component", async () => {
-    const tree = await render(<Text>xin chào</Text>);
+  it("đè cả allowFontScaling={true} truyền tay, để không chỗ nào vô tình bật lại", async () => {
+    const tree = await render(<Text allowFontScaling>xin chào</Text>);
 
-    expect(
-      (tree.toJSON() as never as { props: { maxFontSizeMultiplier?: number } })
-        .props.maxFontSizeMultiplier
-    ).toBe(READABLE_TEXT_MAX_SCALE);
+    expect(scalingOf(tree.toJSON())).toBe(false);
+  });
+
+  it("vẫn nhân hệ số Cỡ chữ của app", async () => {
+    setTextScaleFactor(1.5);
+
+    const tree = await render(<Text style={sheet.sized}>xin chào</Text>);
+    const node = tree.toJSON();
+
+    expect(scalingOf(node)).toBe(false);
+    expect(fontSizeOf(node as never)).toBe(30);
   });
 });
 
 describe("scaledLineHeight", () => {
-  const deviceFontScale = PixelRatio.getFontScale();
-
-  it("giãn dòng theo cả hệ số người dùng lẫn cỡ chữ của máy", () => {
+  it("giãn dòng theo hệ số người dùng, không theo cỡ chữ của máy", () => {
+    const spy = jest.spyOn(PixelRatio, "getFontScale").mockReturnValue(2);
     setTextScaleFactor(1.22);
-    const generousCap = deviceFontScale + 1;
 
-    expect(scaledLineHeight(13.5, 1.55, generousCap)).toBeCloseTo(
-      13.5 * 1.22 * deviceFontScale * 1.55
-    );
-  });
+    expect(scaledLineHeight(13.5, 1.55)).toBeCloseTo(13.5 * 1.22 * 1.55);
 
-  it("không để phần thiết bị vượt trần", () => {
-    setTextScaleFactor(1);
-    const tightCap = deviceFontScale / 2;
-
-    expect(scaledLineHeight(13.5, 1.55, tightCap)).toBeCloseTo(
-      13.5 * tightCap * 1.55
-    );
+    spy.mockRestore();
   });
 });

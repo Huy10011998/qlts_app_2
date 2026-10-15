@@ -192,7 +192,7 @@ const TOPICS: GuideTopic[] = [
           },
           {
             kind: "paragraph",
-            text: "Hình chuông trên thanh đầu Trang chủ là thông báo của phiếu đề nghị, công việc và kế hoạch — xem mục Chuông thông báo bên dưới. Việc Workflow đang chờ bạn thì xem bằng nút Việc cần xử lý (hình khay giấy) ngay cạnh chuông.",
+            text: "Hình chuông trên thanh đầu Trang chủ là thông báo của phiếu đề nghị, công việc và kế hoạch — xem mục Chuông thông báo bên dưới. Việc Workflow đang chờ bạn thì xem bằng nút Việc cần xử lý (hình bảng kẹp giấy có dấu tích) ngay cạnh chuông.",
           },
         ],
       },
@@ -211,6 +211,8 @@ const TOPICS: GuideTopic[] = [
               "Thông báo chưa đọc có nền xanh nhạt, tiêu đề đậm và chấm xanh bên phải. Bấm một thông báo để đánh dấu đã đọc và mở luôn phiếu, công việc hoặc kế hoạch đó.",
               "Ở màn Thông báo, hàng tab trên cùng lọc theo Phiếu / Công việc / Kế hoạch; bật Chỉ chưa đọc để ẩn thông báo đã xem. Đánh dấu tất cả đã đọc (có ở cả bảng chuông) đưa số trên chuông về 0.",
               "Đang mở app thì thông báo mới hiện ngay (trễ vài giây): một khung nhỏ nổi trên đầu màn hình, bấm vào để mở luôn. Đọc ở máy khác hay trên web thì số trên chuông cũng giảm theo.",
+              "App tắt hoặc đang chạy nền thì thông báo hiện trên điện thoại như tin nhắn. Bấm vào để mở luôn phiếu, việc hoặc kế hoạch đó, và thông báo được tính là đã đọc. Đọc trong app thì thông báo đó cũng tự biến khỏi danh sách thông báo của điện thoại.",
+              "Số trên biểu tượng app ở màn hình chính bằng số trên chuông. iPhone luôn hiện đúng số này. Android thì điện thoại tự đếm các thông báo đang nằm trong danh sách thông báo, nên app thêm một dòng Thông báo chưa đọc để bù cho đủ số. Bấm Xoá danh sách thông báo thì biểu tượng hết số, chỉ đếm lại từ thông báo mới; đọc hết thông báo thì dòng đó mới hiện lại khi có thông báo chưa đọc. Một số máy Android (như Pixel) chỉ hiện chấm, không hiện số.",
               "Việc do chính bạn làm không tạo thông báo cho bạn. Thông báo đã đọc quá 180 ngày sẽ tự xoá.",
             ],
           },
@@ -665,7 +667,7 @@ const TOPICS: GuideTopic[] = [
           {
             kind: "note",
             tone: "warn",
-            text: "Ảnh phải chụp trực tiếp bằng camera, app không cho chọn ảnh có sẵn trong thư viện — đây là ảnh làm bằng chứng. Ảnh được tự đóng dấu tên tài khoản và thời điểm chụp.",
+            text: "Ảnh phải chụp trực tiếp bằng camera, app không cho chọn ảnh có sẵn trong thư viện — đây là ảnh làm bằng chứng. Ảnh được tự đóng dấu thời điểm chụp, địa chỉ nơi chụp (kèm toạ độ chữ nhỏ bên dưới) và tên người chụp. Không có mạng thì chỉ có toạ độ, không có địa chỉ.",
           },
           {
             kind: "note",
@@ -820,7 +822,7 @@ const TOPICS: GuideTopic[] = [
         blocks: [
           {
             kind: "paragraph",
-            text: "Trên thanh đầu Trang chủ, cạnh hình chuông có nút Việc cần xử lý (hình khay giấy). Bấm vào để xem phiếu đang chờ bạn duyệt, việc được giao, việc sắp đến hạn, việc quá hạn và bình luận mới. Số trên nút cũng là số đỏ trên ô Workflow.",
+            text: "Trên thanh đầu Trang chủ, cạnh hình chuông có nút Việc cần xử lý (hình bảng kẹp giấy có dấu tích). Bấm vào để xem phiếu đang chờ bạn duyệt, việc được giao, việc sắp đến hạn, việc quá hạn và bình luận mới. Số trên nút cũng là số đỏ trên ô Workflow.",
           },
           {
             kind: "bullets",
@@ -872,7 +874,7 @@ const TOPICS: GuideTopic[] = [
             items: [
               "Ở danh sách phiếu, bấm nút + màu đỏ ở góc dưới để mở màn Lập phiếu.",
               "Chọn Loại đề nghị, nhập Tiêu đề và Mô tả. Ô có dấu * đỏ là bắt buộc.",
-              "Ở mục Đính kèm, bấm Chọn file nếu cần gửi kèm: Chụp ảnh, Ảnh trong máy hoặc Tài liệu (PDF, Word, Excel...).",
+              "Ở mục Đính kèm, bấm Chọn file nếu cần gửi kèm: Chụp ảnh, Ảnh trong máy hoặc Tài liệu (PDF, Word, Excel...). Ảnh chụp bằng Chụp ảnh được tự đóng dấu thời điểm chụp, địa chỉ nơi chụp (kèm toạ độ) và tên người chụp; ảnh chọn trong máy giữ nguyên.",
               "Mục Người duyệt hiện ra sau khi chọn Loại đề nghị (nếu loại đó cần chọn người). Bấm vào từng bước để chọn người; mỗi bước phải có ít nhất 1 người, thiếu thì app báo Thiếu người duyệt và tô đỏ bước còn trống.",
               "Bấm Lưu phiếu để nộp đi duyệt, hoặc Lưu nháp để giữ lại sửa tiếp.",
             ],
@@ -1679,9 +1681,10 @@ const TOPICS: GuideTopic[] = [
             kind: "bullets",
             items: [
               "Hiển thị: chọn giao diện Sáng, Tối, hoặc để app theo cài đặt của thiết bị.",
-              "Cỡ chữ: kéo thanh trượt giữa hai chữ A để chọn cỡ chữ cho toàn ứng dụng, từ 85% đến 150% (mặc định 100%). Đoạn mô tả và khối MẪU CHỮ đổi ngay theo để xem trước. Cỡ này nhân thêm vào cỡ chữ đang đặt trong điện thoại, và chỉ áp dụng trên máy đang dùng.",
+              "Cỡ chữ: kéo thanh trượt giữa hai chữ A để chọn cỡ chữ cho toàn ứng dụng, từ 85% đến 150% (mặc định 100%). Đoạn mô tả và khối MẪU CHỮ đổi ngay theo để xem trước. App không theo cỡ chữ trong Cài đặt của điện thoại, chỉ theo thanh trượt này, và chỉ áp dụng trên máy đang dùng.",
               "Quyền mạng nội bộ: cần có để kết nối máy chủ trong công ty.",
               "Quyền camera: cần có để quét QR và chụp ảnh xác nhận.",
+              "Quyền vị trí: cần có để gắn toạ độ vào ảnh chụp (xác nhận tủ lạnh, ảnh đính kèm Workflow). Hiện Chỉ vị trí gần đúng thì vẫn gắn được nhưng sai số lớn — bấm vào dòng này để mở Cài đặt và bật vị trí chính xác.",
               "Quyền thông báo: nhận thông báo từ hệ thống.",
               "Thông báo camera: tạm dừng thông báo AI phát hiện trong một khoảng thời gian, cho tất cả camera hoặc riêng một camera. Dòng này chỉ hiện với tài khoản được cấp quyền nhận thông báo camera.",
             ],

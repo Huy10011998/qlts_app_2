@@ -10,6 +10,10 @@ import {
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import {
+  startLocating,
+  usePhotoStamper,
+} from "../../../../components/photoStamp/usePhotoStamper";
 import type { WorkflowPickedFile } from "../../../../types/index";
 import { AppColors, useAppColors, useStyles } from "../../../../utils/helpers/colors";
 import { AttachSource, pickWorkflowFiles } from "../workflowAttachments";
@@ -26,9 +30,15 @@ const SOURCES: Array<{ key: AttachSource; label: string; icon: string }> = [
  */
 const SHEET_CLOSE_DELAY = 400;
 
+const toJpgName = (name: string) => `${name.replace(/\.[^.]+$/, "")}.jpg`;
+
 /**
  * Nút đính kèm mở sheet chọn nguồn (Chụp ảnh / Ảnh / Tài liệu). Dùng sheet chứ
  * không dùng Alert vì Alert trên Android chỉ hiện tối đa 3 nút.
+ *
+ * Ảnh chụp bằng camera được nung ngày giờ + toạ độ + người chụp vào ảnh, giống
+ * ảnh xác nhận vị trí tủ lạnh. Ảnh chọn trong máy giữ nguyên vì không biết
+ * chụp lúc nào, ở đâu.
  *
  * Trả `open()` và `sheet` — màn gọi phải render `sheet`.
  */
@@ -43,12 +53,29 @@ export function useAttachmentPicker(
   const onPickedRef = useRef(onPicked);
   onPickedRef.current = onPicked;
 
+  const photoStamper = usePhotoStamper();
+
   const open = useCallback(() => setVisible(true), []);
+
+  const takeStampedPhoto = async () => {
+    const locating = await startLocating();
+    const [photo] = await pickWorkflowFiles("camera", false);
+    if (!photo) return [];
+
+    const uri = await photoStamper.stamp(photo, locating);
+    // Không nung được thì gửi ảnh gốc — còn hơn mất ảnh vừa chụp.
+    return [
+      uri ? { uri, name: toJpgName(photo.name), type: "image/jpeg", size: null } : photo,
+    ];
+  };
 
   const handlePick = (source: AttachSource) => {
     setVisible(false);
     setTimeout(async () => {
-      const files = await pickWorkflowFiles(source, multiple);
+      const files =
+        source === "camera"
+          ? await takeStampedPhoto()
+          : await pickWorkflowFiles(source, multiple);
       if (files.length) onPickedRef.current(files);
     }, SHEET_CLOSE_DELAY);
   };
@@ -85,7 +112,15 @@ export function useAttachmentPicker(
     </Modal>
   );
 
-  return { open, sheet };
+  return {
+    open,
+    sheet: (
+      <>
+        {sheet}
+        {photoStamper.stamper}
+      </>
+    ),
+  };
 }
 
 const makeStyles = (c: AppColors) =>

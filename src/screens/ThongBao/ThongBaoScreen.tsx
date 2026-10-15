@@ -9,7 +9,6 @@ import { thongBaoDaDoc, thongBaoGetList } from "../../services/data/thongBaoApi"
 import { subscribeThongBao } from "../../services/realtime/traoDoiHub";
 import type { ThongBaoItem, ThongBaoNhom } from "../../types/index";
 import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
-import { COMPACT_TEXT_MAX_SCALE } from "../../utils/helpers/textScaling";
 import WorkflowTabBar from "../Workflow/shared/components/WorkflowTabBar";
 import { useWorkflowPagedList } from "../Workflow/shared/useWorkflowPagedList";
 import { getWorkflowErrorMessage } from "../Workflow/shared/workflowErrors";
@@ -107,7 +106,7 @@ export default function ThongBaoScreen() {
             size={18}
             color={chiChuaDoc ? "#1e88e5" : c.textSub}
           />
-          <Text style={styles.toggleText} maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}>
+          <Text style={styles.toggleText}>
             Chỉ chưa đọc
           </Text>
         </TouchableOpacity>
@@ -116,7 +115,6 @@ export default function ThongBaoScreen() {
           <TouchableOpacity onPress={markAllRead} disabled={markingAll} hitSlop={8}>
             <Text
               style={[styles.link, markingAll && styles.linkBusy]}
-              maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
             >
               Đánh dấu tất cả đã đọc
             </Text>

@@ -10,10 +10,6 @@ import {
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import { AppColors, useAppColors, useStyles } from "../../../../utils/helpers/colors";
-import {
-  COMPACT_TEXT_MAX_SCALE,
-  READABLE_TEXT_MAX_SCALE,
-} from "../../../../utils/helpers/textScaling";
 
 export type WorkflowButtonVariant =
   | "primary"
@@ -94,8 +90,6 @@ export default function WorkflowButton({
         numberOfLines={1}
         adjustsFontSizeToFit
         minimumFontScale={0.75}
-        // Nút nhỏ xếp nhiều trên một hàng: kẹp trần thấp như chip, khỏi phình.
-        maxFontSizeMultiplier={compact ? COMPACT_TEXT_MAX_SCALE : READABLE_TEXT_MAX_SCALE}
       >
         {label}
       </Text>
