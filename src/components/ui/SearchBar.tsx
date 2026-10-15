@@ -36,8 +36,6 @@ type SearchBarProps = {
   variant?: "card" | "plain";
   /** Lề/khoảng cách riêng của từng màn. */
   style?: StyleProp<ViewStyle>;
-  /** Giới hạn phóng chữ, cho các màn có lưới chật. */
-  maxFontSizeMultiplier?: number;
   /** Đặt false ở nơi chiều cao cố định không chịu được cỡ chữ hệ thống lớn. */
   allowFontScaling?: boolean;
 };
@@ -63,7 +61,6 @@ export default function SearchBar({
   spinnerColor,
   variant = "card",
   style,
-  maxFontSizeMultiplier,
   allowFontScaling,
 }: SearchBarProps) {
   const styles = useStyles(makeStyles);
@@ -93,7 +90,6 @@ export default function SearchBar({
         placeholderTextColor={c.placeholder}
         clearButtonMode="never"
         returnKeyType="search"
-        maxFontSizeMultiplier={maxFontSizeMultiplier}
         allowFontScaling={allowFontScaling}
         accessibilityLabel={placeholder}
       />

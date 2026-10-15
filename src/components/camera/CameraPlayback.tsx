@@ -2287,6 +2287,7 @@ const CameraPlayback: React.FC = () => {
                   />
                 ) : (
                   <WebView
+                    textZoom={100}
                     ref={liveWebViewRef}
                     key={`live-${camera.iD_Camera}-${cameraToken}`}
                     source={{

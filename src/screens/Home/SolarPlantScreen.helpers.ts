@@ -78,16 +78,32 @@ const hasNumber = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value);
 
 /**
- * Định dạng số theo kiểu Việt Nam: dấu chấm ngăn nghìn, dấu phẩy thập phân
- * (1.234,56). Tự viết thay vì dùng Intl để số hiển thị giống nhau trên mọi máy.
+ * Định dạng số của màn Điện mặt trời theo app FusionSolar: dấu chấm thập phân,
+ * dấu phẩy ngăn nghìn (1,234.56). Màn này cố ý khác phần còn lại của app (kiểu
+ * Việt Nam 1.234,56) để người quen app nhà cung cấp đọc số y như bên đó. Tự viết
+ * thay vì dùng Intl để số hiển thị giống nhau trên mọi máy.
  */
-const formatVnNumber = (value: number, digits = 0) => {
-  const fixed = Math.abs(value).toFixed(digits);
+/**
+ * Làm tròn nửa lên theo số thập phân như người đọc vẫn tính: 9,35 → 9,4.
+ *
+ * `toFixed` làm tròn trên số nhị phân, mà 9.35 lưu thành 9.34999… nên ra "9.3" —
+ * lệch với app FusionSolar (9.4) dù cùng một số 9350 W. Dịch dấu phẩy bằng chuỗi
+ * mũ (`"9.35e1"` = 93.5 đúng tuyệt đối) rồi mới làm tròn thì hết sai số đó.
+ */
+const roundHalfUp = (abs: number, digits: number) => {
+  const text = String(abs);
+  if (text.includes("e")) return abs;
+
+  return Number(`${Math.round(Number(`${text}e${digits}`))}e-${digits}`);
+};
+
+const formatSolarNumber = (value: number, digits = 0) => {
+  const fixed = roundHalfUp(Math.abs(value), digits).toFixed(digits);
   const [intPart, decimalPart] = fixed.split(".");
-  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   const sign = value < 0 ? "-" : "";
 
-  return decimalPart ? `${sign}${grouped},${decimalPart}` : `${sign}${grouped}`;
+  return decimalPart ? `${sign}${grouped}.${decimalPart}` : `${sign}${grouped}`;
 };
 
 type MetricParts = { value: string; unit: string };
@@ -103,8 +119,52 @@ const formatEnergy = (wh: number | null | undefined): MetricParts => {
   if (!hasNumber(wh)) return NO_METRIC;
 
   return Math.abs(wh) >= 1_000_000
-    ? { value: formatVnNumber(wh / 1_000_000, 2), unit: "MWh" }
-    : { value: formatVnNumber(wh / 1_000, 0), unit: "kWh" };
+    ? { value: formatSolarNumber(wh / 1_000_000, 2), unit: "MWh" }
+    : { value: formatSolarNumber(wh / 1_000, 0), unit: "kWh" };
+};
+
+const ENERGY_UNIT_STEPS: { size: number; unit: string }[] = [
+  { size: 1_000_000_000, unit: "GWh" },
+  { size: 1_000_000, unit: "MWh" },
+  { size: 1_000, unit: "kWh" },
+  { size: 1, unit: "Wh" },
+];
+
+/** Số lẻ để còn đúng 3 chữ số có nghĩa: 1,03 · 22,0 · 843. */
+const significantDigits = (value: number) => {
+  const abs = Math.abs(value);
+  if (abs >= 100) return 0;
+  if (abs >= 10) return 1;
+  return 2;
+};
+
+/**
+ * Điện năng dạng gọn như app FusionSolar ("22 MWh", "843 MWh", "1,03 GWh"):
+ * tự lên đơn vị Wh → kWh → MWh → GWh, giữ 3 chữ số có nghĩa và bỏ số 0 thừa ở
+ * cuối. Dùng cho các ô tổng tích luỹ — số lớn dần theo năm, để `formatEnergy`
+ * thì "1.028,73 MWh" chiếm cả cột trên màn hẹp.
+ */
+const formatEnergyCompact = (wh: number | null | undefined): MetricParts => {
+  if (!hasNumber(wh)) return NO_METRIC;
+
+  const abs = Math.abs(wh);
+  let index = ENERGY_UNIT_STEPS.findIndex((step) => abs >= step.size);
+  if (index < 0) index = ENERGY_UNIT_STEPS.length - 1;
+
+  // 999,6 MWh làm tròn ra "1.000 MWh" — lên hẳn đơn vị kế thành "1 GWh".
+  const rounded = roundHalfUp(
+    abs / ENERGY_UNIT_STEPS[index].size,
+    significantDigits(abs / ENERGY_UNIT_STEPS[index].size),
+  );
+  if (rounded >= 1000 && index > 0) index -= 1;
+
+  const scaled = wh / ENERGY_UNIT_STEPS[index].size;
+  const text = formatSolarNumber(scaled, significantDigits(scaled));
+
+  return {
+    value: text.includes(".") ? text.replace(/0+$/, "").replace(/\.$/, "") : text,
+    unit: ENERGY_UNIT_STEPS[index].unit,
+  };
 };
 
 /**
@@ -116,8 +176,8 @@ const formatPower = (watt: number | null | undefined): MetricParts => {
   if (!hasNumber(watt)) return NO_METRIC;
 
   return Math.abs(watt) >= 1_000_000
-    ? { value: formatVnNumber(watt / 1_000_000, 2), unit: "MW" }
-    : { value: formatVnNumber(watt / 1_000, 1), unit: "kW" };
+    ? { value: formatSolarNumber(watt / 1_000_000, 2), unit: "MW" }
+    : { value: formatSolarNumber(watt / 1_000, 1), unit: "kW" };
 };
 
 /**
@@ -129,16 +189,16 @@ const formatPower = (watt: number | null | undefined): MetricParts => {
  */
 const formatPowerMw = (watt: number | null | undefined): MetricParts =>
   hasNumber(watt)
-    ? { value: formatVnNumber(watt / 1_000_000, 2), unit: "MW" }
+    ? { value: formatSolarNumber(watt / 1_000_000, 2), unit: "MW" }
     : NO_METRIC;
 
 /** Tỉ trọng trong biểu đồ: 0 số lẻ. Tỉ lệ so sánh: 2 số lẻ. */
 const formatPercent = (percent: number | null | undefined, digits = 0) =>
-  hasNumber(percent) ? `${formatVnNumber(percent, digits)}%` : NO_VALUE;
+  hasNumber(percent) ? `${formatSolarNumber(percent, digits)}%` : NO_VALUE;
 
-/** Số nguyên lớn (kg CO₂, km) theo định dạng Việt Nam. */
+/** Số nguyên lớn (kg CO₂, km), cùng định dạng với `formatSolarNumber`. */
 const formatCount = (value: number | null | undefined, digits = 0) =>
-  hasNumber(value) ? formatVnNumber(value, digits) : NO_VALUE;
+  hasNumber(value) ? formatSolarNumber(value, digits) : NO_VALUE;
 
 /** `MetricParts` ghép lại thành một chuỗi, dùng cho tooltip / dòng chú giải. */
 const formatMetricText = (parts: MetricParts) =>
@@ -1277,12 +1337,13 @@ export {
   formatDateRangeLabel,
   formatDisplayDate,
   formatEnergy,
+  formatEnergyCompact,
   formatLongDate,
   formatMetricText,
   formatPercent,
   formatPower,
   formatPowerMw,
-  formatVnNumber,
+  formatSolarNumber,
   getCalendarDates,
   getDateRangeForPeriod,
   getEnergyDetailsTimeUnit,

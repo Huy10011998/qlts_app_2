@@ -104,8 +104,8 @@ export default function TextSizeScreen() {
             { color: colors.secondary, fontSize: scale(13) },
           ]}
         >
-          Cài đặt này nhân thêm vào cỡ chữ của thiết bị, nên vẫn có tác dụng kể
-          cả khi máy đang để cỡ chữ mặc định.
+          App không theo cỡ chữ trong Cài đặt của điện thoại, chỉ theo thanh
+          trượt này.
         </Text>
 
         <Text style={[styles.sectionTitle, { color: colors.secondary }]}>

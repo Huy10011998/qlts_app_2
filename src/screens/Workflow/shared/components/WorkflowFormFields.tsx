@@ -32,6 +32,7 @@ export function WorkflowFormFields({ form, styles, lockedFields }: FieldsProps) 
       styles={styles}
       toggleGroup={form.toggleGroup}
       lockedFields={lockedFields}
+      stampCameraPhotos
     />
   );
 }

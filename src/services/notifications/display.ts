@@ -53,6 +53,9 @@ export const displayPushNotification = async (
         groupId: getCameraAiGroupId(message.data),
         smallIcon: ANDROID_SMALL_ICON,
         color: NOTIFICATION_COLOR,
+        // Không gắn giờ thì Samsung hiện ngày rác ("3/1/01").
+        timestamp: Date.now(),
+        showTimestamp: true,
         importance:
           message.channelId === URGENT_CHANNEL_ID
             ? AndroidImportance.HIGH

@@ -7,7 +7,6 @@ import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import SearchBar from "../ui/SearchBar";
-import { COMPACT_TEXT_MAX_SCALE } from "../../utils/helpers/textScaling";
 
 type MenuTreeSearchBarProps = {
   value: string;
@@ -40,7 +39,6 @@ export default function MenuTreeSearchBar({
         placeholder={placeholder}
         isSearching={isSearching}
         spinnerColor={C.red}
-        maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
       />
 
       {showResultCount || onCollapseAll ? (

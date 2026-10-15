@@ -270,7 +270,11 @@ export default function WorkflowCommentsScreen() {
           ]}
         >
           {file ? (
-            <View style={styles.pendingFile}>
+            <TouchableOpacity
+              style={styles.pendingFile}
+              activeOpacity={0.7}
+              onPress={() => fileOpener.openLocalFile(file)}
+            >
               {isImageFileName(file.name) || file.type?.startsWith("image/") ? (
                 <Image source={{ uri: file.uri }} style={styles.pendingThumb} />
               ) : (
@@ -282,7 +286,7 @@ export default function WorkflowCommentsScreen() {
               <TouchableOpacity onPress={() => setFile(null)} hitSlop={8}>
                 <Ionicons name="close-circle" size={18} color={c.textSub} />
               </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
           ) : null}
           <View style={styles.inputRow}>
             <TouchableOpacity onPress={picker.open} style={styles.iconButton} disabled={sending}>

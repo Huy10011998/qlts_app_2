@@ -465,7 +465,7 @@ const styles = StyleSheet.create({
   statusLabel: { flex: 1, fontSize: 16, fontWeight: "700" },
   statusCount: { fontSize: 13, fontWeight: "600" },
   statusDetails: { gap: 6, marginTop: 12 },
-  detailLine: { fontSize: 13, lineHeight: 19 },
+  detailLine: { fontSize: 13 },
   primaryButton: {
     alignItems: "center",
     backgroundColor: C.red,
@@ -495,7 +495,7 @@ const styles = StyleSheet.create({
     padding: 12,
     textAlignVertical: "top",
   },
-  warningText: { fontSize: 13, lineHeight: 19, marginBottom: 14 },
+  warningText: { fontSize: 13, marginBottom: 14 },
   /** Nhãn đầu tiên trong thẻ: bỏ khoảng cách trên của `inputLabel`. */
   firstLabel: { marginTop: 0 },
   selectRow: {

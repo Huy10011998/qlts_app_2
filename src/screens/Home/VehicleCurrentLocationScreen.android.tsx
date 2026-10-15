@@ -389,6 +389,7 @@ export default function VehicleCurrentLocationScreen() {
             </View>
           </View>
           <WebView
+            textZoom={100}
             key={renderKey}
             ref={webViewRef}
             originWhitelist={["*"]}

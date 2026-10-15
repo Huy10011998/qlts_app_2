@@ -54,7 +54,9 @@ export const makeStyles = (c: AppColors) =>
     },
     productionBlock: {
       flex: 1,
-      minWidth: 190,
+      // Đủ cho "1,92 MWh" ở cỡ 36 (số còn tự co tới 80%). Để 190 thì màn hẹp
+      // (bật Thu phóng) đẩy ô nhiệt độ xuống một dòng riêng, hero dài thêm.
+      minWidth: 150,
     },
     prodLabel: { fontSize: 14, fontWeight: "600", color: c.textSecondary },
     prodValue: {
@@ -156,14 +158,14 @@ export const makeStyles = (c: AppColors) =>
       gap: 8,
       marginBottom: 10,
     },
-    sectionTitle: { fontSize: 16, fontWeight: "700", color: c.text },
+    sectionTitle: { fontSize: 16, fontWeight: "600", color: c.text },
     updatedNow: { fontSize: 12, color: c.textMuted },
     epStats: { flexDirection: "row", alignItems: "center", flexWrap: "wrap" },
-    epItem: { flex: 1, minWidth: 96, alignItems: "center" },
+    epItem: { flex: 1, minWidth: 0, alignItems: "center", paddingHorizontal: 4 },
     epLabel: { fontSize: 12, color: c.textMuted, marginBottom: 2 },
-    epValue: { fontSize: 20, fontWeight: "700", color: c.text },
-    epUnit: { fontSize: 12, fontWeight: "400", color: c.textSecondary },
-    epDivider: { width: 1, height: 36, backgroundColor: c.border },
+    epValue: { fontSize: 18, fontWeight: "500", color: c.text },
+    epUnit: { fontSize: 10, fontWeight: "400", color: c.textMuted },
+    epDivider: { width: 1, height: 32, backgroundColor: c.border },
 
     // Tabs
     stickyPeriodHeader: {
@@ -438,11 +440,11 @@ export const makeStyles = (c: AppColors) =>
       marginBottom: 4,
     },
     balanceBigValue: {
-      fontSize: 36,
-      fontWeight: "700",
+      fontSize: 32,
+      fontWeight: "500",
       color: c.text,
     },
-    balanceUnit: { fontSize: 18, fontWeight: "400", color: c.textSecondary },
+    balanceUnit: { fontSize: 12, fontWeight: "400", color: c.textMuted },
     barTrack: {
       flexDirection: "row",
       height: 10,
@@ -466,7 +468,7 @@ export const makeStyles = (c: AppColors) =>
     legendItem: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 8,
+      gap: 6,
       flexWrap: "wrap",
     },
     dot: { width: 10, height: 10, borderRadius: 5 },
@@ -477,22 +479,25 @@ export const makeStyles = (c: AppColors) =>
     // Bám theo BarChart: năm trước xanh da trời, năm nay tím.
     year2025Dot: { backgroundColor: COMPARE_PREVIOUS_YEAR_COLOR },
     year2026Dot: { backgroundColor: COMPARE_CURRENT_YEAR_COLOR },
+    // Một dòng mỗi mục như app FusionSolar: nhãn xám bên trái, số bên phải,
+    // phần trăm xám nhạt. Không đủ chỗ thì số mới xuống dòng.
     legendLabel: {
-      fontSize: 13,
+      fontSize: 12,
       color: c.textSecondary,
       flex: 1,
-      minWidth: 86,
+      minWidth: 70,
     },
     legendValue: {
-      fontSize: 13,
+      fontSize: 12,
       color: c.text,
       fontWeight: "500",
       flexShrink: 1,
     },
+    legendPercent: { color: c.textMuted, fontWeight: "400" },
     separator: { height: 1, backgroundColor: c.border, marginVertical: 14 },
     selfConsumptionRow: { marginTop: 12 },
     selfText: { fontSize: 13, color: c.textSecondary },
-    selfBold: { fontWeight: "700", color: c.text },
+    selfBold: { fontWeight: "600", color: c.text },
     // Màu chú giải của biểu đồ phải khớp nét vẽ trong AreaChart/BarChart.
     // Bảng màu chung (đã qua kiểm tra mù màu): #2a78d6 sản xuất,
     // #eb6834 tiêu thụ & lưới điện, #1baf7a tự dùng.
@@ -518,7 +523,7 @@ export const makeStyles = (c: AppColors) =>
     chartTitle: {
       flex: 1,
       fontSize: 15,
-      fontWeight: "700",
+      fontWeight: "600",
       color: c.text,
     },
     // Tổng của cả kỳ, đứng cạnh nút phóng to. `flexShrink` để tiêu đề bên trái
@@ -630,8 +635,8 @@ export const makeStyles = (c: AppColors) =>
     envRow: { flexDirection: "row", marginTop: 12 },
     envItem: { flex: 1, alignItems: "center", gap: 4 },
     envValueRow: { flexDirection: "row", alignItems: "baseline", gap: 5 },
-    envValue: { fontSize: 30, fontWeight: "700", color: c.text },
-    envUnit: { fontSize: 14, color: c.textSecondary },
+    envValue: { fontSize: 28, fontWeight: "500", color: c.text },
+    envUnit: { fontSize: 12, color: c.textMuted },
     envLabel: {
       fontSize: 12,
       color: c.textMuted,
@@ -795,32 +800,4 @@ export const makeStyles = (c: AppColors) =>
       textAlign: "center",
       marginTop: 2,
     },
-    // Viên nền cho dòng tổng kết dưới ảnh nhà máy: chữ đặt thẳng lên ảnh thì
-    // chìm, mà đẩy xuống hẳn nền khối thì lại dính sát mép ảnh.
-    flowSummaryPill: {
-      flexDirection: "row",
-      alignItems: "center",
-      alignSelf: "center",
-      justifyContent: "center",
-      gap: 7,
-      maxWidth: "100%",
-      marginHorizontal: 18,
-      // Khung cảnh nhà máy tràn xuống 4px dưới đáy vùng của nó (`sceneWrap` có
-      // `bottom: -4`), nên phải cộng thêm 4 vào lề trên thì khoảng hở nhìn thấy
-      // ở trên mới bằng ở dưới.
-      marginTop: 12 + 4,
-      marginBottom: 12,
-      paddingHorizontal: 14,
-      paddingVertical: 7,
-      borderRadius: 999,
-      backgroundColor: c.surface,
-    },
-    flowSummaryText: {
-      flexShrink: 1,
-      fontSize: 13,
-      color: c.textSecondary,
-      // Xuống 2 dòng trên máy hẹp thì cả hai dòng vẫn cân giữa viên nền.
-      textAlign: "center",
-    },
-    flowSummaryValue: { color: c.text, fontWeight: "700" },
   });

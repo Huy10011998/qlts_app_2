@@ -55,6 +55,7 @@ import {
   createTodayDateRange,
   formatCount,
   formatEnergy,
+  formatEnergyCompact,
   formatLongDate,
   formatMetricText,
   formatPercent,
@@ -94,8 +95,9 @@ import {
   DonutChart,
   EnergyBarChart,
   getSceneHeight,
+  getSceneTopSpace,
+  getSolarHeroScale,
   SceneView,
-  SCENE_TOP_SPACE,
   StatBubble,
   WeatherIcon,
 } from "./SolarPlantScreen.visuals";
@@ -106,9 +108,10 @@ import {
   type SolarBlockState,
 } from "./shared/useSolarDashboard";
 
-// Bảng điều khiển này đi theo cỡ chữ hệ thống như phần còn lại của ứng dụng.
-// Riêng khối "Sản lượng hôm nay" ở đầu màn giữ `allowFontScaling={false}` tại
-// chỗ: nó dùng `adjustsFontSizeToFit` để ép con số vào đúng một dòng.
+// Bảng điều khiển này đi theo Cài đặt › Cỡ chữ của app như phần còn lại của
+// ứng dụng (cỡ chữ của điện thoại thì cả app bỏ qua). Riêng khối "Sản lượng
+// hôm nay" ở đầu màn giữ `allowFontScaling={false}` tại chỗ: nó dùng
+// `adjustsFontSizeToFit` để ép con số vào đúng một dòng.
 //
 // `Text` phải đọc thẳng từ `react-native` mỗi lần render — gán ra một biến ở
 // phạm vi module sẽ chốt lại component *trước* khi `installTextScaling` kịp
@@ -1033,15 +1036,27 @@ const SolarHeroSection: React.FC<SolarHeroSectionProps> = ({
   const visualInset = (contentWidth - visualWidth) / 2;
   // Cao theo đúng khung cảnh nhà máy: cảnh giữ tỉ lệ theo chiều rộng nên vùng
   // hero phải nới theo, không thì trên tablet ảnh bị cắt cụt ở đáy.
-  const heroVisualHeight = getSceneHeight(visualWidth) + SCENE_TOP_SPACE;
-  const heroCenterBubbleSize = clamp(visualWidth * 0.31, 108, 126);
-  const heroSideBubbleSize = clamp(visualWidth * 0.23, 82, 90);
-  const heroSideBubbleTop = clamp(visualWidth * 0.17, 54, 72);
-  const heroToHomeLeft = visualInset + clamp(visualWidth * 0.08, 24, 40);
+  // Màn hẹp hơn bản canh (máy nhỏ, bật Thu phóng) thì cả cụm thu lại theo cùng
+  // một hệ số, thay vì giữ cỡ tối thiểu làm hero chiếm gần hết màn hình.
+  const heroScale = getSolarHeroScale(visualWidth);
+  const heroVisualHeight =
+    getSceneHeight(visualWidth) + getSceneTopSpace(visualWidth);
+  const heroCenterBubbleSize = clamp(visualWidth * 0.31, 108 * heroScale, 126);
+  const heroSideBubbleSize = clamp(visualWidth * 0.23, 82 * heroScale, 90);
+  const heroSideBubbleTop = clamp(visualWidth * 0.17, 54 * heroScale, 72);
+  // Sát mép trái, chừa đúng lề như bong bóng bên phải trên màn hẹp.
+  const heroToHomeLeft = visualInset + 8;
   const heroSolarPowerLeft =
-    visualInset + visualWidth * 0.46 + 14 - heroCenterBubbleSize / 2;
-  const heroFromGridLeft =
-    visualInset + visualWidth * 0.87 - heroSideBubbleSize / 2;
+    visualInset +
+    visualWidth * 0.46 +
+    14 * heroScale -
+    heroCenterBubbleSize / 2;
+  // Bong bóng có cỡ tối thiểu nên trên màn hẹp (bật Thu phóng) mốc 87% đẩy nó
+  // chạm mép phải — chặn để luôn chừa lề như bong bóng bên trái.
+  const heroFromGridLeft = Math.min(
+    visualInset + visualWidth * 0.87 - heroSideBubbleSize / 2,
+    visualInset + visualWidth - heroSideBubbleSize - 8,
+  );
 
   const flowData = flow.data;
   const todayEnergy: MetricParts = formatEnergy(overview.data?.today);
@@ -1072,22 +1087,25 @@ const SolarHeroSection: React.FC<SolarHeroSectionProps> = ({
               allowFontScaling={false}
               minimumFontScale={0.8}
               numberOfLines={1}
-              style={styles.prodValue}
+              style={[styles.prodValue, { fontSize: 36 * heroScale }]}
             >
               {todayEnergy.value}{" "}
-              <Text allowFontScaling={false} style={styles.prodUnit}>
+              <Text
+                allowFontScaling={false}
+                style={[styles.prodUnit, { fontSize: 19 * heroScale }]}
+              >
                 {todayEnergy.unit}
               </Text>
             </Text>
           </View>
           <View style={styles.weatherRow}>
             {weather.isLoading || weather.temperature == null ? null : (
-              <WeatherIcon weatherCode={weather.weatherCode} />
+              <WeatherIcon weatherCode={weather.weatherCode} scale={heroScale} />
             )}
             <Text
               allowFontScaling={false}
               numberOfLines={1}
-              style={styles.tempText}
+              style={[styles.tempText, { fontSize: 20 * heroScale }]}
             >
               {weather.temperature == null
                 ? `${NO_VALUE} °C`
@@ -1110,7 +1128,7 @@ const SolarHeroSection: React.FC<SolarHeroSectionProps> = ({
               size={heroSideBubbleSize}
               borderColor="#cccccc"
               borderWidth={2}
-              valueSize={20}
+              valueSize={20 * heroScale}
             />
           </View>
 
@@ -1127,7 +1145,7 @@ const SolarHeroSection: React.FC<SolarHeroSectionProps> = ({
               size={heroCenterBubbleSize}
               borderColor="#1baf7a"
               borderWidth={4}
-              valueSize={27}
+              valueSize={27 * heroScale}
             />
           </View>
 
@@ -1144,7 +1162,7 @@ const SolarHeroSection: React.FC<SolarHeroSectionProps> = ({
               size={heroSideBubbleSize}
               borderColor="#eb6834"
               borderWidth={2.5}
-              valueSize={20}
+              valueSize={20 * heroScale}
             />
           </View>
 
@@ -1155,21 +1173,6 @@ const SolarHeroSection: React.FC<SolarHeroSectionProps> = ({
             />
           </View>
         </View>
-
-        {/* Dòng tổng kết nằm ngay dưới mép ảnh nhà máy nên phải có nền riêng,
-            không thì chữ dính vào ảnh và đọc rất khó. */}
-        {flowData?.solarSharePercent != null ? (
-          <View style={styles.flowSummaryPill}>
-            <Ionicons name="sunny" size={15} color={C.amber} />
-            <Text numberOfLines={2} style={styles.flowSummaryText}>
-              Điện mặt trời đang chiếm{" "}
-              <Text style={styles.flowSummaryValue}>
-                {formatPercent(flowData.solarSharePercent)}
-              </Text>{" "}
-              mức sử dụng
-            </Text>
-          </View>
-        ) : null}
 
         {/* Lỗi của khối overview hiển thị ở khối "Sản lượng tích luỹ" ngay bên
             dưới, ở đây chỉ báo lỗi của dòng năng lượng. */}
@@ -1193,9 +1196,9 @@ const EnergyProducedSummary: React.FC<{
   const data = block.data;
 
   const items: { label: string; parts: MetricParts }[] = [
-    { label: "Tháng này", parts: formatEnergy(data?.thisMonth) },
-    { label: "Năm nay", parts: formatEnergy(data?.thisYear) },
-    { label: "Từ đầu", parts: formatEnergy(data?.lifetime) },
+    { label: "Tháng này", parts: formatEnergyCompact(data?.thisMonth) },
+    { label: "Năm nay", parts: formatEnergyCompact(data?.thisYear) },
+    { label: "Từ đầu", parts: formatEnergyCompact(data?.lifetime) },
   ];
 
   return (
@@ -1218,8 +1221,17 @@ const EnergyProducedSummary: React.FC<{
           <React.Fragment key={item.label}>
             {index > 0 ? <View style={styles.epDivider} /> : null}
             <View style={styles.epItem}>
-              <Text style={styles.epLabel}>{item.label}</Text>
-              <Text style={styles.epValue}>
+              <Text style={styles.epLabel} numberOfLines={1}>
+                {item.label}
+              </Text>
+              {/* Số vừa + đơn vị tí hon cùng dòng; màn hẹp (bật Thu phóng) hay
+                  chữ to thì cả dòng tự co cho vừa cột, khối không dài thêm. */}
+              <Text
+                style={styles.epValue}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.6}
+              >
                 {item.parts.value}{" "}
                 <Text style={styles.epUnit}>{item.parts.unit}</Text>
               </Text>
@@ -1336,6 +1348,9 @@ const SolarFullScreen: React.FC = () => {
   const { width: screenWidth } = useWindowDimensions();
   const { canView, loaded: permissionsLoaded } = usePermission();
   const contentWidth = getSolarContentWidth(screenWidth);
+  // Cùng hệ số với hero: màn hẹp (bật Thu phóng) thì các con số lớn và hình
+  // minh hoạ bên dưới cũng thu lại, cả màn một nhịp.
+  const sizeScale = getSolarHeroScale(contentWidth);
   const chartWidth = Math.max(260, contentWidth - 32);
   const menuWidth = clamp(screenWidth * 0.6, 280, 420);
 
@@ -1743,9 +1758,9 @@ const SolarFullScreen: React.FC = () => {
               trước. Vạch mảnh trên viền khối là dấu hiệu đang tải. */}
           {/* Cụm SẢN XUẤT */}
           <Text style={styles.balanceSubLabel}>Sản xuất</Text>
-          <Text style={styles.balanceBigValue}>
+          <Text style={[styles.balanceBigValue, { fontSize: 32 * sizeScale }]}>
             {formatEnergy(balance?.production).value}{" "}
-            <Text style={styles.balanceUnit}>
+            <Text style={[styles.balanceUnit, { fontSize: 12 * sizeScale }]}>
               {formatEnergy(balance?.production).unit}
             </Text>
           </Text>
@@ -1767,23 +1782,27 @@ const SolarFullScreen: React.FC = () => {
               primaryColor="#1baf7a"
               secondaryColor="#eb6834"
               primaryPct={balance?.selfOfProductionPercent ?? 0}
-              size={90}
+              size={Math.round(84 * sizeScale)}
             />
             <View style={styles.legendCol}>
               <View style={styles.legendItem}>
                 <View style={[styles.dot, styles.balanceToHomeDot]} />
                 <Text style={styles.legendLabel}>🏠 Tự dùng</Text>
                 <Text style={styles.legendValue}>
-                  {formatMetricText(formatEnergy(balance?.selfConsumption))} (
-                  {formatPercent(balance?.selfOfProductionPercent)})
+                  {formatMetricText(formatEnergy(balance?.selfConsumption))}{" "}
+                  <Text style={styles.legendPercent}>
+                    ({formatPercent(balance?.selfOfProductionPercent)})
+                  </Text>
                 </Text>
               </View>
               <View style={styles.legendItem}>
                 <View style={[styles.dot, styles.balanceToGridDot]} />
                 <Text style={styles.legendLabel}>⚡ Phát lên lưới</Text>
                 <Text style={styles.legendValue}>
-                  {formatMetricText(formatEnergy(balance?.feedIn))} (
-                  {formatPercent(balance?.feedInPercent)})
+                  {formatMetricText(formatEnergy(balance?.feedIn))}{" "}
+                  <Text style={styles.legendPercent}>
+                    ({formatPercent(balance?.feedInPercent)})
+                  </Text>
                 </Text>
               </View>
             </View>
@@ -1793,9 +1812,9 @@ const SolarFullScreen: React.FC = () => {
 
           {/* Cụm TIÊU THỤ */}
           <Text style={styles.balanceSubLabel}>Tiêu thụ</Text>
-          <Text style={styles.balanceBigValue}>
+          <Text style={[styles.balanceBigValue, { fontSize: 32 * sizeScale }]}>
             {formatEnergy(balance?.consumption).value}{" "}
-            <Text style={styles.balanceUnit}>
+            <Text style={[styles.balanceUnit, { fontSize: 12 * sizeScale }]}>
               {formatEnergy(balance?.consumption).unit}
             </Text>
           </Text>
@@ -1817,23 +1836,27 @@ const SolarFullScreen: React.FC = () => {
               primaryColor="#eb6834"
               secondaryColor="#1baf7a"
               primaryPct={balance?.purchasedPercent ?? 0}
-              size={90}
+              size={Math.round(84 * sizeScale)}
             />
             <View style={styles.legendCol}>
               <View style={styles.legendItem}>
                 <View style={[styles.dot, styles.balanceFromSolarDot]} />
                 <Text style={styles.legendLabel}>☀️ Từ mặt trời</Text>
                 <Text style={styles.legendValue}>
-                  {formatMetricText(formatEnergy(balance?.selfConsumption))} (
-                  {formatPercent(balance?.selfOfConsumptionPercent)})
+                  {formatMetricText(formatEnergy(balance?.selfConsumption))}{" "}
+                  <Text style={styles.legendPercent}>
+                    ({formatPercent(balance?.selfOfConsumptionPercent)})
+                  </Text>
                 </Text>
               </View>
               <View style={styles.legendItem}>
                 <View style={[styles.dot, styles.balanceFromGridDot]} />
                 <Text style={styles.legendLabel}>⚡ Mua từ lưới</Text>
                 <Text style={styles.legendValue}>
-                  {formatMetricText(formatEnergy(balance?.purchased))} (
-                  {formatPercent(balance?.purchasedPercent)})
+                  {formatMetricText(formatEnergy(balance?.purchased))}{" "}
+                  <Text style={styles.legendPercent}>
+                    ({formatPercent(balance?.purchasedPercent)})
+                  </Text>
                 </Text>
               </View>
             </View>
@@ -2132,7 +2155,7 @@ const SolarFullScreen: React.FC = () => {
             <Text style={styles.chartTitle}>Lợi ích môi trường tích luỹ</Text>
             <Text style={styles.infoIcon}>ⓘ</Text>
           </View>
-          <EnvBenefitsRow data={env} />
+          <EnvBenefitsRow data={env} scale={sizeScale} />
 
           <BlockError message={blocks.env.error} />
         </View>
@@ -2176,9 +2199,11 @@ const SolarFullScreen: React.FC = () => {
 
 // ─── Khối 6: hai ô minh hoạ ──────────────────────────────────────────────────
 
-const EnvBenefitsRow: React.FC<{ data: SolarEnvBenefitsView | null }> = ({
-  data,
-}) => {
+const EnvBenefitsRow: React.FC<{
+  data: SolarEnvBenefitsView | null;
+  /** Hệ số thu cho màn hẹp — xem `getSolarHeroScale`. */
+  scale: number;
+}> = ({ data, scale }) => {
   const styles = useStyles(makeStyles);
   /** Kg → tấn, km → triệu km để con số hiển thị ngắn gọn. */
   const co2Tons = hasNumber(data?.co2Kg) ? data!.co2Kg! / 1_000 : null;
@@ -2190,7 +2215,7 @@ const EnvBenefitsRow: React.FC<{ data: SolarEnvBenefitsView | null }> = ({
     <View style={styles.envRow}>
       <View style={styles.envItem}>
         {/* smoke stack icon */}
-        <Svg width={80} height={72} viewBox="0 0 80 72">
+        <Svg width={80 * scale} height={72 * scale} viewBox="0 0 80 72">
           <Rect x={20} y={32} width={16} height={32} rx={3} fill="#c5d8e8" />
           <Rect x={44} y={22} width={16} height={42} rx={3} fill="#b8ccde" />
           <Rect x={10} y={44} width={14} height={20} rx={3} fill="#d0dfe8" />
@@ -2200,14 +2225,14 @@ const EnvBenefitsRow: React.FC<{ data: SolarEnvBenefitsView | null }> = ({
           <Ellipse cx={58} cy={8} rx={4} ry={6} fill="#e8f2f8" opacity={0.6} />
         </Svg>
         <View style={styles.envValueRow}>
-          <Text style={styles.envValue}>{formatCount(co2Tons)}</Text>
+          <Text style={[styles.envValue, { fontSize: 28 * scale }]}>{formatCount(co2Tons)}</Text>
           <Text style={styles.envUnit}>tấn</Text>
         </View>
         <Text style={styles.envLabel}>CO₂ tránh{"\n"}phát thải</Text>
       </View>
       <View style={styles.envItem}>
         {/* car + trees icon */}
-        <Svg width={80} height={72} viewBox="0 0 80 72">
+        <Svg width={80 * scale} height={72 * scale} viewBox="0 0 80 72">
           <Rect x={4} y={38} width={56} height={16} rx={4} fill="#b8c8d8" />
           <Rect x={10} y={30} width={44} height={16} rx={6} fill="#c8d8e8" />
           <Circle cx={18} cy={54} r={8} fill="#8a9ab0" />
@@ -2220,7 +2245,7 @@ const EnvBenefitsRow: React.FC<{ data: SolarEnvBenefitsView | null }> = ({
           <Ellipse cx={74} cy={26} rx={8} ry={8} fill="#3a9a4a" />
         </Svg>
         <View style={styles.envValueRow}>
-          <Text style={styles.envValue}>{formatCount(kmMillions, 2)}</Text>
+          <Text style={[styles.envValue, { fontSize: 28 * scale }]}>{formatCount(kmMillions, 2)}</Text>
           <Text style={styles.envUnit}>triệu km</Text>
         </View>
         {/* Dấu * cho người xem biết đây là số quy đổi, nhà cung cấp không trả. */}

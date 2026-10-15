@@ -125,6 +125,7 @@ export default function FileView({
         const pdfUrl = `${params.nameClass}/preview-attach-file?name=${params.name}`;
         return (
           <WebView
+            textZoom={100}
             originWhitelist={["*"]}
             source={{ uri: pdfUrl }}
             style={styles.webView}
@@ -134,6 +135,7 @@ export default function FileView({
 
       return (
         <WebView
+          textZoom={100}
           originWhitelist={["*"]}
           source={{ html: buildPdfViewerHtml(fileData ?? "") }}
           style={styles.webView}

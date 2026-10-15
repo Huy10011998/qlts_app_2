@@ -3,7 +3,6 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import { AppColors, useAppColors, useStyles } from "../../../../utils/helpers/colors";
-import { COMPACT_TEXT_MAX_SCALE } from "../../../../utils/helpers/textScaling";
 
 type Props = {
   icon: string;
@@ -35,7 +34,7 @@ export default function WorkflowCounter({
   const pillContent = (
     <>
       <Ionicons name={icon} size={iconSize + 3} color={c.red} />
-      <Text style={styles.pillText} maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}>
+      <Text style={styles.pillText}>
         {count}
       </Text>
     </>

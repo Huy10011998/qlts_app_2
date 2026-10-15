@@ -1107,6 +1107,7 @@ const CameraList: React.FC = () => {
 
                 {Platform.OS === "ios" && (
                   <WebView
+                    textZoom={100}
                     key={fullscreenCamera.iD_Camera}
                     ref={fullscreenWebViewRef}
                     source={{

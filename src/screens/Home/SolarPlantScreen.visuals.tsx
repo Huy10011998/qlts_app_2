@@ -27,7 +27,7 @@ import {
   CHART_WIDTH,
   COMPARE_CURRENT_YEAR_COLOR,
   COMPARE_PREVIOUS_YEAR_COLOR,
-  formatVnNumber,
+  formatSolarNumber,
   isRainWeatherCode,
   isStormWeatherCode,
   roundTo,
@@ -47,8 +47,8 @@ import {
 
 // ─── Weather SVG ─────────────────────────────────────────────────────────────
 
-const WeatherStormy: React.FC = () => (
-  <Svg width={52} height={42} viewBox="0 0 52 42">
+const WeatherStormy: React.FC<{ scale?: number }> = ({ scale = 1 }) => (
+  <Svg width={52 * scale} height={42 * scale} viewBox="0 0 52 42">
     {[6, 14, 22, 30, 38, 46].map((x, i) => (
       <Line
         key={i}
@@ -69,8 +69,8 @@ const WeatherStormy: React.FC = () => (
   </Svg>
 );
 
-const WeatherRainy: React.FC = () => (
-  <Svg width={52} height={42} viewBox="0 0 52 42">
+const WeatherRainy: React.FC<{ scale?: number }> = ({ scale = 1 }) => (
+  <Svg width={52 * scale} height={42 * scale} viewBox="0 0 52 42">
     {[14, 24, 34].map((x, i) => (
       <Line
         key={i}
@@ -90,8 +90,8 @@ const WeatherRainy: React.FC = () => (
   </Svg>
 );
 
-const WeatherSunny: React.FC = () => (
-  <Svg width={52} height={42} viewBox="0 0 52 42">
+const WeatherSunny: React.FC<{ scale?: number }> = ({ scale = 1 }) => (
+  <Svg width={52 * scale} height={42 * scale} viewBox="0 0 52 42">
     <Circle cx={27} cy={21} r={10} fill="#ffc447" />
     {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => {
       const rad = (angle * Math.PI) / 180;
@@ -116,8 +116,8 @@ const WeatherSunny: React.FC = () => (
   </Svg>
 );
 
-const WeatherCloudy: React.FC = () => (
-  <Svg width={52} height={42} viewBox="0 0 52 42">
+const WeatherCloudy: React.FC<{ scale?: number }> = ({ scale = 1 }) => (
+  <Svg width={52 * scale} height={42 * scale} viewBox="0 0 52 42">
     <Circle cx={21} cy={16} r={9} fill="#ffd56a" opacity={0.9} />
     <Ellipse cx={28} cy={22} rx={17} ry={9} fill="white" opacity={0.96} />
     <Ellipse cx={16} cy={24} rx={9} ry={6} fill="white" opacity={0.96} />
@@ -125,22 +125,23 @@ const WeatherCloudy: React.FC = () => (
   </Svg>
 );
 
-export const WeatherIcon: React.FC<{ weatherCode?: number }> = ({
+export const WeatherIcon: React.FC<{ weatherCode?: number; scale?: number }> = ({
   weatherCode,
+  scale,
 }) => {
   if (isStormWeatherCode(weatherCode)) {
-    return <WeatherStormy />;
+    return <WeatherStormy scale={scale} />;
   }
 
   if (isRainWeatherCode(weatherCode)) {
-    return <WeatherRainy />;
+    return <WeatherRainy scale={scale} />;
   }
 
   if (weatherCode != null && weatherCode >= 1 && weatherCode <= 48) {
-    return <WeatherCloudy />;
+    return <WeatherCloudy scale={scale} />;
   }
 
-  return <WeatherSunny />;
+  return <WeatherSunny scale={scale} />;
 };
 
 export const DateCalendarIcon: React.FC = () => (
@@ -249,26 +250,48 @@ export const DateSkipIcon: React.FC<{ muted?: boolean }> = ({ muted }) => (
  */
 const SHOW_ENERGY_FLOW = false;
 
+/**
+ * Nhãn trục biểu đồ: xám trung tính đọc được trên cả nền sáng lẫn tối. Trước đây
+ * #aaa/#bbb cỡ 9 — trên máy bật Thu phóng gần như không đọc nổi.
+ */
+const AXIS_LABEL_COLOR = "#8e8e93";
+
 /** Nhóm SVG có thể chạy animation opacity – dùng cho vệt nắng quét trên dàn pin. */
 const AnimatedG = Animated.createAnimatedComponent(G);
 
-const SCENE_HEIGHT_RATIO = 145 / 390;
+/** Bề ngang điện thoại mà bố cục hero được canh (390 × 145). */
+const SOLAR_HERO_BASE_WIDTH = 390;
+
+/**
+ * Hệ số thu nhỏ hero (ảnh nhà máy, bong bóng, số sản lượng) cho màn hẹp hơn bản
+ * canh — máy nhỏ, bật Thu phóng. Chỉ thu chứ không phóng: màn rộng hơn giữ cỡ
+ * gốc. Chặn dưới 0.8 để chữ trong bong bóng còn đọc được.
+ */
+export const getSolarHeroScale = (width: number) =>
+  Math.min(1, Math.max(0.8, width / SOLAR_HERO_BASE_WIDTH));
+
+const SCENE_HEIGHT_RATIO = 145 / SOLAR_HERO_BASE_WIDTH;
 const SCENE_MIN_HEIGHT = 145;
 const SCENE_MAX_HEIGHT = 230;
 
 export const getSceneHeight = (width: number) =>
   Math.round(
     Math.min(
-      Math.max(width * SCENE_HEIGHT_RATIO, SCENE_MIN_HEIGHT),
+      Math.max(
+        width * SCENE_HEIGHT_RATIO,
+        SCENE_MIN_HEIGHT * getSolarHeroScale(width),
+      ),
       SCENE_MAX_HEIGHT,
     ),
   );
 
 /**
  * Khoảng chừa phía trên khung cảnh cho ba bong bóng số liệu — giữ đúng khoảng hở
- * của bản điện thoại (hero 226 − cảnh 145).
+ * của bản điện thoại (hero 226 − cảnh 145), thu theo `getSolarHeroScale` vì bong
+ * bóng cũng thu theo đó.
  */
-export const SCENE_TOP_SPACE = 81;
+export const getSceneTopSpace = (width: number) =>
+  Math.round(81 * getSolarHeroScale(width));
 
 export const SceneView: React.FC<{
   /**
@@ -1322,13 +1345,13 @@ const tickDigits = (step: number) => {
 };
 
 /**
- * Nhãn trục Y. Cắt số 0 vô nghĩa ở cuối để mốc đọc gọn: 0,50 -> 0,5 và 1,00 -> 1,
- * thay vì cả cột nhãn đều có đuôi ",00".
+ * Nhãn trục Y. Cắt số 0 vô nghĩa ở cuối để mốc đọc gọn: 0.50 -> 0.5 và 1.00 -> 1,
+ * thay vì cả cột nhãn đều có đuôi ".00".
  */
 const formatTick = (value: number, step: number) => {
-  const formatted = formatVnNumber(value, tickDigits(step));
+  const formatted = formatSolarNumber(value, tickDigits(step));
 
-  return formatted.includes(",") ? formatted.replace(/,?0+$/, "") : formatted;
+  return formatted.includes(".") ? formatted.replace(/\.?0+$/, "") : formatted;
 };
 
 /**
@@ -1572,8 +1595,8 @@ const AreaChartBase: React.FC<{
             <SvgText
               x={padL - 4}
               y={py(value) + 4}
-              fontSize={scaledSvgFontSize(9)}
-              fill="#aaa"
+              fontSize={scaledSvgFontSize(10)}
+              fill={AXIS_LABEL_COLOR}
               textAnchor="end"
             >
               {formatTick(value, tickStep)}
@@ -1686,8 +1709,8 @@ const AreaChartBase: React.FC<{
       <SvgText
         x={padL - 4}
         y={padT + H + Math.round(4 * textScale)}
-        fontSize={scaledSvgFontSize(9)}
-        fill="#aaa"
+        fontSize={scaledSvgFontSize(10)}
+        fill={AXIS_LABEL_COLOR}
         textAnchor="end"
       >
         {unitLabel}
@@ -1813,8 +1836,8 @@ const EnergyBarChartBase: React.FC<{
             <SvgText
               x={padL - 4}
               y={py(value) + 4}
-              fontSize={scaledSvgFontSize(9)}
-              fill="#bbb"
+              fontSize={scaledSvgFontSize(10)}
+              fill={AXIS_LABEL_COLOR}
               textAnchor="end"
             >
               {formatTick(value, tickStep)}
@@ -1928,8 +1951,8 @@ const EnergyBarChartBase: React.FC<{
             key={`label-${bucketIndex}`}
             x={padL + (bucketIndex + 0.5) * slotWidth}
             y={padT + H + Math.round(15 * textScale)}
-            fontSize={scaledSvgFontSize(9)}
-            fill="#aaa"
+            fontSize={scaledSvgFontSize(10)}
+            fill={AXIS_LABEL_COLOR}
             textAnchor="middle"
           >
             {bucket.label}
@@ -1941,8 +1964,8 @@ const EnergyBarChartBase: React.FC<{
       <SvgText
         x={padL - 4}
         y={padT + H + Math.round(4 * textScale)}
-        fontSize={scaledSvgFontSize(9)}
-        fill="#bbb"
+        fontSize={scaledSvgFontSize(10)}
+        fill={AXIS_LABEL_COLOR}
         textAnchor="end"
       >
         {unitLabel}
@@ -2017,8 +2040,8 @@ const BarChartBase: React.FC<{
               <SvgText
                 x={padL - 4}
                 y={y + 4}
-                fontSize={scaledSvgFontSize(9)}
-                fill="#bbb"
+                fontSize={scaledSvgFontSize(10)}
+                fill={AXIS_LABEL_COLOR}
                 textAnchor="end"
               >
                 {formatTick(value, tickStep)}
@@ -2066,8 +2089,8 @@ const BarChartBase: React.FC<{
                     key={label}
                     x={x}
                     y={padT + H + Math.round(18 * textScale)}
-                    fontSize={scaledSvgFontSize(9)}
-                    fill="#aaa"
+                    fontSize={scaledSvgFontSize(10)}
+                    fill={AXIS_LABEL_COLOR}
                     textAnchor="middle"
                   >
                     {label}
@@ -2078,8 +2101,8 @@ const BarChartBase: React.FC<{
               <SvgText
                 x={cx}
                 y={padT + H + Math.round(18 * textScale)}
-                fontSize={scaledSvgFontSize(9)}
-                fill="#aaa"
+                fontSize={scaledSvgFontSize(10)}
+                fill={AXIS_LABEL_COLOR}
                 textAnchor="middle"
               >
                 {bucket.label}
@@ -2100,8 +2123,8 @@ const BarChartBase: React.FC<{
       <SvgText
         x={padL - 4}
         y={padT + H + Math.round(4 * textScale)}
-        fontSize={scaledSvgFontSize(9)}
-        fill="#bbb"
+        fontSize={scaledSvgFontSize(10)}
+        fill={AXIS_LABEL_COLOR}
         textAnchor="end"
       >
         {unitLabel}

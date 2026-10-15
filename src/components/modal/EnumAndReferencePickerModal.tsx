@@ -22,7 +22,6 @@ import {
   useSeparatorColor,
   useStyles,
 } from "../../utils/helpers/colors";
-import { COMPACT_TEXT_MAX_SCALE } from "../../utils/helpers/textScaling";
 
 if (
   Platform.OS === "android" &&
@@ -335,7 +334,6 @@ export default function EnumAndReferencePickerModal({
             placeholder="Tìm kiếm..."
             onClear={handleClearSearch}
             isSearching={showSearchSpinner}
-            maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
           />
         </View>
 

@@ -42,6 +42,7 @@ import {
   getCurrentCoordinates,
   type Coordinates,
 } from "../../utils/location/currentPosition";
+import { reverseGeocode } from "../../utils/location/reverseGeocode";
 import {
   AppColors,
   useAppColors,
@@ -51,8 +52,8 @@ import { getFridgeLocationRows } from "./shared/fridgeLookup";
 import PhotoWatermark, {
   getWatermarkFrame,
   type WatermarkLines,
-} from "./shared/PhotoWatermark";
-import { useWatermarkAccountName } from "./shared/useWatermarkAccountName";
+} from "../../components/photoStamp/PhotoWatermark";
+import { useWatermarkAccountName } from "../../components/photoStamp/useWatermarkAccountName";
 import { EMPTY_VALUE, formatNoiDiaDateTime } from "./shared/noiDiaFormat";
 import NoiDiaFormScroll from "./shared/NoiDiaFormScroll";
 import NoiDiaNoteCard from "./shared/NoiDiaNoteCard";
@@ -83,7 +84,15 @@ export default function XacNhanViTriTuLanhScreen() {
   const watermarkRef = useRef<ViewShotRef | null>(null);
   const [note, setNote] = useState("");
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
+  // Địa chỉ tra từ toạ độ — tới sau toạ độ, có thì dải ảnh tự thêm dòng này.
+  const [address, setAddress] = useState<string | null>(null);
+  const locateRequestRef = useRef(0);
+  // Đọc trong handleCapturePhoto mà không làm nó đổi theo mỗi lần có toạ độ.
+  const coordinatesRef = useRef<Coordinates | null>(null);
+  coordinatesRef.current = coordinates;
   const [isLocating, setIsLocating] = useState(true);
+  const isLocatingRef = useRef(true);
+  isLocatingRef.current = isLocating;
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Trạng thái sử dụng lúc xác nhận: mặc định đúng trạng thái hiện tại của tủ,
@@ -117,20 +126,27 @@ export default function XacNhanViTriTuLanhScreen() {
   const watermarkLines = useMemo<WatermarkLines>(
     () => ({
       timestamp: formatNoiDiaDateTime(capturedAt),
+      address: address ?? undefined,
       coordinates: coordinates
         ? `${coordinates.lat}, ${coordinates.lng}`
         : "Không lấy được toạ độ",
-      fridge: fridge?.label ?? "",
+      subject: fridge?.label ?? "",
       account: accountName ? `Người chụp: ${accountName}` : "",
     }),
-    [accountName, capturedAt, coordinates, fridge?.label],
+    [accountName, address, capturedAt, coordinates, fridge?.label],
   );
 
   const loadCoordinates = useCallback(async () => {
+    const requestId = ++locateRequestRef.current;
     setIsLocating(true);
+    setAddress(null);
     const nextCoordinates = await getCurrentCoordinates();
     setCoordinates(nextCoordinates);
     setIsLocating(false);
+    if (!nextCoordinates) return;
+    const nextAddress = await reverseGeocode(nextCoordinates.lat, nextCoordinates.lng);
+    // Bấm Thử lại giữa chừng thì bỏ kết quả của lượt cũ.
+    if (requestId === locateRequestRef.current) setAddress(nextAddress);
   }, []);
 
   useEffect(() => {
@@ -274,11 +290,13 @@ export default function XacNhanViTriTuLanhScreen() {
       setPhoto(asset);
       // Giờ nung lên ảnh là lúc bấm chụp, không phải lúc bấm gửi.
       setPhotoTakenAt(new Date().toISOString());
+      // Như ảnh Workflow: lúc mở màn chưa lấy được toạ độ thì chụp xong lấy lại.
+      if (!coordinatesRef.current && !isLocatingRef.current) loadCoordinates();
     } catch (e) {
       error(e);
       showAlertIfActive("Lỗi", "Không chụp được ảnh. Vui lòng thử lại.");
     }
-  }, [ensureCameraPermission, showAlertIfActive]);
+  }, [ensureCameraPermission, loadCoordinates, showAlertIfActive]);
 
   const handleSubmit = useCallback(async () => {
     if (!fridge || !photo?.uri || isSubmitting) return;
@@ -487,7 +505,9 @@ export default function XacNhanViTriTuLanhScreen() {
               {isLocating
                 ? "Đang lấy toạ độ..."
                 : coordinates
-                  ? `${coordinates.lat}, ${coordinates.lng}`
+                  ? [address, `${coordinates.lat}, ${coordinates.lng}`]
+                      .filter(Boolean)
+                      .join("\n")
                   : "Không lấy được toạ độ"}
             </Text>
             {!isLocating && !coordinates ? (
@@ -670,6 +690,7 @@ const makeStyles = (c: AppColors) =>
       marginTop: 10,
     },
     metaText: {
+      flexShrink: 1,
       fontSize: 13,
       color: c.textSecondary,
     },

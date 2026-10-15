@@ -65,6 +65,12 @@ import {
   requestCameraPermission,
 } from "../../services/cameraPermission";
 import {
+  AppLocationPermissionStatus,
+  checkLocationPermission,
+  getLocationPermissionLabel,
+  requestLocationPermission,
+} from "../../services/locationPermission";
+import {
   AppNotificationPermissionStatus,
   checkNotificationPermission,
   getNotificationPermissionLabel,
@@ -115,6 +121,10 @@ const SettingScreen = () => {
     });
   const [cameraPermissionStatus, setCameraPermissionStatus] =
     useState<AppCameraPermissionStatus>("unknown");
+  const [locationPermissionStatus, setLocationPermissionStatus] =
+    useState<AppLocationPermissionStatus>("unknown");
+  const [isUpdatingLocationPermission, setIsUpdatingLocationPermission] =
+    useState(false);
   const [notificationPermissionStatus, setNotificationPermissionStatus] =
     useState<AppNotificationPermissionStatus>("unknown");
   const [
@@ -195,10 +205,12 @@ const SettingScreen = () => {
       try {
         const [
           nextCameraPermissionStatus,
+          nextLocationPermissionStatus,
           nextNotificationPermissionStatus,
           nextLocalNetworkState,
         ] = await Promise.all([
           checkCameraPermission().catch(() => "unknown" as const),
+          checkLocationPermission().catch(() => "unknown" as const),
           checkNotificationPermission().catch(() => "unknown" as const),
           (probeLocalNetwork
             ? refreshStoredLocalNetworkPermission()
@@ -208,6 +220,7 @@ const SettingScreen = () => {
 
         if (!canUpdateScreen()) return;
         setCameraPermissionStatus(nextCameraPermissionStatus);
+        setLocationPermissionStatus(nextLocationPermissionStatus);
         setNotificationPermissionStatus(nextNotificationPermissionStatus);
         setLocalNetworkState(nextLocalNetworkState);
       } catch {
@@ -461,6 +474,7 @@ const SettingScreen = () => {
     localNetworkState.status,
   );
   const cameraStatusLabel = getCameraPermissionLabel(cameraPermissionStatus);
+  const locationStatusLabel = getLocationPermissionLabel(locationPermissionStatus);
   const notificationStatusLabel = getNotificationPermissionLabel(
     notificationPermissionStatus,
   );
@@ -595,6 +609,55 @@ const SettingScreen = () => {
       }
     },
     [isUpdatingCameraPermission],
+  );
+
+  const handleToggleLocationPermission = useCallback(
+    async (value: boolean) => {
+      if (isUpdatingLocationPermission) return;
+
+      // Tắt hoặc đang "Gần đúng" (muốn đổi sang chính xác): app không tự đổi
+      // được, chỉ mở Cài đặt của máy.
+      if (!value || locationPermissionStatus === "approximate") {
+        Alert.alert(
+          "Quyền vị trí",
+          value
+            ? "Máy đang chỉ cho vị trí gần đúng. Mở Cài đặt, vào Quyền > Vị trí và bật Dùng vị trí chính xác để toạ độ trên ảnh đúng hơn."
+            : "Hệ điều hành không cho tắt trực tiếp quyền vị trí trong app. Bạn có thể mở Cài đặt để thay đổi quyền này.",
+          [
+            { text: "Để sau", style: "cancel" },
+            { text: "Mở Cài đặt", onPress: () => openAppPermissionSettings() },
+          ],
+        );
+        return;
+      }
+
+      setIsUpdatingLocationPermission(true);
+      try {
+        const nextStatus = await requestLocationPermission();
+        setLocationPermissionStatus(nextStatus);
+
+        if (nextStatus === "blocked") {
+          Alert.alert(
+            "Quyền vị trí",
+            "Vị trí đang bị chặn. Vui lòng mở Cài đặt để cấp lại quyền.",
+            [
+              { text: "Đóng", style: "cancel" },
+              { text: "Mở Cài đặt", onPress: () => openAppPermissionSettings() },
+            ],
+          );
+          return;
+        }
+
+        if (nextStatus === "denied" || nextStatus === "unavailable") {
+          Alert.alert("Quyền vị trí", "Chưa thể bật quyền vị trí trên thiết bị này.");
+        }
+      } catch {
+        Alert.alert("Lỗi", "Chưa thể cập nhật quyền vị trí lúc này.");
+      } finally {
+        if (isMountedRef.current) setIsUpdatingLocationPermission(false);
+      }
+    },
+    [isUpdatingLocationPermission, locationPermissionStatus],
   );
 
   const handleToggleNotificationPermission = useCallback(
@@ -920,6 +983,19 @@ const SettingScreen = () => {
               onValueChange={handleToggleCameraPermission}
             />
             <SettingSwitchRow
+              iconName="location-outline"
+              iconBg={C.rose}
+              label="Quyền vị trí"
+              sublabel={`Gắn toạ độ vào ảnh chụp • ${locationStatusLabel}${
+                isUpdatingLocationPermission ? " • Đang cập nhật..." : ""
+              }`}
+              value={
+                locationPermissionStatus === "granted" ||
+                locationPermissionStatus === "approximate"
+              }
+              onValueChange={handleToggleLocationPermission}
+            />
+            <SettingSwitchRow
               iconName="notifications-outline"
               iconBg={C.amber}
               label="Quyền thông báo"
@@ -1088,7 +1164,7 @@ const SettingScreen = () => {
                 { color: colors.textSub },
               ]}
             >
-              Bạn có thể đổi quyền mạng nội bộ và camera trong Cài đặt hệ thống
+              Bạn có thể đổi quyền mạng nội bộ, camera và vị trí trong Cài đặt hệ thống
               bất kỳ lúc nào.
             </Text>
           </View>

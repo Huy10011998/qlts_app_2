@@ -27,7 +27,6 @@ export default function StatusBadge({ label, color, dot, solid, textColor, style
       <Text
         style={[styles.text, { color: labelColor }]}
         numberOfLines={1}
-        maxFontSizeMultiplier={1.3}
       >
         {label}
       </Text>

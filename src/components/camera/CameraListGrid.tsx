@@ -165,6 +165,7 @@ const CameraCell = React.memo(
         <View style={[styles.cell, { width: cellW, height: cellH }]}>
           {shouldRenderWebView ? (
             <WebView
+              textZoom={100}
               key={`webview-${cam.iD_Camera}-${pageKey}-${token}`}
               ref={webviewRefCb}
               source={{
@@ -1733,6 +1734,7 @@ const CameraListGrid: React.FC = () => {
 
                   {Platform.OS === "ios" && (
                     <WebView
+                      textZoom={100}
                       key={`fs-${fullscreenCam.iD_Camera}`}
                       ref={fullscreenWebViewRef}
                       source={{

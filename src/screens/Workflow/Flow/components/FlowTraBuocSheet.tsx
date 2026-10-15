@@ -4,6 +4,7 @@ import { Alert, StyleSheet, Text, View } from "react-native";
 import { flowDuyetHoSo } from "../../../../services/data/flowApi";
 import { getThaoTacError } from "../../../../services/data/workflowApi";
 import { AppColors, useStyles } from "../../../../utils/helpers/colors";
+import { scaledLineHeight } from "../../../../utils/helpers/textScaling";
 import WorkflowButton from "../../shared/components/WorkflowButton";
 import WorkflowSheet from "../../shared/components/WorkflowSheet";
 import WorkflowTextArea from "../../shared/components/WorkflowTextArea";
@@ -121,7 +122,7 @@ const makeStyles = (c: AppColors) =>
     question: {
       fontSize: 15,
       color: c.text,
-      lineHeight: 21,
+      lineHeight: scaledLineHeight(15, 21 / 15),
       marginBottom: 10,
     },
     strong: {
@@ -138,7 +139,7 @@ const makeStyles = (c: AppColors) =>
     warningText: {
       fontSize: 13,
       color: c.text,
-      lineHeight: 18,
+      lineHeight: scaledLineHeight(13, 18 / 13),
     },
     error: {
       fontSize: 12,

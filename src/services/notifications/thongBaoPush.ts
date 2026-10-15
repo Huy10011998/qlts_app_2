@@ -1,9 +1,17 @@
-import notifee from "@notifee/react-native";
+import { Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import notifee, { AndroidImportance } from "@notifee/react-native";
 
 import { resolveThongBaoTarget } from "../../screens/ThongBao/thongBaoRules";
 import { toBeDateTime } from "../../screens/Workflow/shared/workflowDate";
 import type { ThongBaoItem } from "../../types/index";
 import { warn } from "../../utils/Logger";
+import {
+  ANDROID_SMALL_ICON,
+  DEFAULT_PRESS_ACTION_ID,
+  NOTIFICATION_COLOR,
+  SILENT_CHANNEL_ID,
+} from "./constants";
 
 /**
  * Push thông báo chuông (8-Mobile-ThongBao mục 6): `data.type = "THONG_BAO"`,
@@ -101,12 +109,140 @@ export const emitThongBaoPush = (event: ThongBaoPushEvent) => {
 };
 
 /**
+ * Android không có API đặt số trên icon (notifee.setBadgeCount chỉ chạy iOS):
+ * launcher tự cộng số của các thông báo đang nằm trên khay. Nên giữ 1 thông báo
+ * tóm tắt im lặng mang `badgeCount` = phần còn thiếu, để tổng launcher đếm
+ * (Samsung, Xiaomi, Oppo…) = số chưa đọc. Pixel / Android gốc chỉ hiện chấm.
+ * Như Zalo / Messenger: người dùng xoá khay (tóm tắt bị xoá) là thôi hẳn tóm
+ * tắt — icon chỉ còn đếm push tới sau đó, mở lại app không dựng lại. Đọc hết
+ * (về 0) hoặc đăng xuất mới bật lại.
+ */
+export const THONG_BAO_BADGE_NOTIFICATION_ID = "thong-bao-chua-doc";
+
+/** Mọi thao tác trên thông báo tóm tắt chạy nối tiếp — tránh đếm khay giữa chừng. */
+let androidBadgeQueue: Promise<void> = Promise.resolve();
+let androidBadgeCount = 0;
+
+/** Người dùng đã xoá tóm tắt — lưu máy vì DISMISSED có thể tới lúc app tắt (headless). */
+const BADGE_SUMMARY_DISMISSED_KEY = "thongBao.badgeSummaryDismissed";
+let summaryDismissed: boolean | null = null;
+
+const isSummaryDismissed = async () => {
+  if (summaryDismissed == null) {
+    summaryDismissed = (await AsyncStorage.getItem(BADGE_SUMMARY_DISMISSED_KEY).catch(() => null)) === "1";
+  }
+  return summaryDismissed;
+};
+
+const setSummaryDismissed = async (value: boolean) => {
+  summaryDismissed = value;
+  await (value
+    ? AsyncStorage.setItem(BADGE_SUMMARY_DISMISSED_KEY, "1")
+    : AsyncStorage.removeItem(BADGE_SUMMARY_DISMISSED_KEY)
+  ).catch((err) => warn("[Push] Lưu cờ đã xoá tóm tắt thất bại", err));
+};
+
+const refreshAndroidBadge = () => {
+  androidBadgeQueue = androidBadgeQueue.then(async () => {
+    try {
+      const count = androidBadgeCount;
+      // Đọc hết / đăng xuất: lần sau có chưa đọc thì tóm tắt lại được hiện.
+      if (count <= 0 && (await isSummaryDismissed())) await setSummaryDismissed(false);
+      // Launcher đã đếm các thông báo khác trên khay (push chuông chưa đọc,
+      // camera…) — tóm tắt chỉ bù phần còn lại.
+      const shown = await notifee.getDisplayedNotifications();
+      const others = shown.filter((item) => item.id !== THONG_BAO_BADGE_NOTIFICATION_ID).length;
+      const missing = count - others;
+      // Launcher đếm thông báo số 0 thành 1 → hết phần thiếu thì gỡ hẳn.
+      if (missing <= 0 || (await isSummaryDismissed())) {
+        await notifee.cancelDisplayedNotification(THONG_BAO_BADGE_NOTIFICATION_ID);
+        return;
+      }
+      await notifee.displayNotification({
+        id: THONG_BAO_BADGE_NOTIFICATION_ID,
+        title: "Thông báo chưa đọc",
+        body: `Bạn có ${count} thông báo chưa đọc`,
+        data: { route: "ThongBao" },
+        android: {
+          channelId: SILENT_CHANNEL_ID,
+          importance: AndroidImportance.LOW,
+          badgeCount: missing,
+          timestamp: Date.now(),
+          showTimestamp: true,
+          onlyAlertOnce: true,
+          // Bấm mở chuông nhưng vẫn giữ trên khay — nó mang số trên icon.
+          autoCancel: false,
+          smallIcon: ANDROID_SMALL_ICON,
+          color: NOTIFICATION_COLOR,
+          pressAction: { id: DEFAULT_PRESS_ACTION_ID, launchActivity: "default" },
+        },
+      });
+    } catch (err) {
+      warn("[Push] Cập nhật thông báo tóm tắt (số trên icon) thất bại", err);
+    }
+  });
+  return androidBadgeQueue;
+};
+
+/**
+ * Người dùng xoá tóm tắt ("Xoá" khay / vuốt) → nhớ lại, không dựng lại nữa.
+ * Huỷ bằng code (đủ số, về 0, đăng xuất) không phát DISMISSED.
+ */
+export const handleThongBaoBadgeDismissed = async (notification: { id?: string } | undefined) => {
+  if (Platform.OS !== "android" || notification?.id !== THONG_BAO_BADGE_NOTIFICATION_ID) return;
+  await setSummaryDismissed(true);
+};
+
+/**
+ * Push chuông tới lúc app đang mở (Android): không banner (đã có toast) nhưng
+ * vẫn đặt im lặng lên khay để launcher đếm, như lúc app tắt OS tự hiện. Đọc thì
+ * `removeThongBaoFromTray` gỡ, bấm thì mở như push thường.
+ */
+export const showThongBaoInTray = (message: {
+  id: string;
+  title?: string;
+  body?: string;
+  data: Record<string, string>;
+}) => {
+  if (Platform.OS !== "android" || (!message.title && !message.body)) return;
+  // Chung hàng đợi với tóm tắt: hiện xong mới đếm khay.
+  androidBadgeQueue = androidBadgeQueue.then(async () => {
+    try {
+      await notifee.displayNotification({
+        id: message.id,
+        title: message.title,
+        body: message.body,
+        data: message.data,
+        android: {
+          channelId: SILENT_CHANNEL_ID,
+          importance: AndroidImportance.LOW,
+          // Không gắn giờ thì Samsung hiện ngày rác ("3/1/01").
+          timestamp: Date.now(),
+          showTimestamp: true,
+          smallIcon: ANDROID_SMALL_ICON,
+          color: NOTIFICATION_COLOR,
+          pressAction: { id: DEFAULT_PRESS_ACTION_ID, launchActivity: "default" },
+        },
+      });
+    } catch (err) {
+      warn("[Push] Đặt push chuông lên khay thất bại", err);
+    }
+  });
+  return refreshAndroidBadge();
+};
+
+/**
  * Số trên icon app = số chưa đọc (mục 6) — ĐẶT, không xoá về 0. iOS lúc app
  * tắt do server đổi (aps.badge + push im lặng); app đặt lại khi mở / đọc.
  */
 export const setAppBadgeCount = async (count: number) => {
+  const value = Math.max(0, Math.round(count) || 0);
+  if (Platform.OS === "android") {
+    androidBadgeCount = value;
+    return refreshAndroidBadge();
+  }
   try {
-    await notifee.setBadgeCount(Math.max(0, Math.round(count) || 0));
+    await notifee.setBadgeCount(value);
   } catch (err) {
     warn("[Push] Đặt số trên icon thất bại", err);
   }
@@ -126,6 +262,8 @@ export const removeThongBaoFromTray = async (ids: number[] | "all") => {
       return ids === "all" || ids.includes(Number(data.iD_ThongBao));
     });
     await Promise.all(targets.map((item) => notifee.cancelDisplayedNotification(item.id!)));
+    // Khay bớt push → thông báo tóm tắt bù lại cho đủ số trên icon.
+    if (Platform.OS === "android" && targets.length) refreshAndroidBadge();
   } catch (err) {
     warn("[Push] Gỡ thông báo đã đọc khỏi khay thất bại", err);
   }

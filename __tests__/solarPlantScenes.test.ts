@@ -1,5 +1,9 @@
 import { getPlantScene } from "../src/screens/Home/shared/plantScenes";
-import { getSceneHeight } from "../src/screens/Home/SolarPlantScreen.visuals";
+import {
+  getSceneHeight,
+  getSceneTopSpace,
+  getSolarHeroScale,
+} from "../src/screens/Home/SolarPlantScreen.visuals";
 
 // Ảnh nền nhà máy khớp theo tên site của API. Tên đó do bên cấu hình gõ tay nên
 // có thể hoa/thường, có/không dấu, kèm chữ "Nhà máy" — cách khớp phải chịu được
@@ -41,14 +45,34 @@ describe("getSceneHeight", () => {
     expect(getSceneHeight(390)).toBe(145);
   });
 
-  it("máy hẹp hơn vẫn không thấp hơn bản điện thoại", () => {
-    expect(getSceneHeight(320)).toBe(145);
+  // Màn hẹp (máy nhỏ, bật Thu phóng): giữ cỡ tối thiểu 145 thì hero chiếm gần
+  // hết màn hình, nên thu theo bề ngang — nhưng có sàn 80% để ảnh không quá bé.
+  it("máy hẹp hơn thì thu theo bề ngang, có sàn", () => {
+    expect(getSceneHeight(320)).toBe(Math.round((320 * 145) / 390));
+    expect(getSceneHeight(200)).toBe(Math.round(145 * 0.8));
   });
 
   it("khối rộng thì cao thêm nhưng có chặn trên", () => {
     expect(getSceneHeight(520)).toBeGreaterThan(145);
     expect(getSceneHeight(720)).toBe(230);
     expect(getSceneHeight(2000)).toBe(230);
+  });
+});
+
+describe("getSolarHeroScale", () => {
+  it("chỉ thu trên màn hẹp hơn bản canh, không phóng trên màn rộng", () => {
+    expect(getSolarHeroScale(390)).toBe(1);
+    expect(getSolarHeroScale(720)).toBe(1);
+    expect(getSolarHeroScale(320)).toBeCloseTo(320 / 390);
+  });
+
+  it("không thu quá 80%", () => {
+    expect(getSolarHeroScale(200)).toBe(0.8);
+  });
+
+  it("khoảng chừa cho bong bóng thu cùng nhịp", () => {
+    expect(getSceneTopSpace(390)).toBe(81);
+    expect(getSceneTopSpace(320)).toBe(Math.round((81 * 320) / 390));
   });
 });
 

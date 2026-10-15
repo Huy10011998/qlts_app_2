@@ -120,6 +120,8 @@ const pickImages = async (
         name,
         type: asset.type || guessMimeType(name),
         size: asset.fileSize ?? null,
+        width: asset.width,
+        height: asset.height,
       };
     });
 };

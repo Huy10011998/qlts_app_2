@@ -5,7 +5,7 @@ import {
   useHairlineBorderColor,
   useStyles,
 } from "../../utils/helpers/colors";
-import { READABLE_TEXT_MAX_SCALE } from "../../utils/helpers/textScaling";
+import { getTextScaleFactor } from "../../utils/helpers/textScaling";
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import {
   Alert,
@@ -79,11 +79,7 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const hairlineBorderColor = useHairlineBorderColor();
   const accentBorders = useAccentBorderColors();
-  const {
-    height: windowHeight,
-    width: windowWidth,
-    fontScale,
-  } = useWindowDimensions();
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const usernameRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
   const appVersionLabel = `v${DeviceInfo.getVersion()}`;
@@ -132,12 +128,13 @@ export default function LoginScreen() {
     : "#64748B";
   // Chữ to lên thì nội dung cao thêm mà `windowHeight` không đổi, nên màn hình
   // vẫn rơi vào nhánh "rộng rãi" trong khi thực tế đã chật. Quy về chiều cao
-  // hiệu dụng: chia cho cỡ chữ đang áp dụng (đã kẹp trần) trước khi so ngưỡng.
-  const cappedFontScale = Math.min(fontScale, READABLE_TEXT_MAX_SCALE);
-  const effectiveHeight = windowHeight / cappedFontScale;
+  // hiệu dụng: chia cho hệ số Cỡ chữ của app trước khi so ngưỡng (cỡ chữ của
+  // điện thoại thì app bỏ qua).
+  const textScale = getTextScaleFactor();
+  const effectiveHeight = windowHeight / textScale;
   const isCompactHeight = effectiveHeight < 880;
   const isShortHeight = effectiveHeight < 760;
-  const isNarrowFooter = windowWidth < 330 * cappedFontScale;
+  const isNarrowFooter = windowWidth < 330 * textScale;
   const heroRatio = isShortHeight ? 0.17 : isCompactHeight ? 0.18 : 0.2;
   const heroHeight = Math.min(Math.max(windowHeight * heroRatio, 112), 190);
   const heroBgStyle = [

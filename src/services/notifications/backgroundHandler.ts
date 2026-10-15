@@ -8,6 +8,7 @@ import { ensureNotificationChannels } from "./channels";
 import { displayPushNotification, shouldDisplayLocally } from "./display";
 import { normalizeRemoteMessage } from "./payload";
 import { handlePushTap } from "./tapHandler";
+import { handleThongBaoBadgeDismissed } from "./thongBaoPush";
 
 let registered = false;
 
@@ -64,6 +65,10 @@ export const registerPushBackgroundHandlers = (): void => {
 
     notifee.onBackgroundEvent(async ({ type, detail }) => {
       try {
+        if (type === EventType.DISMISSED) {
+          await handleThongBaoBadgeDismissed(detail.notification);
+          return;
+        }
         if (type !== EventType.PRESS) return;
 
         const notification = detail.notification;

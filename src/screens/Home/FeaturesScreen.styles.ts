@@ -1,6 +1,7 @@
 import { StyleSheet } from "react-native";
 
 import { AppColors } from "../../utils/helpers/colors";
+import { getTextScaleFactor } from "../../utils/helpers/textScaling";
 import { HOME_BRAND_RED } from "./shared/homeTheme";
 
 /**
@@ -120,10 +121,11 @@ export const makeFeatureStyles = (c: AppColors) =>
       fontWeight: "700",
     },
     // Chiều cao cố định cho nhãn: tên một dòng và tên hai dòng nằm cùng thẻ thì
-    // hàng dưới phải bắt đầu ngang nhau, không so le.
+    // hàng dưới phải bắt đầu ngang nhau, không so le. Đủ hai dòng ở mọi cỡ chữ
+    // của app — để 32 cứng thì chữ 150% chỉ còn chỗ cho một dòng.
     tileLabel: {
       fontSize: 12.5,
-      height: 32,
+      height: 32 * getTextScaleFactor(),
       fontWeight: "500",
       color: c.text,
       textAlign: "center",

@@ -19,6 +19,8 @@ type Props = {
   onPress: () => void;
   /** Chưa tải ảnh (vd màn còn đang nhảy xuống tin cuối) — khung chờ vẫn đủ cỡ. */
   defer?: boolean;
+  /** Ô vuông cạnh này (ảnh thu nhỏ ở dòng file) thay khung cao cố định. */
+  square?: number;
 };
 
 /**
@@ -44,19 +46,27 @@ const cachePath = (apiBase: string, fileId: number, thuNho: number, name?: strin
  * Realtime-BinhLuan mục 5) rồi ghi vào bộ nhớ đệm; bấm ảnh mới tải file gốc.
  * File bình luận không sửa được nên khoá theo id là đủ. Lỗi thì hiện dòng bấm để mở.
  */
-export default function WorkflowFileImage({ apiBase, fileId, name, onPress, defer = false }: Props) {
+export default function WorkflowFileImage({
+  apiBase,
+  fileId,
+  name,
+  onPress,
+  defer = false,
+  square,
+}: Props) {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
   const [uri, setUri] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [ratio, setRatio] = useState(PLACEHOLDER_RATIO);
-  const width = Math.min(MAX_WIDTH, Math.round(FRAME_HEIGHT * ratio));
+  const width = square ?? Math.min(MAX_WIDTH, Math.round(FRAME_HEIGHT * ratio));
+  const height = square ?? FRAME_HEIGHT;
 
   useEffect(() => {
     if (defer) return;
     let alive = true;
     // Cạnh dài tối đa đang hiện là bề ngang tối đa của khung.
-    const thuNho = getThumbnailSize(MAX_WIDTH, PixelRatio.get());
+    const thuNho = getThumbnailSize(square ?? MAX_WIDTH, PixelRatio.get());
     const path = cachePath(apiBase, fileId, thuNho, name);
 
     (async () => {
@@ -75,7 +85,15 @@ export default function WorkflowFileImage({ apiBase, fileId, name, onPress, defe
     return () => {
       alive = false;
     };
-  }, [apiBase, defer, fileId, name]);
+  }, [apiBase, defer, fileId, name, square]);
+
+  if (failed && square) {
+    return (
+      <TouchableOpacity onPress={onPress} style={[styles.squareFallback, { width, height }]}>
+        <Ionicons name="image-outline" size={18} color={c.textSub} />
+      </TouchableOpacity>
+    );
+  }
 
   if (failed) {
     return (
@@ -95,7 +113,7 @@ export default function WorkflowFileImage({ apiBase, fileId, name, onPress, defe
       disabled={!uri}
       accessibilityRole="imagebutton"
       accessibilityLabel={name ?? "Ảnh đính kèm"}
-      style={[styles.frame, { width, height: FRAME_HEIGHT }]}
+      style={[styles.frame, square ? styles.frameSquare : null, { width, height }]}
     >
       {uri ? (
         <Image
@@ -120,6 +138,15 @@ const makeStyles = (c: AppColors) =>
     frame: {
       borderRadius: 16,
       overflow: "hidden",
+      backgroundColor: c.surfaceAlt,
+    },
+    frameSquare: {
+      borderRadius: 10,
+    },
+    squareFallback: {
+      borderRadius: 10,
+      alignItems: "center",
+      justifyContent: "center",
       backgroundColor: c.surfaceAlt,
     },
     fallback: {

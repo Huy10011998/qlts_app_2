@@ -88,6 +88,7 @@ export default function VehicleJourneyMapScreen() {
   return (
     <View style={styles.root}>
       <WebView
+        textZoom={100}
         ref={webViewRef}
         key={renderKey}
         originWhitelist={["*"]}

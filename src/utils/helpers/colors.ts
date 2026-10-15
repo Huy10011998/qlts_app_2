@@ -1,5 +1,6 @@
 import { StyleSheet } from "react-native";
 import { useThemePreference } from "../../context/ThemeContext";
+import { getTextScaleFactor } from "./textScaling";
 
 /**
  * Single source of truth for every theme-aware color.
@@ -123,31 +124,39 @@ type StyleFactory<T> = (colors: AppColors) => T;
 
 const styleCache = new WeakMap<
   StyleFactory<unknown>,
-  Partial<Record<Scheme, unknown>>
+  Record<string, unknown>
 >();
 
-/** Run `factory` at most once per (factory, scheme) pair. */
+/**
+ * Run `factory` at most once per (factory, scheme, text scale) triple.
+ *
+ * The text scale is part of the key because factories may size things from it
+ * (`scaledLineHeight`, `getTextScaleFactor()`); keyed by scheme alone, a sheet
+ * built at 100% would be served unchanged after the user picks 150%.
+ */
 const cached = <T>(factory: StyleFactory<T>, scheme: Scheme): T => {
-  let perScheme = styleCache.get(factory as StyleFactory<unknown>);
+  let perKey = styleCache.get(factory as StyleFactory<unknown>);
 
-  if (!perScheme) {
-    perScheme = {};
-    styleCache.set(factory as StyleFactory<unknown>, perScheme);
+  if (!perKey) {
+    perKey = {};
+    styleCache.set(factory as StyleFactory<unknown>, perKey);
   }
 
-  if (!(scheme in perScheme)) {
-    perScheme[scheme] = factory(APP_COLORS[scheme]);
+  const key = `${scheme}@${getTextScaleFactor()}`;
+
+  if (!(key in perKey)) {
+    perKey[key] = factory(APP_COLORS[scheme]);
   }
 
-  return perScheme[scheme] as T;
+  return perKey[key] as T;
 };
 
 /**
  * Theme-aware replacement for a module-level `StyleSheet.create`.
  *
  * Pass a factory declared at module scope; the sheet is built once per
- * appearance and cached, so re-renders reuse the same style objects and only an
- * appearance change produces new ones.
+ * appearance and text scale and cached, so re-renders reuse the same style
+ * objects and only an appearance or text-size change produces new ones.
  */
 export function useStyles<T extends StyleSheet.NamedStyles<T>>(
   factory: StyleFactory<T>,

@@ -14,6 +14,11 @@ import { TypeProperty } from "../../utils/Enum";
 import type { RenderInputByTypeProps } from "../../types/components.d";
 import { formatVND, unFormatVND } from "../../utils/helpers/number";
 import IsLoading from "../ui/IconLoading";
+import ImagePreviewModal from "../ui/ImagePreviewModal";
+import {
+  startLocating,
+  usePhotoStamper,
+} from "../photoStamp/usePhotoStamper";
 import { SkeletonFill } from "../ui/SkeletonBlock";
 import Base64ImageField from "./Base64ImageField";
 import { parseLinkHtml } from "../../utils/Link";
@@ -286,6 +291,7 @@ export const RenderInputByType = ({
   parentGate,
   parentGateMessage,
   isLocked = false,
+  stampCameraPhotos = false,
 }: RenderInputByTypeProps) => {
   const c = useAppColors();
   const localStyles = useThemeValue(makeLocalStyles);
@@ -301,6 +307,10 @@ export const RenderInputByType = ({
   const numberInputRef = React.useRef<TextInput>(null);
   const textAreaWrapRef = React.useRef<View>(null);
   const textAreaRef = React.useRef<TextInput>(null);
+  // Field ảnh của form Workflow: ảnh chụp được nung ngày giờ + toạ độ + người chụp.
+  const photoStamper = usePhotoStamper();
+  // Ảnh đang xem toàn màn hình (bấm vào ảnh của field ảnh, form Workflow).
+  const [previewImageUri, setPreviewImageUri] = React.useState<string | null>(null);
   /* Mốc ảnh gốc nằm ở `formImageOriginals` (ngoài component) vì gập nhóm trường
      là field bị tháo khỏi cây, state trong này mất sạch. */
   const [imageTouched, setImageTouchedState] = React.useState(() =>
@@ -557,6 +567,9 @@ export const RenderInputByType = ({
           setImages,
           setLoadingImages,
           source,
+          stampCameraPhotos
+            ? { prepare: startLocating, stamp: photoStamper.stamp }
+            : undefined,
         );
 
         // `pickImage` đã chốt mốc ảnh gốc đúng lúc chọn được ảnh; ở đây chỉ cần
@@ -620,11 +633,28 @@ export const RenderInputByType = ({
         return (
           <View style={localStyles.imageWrap}>
             <View style={localStyles.imageCard}>
-              <Image
-                source={{ uri: imgUrl }}
-                style={localStyles.imagePreview}
-                resizeMode="cover"
-              />
+              {stampCameraPhotos ? (
+                <TouchableOpacity
+                  style={localStyles.imagePreview}
+                  activeOpacity={0.9}
+                  onPress={() => setPreviewImageUri(imgUrl)}
+                  disabled={loading}
+                  accessibilityRole="imagebutton"
+                  accessibilityLabel={`Xem ${fieldLabel}`}
+                >
+                  <Image
+                    source={{ uri: imgUrl }}
+                    style={localStyles.imagePreview}
+                    resizeMode="cover"
+                  />
+                </TouchableOpacity>
+              ) : (
+                <Image
+                  source={{ uri: imgUrl }}
+                  style={localStyles.imagePreview}
+                  resizeMode="cover"
+                />
+              )}
 
               {loading ? (
                 <View style={localStyles.imageUploadingOverlay}>
@@ -669,6 +699,12 @@ export const RenderInputByType = ({
             </View>
 
             {undoButton}
+
+            <ImagePreviewModal
+              uri={previewImageUri}
+              onClose={() => setPreviewImageUri(null)}
+            />
+            {photoStamper.stamper}
           </View>
         );
       }
@@ -713,6 +749,7 @@ export const RenderInputByType = ({
           </View>
 
           {undoButton}
+          {photoStamper.stamper}
         </View>
       );
     }

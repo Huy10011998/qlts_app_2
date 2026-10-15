@@ -6,6 +6,10 @@ import {
 import { error } from "./Logger";
 import { Alert, Platform } from "react-native";
 import { markFormImageTouched } from "./formImageOriginals";
+import type {
+  StampLocating,
+  StampPhotoInput,
+} from "../components/photoStamp/usePhotoStamper";
 import {
   checkCameraPermission,
   openAppPermissionSettings,
@@ -112,6 +116,18 @@ const IMAGE_QUALITY = 0.7;
 export type ImagePickSource = "library" | "camera";
 
 /**
+ * Nung ngày giờ + toạ độ + người chụp vào ảnh chụp bằng camera (`usePhotoStamper`).
+ * `stamp` trả `null` khi không nung được — khi đó dùng ảnh gốc.
+ */
+export type CameraPhotoStamper = {
+  prepare: () => Promise<StampLocating>;
+  stamp: (
+    photo: StampPhotoInput,
+    locating: StampLocating | null,
+  ) => Promise<string | null>;
+};
+
+/**
  * Ảnh nào đang được hiện bằng file ngay trên máy (vừa chụp / vừa chọn, hoặc ảnh
  * cũ vừa hoàn tác) thì không cần tải lại từ server nữa: `useImageLoader` thấy giá
  * trị field đổi là đi tải, mà tải thì lại nhấp nháy đúng cái ảnh đang hiện.
@@ -185,6 +201,8 @@ export const pickImage = async (
   >,
   /** Chụp trực tiếp rồi tải lên luôn, hay lấy ảnh có sẵn trong thư viện. */
   source: ImagePickSource = "library",
+  /** Có thì ảnh chụp bằng camera được nung thông tin trước khi tải lên. */
+  stamper?: CameraPhotoStamper,
   /** Trả về đường dẫn ảnh đã tải lên, `null` nếu người dùng hủy hoặc lỗi — form
    * cần biết ảnh có thật sự đổi hay không để bật nút hoàn tác. */
 ): Promise<string | null> => {
@@ -193,6 +211,10 @@ export const pickImage = async (
       setLoadingImages((p) => ({ ...p, [fieldName]: false }));
       return null;
     }
+
+    // Xin quyền vị trí + lấy toạ độ trước khi mở camera, song song lúc đang chụp.
+    const locating =
+      source === "camera" && stamper ? await stamper.prepare() : null;
 
     const res =
       source === "camera"
@@ -232,7 +254,22 @@ export const pickImage = async (
       return null;
     }
 
-    const asset = res.assets[0];
+    let asset = res.assets[0];
+
+    if (source === "camera" && stamper && asset.uri) {
+      const stampedUri = await stamper.stamp(
+        { uri: asset.uri, width: asset.width, height: asset.height },
+        locating,
+      );
+      if (stampedUri) {
+        asset = {
+          ...asset,
+          uri: stampedUri,
+          fileName: `image_${Date.now()}.jpg`,
+          type: "image/jpeg",
+        };
+      }
+    }
 
     /* Chỉ bật cờ tải khi đã thực sự chọn được ảnh: bật từ trước lúc mở thư viện
        thì suốt lúc người dùng còn đang ngắm ảnh trong máy, form đã thay ảnh cũ

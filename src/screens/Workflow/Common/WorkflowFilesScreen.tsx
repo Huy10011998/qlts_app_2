@@ -13,12 +13,13 @@ import type { StackRoute, WorkflowFileItem, WorkflowPickedFile } from "../../../
 import { AppColors, useStyles } from "../../../utils/helpers/colors";
 import { useAttachmentPicker } from "../shared/components/AttachmentPicker";
 import WorkflowFab from "../shared/components/WorkflowFab";
+import WorkflowFileImage from "../shared/components/WorkflowFileImage";
 import WorkflowFileRow from "../shared/components/WorkflowFileRow";
 import WorkflowFilesSkeleton from "../shared/components/WorkflowFilesSkeleton";
 import { useWorkflowFileOpener } from "../shared/useWorkflowFileOpener";
 import { useMarkWorkflowChanged } from "../shared/useWorkflowVersion";
 import { useNotifyInfoStaleOnClose } from "../shared/workflowInfoRefresh";
-import { formatFileSizeKb } from "../shared/workflowAttachments";
+import { formatFileSizeKb, isImageFileName } from "../shared/workflowAttachments";
 import { formatBeDate } from "../shared/workflowDate";
 import { getWorkflowErrorMessage } from "../shared/workflowErrors";
 
@@ -124,6 +125,17 @@ export default function WorkflowFilesScreen() {
               ]
                 .filter(Boolean)
                 .join(" · ")}
+              thumbnail={
+                isImageFileName(item.name) ? (
+                  <WorkflowFileImage
+                    apiBase={apiBase}
+                    fileId={item.id}
+                    name={item.name}
+                    square={56}
+                    onPress={() => fileOpener.openFile(apiBase, item)}
+                  />
+                ) : undefined
+              }
               onPress={() => fileOpener.openFile(apiBase, item)}
               onRemove={canEdit ? () => confirmDelete(item) : undefined}
             />

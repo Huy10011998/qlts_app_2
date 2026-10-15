@@ -17,6 +17,7 @@ import { SkeletonFill } from "../ui/SkeletonBlock";
 import { fetchImage } from "../../utils/Image";
 import { parseLink } from "../../utils/Link";
 import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
+import { scaledLineHeight } from "../../utils/helpers/textScaling";
 import { getComputedQrUrl } from "../../utils/imageBase64";
 import Base64ImageThumb from "../ui/Base64ImageThumb";
 
@@ -373,7 +374,9 @@ const makeStyles = (c: AppColors) =>
     value: {
       fontSize: 14,
       color: c.text,
-      lineHeight: 20,
+      // Leading phải giãn theo cỡ chữ của app, để 20 cứng thì chữ 150% xén mất
+      // dấu tiếng Việt ("Triển" thành "Triên").
+      lineHeight: scaledLineHeight(14, 20 / 14),
     },
 
     emptyValue: {

@@ -1,5 +1,5 @@
 import React from "react";
-import { UnscaledText } from "../../../utils/helpers/textScaling";
+import { UnscaledText } from "../../utils/helpers/textScaling";
 import { Image, StyleSheet, View } from "react-native";
 
 /** Cạnh dài tối đa của ảnh nung watermark — cùng mức nén BE khuyến nghị. */
@@ -8,10 +8,12 @@ export const WATERMARK_MAX_DIMENSION = 1600;
 export type WatermarkLines = {
   /** Dòng đậm trên cùng: ngày giờ chụp. */
   timestamp: string;
-  /** Toạ độ GPS, hoặc câu báo không lấy được. */
+  /** Địa chỉ tra từ toạ độ; rỗng (không mạng / không tra được) thì ẩn. */
+  address?: string;
+  /** Toạ độ GPS, hoặc câu báo không lấy được. Có địa chỉ thì in nhỏ dưới nó. */
   coordinates: string;
-  /** Tên tủ đang xác nhận. */
-  fridge: string;
+  /** Đối tượng đang chụp (tên tủ...); rỗng thì ẩn dòng này. */
+  subject?: string;
   /** Tài khoản đang chụp; rỗng thì ẩn dòng này. */
   account?: string;
 };
@@ -41,6 +43,8 @@ type PhotoWatermarkProps = {
   width: number;
   height: number;
   lines: WatermarkLines;
+  /** Ảnh đã vẽ xong — chụp `ViewShot` sớm hơn thì ra khung trống. */
+  onLoad?: () => void;
 };
 
 /**
@@ -56,12 +60,20 @@ export default function PhotoWatermark({
   width,
   height,
   lines,
+  onLoad,
 }: PhotoWatermarkProps) {
   const unit = width / 100;
 
   return (
     <View style={{ width, height }}>
-      <Image source={{ uri }} style={StyleSheet.absoluteFill} />
+      {/* Android mặc định cho ảnh hiện dần 300ms: chụp ViewShot ngay sau
+          onLoad thì ảnh còn nửa trong suốt → JPG tối thui. Tắt hẳn. */}
+      <Image
+        source={{ uri }}
+        style={StyleSheet.absoluteFill}
+        fadeDuration={0}
+        onLoad={onLoad}
+      />
 
       <View
         style={[
@@ -80,26 +92,43 @@ export default function PhotoWatermark({
         >
           {lines.timestamp}
         </UnscaledText>
+        {lines.address ? (
+          <UnscaledText
+            allowFontScaling={false}
+            numberOfLines={2}
+            style={[
+              styles.detail,
+              { fontSize: unit * 3.4, marginTop: unit * 0.8 },
+            ]}
+          >
+            {lines.address}
+          </UnscaledText>
+        ) : null}
         <UnscaledText
           allowFontScaling={false}
           numberOfLines={1}
           style={[
-            styles.detail,
-            { fontSize: unit * 3.4, marginTop: unit * 0.8 },
+            lines.address ? styles.minor : styles.detail,
+            {
+              fontSize: unit * (lines.address ? 2.8 : 3.4),
+              marginTop: unit * (lines.address ? 0.4 : 0.8),
+            },
           ]}
         >
           {lines.coordinates}
         </UnscaledText>
-        <UnscaledText
-          allowFontScaling={false}
-          numberOfLines={2}
-          style={[
-            styles.detail,
-            { fontSize: unit * 3.4, marginTop: unit * 0.4 },
-          ]}
-        >
-          {lines.fridge}
-        </UnscaledText>
+        {lines.subject ? (
+          <UnscaledText
+            allowFontScaling={false}
+            numberOfLines={2}
+            style={[
+              styles.detail,
+              { fontSize: unit * 3.4, marginTop: unit * 0.4 },
+            ]}
+          >
+            {lines.subject}
+          </UnscaledText>
+        ) : null}
         {lines.account ? (
           <UnscaledText
             allowFontScaling={false}
@@ -133,5 +162,9 @@ const styles = StyleSheet.create({
   detail: {
     color: "rgba(255,255,255,0.92)",
     fontWeight: "600",
+  },
+  minor: {
+    color: "rgba(255,255,255,0.78)",
+    fontWeight: "500",
   },
 });

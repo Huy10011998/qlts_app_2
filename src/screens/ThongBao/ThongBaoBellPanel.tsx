@@ -17,7 +17,6 @@ import { thongBaoDaDoc, thongBaoGetList } from "../../services/data/thongBaoApi"
 import { subscribeThongBao } from "../../services/realtime/traoDoiHub";
 import type { ThongBaoItem } from "../../types/index";
 import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
-import { COMPACT_TEXT_MAX_SCALE } from "../../utils/helpers/textScaling";
 import { elevation } from "../../utils/helpers/tokens";
 import { getWorkflowErrorMessage } from "../Workflow/shared/workflowErrors";
 import ThongBaoRow from "./ThongBaoRow";
@@ -121,14 +120,13 @@ export default function ThongBaoBellPanel({ visible, onClose }: Props) {
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Đóng thông báo" />
       <View style={[styles.panel, { top: insets.top + 54 }]}>
         <View style={styles.header}>
-          <Text style={styles.heading} maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}>
+          <Text style={styles.heading}>
             Thông báo
           </Text>
           {soChuaDoc > 0 ? (
             <TouchableOpacity onPress={markAllRead} disabled={markingAll} hitSlop={8}>
               <Text
                 style={[styles.link, markingAll && styles.linkBusy]}
-                maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
               >
                 Đánh dấu tất cả đã đọc
               </Text>
@@ -152,7 +150,7 @@ export default function ThongBaoBellPanel({ visible, onClose }: Props) {
           }}
           accessibilityRole="button"
         >
-          <Text style={styles.link} maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}>
+          <Text style={styles.link}>
             Xem tất cả
           </Text>
         </TouchableOpacity>

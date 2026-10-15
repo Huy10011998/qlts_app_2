@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import { AppColors, useAppColors, useStyles } from "../../../../utils/helpers/colors";
@@ -13,6 +13,10 @@ type Props = {
   onRemove?: () => void;
   /** Đang chờ tải lên (file vừa chọn trên form). */
   pending?: boolean;
+  /** Ảnh trong máy: hiện ảnh thu nhỏ thay icon — chụp xong thấy ngay ảnh đã gắn thông tin. */
+  thumbnailUri?: string;
+  /** Ảnh thu nhỏ dựng sẵn (vd ảnh trên server) — ưu tiên hơn `thumbnailUri`. */
+  thumbnail?: React.ReactNode;
 };
 
 const iconForName = (name: string) => {
@@ -26,7 +30,15 @@ const iconForName = (name: string) => {
 };
 
 /** Một dòng file: icon theo đuôi, tên, dòng phụ, nút xoá tuỳ chọn. */
-export default function WorkflowFileRow({ name, meta, onPress, onRemove, pending }: Props) {
+export default function WorkflowFileRow({
+  name,
+  meta,
+  onPress,
+  onRemove,
+  pending,
+  thumbnailUri,
+  thumbnail,
+}: Props) {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
 
@@ -37,9 +49,15 @@ export default function WorkflowFileRow({ name, meta, onPress, onRemove, pending
       disabled={!onPress}
       style={styles.row}
     >
-      <View style={[styles.icon, pending && styles.iconPending]}>
-        <Ionicons name={iconForName(name)} size={18} color={pending ? c.textSub : c.accent} />
-      </View>
+      {thumbnail ? (
+        <View style={styles.thumbnailHost}>{thumbnail}</View>
+      ) : thumbnailUri ? (
+        <Image source={{ uri: thumbnailUri }} style={styles.thumbnail} />
+      ) : (
+        <View style={[styles.icon, pending && styles.iconPending]}>
+          <Ionicons name={iconForName(name)} size={18} color={pending ? c.textSub : c.accent} />
+        </View>
+      )}
       <View style={styles.body}>
         <Text style={styles.name} numberOfLines={1} ellipsizeMode="middle">
           {name}
@@ -73,6 +91,16 @@ const makeStyles = (c: AppColors) =>
       backgroundColor: c.accentLight,
       alignItems: "center",
       justifyContent: "center",
+      marginRight: 10,
+    },
+    thumbnail: {
+      width: 56,
+      height: 56,
+      borderRadius: 10,
+      backgroundColor: c.surfaceAlt,
+      marginRight: 10,
+    },
+    thumbnailHost: {
       marginRight: 10,
     },
     iconPending: {

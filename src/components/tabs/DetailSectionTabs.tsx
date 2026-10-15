@@ -19,7 +19,7 @@ import {
   useStyles,
 } from "../../utils/helpers/colors";
 import { useVisibleDetailTabs } from "./useVisibleDetailTabs";
-import { READABLE_TEXT_MAX_SCALE } from "../../utils/helpers/textScaling";
+import { getTextScaleFactor } from "../../utils/helpers/textScaling";
 
 const SHELL_INSET = 12;
 const SHELL_GAP = 10;
@@ -56,7 +56,7 @@ export const computeTabWidths = ({
   contentWidth: number;
   tabCount: number;
   activeLabelLength: number;
-  /** Cỡ chữ hệ thống đã kẹp trần — nhãn to ra thì pill phải rộng ra theo. */
+  /** Hệ số Cỡ chữ của app — nhãn to ra thì pill phải rộng ra theo. */
   fontScale?: number;
 }) => {
   const activeWidth = Math.min(
@@ -89,7 +89,7 @@ export default function DetailSectionTabs({
 }: DetailSectionTabsProps) {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
-  const { width: screenWidth, fontScale } = useWindowDimensions();
+  const { width: screenWidth } = useWindowDimensions();
   const hairlineBorderColor = useHairlineBorderColor();
   const visibleTabs = useVisibleDetailTabs(tabs);
 
@@ -109,7 +109,7 @@ export default function DetailSectionTabs({
     contentWidth: screenWidth - SHELL_INSET * 2 - BAR_PADDING * 2,
     tabCount,
     activeLabelLength: visibleTabs[index]?.label.length ?? 0,
-    fontScale: Math.min(fontScale, READABLE_TEXT_MAX_SCALE),
+    fontScale: getTextScaleFactor(),
   });
 
   // Một Animated.Value cho mỗi mục, khởi tạo đúng bề rộng đích để lần render đầu

@@ -13,6 +13,7 @@ import {
   useAppColors,
   useStyles,
 } from "../../utils/helpers/colors";
+import { scaledLineHeight } from "../../utils/helpers/textScaling";
 import QrCodeBackButton from "./shared/QrCodeBackButton";
 import QrCodeScreenSkeleton from "./shared/QrCodeScreenSkeleton";
 
@@ -205,7 +206,7 @@ const makeS = (c: AppColors) =>
     personBlock: { alignItems: "center", paddingHorizontal: 4 },
     fullName: {
       fontSize: 27,
-      lineHeight: 33,
+      lineHeight: scaledLineHeight(27, 33 / 27),
       fontWeight: "900",
       letterSpacing: 0.6,
       color: C.onBrand,
@@ -215,7 +216,7 @@ const makeS = (c: AppColors) =>
     position: {
       marginTop: 7,
       fontSize: 14.5,
-      lineHeight: 20,
+      lineHeight: scaledLineHeight(14.5, 20 / 14.5),
       fontWeight: "600",
       color: "#F6E3E5",
       textAlign: "center",
@@ -246,7 +247,7 @@ const makeS = (c: AppColors) =>
     footer: { width: "100%" },
     companyName: {
       fontSize: 17,
-      lineHeight: 22,
+      lineHeight: scaledLineHeight(17, 22 / 17),
       fontWeight: "900",
       letterSpacing: 0.2,
       color: C.onBrand,
@@ -260,7 +261,7 @@ const makeS = (c: AppColors) =>
     footerText: {
       flex: 1,
       fontSize: 13,
-      lineHeight: 18,
+      lineHeight: scaledLineHeight(13, 18 / 13),
       color: "#F3DCDF",
       /* Icon canh với dòng chữ đầu tiên, không trôi lên trên. */
       marginTop: -1,

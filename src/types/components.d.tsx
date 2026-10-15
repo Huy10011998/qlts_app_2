@@ -328,6 +328,11 @@ export interface RenderInputByTypeProps {
    * nào) và giá trị vẫn phải được gửi lên lúc insert.
    */
   isLocked?: boolean;
+  /**
+   * Field ảnh: ảnh chụp bằng camera được nung ngày giờ + toạ độ + người chụp, và
+   * bấm vào ảnh để xem lại. Chỉ form Workflow bật — form tài sản giữ như cũ.
+   */
+  stampCameraPhotos?: boolean;
 
   openEnumReferanceModal: (field: Field) => void;
 }
