@@ -5,6 +5,7 @@ import ReactTestRenderer from "react-test-renderer";
 import { ThemeProvider } from "../src/context/ThemeContext";
 import RecordListSkeleton from "../src/components/list/RecordListSkeleton";
 import { getRecordCardHeight } from "../src/components/list/RecordCardSkeleton";
+import { getListCardShape } from "../src/components/list/listCardShape";
 import AssetDetailsSkeleton from "../src/components/assets/shared/AssetDetailsSkeleton";
 import type { Field } from "../src/types/index";
 import { TypeProperty } from "../src/utils/Enum";
@@ -69,6 +70,48 @@ describe("chiều cao thẻ bản ghi", () => {
   });
 });
 
+describe("dáng thẻ theo field", () => {
+  const text = (name: string) =>
+    ({ name, typeProperty: TypeProperty.Text }) as unknown as Field;
+  const image = (name: string) =>
+    ({ name, typeProperty: TypeProperty.Image }) as unknown as Field;
+  const qr = (name: string) =>
+    ({ name, typeProperty: TypeProperty.ImageBase64 }) as unknown as Field;
+
+  // Danh sách nhân viên: ảnh + QR sang cột phải, không tính là dòng chữ.
+  it("tách ảnh / QR khỏi số dòng chữ", () => {
+    expect(
+      getListCardShape("NhanVien_test1", [
+        text("ma"),
+        image("anh"),
+        text("ten"),
+        qr("qr"),
+        text("sdt"),
+      ]),
+    ).toEqual({ lines: 3, media: 2, avatarAlign: "top" });
+  });
+
+  // Lúc mở lại, field chưa về nhưng khung chờ vẫn phải đúng dáng lần trước.
+  it("chưa có field thì dùng dáng đã nhớ của đúng class đó", () => {
+    getListCardShape("NhanVien_test2", [text("ma"), image("anh")]);
+
+    expect(getListCardShape("NhanVien_test2", [])).toEqual({
+      lines: 1,
+      media: 1,
+      avatarAlign: "top",
+    });
+    expect(getListCardShape("TaiSan_test2", [])).toEqual({
+      avatarAlign: "top",
+    });
+  });
+
+  it("cột ảnh dài hơn chữ thì thẻ cao theo cột ảnh", () => {
+    expect(getRecordCardHeight("avatar", 2, 2)).toBeGreaterThan(
+      getRecordCardHeight("avatar", 2),
+    );
+  });
+});
+
 describe("khung chờ danh sách bản ghi", () => {
   it("dựng đủ thẻ để phủ kín chiều cao khung", async () => {
     const tree = await mount(<RecordListSkeleton />);
@@ -106,7 +149,6 @@ describe("khung chờ chi tiết bản ghi", () => {
   it("dựng đúng số nhóm và nhãn thật của từng field", async () => {
     const tree = await mount(
       <AssetDetailsSkeleton
-        tabCount={5}
         groupedFields={{
           "Thông tin chung": [
             field("ma", "Mã thiết bị", "Thông tin chung"),
@@ -131,21 +173,23 @@ describe("khung chờ chi tiết bản ghi", () => {
     expect(texts).toContain("Ảnh thiết bị");
   });
 
-  // Thanh tab phải đúng số mục thật (5, hoặc 4 khi thiếu quyền xem Tệp), không
-  // thì lúc dữ liệu về ô tab co lại một nhịp.
-  it("thanh tab dựng đúng số mục được truyền", async () => {
-    // Không có field nào thì mọi khối nhấp nháy đều là một ô tab.
-    const tabsOf = (tree: ReactTestRenderer.ReactTestRenderer) =>
-      tree.root.findAllByType(Animated.View).length;
-
-    const five = await mount(
-      <AssetDetailsSkeleton tabCount={5} groupedFields={{}} />,
+  // Chỉ GIÁ TRỊ là chưa biết: mỗi field đúng một khối xám, còn nhãn, đầu nhóm
+  // là thật. Thanh tab (thanh thật, cần route + quyền) thử riêng ở
+  // `assetDetailsSkeleton.test.tsx`.
+  it("mỗi field một khối xám, không có thanh tab khi không truyền tabs", async () => {
+    const tree = await mount(
+      <AssetDetailsSkeleton
+        groupedFields={{
+          "Thông tin chung": [
+            field("ma", "Mã thiết bị", "Thông tin chung"),
+            field("ten", "Tên thiết bị", "Thông tin chung"),
+            field("ngay", "Ngày mua", "Thông tin chung"),
+          ],
+        }}
+      />,
     );
-    const four = await mount(
-      <AssetDetailsSkeleton tabCount={4} groupedFields={{}} />,
-    );
 
-    expect(tabsOf(five)).toBe(5);
-    expect(tabsOf(four)).toBe(4);
+    expect(tree.root.findAllByType(Animated.View)).toHaveLength(3);
+    expect(tree.root.findAllByProps({ accessibilityRole: "tab" })).toHaveLength(0);
   });
 });

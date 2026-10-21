@@ -2,6 +2,8 @@ import {
   buildRangeConditions,
   dayKey,
   formatTaskTime,
+  formatWeekdayName,
+  formatWeekdayShort,
   getMonthRange,
   getTaskDaySpan,
   getWeekRange,
@@ -89,5 +91,17 @@ describe("đổi khoảng không chờ khi dữ liệu đã có", () => {
   it("Tuần → Tháng: tuần không phủ cả tháng nên phải tải", () => {
     const tuan = getWeekRange(new Date(2026, 9, 13));
     expect(isRangeLoaded({ from: tuan.from, to: tuan.to, mau: "" }, thang10, [])).toBe(false);
+  });
+});
+
+describe("nhãn thứ trên thẻ ngày", () => {
+  it("tên đầy đủ và nhãn ngắn khớp nhau, tuần bắt đầu thứ Hai", () => {
+    // 19/10/2026 là thứ Hai, 25/10/2026 là Chủ nhật.
+    expect(formatWeekdayName(new Date(2026, 9, 19))).toBe("Thứ 2");
+    expect(formatWeekdayShort(new Date(2026, 9, 19))).toBe("T2");
+    expect(formatWeekdayName(new Date(2026, 9, 20))).toBe("Thứ 3");
+    expect(formatWeekdayShort(new Date(2026, 9, 20))).toBe("T3");
+    expect(formatWeekdayName(new Date(2026, 9, 25))).toBe("Chủ nhật");
+    expect(formatWeekdayShort(new Date(2026, 9, 25))).toBe("CN");
   });
 });

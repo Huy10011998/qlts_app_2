@@ -63,6 +63,7 @@ import { TypeProperty } from "../../utils/Enum";
 import { RenderInputByType } from "../form/RenderInputByType";
 import { useEnumAndReferenceLoader } from "../../hooks/AssetAddItem/useEnumAndReferenceLoader";
 import { useModalItems } from "../../hooks/AssetAddItem/useModalItems";
+import { useOpenReferenceModal } from "../../hooks/AssetAddItem/useOpenReferenceModal";
 import AssetFormReferencePickerModal from "../assets/shared/AssetFormReferencePickerModal";
 import BottomSheetModalShell, {
   SHEET_CLOSE_DURATION,
@@ -73,11 +74,20 @@ import {
   getParentGate,
   getParentGateMessage,
 } from "../../utils/cascade/parentGate";
-import {
-  buildReferenceFetchParams,
-  getCurrentReferenceIds,
-  loadReferenceItemsForField,
-} from "../../hooks/AssetAddItem/referenceLoaderHelpers";
+import { getCurrentReferenceIds } from "../../hooks/AssetAddItem/referenceLoaderHelpers";
+
+/* Tham số multi lưu dạng "1,2,3": gửi từng id cho `currentID`, không gửi cả
+   chuỗi như một id. */
+const getReportReferenceIds = (
+  values: Record<string, any>,
+  field: Field,
+): Array<string | number> =>
+  field.isMulti
+    ? String(values[field.name] ?? "")
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean)
+    : getCurrentReferenceIds(values, field.name);
 
 const ReportView: React.FC<ReportViewProps> = ({
   title,
@@ -150,7 +160,7 @@ const ReportView: React.FC<ReportViewProps> = ({
 
   reportHtmlRef.current = reportHtml;
 
-  useEnumAndReferenceLoader(
+  const { pendingEnumFields } = useEnumAndReferenceLoader(
     parameterFields,
     setEnumData,
     setReferenceData,
@@ -188,84 +198,22 @@ const ReportView: React.FC<ReportViewProps> = ({
     [parameterFields],
   );
 
-  const loadReferenceModalData = useCallback(
-    async (
-      field: Field,
-      {
-        textSearch = "",
-        page = 0,
-        append = false,
-      }: { textSearch?: string; page?: number; append?: boolean } = {},
-    ) => {
-      setReferenceErrorMessage(null);
-
-      const result = await loadReferenceItemsForField({
-        field,
-        formData: parameterValues,
-        setReferenceData,
-        params: buildReferenceFetchParams({
-          textSearch,
-          pageSize: PAGE_SIZE,
-          page,
-          append,
-          currentIds: field.isMulti
-            ? String(parameterValues[field.name] ?? "")
-                .split(",")
-                .map((value) => value.trim())
-                .filter(Boolean)
-            : getCurrentReferenceIds(parameterValues, field.name),
-        }),
-        /* Thiếu cấp cha thì loader chặn cứng (không gọi get-category). Phải bật
-           báo: không thì ô mở ra rỗng mà người dùng không biết vì sao. */
-        alertOnMissingParents: true,
-        onMissingParents: (gate) => {
-          showAlertIfActive(
-            "Thông báo",
-            getParentGateMessage(gate, parameterFields) ||
-              "Vui lòng chọn đầy đủ thông tin cấp trên trước!",
-          );
-        },
-      });
-
-      if (result && typeof result === "object" && "errorMessage" in result) {
-        setReferenceData((prev: any) => ({
-          ...prev,
-          [field.name]: {
-            items: [],
-            totalCount: 0,
-          },
-        }));
-        setReferenceErrorMessage(
-          String(result.errorMessage || "Không thể tải dữ liệu."),
-        );
-        return "error";
-      }
-
-      return result !== false;
-    },
-    [parameterFields, parameterValues, showAlertIfActive],
-  );
-
-  const openReferenceModal = useCallback(
-    async (field: Field) => {
-      if (
-        field.typeProperty === TypeProperty.Reference &&
-        field.referenceName
-      ) {
-        const didLoad = await loadReferenceModalData(field);
-
-        // Bị chặn vì thiếu cấp cha: đã báo rồi, mở modal rỗng là vô nghĩa.
-        if (!didLoad) return;
-      }
-
-      setActiveEnumField(field);
-      setRefKeyword("");
-      setRefPage(0);
-      setRefHasMore(true);
-      setModalVisible(true);
-    },
-    [loadReferenceModalData],
-  );
+  /* Dùng chung hook với form tài sản: mở sheet ngay rồi mới tải trang đầu,
+     chặn cấp cha trước khi mở, bỏ phản hồi về muộn của lượt mở cũ. */
+  const { openReferenceModal, loadReferenceModalData } = useOpenReferenceModal({
+    formData: parameterValues,
+    fieldActive: parameterFields,
+    setActiveEnumField,
+    setRefKeyword,
+    setRefPage,
+    setRefHasMore,
+    setModalVisible,
+    setReferenceErrorMessage,
+    setReferenceData,
+    pageSize: PAGE_SIZE,
+    getCurrentIds: getReportReferenceIds,
+    showAlert: showAlertIfActive,
+  });
 
   const modalItems = useModalItems(
     activeEnumField,
@@ -979,6 +927,7 @@ const ReportView: React.FC<ReportViewProps> = ({
         setRefLoadingMore={setRefLoadingMore}
         setRefPage={setRefPage}
         setRefSearching={setRefSearching}
+        pendingEnumFields={pendingEnumFields}
       />
     </View>
   );

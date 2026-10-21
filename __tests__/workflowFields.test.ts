@@ -10,7 +10,8 @@ import { TypeProperty } from "../src/utils/Enum";
 
 // Metadata thật trả `stT_Grid` (.NET đổi STT_Grid), tài liệu ghi `stt_Grid`.
 // Bộ dựng của view Workflow phải sắp / lọc theo đúng luật web mà bộ dựng màn
-// Tài sản chưa làm: stt_Grid cho thẻ, stt cho form / chi tiết, isShowDetail.
+// Tài sản chưa làm: stt_Grid cho thẻ, STT_Mobile (thiếu thì stt) cho form /
+// chi tiết, isShowDetail.
 
 const RAW = [
   { name: "SoTicket", moTa: "Số", typeProperty: 0, stt: 1, stT_Grid: 2, isShowMobile: true, isReadOnly: true },
@@ -74,6 +75,63 @@ describe("getFormFields", () => {
       "ID_LoaiFlow",
       "TieuDe",
     ]);
+  });
+});
+
+describe("STT_Mobile", () => {
+  // Như Ticket_PhongBan thật: STT là thứ tự web, STT_Mobile xếp lại cho mobile.
+  const MOBILE = [
+    { name: "SoTicket", stt: 1, stT_Grid: 1, stT_Mobile: 3, isShowMobile: true, isReadOnly: true },
+    { name: "TinhTrang", stt: 2, stT_Grid: 2, stT_Mobile: 5, isShowMobile: true, isReadOnly: true },
+    { name: "ID_LoaiFlow", stt: 3, stT_Grid: 3, stT_Mobile: 1, isShowMobile: true },
+    { name: "TieuDe", stt: 4, stT_Grid: 4, stT_Mobile: 2, isShowMobile: true },
+    { name: "MoTa", stt: 5, stT_Grid: 5, stT_Mobile: 4 },
+    // Chưa khai STT_Mobile → theo stt.
+    { name: "GhiChu", stt: 6, stT_Grid: 6, stT_Mobile: null },
+  ];
+
+  it("chi tiết và form theo STT_Mobile thay cho stt", () => {
+    const fields = normalizeWorkflowFields(MOBILE);
+    expect(getDetailFields(fields, "notFalse").map((f) => f.name)).toEqual([
+      "ID_LoaiFlow",
+      "TieuDe",
+      "SoTicket",
+      "MoTa",
+      "TinhTrang",
+      "GhiChu",
+    ]);
+    expect(getFormFields(fields).map((f) => f.name)).toEqual([
+      "ID_LoaiFlow",
+      "TieuDe",
+      "MoTa",
+      "GhiChu",
+    ]);
+  });
+
+  it("thẻ vẫn theo stt_Grid; thiếu stt_Grid thì theo STT_Mobile", () => {
+    expect(getCardFields(normalizeWorkflowFields(MOBILE)).map((f) => f.name)).toEqual([
+      "SoTicket",
+      "TinhTrang",
+      "ID_LoaiFlow",
+      "TieuDe",
+    ]);
+
+    const noGrid = MOBILE.map(({ stT_Grid, ...rest }) => rest);
+    expect(getCardFields(normalizeWorkflowFields(noGrid)).map((f) => f.name)).toEqual([
+      "ID_LoaiFlow",
+      "TieuDe",
+      "SoTicket",
+      "TinhTrang",
+    ]);
+  });
+
+  it("đọc cả stt_Mobile / STT_Mobile", () => {
+    const fields = normalizeWorkflowFields([
+      { name: "A", stt: 1, stt_Mobile: 2 },
+      { name: "B", stt: 2, STT_Mobile: 1 },
+    ]);
+    expect(fields.map((f) => f.stT_Mobile)).toEqual([2, 1]);
+    expect(getFormFields(fields).map((f) => f.name)).toEqual(["B", "A"]);
   });
 });
 

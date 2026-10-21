@@ -96,7 +96,7 @@ export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
 
   // Như `AssetDetails`: nhãn field đã có sẵn từ route, chỉ giá trị phải chờ.
   if (isLoading && !item && !loadErrorMessage) {
-    return <AssetDetailsSkeleton groupedFields={groupedFields} tabCount={0} />;
+    return <AssetDetailsSkeleton groupedFields={groupedFields} />;
   }
 
   return (

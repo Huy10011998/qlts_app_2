@@ -14,6 +14,7 @@ import { WebView } from "react-native-webview";
 import type { ViewerProps } from "../../types/index";
 import { getPreviewAttachFile } from "../../services";
 import IsLoading from "../ui/IconLoading";
+import EmptyState from "../ui/EmptyState";
 import { error } from "../../utils/Logger";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
@@ -114,7 +115,7 @@ export default function FileView({
           {uri ? (
             <Image source={{ uri }} style={styles.imagePreview} />
           ) : (
-            <Text style={styles.stateText}>❌ Không tải được ảnh</Text>
+            <EmptyState iconName="image-outline" title="Không tải được ảnh" />
           )}
         </ScrollView>
       );
@@ -146,9 +147,11 @@ export default function FileView({
     }
 
     return (
-      <ScrollView contentContainerStyle={styles.unsupportedContent}>
-        <Text style={styles.stateText}>❌ Không hỗ trợ hiển thị file này</Text>
-      </ScrollView>
+      <EmptyState
+        iconName="document-outline"
+        title="Không hỗ trợ hiển thị file này"
+        subtitle={`Ứng dụng chưa xem được file .${fileType}`}
+      />
     );
   };
 
@@ -226,15 +229,6 @@ const makeStyles = (c: AppColors) =>
     },
     webView: {
       flex: 1,
-    },
-    unsupportedContent: {
-      padding: 16,
-    },
-    stateText: {
-      // Cỡ chữ phải khai tường minh: hệ số cỡ chữ của app chỉ nhân vào
-      // `fontSize` có sẵn trong style, không chạm tới cỡ mặc định của `Text`.
-      fontSize: 14,
-      color: c.text,
     },
     titleWrap: {
       flex: 1,

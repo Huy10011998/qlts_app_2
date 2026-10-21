@@ -16,6 +16,7 @@ import { getParentGate } from "../../../utils/cascade/parentGate";
 import { TypeProperty } from "../../../utils/Enum";
 import { pickImage } from "../../../utils/Image";
 import type { Field } from "../../../types/index";
+import { snapshotFormValues, useFormDirty } from "./useFormDirty";
 import type { WorkflowField } from "./workflowFields";
 
 const NO_FIELDS: Field[] = [];
@@ -68,6 +69,12 @@ export function useWorkflowDynamicForm(
 
   useFieldDefaults(mode === "add" ? fieldActive : NO_FIELDS, setFormData);
 
+  // Phần động có thay đổi chưa lưu chưa (màn gộp với phần vẽ riêng của nó để
+  // hỏi "Bỏ thay đổi?" khi rời form). Chỉ so đúng các ô của form.
+  const fieldNames = useMemo(() => fields.map((field) => field.name), [fields]);
+  const snapshot = useMemo(() => snapshotFormValues(fieldNames, formData), [fieldNames, formData]);
+  const { isDirty, markTouched, markSaved } = useFormDirty(snapshot);
+
   const { handleChange: cascadeChange } = useCascadeForm(
     fieldActive,
     setFormData,
@@ -76,6 +83,8 @@ export function useWorkflowDynamicForm(
 
   const handleChange = useCallback(
     (name: string, value: any) => {
+      // Mọi lần gõ / chọn của người dùng (kể cả modal chọn tham chiếu) đi qua đây.
+      markTouched();
       setValidationErrors((prev) => {
         if (!prev[name]) return prev;
         const next = { ...prev };
@@ -84,10 +93,10 @@ export function useWorkflowDynamicForm(
       });
       cascadeChange(name, value);
     },
-    [cascadeChange, setValidationErrors],
+    [cascadeChange, markTouched, setValidationErrors],
   );
 
-  useEnumAndReferenceLoader(
+  const { pendingEnumFields } = useEnumAndReferenceLoader(
     fieldActive,
     setEnumData,
     setReferenceData,
@@ -172,9 +181,14 @@ export function useWorkflowDynamicForm(
     openReferenceModal,
     loadReferenceModalData,
     modalItems,
+    pendingEnumFields,
     validateRequired,
     validationErrors,
     pickImage,
+    /** Người dùng đã sửa ô động nào đó và giá trị khác lúc trước khi sửa. */
+    isDirty,
+    /** Vừa lưu lên server: giá trị đang có thành mốc mới. */
+    markSaved,
   };
 }
 

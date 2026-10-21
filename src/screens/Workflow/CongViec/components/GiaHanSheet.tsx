@@ -6,7 +6,7 @@ import { getThaoTacError } from "../../../../services/data/workflowApi";
 import { AppColors, useStyles } from "../../../../utils/helpers/colors";
 import DateTimeField from "../../shared/components/DateTimeField";
 import WorkflowButton from "../../shared/components/WorkflowButton";
-import WorkflowSheet from "../../shared/components/WorkflowSheet";
+import WorkflowSheet, { confirmCloseSheet } from "../../shared/components/WorkflowSheet";
 import WorkflowTextArea from "../../shared/components/WorkflowTextArea";
 import { formatDayTime, parseBeDate, toBeDateTime } from "../../shared/workflowDate";
 import { getWorkflowErrorMessage } from "../../shared/workflowErrors";
@@ -55,6 +55,9 @@ export default function GiaHanSheet({ visible, idCongViec, denNgay, onClose, onD
     }
   };
 
+  // Ghi chú đã gõ mà chạm nhầm ra nền tối là mất — sheet hỏi trước khi đóng.
+  const dirty = !!ghiChu.trim();
+
   return (
     <WorkflowSheet
       visible={visible}
@@ -62,9 +65,15 @@ export default function GiaHanSheet({ visible, idCongViec, denNgay, onClose, onD
       onClose={onClose}
       loading={submitting}
       loadingText="Đang lưu..."
+      dirty={dirty}
       footer={
         <>
-          <WorkflowButton label="Đóng" variant="neutral" flex onPress={onClose} />
+          <WorkflowButton
+            label="Đóng"
+            variant="neutral"
+            flex
+            onPress={() => confirmCloseSheet(dirty, onClose)}
+          />
           <WorkflowButton label="Gia hạn" icon="time-outline" flex onPress={submit} />
         </>
       }

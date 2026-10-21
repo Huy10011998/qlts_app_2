@@ -44,15 +44,17 @@ export default function AssetDetailsScreen() {
               isRefreshing={isRefreshing}
             />
             {/*
-              Cùng đường tắt như nút vuốt ở danh sách: vào thẳng màn tạo bản ghi
-              con, khỏi phải qua tab "Chi tiết" → danh mục → nút thêm mới.
-              Không dùng `returnTo: "qrScan"` như luồng QR — vào từ danh sách thì
-              không có máy quét nào để quay về.
+              Màn này là đường KHÔNG qua máy quét (danh sách, mã bản ghi cha trên
+              header màn con) nên thanh bỏ việc tạo bản ghi con: tab "Chi tiết" đã
+              có đúng các danh mục đó, còn danh sách có nút vuốt thêm nhanh. Chỉ
+              còn nghiệp vụ riêng (tủ lạnh); loại tài sản thường thì không có thanh.
+              Màn chi tiết của luồng QR (`QrDetailsScreen`) vẫn đủ cả.
             */}
             <RecordActionBar
               item={item}
               nameClass={nameClass}
               fieldActive={fieldActive}
+              includeChildClasses={false}
               listRoute="AssetRelatedList"
               returnTo="openAssetRelatedList"
             />

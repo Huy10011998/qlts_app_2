@@ -225,9 +225,9 @@ function FieldGroups({ fields, opacity }: { fields: WorkflowField[]; opacity: Op
               key={field.name ?? `${groupName}-${index}`}
               style={[styles.fieldRow, index < groupFields.length - 1 && styles.fieldDivider]}
             >
-              <Text style={styles.label} numberOfLines={1}>
-                {field.moTa}
-              </Text>
+              {/* Không cắt một dòng: nhãn thật xuống dòng khi dài, cắt ở đây thì
+                  dòng field thấp hơn dòng thật. */}
+              <Text style={styles.label}>{field.moTa}</Text>
               <SkeletonBlock opacity={opacity} style={[styles.value, valueWidth(index)]} />
             </View>
           ))}
@@ -406,18 +406,20 @@ const makeStyles = (c: AppColors) =>
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: c.border,
     },
+    // Đúng `label` của `AssetGroupList` (đậm, textSecondary, 12).
     label: {
-      fontWeight: "600",
-      color: c.textMuted,
-      fontSize: 11.5,
+      fontWeight: "bold",
+      color: c.textSecondary,
+      fontSize: 12,
       letterSpacing: 0.2,
       marginBottom: 3,
     },
+    // Thay dòng nhãn chữ 12 (≈ 14.3) + `marginBottom` 3 khi chưa có metadata.
     labelBar: {
       width: "28%",
-      height: 10,
-      marginTop: 2,
-      marginBottom: 5,
+      height: 11,
+      marginTop: (14.3 - 11) / 2,
+      marginBottom: (14.3 - 11) / 2 + 3,
       borderRadius: 5,
     },
     value: {

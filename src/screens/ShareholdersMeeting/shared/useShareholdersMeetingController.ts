@@ -679,6 +679,7 @@ export function useShareholdersMeetingController() {
     isRefreshingAttendance,
     isSearching,
     isVotingLoading,
+    loadMeetingData,
     loaded,
     meetingError,
     opinionSearchQuery,

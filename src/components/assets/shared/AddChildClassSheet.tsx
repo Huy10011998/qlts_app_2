@@ -1,5 +1,12 @@
 import React from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import BottomSheetModalShell from "../../shared/BottomSheetModalShell";
 import { AppColors, useAppColors, useStyles } from "../../../utils/helpers/colors";
@@ -45,7 +52,14 @@ export default function AddChildClassSheet({
           : "Chọn danh mục con cần thêm"}
       </Text>
 
-      <View style={styles.list}>
+      {/* Class cha có cả chục danh mục con thì danh sách dài hơn màn hình: phải
+          cuộn trong sheet, không thì sheet (neo ở đáy) đẩy tiêu đề và mấy mục
+          đầu lên khuất sau tai thỏ. */}
+      <ScrollView
+        style={styles.listScroll}
+        contentContainerStyle={styles.list}
+        alwaysBounceVertical={false}
+      >
         {items.map((item) => (
           <Pressable
             key={String(item.id)}
@@ -70,7 +84,7 @@ export default function AddChildClassSheet({
             <Ionicons name="add-circle-outline" size={18} color={c.textMuted} />
           </Pressable>
         ))}
-      </View>
+      </ScrollView>
     </BottomSheetModalShell>
   );
 }
@@ -83,6 +97,7 @@ const makeStyles = (c: AppColors) =>
       borderTopRightRadius: 18,
       paddingHorizontal: 16,
       paddingBottom: 24,
+      maxHeight: "86%",
     },
     title: {
       fontSize: 16,
@@ -96,6 +111,9 @@ const makeStyles = (c: AppColors) =>
       textAlign: "center",
       marginTop: 4,
       marginBottom: 12,
+    },
+    listScroll: {
+      flexGrow: 0,
     },
     list: {
       gap: 8,

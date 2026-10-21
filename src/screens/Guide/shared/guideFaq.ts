@@ -12,14 +12,30 @@ import type { GuideTopic } from "./guideTypes";
 export const GUIDE_FAQ_TOPIC: GuideTopic = {
   id: "faq",
   title: "Câu hỏi thường gặp",
-  summary: "Lỗi kết nối, hết phiên, quyền, GPS, camera, Workflow, danh thiếp QR",
+  summary: "Lỗi kết nối, hết phiên, quyền, GPS, camera, tệp, Workflow, Trang chủ, danh thiếp QR",
   iconName: "help-circle-outline",
   iconBg: C.violet,
   group: "Trợ giúp",
   collapsibleSections: true,
+  // Mỗi câu hỏi gắn `group`; màn hiện từng nhóm thành một thẻ, theo đúng thứ tự này.
+  sectionGroups: [
+    "Đăng nhập & quyền",
+    "Quét QR & tài sản",
+    "Nhập liệu",
+    "Camera",
+    "Workflow & thông báo",
+    "Trang chủ",
+    "Hồ sơ & danh thiếp",
+    "Khác",
+  ],
   keywords: [
     "faq",
     "cau hoi",
+    "an khoi",
+    "thu gon",
+    "mat khoi",
+    "doi may",
+    "diem danh phong ban",
     "loi",
     "khong ket noi",
     "het phien",
@@ -103,10 +119,17 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     "co chu",
     "chu nho",
     "chu to",
+    "khong ho tro hien thi",
+    "file word",
+    "file excel",
+    "mo file",
+    "thieu dong",
+    "dong trong",
   ],
   sections: [
     {
       id: "faq-khong-ket-noi",
+      group: "Đăng nhập & quyền",
       heading: 'App báo "Không thể kết nối đến máy chủ"',
       blocks: [
         {
@@ -117,7 +140,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
           kind: "steps",
           items: [
             "Kiểm tra máy đang nối Wi-Fi công ty, không phải 4G hay Wi-Fi khác.",
-            "Trên iPhone/iPad: mở Cài đặt trong app, xem dòng Quyền mạng nội bộ đã ở trạng thái Đã cấp quyền chưa.",
+            "Trên iPhone/iPad: mở tab Cài đặt → Hệ thống trong app, xem dòng Quyền mạng nội bộ đã ở trạng thái Đã cấp quyền chưa.",
             "Bấm Thử lại. Nếu vẫn không được và đồng nghiệp cùng phòng cũng vậy thì máy chủ đang có vấn đề — liên hệ IT.",
           ],
         },
@@ -125,6 +148,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-het-phien",
+      group: "Đăng nhập & quyền",
       heading: 'App báo "Phiên đăng nhập đã hết"',
       blocks: [
         {
@@ -139,24 +163,26 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-faceid",
-      heading: 'Bấm Face ID thì báo "FaceID chưa bật"',
+      group: "Đăng nhập & quyền",
+      heading: 'Nút Face ID bị mờ, bấm vào báo "FaceID chưa bật"',
       blocks: [
         {
           kind: "paragraph",
-          text: "Face ID phải được bật một lần cho từng tài khoản, trên từng máy.",
+          text: "Tài khoản chưa bật Face ID trên chính máy đang dùng. Face ID bật riêng cho từng tài khoản, từng máy; bấm Đăng xuất là Face ID của máy đó tắt theo.",
         },
         {
           kind: "steps",
           items: [
             "Đăng nhập bằng tài khoản và mật khẩu.",
-            "Vào tab Cài đặt → bật Đăng nhập FaceID và xác thực khuôn mặt.",
-            "Đăng xuất rồi thử nút Face ID lại.",
+            "Vào tab Cài đặt → Tài khoản → bật Đăng nhập FaceID và xác thực khuôn mặt.",
+            "Lần sau mở app, máy tự hỏi Face ID ở màn Đăng nhập; lỡ bỏ qua thì bấm nút Face ID.",
           ],
         },
       ],
     },
     {
       id: "faq-camera-bi-chan",
+      group: "Đăng nhập & quyền",
       heading: "Quyền camera hiện Đã chặn quyền, không quét được QR",
       blocks: [
         {
@@ -166,7 +192,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
         {
           kind: "steps",
           items: [
-            "Vào tab Cài đặt trong app và bấm vào dòng Quyền camera — app đưa bạn tới đúng trang cài đặt của hệ thống.",
+            "Vào tab Cài đặt → Hệ thống trong app và bấm vào dòng Quyền camera — app đưa bạn tới đúng trang cài đặt của hệ thống.",
             "Bật lại quyền Camera cho ứng dụng.",
             "Quay lại app; trạng thái đổi thành Đã cấp quyền là quét được.",
           ],
@@ -175,13 +201,14 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-gps",
+      group: "Đăng nhập & quyền",
       heading: "Không lấy được toạ độ (xác nhận tủ lạnh, ảnh chụp có dòng Không lấy được toạ độ)",
       blocks: [
         {
           kind: "bullets",
           items: [
             "Bật Định vị / Location của điện thoại, và cho ứng dụng quyền vị trí khi máy hỏi.",
-            "Vào Cài đặt của app xem dòng Quyền vị trí: phải là Đã cấp quyền. Đang chặn hoặc chỉ vị trí gần đúng thì bấm vào dòng đó để mở Cài đặt của điện thoại.",
+            "Vào tab Cài đặt → Hệ thống của app xem dòng Quyền vị trí: phải là Đã cấp quyền. Đang chặn hoặc chỉ vị trí gần đúng thì bấm vào dòng đó để mở Cài đặt của điện thoại.",
             "Đứng chỗ thoáng trời vài giây — trong kho kín hoặc giữa nhà cao tầng thì máy rất lâu mới có toạ độ.",
             "Toạ độ hiện ra rồi hãy bấm Gửi, để bản ghi có đúng vị trí nơi bạn đang đứng.",
           ],
@@ -190,6 +217,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-thieu-chuc-nang",
+      group: "Đăng nhập & quyền",
       heading: "Không thấy chức năng hoặc không thấy nút Thêm / Sửa / Xoá",
       blocks: [
         {
@@ -204,6 +232,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-camera-khong-len-hinh",
+      group: "Camera",
       heading: "Camera không lên hình",
       blocks: [
         {
@@ -218,6 +247,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-khong-phong-to-duoc-camera",
+      group: "Camera",
       heading: "Chụm hai ngón mà hình camera không phóng to",
       blocks: [
         {
@@ -236,6 +266,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-qr-khong-nhan",
+      group: "Quét QR & tài sản",
       heading: "Quét mãi không nhận mã QR",
       blocks: [
         {
@@ -250,6 +281,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-vuot-the-khong-ra-nut",
+      group: "Quét QR & tài sản",
       heading: "Vuốt dòng ở danh sách tài sản không thấy nút nào",
       blocks: [
         {
@@ -272,17 +304,19 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-mat-muc-danh-gia",
+      group: "Quét QR & tài sản",
       heading: "Dấu ba chấm không còn mục Đánh giá / Trung chuyển nữa",
       blocks: [
         {
           kind: "paragraph",
-          text: "Những việc này đã chuyển xuống thanh dưới đáy màn chi tiết, không mất đi. Dấu ba chấm giờ chỉ còn thao tác quản trị bản ghi: Bản sao và Xoá.",
+          text: "Những việc này không mất đi, chỉ chuyển chỗ. Dấu ba chấm giờ chỉ còn thao tác quản trị bản ghi: Bản sao và Xoá.",
         },
         {
           kind: "bullets",
           items: [
-            "Thiết bị chỉ làm được một việc: nút đỏ dưới đáy ghi thẳng tên việc, ví dụ Đánh giá.",
-            "Thiết bị làm được nhiều việc: nút ghi Chọn thao tác kèm số việc, bấm ra bảng chọn.",
+            "Quét QR ra thiết bị: thanh dưới đáy màn có nút đỏ ghi thẳng tên việc, ví dụ Đánh giá; làm được nhiều việc thì nút ghi Chọn thao tác kèm số việc, bấm ra bảng chọn.",
+            "Mở thiết bị từ danh sách: vuốt dòng sang trái ngay ở danh sách, hoặc vào tab Chi tiết → chọn danh mục → Thêm mới.",
+            "Tủ lạnh nội địa: Xác nhận vị trí và Trung chuyển nằm ở thanh dưới đáy màn chi tiết, mở từ danh sách hay quét QR đều có.",
           ],
         },
         {
@@ -293,6 +327,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-bang-tu-mo",
+      group: "Quét QR & tài sản",
       heading: "Quét xong tự hiện bảng hỏi làm gì, tôi chỉ muốn xem thông tin",
       blocks: [
         {
@@ -310,11 +345,16 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-khong-thay-tao-moi-thanh-cong",
-      heading: 'Lưu xong không thấy thông báo "Tạo mới thành công"',
+      group: "Quét QR & tài sản",
+      heading: 'Lưu xong không thấy hộp thoại "Tạo mới thành công" để bấm OK',
       blocks: [
         {
           kind: "paragraph",
-          text: "Ở luồng quét QR, app không hỏi OK nữa mà quay thẳng về màn quét kèm dải xanh Đã lưu… ở trên, tự tắt sau vài giây. Bản ghi đã lưu rồi.",
+          text: "App không hỏi OK nữa. Lưu, nhân bản, xoá tài sản, lưu công việc, nộp phiếu, duyệt phiếu… xong là quay thẳng về màn trước, kèm một dải xanh ở phía dưới (vd Tạo mới thành công, Đã duyệt phiếu…) tự tắt sau vài giây. Bản ghi đã lưu rồi.",
+        },
+        {
+          kind: "paragraph",
+          text: "Ở luồng quét QR, dải xanh Đã lưu… hiện ngay ở màn quét.",
         },
         {
           kind: "bullets",
@@ -325,12 +365,13 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
         },
         {
           kind: "paragraph",
-          text: "Bỏ bước bấm OK vì đi kiểm tra cả loạt thiết bị thì mỗi bản ghi một lần bấm là thao tác thừa nhân lên theo số thiết bị. Các luồng thêm mới khác vẫn báo như cũ.",
+          text: "Bỏ bước bấm OK vì mỗi lần lưu thêm một lần bấm là thao tác thừa. Lỗi, hoặc lưu được nhưng có file chưa tải lên, thì app vẫn báo bằng hộp thoại để bạn không bỏ lỡ. Riêng Thêm nhanh trong bảng chọn vẫn báo bằng hộp thoại như cũ.",
         },
       ],
     },
     {
       id: "faq-bang-chon-khong-co-gia-tri",
+      group: "Nhập liệu",
       heading: "Bảng chọn không có giá trị tôi cần",
       blocks: [
         {
@@ -353,6 +394,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-them-nhanh-o-van-trong",
+      group: "Nhập liệu",
       heading: "Thêm nhanh xong mà ô chọn vẫn trống",
       blocks: [
         {
@@ -372,6 +414,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-o-chon-bi-mo",
+      group: "Nhập liệu",
       heading: "Ô chọn bị mờ, bấm không mở được bảng chọn",
       blocks: [
         {
@@ -398,6 +441,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-o-dien-san-khong-sua-duoc",
+      group: "Nhập liệu",
       heading: "Ô đã điền sẵn mà mờ, không sửa được",
       blocks: [
         {
@@ -407,7 +451,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
         {
           kind: "bullets",
           items: [
-            "Thêm bản ghi con (vuốt dòng, hoặc thanh thao tác dưới đáy màn chi tiết): các ô chỉ ra thiết bị cha — Khu, Toà nhà, Tầng, Phòng… — được điền sẵn và khoá.",
+            "Thêm bản ghi con (vuốt dòng, hoặc thanh thao tác dưới đáy màn khi quét QR): các ô chỉ ra thiết bị cha — Khu, Toà nhà, Tầng, Phòng… — được điền sẵn và khoá.",
             "Thêm nhanh một danh mục có cấp trên từ bảng chọn: chuỗi cấp trên đang chọn ở form ngoài được mang xuống và khoá.",
           ],
         },
@@ -419,6 +463,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-form-tu-dien-gia-tri",
+      group: "Nhập liệu",
       heading: "Mở form thêm mới thì một số ô đã có sẵn giá trị",
       blocks: [
         {
@@ -441,6 +486,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-danh-sach-con-it-dong",
+      group: "Quét QR & tài sản",
       heading: "Danh sách bản ghi con ít dòng hơn trước",
       blocks: [
         {
@@ -450,7 +496,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
         {
           kind: "bullets",
           items: [
-            "Con số ở dòng Lịch sử… dưới đáy màn chi tiết cũng đếm theo cách đó, nên khớp với số dòng mở ra.",
+            "Con số ở dòng Lịch sử… dưới đáy màn chi tiết (khi quét QR) cũng đếm theo cách đó, nên khớp với số dòng mở ra.",
             "Kéo xuống làm mới nếu vừa thêm bản ghi ở nơi khác.",
           ],
         },
@@ -463,6 +509,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-o-xam-khi-mo-man",
+      group: "Khác",
       heading: "Mở màn hình thấy mấy ô xám rồi mới ra dữ liệu",
       blocks: [
         {
@@ -481,11 +528,13 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-khong-thay-thanh-thao-tac",
+      group: "Quét QR & tài sản",
       heading: "Không thấy thanh thao tác dưới đáy màn chi tiết",
       blocks: [
         {
           kind: "bullets",
           items: [
+            "Mở thiết bị từ danh sách tài sản thì không có thanh là đúng: tab Chi tiết đã có đủ các danh mục con, và danh sách có nút vuốt để thêm nhanh. Thanh chỉ hiện khi quét QR — riêng tủ lạnh nội địa thì mở từ đâu cũng có.",
             "Loại tài sản đó chưa khai danh mục con nào và cũng không có nghiệp vụ riêng — không có việc gì để làm.",
             "Có danh mục con nhưng tài khoản chưa có quyền thêm ở đó thì thanh cũng ẩn hẳn, thay vì hiện rồi báo lỗi khi bấm.",
             "Đang mất mạng thì app chưa lấy được danh sách việc; kéo xuống nạp lại sau khi có mạng.",
@@ -498,7 +547,42 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
       ],
     },
     {
+      id: "faq-file-khong-ho-tro",
+      group: "Quét QR & tài sản",
+      heading: 'Mở file ở tab Tệp báo "Không hỗ trợ hiển thị file này"',
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Ở tab Tệp của tài sản, app xem trực tiếp được ảnh (PNG, JPG) và PDF. Loại file khác — Word (.doc, .docx), Excel (.xls, .xlsx)… — app báo Không hỗ trợ hiển thị file này và ghi rõ đuôi file, ví dụ Ứng dụng chưa xem được file .doc. File vẫn còn nguyên trên máy chủ, không phải bị lỗi.",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Cần xem nội dung: mở bản ghi đó trên web bằng máy tính rồi tải file về.",
+            "Muốn xem được trên điện thoại về sau: khi đính kèm, xuất file sang PDF trước rồi mới tải lên.",
+            "File đính kèm ở phiếu, công việc và bình luận thì khác: file Word, Excel mở bằng bảng chia sẻ của điện thoại để chọn app đọc.",
+          ],
+        },
+      ],
+    },
+    {
+      id: "faq-the-danh-sach-it-dong",
+      group: "Quét QR & tài sản",
+      heading: "Thẻ ở danh sách tài sản ít dòng hơn trước",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Thẻ ở danh sách giờ bỏ các trường chưa có giá trị để lướt tìm cho nhanh — không phải dữ liệu bị mất. Mở bản ghi để xem đủ mọi trường ở tab Thông tin; trường trống hiện ---.",
+        },
+        {
+          kind: "paragraph",
+          text: "Loại hồ sơ có ảnh hoặc mã QR thì hai ô đó chuyển sang cột bên phải thẻ thay vì nằm chung với các dòng chữ. Bấm vào ảnh để xem lớn.",
+        },
+      ],
+    },
+    {
       id: "faq-khong-nhan-thong-bao-camera",
+      group: "Camera",
       heading: "Không nhận được thông báo camera",
       blocks: [
         {
@@ -508,8 +592,8 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
         {
           kind: "steps",
           items: [
-            "Vào tab Cài đặt xem có dòng Thông báo camera không. Không thấy nghĩa là tài khoản chưa được cấp quyền — nhờ IT thêm quyền nhận thông báo camera.",
-            "Vẫn ở Cài đặt, xem dòng Quyền thông báo đã ở trạng thái Đã cấp quyền chưa. Đang bị chặn thì bấm vào dòng đó để mở Cài đặt của điện thoại.",
+            "Vào tab Cài đặt → Hệ thống xem có dòng Thông báo camera không. Không thấy nghĩa là tài khoản chưa được cấp quyền — nhờ IT thêm quyền nhận thông báo camera.",
+            "Vẫn ở màn Hệ thống, xem dòng Quyền thông báo đã ở trạng thái Đã cấp quyền chưa. Đang bị chặn thì bấm vào dòng đó để mở Cài đặt của điện thoại.",
             "Mở Thông báo camera, xem phần trạng thái có đang Tạm dừng không — kể cả lệnh do người khác tắt cho cả công ty. Phần Phạm vi cho biết lệnh đang tắt tất cả camera hay chỉ một camera.",
             "Ba bước trên đều ổn mà vẫn không có thì đóng hẳn app rồi mở lại một lần, app sẽ đăng ký lại với máy chủ.",
           ],
@@ -522,11 +606,12 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-thong-bao-camera-ca-cong-ty",
+      group: "Camera",
       heading: "Cả phòng không ai nhận được thông báo camera",
       blocks: [
         {
           kind: "paragraph",
-          text: "Nhiều khả năng có người đã đặt tạm dừng cho cả công ty. Vào tab Cài đặt, chọn Thông báo camera — nếu đúng vậy thì phần trạng thái ghi rõ cả công ty, kèm tên người tắt, lý do và còn bao lâu.",
+          text: "Nhiều khả năng có người đã đặt tạm dừng cho cả công ty. Vào tab Cài đặt → Hệ thống, chọn Thông báo camera — nếu đúng vậy thì phần trạng thái ghi rõ cả công ty, kèm tên người tắt, lý do và còn bao lâu.",
         },
         {
           kind: "paragraph",
@@ -536,6 +621,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-tam-dung-het-han",
+      group: "Camera",
       heading: "Tạm dừng thông báo camera có tự hết không?",
       blocks: [
         {
@@ -554,11 +640,12 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-tat-rieng-mot-camera",
+      group: "Camera",
       heading: "Chỉ muốn tắt thông báo của một camera, được không?",
       blocks: [
         {
           kind: "paragraph",
-          text: "Được. Vào tab Cài đặt, chọn Thông báo camera, bấm ô Áp dụng cho rồi chọn camera cần tắt — tìm theo mã, tên hoặc tên khu vực, gõ không dấu cũng ra. Sau đó bấm mốc thời gian như bình thường.",
+          text: "Được. Vào tab Cài đặt → Hệ thống, chọn Thông báo camera, bấm ô Áp dụng cho rồi chọn camera cần tắt — tìm theo mã, tên hoặc tên khu vực, gõ không dấu cũng ra. Sau đó bấm mốc thời gian như bình thường.",
         },
         {
           kind: "bullets",
@@ -572,6 +659,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-bam-thong-bao-camera",
+      group: "Camera",
       heading: "Bấm vào thông báo camera thì mở ra gì?",
       blocks: [
         {
@@ -586,6 +674,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-khong-thay-workflow",
+      group: "Workflow & thông báo",
       heading: "Không thấy Workflow hoặc tab Lịch",
       blocks: [
         {
@@ -608,6 +697,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-tab-camera-thanh-lich",
+      group: "Workflow & thông báo",
       heading: "Tab Camera biến thành Lịch, giờ xem camera ở đâu?",
       blocks: [
         {
@@ -622,6 +712,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-chuong-sap-trien-khai",
+      group: "Workflow & thông báo",
       heading: "Số trên chuông khác số trên nút Việc cần xử lý / ô Workflow",
       blocks: [
         {
@@ -640,6 +731,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-so-tren-bieu-tuong-app",
+      group: "Workflow & thông báo",
       heading: "Số trên biểu tượng app khác số trên chuông (Android)",
       blocks: [
         {
@@ -658,13 +750,14 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-khong-thay-tong-quan-cong-viec",
+      group: "Trang chủ",
       heading: "Không thấy khối Tổng quan công việc ở Trang chủ",
       blocks: [
         {
           kind: "bullets",
           items: [
             "Khối chỉ hiện với tài khoản được cấp quyền Workflow. Chưa có quyền thì nhờ IT cấp.",
-            "Khối có thể đang nằm ở chỗ khác: bấm nút sắp xếp trên thanh đầu Trang chủ để xem và kéo khối lên.",
+            "Khối có thể đang bị ẩn hoặc nằm ở chỗ khác: bấm nút Sắp xếp (mũi tên lên xuống) trên thanh đầu Trang chủ — khối có nút tròn trống (dấu +) là đang ẩn, bấm vào để hiện lại; giữ và kéo để đưa khối lên.",
             "Khối báo không tải được thì kiểm tra mạng nội bộ rồi bấm Thử lại, hoặc kéo Trang chủ xuống để tải lại.",
           ],
         },
@@ -672,6 +765,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-chua-lien-ket-nhan-vien",
+      group: "Workflow & thông báo",
       heading: 'Lập phiếu thì báo "Chưa liên kết nhân viên"',
       blocks: [
         {
@@ -686,6 +780,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-phieu-khong-co-nut-duyet",
+      group: "Workflow & thông báo",
       heading: "Phiếu không có nút Duyệt",
       blocks: [
         {
@@ -705,6 +800,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-tu-choi-nham",
+      group: "Workflow & thông báo",
       heading: "Lỡ bấm Từ chối một phiếu",
       blocks: [
         {
@@ -719,6 +815,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-duyet-tat-ca-con-phieu",
+      group: "Workflow & thông báo",
       heading: "Bấm Duyệt nhiều mà vẫn còn phiếu chờ",
       blocks: [
         {
@@ -737,6 +834,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-khong-thay-nut-cong-viec",
+      group: "Workflow & thông báo",
       heading: "Không thấy nút Sửa / Gia hạn / Đổi chủ trì / Xoá ở công việc",
       blocks: [
         {
@@ -756,16 +854,18 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-khong-xoa-duoc-ke-hoach",
-      heading: "Nút Xoá kế hoạch bị mờ",
+      group: "Workflow & thông báo",
+      heading: "Bấm Xoá kế hoạch thì báo không xoá được",
       blocks: [
         {
           kind: "paragraph",
-          text: "Kế hoạch còn công việc thì không xoá được — xoá là mất mối gom các việc đó. Chỉ kế hoạch không còn việc nào mới xoá được, và chỉ chủ trì kế hoạch thấy nút Xoá.",
+          text: "Kế hoạch còn công việc thì không xoá được — xoá là mất mối gom các việc đó. App báo \"Kế hoạch còn n công việc, không xoá được.\". Chỉ kế hoạch không còn việc nào mới xoá được, và chỉ chủ trì kế hoạch thấy nút Xoá.",
         },
       ],
     },
     {
       id: "faq-file-qua-lon",
+      group: "Workflow & thông báo",
       heading: "Đính kèm file thì báo \"File quá lớn\"",
       blocks: [
         {
@@ -785,6 +885,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-khong-co-thong-bao-day-workflow",
+      group: "Workflow & thông báo",
       heading: "Có phiếu chờ duyệt mà điện thoại không báo",
       blocks: [
         {
@@ -794,7 +895,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
         {
           kind: "bullets",
           items: [
-            "Vào Cài đặt của app, xem dòng Quyền thông báo đã ở trạng thái Đã cấp quyền chưa. Đang bị chặn thì bấm vào dòng đó để mở Cài đặt của điện thoại.",
+            "Vào tab Cài đặt → Hệ thống của app, xem dòng Quyền thông báo đã ở trạng thái Đã cấp quyền chưa. Đang bị chặn thì bấm vào dòng đó để mở Cài đặt của điện thoại.",
             "Đăng xuất thì máy không nhận thông báo nữa — đăng nhập lại là nhận tiếp.",
             "Máy Xiaomi, Oppo, Vivo, Realme: vuốt tắt app trong đa nhiệm có thể làm máy chặn luôn thông báo. Bật Tự khởi động cho app, hoặc khoá app trong đa nhiệm.",
             "Việc do chính bạn làm không tạo thông báo cho bạn.",
@@ -808,6 +909,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-khong-thay-viec-dong-nghiep",
+      group: "Workflow & thông báo",
       heading: "Không thấy công việc của đồng nghiệp",
       blocks: [
         {
@@ -825,6 +927,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-khong-thay-dinh-ky",
+      group: "Workflow & thông báo",
       heading: "Không thấy mục Định kỳ khi tạo việc",
       blocks: [
         {
@@ -839,6 +942,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-danh-thiep-khong-co-ma-qr",
+      group: "Hồ sơ & danh thiếp",
       heading: "Màn Thông tin QrCode không có mã QR",
       blocks: [
         {
@@ -853,6 +957,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-quet-danh-thiep",
+      group: "Hồ sơ & danh thiếp",
       heading: "Người khác quét danh thiếp của tôi thì ra gì?",
       blocks: [
         {
@@ -862,7 +967,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
         {
           kind: "bullets",
           items: [
-            "Phải quét bằng camera có sẵn của điện thoại (hoặc Zalo, ứng dụng quét QR bất kỳ). Nút Quét QR trong app này chỉ đọc tem tài sản nên sẽ báo Mã QR không hợp lệ.",
+            "Phải quét bằng camera có sẵn của điện thoại (hoặc Zalo, ứng dụng quét QR bất kỳ). Nút Quét QR trong app này chỉ đọc tem tài sản nên sẽ báo Mã này không phải tem tài sản.",
             "Quét ra link mà không mở được trang: máy người quét cần có mạng; thử mở lại link bằng trình duyệt.",
             "Tăng độ sáng màn hình và giữ máy yên cho mã nằm gọn trong khung.",
           ],
@@ -871,6 +976,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-ho-so-chua-cap-nhat",
+      group: "Hồ sơ & danh thiếp",
       heading: "Hồ sơ cá nhân / danh thiếp hiện thông tin cũ hoặc sai",
       blocks: [
         {
@@ -890,6 +996,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-khong-tim-thay-tai-khoan",
+      group: "Đăng nhập & quyền",
       heading: 'App báo "Không tìm thấy tài khoản" và chỉ có nút Đăng xuất',
       blocks: [
         {
@@ -900,11 +1007,12 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-o-so-lieu-mot-nhanh",
+      group: "Trang chủ",
       heading: "Bấm ô Thiết bị ở Trang chủ chỉ thấy một phần danh sách tài sản",
       blocks: [
         {
           kind: "paragraph",
-          text: "Đúng như thiết kế. Ô Thiết bị máy móc đang quản lý chỉ mở nhánh máy móc trong nhóm Tài sản, ô Thiết bị CNTT đang sử dụng chỉ mở nhánh CNTT trong nhóm IT — tiêu đề thanh đỏ ghi đúng tên nhóm đang xem.",
+          text: "Đúng như thiết kế. Ô Máy móc đang quản lý chỉ mở nhánh máy móc trong nhóm Tài sản, ô Thiết bị CNTT đang dùng chỉ mở nhánh CNTT trong nhóm IT — tiêu đề thanh đỏ ghi đúng tên nhóm đang xem.",
         },
         {
           kind: "bullets",
@@ -916,7 +1024,53 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
       ],
     },
     {
+      id: "faq-khoi-trang-chu-bien-mat",
+      group: "Trang chủ",
+      heading: "Một khối trên Trang chủ biến mất hoặc chỉ còn dòng tiêu đề",
+      blocks: [
+        {
+          kind: "bullets",
+          items: [
+            "Chỉ còn nhãn màu, bên cạnh ghi Đã thu gọn: khối đang được thu gọn. Bấm vào nhãn màu để mở lại.",
+            "Mất hẳn: khối đang bị ẩn. Bấm nút Sắp xếp (mũi tên lên xuống) trên đầu Trang chủ, khối có nút tròn trống (dấu +) là đang ẩn — bấm vào để hiện lại.",
+            "Không có trong bảng Sắp xếp: tài khoản chưa được cấp quyền xem khối đó (Dashboard Tài sản hoặc Workflow) — nhờ IT cấp.",
+          ],
+        },
+      ],
+    },
+    {
+      id: "faq-doi-may-mat-tuy-chinh",
+      group: "Trang chủ",
+      heading: "Đăng nhập máy khác thì mất chức năng đã ghim, thứ tự khối",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Chức năng ghim ở TRUY CẬP NHANH, thứ tự khối, khối ẩn và khối thu gọn đều lưu trên từng máy (theo tài khoản), chưa lưu lên hệ thống. Đăng nhập máy khác thì làm lại một lần trên máy đó.",
+        },
+      ],
+    },
+    {
+      id: "faq-diem-danh-5-phong-ban",
+      group: "Trang chủ",
+      heading: "Khối điểm danh chỉ hiện vài phòng ban",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Nhiều phòng ban thì khối chỉ hiện sẵn 5 phòng ban có tỉ lệ điểm danh thấp nhất — đó là chỗ cần để ý. Bấm Xem tất cả … bộ phận ở cuối danh sách để thấy đủ, bấm Thu gọn để quay lại.",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Tỉ lệ tô đỏ khi dưới 50%, cam khi dưới 80%, xanh khi từ 80% trở lên.",
+            "Chọn một phòng ban ở ô Tất cả bộ phận phía trên thì chỉ còn phòng ban đó.",
+            "Bấm một phòng ban để xem danh sách người đã và chưa điểm danh.",
+          ],
+        },
+      ],
+    },
+    {
       id: "faq-ban-do-trang",
+      group: "Khác",
       heading: "Bản đồ phương tiện trắng trơn trên iPhone",
       blocks: [
         {
@@ -934,12 +1088,13 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-co-chu",
+      group: "Khác",
       heading: "Chữ trong app quá nhỏ hoặc quá to",
       blocks: [
         {
           kind: "steps",
           items: [
-            "Vào tab Cài đặt, chọn Cỡ chữ.",
+            "Vào tab Cài đặt → Khác, chọn Cỡ chữ.",
             "Kéo thanh trượt về phía chữ A lớn để chữ to hơn, về phía chữ A nhỏ để chữ nhỏ lại. Đoạn chữ phía trên đổi ngay để xem trước.",
             "Nhấc tay khỏi thanh trượt là cả app đổi theo ngay, không cần mở lại app.",
           ],
@@ -953,11 +1108,12 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     },
     {
       id: "faq-cap-nhat",
+      group: "Khác",
       heading: "Làm sao biết app đã là bản mới nhất?",
       blocks: [
         {
           kind: "paragraph",
-          text: "Vào tab Cài đặt, khối THÔNG TIN ỨNG DỤNG hiện phiên bản đang cài và tự kiểm tra bản mới. Khi có bản mới, nút Cập nhật hiện ra và mở thẳng App Store / Google Play.",
+          text: "Vào tab Cài đặt → Thông tin ứng dụng: màn này hiện phiên bản đang cài và tự kiểm tra bản mới. Khi có bản mới, dòng Thông tin ứng dụng ở màn Cài đặt có nhãn Mới, và bên trong có nút Cập nhật mở thẳng App Store / Google Play.",
         },
       ],
     },

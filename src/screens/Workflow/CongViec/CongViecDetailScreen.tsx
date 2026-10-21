@@ -40,7 +40,6 @@ import {
 import { useOnWorkflowInfoStale } from "../shared/workflowInfoRefresh";
 import {
   CV_KIEU_LAP,
-  CV_MA_MAU,
   CV_THU_TRONG_TUAN,
   CV_VAI_TRO_OPTIONS,
   getCongViecTrangThai,
@@ -53,7 +52,11 @@ import ChuyenTrangThaiSheet from "./components/ChuyenTrangThaiSheet";
 import DoiChuTriSheet from "./components/DoiChuTriSheet";
 import GiaHanSheet from "./components/GiaHanSheet";
 import LichSuTimeline from "./components/LichSuTimeline";
-import { CV_CARD_CUSTOM_FIELDS, getCongViecActions } from "./congViecRules";
+import {
+  CV_CARD_CUSTOM_FIELDS,
+  getCongViecActions,
+  getCongViecHanBadge,
+} from "./congViecRules";
 
 type Sheet = "trangThai" | "giaHan" | "doiChuTri" | null;
 type Tab = "thongTin" | "lichSu";
@@ -215,8 +218,7 @@ export default function CongViecDetailScreen() {
   }
 
   const trangThai = getCongViecTrangThai(congViec.trangThai);
-  const maMau = CV_MA_MAU.find((item) => item.key === congViec.maMau);
-  const showMaMau = maMau && (maMau.key === "QuaHan" || maMau.key === "GiaHan");
+  const hanBadge = getCongViecHanBadge(congViec.maMau);
   const tuNgay = parseBeDate(congViec.tuNgay);
   const denNgay = parseBeDate(congViec.denNgay);
   const hanBanDau = parseBeDate(congViec.hanBanDau);
@@ -232,8 +234,14 @@ export default function CongViecDetailScreen() {
           <View style={styles.heroTop}>
             <Text style={styles.code}>{congViec.soCongViec}</Text>
             <View style={styles.badges}>
-              {showMaMau ? <StatusBadge label={maMau.label} color={maMau.color} dot /> : null}
-              {trangThai ? <StatusBadge label={trangThai.label} color={trangThai.color} /> : null}
+              {hanBadge ? <StatusBadge label={hanBadge.label} color={hanBadge.color} dot /> : null}
+              {trangThai ? (
+                <StatusBadge
+                  label={trangThai.label}
+                  color={trangThai.color}
+                  textColor={trangThai.textColor}
+                />
+              ) : null}
             </View>
           </View>
           <Text style={styles.title}>{congViec.tieuDe}</Text>

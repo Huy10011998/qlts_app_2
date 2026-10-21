@@ -4,8 +4,6 @@ import { useNavigation } from "@react-navigation/native";
 
 import EmptyState from "../../../components/ui/EmptyState";
 import SearchBar from "../../../components/ui/SearchBar";
-import RecordListFooterSkeleton from "../../../components/list/RecordListFooterSkeleton";
-import RecordListSkeleton from "../../../components/list/RecordListSkeleton";
 import { useDebounce } from "../../../hooks/useDebounce";
 import { cvDemTab, cvGetList, cvThongTin } from "../../../services/data/congViecApi";
 import { CV_CONG_VIEC_NAME_CLASS } from "../../../services/data/workflowApi";
@@ -17,6 +15,13 @@ import type {
 } from "../../../types/index";
 import { AppColors, useStyles } from "../../../utils/helpers/colors";
 import WorkflowFab from "../shared/components/WorkflowFab";
+import WorkflowListFooter from "../shared/components/WorkflowListFooter";
+import WorkflowListSkeleton, {
+  countFieldLines,
+  useInfoPending,
+  type WorkflowCardSkeletonShape,
+  WorkflowListFooterSkeleton,
+} from "../shared/components/WorkflowListSkeleton";
 import WorkflowTabBar from "../shared/components/WorkflowTabBar";
 import { useWorkflowMe } from "../shared/useWorkflowMe";
 import { useWorkflowPagedList } from "../shared/useWorkflowPagedList";
@@ -26,7 +31,7 @@ import { useOnWorkflowInfoStale } from "../shared/workflowInfoRefresh";
 import { CV_TABS, readTabCount } from "../shared/workflowConstants";
 import { getCardFields, WorkflowField } from "../shared/workflowFields";
 import { loadClassFields } from "../shared/workflowMetadata";
-import CongViecCard from "./components/CongViecCard";
+import CongViecCard, { getCongViecCardLayout } from "./components/CongViecCard";
 import MaMauFilter from "./components/MaMauFilter";
 import { CV_CARD_CUSTOM_FIELDS } from "./congViecRules";
 
@@ -47,6 +52,7 @@ export default function CongViecListScreen() {
   const searchText = useDebounce(keyword, 600);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [infos, setInfos] = useState<Record<number, CongViecThongTin>>({});
+  const { pendingIds: infoPending, track: trackInfo } = useInfoPending();
   const [fields, setFields] = useState<WorkflowField[]>([]);
 
   useEffect(() => {
@@ -60,6 +66,18 @@ export default function CongViecListScreen() {
     [fields],
   );
 
+  // Dáng khung chờ theo metadata (loadClassFields giữ trong phiên, nên từ lần mở
+  // thứ hai đã có ngay); chưa có thì khung chờ tự đoán.
+  const skeletonShape = useMemo<WorkflowCardSkeletonShape>(() => {
+    if (!fields.length) return {};
+    const layout = getCongViecCardLayout(cardFields);
+    return {
+      code: layout.showSo,
+      title: layout.showTieuDe,
+      lines: countFieldLines(layout.lineFields),
+    };
+  }, [cardFields, fields.length]);
+
   const loadCounts = useCallback(() => {
     cvDemTab(mau, searchText)
       .then(setCounts)
@@ -67,8 +85,10 @@ export default function CongViecListScreen() {
   }, [mau, searchText]);
 
   const loadInfos = useCallback((page: CongViecItem[]) => {
-    cvThongTin(page.map((item) => item.id))
-      .then((rows) =>
+    const ids = page.map((item) => item.id);
+    trackInfo(
+      ids,
+      cvThongTin(ids).then((rows) =>
         setInfos((prev) => {
           const next = { ...prev };
           rows.forEach((row) => {
@@ -76,9 +96,9 @@ export default function CongViecListScreen() {
           });
           return next;
         }),
-      )
-      .catch(() => undefined);
-  }, []);
+      ),
+    );
+  }, [trackInfo]);
 
   const list = useWorkflowPagedList<CongViecItem>(
     (skipSize, pageSize) =>
@@ -145,10 +165,10 @@ export default function CongViecListScreen() {
         activeKey={tab}
         onChange={(key) => setTab(key as CongViecTab)}
       />
-      <MaMauFilter value={mau} onChange={setMau} />
+      <MaMauFilter value={mau} onChange={setMau} spacious />
 
       {list.loading && !list.items.length ? (
-        <RecordListSkeleton hasSearchBar={false} rows={5} />
+        <WorkflowListSkeleton kind="congViec" shape={skeletonShape} />
       ) : (
         <FlatList
           data={list.items}
@@ -158,6 +178,7 @@ export default function CongViecListScreen() {
               item={item}
               fields={cardFields}
               info={infos[item.id]}
+              infoPending={infoPending.has(item.id)}
               onPress={() => navigation.navigate("CongViecChiTiet", { id: item.id })}
               // Cùng tham số với nút ở màn chi tiết: cv-thong-tin trả sẵn cờ quyền
               // như cv-chi-tiet, `duocTraoDoi` quyết định gửi bình luận / sửa file.
@@ -186,7 +207,10 @@ export default function CongViecListScreen() {
             <RefreshControl refreshing={list.refreshing} onRefresh={refreshAll} />
           }
           ListFooterComponent={
-            list.loadingMore ? <RecordListFooterSkeleton cardStyle={styles.footerCard} /> : null
+            <WorkflowListFooter
+              list={list}
+              skeleton={<WorkflowListFooterSkeleton kind="congViec" shape={skeletonShape} />}
+            />
           }
           ListEmptyComponent={
             <EmptyState
@@ -222,9 +246,5 @@ const makeStyles = (c: AppColors) =>
       paddingTop: 4,
       paddingBottom: 96,
       flexGrow: 1,
-    },
-    // Danh sách đã có lề ngang 12 — thẻ chờ khỏi thụt thêm lần nữa.
-    footerCard: {
-      marginHorizontal: 0,
     },
   });

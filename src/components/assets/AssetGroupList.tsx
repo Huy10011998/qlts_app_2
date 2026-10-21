@@ -29,6 +29,7 @@ export default function AssetGroupList({
   item,
   previousItem,
   isFieldChanged,
+  onGroupLayout,
 }: GroupListProps) {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
@@ -71,7 +72,15 @@ export default function AssetGroupList({
         const isCollapsed = collapsedGroups[groupName];
 
         return (
-          <View key={groupName} style={styles.groupCard}>
+          <View
+            key={groupName}
+            style={styles.groupCard}
+            onLayout={
+              onGroupLayout
+                ? (e) => onGroupLayout(groupName, e.nativeEvent.layout.y)
+                : undefined
+            }
+          >
             <TouchableOpacity
               style={[
                 styles.groupHeader,
@@ -364,9 +373,11 @@ const makeStyles = (c: AppColors) =>
     },
 
     label: {
-      fontWeight: "600",
-      color: c.textMuted,
-      fontSize: 11.5,
+      // Đậm như nhãn thẻ danh sách (`ListCardAsset`).
+      fontWeight: "bold",
+      // textMuted 11.5 quá nhạt và nhỏ để đọc lướt cả trang thông tin.
+      color: c.textSecondary,
+      fontSize: 12,
       letterSpacing: 0.2,
       marginBottom: 3,
     },

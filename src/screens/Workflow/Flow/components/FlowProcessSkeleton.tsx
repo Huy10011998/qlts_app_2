@@ -4,6 +4,7 @@ import { StyleSheet, View } from "react-native";
 import SkeletonBlock from "../../../../components/ui/SkeletonBlock";
 import { useSkeletonPulse } from "../../../../components/ui/useSkeletonAutoFill";
 import { AppColors, useStyles } from "../../../../utils/helpers/colors";
+import { FLOW_DIAGRAM_ROW_H } from "./FlowProcessDiagram";
 
 /** Số điểm dựng sẵn trên sơ đồ: vừa một màn hẹp, đủ ra dáng một quy trình. */
 const DIAGRAM_POINTS = 3;
@@ -65,7 +66,7 @@ export default function FlowProcessSkeleton({ tab }: { tab: "quyTrinh" | "lichSu
   );
 }
 
-// Số đo theo `FlowProcessDiagram` (DOT 30, ROW_H 112) và `FlowProcessDetail`.
+// Số đo theo `FlowProcessDiagram` (DOT 30, FLOW_DIAGRAM_ROW_H) và `FlowProcessDetail`.
 const makeStyles = (c: AppColors) =>
   StyleSheet.create({
     diagramCard: {
@@ -74,7 +75,7 @@ const makeStyles = (c: AppColors) =>
       borderRadius: 14,
       paddingVertical: 12,
       paddingHorizontal: 8,
-      height: 112 + 16,
+      height: FLOW_DIAGRAM_ROW_H + 16,
     },
     cell: {
       flex: 1,

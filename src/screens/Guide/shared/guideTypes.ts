@@ -60,6 +60,8 @@ export type GuideBlock =
 export type GuideSection = {
   id: string;
   heading: string;
+  /** Nhóm của mục, phải nằm trong `sectionGroups` của chủ đề chứa nó. */
+  group?: string;
   blocks: GuideBlock[];
 };
 
@@ -77,5 +79,10 @@ export type GuideTopic = {
   keywords?: string[];
   /** Mỗi section là một câu hỏi gập/mở được. Dùng cho chủ đề FAQ. */
   collapsibleSections?: boolean;
+  /**
+   * Thứ tự các nhóm mục. Có thì màn chủ đề gom mục theo `group`, mỗi nhóm một
+   * thẻ có tiêu đề — như mục lục Hướng dẫn. Dùng cho Câu hỏi thường gặp.
+   */
+  sectionGroups?: readonly string[];
   sections: GuideSection[];
 };

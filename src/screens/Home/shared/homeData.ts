@@ -17,8 +17,6 @@ export const HOME_MEETING_INFO = {
   totalShareholders: 220,
 };
 
-type HomeDashboardBlock<T> = T & { viewPermission?: string };
-
 /** Một loại thiết bị trong khối CƠ CẤU THIẾT BỊ CNTT. */
 export type HomeDashboardItCategory = {
   key: string;
@@ -77,22 +75,22 @@ export type HomeDashboardPayload = {
     it: number;
     camera: number;
   };
-  itStructure: HomeDashboardBlock<{
+  itStructure: {
     total: number;
     /** Đã sắp giảm dần theo số lượng. */
     items: HomeDashboardItCategory[];
-  }>;
-  utilities: HomeDashboardBlock<{
+  };
+  utilities: {
     items: HomeDashboardUtility[];
-  }>;
-  attendance: HomeDashboardBlock<{
+  };
+  attendance: {
     /** null = không kết nối được hệ thống nhân sự Bravo8. */
     total: number | null;
     checkedIn: number | null;
     notCheckedIn: number | null;
     /** Giữ NGUYÊN thứ tự nhận được (đã sắp theo sttPrintRep). */
     departments: HomeDashboardDepartment[];
-  }>;
+  };
   /** ISO string — giờ SERVER lúc chạy proc, không phải giờ máy điện thoại. */
   updatedAt: string;
 };

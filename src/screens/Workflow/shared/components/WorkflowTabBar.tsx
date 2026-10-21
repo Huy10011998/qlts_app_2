@@ -96,6 +96,9 @@ const makeStyles = (c: AppColors) =>
     tab: {
       flexDirection: "row",
       alignItems: "center",
+      // Cao bằng tab có viên số (18): số đếm về sau (dem-tab) thì hàng tab khỏi
+      // nhích cao thêm ~2.5pt, đẩy cả danh sách xuống.
+      minHeight: 18 + 8 * 2 + StyleSheet.hairlineWidth * 2,
       paddingHorizontal: 14,
       paddingVertical: 8,
       borderRadius: 999,
@@ -104,6 +107,7 @@ const makeStyles = (c: AppColors) =>
       borderColor: c.borderStrong,
     },
     tabEmbedded: {
+      minHeight: 18 + 6 * 2 + StyleSheet.hairlineWidth * 2,
       paddingHorizontal: 12,
       paddingVertical: 6,
     },

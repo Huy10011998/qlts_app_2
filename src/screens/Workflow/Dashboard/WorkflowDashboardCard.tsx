@@ -5,7 +5,8 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { cvDashboard } from "../../../services/data/congViecApi";
 import { useAppSelector } from "../../../store/hooks";
 import type { CongViecDashboard } from "../../../types/index";
-import { AppColors, useAppColors, useStyles } from "../../../utils/helpers/colors";
+import { AppColors, useAppColors, useSchemeColor, useStyles } from "../../../utils/helpers/colors";
+import { useHomeCardChrome } from "../../Home/shared/homeBlockTone";
 import ProgressRing from "../shared/components/ProgressRing";
 import { tint } from "../shared/workflowConstants";
 import { getWorkflowErrorMessage } from "../shared/workflowErrors";
@@ -39,6 +40,11 @@ const BAR_WIDTH = 10;
 export default function WorkflowDashboardCard({ reloadKey }: Props) {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
+  // Viền + mép trên màu khối Công việc, cùng kiểu với mọi card Trang chủ.
+  const chrome = useHomeCardChrome();
+  // Xanh / đỏ đậm của web chìm trên thẻ tối — nền tối dùng tông sáng hơn.
+  const deltaUpColor = useSchemeColor("#2e7d32", "#66bb6a");
+  const deltaDownColor = useSchemeColor("#c62828", "#ef5350");
   const version = useAppSelector((state) => state.workflow.version);
   const [data, setData] = useState<CongViecDashboard | null>(null);
   const [loading, setLoading] = useState(true);
@@ -72,7 +78,7 @@ export default function WorkflowDashboardCard({ reloadKey }: Props) {
 
   if (loading && !data) {
     return (
-      <View style={styles.card}>
+      <View style={[styles.card, chrome]}>
         <View style={[styles.skeleton, { height: 64 }]} />
         <View style={[styles.skeleton, { height: 56, marginTop: 12 }]} />
         <View style={[styles.skeleton, { height: CHART_HEIGHT, marginTop: 12 }]} />
@@ -82,7 +88,7 @@ export default function WorkflowDashboardCard({ reloadKey }: Props) {
 
   if (!data) {
     return (
-      <View style={[styles.card, styles.errorCard]}>
+      <View style={[styles.card, chrome, styles.errorCard]}>
         <Ionicons name="cloud-offline-outline" size={20} color={c.textSub} />
         <Text style={styles.errorText}>{errorMessage ?? "Chưa có dữ liệu công việc."}</Text>
         <TouchableOpacity onPress={load} hitSlop={8}>
@@ -103,10 +109,10 @@ export default function WorkflowDashboardCard({ reloadKey }: Props) {
     0,
   );
   const deltaColor =
-    delta.trend === "up" ? "#2e7d32" : delta.trend === "down" ? "#c62828" : c.textSub;
+    delta.trend === "up" ? deltaUpColor : delta.trend === "down" ? deltaDownColor : c.textSub;
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, chrome]}>
       {/* Chữ y hệt Home web: "Bạn đã hoàn tất 15% công việc trong năm", "Tháng
           hiện tại", "+200% so với tháng trước (3)". */}
       <View style={styles.heroRow}>
@@ -223,19 +229,14 @@ export default function WorkflowDashboardCard({ reloadKey }: Props) {
 
 const makeStyles = (c: AppColors) =>
   StyleSheet.create({
+    // Viền, bóng và mép trên do `useHomeCardChrome` lo.
     card: {
       backgroundColor: c.surface,
       borderRadius: 18,
       paddingHorizontal: 14,
-      paddingVertical: 14,
+      paddingTop: 12,
+      paddingBottom: 14,
       marginBottom: 14,
-      shadowColor: c.shadow,
-      shadowOpacity: 0.07,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 3 },
-      elevation: 2,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border,
     },
     skeleton: {
       borderRadius: 12,

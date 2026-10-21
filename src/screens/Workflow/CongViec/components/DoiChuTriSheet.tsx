@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
@@ -8,7 +8,7 @@ import type { WorkflowEmployee } from "../../../../types/index";
 import { AppColors, useAppColors, useStyles } from "../../../../utils/helpers/colors";
 import EmployeePickerModal from "../../shared/components/EmployeePickerModal";
 import WorkflowButton from "../../shared/components/WorkflowButton";
-import WorkflowSheet from "../../shared/components/WorkflowSheet";
+import WorkflowSheet, { confirmCloseSheet } from "../../shared/components/WorkflowSheet";
 import WorkflowTextArea from "../../shared/components/WorkflowTextArea";
 import { getWorkflowErrorMessage } from "../../shared/workflowErrors";
 
@@ -33,19 +33,45 @@ export default function DoiChuTriSheet({
   const styles = useStyles(makeStyles);
   const c = useAppColors();
   const [employees, setEmployees] = useState<WorkflowEmployee[]>([]);
+  const [employeesLoading, setEmployeesLoading] = useState(false);
+  const [employeesError, setEmployeesError] = useState<string | null>(null);
+  const employeesRequestRef = useRef(0);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [ghiChu, setGhiChu] = useState("");
   const [pickerVisible, setPickerVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  /*
+   * Gọi lúc mở sheet nên bấm "Chọn nhân viên" ngay có thể tới trước khi danh
+   * sách về — trước đây lúc đó (và cả khi gọi hỏng) bảng chọn báo "Không có
+   * nhân viên để chọn". Giờ truyền trạng thái tải / lỗi xuống bảng chọn. Lỗi
+   * thì giữ danh sách cũ (nếu có) thay vì xoá trắng.
+   */
+  const loadEmployees = useCallback(() => {
+    const requestId = ++employeesRequestRef.current;
+    setEmployeesLoading(true);
+    setEmployeesError(null);
+    cvNhanVien()
+      .then((list) => {
+        if (requestId === employeesRequestRef.current) setEmployees(list);
+      })
+      .catch((err) => {
+        if (requestId !== employeesRequestRef.current) return;
+        setEmployeesError(
+          getWorkflowErrorMessage(err, "Không tải được danh sách nhân viên."),
+        );
+      })
+      .finally(() => {
+        if (requestId === employeesRequestRef.current) setEmployeesLoading(false);
+      });
+  }, []);
+
   useEffect(() => {
     if (!visible) return;
     setSelectedId(null);
     setGhiChu("");
-    cvNhanVien()
-      .then(setEmployees)
-      .catch(() => setEmployees([]));
-  }, [visible]);
+    loadEmployees();
+  }, [loadEmployees, visible]);
 
   const selected = useMemo(
     () => employees.find((employee) => employee.id === selectedId),
@@ -74,6 +100,9 @@ export default function DoiChuTriSheet({
     }
   };
 
+  // Ghi chú đã gõ mà chạm nhầm ra nền tối là mất — sheet hỏi trước khi đóng.
+  const dirty = !!ghiChu.trim();
+
   return (
     <WorkflowSheet
       visible={visible}
@@ -81,9 +110,15 @@ export default function DoiChuTriSheet({
       onClose={onClose}
       loading={submitting}
       loadingText="Đang lưu..."
+      dirty={dirty}
       footer={
         <>
-          <WorkflowButton label="Đóng" variant="neutral" flex onPress={onClose} />
+          <WorkflowButton
+            label="Đóng"
+            variant="neutral"
+            flex
+            onPress={() => confirmCloseSheet(dirty, onClose)}
+          />
           <WorkflowButton label="Đổi chủ trì" icon="swap-horizontal" flex onPress={submit} />
         </>
       }
@@ -95,6 +130,10 @@ export default function DoiChuTriSheet({
           selectedIds={selectedId ? [selectedId] : []}
           multiple={false}
           excludeIds={idChuTriHienTai ? [idChuTriHienTai] : []}
+          // Đã có danh sách từ lần mở trước thì cứ cho chọn trong lúc tải lại.
+          loading={employeesLoading && !employees.length}
+          errorMessage={employeesError}
+          onRetry={loadEmployees}
           onClose={() => setPickerVisible(false)}
           onConfirm={(ids) => {
             setSelectedId(ids[0] ?? null);

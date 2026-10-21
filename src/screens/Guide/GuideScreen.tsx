@@ -134,8 +134,9 @@ export default function GuideScreen() {
                 </View>
                 <Ionicons name="open-outline" size={16} color={C.blue} />
               </TouchableOpacity>
+              <View style={styles.sectionDivider} />
               <TouchableOpacity
-                style={[styles.contactRow, styles.contactRowLast]}
+                style={styles.contactRow}
                 onPress={() => Linking.openURL(`tel:${SUPPORT_PHONE_LINK}`)}
                 activeOpacity={0.65}
                 accessibilityRole="button"

@@ -157,7 +157,7 @@ export const formatFlowBuocTen = (buoc: Pick<FlowBuoc, "buoc" | "buocCon" | "ten
  * Tab Lịch sử theo thời gian, đúng tiêu đề web (PHỤ LỤC): Thêm mới · Chờ xử lý
  * (bước mở, giao ai / ai chỉ xem) · Duyệt / Từ chối / Không ý kiến (cả kết quả
  * của lượt bị chạy lại — nguoiDuyetCus) · Bỏ qua (bước 4 không ai bấm) · Trả
- * bước (lần N) · Tạo công việc.
+ * bước · Tạo công việc.
  */
 export const getFlowHistory = (
   data:
@@ -249,7 +249,7 @@ export const getFlowHistory = (
     if (!time) return;
     events.push({
       time,
-      title: `Trả bước (lần ${tra.lan})`,
+      title: "Trả bước",
       content: [tra.tenBuocTu, tra.tenBuocVe].filter(Boolean).join(" → "),
       by: tra.iD_NhanVien_MoTa ?? undefined,
       byMe: isMe(tra.iD_NhanVien),
@@ -308,6 +308,25 @@ export const getFlowLabel = (
   record: FlowRecord | null | undefined,
   soPhieuField: string | null | undefined,
 ) => getFlowSoPhieu(record, soPhieuField) ?? `#${record?.id ?? ""}`;
+
+/**
+ * Câu báo sau khi xử lý xong 1 phiếu (dải thông báo ngắn, thay cho im lặng):
+ * "Đã duyệt phiếu PDN-001", "Đã trả bước phiếu #12"...
+ */
+export const getFlowDoneMessage = (ketQua: number, phieuLabel: string) => {
+  switch (ketQua) {
+    case FLOW_KET_QUA.Duyet:
+      return `Đã duyệt phiếu ${phieuLabel}`;
+    case FLOW_KET_QUA.TuChoi:
+      return `Đã từ chối phiếu ${phieuLabel}`;
+    case FLOW_KET_QUA.KhongYKien:
+      return `Đã gửi "Không ý kiến" cho phiếu ${phieuLabel}`;
+    case FLOW_KET_QUA.TraBuoc:
+      return `Đã trả bước phiếu ${phieuLabel}`;
+    default:
+      return `Đã xử lý phiếu ${phieuLabel}`;
+  }
+};
 
 /**
  * Dòng đầu thẻ chi tiết phiếu: tên Loại đề nghị (ID_LoaiFlow — cột hệ thống

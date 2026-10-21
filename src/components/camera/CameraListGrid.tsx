@@ -1484,11 +1484,6 @@ const CameraListGrid: React.FC = () => {
                 color={isMuted ? "#e53935" : c.textSecondary}
               />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.toolBtn}>
-              <View style={styles.sdBadge}>
-                <Text style={styles.sdText}>SD</Text>
-              </View>
-            </TouchableOpacity>
             <TouchableOpacity
               style={styles.toolBtn}
               onPress={() => setShowLayoutPicker((v) => !v)}
@@ -1524,38 +1519,22 @@ const CameraListGrid: React.FC = () => {
               <Text style={styles.playbackText}>Phát lại</Text>
             </TouchableOpacity>
             <View style={styles.iconGroup}>
-              <TouchableOpacity style={styles.iconBtn} onPress={handleSnapshot}>
+              {/* Chỉ giữ nút chạy thật. SD / ghi hình / micro / tài khoản trước
+                  đây là nút không có onPress — bấm không ra gì, trông như app
+                  lỗi. */}
+              <TouchableOpacity
+                style={styles.iconBtn}
+                onPress={handleSnapshot}
+                accessibilityRole="button"
+                accessibilityLabel="Chụp ảnh"
+              >
                 <Ionicons
                   name="camera-outline"
                   size={24}
                   color={c.textSecondary}
                 />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.iconBtn}>
-                <Ionicons
-                  name="radio-button-on-outline"
-                  size={24}
-                  color={c.textSecondary}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.iconBtn}>
-                <Ionicons
-                  name="mic-outline"
-                  size={24}
-                  color={c.textSecondary}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.iconBtn}>
-                <Ionicons
-                  name="person-circle-outline"
-                  size={24}
-                  color={c.textSecondary}
-                />
-              </TouchableOpacity>
             </View>
-          </View>
-          <View style={styles.chevronWrapper}>
-            <Ionicons name="chevron-down" size={20} color={c.textMuted} />
           </View>
         </View>
       )}

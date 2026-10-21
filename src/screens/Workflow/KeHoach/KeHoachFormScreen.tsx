@@ -5,7 +5,9 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 
 import AssetFormScreenShell from "../../../components/assets/shared/AssetFormScreenShell";
 import { createAssetFormBaseStyles } from "../../../components/assets/shared/assetFormStyles";
+import { showAppToast } from "../../../components/ui/AppToast";
 import EmptyState from "../../../components/ui/EmptyState";
+import { useUnsavedChangesGuard } from "../../../hooks/useUnsavedChangesGuard";
 import { cvNhanVien } from "../../../services/data/congViecApi";
 import { khChiTiet, khSua, khThem } from "../../../services/data/keHoachApi";
 import { CV_KE_HOACH_NAME_CLASS } from "../../../services/data/workflowApi";
@@ -25,6 +27,7 @@ import {
 } from "../shared/components/WorkflowFormFields";
 import WorkflowFormSkeleton from "../shared/components/WorkflowFormSkeleton";
 import WorkflowSection from "../shared/components/WorkflowSection";
+import { useFormDirty } from "../shared/useFormDirty";
 import { useWorkflowDynamicForm } from "../shared/useWorkflowDynamicForm";
 import { useWorkflowMe } from "../shared/useWorkflowMe";
 import { useMarkWorkflowChanged } from "../shared/useWorkflowVersion";
@@ -116,6 +119,16 @@ export default function KeHoachFormScreen() {
 
   const form = useWorkflowDynamicForm(formFields, initialData, isEdit ? "edit" : "add");
 
+  // Người tham gia vẽ riêng nên theo dõi riêng; phần động do `form` tự theo dõi.
+  // Sửa: chỉ hỏi khi bản ghi đã nạp xong — đang khung chờ thì chưa có gì để mất.
+  const { isDirty: thamGiasDirty, markTouched: markThamGiasTouched } = useFormDirty(
+    JSON.stringify(thamGias),
+  );
+  const formReady = !loadError && !!fields && !meLoading && (!isEdit || !!detail);
+  const { leaveWithoutPrompt } = useUnsavedChangesGuard(
+    formReady && (form.isDirty || thamGiasDirty),
+  );
+
   // Chủ trì (chính mình khi thêm, người tạo khi sửa) không nằm trong danh sách chọn.
   const chuTriId = detail ? Number(detail.keHoach.iD_NhanVien_Tao) : me.iD_NhanVien;
 
@@ -175,7 +188,8 @@ export default function KeHoachFormScreen() {
         return;
       }
       markChanged();
-      navigation.goBack();
+      showAppToast({ message: isEdit ? "Đã lưu kế hoạch" : "Đã tạo kế hoạch" });
+      leaveWithoutPrompt(() => navigation.goBack());
     } catch (err) {
       Alert.alert("Không lưu được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
     } finally {
@@ -227,7 +241,10 @@ export default function KeHoachFormScreen() {
                   {nameOf(id)}
                 </Text>
                 <TouchableOpacity
-                  onPress={() => setThamGias((prev) => prev.filter((item) => item !== id))}
+                  onPress={() => {
+                    markThamGiasTouched();
+                    setThamGias((prev) => prev.filter((item) => item !== id));
+                  }}
                   hitSlop={8}
                 >
                   <Ionicons name="close-circle" size={16} color={c.textSub} />
@@ -248,6 +265,7 @@ export default function KeHoachFormScreen() {
         excludeIds={chuTriId ? [chuTriId] : []}
         onClose={() => setPickerVisible(false)}
         onConfirm={(ids) => {
+          markThamGiasTouched();
           setThamGias(ids);
           setPickerVisible(false);
         }}
@@ -264,7 +282,8 @@ const makeStyles = (c: AppColors) =>
       alignItems: "center",
       gap: 3,
       paddingHorizontal: 10,
-      paddingVertical: 4,
+      // Nút nhỏ cạnh tiêu đề mục: 8 cho vùng bấm cao ~32, khỏi bấm trượt.
+      paddingVertical: 8,
       borderRadius: 999,
       backgroundColor: c.redSurface,
     },

@@ -1,5 +1,11 @@
 import React from "react";
-import { Animated, StyleSheet, View } from "react-native";
+import {
+  Animated,
+  StyleProp,
+  StyleSheet,
+  View,
+  ViewStyle,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ADD_FAB_OFFSET, ADD_FAB_SIZE } from "../add/shared/AddActionFab";
@@ -58,6 +64,7 @@ function SkeletonFab({
 
 export default function RecordListSkeleton({
   hasSearchBar = false,
+  searchSummary = "badge",
   hasSummaryCard = false,
   hasBanner = false,
   hasFilterCard = false,
@@ -65,10 +72,28 @@ export default function RecordListSkeleton({
   hasFab = false,
   variant = "avatar",
   lines = 3,
+  media = 0,
+  lineHeight,
+  avatarAlign,
   trailing = "none",
   rows,
+  contentStyle,
 }: {
   hasSearchBar?: boolean;
+  /**
+   * Dòng tóm tắt dưới ô tìm kiếm — mỗi kiểu ứng với một khối tìm kiếm thật:
+   *
+   * - `badge` (mặc định): `AssetListSearchBar` — nhãn viền đỏ bên trái + số
+   *   đếm bên phải; khối có lề ngang 14 và tự chừa 14 phía trên.
+   * - `count`: `SearchBar` trần + một dòng chữ nhỏ "N kết quả" bên trái, như
+   *   `NoiDiaPickerList`; lề ngang 16 và KHÔNG tự chừa khoảng trên — khoảng đó
+   *   là `paddingTop` khung ngoài của màn, nằm trên cả dòng ngữ cảnh.
+   */
+  searchSummary?: "badge" | "count";
+  /**
+   * Thẻ tổng số của `AssetListSummaryCard`, kể cả lề 2 / 10 của `stickyHeader`
+   * bọc nó.
+   */
   hasSummaryCard?: boolean;
   /** Dải nhắc vuốt của `AssetList`, chỉ hiện khi class có cây con. */
   hasBanner?: boolean;
@@ -79,9 +104,12 @@ export default function RecordListSkeleton({
    */
   hasFilterCard?: boolean;
   /**
-   * Tiêu đề nhóm phía trên các thẻ — tab Tệp gom thẻ theo loại tệp. Chỉ dựng MỘT
-   * tiêu đề: số nhóm chỉ biết sau khi có dữ liệu, nên đây là phần xấp xỉ duy
-   * nhất của khung chờ này.
+   * Gom thẻ theo nhóm như tab Tệp (gom theo loại tệp): các thẻ nằm TRONG một
+   * khối trắng bo góc, dòng tiêu đề nhóm ở đầu khối — đo từ `groupContainer` /
+   * `categoryText` của `AssetAttachFile`. Vẽ tiêu đề trần trên nền trang như
+   * trước thì lúc dữ liệu về hiện ra cả một tấm nền trắng, thẻ thụt vào 12 mỗi
+   * bên. Chỉ dựng MỘT nhóm: số nhóm chỉ biết sau khi có dữ liệu, nên đây là
+   * phần xấp xỉ duy nhất của khung chờ này.
    */
   hasGroupHeader?: boolean;
   /**
@@ -94,6 +122,12 @@ export default function RecordListSkeleton({
   hasFab?: boolean;
   variant?: RecordCardVariant;
   lines?: number;
+  /** Số ô ảnh / QR ở cột phải thẻ — xem `RecordCardSkeleton`. */
+  media?: number;
+  /** Chiều cao một dòng chữ của thẻ thật — xem `RecordCardSkeleton`. */
+  lineHeight?: number;
+  /** Avatar đứng giữa hay ở đỉnh thẻ — xem `RecordCardSkeleton`. */
+  avatarAlign?: "center" | "top";
   trailing?: RecordCardTrailing;
   /**
    * Số thẻ cố định, cho chỗ KHÔNG đo được chiều cao khung: bên trong `ScrollView`
@@ -101,13 +135,35 @@ export default function RecordListSkeleton({
    * tự đếm sẽ chạy vòng. Bỏ trống thì tự phủ kín màn.
    */
   rows?: number;
+  /**
+   * Lề của khối thẻ (nằm dưới mọi khối header ở trên). Truyền thẳng
+   * `contentContainerStyle` của danh sách thật để hai bên không lệch nhau khi
+   * một bên đổi: `paddingTop` 14 của lịch sử, `padding` 16 + `gap` 8 của picker
+   * Nội địa (dáng `row` không tự có lề). Bỏ trống thì thẻ bắt đầu sát header.
+   */
+  contentStyle?: StyleProp<ViewStyle>;
 }) {
   const styles = useStyles(makeStyles);
   const colors = useAppColors();
   const { onLayout, opacity, rowCount } = useSkeletonAutoFill(
-    getRecordCardHeight(variant, lines),
+    getRecordCardHeight(variant, lines, media, lineHeight),
     rows,
   );
+
+  const cards = Array.from({ length: rowCount }).map((_, index) => (
+    <RecordCardSkeleton
+      key={index}
+      variant={variant}
+      lines={lines}
+      media={media}
+      lineHeight={lineHeight}
+      avatarAlign={avatarAlign}
+      trailing={trailing}
+      // Dòng đầu không có gạch ngăn, giống `isFirst` của danh sách thật.
+      separator={variant === "plain" && index > 0}
+      opacity={opacity}
+    />
+  ));
 
   return (
     <View
@@ -116,7 +172,11 @@ export default function RecordListSkeleton({
       accessibilityLabel="Đang tải danh sách"
     >
       {hasSearchBar ? (
-        <View style={styles.searchWrap}>
+        <View
+          style={
+            searchSummary === "count" ? styles.searchWrapCount : styles.searchWrap
+          }
+        >
           {/* Ô tìm kiếm thật là hộp TRẮNG có viền (`SearchBar` cardBox), chỉ chữ
               bên trong mới xám — vẽ thành khối xám đặc là lệch hình dáng. */}
           <Animated.View
@@ -125,20 +185,29 @@ export default function RecordListSkeleton({
             <View style={styles.searchIcon} />
             <View style={styles.searchText} />
           </Animated.View>
-          <View style={styles.summaryRow}>
+          {searchSummary === "count" ? (
             <Animated.View
               style={[
-                styles.summaryBadge,
+                styles.countLabel,
                 { backgroundColor: colors.skeleton, opacity },
               ]}
             />
-            <Animated.View
-              style={[
-                styles.summaryMeta,
-                { backgroundColor: colors.skeleton, opacity },
-              ]}
-            />
-          </View>
+          ) : (
+            <View style={styles.summaryRow}>
+              <Animated.View
+                style={[
+                  styles.summaryBadge,
+                  { backgroundColor: colors.skeleton, opacity },
+                ]}
+              />
+              <Animated.View
+                style={[
+                  styles.summaryMeta,
+                  { backgroundColor: colors.skeleton, opacity },
+                ]}
+              />
+            </View>
+          )}
         </View>
       ) : null}
 
@@ -182,28 +251,34 @@ export default function RecordListSkeleton({
         </Animated.View>
       ) : null}
 
-      {hasGroupHeader ? (
-        <Animated.View
-          style={[
-            styles.groupHeader,
-            { backgroundColor: colors.skeleton, opacity },
-          ]}
-        />
-      ) : null}
-
       {hasFab ? <SkeletonFab opacity={opacity} /> : null}
 
-      {Array.from({ length: rowCount }).map((_, index) => (
-        <RecordCardSkeleton
-          key={index}
-          variant={variant}
-          lines={lines}
-          trailing={trailing}
-          // Dòng đầu không có gạch ngăn, giống `isFirst` của danh sách thật.
-          separator={variant === "plain" && index > 0}
-          opacity={opacity}
-        />
-      ))}
+      <View style={contentStyle}>
+        {hasGroupHeader ? (
+          /* Vỏ nhóm là tấm trắng thật nên KHÔNG nhấp nháy, chỉ tiêu đề và thẻ
+             bên trong mới mờ — tô mờ cả vỏ thì thẻ con mờ chồng hai lần. */
+          <View
+            style={[
+              styles.group,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
+            <View
+              style={[styles.groupTitleRow, { borderBottomColor: colors.hairline }]}
+            >
+              <Animated.View
+                style={[
+                  styles.groupTitle,
+                  { backgroundColor: colors.skeleton, opacity },
+                ]}
+              />
+            </View>
+            {cards}
+          </View>
+        ) : (
+          cards
+        )}
+      </View>
     </View>
   );
 }
@@ -220,6 +295,10 @@ const makeStyles = (c: AppColors) =>
       paddingHorizontal: 14,
       paddingTop: 14,
       paddingBottom: 8,
+    },
+    // `searchBar` (lề 16) của `NoiDiaPickerList` — ô đó không có padding trên.
+    searchWrapCount: {
+      paddingHorizontal: 16,
     },
     searchBar: {
       flexDirection: "row",
@@ -260,11 +339,23 @@ const makeStyles = (c: AppColors) =>
       height: 12,
       borderRadius: 6,
     },
+    /* "N kết quả" của picker Nội địa: `paddingTop` 8 + chữ 12 cao ~14.3 (iOS).
+       Vạch 10 cộng 2 mỗi bên cho bằng dòng chữ đó. */
+    countLabel: {
+      width: 70,
+      height: 10,
+      marginTop: 8 + 2,
+      marginBottom: 2,
+      borderRadius: 5,
+    },
+    // Lề 2 / 10 là `stickyHeader` bọc `AssetListSummaryCard` — trước đây 0 / 6
+    // nên lúc dữ liệu về danh sách tụt xuống 6pt.
     summaryCard: {
       flexDirection: "row",
       alignItems: "center",
       marginHorizontal: 14,
-      marginBottom: 6,
+      marginTop: 2,
+      marginBottom: 10,
       padding: 12,
       borderRadius: 14,
       borderWidth: StyleSheet.hairlineWidth,
@@ -309,12 +400,27 @@ const makeStyles = (c: AppColors) =>
       borderRadius: 5,
       backgroundColor: c.skeleton,
     },
-    groupHeader: {
-      width: 128,
+    /* Đo từ `groupContainer` của `AssetAttachFile`: lề ngang 12, trên 4, đệm
+       dưới 8, bo 12. Thẻ bên trong giữ lề 12 của chính nó, nên thụt vào x = 24
+       như `ListCardAttachFile` thật. */
+    group: {
+      marginHorizontal: 12,
+      marginTop: 4,
+      paddingBottom: 8,
+      borderRadius: 12,
+      borderWidth: StyleSheet.hairlineWidth,
+    },
+    /* `categoryText`: đệm 8/12 + chữ 14 đậm cao ~17 (iOS) + gạch dưới mảnh ≈ 33.
+       Vạch 14 cộng 1.5 mỗi bên cho bằng dòng chữ. */
+    groupTitleRow: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+    },
+    groupTitle: {
+      width: 72,
       height: 14,
-      marginTop: 12,
-      marginBottom: 8,
-      marginHorizontal: 24,
+      marginVertical: 1.5,
       borderRadius: 6,
     },
     // Đo từ `AddActionFab` dáng `extended` — dáng duy nhất các màn danh sách dùng.

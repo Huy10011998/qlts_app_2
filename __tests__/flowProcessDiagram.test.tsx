@@ -41,7 +41,14 @@ const data: FlowTienTrinh = {
     },
   ],
   nguoiDuyetCus: [
-    { iD_Flow_HoSo_Buoc: 21, iD_NhanVien_MoTa: "TEST03 - Nhân viên Test 3", ketQua: 4, ngayDuyet: "2026-10-12T16:18:00", lan: 1 },
+    {
+      iD_Flow_HoSo_Buoc: 21,
+      iD_NhanVien_MoTa: "TEST03 - Nhân viên Test 3",
+      ketQua: 4,
+      ngayDuyet: "2026-10-12T16:18:00",
+      yKien: "Thiếu chữ ký.",
+      lan: 1,
+    },
   ],
 };
 
@@ -52,7 +59,7 @@ const textsOf = (renderer: ReactTestRenderer.ReactTestRenderer) =>
   });
 
 describe("FlowProcessDiagram / FlowProcessDetail", () => {
-  it("vẽ 2 lượt, nhãn Lần, nhãn trả bước và khung chi tiết của điểm đang xử lý", async () => {
+  it("vẽ 2 lượt (không nhãn Lần), nhãn trả bước gọn và khung chi tiết của điểm đang xử lý", async () => {
     const diagram = buildFlowDiagram(data, "2026-10-04T16:19:00");
     const selected = getInitialFlowPoint(diagram)!;
     let renderer!: ReactTestRenderer.ReactTestRenderer;
@@ -72,13 +79,13 @@ describe("FlowProcessDiagram / FlowProcessDetail", () => {
     });
 
     const texts = textsOf(renderer);
-    expect(texts).toEqual(expect.arrayContaining(["Lần 1", "Lần 2", "Lập phiếu", "ĐANG Ở BƯỚC"]));
-    expect(texts.some((text) => text.startsWith("Trả bước lần 1"))).toBe(true);
+    expect(texts).toEqual(expect.arrayContaining(["Lập phiếu", "ĐANG Ở BƯỚC", "Trả bước"]));
+    expect(texts.some((text) => /^Lần \d|lần \d/.test(text))).toBe(false);
     // Bước chưa mở: người khai trong luatNguois.
     expect(texts).toContain("2. Kiểm soát chứng từ");
   });
 
-  it("điểm bấm trả ở lượt cũ có khung lý do", async () => {
+  it("điểm bấm trả ở lượt cũ: khung cam gọn ghi bước về, lý do nằm ở dòng Trả bước của bảng", async () => {
     const diagram = buildFlowDiagram(data, null);
     const tra = diagram.runs[0].points.find((point) => point.state === "tra")!;
     let renderer!: ReactTestRenderer.ReactTestRenderer;
@@ -92,7 +99,10 @@ describe("FlowProcessDiagram / FlowProcessDetail", () => {
     });
 
     const texts = textsOf(renderer);
-    expect(texts).toContain("LẦN 1 · BƯỚC");
-    expect(texts).toContain("Lý do: Thiếu chữ ký.");
+    expect(texts).toContain("BƯỚC");
+    expect(texts).toContain("Trả bước: ");
+    expect(texts).toContain("1. Trưởng bộ phận duyệt");
+    expect(texts).toContain("Ý kiến: Thiếu chữ ký.");
+    expect(texts.some((text) => text.startsWith("Lý do"))).toBe(false);
   });
 });

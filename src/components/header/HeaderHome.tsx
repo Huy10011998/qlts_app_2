@@ -9,13 +9,12 @@ import {
   StyleSheet,
   Linking,
   Text,
-  Dimensions,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Svg, { Path } from "react-native-svg";
 import { useHomeMenuContext } from "../../screens/Home/shared/HomeMenuProvider";
+import { useHomePageBackground } from "../../screens/Home/shared/homeBlockTone";
 import { usePermission } from "../../hooks/usePermission";
 import { navigateFromRef } from "../../navigation/navigationService";
 import { WORKFLOW_VIEW_CODE } from "../../screens/Workflow/workflowMenu";
@@ -23,8 +22,6 @@ import ThongBaoBellPanel from "../../screens/ThongBao/ThongBaoBellPanel";
 import { useThongBaoContext } from "../../screens/ThongBao/ThongBaoProvider";
 import type { HeaderHomeProps } from "../../types/components.d";
 import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
-
-const { width: W } = Dimensions.get("window");
 
 const getGreeting = (date: Date) => {
   const h = date.getHours();
@@ -48,36 +45,13 @@ const formatDate = (d: Date) =>
     year: "numeric",
   });
 
-const HeaderWave: React.FC<{ bottomFill: string }> = ({ bottomFill }) => {
-  const styles = useStyles(makeStyles);
-
-  return (
-    <Svg
-      width={W}
-      height={36}
-      viewBox={`0 0 ${W} 36`}
-      style={styles.headerWave}
-    >
-      <Path
-        d={`M0,8 C${W * 0.2},32 ${W * 0.4},0 ${W * 0.6},18 C${W * 0.8},36 ${
-          W * 0.9
-        },10 ${W},22 L${W},36 L0,36 Z`}
-        fill="rgba(255,255,255,0.12)"
-      />
-      <Path
-        d={`M0,18 C${W * 0.25},36 ${W * 0.5},10 ${W * 0.75},28 C${
-          W * 0.88
-        },38 ${W},16 ${W},36 L${W},36 L0,36 Z`}
-        fill={bottomFill}
-      />
-    </Svg>
-  );
-};
-
 export default function HeaderHome(_props: HeaderHomeProps) {
   const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const colors = useAppColors();
+  // Hai góc bo dưới của header lộ ra nền phía sau: phải trùng nền Trang chủ
+  // (đậm hơn `bg` một nấc), không thì lộ hai mảng màu khác ở hai góc.
+  const pageBackground = useHomePageBackground();
   const {
     isHomeRefreshing,
     openBlockOrderSheet,
@@ -150,176 +124,176 @@ export default function HeaderHome(_props: HeaderHomeProps) {
   };
 
   return (
-    <View style={[styles.outer, { paddingTop: insets.top }]}>
-      <View style={styles.deco1} />
-      <View style={styles.deco2} />
-      <View style={styles.deco3} />
+    // Lớp ngoài tô nền Trang chủ để hai góc bo dưới của header (như mẫu C) lộ
+    // ra đúng màu nền trang, không lộ nền mặc định của navigator.
+    <View style={{ backgroundColor: pageBackground }}>
+      <View style={[styles.outer, { paddingTop: insets.top }]}>
+        <View style={styles.deco1} />
+        <View style={styles.deco2} />
+        <View style={styles.deco3} />
 
-      <View style={styles.topBar}>
-        <TouchableOpacity
-          onPress={() => Linking.openURL("https://cholimexfood.com.vn")}
-          activeOpacity={0.8}
-        >
-          <View
-            style={[
-              styles.logoWrap,
-              {
-                backgroundColor: colors.surface,
-                shadowColor: colors.shadow,
-              },
-            ]}
-          >
-            <Image
-              source={require("../../assets/images/logo-cholimex-trans.jpg")}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-          </View>
-        </TouchableOpacity>
-
-        <View style={styles.topActions}>
-          {/* Làm mới cả trang: dùng chung lượt tải với kéo-để-làm-mới, tiện cho
-              người dùng một tay hoặc khi trang đang cuộn giữa. */}
+        <View style={styles.topBar}>
           <TouchableOpacity
-            style={styles.iconBtn}
-            activeOpacity={0.75}
-            onPress={refreshHome}
-            disabled={isHomeRefreshing}
-            accessibilityRole="button"
-            accessibilityLabel="Làm mới Trang chủ"
-            accessibilityState={{ busy: isHomeRefreshing }}
+            onPress={() => Linking.openURL("https://cholimexfood.com.vn")}
+            activeOpacity={0.8}
           >
-            <Animated.View style={isHomeRefreshing ? spinStyle : undefined}>
-              <Ionicons name="refresh-outline" size={20} color="#fff" />
-            </Animated.View>
+            <View
+              style={[
+                styles.logoWrap,
+                {
+                  backgroundColor: colors.surface,
+                  shadowColor: colors.shadow,
+                },
+              ]}
+            >
+              <Image
+                source={require("../../assets/images/logo-cholimex-trans.jpg")}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+            </View>
           </TouchableOpacity>
 
-          {/* Sắp xếp khối đặt cạnh chuông vì đây là hành động của cả trang, và
-              header là chỗ duy nhất không trôi theo thứ tự khối. */}
-          <TouchableOpacity
-            style={styles.iconBtn}
-            activeOpacity={0.75}
-            onPress={openBlockOrderSheet}
-            accessibilityRole="button"
-            accessibilityLabel="Sắp xếp Trang chủ"
-          >
-            <Ionicons name="swap-vertical-outline" size={20} color="#fff" />
-          </TouchableOpacity>
-
-          {/* Việc cần xử lý (cv-thong-bao): bảng tổng hợp việc, không phải thông
-              báo nên có nút riêng cạnh chuông. Số cùng lượt tải với ô Workflow. */}
-          {canViewWorkflow ? (
+          <View style={styles.topActions}>
+            {/* Làm mới cả trang: dùng chung lượt tải với kéo-để-làm-mới, tiện cho
+                người dùng một tay hoặc khi trang đang cuộn giữa. */}
             <TouchableOpacity
               style={styles.iconBtn}
               activeOpacity={0.75}
-              onPress={() => navigateFromRef("ViecCanXuLy")}
+              onPress={refreshHome}
+              disabled={isHomeRefreshing}
+              accessibilityRole="button"
+              accessibilityLabel="Làm mới Trang chủ"
+              accessibilityState={{ busy: isHomeRefreshing }}
+            >
+              <Animated.View style={isHomeRefreshing ? spinStyle : undefined}>
+                <Ionicons name="refresh-outline" size={20} color="#fff" />
+              </Animated.View>
+            </TouchableOpacity>
+
+            {/* Sắp xếp khối đặt cạnh chuông vì đây là hành động của cả trang, và
+                header là chỗ duy nhất không trôi theo thứ tự khối. */}
+            <TouchableOpacity
+              style={styles.iconBtn}
+              activeOpacity={0.75}
+              onPress={openBlockOrderSheet}
+              accessibilityRole="button"
+              accessibilityLabel="Sắp xếp Trang chủ"
+            >
+              <Ionicons name="swap-vertical-outline" size={20} color="#fff" />
+            </TouchableOpacity>
+
+            {/* Việc cần xử lý (cv-thong-bao): bảng tổng hợp việc, không phải thông
+                báo nên có nút riêng cạnh chuông. Số cùng lượt tải với ô Workflow. */}
+            {canViewWorkflow ? (
+              <TouchableOpacity
+                style={styles.iconBtn}
+                activeOpacity={0.75}
+                onPress={() => navigateFromRef("ViecCanXuLy")}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  workflowTileCount
+                    ? `Việc cần xử lý, ${workflowTileCount} việc`
+                    : "Việc cần xử lý"
+                }
+              >
+                <MaterialCommunityIcons name="clipboard-check-outline" size={21} color="#fff" />
+                {workflowTileCount > 0 ? (
+                  <View style={styles.countBadge}>
+                    {/* Số nằm trong viên cao cố định 18pt: không theo cỡ chữ của
+                        app, phóng to là xén mất đầu số. */}
+                    <Text
+                      style={styles.countBadgeText}
+                      allowFontScaling={false}
+                    >
+                      {workflowTileCount > 99 ? "99+" : workflowTileCount}
+                    </Text>
+                  </View>
+                ) : null}
+              </TouchableOpacity>
+            ) : null}
+
+            {/* Thông báo (8-Mobile-ThongBao): số = chưa đọc của mọi nhóm,
+                realtime qua hub; bấm mở bảng 20 thông báo mới nhất. Chỉ cần
+                đăng nhập, không theo quyền màn hình. */}
+            <TouchableOpacity
+              style={styles.iconBtn}
+              activeOpacity={0.75}
+              onPress={() => setIsBellOpen(true)}
               accessibilityRole="button"
               accessibilityLabel={
-                workflowTileCount
-                  ? `Việc cần xử lý, ${workflowTileCount} việc`
-                  : "Việc cần xử lý"
+                soChuaDoc ? `Thông báo, ${soChuaDoc} chưa đọc` : "Thông báo"
               }
             >
-              <MaterialCommunityIcons name="clipboard-check-outline" size={21} color="#fff" />
-              {workflowTileCount > 0 ? (
+              <Ionicons name="notifications-outline" size={20} color="#fff" />
+              {soChuaDoc > 0 ? (
                 <View style={styles.countBadge}>
-                  {/* Số nằm trong viên cao cố định 18pt: không theo cỡ chữ của
-                      app, phóng to là xén mất đầu số. */}
                   <Text
                     style={styles.countBadgeText}
                     allowFontScaling={false}
                   >
-                    {workflowTileCount > 99 ? "99+" : workflowTileCount}
+                    {soChuaDoc > 99 ? "99+" : soChuaDoc}
                   </Text>
                 </View>
               ) : null}
             </TouchableOpacity>
-          ) : null}
-
-          {/* Thông báo (8-Mobile-ThongBao): số = chưa đọc của mọi nhóm,
-              realtime qua hub; bấm mở bảng 20 thông báo mới nhất. Chỉ cần
-              đăng nhập, không theo quyền màn hình. */}
-          <TouchableOpacity
-            style={styles.iconBtn}
-            activeOpacity={0.75}
-            onPress={() => setIsBellOpen(true)}
-            accessibilityRole="button"
-            accessibilityLabel={
-              soChuaDoc ? `Thông báo, ${soChuaDoc} chưa đọc` : "Thông báo"
-            }
-          >
-            <Ionicons name="notifications-outline" size={20} color="#fff" />
-            {soChuaDoc > 0 ? (
-              <View style={styles.countBadge}>
-                <Text
-                  style={styles.countBadgeText}
-                  allowFontScaling={false}
-                >
-                  {soChuaDoc > 99 ? "99+" : soChuaDoc}
-                </Text>
-              </View>
-            ) : null}
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={styles.greetRow}>
-        <View style={styles.greetLeft}>
-          <View style={styles.greetIconWrap}>
-            <Ionicons
-              name={greeting.icon as any}
-              size={14}
-              color="rgba(255,255,255,0.85)"
-            />
           </View>
-          <Text style={styles.greetText}>
-            {greeting.text}
-          </Text>
         </View>
-        <View style={styles.timePill}>
-          <Ionicons
-            name="time-outline"
-            size={11}
-            color="rgba(255,255,255,0.7)"
-            style={styles.timeIcon}
-          />
-          <Text style={styles.timeText}>
-            {formatTime(now)}
-          </Text>
+
+        <View style={styles.greetRow}>
+          <View style={styles.greetLeft}>
+            <View style={styles.greetIconWrap}>
+              <Ionicons
+                name={greeting.icon as any}
+                size={14}
+                color="rgba(255,255,255,0.85)"
+              />
+            </View>
+            <Text style={styles.greetText}>
+              {greeting.text}
+            </Text>
+          </View>
+          <View style={styles.timePill}>
+            <Ionicons
+              name="time-outline"
+              size={11}
+              color="rgba(255,255,255,0.7)"
+              style={styles.timeIcon}
+            />
+            <Text style={styles.timeText}>
+              {formatTime(now)}
+            </Text>
+          </View>
         </View>
+
+        <Text style={styles.dateText}>
+          {formatDate(now)}
+        </Text>
+
+        <View style={styles.bottomSpacer} />
+
+        <ThongBaoBellPanel
+          visible={isBellOpen}
+          onClose={() => setIsBellOpen(false)}
+        />
       </View>
-
-      <Text style={styles.dateText}>
-        {formatDate(now)}
-      </Text>
-
-      <View style={styles.waveContainer}>
-        <HeaderWave bottomFill={colors.bg} />
-      </View>
-
-      <ThongBaoBellPanel
-        visible={isBellOpen}
-        onClose={() => setIsBellOpen(false)}
-      />
     </View>
   );
 }
 
 const makeStyles = (c: AppColors) =>
   StyleSheet.create({
+    // Đáy thẳng, không bo góc. `overflow: hidden` cắt các vòng tròn trang trí
+    // tràn ra ngoài header.
     outer: {
       backgroundColor: c.red,
       overflow: "hidden",
     },
-    headerWave: {
-      position: "absolute",
-      bottom: 0,
-    },
     timeIcon: {
       marginRight: 4,
     },
-    waveContainer: {
-      height: 36,
+    bottomSpacer: {
+      height: 20,
     },
     deco1: {
       position: "absolute",

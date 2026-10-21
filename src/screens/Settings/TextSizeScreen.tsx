@@ -4,6 +4,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import TextSizeSlider from "../../components/ui/TextSizeSlider";
 import { useTextScale } from "../../context/FontScaleContext";
 import { useColorScheme } from "../../hooks/useColorScheme";
+import { C } from "../../utils/helpers/colors";
+import { ROW_DIVIDER_OPACITY } from "../../utils/helpers/tokens";
 import {
   getTextScaleFactorForStep,
   TEXT_SCALE_DEFAULT_STEP,
@@ -115,30 +117,24 @@ export default function TextSizeScreen() {
         <View
           style={[
             styles.card,
-            { backgroundColor: colors.card, borderColor: colors.border },
+            { backgroundColor: colors.card, borderColor: C.blue },
           ]}
         >
           {SPECIMEN.map((row, index) => (
-            <View
-              key={row.text}
-              style={[
-                styles.specimenRow,
-                index > 0 && {
-                  borderTopWidth: StyleSheet.hairlineWidth,
-                  borderTopColor: colors.border,
-                },
-              ]}
-            >
-              <Text
-                style={{
-                  color: colors.text,
-                  fontSize: scale(row.size),
-                  fontWeight: row.weight,
-                }}
-              >
-                {row.text}
-              </Text>
-            </View>
+            <React.Fragment key={row.text}>
+              {index > 0 ? <View style={styles.specimenDivider} /> : null}
+              <View style={styles.specimenRow}>
+                <Text
+                  style={{
+                    color: colors.text,
+                    fontSize: scale(row.size),
+                    fontWeight: row.weight,
+                  }}
+                >
+                  {row.text}
+                </Text>
+              </View>
+            </React.Fragment>
           ))}
         </View>
       </ScrollView>
@@ -152,7 +148,7 @@ export default function TextSizeScreen() {
           style={[
             styles.card,
             styles.sliderCard,
-            { backgroundColor: colors.card, borderColor: colors.border },
+            { backgroundColor: colors.card, borderColor: C.blue },
           ]}
         >
           <Text
@@ -218,10 +214,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 13,
   },
+  // Vạch ngăn cùng tông màu viền card nhưng nhạt, thụt vào bằng lề ngang của
+  // dòng để không chạm viền.
+  specimenDivider: {
+    height: 1,
+    backgroundColor: C.blue,
+    opacity: ROW_DIVIDER_OPACITY,
+    marginHorizontal: 16,
+  },
+  // Viền 1pt + mép trên 3pt như card Trang chủ / Cài đặt, xanh như icon Cỡ chữ ở Cài đặt.
   card: {
     marginHorizontal: 16,
     borderRadius: 18,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
+    borderTopWidth: 3,
     overflow: "hidden",
     shadowColor: "#000000",
     shadowOpacity: 0.08,

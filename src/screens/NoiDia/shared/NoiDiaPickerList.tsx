@@ -28,6 +28,14 @@ type NoiDiaPickerListProps<T> = {
 };
 
 /**
+ * Nhịp dòng của khung chờ, đo từ `rowTitle` / `rowSubtitle` (cỡ chữ iOS): tên
+ * 14.5 đậm cao ~17.3, dòng phụ `marginTop` 3 + chữ 12.5 cao ~14.9 → hai dòng
+ * 35.2, cả dòng chọn ~60. Nhịp mặc định của khung chờ chỉ 33 nên mỗi dòng hụt
+ * ~2.5pt, cuối màn lệch gần nửa dòng.
+ */
+const SKELETON_LINE_HEIGHT = (17.3 + 3 + 14.9) / 2;
+
+/**
  * Danh sách chọn có ô tìm kiếm, dùng cho cả nhà phân phối và khách hàng.
  *
  * Cả hai API đều trả toàn bộ danh sách một lượt (NPP cỡ trăm dòng, khách hàng
@@ -84,9 +92,11 @@ export default function NoiDiaPickerList<T>({
          chữ THẬT chứ không tô xám, và không có nó thì lúc dữ liệu về cả danh
          sách bị đẩy xuống một dòng.
 
-         Khung ngoài cố ý không lấy `paddingTop` của `root`: khoảng hở trên đã
-         nằm sẵn trong khối tìm kiếm của khung chờ, cộng cả hai là thừa. */
-      <View style={styles.skeletonRoot}>
+         Dùng chung `root` (có `paddingTop` 12) với màn thật: khoảng hở trên nằm
+         TRÊN dòng ngữ cảnh, nên không thể để khối tìm kiếm của khung chờ tự chừa
+         thay — làm vậy thì dòng ngữ cảnh dính sát đỉnh, cao hơn thật 12pt. Kiểu
+         `count` là ô tìm kiếm không chừa khoảng trên, cộng dòng "N kết quả". */
+      <View style={styles.root}>
         {contextLabel ? (
           <Text style={styles.contextLabel} numberOfLines={1}>
             {contextLabel}
@@ -95,9 +105,12 @@ export default function NoiDiaPickerList<T>({
 
         <RecordListSkeleton
           hasSearchBar
+          searchSummary="count"
           variant="row"
           lines={2}
+          lineHeight={SKELETON_LINE_HEIGHT}
           trailing="chevron"
+          contentStyle={styles.listContent}
         />
       </View>
     );
@@ -165,9 +178,6 @@ const makeStyles = (c: AppColors) =>
     root: {
       flex: 1,
       paddingTop: 12,
-    },
-    skeletonRoot: {
-      flex: 1,
     },
     contextLabel: {
       paddingHorizontal: 16,

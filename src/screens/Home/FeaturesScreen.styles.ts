@@ -72,7 +72,9 @@ export const makeFeatureStyles = (c: AppColors) =>
       paddingHorizontal: FEATURE_CARD_PADDING,
       paddingBottom: 12,
       marginBottom: 10,
-      borderBottomWidth: StyleSheet.hairlineWidth,
+      // Dày bằng viền thẻ (`getHomeCardChrome`): để hairline thì gạch cùng màu
+      // mà trông nhạt hơn viền hẳn.
+      borderBottomWidth: 1,
       borderBottomColor: c.separator,
     },
     sectionTitle: {

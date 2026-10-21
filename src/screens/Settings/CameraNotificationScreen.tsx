@@ -242,7 +242,7 @@ export default function CameraNotificationScreen() {
       <View
         style={[
           styles.card,
-          { backgroundColor: colors.card, borderColor: colors.border },
+          { backgroundColor: colors.card, borderColor: C.rose },
         ]}
       >
         <View style={styles.statusRow}>
@@ -300,7 +300,7 @@ export default function CameraNotificationScreen() {
       <View
         style={[
           styles.card,
-          { backgroundColor: colors.card, borderColor: colors.border },
+          { backgroundColor: colors.card, borderColor: C.rose },
         ]}
       >
         {/* Phạm vi camera dùng chung cho cả lệnh cá nhân lẫn lệnh toàn công ty:
@@ -392,7 +392,7 @@ export default function CameraNotificationScreen() {
       <View
         style={[
           styles.card,
-          { backgroundColor: colors.card, borderColor: colors.redBorder },
+          { backgroundColor: colors.card, borderColor: C.red },
         ]}
       >
         <Text style={[styles.warningText, { color: colors.textSecondary }]}>
@@ -446,9 +446,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginTop: 12,
   },
+  // Viền 1pt + mép trên 3pt như card Trang chủ / Cài đặt: hồng như icon
+  // Thông báo camera, riêng thẻ tắt cho cả công ty đỏ cảnh báo.
   card: {
     borderRadius: 14,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
+    borderTopWidth: 3,
     padding: 16,
   },
   errorBox: {

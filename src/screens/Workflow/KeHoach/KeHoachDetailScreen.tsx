@@ -158,6 +158,14 @@ export default function KeHoachDetailScreen() {
   const isChuTri = !!data?.quyen?.isChuTri;
 
   const confirmDelete = () => {
+    // Còn việc thì không xoá được. Nút vẫn để bấm được (trước đây chỉ mờ đi,
+    // người dùng không biết vì sao) — bấm thì nói lý do.
+    const soCongViec = Number(keHoach?.soCongViec ?? 0);
+    if (soCongViec > 0) {
+      Alert.alert("Không xoá được", `Kế hoạch còn ${soCongViec} công việc, không xoá được.`);
+      return;
+    }
+
     Alert.alert("Xoá kế hoạch", "Xoá kế hoạch này?", [
       { text: "Huỷ", style: "cancel" },
       {
@@ -251,7 +259,6 @@ export default function KeHoachDetailScreen() {
               icon="trash-outline"
               label="Xoá"
               loading={deleting}
-              disabled={Number(keHoach.soCongViec ?? 0) > 0}
               onPress={confirmDelete}
             />
           ) : null}

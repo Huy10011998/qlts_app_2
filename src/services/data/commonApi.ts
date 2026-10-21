@@ -2,6 +2,7 @@ import { Buffer } from "buffer";
 import { api, callApi } from "./httpClient";
 import { API_ENDPOINTS } from "../../config/index";
 import { log } from "../../utils/Logger";
+import { sortByMobileOrder } from "../../utils/helpers/field";
 
 export const getClassReference = async <T = any,>(nameClass: string) =>
   callApi<T>("POST", API_ENDPOINTS.GET_CLASS_REFERENCE, {
@@ -11,6 +12,11 @@ export const getClassReference = async <T = any,>(nameClass: string) =>
 export const getPropertyClass = async <T = any,>(nameClass: string) =>
   callApi<T>("POST", API_ENDPOINTS.GET_CLASS_BY_NAME, { nameClass });
 
+/**
+ * Field của class (ClassAttributes), đã sắp theo STT_Mobile — server trả theo
+ * STT (thứ tự của web). Mọi màn dựng từ đây (danh sách, chi tiết, form, QR)
+ * nhận đúng thứ tự mobile mà không phải tự sắp lại.
+ */
 export const getFieldActive = async <T = any,>(iD_Class_MoTa: string) => {
   log("[API] getFieldActive request", { iD_Class_MoTa });
   const response = await callApi<T>("POST", API_ENDPOINTS.GET_FIELD_ACTIVE, {
@@ -18,14 +24,17 @@ export const getFieldActive = async <T = any,>(iD_Class_MoTa: string) => {
   });
 
   const responseData = (response as { data?: unknown } | null)?.data;
+  const fields = Array.isArray(responseData)
+    ? sortByMobileOrder(responseData)
+    : null;
 
   log("[API] getFieldActive response", {
     iD_Class_MoTa,
-    totalFields: Array.isArray(responseData) ? responseData.length : undefined,
-    data: responseData,
+    totalFields: fields?.length,
+    data: fields ?? responseData,
   });
 
-  return response;
+  return fields ? ({ ...response, data: fields } as T) : response;
 };
 
 export const getPreviewAttachProperty = async (path: string) => {

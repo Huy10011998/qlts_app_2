@@ -12,6 +12,8 @@ const localStyles = StyleSheet.create({
 
 type SettingProfileHeaderProps = {
   name?: string;
+  /** Chức danh trên nhãn dưới tên; chưa có thì ghi "Thành viên". */
+  title?: string;
   avatarUrl?: string;
   safeTop?: number;
 };
@@ -29,6 +31,7 @@ function getInitials(name?: string) {
 
 export default function SettingProfileHeader({
   name,
+  title,
   avatarUrl,
   safeTop = 44,
 }: SettingProfileHeaderProps) {
@@ -60,13 +63,16 @@ export default function SettingProfileHeader({
       <Text style={styles.name}>{name || "---"}</Text>
       <View style={styles.badgeRow}>
         <View style={styles.badge}>
+          {/* Cùng icon với dòng Chức danh ở Hồ sơ cá nhân. */}
           <Ionicons
-            name="shield-checkmark"
+            name="ribbon"
             size={10}
             color="rgba(255,255,255,0.85)"
             style={localStyles.badgeIcon}
           />
-          <Text style={styles.badgeText}>Thành viên</Text>
+          <Text style={styles.badgeText} numberOfLines={1}>
+            {title || "Thành viên"}
+          </Text>
         </View>
       </View>
     </View>
@@ -149,8 +155,11 @@ const styles = StyleSheet.create({
   badgeRow: {
     flexDirection: "row",
     gap: 8,
+    // Chức danh dài thì nhãn co lại và cắt "…", không tràn ra mép màn.
+    maxWidth: "86%",
   },
   badge: {
+    flexShrink: 1,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "rgba(255,255,255,0.2)",
@@ -161,6 +170,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.25)",
   },
   badgeText: {
+    flexShrink: 1,
     fontSize: 11,
     color: "rgba(255,255,255,0.9)",
     fontWeight: "600",

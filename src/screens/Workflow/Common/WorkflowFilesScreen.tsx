@@ -97,60 +97,66 @@ export default function WorkflowFilesScreen() {
       },
     ]);
 
-  if (loading) return <WorkflowFilesSkeleton />;
-
   return (
     <View style={styles.container}>
-      <FlatList
-        data={items}
-        keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => {
-              setRefreshing(true);
-              load();
-            }}
-          />
-        }
-        renderItem={({ item }) => (
-          <View style={styles.row}>
-            <WorkflowFileRow
-              name={item.name}
-              meta={[
-                formatFileSizeKb(item.fileSize),
-                item.iD_User_MoTa,
-                formatBeDate(item.uploadedAt, true),
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-              thumbnail={
-                isImageFileName(item.name) ? (
-                  <WorkflowFileImage
-                    apiBase={apiBase}
-                    fileId={item.id}
-                    name={item.name}
-                    square={56}
-                    onPress={() => fileOpener.openFile(apiBase, item)}
-                  />
-                ) : undefined
-              }
-              onPress={() => fileOpener.openFile(apiBase, item)}
-              onRemove={canEdit ? () => confirmDelete(item) : undefined}
+      {/* Chỉ phần danh sách chờ: nút tải lên theo `canEdit` của route param, biết
+          ngay từ đầu — trước đây khung chờ thay cả màn nên nút tròn 56 bật ra
+          ở góc lúc dữ liệu về. Nút vẫn bấm được lúc đang tải: tải lên xong màn
+          tự nạp lại danh sách. */}
+      {loading ? (
+        <WorkflowFilesSkeleton />
+      ) : (
+        <FlatList
+          data={items}
+          keyExtractor={(item) => String(item.id)}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => {
+                setRefreshing(true);
+                load();
+              }}
             />
-          </View>
-        )}
-        ListEmptyComponent={
-          <EmptyState
-            iconName="folder-open-outline"
-            title={errorMessage ? "Không tải được file" : "Chưa có file đính kèm"}
-            subtitle={errorMessage ?? undefined}
-            actionLabel={errorMessage ? "Thử lại" : undefined}
-            onActionPress={errorMessage ? load : undefined}
-          />
-        }
-      />
+          }
+          renderItem={({ item }) => (
+            <View style={styles.row}>
+              <WorkflowFileRow
+                name={item.name}
+                meta={[
+                  formatFileSizeKb(item.fileSize),
+                  item.iD_User_MoTa,
+                  formatBeDate(item.uploadedAt, true),
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+                thumbnail={
+                  isImageFileName(item.name) ? (
+                    <WorkflowFileImage
+                      apiBase={apiBase}
+                      fileId={item.id}
+                      name={item.name}
+                      square={56}
+                      onPress={() => fileOpener.openFile(apiBase, item)}
+                    />
+                  ) : undefined
+                }
+                onPress={() => fileOpener.openFile(apiBase, item)}
+                onRemove={canEdit ? () => confirmDelete(item) : undefined}
+              />
+            </View>
+          )}
+          ListEmptyComponent={
+            <EmptyState
+              iconName="folder-open-outline"
+              title={errorMessage ? "Không tải được file" : "Chưa có file đính kèm"}
+              subtitle={errorMessage ?? undefined}
+              actionLabel={errorMessage ? "Thử lại" : undefined}
+              onActionPress={errorMessage ? load : undefined}
+            />
+          }
+        />
+      )}
 
       {canEdit ? <WorkflowFab icon="cloud-upload-outline" onPress={picker.open} /> : null}
       {picker.sheet}

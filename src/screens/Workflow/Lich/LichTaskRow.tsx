@@ -22,7 +22,13 @@ export default function LichTaskRow({ item, onPress }: Props) {
   const color = getMaMauColor(item.maMau);
 
   return (
-    <TouchableOpacity activeOpacity={0.75} onPress={onPress} style={styles.row}>
+    <TouchableOpacity
+      activeOpacity={0.75}
+      onPress={onPress}
+      // Viền cùng màu tình trạng (ô màu bên trái) — thẻ viền theo màu của chính
+      // nó, như các card khác trong app.
+      style={[styles.row, { borderColor: color }]}
+    >
       <View
         style={[
           styles.swatch,
@@ -102,6 +108,8 @@ const makeStyles = (c: AppColors) =>
       alignItems: "stretch",
       backgroundColor: c.surface,
       borderRadius: 12,
+      borderWidth: 1,
+      borderColor: "transparent",
       marginBottom: 8,
       overflow: "hidden",
     },

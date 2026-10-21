@@ -48,6 +48,7 @@ import {
 import { log } from "../../utils/Logger";
 import {
   readStoredAuthTokens,
+  readStoredAuthUsername,
   writeStoredAuthUsername,
 } from "../../context/authStorage";
 import { readFaceIdEnabled } from "../../services/auth/faceIdFlag";
@@ -99,33 +100,34 @@ export default function LoginScreen() {
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [scrollViewportHeight, setScrollViewportHeight] = useState(0);
   const [scrollContentHeight, setScrollContentHeight] = useState(0);
+  // `null` = chưa kiểm xong. Để "unknown" làm giá trị đầu thì thẻ báo quyền
+  // chớp lên một nhịp rồi mới biến mất ở máy đã cấp quyền.
   const [localNetworkStatus, setLocalNetworkStatus] =
-    useState<LocalNetworkPermissionStatus>("unknown");
+    useState<LocalNetworkPermissionStatus | null>(null);
+  // Mở màn bằng phiên còn hạn + đã bật Face ID thì tự hỏi Face ID một lần,
+  // khỏi bắt người dùng bấm nút (xem effect bên dưới).
+  const [shouldAutoPromptFaceId, setShouldAutoPromptFaceId] = useState(false);
 
   const isFaceIdRunning = useRef(false);
+  const hasAutoPromptedFaceIdRef = useRef(false);
   const isLocalNetworkRequestRunning = useRef(false);
   const isLocalNetworkDenied = localNetworkStatus === "denied";
-  const isLocalNetworkGranted = localNetworkStatus === "granted";
-  const localNetworkToneStyle = isLocalNetworkGranted
-    ? [styles.localNetworkNoticeGranted, { borderColor: accentBorders.green }]
-    : isLocalNetworkDenied
+  // Chỉ iOS mới có quyền mạng nội bộ (Android luôn coi là đã cấp), và chỉ nhắc
+  // khi CHƯA cấp — đã cấp rồi thì thẻ này chỉ chiếm chỗ.
+  const shouldShowLocalNetworkNotice =
+    Platform.OS === "ios" &&
+    localNetworkStatus !== null &&
+    localNetworkStatus !== "granted";
+  const localNetworkToneStyle = isLocalNetworkDenied
     ? [styles.localNetworkNoticeDenied, { borderColor: accentBorders.amber }]
     : [styles.localNetworkNoticeUnknown, { borderColor: hairlineBorderColor }];
-  const localNetworkIconToneStyle = isLocalNetworkGranted
-    ? styles.localNetworkIconGranted
-    : isLocalNetworkDenied
+  const localNetworkIconToneStyle = isLocalNetworkDenied
     ? styles.localNetworkIconDenied
     : styles.localNetworkIconUnknown;
-  const localNetworkStatusToneStyle = isLocalNetworkGranted
-    ? styles.localNetworkStatusGranted
-    : isLocalNetworkDenied
+  const localNetworkStatusToneStyle = isLocalNetworkDenied
     ? styles.localNetworkStatusDenied
     : styles.localNetworkStatusUnknown;
-  const localNetworkIconColor = isLocalNetworkGranted
-    ? "#15803D"
-    : isLocalNetworkDenied
-    ? RED
-    : "#64748B";
+  const localNetworkIconColor = isLocalNetworkDenied ? RED : "#64748B";
   // Chữ to lên thì nội dung cao thêm mà `windowHeight` không đổi, nên màn hình
   // vẫn rơi vào nhánh "rộng rãi" trong khi thực tế đã chật. Quy về chiều cao
   // hiệu dụng: chia cho hệ số Cỡ chữ của app trước khi so ngưỡng (cỡ chữ của
@@ -142,8 +144,8 @@ export default function LoginScreen() {
     { height: heroHeight, paddingBottom: isCompactHeight ? 10 : 16 },
   ];
   const restingContentTopPadding = Math.min(
-    Math.max(windowHeight * 0.04, 28),
-    40,
+    Math.max(windowHeight * 0.024, 16),
+    24,
   );
   const bottomContentPadding = isKeyboardVisible
     ? Math.max(insets.bottom, 16) + 24
@@ -175,6 +177,21 @@ export default function LoginScreen() {
   useEffect(() => {
     setIsLoginDisabled(!(userName.trim() && userPassword.trim()));
   }, [userName, userPassword]);
+
+  // Điền sẵn tài khoản lần đăng nhập trước (lưu ở `completeLogin`) cho khỏi gõ
+  // lại. Chỉ điền khi ô còn trống — người dùng gõ trước khi đọc xong thì giữ.
+  useEffect(() => {
+    let isCancelled = false;
+    readStoredAuthUsername()
+      .then((storedUserName) => {
+        if (isCancelled || !storedUserName) return;
+        setUserName((current) => current || storedUserName);
+      })
+      .catch(() => {});
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
 
   const openLocalNetworkSettings = useCallback(() => {
     Linking.openSettings();
@@ -209,6 +226,13 @@ export default function LoginScreen() {
         return;
       }
       setIsFaceIdEnabled(true);
+      // Tự hỏi Face ID chỉ khi còn phiên để khôi phục — cùng điều kiện
+      // `handleFaceIDLogin` dùng. Đăng xuất chủ động thì `logout()` đã xoá cả
+      // cờ Face ID lẫn token; hết phiên (EXPIRED) thì token cũng đã bị xoá —
+      // cả hai trường hợp đều không tự bật Face ID lên nữa.
+      const { token: storedToken, refreshToken: storedRefreshToken } =
+        await readStoredAuthTokens();
+      if (storedToken || storedRefreshToken) setShouldAutoPromptFaceId(true);
     } catch {
       // ignore
     } finally {
@@ -477,6 +501,35 @@ export default function LoginScreen() {
     }
   };
 
+  // Effect bên dưới chỉ chạy theo cờ, nên giữ bản `handleFaceIDLogin` mới nhất
+  // trong ref thay vì đưa hàm (đổi mỗi lần render) vào deps.
+  const handleFaceIDLoginRef = useRef(handleFaceIDLogin);
+  handleFaceIDLoginRef.current = handleFaceIDLogin;
+
+  useEffect(() => {
+    if (!shouldAutoPromptFaceId || hasAutoPromptedFaceIdRef.current) return;
+
+    const prompt = () => {
+      if (hasAutoPromptedFaceIdRef.current) return;
+      hasAutoPromptedFaceIdRef.current = true;
+      handleFaceIDLoginRef.current();
+    };
+
+    // Face ID không hiện được khi app chưa ở foreground (vd mở nền do push) —
+    // đợi tới lần app active đầu tiên rồi mới hỏi.
+    if (AppState.currentState === "active") {
+      prompt();
+      return;
+    }
+
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "active") prompt();
+    });
+    return () => {
+      subscription.remove();
+    };
+  }, [shouldAutoPromptFaceId]);
+
   return (
     /*
       Android KHÔNG được dùng `behavior`: manifest đã để
@@ -711,6 +764,10 @@ export default function LoginScreen() {
                     ]}
                     onPress={handleFaceIDPress}
                     activeOpacity={0.8}
+                    // Nút chỉ có icon: không có nhãn thì trình đọc màn hình chỉ
+                    // đọc được "nút".
+                    accessibilityRole="button"
+                    accessibilityLabel="Đăng nhập bằng Face ID"
                   >
                     <Image
                       source={require("../../assets/images/faceid-icon2.png")}
@@ -720,7 +777,7 @@ export default function LoginScreen() {
                 )}
               </View>
 
-              {(Platform.OS === "ios" || Platform.OS === "android") && (
+              {shouldShowLocalNetworkNotice && localNetworkStatus && (
                 <View
                   style={[styles.localNetworkNotice, localNetworkToneStyle]}
                 >
@@ -731,11 +788,7 @@ export default function LoginScreen() {
                     ]}
                   >
                     <Ionicons
-                      name={
-                        isLocalNetworkGranted
-                          ? "checkmark-circle"
-                          : "wifi-outline"
-                      }
+                      name="wifi-outline"
                       size={15}
                       color={localNetworkIconColor}
                     />
@@ -751,7 +804,7 @@ export default function LoginScreen() {
                       {getLocalNetworkPermissionLabel(localNetworkStatus)}
                     </Text>
                   </View>
-                  {Platform.OS === "ios" && isLocalNetworkDenied && (
+                  {isLocalNetworkDenied && (
                     <TouchableOpacity
                       style={[
                         styles.localNetworkSettingsButton,

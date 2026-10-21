@@ -26,6 +26,8 @@ import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { isNetworkRequestError } from "../../utils/helpers/api";
 import { normalizeIconImageUri } from "../../utils/iconImage";
 
+const LOAD_ERROR_MESSAGE = "Vui lòng kiểm tra kết nối mạng rồi bấm Thử lại.";
+
 export default function AssetDeTailsTab({
   nameClassRoot,
   rootRecordLabel,
@@ -75,9 +77,7 @@ export default function AssetDeTailsTab({
     } catch (e) {
       if (!isNetworkRequestError(e)) error(e);
       setItems([]);
-      setLoadErrorMessage(
-        "Vui lòng kiểm tra kết nối mạng hoặc quay lại để thử lại.",
-      );
+      setLoadErrorMessage(LOAD_ERROR_MESSAGE);
     } finally {
       if (isMounted()) {
         setIsLoading(false);
@@ -94,9 +94,7 @@ export default function AssetDeTailsTab({
     refetchOnAppResume: true,
     onOffline: () => {
       setItems([]);
-      setLoadErrorMessage(
-        "Vui lòng kiểm tra kết nối mạng hoặc quay lại để thử lại.",
-      );
+      setLoadErrorMessage(LOAD_ERROR_MESSAGE);
     },
   });
 
@@ -133,7 +131,9 @@ export default function AssetDeTailsTab({
   );
 
   if (isLoading) {
-    return <MenuCardSkeleton />;
+    // Đúng dáng dòng thật bên dưới: thẻ 56 + 8, mũi tên trơn, lề trên 14 như
+    // `listContent` — dáng thẻ menu mặc định lệch cả ba chỗ.
+    return <MenuCardSkeleton variant="related" paddingTop={14} />;
   }
 
   const isEmpty = items.length === 0;
@@ -162,6 +162,9 @@ export default function AssetDeTailsTab({
               loadErrorMessage ||
               "Danh mục liên kết sẽ hiển thị tại đây khi có dữ liệu"
             }
+            // `fetchDetails` tự bật khung chờ nên bấm là thấy đang tải lại ngay.
+            actionLabel={loadErrorMessage ? "Thử lại" : undefined}
+            onActionPress={loadErrorMessage ? fetchDetails : undefined}
           />
         }
       />

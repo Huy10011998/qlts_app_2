@@ -38,6 +38,22 @@ export const makeSharedAssetListStyles = (c: AppColors) =>
       fontWeight: "600",
       color: BRAND_RED,
     },
+    /** Nhãn lọc bấm được (`AssetListSearchBar` có `onBadgePress`). */
+    summaryChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    summaryChipMain: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      minWidth: 0,
+      flexShrink: 1,
+    },
+    summaryChipText: {
+      flexShrink: 1,
+    },
     summaryMeta: {
       fontSize: 11.5,
       color: c.textSub,

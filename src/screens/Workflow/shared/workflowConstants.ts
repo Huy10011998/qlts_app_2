@@ -14,7 +14,10 @@ export type WorkflowOption = {
   value: number;
   label: string;
   color: string;
-  /** Chữ trên nền đặc khi khác chữ trắng (nền quá nhạt). */
+  /**
+   * Chữ khi màu nhãn quá nhạt để đọc: trên nền đặc thay cho chữ trắng, trên nền
+   * nhạt / nền thẻ thay cho chính `color`.
+   */
   textColor?: string;
 };
 
@@ -38,15 +41,16 @@ const findOption = (options: WorkflowOption[], value: unknown) =>
 
 /**
  * Tình trạng PHIẾU — nhãn nền đặc, CHỮ TRẮNG, cùng bảng màu màn Công việc
- * (web: TinhTrangFlowMau).
+ * (web: TinhTrangFlowMau). Riêng nền cam / xám nhạt chữ trắng không đọc được
+ * (dưới 3:1) nên dùng chữ tối.
  */
 export const FLOW_TINH_TRANG: WorkflowOption[] = [
   { value: 0, label: "Nháp", color: "#78909c" },
-  { value: 1, label: "Chờ duyệt", color: "#fb8c00" },
+  { value: 1, label: "Chờ duyệt", color: "#fb8c00", textColor: "#3e2723" },
   { value: 2, label: "Đang xử lý", color: "#1e88e5" },
   { value: 3, label: "Đã hoàn tất", color: "#43a047" },
   { value: 4, label: "Đã từ chối", color: "#e53935" },
-  { value: 5, label: "Đã hủy", color: "#bdbdbd" },
+  { value: 5, label: "Đã hủy", color: "#bdbdbd", textColor: "#424242" },
 ];
 
 export const FLOW_TINH_TRANG_NHAP = 0;
@@ -106,11 +110,13 @@ export const getFlowBuocTinhTrang = (value: unknown) =>
 // CÔNG VIỆC
 // =====================================================
 
+// "Hủy" giữ màu xám nhạt của web cho vạch / chấm màu; chữ xám nhạt trên nền
+// trắng không đọc được nên chữ (và nút đang chọn) dùng `textColor` đậm hơn.
 export const CV_TRANG_THAI: WorkflowOption[] = [
   { value: 0, label: "Mới", color: "#78909c" },
   { value: 1, label: "Đang xử lý", color: "#1e88e5" },
   { value: 2, label: "Hoàn thành", color: "#43a047" },
-  { value: 3, label: "Hủy", color: "#bdbdbd" },
+  { value: 3, label: "Hủy", color: "#bdbdbd", textColor: "#616161" },
 ];
 
 export const CV_TRANG_THAI_MOI = 0;
@@ -129,13 +135,19 @@ export const getCongViecTrangThai = (value: unknown) =>
  * Màu tính sẵn ở server (maMau) — KHÔNG phải trạng thái lưu. Thứ tự đúng thứ
  * tự ưu tiên của server; chip lọc màu hiện theo thứ tự này.
  */
-export const CV_MA_MAU: Array<{ key: CongViecMaMau; label: string; color: string }> = [
+export const CV_MA_MAU: Array<{
+  key: CongViecMaMau;
+  label: string;
+  color: string;
+  /** Chữ khi `color` quá nhạt để đọc trên nền sáng (Hủy). */
+  textColor?: string;
+}> = [
   { key: "QuaHan", label: "Quá hạn", color: "#e53935" },
   { key: "GiaHan", label: "Gia hạn", color: "#fb8c00" },
   { key: "DangXuLy", label: "Đang xử lý", color: "#1e88e5" },
   { key: "Moi", label: "Mới", color: "#78909c" },
   { key: "HoanThanh", label: "Hoàn thành", color: "#43a047" },
-  { key: "Huy", label: "Hủy", color: "#bdbdbd" },
+  { key: "Huy", label: "Hủy", color: "#bdbdbd", textColor: "#616161" },
 ];
 
 export const getMaMauColor = (maMau: unknown) =>
@@ -224,6 +236,8 @@ export const KH_TABS: WorkflowTabDef<KeHoachTab>[] = [
 export const KH_PROGRESS_COLOR = "#43a047";
 export const KH_PROGRESS_DONE_COLOR = "#2e7d32";
 export const KH_PROGRESS_TRACK_COLOR = "#e4e7ea";
+/** Vòng nền tối: #e4e7ea trên thẻ tối sáng chói, lấn cả phần đã hoàn thành. */
+export const KH_PROGRESS_TRACK_COLOR_DARK = "#33455b";
 
 // =====================================================
 // DÙNG CHUNG

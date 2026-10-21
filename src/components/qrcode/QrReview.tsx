@@ -19,6 +19,7 @@ import type { QrReviewNavigationProp, StackRoute } from "../../types/index";
 import { mapPropertyResponseToPropertyClass } from "../../utils/helpers/propertyClass";
 import RecordListFooterSkeleton from "../list/RecordListFooterSkeleton";
 import RecordListSkeleton from "../list/RecordListSkeleton";
+import { getListCardShape } from "../list/listCardShape";
 import { shouldShowListSkeleton } from "../ui/shouldShowListSkeleton";
 import ListCardAsset from "../list/ListCardAsset";
 import { AddItem } from "../add/AddItem";
@@ -35,7 +36,6 @@ import {
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { useRelatedAssetListData } from "../../hooks/useRelatedAssetListData";
 import AssetListSearchBar from "../assets/shared/AssetListSearchBar";
-import AssetListSummaryCard from "../assets/shared/AssetListSummaryCard";
 import AssetListEmptyState from "../assets/shared/AssetListEmptyState";
 import { BRAND_RED } from "../assets/shared/listTheme";
 import { makeSharedAssetListStyles } from "../assets/shared/listStyles";
@@ -104,6 +104,7 @@ export default function QrReview() {
     mergeItemById,
     refreshTop,
     handleLoadMore,
+    retry,
   } = useRelatedAssetListData({
     conditions,
     debouncedSearch,
@@ -179,6 +180,8 @@ export default function QrReview() {
 
   // Một điều kiện duy nhất cho cả nút và khoảng chừa ở đáy danh sách.
   const showAddFab = Boolean(loaded && can(nameClass, "Insert"));
+  // Khung chờ vẽ theo dáng thẻ thật (số dòng, cột ảnh / QR).
+  const cardShape = getListCardShape(nameClass, fieldShowMobile);
 
   if (
     shouldShowListSkeleton({
@@ -189,7 +192,7 @@ export default function QrReview() {
     })
   ) {
     return (
-      <RecordListSkeleton hasSearchBar hasSummaryCard hasFab={showAddFab} />
+      <RecordListSkeleton hasSearchBar hasFab={showAddFab} {...cardShape} />
     );
   }
 
@@ -199,7 +202,9 @@ export default function QrReview() {
         <AssetListEmptyState
           iconName="cloud-offline-outline"
           title="Không thể tải dữ liệu QR"
-          subtitle={loadErrorMessage}
+          subtitle="Vui lòng kiểm tra kết nối mạng rồi bấm Thử lại."
+          actionLabel="Thử lại"
+          onActionPress={retry}
         />
       </View>
     );
@@ -216,16 +221,10 @@ export default function QrReview() {
         isSearching={isSearching}
         onClear={() => setSearchText("")}
         badgeText="Kết quả QR"
-        summaryText={`Tổng ${total} • Đã tải ${data.length}`}
+        // Một dòng đếm là đủ; "Đã tải n" là chi tiết phân trang, người dùng
+        // không cần (cùng cách với danh sách tài sản).
+        summaryText={`${total} kết quả`}
       />
-
-      {!isEmpty ? (
-        <AssetListSummaryCard
-          iconName="qr-code-outline"
-          title="Danh sách sau quét"
-          subtitle={`${total} kết quả • hiển thị ${data.length}`}
-        />
-      ) : null}
 
       <View style={styles.listWrap}>
         <FlatList
@@ -255,7 +254,9 @@ export default function QrReview() {
           removeClippedSubviews={Platform.OS === "android"}
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
-          ListFooterComponent={isLoadingMore ? <RecordListFooterSkeleton /> : null}
+          ListFooterComponent={
+            isLoadingMore ? <RecordListFooterSkeleton {...cardShape} /> : null
+          }
           ListHeaderComponent={null}
           stickyHeaderIndices={[]}
           contentContainerStyle={[

@@ -3,14 +3,15 @@ import { AppColors } from "../../utils/helpers/colors";
 import { HOME_REPORT_CARD_MIN_HEIGHT } from "./shared/HomeReportCard";
 import { HOME_BRAND_RED } from "./shared/homeTheme";
 import {
-  HOME_SHORTCUT_COLUMNS,
+  getHomeShortcutColumnCount,
   getHomeShortcutRowCount,
 } from "./shared/homeShortcutPages";
 
 // Layout constants shared between the screen grid math and these styles.
 export const HOME_CONTENT_HORIZONTAL_PADDING = 16;
 export const HOME_FEATURE_GRID_GAP = 10;
-// 106 = accentBar(3+8) + iconWrap(44+6) + labelWrap(34) + paddingBottom(8), cộng
+// 106 = mép trên màu(3) + paddingTop(8) + iconWrap(44+6) + labelWrap(34) +
+// paddingBottom(8), cộng
 // chút dư. Trước đây là 132 vì mỗi card còn một chip mũi tên ở đáy; bỏ chip đó
 // nên lưới ngắn lại ~26pt mỗi hàng, đủ để TỔNG QUAN nằm trên mà không đẩy hàng
 // chức năng đầu tiên ra khỏi màn hình.
@@ -19,10 +20,14 @@ export const HOME_FEATURE_CARD_HEIGHT = 106;
 // Truy cập nhanh giờ chia trang, không cuộn tự do nữa: mỗi trang rộng đúng bề
 // ngang nội dung và lấp kín một hàng card, nên không còn phải chừa phần hở ra để
 // báo "còn nữa" — hàng chấm tròn ở dưới đã nói điều đó.
-export const getHomeShortcutCardWidth = (contentWidth: number) =>
-  (contentWidth -
-    HOME_FEATURE_GRID_GAP * (HOME_SHORTCUT_COLUMNS - 1)) /
-  HOME_SHORTCUT_COLUMNS;
+export const getHomeShortcutCardWidth = (
+  contentWidth: number,
+  itemCount: number,
+) => {
+  const columns = getHomeShortcutColumnCount(itemCount);
+
+  return (contentWidth - HOME_FEATURE_GRID_GAP * (columns - 1)) / columns;
+};
 
 export const getHomeShortcutPagerHeight = (itemCount: number) => {
   const rows = getHomeShortcutRowCount(itemCount);
@@ -37,11 +42,6 @@ export const getHomeShortcutPagerHeight = (itemCount: number) => {
 export const makeStyles = (c: AppColors) =>
   StyleSheet.create({
     root: { flex: 1 },
-    loadingWrap: {
-      flex: 1,
-      alignItems: "center",
-      justifyContent: "center",
-    },
     centerState: {
       flex: 1,
       alignItems: "center",
@@ -54,18 +54,12 @@ export const makeStyles = (c: AppColors) =>
       paddingBottom: 32,
     },
 
-    grid: {
-      flexDirection: "column",
-      gap: HOME_FEATURE_GRID_GAP,
-      marginBottom: 14,
+    // Card nào cũng có marginBottom 14 riêng; cộng thêm chỗ này cho khoảng giữa
+    // hai khối (~24pt) rộng hơn hẳn khoảng giữa các card trong cùng một khối.
+    block: {
+      marginBottom: 8,
     },
-    gridRow: {
-      flexDirection: "row",
-      gap: HOME_FEATURE_GRID_GAP,
-    },
-    homeGridItem: {
-      height: HOME_FEATURE_CARD_HEIGHT,
-    },
+
 
     // Trang shortcut rộng đúng bề ngang nội dung nên `pagingEnabled` snap đúng
     // từng trang — không cần snapToInterval và không tràn ra ngoài lề 16pt.

@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
 import { useThemePreference } from "../../context/ThemeContext";
 import { useColorScheme } from "../../hooks/useColorScheme";
 import { C } from "../../utils/helpers/colors";
+import { ROW_DIVIDER_OPACITY } from "../../utils/helpers/tokens";
 
 const RED = C.red;
 
@@ -127,7 +128,7 @@ export default function AppearanceScreen() {
       <View
         style={[
           styles.card,
-          { backgroundColor: colors.card, borderColor: colors.border },
+          { backgroundColor: colors.card, borderColor: C.violet },
         ]}
       >
         <View accessibilityRole="radiogroup" style={styles.optionsRow}>
@@ -149,7 +150,8 @@ export default function AppearanceScreen() {
           />
         </View>
 
-        <View style={[styles.systemRow, { borderTopColor: colors.border }]}>
+        <View style={styles.systemDivider} />
+        <View style={styles.systemRow}>
           <View style={styles.systemTextWrap}>
             <Text style={[styles.systemLabel, { color: colors.text }]}>
               Sử dụng cài đặt của thiết bị
@@ -183,10 +185,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
   },
+  // Viền 1pt + mép trên 3pt như card Trang chủ / Cài đặt, tím như icon Hiển thị ở Cài đặt.
   card: {
     marginHorizontal: 16,
     borderRadius: 18,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
+    borderTopWidth: 3,
     overflow: "hidden",
     shadowColor: "#000000",
     shadowOpacity: 0.08,
@@ -243,8 +247,15 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: "#FFFFFF",
   },
+  // Vạch ngăn cùng tông màu viền card nhưng nhạt, thụt vào bằng lề ngang của
+  // dòng để không chạm viền.
+  systemDivider: {
+    height: 1,
+    backgroundColor: C.violet,
+    opacity: ROW_DIVIDER_OPACITY,
+    marginHorizontal: 18,
+  },
   systemRow: {
-    borderTopWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 18,
     paddingVertical: 18,
     flexDirection: "row",

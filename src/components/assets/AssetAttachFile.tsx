@@ -29,6 +29,8 @@ import AssetListSummaryCard from "./shared/AssetListSummaryCard";
 import { makeSharedAssetListStyles } from "./shared/listStyles";
 import { cardShadow } from "./shared/listTheme";
 
+const LOAD_ERROR_MESSAGE = "Vui lòng kiểm tra kết nối mạng rồi bấm Thử lại.";
+
 export default function AssetListAttachFile() {
   const styles = useStyles(makeStyles);
   const separatorColor = useSeparatorColor();
@@ -101,9 +103,7 @@ export default function AssetListAttachFile() {
         }
         if (!isLoadMore) {
           setFile([]);
-          setLoadErrorMessage(
-            "Vui lòng kiểm tra kết nối mạng hoặc quay lại để thử lại.",
-          );
+          setLoadErrorMessage(LOAD_ERROR_MESSAGE);
         }
       } finally {
         if (isMounted()) {
@@ -124,11 +124,16 @@ export default function AssetListAttachFile() {
     hasError: Boolean(loadErrorMessage),
     refetchOnAppResume: true,
     onOffline: () => {
-      setLoadErrorMessage(
-        "Vui lòng kiểm tra kết nối mạng hoặc quay lại để thử lại.",
-      );
+      setLoadErrorMessage(LOAD_ERROR_MESSAGE);
     },
   });
+
+  // Dọn lỗi trước: còn tệp cũ thì danh sách cũ hiện trong lúc gọi lại, không
+  // thì khung chờ (fetchData tự bật `isLoading`) thay chỗ màn lỗi.
+  const retryLoad = () => {
+    setLoadErrorMessage(null);
+    fetchData();
+  };
 
   const handleLoadMore = () => {
     if (file.length < total && !isLoadingMore) fetchData(true);
@@ -149,12 +154,20 @@ export default function AssetListAttachFile() {
     shouldShowListSkeleton({ isFetching: isLoading, isEmpty: file.length === 0 })
   )
     return (
-      <RecordListSkeleton
-        hasSummaryCard
-        hasGroupHeader
-        lines={2}
-        trailing="button"
-      />
+      /* Thẻ tổng số thật là `ListHeaderComponent`, nằm DƯỚI `paddingTop` của
+         `listContent` — khung chờ phải chừa đúng khoảng đó ở trên nó, không
+         thì lúc dữ liệu về cả màn tụt xuống 14pt. Thẻ tệp hai dòng (tên 15 đậm
+         + tên tệp 4 + 14, ~39) thấp hơn avatar 48 nên nhịp mặc định đã khớp. */
+      <View
+        style={[styles.container, { paddingTop: styles.listContent.paddingTop }]}
+      >
+        <RecordListSkeleton
+          hasSummaryCard
+          hasGroupHeader
+          lines={2}
+          trailing="button"
+        />
+      </View>
     );
 
   if (loadErrorMessage) {
@@ -164,6 +177,8 @@ export default function AssetListAttachFile() {
           iconName="cloud-offline-outline"
           title="Không thể tải tệp đính kèm"
           subtitle={loadErrorMessage}
+          actionLabel="Thử lại"
+          onActionPress={retryLoad}
         />
       </View>
     );

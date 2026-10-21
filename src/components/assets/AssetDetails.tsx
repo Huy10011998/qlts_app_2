@@ -17,7 +17,6 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import { useDetailViewState } from "../../hooks/useDetailViewState";
 import { useTabFromParams } from "../../hooks/useTabFromParams";
-import { useVisibleDetailTabs } from "../tabs/useVisibleDetailTabs";
 import { isNetworkRequestError } from "../../utils/helpers/api";
 
 export default function AssetDetails({ children }: DetailsProps) {
@@ -37,9 +36,6 @@ export default function AssetDetails({ children }: DetailsProps) {
     handleChangeTab,
     toggleGroup,
   } = useDetailViewState(field, tabFromParams ?? "list");
-  // Thanh tab của khung chờ phải đúng số mục thật, không thì lúc dữ liệu về ô
-  // tab co lại một nhịp.
-  const visibleTabs = useVisibleDetailTabs(TAB_ITEMS);
 
   const dispatch = useAppDispatch();
   const { isMounted } = useSafeAlert();
@@ -107,7 +103,8 @@ export default function AssetDetails({ children }: DetailsProps) {
     return (
       <AssetDetailsSkeleton
         groupedFields={groupedFields}
-        tabCount={visibleTabs.length}
+        tabs={TAB_ITEMS}
+        activeTab={activeTab}
       />
     );
 

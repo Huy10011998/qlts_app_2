@@ -6,6 +6,9 @@ type AssetListEmptyStateProps = {
   title: string;
   subtitle: string;
   fullHeight?: boolean;
+  /** Nút dưới phần chữ, ví dụ "Thử lại" ở màn lỗi hay "Xoá từ khoá". */
+  actionLabel?: string;
+  onActionPress?: () => void;
 };
 
 export default function AssetListEmptyState({
@@ -13,6 +16,8 @@ export default function AssetListEmptyState({
   title,
   subtitle,
   fullHeight = true,
+  actionLabel,
+  onActionPress,
 }: AssetListEmptyStateProps) {
   return (
     <EmptyState
@@ -20,6 +25,8 @@ export default function AssetListEmptyState({
       title={title}
       subtitle={subtitle}
       fullHeight={fullHeight}
+      actionLabel={actionLabel}
+      onActionPress={onActionPress}
     />
   );
 }

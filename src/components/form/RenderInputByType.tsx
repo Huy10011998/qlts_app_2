@@ -163,7 +163,7 @@ const makeLocalStyles = (c: AppColors) => ({
   },
   linkText: {
     fontSize: 14,
-    color: "blue",
+    color: c.blue,
   },
   selectText: {
     color: c.text,
@@ -251,7 +251,7 @@ function LinkInputField({
           { borderColor: strongBorderColor },
           localStyles.inputText,
         ]}
-        placeholder="Nhập label"
+        placeholder="Nhập tên hiển thị"
         placeholderTextColor={c.textMuted}
         value={label}
         onFocus={() => {

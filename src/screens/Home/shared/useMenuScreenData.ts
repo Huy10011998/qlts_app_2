@@ -17,16 +17,6 @@ import {
 export const MENU_FEATURE_COLUMNS = 4;
 export const MENU_REPORT_COLUMNS = 3;
 
-export const chunkMenuItems = <T,>(items: T[], size: number) => {
-  const rows: T[][] = [];
-
-  for (let i = 0; i < items.length; i += size) {
-    rows.push(items.slice(i, i + size));
-  }
-
-  return rows;
-};
-
 /**
  * Phần dùng chung của màn danh mục (tab Chức năng) và Trang chủ: nạp lại quyền
  * khi focus, kéo-để-làm-mới, và chia danh sách chức năng theo nhóm.

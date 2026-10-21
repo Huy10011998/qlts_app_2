@@ -8,7 +8,6 @@ import {
   getPropertyClass,
   getListHistory,
 } from "../../services";
-import RecordListFooterSkeleton from "../list/RecordListFooterSkeleton";
 import RecordListSkeleton from "../list/RecordListSkeleton";
 import { shouldShowListSkeleton } from "../ui/shouldShowListSkeleton";
 import ListCardHistory from "../list/ListCardHistory";
@@ -17,12 +16,12 @@ import { useNavigation } from "@react-navigation/native";
 import { error } from "../../utils/Logger";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
-import { isAuthExpiredError } from "../../services/data/callApi";
 import { isNetworkRequestError } from "../../utils/helpers/api";
 import AssetListEmptyState from "./shared/AssetListEmptyState";
-import AssetListSummaryCard from "./shared/AssetListSummaryCard";
 import { makeSharedAssetListStyles } from "./shared/listStyles";
 import { BRAND_RED } from "./shared/listTheme";
+
+const LOAD_ERROR_MESSAGE = "Vui lòng kiểm tra kết nối mạng rồi bấm Thử lại.";
 
 export default function AssetListHistory({
   rootRecordLabel,
@@ -36,16 +35,12 @@ export default function AssetListHistory({
   const [fieldShowMobile, setFieldShowMobile] = useState<Field[]>([]);
   const [propertyClass, setPropertyClass] = useState<PropertyResponse>();
   const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isRefreshingTop, setIsRefreshingTop] = useState(false);
-  const [total, setTotal] = useState(0);
   const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
   const fieldActiveRef = useRef<Field[]>([]);
   const propertyClassRef = useRef<PropertyResponse | undefined>(undefined);
-  const skipSizeRef = useRef(0);
 
   const { id, nameClass } = useParams();
-  const pageSize = 20;
 
   const navigation = useNavigation<StackNavigation<"AssetListHistory">>();
   const { isMounted, showAlertIfActive } = useSafeAlert();
@@ -88,18 +83,19 @@ export default function AssetListHistory({
     ],
   );
 
+  /* `get-list-history` trả trọn lịch sử một lần, không phân trang (xem
+     `getListHistory`), nên ở đây không có tải thêm — nhánh load-more cũ chỉ
+     gọi lại đúng request này rồi nối trùng cả danh sách. */
   const fetchData = useCallback(
-    async (isLoadMore = false, options?: { isRefresh?: boolean }) => {
+    async (options?: { isRefresh?: boolean }) => {
       if (!nameClass || !id) return;
 
       const isRefresh = options?.isRefresh;
       const shouldReloadFieldConfig =
-        !isLoadMore && (isRefresh || fieldActiveRef.current.length === 0);
-      const shouldReloadPropertyClass =
-        !isLoadMore && (isRefresh || !propertyClassRef.current);
+        isRefresh || fieldActiveRef.current.length === 0;
+      const shouldReloadPropertyClass = isRefresh || !propertyClassRef.current;
 
-      if (isLoadMore) setIsLoadingMore(true);
-      else if (!isRefresh) setIsLoading(true);
+      if (!isRefresh) setIsLoading(true);
 
       try {
         if (shouldReloadFieldConfig) {
@@ -122,38 +118,21 @@ export default function AssetListHistory({
         const response = await getListHistory(id, nameClass);
         let newItems: Record<string, any>[] = response?.data || [];
         newItems = orderBy(newItems, ["log_StartDate"], ["desc"]);
-        const totalItems = newItems.length;
 
-        if (isLoadMore) {
-          setHistoryItems((prev) => [...prev, ...newItems]);
-          const nextSkipSize = skipSizeRef.current + pageSize;
-          skipSizeRef.current = nextSkipSize;
-        } else {
-          setHistoryItems(newItems);
-          skipSizeRef.current = pageSize;
-        }
-        setTotal(totalItems);
+        setHistoryItems(newItems);
         setLoadErrorMessage(null);
       } catch (e) {
         if (!isNetworkRequestError(e)) error(e);
-        if (isLoadMore && !isAuthExpiredError(e)) {
-          showAlertIfActive("Lỗi", "Không thể tải thêm dữ liệu.");
-        }
-        if (!isLoadMore) {
-          setHistoryItems([]);
-          setLoadErrorMessage(
-            "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại.",
-          );
-        }
+        setHistoryItems([]);
+        setLoadErrorMessage(LOAD_ERROR_MESSAGE);
       } finally {
         if (isMounted()) {
           setIsLoading(false);
-          setIsLoadingMore(false);
           setIsRefreshingTop(false);
         }
       }
     },
-    [id, isMounted, nameClass, showAlertIfActive],
+    [id, isMounted, nameClass],
   );
 
   useEffect(() => {
@@ -165,9 +144,7 @@ export default function AssetListHistory({
     hasError: Boolean(loadErrorMessage),
     refetchOnAppResume: true,
     onOffline: () => {
-      setLoadErrorMessage(
-        "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại.",
-      );
+      setLoadErrorMessage(LOAD_ERROR_MESSAGE);
     },
   });
 
@@ -175,13 +152,15 @@ export default function AssetListHistory({
     if (isRefreshingTop) return;
 
     setIsRefreshingTop(true);
-    skipSizeRef.current = 0;
 
-    await fetchData(false, { isRefresh: true });
+    await fetchData({ isRefresh: true });
   };
 
-  const handleLoadMore = () => {
-    if (historyItems.length < total && !isLoadingMore) fetchData(true);
+  // Dọn lỗi trước: còn lịch sử cũ thì danh sách cũ hiện trong lúc gọi lại,
+  // không thì khung chờ (fetchData tự bật `isLoading`) thay chỗ màn lỗi.
+  const retryLoad = () => {
+    setLoadErrorMessage(null);
+    fetchData();
   };
 
   if (
@@ -191,7 +170,17 @@ export default function AssetListHistory({
       isRefreshing: isRefreshingTop,
     })
   ) {
-    return <RecordListSkeleton hasSummaryCard lines={2} />;
+    /* Đo từ `ListCardHistory`: mỗi dòng `paddingTop` 5 + chữ 14 cao ~16.7
+       (iOS) + `marginBottom` 4, thẻ ~84 với avatar ở đỉnh — nhịp mặc định chỉ
+       80. Khối thẻ lấy đúng `listContent` (`paddingTop` 14) của danh sách. */
+    return (
+      <RecordListSkeleton
+        lines={2}
+        lineHeight={5 + 16.7 + 4}
+        avatarAlign="top"
+        contentStyle={styles.listContent}
+      />
+    );
   }
 
   if (loadErrorMessage) {
@@ -201,6 +190,8 @@ export default function AssetListHistory({
           iconName="cloud-offline-outline"
           title="Không thể tải lịch sử"
           subtitle={loadErrorMessage}
+          actionLabel="Thử lại"
+          onActionPress={retryLoad}
         />
       </View>
     );
@@ -235,9 +226,6 @@ export default function AssetListHistory({
           />
         }
         scrollEventThrottle={16}
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.5}
-        ListFooterComponent={isLoadingMore ? <RecordListFooterSkeleton lines={2} /> : null}
         ListEmptyComponent={
           <AssetListEmptyState
             iconName="time-outline"
@@ -245,16 +233,6 @@ export default function AssetListHistory({
             subtitle="Dữ liệu thay đổi sẽ được hiển thị tại đây khi có phát sinh."
           />
         }
-        ListHeaderComponent={
-          isEmpty ? null : (
-            <AssetListSummaryCard
-              iconName="time-outline"
-              title="Lịch sử thay đổi"
-              subtitle={`Tổng số lịch sử: ${total} • Đã tải: ${historyItems.length}`}
-            />
-          )
-        }
-        stickyHeaderIndices={isEmpty ? [] : [0]}
       />
     </View>
   );

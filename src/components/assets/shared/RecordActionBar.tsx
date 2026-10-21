@@ -23,6 +23,15 @@ import { BRAND_RED } from "./listTheme";
 
 type RecordActionBarProps = {
   fieldActive?: Field[];
+  /**
+   * Có đưa việc tạo bản ghi con lên thanh hay không. Mặc định có.
+   *
+   * Tắt ở màn chi tiết mở từ danh sách: ở đó tab "Chi tiết" đã liệt kê đúng các
+   * danh mục con ấy, và danh sách vừa rời đi có sẵn nút vuốt thêm nhanh — thanh
+   * chỉ còn là bản sao thứ ba ("Chọn thao tác (24)" cạnh tab Chi tiết 24). Nghiệp
+   * vụ riêng của app (tủ lạnh) không có ở tab nào nên vẫn giữ.
+   */
+  includeChildClasses?: boolean;
   item: AssetItem | null | undefined;
   /** Màn danh sách bản ghi con của luồng đang đứng: QR có màn riêng. */
   listRoute: "QrReview" | "AssetRelatedList";
@@ -57,6 +66,7 @@ const NETWORK_MESSAGE = "Vui lòng kiểm tra kết nối mạng rồi thử l�
  */
 export default function RecordActionBar({
   fieldActive,
+  includeChildClasses = true,
   item,
   listRoute,
   nameClass,
@@ -69,6 +79,7 @@ export default function RecordActionBar({
 
   const { actions, primary } = useRecordActions({
     fieldActive,
+    includeChildClasses,
     item,
     listRoute,
     nameClass,

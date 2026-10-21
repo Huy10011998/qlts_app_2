@@ -79,6 +79,12 @@ export const formatRangeLabel = (mode: LichMode, anchor: Date, range: LichRange)
 export const formatWeekday = (date: Date) =>
   `${WEEKDAY_NAMES[date.getDay()]}, ${formatDay(date)}`;
 
+/** "Thứ 3" / "Chủ nhật" — tên thứ đứng riêng trên thẻ ngày. */
+export const formatWeekdayName = (date: Date) => WEEKDAY_NAMES[date.getDay()];
+
+/** "T3" / "CN" — nhãn ngắn trong ô ngày kiểu tờ lịch. */
+export const formatWeekdayShort = (date: Date) => WEEKDAY_LABELS[mondayIndex(date)];
+
 /**
  * Điều kiện "nằm trong khoảng" = GIAO với khoảng: DenNgay >= Từ VÀ TuNgay < Đến
  * (việc kéo dài nhiều ngày, bắt đầu trước khoảng vẫn hiện).

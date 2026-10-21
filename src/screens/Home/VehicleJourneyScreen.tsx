@@ -413,7 +413,9 @@ export default function VehicleJourneyScreen() {
             <EmptyState
               iconName="cloud-offline-outline"
               title="Không thể tải phương tiện"
-              subtitle="Kéo xuống để thử lại."
+              subtitle="Kiểm tra kết nối rồi bấm Thử lại."
+              actionLabel="Thử lại"
+              onActionPress={refreshAll}
               fullHeight={false}
               style={styles.journeyLoading}
             />
@@ -421,7 +423,9 @@ export default function VehicleJourneyScreen() {
             <EmptyState
               iconName="cloud-offline-outline"
               title="Không thể tải hành trình"
-              subtitle="Kéo xuống để thử lại."
+              subtitle="Kiểm tra kết nối rồi bấm Thử lại."
+              actionLabel="Thử lại"
+              onActionPress={refreshAll}
               fullHeight={false}
               style={styles.journeyLoading}
             />

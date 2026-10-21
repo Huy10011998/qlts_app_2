@@ -1214,10 +1214,22 @@ const CameraList: React.FC = () => {
           {zoneName} ({cameras.length} Camera)
         </Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity onPress={handleNavigate}>
+          {/* Icon 24px trơn, không khung: hitSlop để ngón tay không phải nhắm
+              đúng vào hình. */}
+          <TouchableOpacity
+            onPress={handleNavigate}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Xem dạng lưới"
+          >
             <Ionicons name="apps" size={24} color={colors.text} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setShowLayoutModal(true)}>
+          <TouchableOpacity
+            onPress={() => setShowLayoutModal(true)}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Chọn bố cục"
+          >
             <Ionicons name="grid" size={24} color={colors.text} />
           </TouchableOpacity>
         </View>

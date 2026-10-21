@@ -1,8 +1,8 @@
 import React, { JSX } from "react";
-import { RefreshControl, ScrollView, View } from "react-native";
+import { RefreshControl, View } from "react-native";
 
 import type { TabContentProps } from "../../types";
-import AssetGroupList from "../assets/AssetGroupList";
+import AssetGroupScrollView from "../assets/shared/AssetGroupScrollView";
 import AssetListAttachFile from "../assets/AssetAttachFile";
 import AssetDeTailsTab from "../assets/AssetDetailsTab";
 import AssetListHistory from "../assets/AssetListHistory";
@@ -18,10 +18,6 @@ import {
 const makeStyles = (c: AppColors) => ({
   container: {
     flex: 1,
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 20,
   },
   emptyStateRoot: {
     flex: 1,
@@ -71,8 +67,7 @@ export default function TabContent({
             />
           </View>
         ) : (
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
+          <AssetGroupScrollView
             refreshControl={
               onRefresh ? (
                 <RefreshControl
@@ -83,19 +78,16 @@ export default function TabContent({
                 />
               ) : undefined
             }
-          >
-            <AssetGroupList
-              groupedFields={groupedFields}
-              collapsedGroups={collapsedGroups}
-              toggleGroup={toggleGroup}
-              getFieldValue={getFieldValue}
-              item={item}
-              previousItem={previousItem}
-              fieldActive={fieldActive}
-              isFieldChanged={isFieldChanged}
-              nameClass={nameClass}
-            />
-          </ScrollView>
+            groupedFields={groupedFields}
+            collapsedGroups={collapsedGroups}
+            toggleGroup={toggleGroup}
+            getFieldValue={getFieldValue}
+            item={item}
+            previousItem={previousItem}
+            fieldActive={fieldActive}
+            isFieldChanged={isFieldChanged}
+            nameClass={nameClass}
+          />
         )}
       </View>
     ),

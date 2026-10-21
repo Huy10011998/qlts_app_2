@@ -2,12 +2,20 @@ import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
+import { useThemePreference } from "../../../../context/ThemeContext";
 import type { FlowCongViecLink } from "../../../../types/index";
 import { AppColors, useAppColors, useStyles } from "../../../../utils/helpers/colors";
 import StatusBadge from "../../shared/components/StatusBadge";
 import { FLOW_TRA_BUOC_COLOR, getCongViecTrangThai, tint } from "../../shared/workflowConstants";
 import { formatBeDate } from "../../shared/workflowDate";
-import { bareFlowName, FLOW_POINT_COLOR, FlowPoint, FlowPointDetail } from "../flowProcessRules";
+import {
+  bareFlowName,
+  FLOW_CHIP_COLOR,
+  FLOW_POINT_COLOR,
+  FlowDetailStatus,
+  FlowPoint,
+  FlowPointDetail,
+} from "../flowProcessRules";
 
 type Props = {
   point: FlowPoint;
@@ -17,6 +25,20 @@ type Props = {
   ngayLap?: unknown;
   onOpenCongViec: (link: FlowCongViecLink) => void;
 };
+
+/**
+ * Chip trạng thái bước: nền / chữ đúng PHỤ LỤC. Giao diện tối giữ chữ màu chấm
+ * trên nền nhạt cùng màu — nền pastel của web chói trên nền tối.
+ */
+function StatusChip({ status }: { status: FlowDetailStatus }) {
+  const dark = useThemePreference().resolvedColorScheme === "dark";
+  const chip = FLOW_CHIP_COLOR[status.state];
+  return dark ? (
+    <StatusBadge label={status.label} color={FLOW_POINT_COLOR[status.state]} />
+  ) : (
+    <StatusBadge label={status.label} color={chip.bg} solid textColor={chip.text} />
+  );
+}
 
 /**
  * Khung chi tiết dưới sơ đồ (mục 6e). Bảng 4 cột của web (Bước | Người xử lý |
@@ -39,7 +61,13 @@ export default function FlowProcessDetail({ point, detail, nguoiLap, ngayLap, on
         <View style={styles.headRow}>
           <Ionicons name="briefcase-outline" size={16} color={c.accent} />
           <Text style={styles.title}>Công việc {link.soCongViec}</Text>
-          {trangThai ? <StatusBadge label={trangThai.label} color={trangThai.color} /> : null}
+          {trangThai ? (
+            <StatusBadge
+              label={trangThai.label}
+              color={trangThai.color}
+              textColor={trangThai.textColor}
+            />
+          ) : null}
         </View>
         {link.tieuDe ? <Text style={styles.bodyText}>{link.tieuDe}</Text> : null}
         <Text style={styles.meta}>
@@ -71,17 +99,18 @@ export default function FlowProcessDetail({ point, detail, nguoiLap, ngayLap, on
           <Text style={styles.kicker}>{detail.kicker}</Text>
           <Text style={styles.title}>{detail.title}</Text>
         </View>
-        <StatusBadge label={detail.status.label} color={detail.status.color} />
+        <StatusChip status={detail.status} />
       </View>
 
+      {/* Khung cam gọn 1 dòng: bước bị trả VỀ. Người trả / giờ / lý do không lặp
+          ở đây — đã có ở dòng "Trả bước" của bảng bên dưới. */}
       {detail.tra ? (
         <View style={styles.traBox}>
+          {/* Icon thay cho ký tự ↩ — iOS vẽ ký tự đó thành emoji ô xanh. */}
+          <Ionicons name="arrow-undo" size={14} color={FLOW_TRA_BUOC_COLOR} />
           <Text style={styles.traText}>
-            <Text style={styles.traStrong}>{bareFlowName(detail.tra.iD_NhanVien_MoTa)}</Text> trả{" "}
-            {detail.tra.tenBuocTu} về {detail.tra.tenBuocVe}
-            {detail.tra.ngayTra ? ` · ${formatBeDate(detail.tra.ngayTra, true)}` : ""}
+            Trả bước: <Text style={styles.traStrong}>{detail.tra.tenBuocVe}</Text>
           </Text>
-          {detail.tra.lyDo ? <Text style={styles.traText}>Lý do: {detail.tra.lyDo}</Text> : null}
         </View>
       ) : null}
 
@@ -107,7 +136,7 @@ export default function FlowProcessDetail({ point, detail, nguoiLap, ngayLap, on
             <Text style={styles.meta}>—</Text>
           )}
           <View style={styles.statusRow}>
-            <StatusBadge label={row.status.label} color={row.status.color} />
+            <StatusChip status={row.status} />
             {row.time ? <Text style={styles.meta}>{row.time}</Text> : null}
           </View>
           {row.yKien ? <Text style={styles.opinion}>Ý kiến: {row.yKien}</Text> : null}
@@ -166,15 +195,17 @@ const makeStyles = (c: AppColors) =>
       marginTop: 8,
     },
     traBox: {
+      flexDirection: "row",
+      alignItems: "center",
       marginTop: 10,
-      padding: 10,
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: FLOW_TRA_BUOC_COLOR,
+      paddingVertical: 8,
+      paddingHorizontal: 10,
+      borderRadius: 8,
       backgroundColor: tint(FLOW_TRA_BUOC_COLOR, "1F"),
-      gap: 2,
+      gap: 6,
     },
     traText: {
+      flexShrink: 1,
       fontSize: 13,
       color: c.text,
     },

@@ -7,16 +7,25 @@ import {
   C,
   useAppColors,
   useHairlineBorderColor,
+  useSchemeColor,
   useSeparatorColor,
   useStyles,
 } from "../../../utils/helpers/colors";
 import HomeAttendanceDetailSheet from "./HomeAttendanceDetailSheet";
+import {
+  getAttendanceRateLevel,
+  HOME_ATTENDANCE_PREVIEW_COUNT,
+  pickLowestAttendanceDepartments,
+  type HomeAttendanceRateLevel,
+} from "./homeAttendance";
+import { useHomeCardChrome } from "./homeBlockTone";
 import type { HomeDashboardDepartment } from "./homeData";
 import {
   formatHomeCount,
   formatHomeNumber,
   formatHomePercent,
   getHomeRatioPercent,
+  HOME_NO_DATA,
 } from "./homeFormat";
 
 type HomeAttendanceCardProps = {
@@ -90,7 +99,21 @@ export default function HomeAttendanceCard({
   const colors = useAppColors();
   const hairlineBorderColor = useHairlineBorderColor();
   const separatorColor = useSeparatorColor();
+  const chrome = useHomeCardChrome();
+  // Chữ trên nhãn tỉ lệ: tông đậm trên nền nhạt (sáng), tông sáng trên nền tối.
+  const lowRateColor = useSchemeColor("#B91C1C", "#FCA5A5");
+  const mediumRateColor = useSchemeColor("#B45309", "#FCD34D");
+  const highRateColor = useSchemeColor("#047857", "#6EE7B7");
+  const rateTones: Record<
+    HomeAttendanceRateLevel,
+    { bg: string; color: string }
+  > = {
+    low: { bg: colors.redSurface, color: lowRateColor },
+    medium: { bg: colors.amberLight, color: mediumRateColor },
+    high: { bg: colors.greenLight, color: highRateColor },
+  };
   const [selectedKey, setSelectedKey] = useState(ALL_DEPARTMENTS_KEY);
+  const [showAllDepartments, setShowAllDepartments] = useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [pickerSearch, setPickerSearch] = useState("");
   // Bộ phận đang xem chi tiết. Giữ lại cả trong lúc sheet trượt ra (chỉ tắt cờ
@@ -147,23 +170,27 @@ export default function HomeAttendanceCard({
       }
     : { total, checkedIn, notCheckedIn };
   const ratePercent = getHomeRatioPercent(scope.checkedIn, scope.total);
+  // Xem "Tất cả bộ phận" mà danh sách dài thì chỉ hiện sẵn mấy bộ phận tỉ lệ thấp
+  // nhất — đó là chỗ cần để ý; phần còn lại (theo thứ tự API) sau nút Xem tất cả.
+  const canPreviewDepartments =
+    !selectedDepartment && departments.length > HOME_ATTENDANCE_PREVIEW_COUNT;
+  const isDepartmentPreview = canPreviewDepartments && !showAllDepartments;
+  const lowestDepartments = useMemo(
+    () => pickLowestAttendanceDepartments(departments),
+    [departments],
+  );
   const visibleDepartments = selectedDepartment
     ? [selectedDepartment]
-    : departments;
+    : isDepartmentPreview
+      ? lowestDepartments
+      : departments;
   const hasDepartments = departments.length > 0;
   // tongNhanVien = null nghĩa là mất kết nối Bravo8, không phải "0 nhân sự".
   const hasAttendanceData = total != null;
 
   return (
     <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: colors.surface,
-          borderColor: hairlineBorderColor,
-          shadowColor: colors.shadow,
-        },
-      ]}
+      style={[styles.card, chrome, { backgroundColor: colors.surface }]}
     >
       {/* Mảng bộ phận rỗng thì ẩn luôn combobox — không có gì để lọc. */}
       {hasDepartments ? (
@@ -259,11 +286,35 @@ export default function HomeAttendanceCard({
 
           {visibleDepartments.length > 0 ? (
             <View style={[styles.deptList, { borderTopColor: separatorColor }]}>
+              {canPreviewDepartments ? (
+                <View style={styles.deptHeader}>
+                  <Text
+                    style={[
+                      styles.deptHeaderTitle,
+                      { color: colors.textSecondary },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {isDepartmentPreview
+                      ? "BỘ PHẬN ĐIỂM DANH THẤP NHẤT"
+                      : `TẤT CẢ ${departments.length} BỘ PHẬN`}
+                  </Text>
+                  {isDepartmentPreview ? (
+                    <Text
+                      style={[styles.deptHeaderNote, { color: colors.textMuted }]}
+                    >
+                      theo tỉ lệ
+                    </Text>
+                  ) : null}
+                </View>
+              ) : null}
               {visibleDepartments.map((dept, index) => {
                 const deptPercent = getHomeRatioPercent(
                   dept.checkedIn,
                   dept.total,
                 );
+                const rateLevel = getAttendanceRateLevel(deptPercent);
+                const rateTone = rateLevel ? rateTones[rateLevel] : null;
                 // Endpoint chi tiết nhận deptCode, nên dòng "Chưa gán bộ phận"
                 // (code null) không mở được — để nguyên, đừng gọi API với mã rỗng.
                 const canOpenDetail = Boolean(dept.code);
@@ -305,21 +356,25 @@ export default function HomeAttendanceCard({
                         dept.total,
                       )}`}
                     </Text>
+                    {/* Tỉ lệ thành chữ có tô màu (dưới 50% đỏ, dưới 80% cam): danh
+                        sách xếp theo tỉ lệ thì phải đọc được ngay con số đó. */}
                     <View
                       style={[
-                        styles.deptTrack,
-                        { backgroundColor: colors.surfaceAlt },
+                        styles.ratePill,
+                        { backgroundColor: rateTone?.bg ?? colors.surfaceAlt },
                       ]}
                     >
-                      <View
+                      <Text
                         style={[
-                          styles.trackFill,
-                          {
-                            backgroundColor: C.emerald,
-                            width: `${deptPercent ?? 0}%`,
-                          },
+                          styles.rateText,
+                          { color: rateTone?.color ?? colors.textMuted },
                         ]}
-                      />
+                        numberOfLines={1}
+                      >
+                        {deptPercent == null
+                          ? HOME_NO_DATA
+                          : `${formatHomeNumber(Math.round(deptPercent))}%`}
+                      </Text>
                     </View>
                     {/* Mũi tên là chỗ duy nhất cho biết dòng bấm được — không có
                         nó thì không ai nghĩ ra là chạm vào xem được danh sách. */}
@@ -331,6 +386,32 @@ export default function HomeAttendanceCard({
                   </TouchableOpacity>
                 );
               })}
+
+              {canPreviewDepartments ? (
+                <TouchableOpacity
+                  style={[
+                    styles.moreButton,
+                    {
+                      backgroundColor: colors.greenLight,
+                      borderColor: colors.greenBorder,
+                    },
+                  ]}
+                  activeOpacity={0.75}
+                  onPress={() => setShowAllDepartments((current) => !current)}
+                  accessibilityRole="button"
+                >
+                  <Text style={[styles.moreText, { color: highRateColor }]}>
+                    {isDepartmentPreview
+                      ? `Xem tất cả ${departments.length} bộ phận`
+                      : "Thu gọn"}
+                  </Text>
+                  <Ionicons
+                    name={isDepartmentPreview ? "chevron-down" : "chevron-up"}
+                    size={14}
+                    color={highRateColor}
+                  />
+                </TouchableOpacity>
+              ) : null}
             </View>
           ) : null}
 
@@ -378,19 +459,14 @@ export default function HomeAttendanceCard({
 
 const makeStyles = (c: AppColors) =>
   StyleSheet.create({
+    // Viền, bóng và mép trên do `useHomeCardChrome` lo.
     card: {
       backgroundColor: c.surface,
       borderRadius: 18,
       paddingHorizontal: 14,
-      paddingVertical: 14,
+      paddingTop: 12,
+      paddingBottom: 14,
       marginBottom: 14,
-      shadowColor: c.shadow,
-      shadowOpacity: 0.07,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 3 },
-      elevation: 2,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border,
     },
     picker: {
       flexDirection: "row",
@@ -483,19 +559,58 @@ const makeStyles = (c: AppColors) =>
     deptCount: {
       // `minWidth` chứ không `width`: các dòng vẫn thẳng cột, nhưng chữ to thì ô
       // nở ra thay vì bẻ "106/117" làm hai dòng.
-      minWidth: 80,
+      minWidth: 64,
       flexShrink: 0,
       textAlign: "right",
       fontSize: 14,
       fontWeight: "800",
       color: c.text,
     },
-    deptTrack: {
-      width: 48,
-      height: 6,
-      borderRadius: 3,
-      overflow: "hidden",
+    deptHeader: {
+      flexDirection: "row",
+      alignItems: "baseline",
+      justifyContent: "space-between",
+      gap: 8,
+      paddingTop: 8,
+      paddingBottom: 2,
+    },
+    deptHeaderTitle: {
+      flexShrink: 1,
+      fontSize: 11,
+      fontWeight: "800",
+      letterSpacing: 0.3,
+      color: c.textSecondary,
+    },
+    deptHeaderNote: {
+      fontSize: 10.5,
+      fontWeight: "600",
+      color: c.textMuted,
+    },
+    ratePill: {
+      minWidth: 44,
+      paddingHorizontal: 7,
+      paddingVertical: 3,
+      borderRadius: 10,
+      alignItems: "center",
       backgroundColor: c.surfaceAlt,
+    },
+    rateText: {
+      fontSize: 11.5,
+      fontWeight: "800",
+    },
+    moreButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 4,
+      minHeight: 40,
+      marginTop: 8,
+      borderRadius: 12,
+      borderWidth: 1,
+    },
+    moreText: {
+      fontSize: 12.5,
+      fontWeight: "700",
     },
     // Cùng cỡ với ghi chú cuối các card cơ cấu / tiêu thụ, để mọi chú thích trên
     // Trang chủ đọc như một loại chữ.

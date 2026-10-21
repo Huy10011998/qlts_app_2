@@ -1,12 +1,8 @@
 import React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
-import {
-  AppColors,
-  useAppColors,
-  useHairlineBorderColor,
-  useStyles,
-} from "../../utils/helpers/colors";
+import { AppColors, useStyles } from "../../utils/helpers/colors";
+import { ROW_DIVIDER_OPACITY } from "../../utils/helpers/tokens";
 
 /**
  * Đúng các nhóm và nhãn của màn thật — nhãn ở đây là chuỗi cố định trong code,
@@ -34,13 +30,16 @@ const SECTIONS = [
  * chờ ở đây là chờ `get-info` trả về giá trị, còn khung nhóm và tên từng mục thì
  * nằm sẵn trong code. Nhờ vậy lúc dữ liệu về không có gì dịch chuyển.
  *
+ * Khung nhóm cũng theo `makeSecS` / `makeRowS` của màn thật: thẻ viền đỏ 1pt +
+ * mép trên 3pt, bo 18, vạch ngăn dòng là nét đỏ nhạt thụt vào 16 hai bên — vẽ
+ * thẻ viền hairline xám như trước thì lúc dữ liệu về cả ba thẻ đổi khung và mỗi
+ * thẻ dài thêm ~4.
+ *
  * Nếu sửa danh sách mục ở `ProfileScreen`, sửa `SECTIONS` ở đây theo — hai chỗ
  * lệch nhau thì khung chờ sẽ nhảy một nhịp khi dữ liệu về.
  */
 export default function ProfileScreenSkeleton() {
   const styles = useStyles(makeStyles);
-  const colors = useAppColors();
-  const hairlineBorderColor = useHairlineBorderColor();
 
   return (
     <ScrollView
@@ -68,29 +67,26 @@ export default function ProfileScreenSkeleton() {
             <Text style={styles.title}>{section.title}</Text>
           </View>
 
-          <View style={[styles.card, { borderColor: hairlineBorderColor }]}>
+          <View style={styles.card}>
             {section.labels.map((label, index) => (
-              <View
-                key={label}
-                style={[
-                  styles.row,
-                  index === section.labels.length - 1
-                    ? styles.rowLast
-                    : { borderBottomColor: colors.border },
-                ]}
-              >
-                <View style={styles.iconBox} />
-                <View style={styles.col}>
-                  <Text style={styles.label}>{label}</Text>
-                  <View
-                    style={[
-                      styles.value,
-                      // Dài ngắn khác nhau cho giống giá trị thật.
-                      index % 2 === 1 && styles.valueShort,
-                    ]}
-                  />
+              <React.Fragment key={label}>
+                <View style={styles.row}>
+                  <View style={styles.iconBox} />
+                  <View style={styles.col}>
+                    <Text style={styles.label}>{label}</Text>
+                    <View
+                      style={[
+                        styles.value,
+                        // Dài ngắn khác nhau cho giống giá trị thật.
+                        index % 2 === 1 && styles.valueShort,
+                      ]}
+                    />
+                  </View>
                 </View>
-              </View>
+                {index === section.labels.length - 1 ? null : (
+                  <View style={styles.separator} />
+                )}
+              </React.Fragment>
             ))}
           </View>
         </View>
@@ -141,16 +137,19 @@ const makeStyles = (c: AppColors) =>
       backgroundColor: c.red,
     },
     title: {
-      fontSize: 11,
+      fontSize: 11.5,
       fontWeight: "700",
-      letterSpacing: 0.4,
-      color: c.textSub,
+      letterSpacing: 0.5,
+      color: c.textSecondary,
     },
+    // Cùng khung với `makeSecS.card` của màn thật.
     card: {
       backgroundColor: c.surface,
-      borderRadius: 16,
-      borderWidth: StyleSheet.hairlineWidth,
+      borderRadius: 18,
       overflow: "hidden",
+      borderWidth: 1,
+      borderTopWidth: 3,
+      borderColor: c.red,
     },
     row: {
       flexDirection: "row",
@@ -158,9 +157,14 @@ const makeStyles = (c: AppColors) =>
       gap: 12,
       paddingVertical: 11,
       paddingHorizontal: 16,
-      borderBottomWidth: StyleSheet.hairlineWidth,
     },
-    rowLast: { borderBottomWidth: 0 },
+    // Cùng vạch ngăn với `makeRowS.separator`.
+    separator: {
+      height: 1,
+      backgroundColor: c.red,
+      opacity: ROW_DIVIDER_OPACITY,
+      marginHorizontal: 16,
+    },
     iconBox: {
       width: 34,
       height: 34,

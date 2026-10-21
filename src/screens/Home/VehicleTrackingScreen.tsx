@@ -331,7 +331,9 @@ export default function VehicleTrackingScreen() {
             <EmptyState
               iconName="cloud-offline-outline"
               title="Không thể tải điểm dừng"
-              subtitle="Kéo xuống để thử lại."
+              subtitle="Kiểm tra kết nối rồi bấm Thử lại."
+              actionLabel="Thử lại"
+              onActionPress={refresh}
               fullHeight={false}
               style={styles.listState}
             />

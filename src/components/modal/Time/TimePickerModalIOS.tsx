@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { Platform, View, useColorScheme } from "react-native";
+import { Platform, View } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { formatHHMM, parseTime } from "../../../utils/Time";
 import IosSpinnerPickerSheet from "../../dataPicker/shared/IosSpinnerPickerSheet";
 import PickerFieldTrigger from "../../dataPicker/shared/PickerFieldTrigger";
 import { useAppColors } from "../../../utils/helpers/colors";
+// Theo cài đặt giao diện trong app, không theo máy: chọn Sáng trong app mà máy
+// đang Tối thì bánh xe giờ phải sáng như phần còn lại.
+import { useColorScheme } from "../../../hooks/useColorScheme";
 
 export const TimePickerModalIOS = ({
   value,

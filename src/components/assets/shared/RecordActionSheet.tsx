@@ -1,5 +1,5 @@
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import BottomSheetModalShell from "../../shared/BottomSheetModalShell";
@@ -57,7 +57,13 @@ export default function RecordActionSheet({
             : "Việc bạn có thể làm với bản ghi này")}
       </Text>
 
-      <View style={styles.list}>
+      {/* Mỗi danh mục con là một thao tác, nên danh sách có thể dài hơn màn
+          hình — xem `AddChildClassSheet`. */}
+      <ScrollView
+        style={styles.listScroll}
+        contentContainerStyle={styles.list}
+        alwaysBounceVertical={false}
+      >
         {actions.map((action) => (
           <Pressable
             key={action.key}
@@ -89,7 +95,7 @@ export default function RecordActionSheet({
             <Ionicons name="chevron-forward" size={16} color={c.textMuted} />
           </Pressable>
         ))}
-      </View>
+      </ScrollView>
     </BottomSheetModalShell>
   );
 }
@@ -102,6 +108,7 @@ const makeStyles = (c: AppColors) =>
       borderTopRightRadius: 18,
       paddingHorizontal: 16,
       paddingBottom: 24,
+      maxHeight: "86%",
     },
     title: {
       fontSize: 16,
@@ -115,6 +122,9 @@ const makeStyles = (c: AppColors) =>
       textAlign: "center",
       marginTop: 4,
       marginBottom: 12,
+    },
+    listScroll: {
+      flexGrow: 0,
     },
     list: {
       gap: 8,

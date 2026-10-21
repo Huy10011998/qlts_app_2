@@ -2,8 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 
-import RecordListFooterSkeleton from "../../../components/list/RecordListFooterSkeleton";
-import RecordListSkeleton from "../../../components/list/RecordListSkeleton";
 import EmptyState from "../../../components/ui/EmptyState";
 import SearchBar from "../../../components/ui/SearchBar";
 import { useDebounce } from "../../../hooks/useDebounce";
@@ -12,6 +10,12 @@ import { CV_KE_HOACH_NAME_CLASS } from "../../../services/data/workflowApi";
 import type { KeHoachItem, KeHoachTab, StackNavigation } from "../../../types/index";
 import { AppColors, useStyles } from "../../../utils/helpers/colors";
 import WorkflowFab from "../shared/components/WorkflowFab";
+import WorkflowListFooter from "../shared/components/WorkflowListFooter";
+import WorkflowListSkeleton, {
+  countFieldLines,
+  type WorkflowCardSkeletonShape,
+  WorkflowListFooterSkeleton,
+} from "../shared/components/WorkflowListSkeleton";
 import WorkflowTabBar from "../shared/components/WorkflowTabBar";
 import { useWorkflowMe } from "../shared/useWorkflowMe";
 import { useWorkflowPagedList } from "../shared/useWorkflowPagedList";
@@ -20,7 +24,7 @@ import { useReloadOnWorkflowChange } from "../shared/useWorkflowVersion";
 import { KH_TABS } from "../shared/workflowConstants";
 import { getCardFields, WorkflowField } from "../shared/workflowFields";
 import { loadClassFields } from "../shared/workflowMetadata";
-import KeHoachCard from "./KeHoachCard";
+import KeHoachCard, { getKeHoachCardLayout } from "./KeHoachCard";
 
 /**
  * Danh sách kế hoạch (mục 1, 5-Mobile-KeHoach): kế hoạch tôi chủ trì hoặc
@@ -44,6 +48,18 @@ export default function KeHoachListScreen() {
   }, []);
 
   const cardFields = useMemo(() => getCardFields(fields), [fields]);
+
+  // Dáng khung chờ theo metadata (loadClassFields giữ trong phiên, nên từ lần mở
+  // thứ hai đã có ngay); chưa có thì khung chờ tự đoán.
+  const skeletonShape = useMemo<WorkflowCardSkeletonShape>(() => {
+    if (!fields.length) return {};
+    const layout = getKeHoachCardLayout(cardFields);
+    return {
+      code: layout.showSo,
+      title: layout.showTieuDe,
+      lines: countFieldLines(layout.lineFields),
+    };
+  }, [cardFields, fields.length]);
 
   const list = useWorkflowPagedList<KeHoachItem>(
     (skipSize, pageSize) => khGetList({ tab, searchText, skipSize, pageSize }),
@@ -78,7 +94,7 @@ export default function KeHoachListScreen() {
       />
 
       {list.loading && !list.items.length ? (
-        <RecordListSkeleton hasSearchBar={false} rows={5} />
+        <WorkflowListSkeleton kind="keHoach" shape={skeletonShape} />
       ) : (
         <FlatList
           data={list.items}
@@ -95,7 +111,10 @@ export default function KeHoachListScreen() {
           onEndReachedThreshold={0.5}
           refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={list.refresh} />}
           ListFooterComponent={
-            list.loadingMore ? <RecordListFooterSkeleton cardStyle={styles.footerCard} /> : null
+            <WorkflowListFooter
+              list={list}
+              skeleton={<WorkflowListFooterSkeleton kind="keHoach" shape={skeletonShape} />}
+            />
           }
           ListEmptyComponent={
             <EmptyState
@@ -131,9 +150,5 @@ const makeStyles = (c: AppColors) =>
       paddingTop: 4,
       paddingBottom: 96,
       flexGrow: 1,
-    },
-    // Danh sách đã có lề ngang 12 — thẻ chờ khỏi thụt thêm lần nữa.
-    footerCard: {
-      marginHorizontal: 0,
     },
   });

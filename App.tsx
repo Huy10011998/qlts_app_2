@@ -24,6 +24,7 @@ import {
 } from "./src/context/FontScaleContext";
 import { navigationRef } from "./src/navigation/navigationService";
 import { resetImmersiveMode } from "./src/services/immersive/immersiveMode";
+import { AppToastHost } from "./src/components/ui/AppToast";
 
 const LANDSCAPE_ALLOWED_ROUTES = new Set([
   "CameraList",
@@ -132,6 +133,9 @@ function AppContent() {
             >
               <RootNavigator />
             </NavigationContainer>
+            {/* Ngoài NavigationContainer: thông báo "đã lưu" vẫn còn sau khi màn
+                vừa lưu đã đóng (showAppToast rồi goBack). */}
+            <AppToastHost />
           </AuthProvider>
         </Provider>
       </SafeAreaProvider>

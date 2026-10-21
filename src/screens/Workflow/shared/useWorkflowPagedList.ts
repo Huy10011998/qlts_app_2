@@ -28,6 +28,9 @@ export function useWorkflowPagedList<T>(
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Lỗi đang hiện là của lượt nạp thêm (cuộn cuối) hay của lượt nạp lại — chân
+  // danh sách nói đúng việc hỏng và "Thử lại" gọi lại đúng lượt đó.
+  const [loadMoreFailed, setLoadMoreFailed] = useState(false);
 
   const requestIdRef = useRef(0);
   const itemsRef = useRef<T[]>([]);
@@ -59,10 +62,12 @@ export function useWorkflowPagedList<T>(
         setItems(next);
         setTotalCount(Number(result?.totalCount) || next.length);
         setErrorMessage(null);
+        setLoadMoreFailed(false);
         onPageRef.current?.(page);
       } catch (err) {
         if (requestId !== requestIdRef.current) return;
         setErrorMessage(getWorkflowErrorMessage(err, "Không tải được dữ liệu."));
+        setLoadMoreFailed(mode === "more");
       } finally {
         if (requestId === requestIdRef.current) {
           setLoading(false);
@@ -89,6 +94,12 @@ export function useWorkflowPagedList<T>(
     load("more");
   }, [load, loading, loadingMore, refreshing, totalCount]);
 
+  /** Nút "Thử lại" ở chân danh sách (đã có dòng mà lượt nạp gần nhất hỏng). */
+  const retry = useCallback(
+    () => (loadMoreFailed ? loadMore() : reload()),
+    [loadMore, loadMoreFailed, reload],
+  );
+
   return {
     items,
     setItems,
@@ -97,8 +108,10 @@ export function useWorkflowPagedList<T>(
     refreshing,
     loadingMore,
     errorMessage,
+    loadMoreFailed,
     refresh,
     reload,
     loadMore,
+    retry,
   };
 }

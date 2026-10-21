@@ -108,6 +108,42 @@ describe("gộp việc làm được với một bản ghi", () => {
     ]);
   });
 
+  // Màn chi tiết mở từ danh sách: danh mục con đã có ở tab Chi tiết, thanh chỉ
+  // giữ nghiệp vụ riêng — và không tốn request tải danh mục con.
+  it("bỏ danh mục con thì chỉ còn việc của tủ lạnh, không tải danh mục con", async () => {
+    const loadChildClasses = jest.fn(async () => [
+      child("DanhGia_TuLanh", "Đánh giá tủ lạnh"),
+    ]);
+    const { actions, childClassesFailed } = await resolveRecordActions(
+      makeCtx({
+        includeChildClasses: false,
+        item: FRIDGE,
+        loadChildClasses,
+        nameClass: "NoiDia_TuLanh",
+      }),
+    );
+
+    expect(loadChildClasses).not.toHaveBeenCalled();
+    expect(childClassesFailed).toBe(false);
+    expect(actions.map((a) => a.kind)).toEqual([
+      FRIDGE_XAC_NHAN_VI_TRI_KIND,
+      FRIDGE_TRUNG_CHUYEN_KIND,
+    ]);
+  });
+
+  it("bỏ danh mục con ở loại tài sản thường thì không còn việc nào", async () => {
+    const { actions } = await resolveRecordActions(
+      makeCtx({
+        includeChildClasses: false,
+        loadChildClasses: async () => [
+          child("DanhGia_BinhChuaChay", "Đánh giá"),
+        ],
+      }),
+    );
+
+    expect(actions).toEqual([]);
+  });
+
   // `Read` đủ để thấy việc và mở màn lịch sử; vào THẲNG form là tạo mới nên phải
   // có `Insert`. Cửa `Insert` vốn nằm ở nút thêm trên màn lịch sử, mà màn form
   // không tự kiểm quyền — bỏ qua màn lịch sử là bỏ luôn cửa đó.

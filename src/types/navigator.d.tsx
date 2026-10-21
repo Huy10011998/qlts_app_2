@@ -6,6 +6,7 @@ import type {
 } from "../services/data/noiDiaApi";
 import type { FridgeSummary } from "../screens/NoiDia/shared/fridgeLookup";
 import type { GuideTopicId } from "../screens/Guide/shared/guideTypes";
+import type { SettingGroupId } from "../screens/Settings/shared/settingGroups";
 import type {
   CongViecFormParams,
   FlowFormParams,
@@ -156,6 +157,8 @@ export type RootStackParamList = {
   HomeTab: NavigatorScreenParams<HomeTabParamList>;
   /** ================= SETTINGS ================= */
   Settings: undefined;
+  /** Một nhóm của màn Cài đặt (Tài khoản, Hỗ trợ, Hệ thống...). */
+  SettingGroup: { group: SettingGroupId };
   Profile: undefined;
   Appearance: undefined;
   /** Chọn trần phóng to cỡ chữ cho toàn ứng dụng. */

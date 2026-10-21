@@ -6,7 +6,7 @@ import { flowDuyetHoSo, flowKiemTaoCongViec } from "../../../../services/data/fl
 import type { FlowThaoTacResult } from "../../../../types/index";
 import { AppColors, useAppColors, useStyles } from "../../../../utils/helpers/colors";
 import WorkflowButton from "../../shared/components/WorkflowButton";
-import WorkflowSheet from "../../shared/components/WorkflowSheet";
+import WorkflowSheet, { confirmCloseSheet } from "../../shared/components/WorkflowSheet";
 import WorkflowTextArea from "../../shared/components/WorkflowTextArea";
 import { FLOW_KET_QUA } from "../../shared/workflowConstants";
 import { getWorkflowErrorMessage } from "../../shared/workflowErrors";
@@ -113,6 +113,9 @@ export default function FlowBulkApproveSheet({
     }
   };
 
+  // Ý kiến đã gõ mà chạm nhầm ra nền tối là mất — sheet hỏi trước khi đóng.
+  const dirty = !!yKien.trim();
+
   return (
     <WorkflowSheet
       visible={visible}
@@ -121,9 +124,15 @@ export default function FlowBulkApproveSheet({
       loading={checking || submitting}
       loadingText={checking ? "Đang kiểm tra phiếu..." : "Đang gửi..."}
       closableWhileLoading={checking}
+      dirty={dirty}
       footer={
         <>
-          <WorkflowButton label="Đóng" variant="neutral" flex onPress={onClose} />
+          <WorkflowButton
+            label="Đóng"
+            variant="neutral"
+            flex
+            onPress={() => confirmCloseSheet(dirty, onClose)}
+          />
           <WorkflowButton
             label="Duyệt"
             icon="checkmark-done-outline"

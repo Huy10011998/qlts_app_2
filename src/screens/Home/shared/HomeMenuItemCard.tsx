@@ -10,11 +10,10 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import type { MenuItemCardProps } from "../../../types";
 import { HOME_BRAND_RED } from "./homeTheme";
 import {
-  AppColors,
   useAppColors,
-  useHairlineBorderColor,
   useStyles,
 } from "../../../utils/helpers/colors";
+import { useHomeCardChrome } from "./homeBlockTone";
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 const localStyles = StyleSheet.create({
@@ -43,7 +42,6 @@ export default function HomeMenuItemCard({
   const c = useAppColors();
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const colors = useAppColors();
-  const hairlineBorderColor = useHairlineBorderColor();
 
   useEffect(() => {
     Animated.spring(scaleAnim, {
@@ -70,6 +68,9 @@ export default function HomeMenuItemCard({
     color: accent.color,
     text: colors.text,
   };
+  // Viền và mép trên tô theo loại mục chứ không theo màu khối Truy cập nhanh:
+  // đó là chỗ phân biệt chức năng / phương tiện / báo cáo nằm chung một lưới.
+  const chrome = useHomeCardChrome(theme.color);
 
   return (
     <AnimatedTouchable
@@ -84,13 +85,11 @@ export default function HomeMenuItemCard({
       <View
         style={[
           styles.card,
-          { borderColor: hairlineBorderColor },
-          { shadowColor: colors.shadow },
+          chrome,
           fixedHeight ? styles.fixedHeightCard : null,
           { backgroundColor: theme.bg },
         ]}
       >
-        <View style={[styles.accentBar, { backgroundColor: theme.color }]} />
         <View style={[styles.iconWrap, { backgroundColor: theme.iconBg }]}>
           <Ionicons name={iconName} color={theme.color} size={22} />
           {notificationCount ? (
@@ -116,32 +115,22 @@ export default function HomeMenuItemCard({
   );
 }
 
-const makeStyles = (c: AppColors) =>
+// Màu nền / viền / bóng đều đi qua `useHomeCardChrome` và theme từng mục, nên
+// bảng style ở đây không còn phụ thuộc giao diện sáng / tối.
+const makeStyles = () =>
   StyleSheet.create({
+    // Mép trên 3pt (từ `useHomeCardChrome`) + paddingTop 8 cao đúng bằng thanh
+    // màu 3pt + khoảng 8pt trước đây, nên `HOME_FEATURE_CARD_HEIGHT` giữ nguyên.
     card: {
       borderRadius: 16,
-      paddingTop: 0,
+      paddingTop: 8,
       paddingBottom: 8,
       paddingHorizontal: 8,
       alignItems: "center",
       overflow: "hidden",
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border,
-      shadowColor: c.shadow,
-      shadowOpacity: 0.08,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 3 },
-      elevation: 2,
     },
     fixedHeightCard: {
       flex: 1,
-    },
-    accentBar: {
-      height: 3,
-      width: "100%",
-      borderTopLeftRadius: 16,
-      borderTopRightRadius: 16,
-      marginBottom: 8,
     },
     iconWrap: {
       width: 44,

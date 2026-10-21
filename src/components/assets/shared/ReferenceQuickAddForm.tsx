@@ -261,7 +261,7 @@ export default function ReferenceQuickAddForm({
     [baseHandleChange, setFormData, setValidationErrors],
   );
 
-  useEnumAndReferenceLoader(
+  const { pendingEnumFields } = useEnumAndReferenceLoader(
     fieldActive,
     setEnumData,
     setReferenceData,
@@ -587,6 +587,7 @@ export default function ReferenceQuickAddForm({
       {/* Picker của chính form này. `enableQuickAdd={false}`: thêm nhanh chỉ đi
           một cấp, không lồng vô tận. */}
       <AssetFormReferencePickerModal
+        pendingEnumFields={pendingEnumFields}
         enableQuickAdd={false}
         activeEnumField={activeEnumField}
         formData={formData}

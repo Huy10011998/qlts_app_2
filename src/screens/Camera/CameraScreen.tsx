@@ -49,6 +49,8 @@ import { CAMERA_MENU_BRAND_RED } from "./shared/cameraMenuTheme";
  */
 const CAMERA_TREE_STALE_MS = 10 * 60 * 1000;
 
+const LOAD_ERROR_MESSAGE = "Vui lòng kiểm tra kết nối mạng rồi bấm Thử lại.";
+
 if (
   Platform.OS === "android" &&
   UIManager.setLayoutAnimationEnabledExperimental
@@ -98,9 +100,7 @@ export default function CameraScreen() {
         setLoadErrorMessage(null);
       } catch (e) {
         error("API error:", e);
-        setLoadErrorMessage(
-          "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại.",
-        );
+        setLoadErrorMessage(LOAD_ERROR_MESSAGE);
       } finally {
         fetchingRef.current = false;
         if (isMounted()) {
@@ -120,6 +120,13 @@ export default function CameraScreen() {
     setLoadErrorMessage(null);
     setIsRefreshingTop(true);
     await fetchData({ isRefresh: true });
+  };
+
+  // Màn lỗi không có danh sách để kéo xuống, nên phải có nút. Dọn lỗi trước để
+  // khung chờ (hoặc cây cũ nếu còn) thay chỗ màn lỗi trong lúc gọi lại.
+  const retryLoad = () => {
+    setLoadErrorMessage(null);
+    fetchData();
   };
 
   useEffect(() => {
@@ -144,9 +151,7 @@ export default function CameraScreen() {
       hasError: Boolean(loadErrorMessage),
       refetchOnAppResume: true,
       onOffline: () => {
-        setLoadErrorMessage(
-          "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại.",
-        );
+        setLoadErrorMessage(LOAD_ERROR_MESSAGE);
       },
     },
   );
@@ -189,9 +194,20 @@ export default function CameraScreen() {
       setIsSearching(false);
     }
   }, [search, debouncedSearch]);
+  // Hàng Truy cập nhanh và nút "Thu tất cả" đều theo trạng thái đã lưu trên máy
+  // (đọc xong trước khi cây tải về), nên người dùng quay lại thấy chúng ngay khi
+  // danh sách hiện — khung chờ phải chừa sẵn, không thì cả danh sách tụt xuống.
+  const treeSkeleton = (
+    <MenuCardSkeleton
+      hasSearchBar
+      hasCollapseAll={expandedIds.length > 0}
+      hasRecents={recents.length > 0}
+    />
+  );
+
   // Chờ quyền cũng dùng khung chờ như chờ dữ liệu: hai nhánh khác kiểu thì vào
   // màn thấy vòng xoay nhảy sang khung xám rồi mới ra nội dung.
-  if (!loaded) return <MenuCardSkeleton hasSearchBar />;
+  if (!loaded) return treeSkeleton;
 
   if (!hasViewPermission) {
     return (
@@ -215,7 +231,7 @@ export default function CameraScreen() {
       isSearching: Boolean(debouncedSearch),
     })
   )
-    return <MenuCardSkeleton hasSearchBar />;
+    return treeSkeleton;
 
   if (loadErrorMessage) {
     return (
@@ -227,6 +243,8 @@ export default function CameraScreen() {
           iconName="cloud-offline-outline"
           title="Không thể tải dữ liệu Camera"
           subtitle={loadErrorMessage}
+          actionLabel="Thử lại"
+          onActionPress={retryLoad}
         />
       </KeyboardAvoidingView>
     );

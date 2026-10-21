@@ -314,6 +314,8 @@ export default function BottomSheetModalShell({
               style={[styles.closeButton, closeButtonStyle]}
               hitSlop={10}
               onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Đóng"
             >
               <Ionicons name="close" size={22} color={c.textSecondary} />
             </TouchableOpacity>

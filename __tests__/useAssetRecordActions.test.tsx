@@ -43,6 +43,11 @@ jest.mock("../src/hooks/useSafeAlert", () => ({
 
 jest.mock("../src/utils/Logger", () => ({ error: jest.fn() }));
 
+const mockShowAppToast = jest.fn();
+jest.mock("../src/components/ui/AppToast", () => ({
+  showAppToast: (...args: unknown[]) => mockShowAppToast(...args),
+}));
+
 const mockedCheckReference = jest.mocked(checkReferenceUsage);
 const mockedDeleteItems = jest.mocked(deleteItems);
 
@@ -193,7 +198,6 @@ describe("useAssetRecordActions", () => {
       await harness.result.onDelete();
     });
     await pressLastAlertButton(); // Xác nhận xoá → gọi API xoá
-    await pressLastAlertButton(); // OK ở thông báo thành công
 
     expect(mockedDeleteItems).toHaveBeenCalled();
     expect(dispatchedTypes()).toContain("asset/resetUpdatedListItem");
@@ -212,10 +216,52 @@ describe("useAssetRecordActions", () => {
       await harness.result.onDelete();
     });
     await pressLastAlertButton();
-    await pressLastAlertButton();
 
     expect(dispatchedTypes()).not.toContain("asset/resetUpdatedListItem");
     expect(dispatchedTypes()).toContain("asset/setShouldRefreshList");
+
+    await harness.unmount();
+  });
+
+  // Xoá xong báo bằng toast rồi đóng màn luôn — không bắt bấm thêm OK nữa.
+  it("xoá xong hiện toast kèm mã bản ghi và quay lại ngay", async () => {
+    mockedCheckReference.mockResolvedValue({ data: [] } as any);
+    mockedDeleteItems.mockResolvedValue({} as any);
+    const harness = await mount();
+
+    await ReactTestRenderer.act(async () => {
+      await harness.result.onDelete();
+    });
+    const alertCountBeforeConfirm = mockShowAlert.mock.calls.length;
+    await pressLastAlertButton();
+
+    expect(mockShowAppToast).toHaveBeenCalledWith({
+      message: "Đã xoá thông tin",
+      detail: "PC0015",
+    });
+    expect(mockGoBack).toHaveBeenCalledTimes(1);
+    // Không còn Alert "Thành công" nào sau khi xác nhận.
+    expect(mockShowAlert.mock.calls.length).toBe(alertCountBeforeConfirm);
+
+    await harness.unmount();
+  });
+
+  it("xoá lỗi thì vẫn báo bằng Alert và không rời màn", async () => {
+    mockedCheckReference.mockResolvedValue({ data: [] } as any);
+    mockedDeleteItems.mockRejectedValue(new Error("boom"));
+    const harness = await mount();
+
+    await ReactTestRenderer.act(async () => {
+      await harness.result.onDelete();
+    });
+    await pressLastAlertButton();
+
+    expect(mockShowAlert).toHaveBeenLastCalledWith(
+      "Lỗi",
+      "Không thể xoá thông tin!",
+    );
+    expect(mockShowAppToast).not.toHaveBeenCalled();
+    expect(mockGoBack).not.toHaveBeenCalled();
 
     await harness.unmount();
   });
