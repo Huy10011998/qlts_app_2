@@ -3,7 +3,6 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   FlatList,
-  Alert,
   StyleSheet,
   Platform,
   UIManager,
@@ -39,6 +38,7 @@ import AssetListSearchBar from "../assets/shared/AssetListSearchBar";
 import AssetListEmptyState from "../assets/shared/AssetListEmptyState";
 import { BRAND_RED } from "../assets/shared/listTheme";
 import { makeSharedAssetListStyles } from "../assets/shared/listStyles";
+import { AppAlert } from "../ui/AppAlert";
 
 if (
   Platform.OS === "android" &&
@@ -174,7 +174,7 @@ export default function QrReview() {
   }, [debouncedSearch, isSearching, refreshAndroidListLayout]);
 
   if (!hasRequiredParams) {
-    Alert.alert("Lỗi", "Thiếu param bắt buộc");
+    AppAlert.alert("Lỗi", "Thiếu param bắt buộc");
     return null;
   }
 

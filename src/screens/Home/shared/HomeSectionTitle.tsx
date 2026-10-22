@@ -1,5 +1,5 @@
 import React from "react";
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { HOME_BRAND_RED } from "./homeTheme";
 import type { HomeBlockTone } from "./homeBlockTone";
@@ -8,6 +8,7 @@ import {
   useAppColors,
   useStyles,
 } from "../../../utils/helpers/colors";
+import { AppAlert } from "../../../components/ui/AppAlert";
 
 type HomeSectionTitleProps = {
   label: string;
@@ -46,7 +47,7 @@ export default function HomeSectionTitle({
   const handleActionPress =
     onAction ??
     (() => {
-      Alert.alert(
+      AppAlert.alert(
         "Thông báo",
         "Chức năng sẽ được triển khai trong thời gian sắp tới.",
       );

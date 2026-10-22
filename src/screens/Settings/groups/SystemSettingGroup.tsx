@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, AppState, Platform } from "react-native";
+import { AppState, Platform } from "react-native";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import type { StackNavigation } from "../../../types";
 import { C } from "../../../utils/helpers/colors";
@@ -34,6 +34,7 @@ import {
 import SettingSectionGroup from "../shared/SettingSectionGroup";
 import { getSettingGroupColor } from "../shared/settingGroups";
 import { SettingRowItem, SettingSwitchRow } from "../shared/SettingRowItem";
+import { AppAlert } from "../../../components/ui/AppAlert";
 
 const LOCAL_NETWORK_FALLBACK_STATE: StoredLocalNetworkPermissionState = {
   hasShownNotice: false,
@@ -146,7 +147,7 @@ export default function SystemSettingGroup() {
       if (isUpdatingLocalNetworkPermission) return;
 
       if (!value) {
-        Alert.alert(
+        AppAlert.alert(
           "Quyền mạng nội bộ",
           "Hệ điều hành không cho tắt trực tiếp quyền này trong app. Bạn có thể mở Cài đặt để thay đổi quyền thủ công.",
           [
@@ -174,7 +175,7 @@ export default function SystemSettingGroup() {
         });
 
         if (nextStatus !== "granted") {
-          Alert.alert(
+          AppAlert.alert(
             "Quyền mạng nội bộ",
             "Không thể bật trực tiếp quyền này. Vui lòng mở Cài đặt nếu bạn đã từ chối trước đó.",
             [
@@ -189,7 +190,7 @@ export default function SystemSettingGroup() {
           );
         }
       } catch {
-        Alert.alert(
+        AppAlert.alert(
           "Lỗi",
           "Chưa thể cập nhật quyền mạng nội bộ lúc này. Vui lòng thử lại.",
         );
@@ -205,7 +206,7 @@ export default function SystemSettingGroup() {
       if (isUpdatingCameraPermission) return;
 
       if (!value) {
-        Alert.alert(
+        AppAlert.alert(
           "Quyền camera",
           "Hệ điều hành không cho tắt trực tiếp quyền camera trong app. Bạn có thể mở Cài đặt để thay đổi quyền này.",
           [
@@ -228,7 +229,7 @@ export default function SystemSettingGroup() {
         setCameraPermissionStatus(nextStatus);
 
         if (nextStatus === "blocked") {
-          Alert.alert(
+          AppAlert.alert(
             "Quyền camera",
             "Camera đang bị chặn. Vui lòng mở Cài đặt để cấp lại quyền.",
             [
@@ -245,13 +246,13 @@ export default function SystemSettingGroup() {
         }
 
         if (nextStatus === "denied" || nextStatus === "unavailable") {
-          Alert.alert(
+          AppAlert.alert(
             "Quyền camera",
             "Chưa thể bật quyền camera trên thiết bị này.",
           );
         }
       } catch {
-        Alert.alert("Lỗi", "Chưa thể cập nhật quyền camera lúc này.");
+        AppAlert.alert("Lỗi", "Chưa thể cập nhật quyền camera lúc này.");
       } finally {
         if (isMountedRef.current) setIsUpdatingCameraPermission(false);
       }
@@ -266,7 +267,7 @@ export default function SystemSettingGroup() {
       // Tắt hoặc đang "Gần đúng" (muốn đổi sang chính xác): app không tự đổi
       // được, chỉ mở Cài đặt của máy.
       if (!value || locationPermissionStatus === "approximate") {
-        Alert.alert(
+        AppAlert.alert(
           "Quyền vị trí",
           value
             ? "Máy đang chỉ cho vị trí gần đúng. Mở Cài đặt, vào Quyền > Vị trí và bật Dùng vị trí chính xác để toạ độ trên ảnh đúng hơn."
@@ -286,7 +287,7 @@ export default function SystemSettingGroup() {
         setLocationPermissionStatus(nextStatus);
 
         if (nextStatus === "blocked") {
-          Alert.alert(
+          AppAlert.alert(
             "Quyền vị trí",
             "Vị trí đang bị chặn. Vui lòng mở Cài đặt để cấp lại quyền.",
             [
@@ -298,10 +299,10 @@ export default function SystemSettingGroup() {
         }
 
         if (nextStatus === "denied" || nextStatus === "unavailable") {
-          Alert.alert("Quyền vị trí", "Chưa thể bật quyền vị trí trên thiết bị này.");
+          AppAlert.alert("Quyền vị trí", "Chưa thể bật quyền vị trí trên thiết bị này.");
         }
       } catch {
-        Alert.alert("Lỗi", "Chưa thể cập nhật quyền vị trí lúc này.");
+        AppAlert.alert("Lỗi", "Chưa thể cập nhật quyền vị trí lúc này.");
       } finally {
         if (isMountedRef.current) setIsUpdatingLocationPermission(false);
       }
@@ -314,7 +315,7 @@ export default function SystemSettingGroup() {
       if (isUpdatingNotificationPermission) return;
 
       if (!value) {
-        Alert.alert(
+        AppAlert.alert(
           "Quyền thông báo",
           "Hệ điều hành không cho tắt trực tiếp quyền thông báo trong app. Bạn có thể mở Cài đặt để thay đổi quyền này.",
           [
@@ -333,7 +334,7 @@ export default function SystemSettingGroup() {
       // Đã bị chặn thì gọi dialog hệ thống cũng không hiện gì (iOS chỉ hiện đúng
       // một lần trong đời app) → dẫn user vào Cài đặt luôn.
       if (notificationPermissionStatus === "blocked") {
-        Alert.alert(
+        AppAlert.alert(
           "Quyền thông báo",
           "Thông báo đang bị chặn. Vui lòng mở Cài đặt để cấp lại quyền.",
           [
@@ -356,7 +357,7 @@ export default function SystemSettingGroup() {
         setNotificationPermissionStatus(nextStatus);
 
         if (nextStatus === "blocked") {
-          Alert.alert(
+          AppAlert.alert(
             "Quyền thông báo",
             "Thông báo đang bị chặn. Vui lòng mở Cài đặt để cấp lại quyền.",
             [
@@ -373,13 +374,13 @@ export default function SystemSettingGroup() {
         }
 
         if (nextStatus !== "granted") {
-          Alert.alert(
+          AppAlert.alert(
             "Quyền thông báo",
             "Chưa thể bật quyền thông báo trên thiết bị này.",
           );
         }
       } catch {
-        Alert.alert("Lỗi", "Chưa thể cập nhật quyền thông báo lúc này.");
+        AppAlert.alert("Lỗi", "Chưa thể cập nhật quyền thông báo lúc này.");
       } finally {
         if (isMountedRef.current) setIsUpdatingNotificationPermission(false);
       }

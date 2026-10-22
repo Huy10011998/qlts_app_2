@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { Alert } from "react-native";
+import { AppAlert } from "../../../components/ui/AppAlert";
 import RNFS from "react-native-fs";
 import Share from "react-native-share";
 
@@ -67,7 +67,7 @@ export function useWorkflowFileOpener() {
         });
       } catch (err) {
         error("[useWorkflowFileOpener] open file error", err);
-        Alert.alert("Không mở được file", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
+        AppAlert.alert("Không mở được file", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
       } finally {
         setOpening(false);
       }
@@ -99,7 +99,7 @@ export function useWorkflowFileOpener() {
       });
     } catch (err) {
       error("[useWorkflowFileOpener] open local file error", err);
-      Alert.alert("Không mở được file", "Vui lòng thử lại.");
+      AppAlert.alert("Không mở được file", "Vui lòng thử lại.");
     }
   }, []);
 

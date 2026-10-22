@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import { cvDoiChuTri, cvNhanVien } from "../../../../services/data/congViecApi";
@@ -11,6 +11,7 @@ import WorkflowButton from "../../shared/components/WorkflowButton";
 import WorkflowSheet, { confirmCloseSheet } from "../../shared/components/WorkflowSheet";
 import WorkflowTextArea from "../../shared/components/WorkflowTextArea";
 import { getWorkflowErrorMessage } from "../../shared/workflowErrors";
+import { AppAlert } from "../../../../components/ui/AppAlert";
 
 type Props = {
   visible: boolean;
@@ -80,7 +81,7 @@ export default function DoiChuTriSheet({
 
   const submit = async () => {
     if (!selectedId) {
-      Alert.alert("Thiếu thông tin", "Vui lòng chọn chủ trì mới.");
+      AppAlert.alert("Thiếu thông tin", "Vui lòng chọn chủ trì mới.");
       return;
     }
 
@@ -89,12 +90,12 @@ export default function DoiChuTriSheet({
       const result = await cvDoiChuTri(idCongViec, selectedId, ghiChu.trim() || null);
       const loi = getThaoTacError(result);
       if (loi) {
-        Alert.alert("Không đổi được chủ trì", loi);
+        AppAlert.alert("Không đổi được chủ trì", loi);
         return;
       }
       onDone();
     } catch (err) {
-      Alert.alert("Không đổi được chủ trì", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
+      AppAlert.alert("Không đổi được chủ trì", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
     } finally {
       setSubmitting(false);
     }

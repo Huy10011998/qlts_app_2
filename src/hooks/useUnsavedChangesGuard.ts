@@ -1,5 +1,5 @@
 import { useCallback, useRef } from "react";
-import { Alert } from "react-native";
+import { AppAlert } from "../components/ui/AppAlert";
 import { useNavigation, usePreventRemove } from "@react-navigation/native";
 
 type UnsavedChangesGuardOptions = {
@@ -37,7 +37,7 @@ export function useUnsavedChangesGuard(
       return;
     }
 
-    Alert.alert("Bỏ thay đổi?", message, [
+    AppAlert.alert("Bỏ thay đổi?", message, [
       { text: "Ở lại", style: "cancel" },
       {
         text: "Bỏ thay đổi",

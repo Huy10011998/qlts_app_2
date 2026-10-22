@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import { useThemePreference } from "../../../../context/ThemeContext";
 import { cvChuyenTrangThai, cvTaiFileLichSu } from "../../../../services/data/congViecApi";
@@ -12,6 +12,7 @@ import WorkflowSheet, { confirmCloseSheet } from "../../shared/components/Workfl
 import WorkflowTextArea from "../../shared/components/WorkflowTextArea";
 import { CV_TRANG_THAI, CV_TRANG_THAI_HUY, tint } from "../../shared/workflowConstants";
 import { getWorkflowErrorMessage } from "../../shared/workflowErrors";
+import { AppAlert } from "../../../../components/ui/AppAlert";
 
 type Props = {
   visible: boolean;
@@ -52,11 +53,11 @@ export default function ChuyenTrangThaiSheet({
     const note = ghiChu.trim();
 
     if (selected === CV_TRANG_THAI_HUY && !note) {
-      Alert.alert("Thiếu ghi chú", "Hủy công việc phải ghi lý do.");
+      AppAlert.alert("Thiếu ghi chú", "Hủy công việc phải ghi lý do.");
       return;
     }
     if (selected === trangThai && !note && !files.length) {
-      Alert.alert(
+      AppAlert.alert(
         "Thiếu nội dung",
         "Giữ nguyên trạng thái thì cần ghi chú hoặc đính kèm file kết quả.",
       );
@@ -68,7 +69,7 @@ export default function ChuyenTrangThaiSheet({
       const result = await cvChuyenTrangThai([idCongViec], selected, note || null);
       const loi = getThaoTacError(result);
       if (loi) {
-        Alert.alert("Không chuyển được trạng thái", loi);
+        AppAlert.alert("Không chuyển được trạng thái", loi);
         return;
       }
 
@@ -90,14 +91,14 @@ export default function ChuyenTrangThaiSheet({
 
       // Tải file lỗi vẫn coi là đã chuyển — không cho chuyển lại lần nữa.
       if (failed.length) {
-        Alert.alert(
+        AppAlert.alert(
           "Đã chuyển trạng thái",
           `Nhưng một số file chưa tải lên được:\n${failed.join("\n")}`,
         );
       }
       onDone();
     } catch (err) {
-      Alert.alert(
+      AppAlert.alert(
         "Không chuyển được trạng thái",
         getWorkflowErrorMessage(err, "Vui lòng thử lại."),
       );

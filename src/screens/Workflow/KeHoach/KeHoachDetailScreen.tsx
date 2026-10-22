@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
@@ -42,6 +42,7 @@ import { getWorkflowErrorMessage } from "../shared/workflowErrors";
 import { getCardFields, getDetailFields, WorkflowField } from "../shared/workflowFields";
 import { loadClassFields } from "../shared/workflowMetadata";
 import { getKeHoachProgress } from "./keHoachRules";
+import { AppAlert } from "../../../components/ui/AppAlert";
 
 type Tab = "thongTin" | "congViec";
 
@@ -117,7 +118,7 @@ export default function KeHoachDetailScreen() {
         setErrorMessage(null);
       } catch (err) {
         if (isWorkflowNotFound(err)) {
-          Alert.alert("Thông báo", "Không tìm thấy kế hoạch.", [
+          AppAlert.alert("Thông báo", "Không tìm thấy kế hoạch.", [
             { text: "OK", onPress: () => navigation.goBack() },
           ]);
           return;
@@ -162,11 +163,11 @@ export default function KeHoachDetailScreen() {
     // người dùng không biết vì sao) — bấm thì nói lý do.
     const soCongViec = Number(keHoach?.soCongViec ?? 0);
     if (soCongViec > 0) {
-      Alert.alert("Không xoá được", `Kế hoạch còn ${soCongViec} công việc, không xoá được.`);
+      AppAlert.alert("Không xoá được", `Kế hoạch còn ${soCongViec} công việc, không xoá được.`);
       return;
     }
 
-    Alert.alert("Xoá kế hoạch", "Xoá kế hoạch này?", [
+    AppAlert.alert("Xoá kế hoạch", "Xoá kế hoạch này?", [
       { text: "Huỷ", style: "cancel" },
       {
         text: "Xoá",
@@ -177,13 +178,13 @@ export default function KeHoachDetailScreen() {
             const result = await khXoa(id);
             const loi = getThaoTacError(result);
             if (loi) {
-              Alert.alert("Không xoá được", loi);
+              AppAlert.alert("Không xoá được", loi);
               return;
             }
             markChanged();
             navigation.goBack();
           } catch (err) {
-            Alert.alert("Không xoá được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
+            AppAlert.alert("Không xoá được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
           } finally {
             setDeleting(false);
           }

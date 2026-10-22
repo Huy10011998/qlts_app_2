@@ -8,7 +8,6 @@ import {
 import { getTextScaleFactor } from "../../utils/helpers/textScaling";
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import {
-  Alert,
   AppState,
   AppStateStatus,
   Image,
@@ -39,20 +38,29 @@ import {
   setRefreshInApi,
   shouldRefreshAccessToken,
 } from "../../services/data/callApi";
-import {
-  AUTH_LOGIN_SERVICE,
-  FACE_ID_LOGIN_SERVICE,
-  FACE_ID_MARKER_PASSWORD,
-  FACE_ID_MARKER_USERNAME,
-} from "../../constants/AuthStorage";
+import { AUTH_LOGIN_SERVICE } from "../../constants/AuthStorage";
 import { log } from "../../utils/Logger";
 import {
   readStoredAuthTokens,
   readStoredAuthUsername,
   writeStoredAuthUsername,
 } from "../../context/authStorage";
-import { readFaceIdEnabled } from "../../services/auth/faceIdFlag";
+import {
+  readFaceIdEnabled,
+  writeFaceIdEnabled,
+} from "../../services/auth/faceIdFlag";
+import {
+  BiometricKind,
+  biometricName,
+  classifyBiometricError,
+  getBiometricKind,
+  isBiometricUnlockUsable,
+  readBiometricMarker,
+  resetBiometricMarker,
+  writeBiometricMarker,
+} from "../../services/auth/biometric";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import {
   LocalNetworkPermissionStatus,
   getLocalNetworkPermissionLabel,
@@ -70,9 +78,13 @@ import {
   SUPPORT_PHONE_LINK,
 } from "../../constants/support";
 import { makeStyles } from "./LoginScreen.styles";
+import { AppAlert } from "../../components/ui/AppAlert";
 
 const RED = C.red;
 const COMPANY_FOUNDED_YEAR = 1983;
+
+const capitalize = (text: string) =>
+  text.charAt(0).toUpperCase() + text.slice(1);
 
 export default function LoginScreen() {
   const c = useAppColors();
@@ -85,7 +97,7 @@ export default function LoginScreen() {
   const passwordRef = useRef<TextInput>(null);
   const appVersionLabel = `v${DeviceInfo.getVersion()}`;
   const companyAge = new Date().getFullYear() - COMPANY_FOUNDED_YEAR;
-  const { setToken, setRefreshToken, setIosAuthenticated, syncSession, token } =
+  const { setToken, setRefreshToken, setSessionUnlocked, syncSession, token } =
     useAuth();
 
   const [userName, setUserName] = useState("");
@@ -97,13 +109,16 @@ export default function LoginScreen() {
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
   const [isTokenReady, setIsTokenReady] = useState(false);
   const [isFaceIdEnabled, setIsFaceIdEnabled] = useState(false);
+  // Android: loại sinh trắc máy có; `null` = không có / chưa cài → ẩn nút.
+  // iOS không dùng — nút Face ID luôn hiện.
+  const [biometricKind, setBiometricKind] = useState<BiometricKind | null>(
+    null,
+  );
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [scrollViewportHeight, setScrollViewportHeight] = useState(0);
   const [scrollContentHeight, setScrollContentHeight] = useState(0);
-  // `null` = chưa kiểm xong. Để "unknown" làm giá trị đầu thì thẻ báo quyền
-  // chớp lên một nhịp rồi mới biến mất ở máy đã cấp quyền.
   const [localNetworkStatus, setLocalNetworkStatus] =
-    useState<LocalNetworkPermissionStatus | null>(null);
+    useState<LocalNetworkPermissionStatus>("unknown");
   // Mở màn bằng phiên còn hạn + đã bật Face ID thì tự hỏi Face ID một lần,
   // khỏi bắt người dùng bấm nút (xem effect bên dưới).
   const [shouldAutoPromptFaceId, setShouldAutoPromptFaceId] = useState(false);
@@ -112,22 +127,27 @@ export default function LoginScreen() {
   const hasAutoPromptedFaceIdRef = useRef(false);
   const isLocalNetworkRequestRunning = useRef(false);
   const isLocalNetworkDenied = localNetworkStatus === "denied";
-  // Chỉ iOS mới có quyền mạng nội bộ (Android luôn coi là đã cấp), và chỉ nhắc
-  // khi CHƯA cấp — đã cấp rồi thì thẻ này chỉ chiếm chỗ.
-  const shouldShowLocalNetworkNotice =
-    Platform.OS === "ios" &&
-    localNetworkStatus !== null &&
-    localNetworkStatus !== "granted";
-  const localNetworkToneStyle = isLocalNetworkDenied
+  const isLocalNetworkGranted = localNetworkStatus === "granted";
+  const localNetworkToneStyle = isLocalNetworkGranted
+    ? [styles.localNetworkNoticeGranted, { borderColor: accentBorders.green }]
+    : isLocalNetworkDenied
     ? [styles.localNetworkNoticeDenied, { borderColor: accentBorders.amber }]
     : [styles.localNetworkNoticeUnknown, { borderColor: hairlineBorderColor }];
-  const localNetworkIconToneStyle = isLocalNetworkDenied
+  const localNetworkIconToneStyle = isLocalNetworkGranted
+    ? styles.localNetworkIconGranted
+    : isLocalNetworkDenied
     ? styles.localNetworkIconDenied
     : styles.localNetworkIconUnknown;
-  const localNetworkStatusToneStyle = isLocalNetworkDenied
+  const localNetworkStatusToneStyle = isLocalNetworkGranted
+    ? styles.localNetworkStatusGranted
+    : isLocalNetworkDenied
     ? styles.localNetworkStatusDenied
     : styles.localNetworkStatusUnknown;
-  const localNetworkIconColor = isLocalNetworkDenied ? RED : "#64748B";
+  const localNetworkIconColor = isLocalNetworkGranted
+    ? "#15803D"
+    : isLocalNetworkDenied
+    ? RED
+    : "#64748B";
   // Chữ to lên thì nội dung cao thêm mà `windowHeight` không đổi, nên màn hình
   // vẫn rơi vào nhánh "rộng rãi" trong khi thực tế đã chật. Quy về chiều cao
   // hiệu dụng: chia cho hệ số Cỡ chữ của app trước khi so ngưỡng (cỡ chữ của
@@ -218,9 +238,13 @@ export default function LoginScreen() {
 
   const prepareTokenForFaceID = useCallback(async () => {
     try {
-      const enabled = await readFaceIdEnabled();
+      // Android còn kiểm máy vẫn còn vân tay + marker (mất thì tự tắt cờ).
+      const enabled =
+        Platform.OS === "ios"
+          ? await readFaceIdEnabled()
+          : await isBiometricUnlockUsable();
       if (!enabled) {
-        await Keychain.resetGenericPassword({ service: FACE_ID_LOGIN_SERVICE });
+        await resetBiometricMarker();
         setIsFaceIdEnabled(false);
         setIsTokenReady(true);
         return;
@@ -243,9 +267,17 @@ export default function LoginScreen() {
   useEffect(() => {
     if (Platform.OS === "ios") {
       prepareTokenForFaceID();
-    } else {
-      setIsTokenReady(true);
+      return;
     }
+    // Android: chỉ máy có vân tay / khuôn mặt mới có nút và tự hỏi.
+    getBiometricKind().then((kind) => {
+      setBiometricKind(kind);
+      if (kind) {
+        prepareTokenForFaceID();
+      } else {
+        setIsTokenReady(true);
+      }
+    });
   }, [prepareTokenForFaceID]);
 
   const handleLocalNetworkPermission = useCallback(async () => {
@@ -256,7 +288,7 @@ export default function LoginScreen() {
       const status = await requestLocalNetworkPermission();
       applyLocalNetworkStatus(status);
     } catch {
-      Alert.alert(
+      AppAlert.alert(
         "Không thể yêu cầu quyền",
         "Ứng dụng chưa thể kiểm tra quyền mạng nội bộ lúc này.",
       );
@@ -299,22 +331,19 @@ export default function LoginScreen() {
   }, [syncLocalNetworkState]);
 
   const syncFaceIdMarker = useCallback(async () => {
-    if (Platform.OS !== "ios") return;
     const enabled = await readFaceIdEnabled();
     if (!enabled) {
-      await Keychain.resetGenericPassword({ service: FACE_ID_LOGIN_SERVICE });
+      await resetBiometricMarker();
       setIsFaceIdEnabled(false);
       return;
     }
-    await Keychain.setGenericPassword(
-      FACE_ID_MARKER_USERNAME,
-      FACE_ID_MARKER_PASSWORD,
-      {
-        service: FACE_ID_LOGIN_SERVICE,
-        accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
-        accessible: Keychain.ACCESSIBLE.WHEN_PASSCODE_SET_THIS_DEVICE_ONLY,
-      },
-    );
+    if (Platform.OS === "android") {
+      // Ghi marker trên Android là phải hỏi vân tay — gõ mật khẩu xong còn bị
+      // hỏi thêm thì thừa. Còn marker thì giữ; mất thì tắt cờ để bật lại.
+      setIsFaceIdEnabled(await isBiometricUnlockUsable());
+      return;
+    }
+    await writeBiometricMarker();
     setIsFaceIdEnabled(true);
   }, []);
 
@@ -333,17 +362,17 @@ export default function LoginScreen() {
         accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
       });
       await syncFaceIdMarker();
-      if (Platform.OS === "ios") setIosAuthenticated(true);
+      setSessionUnlocked(true);
     },
-    [setIosAuthenticated, setRefreshToken, setToken, syncFaceIdMarker],
+    [setSessionUnlocked, setRefreshToken, setToken, syncFaceIdMarker],
   );
 
   const restoreStoredSession = useCallback(
     async (accessToken: string, refreshToken: string | null) => {
       syncSession(accessToken, refreshToken);
-      setIosAuthenticated(true);
+      setSessionUnlocked(true);
     },
-    [setIosAuthenticated, syncSession],
+    [setSessionUnlocked, syncSession],
   );
 
   // Blur trực tiếp hai input rồi mới đóng keyboard: sau khi chọn mật khẩu gợi ý
@@ -376,14 +405,14 @@ export default function LoginScreen() {
         (typeof responseData === "string" ? responseData : undefined) ||
         responseData?.message;
       if (status === 401) {
-        Alert.alert(
+        AppAlert.alert(
           "Đăng nhập thất bại",
           message || "Sai tài khoản hoặc mật khẩu.",
         );
       } else if (!err.response) {
-        Alert.alert("Lỗi kết nối", "Không thể kết nối đến máy chủ.");
+        AppAlert.alert("Lỗi kết nối", "Không thể kết nối đến máy chủ.");
       } else {
-        Alert.alert(
+        AppAlert.alert(
           "Lỗi đăng nhập",
           message ||
             `Không thể đăng nhập lúc này${
@@ -396,20 +425,24 @@ export default function LoginScreen() {
     }
   };
 
+  // iOS: "FaceID" (giữ nguyên câu chữ cũ); Android: "vân tay" / "khuôn mặt".
+  const biometricLabel = biometricName(
+    Platform.OS === "ios" ? "faceid" : biometricKind,
+  );
+
   const handleFaceIDPress = async () => {
     if (isLoading) return;
-    if (Platform.OS !== "ios") return;
     if (!isTokenReady) {
-      Alert.alert(
+      AppAlert.alert(
         "Đang chuẩn bị",
-        "Ứng dụng đang chuẩn bị FaceID. Vui lòng đợi.",
+        `Ứng dụng đang chuẩn bị ${biometricLabel}. Vui lòng đợi.`,
       );
       return;
     }
     if (!isFaceIdEnabled) {
-      Alert.alert(
-        "FaceID chưa bật",
-        "Bạn cần đăng nhập và bật FaceID trong Cài đặt.",
+      AppAlert.alert(
+        `${capitalize(biometricLabel)} chưa bật`,
+        `Bạn cần đăng nhập và bật ${biometricLabel} trong Cài đặt.`,
       );
       return;
     }
@@ -418,7 +451,6 @@ export default function LoginScreen() {
   };
 
   const handleFaceIDLogin = async () => {
-    if (Platform.OS !== "ios") return;
     if (isFaceIdRunning.current) return;
     isFaceIdRunning.current = true;
     dismissKeyboardBeforeEnteringApp();
@@ -426,27 +458,36 @@ export default function LoginScreen() {
     try {
       const reachability = await checkServerReachability();
       if (!reachability.canReachServer) {
-        Alert.alert("Lỗi", SERVER_UNAVAILABLE_MESSAGE);
+        AppAlert.alert("Lỗi", SERVER_UNAVAILABLE_MESSAGE);
         return;
       }
 
-      const credentials = await Keychain.getGenericPassword({
-        service: FACE_ID_LOGIN_SERVICE,
-        authenticationPrompt: {
-          title: "Xác thực",
-          subtitle: "Sử dụng FaceID để đăng nhập",
-          description: "Đăng nhập bằng FaceID",
-          cancel: "Huỷ",
-        },
-      });
+      const credentials = await readBiometricMarker(
+        Platform.OS === "ios"
+          ? {
+              title: "Xác thực",
+              subtitle: "Sử dụng FaceID để đăng nhập",
+              description: "Đăng nhập bằng FaceID",
+              cancel: "Huỷ",
+            }
+          : {
+              title: "Đăng nhập",
+              subtitle: `Dùng ${biometricLabel} để mở ứng dụng`,
+              // Nút phụ của hộp hỏi Android: đóng hộp, ở lại form mật khẩu.
+              cancel: "Dùng mật khẩu",
+            },
+      );
       if (!credentials) {
-        Alert.alert("FaceID", "Không tìm thấy thông tin đăng nhập.");
+        AppAlert.alert(
+          capitalize(biometricLabel),
+          "Không tìm thấy thông tin đăng nhập.",
+        );
         return;
       }
       const { token: storedToken, refreshToken: storedRefreshToken } =
         await readStoredAuthTokens();
       if (!storedToken && !storedRefreshToken) {
-        Alert.alert("Phiên đăng nhập đã hết", "Vui lòng đăng nhập lại.");
+        AppAlert.alert("Phiên đăng nhập đã hết", "Vui lòng đăng nhập lại.");
         return;
       }
       if (storedToken && !shouldRefreshAccessToken(storedToken)) {
@@ -454,7 +495,7 @@ export default function LoginScreen() {
         return;
       }
       if (!storedRefreshToken) {
-        Alert.alert("Phiên đăng nhập đã hết", "Vui lòng đăng nhập lại.");
+        AppAlert.alert("Phiên đăng nhập đã hết", "Vui lòng đăng nhập lại.");
         return;
       }
       setRefreshInApi(storedRefreshToken);
@@ -464,37 +505,49 @@ export default function LoginScreen() {
         nextSession.refreshToken ?? storedRefreshToken,
       );
     } catch (err: any) {
-      const code = err?.code;
-      const message = String(err?.message ?? "");
-      const normalizedMessage = message.toLowerCase();
-      const isCancelled =
-        code === -128 ||
-        code === "-128" ||
-        normalizedMessage.includes("cancel") ||
-        message.includes("UserCancel") ||
-        err?.name === "LAErrorUserCancel";
+      const biometricError = classifyBiometricError(err);
       const status = err?.response?.status;
       const needsLogin = err?.NEED_LOGIN === true;
-      if (isCancelled) return;
+      if (biometricError === "cancel") return;
+      // Hai nhánh dưới chỉ có trên Android.
+      if (biometricError === "lockout") {
+        AppAlert.alert(
+          "Tạm khoá",
+          `Thử ${biometricLabel} sai quá nhiều lần. Vui lòng đăng nhập bằng mật khẩu.`,
+        );
+        return;
+      }
+      if (biometricError === "invalidated") {
+        await resetBiometricMarker();
+        await writeFaceIdEnabled(false);
+        setIsFaceIdEnabled(false);
+        AppAlert.alert(
+          `${capitalize(biometricLabel)} trên máy đã thay đổi`,
+          `Vui lòng đăng nhập bằng mật khẩu rồi bật lại ${biometricLabel} trong Cài đặt.`,
+        );
+        return;
+      }
       if (needsLogin || status === 401 || status === 403) {
-        Alert.alert("Phiên đăng nhập đã hết", "Vui lòng đăng nhập lại.");
+        AppAlert.alert("Phiên đăng nhập đã hết", "Vui lòng đăng nhập lại.");
         return;
       }
       if (!err?.response) {
         const reachability = await checkServerReachability();
         if (!reachability.canReachServer) {
-          Alert.alert("Lỗi", SERVER_UNAVAILABLE_MESSAGE);
+          AppAlert.alert("Lỗi", SERVER_UNAVAILABLE_MESSAGE);
           return;
         }
       }
       if (!err?.response) {
-        Alert.alert(
-          "Không thể dùng FaceID",
-          "Thiết bị chưa sẵn sàng cho FaceID hoặc ứng dụng chưa được phép sử dụng FaceID trong Cài đặt. Vui lòng đăng nhập bằng mật khẩu và kiểm tra lại quyền FaceID.",
+        AppAlert.alert(
+          `Không thể dùng ${biometricLabel}`,
+          Platform.OS === "ios"
+            ? "Thiết bị chưa sẵn sàng cho FaceID hoặc ứng dụng chưa được phép sử dụng FaceID trong Cài đặt. Vui lòng đăng nhập bằng mật khẩu và kiểm tra lại quyền FaceID."
+            : "Vui lòng đăng nhập bằng mật khẩu.",
         );
         return;
       }
-      Alert.alert("Lỗi", "Không thể đăng nhập bằng FaceID.");
+      AppAlert.alert("Lỗi", `Không thể đăng nhập bằng ${biometricLabel}.`);
     } finally {
       setIsLoading(false);
       isFaceIdRunning.current = false;
@@ -775,9 +828,35 @@ export default function LoginScreen() {
                     />
                   </TouchableOpacity>
                 )}
+
+                {/* Android: cùng ô với nút Face ID, chỉ hiện khi máy có sinh trắc. */}
+                {Platform.OS === "android" && biometricKind && (
+                  <TouchableOpacity
+                    style={[
+                      styles.faceIdBtn,
+                      { borderColor: hairlineBorderColor },
+                      (!isTokenReady || !isFaceIdEnabled) &&
+                        styles.faceIdBtnDimmed,
+                    ]}
+                    onPress={handleFaceIDPress}
+                    activeOpacity={0.8}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Đăng nhập bằng ${biometricLabel}`}
+                  >
+                    <MaterialCommunityIcons
+                      name={
+                        biometricKind === "face"
+                          ? "face-recognition"
+                          : "fingerprint"
+                      }
+                      size={28}
+                      color={C.blue}
+                    />
+                  </TouchableOpacity>
+                )}
               </View>
 
-              {shouldShowLocalNetworkNotice && localNetworkStatus && (
+              {(Platform.OS === "ios" || Platform.OS === "android") && (
                 <View
                   style={[styles.localNetworkNotice, localNetworkToneStyle]}
                 >
@@ -788,7 +867,11 @@ export default function LoginScreen() {
                     ]}
                   >
                     <Ionicons
-                      name="wifi-outline"
+                      name={
+                        isLocalNetworkGranted
+                          ? "checkmark-circle"
+                          : "wifi-outline"
+                      }
                       size={15}
                       color={localNetworkIconColor}
                     />
@@ -804,7 +887,7 @@ export default function LoginScreen() {
                       {getLocalNetworkPermissionLabel(localNetworkStatus)}
                     </Text>
                   </View>
-                  {isLocalNetworkDenied && (
+                  {Platform.OS === "ios" && isLocalNetworkDenied && (
                     <TouchableOpacity
                       style={[
                         styles.localNetworkSettingsButton,

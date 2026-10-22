@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Alert,
   FlatList,
   Image,
   Keyboard,
@@ -40,6 +39,7 @@ import { getWorkflowErrorMessage } from "../shared/workflowErrors";
 import { useNotifyInfoStaleOnClose } from "../shared/workflowInfoRefresh";
 import { mergeRealtimeComment } from "./realtimeCommentRules";
 import { useRealtimeComments } from "./useRealtimeComments";
+import { AppAlert } from "../../../components/ui/AppAlert";
 
 /**
  * Bình luận dạng chat — dùng chung phiếu đề nghị (`/{TenBang}/flow-*`) và
@@ -138,7 +138,7 @@ export default function WorkflowCommentsScreen() {
       markChanged();
       requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
     } catch (err) {
-      Alert.alert("Không gửi được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
+      AppAlert.alert("Không gửi được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
     } finally {
       setSending(false);
     }

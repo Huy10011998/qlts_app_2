@@ -66,7 +66,7 @@ const SettingScreen = () => {
     account:
       Platform.OS === "ios"
         ? "Hồ sơ, danh thiếp QR, mật khẩu, FaceID"
-        : "Hồ sơ, danh thiếp QR, đổi mật khẩu",
+        : "Hồ sơ, danh thiếp QR, mật khẩu, vân tay",
     support: "Hướng dẫn sử dụng, câu hỏi thường gặp",
     system: [
       Platform.OS === "ios" ? "Quyền mạng, camera" : "Quyền camera",
@@ -167,7 +167,6 @@ const SettingScreen = () => {
             </View>
           ) : null}
 
-          {/* Đáy vùng đỏ đã chừa sẵn khoảng trống, thêm marginTop là hở quá. */}
           <SettingSectionGroup
             accent={C.red}
             style={inlineErrorMessage ? undefined : styles.groupListTop}
@@ -204,17 +203,19 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { flexGrow: 1 },
   // Đáy thẳng như header Trang chủ và các màn khác. Màu gradient truyền inline.
+  // KHÔNG đặt padding ở đây: iOS chỉ tô gradient trong phần nội dung (trừ
+  // padding) còn Android tô cả padding, nên khoảng cách với card phải nằm ở
+  // marginTop phía dưới thì hai máy mới giống nhau.
   redZone: {
     overflow: "hidden",
-    paddingBottom: 24,
   },
   greyZone: { flexGrow: 1, paddingBottom: 48 },
-  groupListTop: { marginTop: 0 },
+  groupListTop: { marginTop: 24 },
   inlineError: {
     flexDirection: "row",
     alignItems: "center",
     marginHorizontal: 16,
-    marginTop: 16,
+    marginTop: 24,
     borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 14,

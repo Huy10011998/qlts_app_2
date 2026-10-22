@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -49,6 +49,7 @@ import {
   getFlowSoPhieu,
 } from "./flowRules";
 import { useFlowMeta } from "./useFlowMeta";
+import { AppAlert } from "../../../components/ui/AppAlert";
 
 /**
  * Trần số phiếu của một lượt "Duyệt nhiều (n)" ở đầu tab Chờ duyệt (duyệt hết,
@@ -216,7 +217,7 @@ export default function FlowListScreen() {
       const skippedNotAllowed = records.length - allowed.length;
 
       if (!allowed.length) {
-        Alert.alert("Không có phiếu để duyệt", "Các phiếu này không còn tới lượt bạn duyệt.");
+        AppAlert.alert("Không có phiếu để duyệt", "Các phiếu này không còn tới lượt bạn duyệt.");
         return;
       }
       if (allowed.length === 1) {
@@ -225,7 +226,7 @@ export default function FlowListScreen() {
       }
       setBulk({ records: allowed, skippedNotAllowed });
     } catch (err) {
-      Alert.alert("Không kiểm tra được phiếu", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
+      AppAlert.alert("Không kiểm tra được phiếu", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
     } finally {
       setPreparingBulk(false);
     }
@@ -249,18 +250,18 @@ export default function FlowListScreen() {
       const records = result.items ?? [];
 
       if (!records.length) {
-        Alert.alert("Không còn phiếu", "Không có phiếu nào chờ duyệt.");
+        AppAlert.alert("Không còn phiếu", "Không có phiếu nào chờ duyệt.");
         return;
       }
       if (result.totalCount > records.length) {
-        Alert.alert(
+        AppAlert.alert(
           "Duyệt nhiều",
           `Có ${result.totalCount} phiếu chờ duyệt; lượt này duyệt ${records.length} phiếu đầu, phần còn lại bấm Duyệt nhiều lần nữa.`,
         );
       }
       await startBulkApprove(records);
     } catch (err) {
-      Alert.alert("Không lấy được danh sách phiếu", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
+      AppAlert.alert("Không lấy được danh sách phiếu", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
     } finally {
       setPreparingBulk(false);
     }
@@ -299,7 +300,7 @@ export default function FlowListScreen() {
       : "";
 
     if (soCanChonNguoi > 0) {
-      Alert.alert(
+      AppAlert.alert(
         "Kết quả duyệt",
         [
           `Đã duyệt ${soThanhCong} phiếu.`,
@@ -314,7 +315,7 @@ export default function FlowListScreen() {
     }
 
     if (loi.length) {
-      Alert.alert(
+      AppAlert.alert(
         "Kết quả duyệt",
         [soThanhCong ? `Đã duyệt ${soThanhCong} phiếu.` : "", ...loi.map((item) => `- ${item}`), boQua]
           .filter(Boolean)
@@ -330,7 +331,7 @@ export default function FlowListScreen() {
         tone: boQua ? "warning" : "success",
       });
     } else if (boQua) {
-      Alert.alert("Kết quả duyệt", boQua);
+      AppAlert.alert("Kết quả duyệt", boQua);
     }
   };
 

@@ -4,11 +4,11 @@ import { BootstrapAuthState } from "./types";
 export function useBootstrapAuthRefs({
   isAuthenticated,
   authReady,
-  iosAuthenticated,
+  sessionUnlocked,
 }: BootstrapAuthState) {
   const isAuthenticatedRef = useRef(isAuthenticated);
   const authReadyRef = useRef(authReady);
-  const iosAuthenticatedRef = useRef(iosAuthenticated);
+  const sessionUnlockedRef = useRef(sessionUnlocked);
 
   useEffect(() => {
     isAuthenticatedRef.current = isAuthenticated;
@@ -19,12 +19,12 @@ export function useBootstrapAuthRefs({
   }, [authReady]);
 
   useEffect(() => {
-    iosAuthenticatedRef.current = iosAuthenticated;
-  }, [iosAuthenticated]);
+    sessionUnlockedRef.current = sessionUnlocked;
+  }, [sessionUnlocked]);
 
   return {
     isAuthenticatedRef,
     authReadyRef,
-    iosAuthenticatedRef,
+    sessionUnlockedRef,
   };
 }

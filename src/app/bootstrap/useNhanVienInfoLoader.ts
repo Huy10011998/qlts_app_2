@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { Platform } from "react-native";
 import { useAppDispatch } from "../../store/hooks";
 import { loadNhanVienInfo } from "../../store/NhanVienActions";
 import { clearNhanVien } from "../../store/NhanVienSlice";
@@ -18,7 +17,7 @@ import { BootstrapAuthState } from "./types";
 export function useNhanVienInfoLoader({
   isAuthenticated,
   authReady,
-  iosAuthenticated,
+  sessionUnlocked,
 }: BootstrapAuthState) {
   const dispatch = useAppDispatch();
 
@@ -29,8 +28,8 @@ export function useNhanVienInfoLoader({
     }
 
     if (!authReady) return;
-    if (Platform.OS === "ios" && !iosAuthenticated) return;
+    if (!sessionUnlocked) return;
 
     dispatch(loadNhanVienInfo());
-  }, [dispatch, isAuthenticated, authReady, iosAuthenticated]);
+  }, [dispatch, isAuthenticated, authReady, sessionUnlocked]);
 }

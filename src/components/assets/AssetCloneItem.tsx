@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet, Alert } from "react-native";
+import { StyleSheet } from "react-native";
 
 import type {
   AssetCloneItemNavigationProp,
@@ -59,6 +59,7 @@ import {
   backToAssetList,
   backToAssetRelatedList,
 } from "../../navigation/shared/assetNavigationReset";
+import { AppAlert } from "../ui/AppAlert";
 
 const BRAND_RED = ASSET_FORM_BRAND_RED;
 
@@ -287,12 +288,12 @@ export default function AssetCloneItem() {
     if (submittingRef.current) return;
 
     if (!Object.keys(formData).length) {
-      Alert.alert("Thông báo", "Không có dữ liệu để clone!");
+      AppAlert.alert("Thông báo", "Không có dữ liệu để clone!");
       return;
     }
 
     if (!nameClass) {
-      Alert.alert("Lỗi", "Không xác định được danh mục!");
+      AppAlert.alert("Lỗi", "Không xác định được danh mục!");
       return;
     }
 
@@ -300,7 +301,7 @@ export default function AssetCloneItem() {
     if (Object.keys(requiredErrors).length) {
       setValidationErrors((prev) => ({ ...prev, ...requiredErrors }));
       expandGroupsWithErrors(requiredErrors);
-      Alert.alert(
+      AppAlert.alert(
         "Thiếu thông tin",
         getRequiredFieldsMessage(fieldActive, requiredErrors),
       );

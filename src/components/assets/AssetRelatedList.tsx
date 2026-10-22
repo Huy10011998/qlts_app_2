@@ -3,7 +3,6 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   FlatList,
-  Alert,
   StyleSheet,
   Platform,
   UIManager,
@@ -40,6 +39,7 @@ import { BRAND_RED } from "./shared/listTheme";
 import { makeSharedAssetListStyles } from "./shared/listStyles";
 import { useRelatedAssetListData } from "../../hooks/useRelatedAssetListData";
 import { useHeaderRecordPill } from "./shared/useHeaderRecordPill";
+import { AppAlert } from "../ui/AppAlert";
 
 if (
   Platform.OS === "android" &&
@@ -201,7 +201,7 @@ export default function AssetRelatedList() {
   }, [debouncedSearch, isSearching, refreshAndroidListLayout]);
 
   if (!hasRequiredParams) {
-    Alert.alert("Lỗi", "Thiếu param bắt buộc");
+    AppAlert.alert("Lỗi", "Thiếu param bắt buộc");
     return null;
   }
 

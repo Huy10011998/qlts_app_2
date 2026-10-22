@@ -4,10 +4,10 @@ export type AuthContextType = {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  iosAuthenticated: boolean;
+  sessionUnlocked: boolean;
   authReady: boolean;
 
-  setIosAuthenticated: (value: boolean) => void;
+  setSessionUnlocked: (value: boolean) => void;
   setToken: (token: string | null) => Promise<void>;
   setRefreshToken: (token: string | null) => Promise<void>;
   syncSession: (

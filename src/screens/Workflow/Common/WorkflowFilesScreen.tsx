@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Alert, FlatList, RefreshControl, StyleSheet, View } from "react-native";
+import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 import { useRoute } from "@react-navigation/native";
 
 import EmptyState from "../../../components/ui/EmptyState";
@@ -22,6 +22,7 @@ import { useNotifyInfoStaleOnClose } from "../shared/workflowInfoRefresh";
 import { formatFileSizeKb, isImageFileName } from "../shared/workflowAttachments";
 import { formatBeDate } from "../shared/workflowDate";
 import { getWorkflowErrorMessage } from "../shared/workflowErrors";
+import { AppAlert } from "../../../components/ui/AppAlert";
 
 /**
  * File đính kèm của phiếu / công việc. Thêm, xoá khi được phép (phiếu: nháp
@@ -69,7 +70,7 @@ export default function WorkflowFilesScreen() {
       }
     }
     setBusy(false);
-    if (failed.length) Alert.alert("Có file chưa tải lên được", failed.join("\n"));
+    if (failed.length) AppAlert.alert("Có file chưa tải lên được", failed.join("\n"));
     await load();
     markChanged();
   };
@@ -77,7 +78,7 @@ export default function WorkflowFilesScreen() {
   const picker = useAttachmentPicker(upload, true);
 
   const confirmDelete = (file: WorkflowFileItem) =>
-    Alert.alert("Xoá file", `Xoá "${file.name}"?`, [
+    AppAlert.alert("Xoá file", `Xoá "${file.name}"?`, [
       { text: "Huỷ", style: "cancel" },
       {
         text: "Xoá",
@@ -89,7 +90,7 @@ export default function WorkflowFilesScreen() {
             await load();
             markChanged();
           } catch (err) {
-            Alert.alert("Không xoá được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
+            AppAlert.alert("Không xoá được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
           } finally {
             setBusy(false);
           }

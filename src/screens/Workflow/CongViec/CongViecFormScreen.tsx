@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Alert, StyleSheet, Switch, Text, View } from "react-native";
+import { StyleSheet, Switch, Text, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationOptions } from "@react-navigation/native-stack";
 
@@ -66,6 +66,7 @@ import {
   validateThamGias,
   validateTuDen,
 } from "./congViecRules";
+import { AppAlert } from "../../../components/ui/AppAlert";
 
 /** "yyyy-MM-dd" (ngày bấm trên lịch) → Date lúc 00:00. */
 const parseNgay = (ngay?: string) => {
@@ -171,7 +172,7 @@ export default function CongViecFormScreen() {
       .catch((err) => {
         if (!alive) return;
         if (isWorkflowNotFound(err)) {
-          Alert.alert("Thông báo", "Không tìm thấy công việc.", [
+          AppAlert.alert("Thông báo", "Không tìm thấy công việc.", [
             { text: "OK", onPress: () => navigation.goBack() },
           ]);
           return;
@@ -355,7 +356,7 @@ export default function CongViecFormScreen() {
     const payload = buildPayload();
     const message = validate(payload);
     if (message) {
-      Alert.alert("Thiếu thông tin", message);
+      AppAlert.alert("Thiếu thông tin", message);
       return;
     }
 
@@ -375,7 +376,7 @@ export default function CongViecFormScreen() {
         // Giao việc từ phiếu bị từ chối (vd người khác vừa xử lý phiếu — mục 8e
         // phiếu): nạp lại phiếu / danh sách khi quay về để nút Duyệt tự ẩn.
         if (fromFlow) markChanged();
-        Alert.alert("Không lưu được", result.loi || "Vui lòng thử lại.");
+        AppAlert.alert("Không lưu được", result.loi || "Vui lòng thử lại.");
         return;
       }
 
@@ -394,7 +395,7 @@ export default function CongViecFormScreen() {
 
       // File hỏng vẫn phải báo bằng Alert để người dùng đọc được tên file.
       if (failed.length) {
-        Alert.alert(title, `Một số file chưa tải lên được:\n${failed.join("\n")}`, [
+        AppAlert.alert(title, `Một số file chưa tải lên được:\n${failed.join("\n")}`, [
           { text: "OK", onPress: leave },
         ]);
         return;
@@ -407,7 +408,7 @@ export default function CongViecFormScreen() {
       });
       leave();
     } catch (err) {
-      Alert.alert("Không lưu được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
+      AppAlert.alert("Không lưu được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
     } finally {
       setSubmitting(false);
     }
@@ -463,6 +464,7 @@ export default function CongViecFormScreen() {
         <DateTimeField
           label="Đến ngày"
           required
+          minDate={tuNgay}
           value={denNgay}
           onChange={(next) => {
             markTouched();

@@ -34,6 +34,11 @@ export const makePickerFieldTriggerStyles = (c: AppColors) =>
     placeholder: {
       color: c.textMuted,
     },
+    // Trường bị khoá: cùng dáng với ô chọn Tham chiếu bị khoá trong form động.
+    blocked: {
+      opacity: 0.55,
+      backgroundColor: c.surfaceAlt,
+    },
     icon: {
       marginLeft: 0,
     },

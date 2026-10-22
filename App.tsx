@@ -24,6 +24,7 @@ import {
 } from "./src/context/FontScaleContext";
 import { navigationRef } from "./src/navigation/navigationService";
 import { resetImmersiveMode } from "./src/services/immersive/immersiveMode";
+import { AppAlertHost } from "./src/components/ui/AppAlert";
 import { AppToastHost } from "./src/components/ui/AppToast";
 
 const LANDSCAPE_ALLOWED_ROUTES = new Set([
@@ -136,6 +137,8 @@ function AppContent() {
             {/* Ngoài NavigationContainer: thông báo "đã lưu" vẫn còn sau khi màn
                 vừa lưu đã đóng (showAppToast rồi goBack). */}
             <AppToastHost />
+            {/* Hộp thông báo dùng chung thay hộp gốc: chữ theo Cỡ chữ của app. */}
+            <AppAlertHost />
           </AuthProvider>
         </Provider>
       </SafeAreaProvider>

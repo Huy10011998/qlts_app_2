@@ -16,12 +16,12 @@ const TOPICS: GuideTopic[] = [
   // ─── Bắt đầu ───────────────────────────────────────────────────────────────
   {
     id: "dang-nhap",
-    title: "Đăng nhập & Face ID",
-    summary: "Đăng nhập, bật Face ID, xử lý khi hết phiên",
+    title: "Đăng nhập, Face ID & vân tay",
+    summary: "Đăng nhập, bật Face ID / vân tay, xử lý khi hết phiên",
     iconName: "log-in-outline",
     iconBg: C.blue,
     group: "Bắt đầu",
-    keywords: ["dang nhap", "login", "mat khau", "faceid", "face id", "mang noi bo"],
+    keywords: ["dang nhap", "login", "mat khau", "faceid", "face id", "van tay", "khuon mat", "sinh trac", "mang noi bo"],
     sections: [
       {
         id: "dang-nhap-thuong",
@@ -48,7 +48,7 @@ const TOPICS: GuideTopic[] = [
         blocks: [
           {
             kind: "paragraph",
-            text: "iOS bắt buộc phải cho phép quyền Mạng nội bộ, không có nó thì máy không gọi được tới máy chủ trong công ty. Khi quyền chưa được cấp hoặc bị chặn, màn Đăng nhập hiện thêm dòng Mạng nội bộ; đã cấp rồi thì dòng này không hiện.",
+            text: "Ngay trên màn Đăng nhập có dòng trạng thái Mạng nội bộ. iOS bắt buộc phải cho phép quyền này, không có nó thì máy không gọi được tới máy chủ trong công ty.",
           },
           {
             kind: "bullets",
@@ -78,7 +78,35 @@ const TOPICS: GuideTopic[] = [
           },
           {
             kind: "paragraph",
-            text: "Face ID chỉ hiện trên iPhone/iPad. Máy Android đăng nhập bằng tài khoản và mật khẩu.",
+            text: "Face ID chỉ có trên iPhone/iPad. Máy Android xem mục vân tay bên dưới.",
+          },
+        ],
+      },
+      {
+        id: "dang-nhap-van-tay",
+        heading: "Máy Android: mở app bằng vân tay",
+        blocks: [
+          {
+            kind: "paragraph",
+            text: "Mặc định máy Android đã đăng nhập thì mở app là vào thẳng. Bật vân tay để mỗi lần mở lại app phải chạm vân tay, người khác cầm máy không vào được.",
+          },
+          {
+            kind: "steps",
+            items: [
+              "Cài vân tay trong Cài đặt của điện thoại trước (máy chưa cài thì app không hiện mục này).",
+              "Đăng nhập bằng tài khoản và mật khẩu, vào tab Cài đặt → Tài khoản → bật Đăng nhập bằng vân tay rồi chạm vân tay khi máy hỏi.",
+              "Lần sau mở app, máy tự hỏi vân tay ở màn Đăng nhập. Bấm Dùng mật khẩu nếu muốn gõ mật khẩu; lỡ bỏ qua thì bấm nút vân tay cạnh nút Đăng nhập.",
+            ],
+          },
+          {
+            kind: "note",
+            tone: "info",
+            text: "Đa số máy Android chỉ dùng được vân tay. Mở khoá bằng khuôn mặt của nhiều hãng (Samsung, Oppo, Xiaomi…) không đủ an toàn nên Android không cho app dùng; chỉ một số máy (vd Pixel 8 trở lên) mới có Đăng nhập bằng khuôn mặt.",
+          },
+          {
+            kind: "note",
+            tone: "warn",
+            text: "Xoá hết vân tay hoặc tắt khoá màn hình của điện thoại thì app tự tắt đăng nhập bằng vân tay. Đăng nhập bằng mật khẩu rồi bật lại.",
           },
         ],
       },
@@ -1689,7 +1717,7 @@ const TOPICS: GuideTopic[] = [
           {
             kind: "bullets",
             items: [
-              "Tài khoản: hồ sơ cá nhân, danh thiếp QR, đổi mật khẩu, đăng nhập FaceID.",
+              "Tài khoản: hồ sơ cá nhân, danh thiếp QR, đổi mật khẩu, đăng nhập FaceID / vân tay.",
               "Hỗ trợ: tài liệu hướng dẫn sử dụng này và câu hỏi thường gặp.",
               "Hệ thống: quyền mạng nội bộ, camera, vị trí, thông báo và thông báo camera.",
               "Thông tin ứng dụng: phiên bản đang cài và bản mới trên store.",
@@ -1710,7 +1738,7 @@ const TOPICS: GuideTopic[] = [
               "Ảnh đại diện (ở đầu màn Hồ sơ cá nhân): Chụp ảnh hoặc chọn từ Thư viện, cắt khung vuông rồi bấm Xong là lưu ngay. Cắt lại để chỉnh khung ảnh đang có, Xoá để bỏ ảnh. Ảnh này cũng hiện trên web và danh thiếp.",
               "Thông tin QrCode: danh thiếp của bạn kèm mã QR để người khác lưu vào danh bạ — xem mục bên dưới.",
               "Đổi mật khẩu: nhập mật khẩu cũ, mật khẩu mới và nhập lại mật khẩu mới.",
-              "Đăng nhập FaceID (chỉ iPhone/iPad): bật để lần sau đăng nhập bằng khuôn mặt.",
+              "Đăng nhập FaceID (iPhone/iPad) / Đăng nhập bằng vân tay (Android): bật để lần sau mở app bằng khuôn mặt hoặc vân tay.",
             ],
           },
         ],

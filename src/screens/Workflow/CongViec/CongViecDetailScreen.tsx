@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
@@ -57,6 +57,7 @@ import {
   getCongViecActions,
   getCongViecHanBadge,
 } from "./congViecRules";
+import { AppAlert } from "../../../components/ui/AppAlert";
 
 type Sheet = "trangThai" | "giaHan" | "doiChuTri" | null;
 type Tab = "thongTin" | "lichSu";
@@ -126,7 +127,7 @@ export default function CongViecDetailScreen() {
         setErrorMessage(null);
       } catch (err) {
         if (isWorkflowNotFound(err)) {
-          Alert.alert("Thông báo", "Không tìm thấy công việc.", [
+          AppAlert.alert("Thông báo", "Không tìm thấy công việc.", [
             { text: "OK", onPress: () => navigation.goBack() },
           ]);
           return;
@@ -179,7 +180,7 @@ export default function CongViecDetailScreen() {
   };
 
   const confirmDelete = () => {
-    Alert.alert("Xoá công việc", "Xoá công việc này? Thao tác không hoàn tác được.", [
+    AppAlert.alert("Xoá công việc", "Xoá công việc này? Thao tác không hoàn tác được.", [
       { text: "Huỷ", style: "cancel" },
       {
         text: "Xoá",
@@ -191,7 +192,7 @@ export default function CongViecDetailScreen() {
             markChanged();
             navigation.goBack();
           } catch (err) {
-            Alert.alert("Không xoá được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
+            AppAlert.alert("Không xoá được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
           } finally {
             setDeleting(false);
           }

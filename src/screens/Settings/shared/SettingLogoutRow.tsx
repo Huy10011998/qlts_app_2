@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Alert } from "react-native";
+import { AppAlert } from "../../../components/ui/AppAlert";
 import { useAuth } from "../../../context/AuthContext";
 import {
   clearTokenStorage,
@@ -54,7 +54,7 @@ export default function SettingLogoutRow() {
       isLast
       disabled={isLoggingOut}
       onPress={() =>
-        Alert.alert("Xác nhận", "Bạn muốn đăng xuất?", [
+        AppAlert.alert("Xác nhận", "Bạn muốn đăng xuất?", [
           { text: "Hủy", style: "cancel" },
           {
             text: "Đăng xuất",

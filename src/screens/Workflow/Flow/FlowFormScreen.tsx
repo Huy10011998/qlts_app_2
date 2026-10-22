@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 
 import AssetFormScreenShell from "../../../components/assets/shared/AssetFormScreenShell";
@@ -54,6 +54,7 @@ import {
   stripDisplayColumns,
 } from "./flowRules";
 import { useFlowMeta } from "./useFlowMeta";
+import { AppAlert } from "../../../components/ui/AppAlert";
 
 const TITLES = {
   add: "Lập phiếu",
@@ -194,12 +195,12 @@ export default function FlowFormScreen() {
   const save = async (submit: boolean) => {
     const requiredMessage = form.validateRequired();
     if (requiredMessage) {
-      Alert.alert("Thiếu thông tin", requiredMessage);
+      AppAlert.alert("Thiếu thông tin", requiredMessage);
       return;
     }
     if (submit && chonNguoi?.buocs.length && getMissingSteps(chonNguoi, chons).length) {
       setShowStepErrors(true);
-      Alert.alert("Thiếu người duyệt", "Mỗi bước phải chọn ít nhất 1 người duyệt.");
+      AppAlert.alert("Thiếu người duyệt", "Mỗi bước phải chọn ít nhất 1 người duyệt.");
       return;
     }
 
@@ -217,7 +218,7 @@ export default function FlowFormScreen() {
         });
         form.setValidationErrors((prev) => ({ ...prev, ...fieldErrors }));
         form.expandGroupsWithErrors(fieldErrors);
-        Alert.alert(
+        AppAlert.alert(
           "Dữ liệu chưa hợp lệ",
           errors.map((err) => err.message).filter(Boolean).join("\n") || "Vui lòng kiểm tra lại.",
         );
@@ -257,7 +258,7 @@ export default function FlowFormScreen() {
         }
       }
       if (failed.length) {
-        Alert.alert(
+        AppAlert.alert(
           "Đã lưu nháp",
           `Một số file chưa tải lên được, phiếu vẫn là nháp:\n${failed.join("\n")}`,
         );
@@ -269,7 +270,7 @@ export default function FlowFormScreen() {
         const result = await flowNopHoSo(nameClass, idHoSo);
         const loi = getThaoTacError(result);
         if (loi) {
-          Alert.alert("Chưa nộp được", `Phiếu đã lưu nháp.\n${loi}`);
+          AppAlert.alert("Chưa nộp được", `Phiếu đã lưu nháp.\n${loi}`);
           return;
         }
         markChanged();
@@ -278,7 +279,7 @@ export default function FlowFormScreen() {
       showAppToast({ message: submit ? "Đã nộp phiếu" : "Đã lưu nháp" });
       leaveWithoutPrompt(() => navigation.goBack());
     } catch (err) {
-      Alert.alert(
+      AppAlert.alert(
         "Không lưu được",
         getWorkflowErrorMessage(err, "Vui lòng thử lại.") +
           (savedId > 0 ? "\nPhiếu vẫn là nháp, lưu lại lần sau là cập nhật." : ""),

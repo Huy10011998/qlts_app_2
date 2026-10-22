@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -36,6 +36,7 @@ import {
   getFlowTinhTrang,
 } from "./flowRules";
 import { useFlowMeta } from "./useFlowMeta";
+import { AppAlert } from "../../../components/ui/AppAlert";
 
 /**
  * Chi tiết 1 phiếu: phần động (field isShowDetail != false — gồm cả field chỉ
@@ -80,7 +81,7 @@ export default function FlowDetailScreen() {
         if (!fresh) {
           // Mục 5: items rỗng = phiếu không còn tới tôi / đã xoá.
           if (recordRef.current) {
-            Alert.alert("Thông báo", "Không tìm thấy phiếu.", [
+            AppAlert.alert("Thông báo", "Không tìm thấy phiếu.", [
               { text: "OK", onPress: () => navigation.goBack() },
             ]);
           } else {
@@ -140,7 +141,7 @@ export default function FlowDetailScreen() {
   };
 
   const confirmDelete = () =>
-    Alert.alert("Xoá phiếu", `Xoá phiếu ${phieuLabel}? Thao tác không hoàn tác được.`, [
+    AppAlert.alert("Xoá phiếu", `Xoá phiếu ${phieuLabel}? Thao tác không hoàn tác được.`, [
       { text: "Huỷ", style: "cancel" },
       {
         text: "Xoá",
@@ -152,7 +153,7 @@ export default function FlowDetailScreen() {
             markChanged();
             navigation.goBack();
           } catch (err) {
-            Alert.alert("Không xoá được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
+            AppAlert.alert("Không xoá được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
           } finally {
             setDeleting(false);
           }

@@ -1,5 +1,4 @@
 import { RefObject, useRef } from "react";
-import { Platform } from "react-native";
 import { useAppDispatch } from "../../store/hooks";
 import { reloadPermissions } from "../../store/PermissionActions";
 import { BASE_RETRY_MS, MAX_RETRY_ATTEMPTS } from "./constants";
@@ -7,13 +6,13 @@ import { BASE_RETRY_MS, MAX_RETRY_ATTEMPTS } from "./constants";
 type UsePermissionReloaderParams = {
   isAuthenticatedRef: RefObject<boolean>;
   authReadyRef: RefObject<boolean | undefined>;
-  iosAuthenticatedRef: RefObject<boolean>;
+  sessionUnlockedRef: RefObject<boolean>;
 };
 
 export function usePermissionReloader({
   isAuthenticatedRef,
   authReadyRef,
-  iosAuthenticatedRef,
+  sessionUnlockedRef,
 }: UsePermissionReloaderParams) {
   const dispatch = useAppDispatch();
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -24,7 +23,7 @@ export function usePermissionReloader({
   safeReloadRef.current = async () => {
     if (!isAuthenticatedRef.current) return;
     if (authReadyRef.current === false) return;
-    if (Platform.OS === "ios" && !iosAuthenticatedRef.current) return;
+    if (!sessionUnlockedRef.current) return;
     if (isReloading.current) return;
 
     isReloading.current = true;

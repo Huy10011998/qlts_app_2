@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { StyleSheet, Alert } from "react-native";
+import { StyleSheet } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useSelector } from "react-redux";
 
@@ -53,6 +53,7 @@ import { createAssetFormBaseStyles } from "./shared/assetFormStyles";
 import { ASSET_FORM_BRAND_RED } from "./shared/assetFormTheme";
 import { REVIEW_NAME_CLASSES_DANHGIA } from "../../constants/reviewNameClasses";
 import { backToAssetList } from "../../navigation/shared/assetNavigationReset";
+import { AppAlert } from "../ui/AppAlert";
 
 const BRAND_RED = ASSET_FORM_BRAND_RED;
 
@@ -231,17 +232,17 @@ export default function AssetAddItemDetails() {
     if (submittingRef.current) return;
 
     if (nameClass && !can(nameClass, "Insert")) {
-      Alert.alert("Không có quyền", "Bạn không có quyền tạo mới dữ liệu!");
+      AppAlert.alert("Không có quyền", "Bạn không có quyền tạo mới dữ liệu!");
       return;
     }
 
     if (!Object.keys(formData).length) {
-      Alert.alert("Thông báo", "Vui lòng nhập ít nhất một trường!");
+      AppAlert.alert("Thông báo", "Vui lòng nhập ít nhất một trường!");
       return;
     }
 
     if (!nameClass) {
-      Alert.alert("Lỗi", "Không xác định được danh mục!");
+      AppAlert.alert("Lỗi", "Không xác định được danh mục!");
       return;
     }
 
@@ -249,7 +250,7 @@ export default function AssetAddItemDetails() {
     if (Object.keys(requiredErrors).length) {
       setValidationErrors((prev) => ({ ...prev, ...requiredErrors }));
       expandGroupsWithErrors(requiredErrors);
-      Alert.alert(
+      AppAlert.alert(
         "Thiếu thông tin",
         getRequiredFieldsMessage(fieldActive, requiredErrors)
       );

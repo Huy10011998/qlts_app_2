@@ -1,5 +1,5 @@
 import { useCallback, useRef } from "react";
-import { Alert } from "react-native";
+import { AppAlert } from "../../components/ui/AppAlert";
 import type { Field, ReferenceDataMap } from "../../types/model.d";
 import { TypeProperty } from "../../utils/Enum";
 import { log } from "../../utils/Logger";
@@ -34,7 +34,7 @@ type Props = {
     formData: Record<string, any>,
     field: Field,
   ) => Array<string | number>;
-  /** Mặc định `Alert.alert`; màn báo cáo truyền bản chỉ báo khi màn đang hiện. */
+  /** Mặc định `AppAlert.alert`; màn báo cáo truyền bản chỉ báo khi màn đang hiện. */
   showAlert?: (title: string, message: string) => void;
 };
 
@@ -112,7 +112,7 @@ export const useOpenReferenceModal = ({
         missingFields: gate.missingFields,
         currentValue: formData[f.name],
       });
-      (showAlert ?? Alert.alert)(
+      (showAlert ?? AppAlert.alert)(
         "Thông báo",
         getParentGateMessage(gate, fieldActive) ||
           "Vui lòng chọn đầy đủ thông tin cấp trên trước!",

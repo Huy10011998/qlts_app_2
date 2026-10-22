@@ -1,5 +1,5 @@
 import { RefObject, useEffect, useRef } from "react";
-import { Alert, Platform } from "react-native";
+import { Platform } from "react-native";
 import {
   ANDROID_STORE_URL,
   getStoreVersionInfo,
@@ -15,23 +15,24 @@ import {
 } from "../../services/appUpdate/androidInAppUpdate";
 import { warn } from "../../utils/Logger";
 import { StoreVersionInfo } from "../../utils/appVersion/types";
+import { AppAlert } from "../../components/ui/AppAlert";
 
 type UseAppUpdateCheckerParams = {
   isAuthenticated: boolean;
   authReady?: boolean;
-  iosAuthenticated: boolean;
+  sessionUnlocked: boolean;
   isAuthenticatedRef: RefObject<boolean>;
   authReadyRef: RefObject<boolean | undefined>;
-  iosAuthenticatedRef: RefObject<boolean>;
+  sessionUnlockedRef: RefObject<boolean>;
 };
 
 export function useAppUpdateChecker({
   isAuthenticated,
   authReady,
-  iosAuthenticated,
+  sessionUnlocked,
   isAuthenticatedRef,
   authReadyRef,
-  iosAuthenticatedRef,
+  sessionUnlockedRef,
 }: UseAppUpdateCheckerParams) {
   const hasCheckedUpdateRef = useRef(false);
   const isCheckingUpdateRef = useRef(false);
@@ -49,7 +50,7 @@ export function useAppUpdateChecker({
     const canCheckUpdate =
       authReadyRef.current &&
       isAuthenticatedRef.current &&
-      (Platform.OS !== "ios" || iosAuthenticatedRef.current);
+      sessionUnlockedRef.current;
 
     if (!canCheckUpdate || isCheckingUpdateRef.current) return;
 
@@ -82,16 +83,13 @@ export function useAppUpdateChecker({
   };
 
   useEffect(() => {
-    const canCheckUpdate =
-      authReady &&
-      isAuthenticated &&
-      (Platform.OS !== "ios" || iosAuthenticated === true);
+    const canCheckUpdate = authReady && isAuthenticated && sessionUnlocked;
 
     if (!canCheckUpdate || hasCheckedUpdateRef.current) return;
 
     hasCheckedUpdateRef.current = true;
     checkAppUpdateRef.current();
-  }, [authReady, iosAuthenticated, isAuthenticated]);
+  }, [authReady, sessionUnlocked, isAuthenticated]);
 
   /**
    * Luồng flexible tải ngầm xong thì bản mới vẫn chưa được cài — phải khởi động
@@ -102,7 +100,7 @@ export function useAppUpdateChecker({
     if (Platform.OS !== "android") return;
 
     return addAndroidUpdateDownloadedListener(() => {
-      Alert.alert(
+      AppAlert.alert(
         "Đã tải xong bản cập nhật",
         "Khởi động lại ứng dụng để hoàn tất cài đặt.",
         [
@@ -139,7 +137,7 @@ const promptAndroidUpdate = async (reminderKey: string) => {
 };
 
 const promptIosUpdate = (versionInfo: StoreVersionInfo, reminderKey: string) => {
-  Alert.alert(
+  AppAlert.alert(
     "Có phiên bản mới",
     `Bạn đang dùng phiên bản ${versionInfo.currentVersion}. Phiên bản mới nhất là ${
       versionInfo.latestVersion ?? ""

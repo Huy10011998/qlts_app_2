@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { StyleSheet, Alert } from "react-native";
+import { StyleSheet } from "react-native";
 
 import type {
   AssetEditItemNavigationProp,
@@ -55,6 +55,7 @@ import {
 import { toBase64FieldPayload } from "../../utils/imageBase64";
 import { createAssetFormBaseStyles } from "./shared/assetFormStyles";
 import { ASSET_FORM_BRAND_RED } from "./shared/assetFormTheme";
+import { AppAlert } from "../ui/AppAlert";
 
 const BRAND_RED = ASSET_FORM_BRAND_RED;
 
@@ -351,12 +352,12 @@ export default function AssetEditItem() {
 
     try {
       if (!originalItem?.id) {
-        Alert.alert("Lỗi", "Không tìm thấy ID để cập nhật!");
+        AppAlert.alert("Lỗi", "Không tìm thấy ID để cập nhật!");
         return;
       }
 
       if (!hasFormChanges) {
-        Alert.alert("Thông báo", "Chưa có thay đổi để lưu.");
+        AppAlert.alert("Thông báo", "Chưa có thay đổi để lưu.");
         return;
       }
 
@@ -364,7 +365,7 @@ export default function AssetEditItem() {
       if (Object.keys(requiredErrors).length) {
         setValidationErrors((prev) => ({ ...prev, ...requiredErrors }));
         expandGroupsWithErrors(requiredErrors);
-        Alert.alert(
+        AppAlert.alert(
           "Thiếu thông tin",
           getRequiredFieldsMessage(fieldActive, requiredErrors),
         );
@@ -392,7 +393,7 @@ export default function AssetEditItem() {
       };
 
       if (!nameClass) {
-        Alert.alert("Lỗi", "Không tìm thấy nameClass để update!");
+        AppAlert.alert("Lỗi", "Không tìm thấy nameClass để update!");
         return;
       }
 

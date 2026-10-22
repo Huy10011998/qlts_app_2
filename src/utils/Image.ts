@@ -4,7 +4,7 @@ import {
   uploadAttachProperty,
 } from "../services/data/callApi";
 import { error } from "./Logger";
-import { Alert, Platform } from "react-native";
+import { Platform } from "react-native";
 import { markFormImageTouched } from "./formImageOriginals";
 import type {
   StampLocating,
@@ -15,6 +15,7 @@ import {
   openAppPermissionSettings,
   requestCameraPermission,
 } from "../services/cameraPermission";
+import { AppAlert } from "../components/ui/AppAlert";
 
 export const buildImageUrlLocal = (raw: any) => {
   if (!raw) return "";
@@ -150,7 +151,7 @@ export const hasLocalPreview = (fieldName: string, value: string) =>
  */
 export const alertCameraUnavailable = (
   showAlert: (title: string, message: string) => void = (title, message) =>
-    Alert.alert(title, message),
+    AppAlert.alert(title, message),
 ) =>
   showAlert(
     "Không mở được camera",
@@ -180,7 +181,7 @@ export const ensureCameraPermission = async () => {
 
   if (nextStatus === "granted") return true;
 
-  Alert.alert(
+  AppAlert.alert(
     "Không có quyền camera",
     "Ứng dụng cần quyền camera để chụp ảnh. Vui lòng cấp quyền trong phần Cài đặt.",
     [
@@ -239,7 +240,7 @@ export const pickImage = async (
       if (source === "camera") {
         alertCameraUnavailable();
       } else {
-        Alert.alert(
+        AppAlert.alert(
           "Không mở được thư viện",
           res.errorMessage ||
             "Thiết bị không mở được. Vui lòng thử lại trên máy thật.",
@@ -325,7 +326,7 @@ export const pickImage = async (
       message.includes("denied") ||
       message.includes("not authorized");
 
-    Alert.alert(
+    AppAlert.alert(
       isPermissionError ? "Không có quyền truy cập ảnh" : "Lỗi",
       isPermissionError
         ? Platform.OS === "android"

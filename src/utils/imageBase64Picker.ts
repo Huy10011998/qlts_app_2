@@ -1,4 +1,4 @@
-import { Alert, Image as RNImage } from "react-native";
+import { Image as RNImage } from "react-native";
 import ImagePicker, {
   type Image as PickedImage,
 } from "react-native-image-crop-picker";
@@ -11,6 +11,7 @@ import {
 } from "./Image";
 import { isDataUrlImage } from "./imageBase64";
 import { error } from "./Logger";
+import { AppAlert } from "../components/ui/AppAlert";
 
 /*
  * Chọn ảnh cho field `typeProperty = 12`. Các con số phải khớp web
@@ -31,7 +32,7 @@ const reportPickerError = (err: any) => {
     return;
   }
   if (code === "E_NO_LIBRARY_PERMISSION" || code === "E_NO_CAMERA_PERMISSION") {
-    Alert.alert(
+    AppAlert.alert(
       "Không có quyền truy cập",
       "Ứng dụng cần quyền truy cập ảnh / camera. Vui lòng cấp quyền trong phần Cài đặt.",
     );
@@ -39,7 +40,7 @@ const reportPickerError = (err: any) => {
   }
 
   error("[imageBase64] picker error:", err);
-  Alert.alert("Lỗi", "Không thể xử lý ảnh. Vui lòng thử lại.");
+  AppAlert.alert("Lỗi", "Không thể xử lý ảnh. Vui lòng thử lại.");
 };
 
 const cleanup = (path?: string) => {
@@ -116,12 +117,12 @@ export const pickImageBase64 = async (
         : await ImagePicker.openPicker({ mediaType: "photo" });
 
     if (picked.mime && !picked.mime.startsWith("image/")) {
-      Alert.alert("Lỗi", "Vui lòng chọn tệp ảnh.");
+      AppAlert.alert("Lỗi", "Vui lòng chọn tệp ảnh.");
       return null;
     }
 
     if (picked.size > MAX_SOURCE_BYTES) {
-      Alert.alert("Lỗi", "Kích thước tệp quá lớn");
+      AppAlert.alert("Lỗi", "Kích thước tệp quá lớn");
       return null;
     }
 

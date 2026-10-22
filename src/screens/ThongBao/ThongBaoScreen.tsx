@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import EmptyState from "../../components/ui/EmptyState";
@@ -15,6 +15,7 @@ import ThongBaoRow from "./ThongBaoRow";
 import ThongBaoRowSkeleton from "./ThongBaoRowSkeleton";
 import { useThongBaoContext } from "./ThongBaoProvider";
 import { markThongBaoRead, PAGE_SIZE, prependThongBao, THONG_BAO_NHOM } from "./thongBaoRules";
+import { AppAlert } from "../../components/ui/AppAlert";
 
 const ALL = "TatCa";
 const TABS = [{ key: ALL, label: "Tất cả" }, ...THONG_BAO_NHOM];
@@ -83,7 +84,7 @@ export default function ThongBaoScreen() {
       setSoChuaDoc(left ?? 0);
       setItems((prev) => markThongBaoRead(prev, "all"));
     } catch (err) {
-      Alert.alert("Thông báo", getWorkflowErrorMessage(err, "Không đánh dấu được đã đọc."));
+      AppAlert.alert("Thông báo", getWorkflowErrorMessage(err, "Không đánh dấu được đã đọc."));
     } finally {
       setMarkingAll(false);
     }

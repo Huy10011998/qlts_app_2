@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import { flowChonNguoiDuyet, flowDuyetHoSo } from "../../../../services/data/flowApi";
@@ -17,6 +17,7 @@ import { FLOW_KET_QUA } from "../../shared/workflowConstants";
 import { getWorkflowErrorMessage } from "../../shared/workflowErrors";
 import { getMissingSteps } from "../flowRules";
 import ApproverStepPicker from "./ApproverStepPicker";
+import { AppAlert } from "../../../../components/ui/AppAlert";
 
 export type FlowKetQua = 1 | 2 | 3;
 
@@ -91,7 +92,7 @@ export default function FlowApproveSheet({
       })
       .catch((err) => {
         if (!alive) return;
-        Alert.alert("Không kiểm tra được phiếu", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
+        AppAlert.alert("Không kiểm tra được phiếu", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
         onClose();
       })
       .finally(() => {
@@ -124,16 +125,16 @@ export default function FlowApproveSheet({
       if (loi) {
         // Mục 8e: người khác vừa duyệt / trả bước / từ chối trước, hoặc phiếu đã
         // kết thúc — báo nguyên văn rồi nạp lại để nút Duyệt tự ẩn.
-        Alert.alert("Không gửi được", loi, [{ text: "OK", onPress: () => onDone(false) }]);
+        AppAlert.alert("Không gửi được", loi, [{ text: "OK", onPress: () => onDone(false) }]);
         return;
       }
       if ((result.soCanChonNguoi ?? 0) > 0) {
-        Alert.alert("Cần chọn người duyệt", "Phiếu cần chọn người duyệt cho bước kế tiếp.");
+        AppAlert.alert("Cần chọn người duyệt", "Phiếu cần chọn người duyệt cho bước kế tiếp.");
         return;
       }
       onDone(true);
     } catch (err) {
-      Alert.alert("Không gửi được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
+      AppAlert.alert("Không gửi được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
     } finally {
       setSubmitting(false);
     }
@@ -147,12 +148,12 @@ export default function FlowApproveSheet({
 
     if (needPick && getMissingSteps(data, chons).length) {
       setShowErrors(true);
-      Alert.alert("Thiếu người duyệt", "Mỗi bước phải chọn ít nhất 1 người.");
+      AppAlert.alert("Thiếu người duyệt", "Mỗi bước phải chọn ít nhất 1 người.");
       return;
     }
 
     if (ketQua === FLOW_KET_QUA.TuChoi) {
-      Alert.alert("Từ chối phiếu", "Từ chối sẽ đóng phiếu, không quay lại được. Tiếp tục?", [
+      AppAlert.alert("Từ chối phiếu", "Từ chối sẽ đóng phiếu, không quay lại được. Tiếp tục?", [
         { text: "Huỷ", style: "cancel" },
         { text: "Từ chối", style: "destructive", onPress: send },
       ]);

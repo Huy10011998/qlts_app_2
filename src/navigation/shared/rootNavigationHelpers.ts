@@ -1,21 +1,17 @@
-import { Platform } from "react-native";
-
+// `sessionUnlocked`: đã mở khoá trong lần chạy app này — qua Face ID / vân tay
+// hoặc gõ mật khẩu. Android chưa bật vân tay thì AuthContext mở khoá sẵn lúc
+// khởi động nên vẫn vào thẳng như trước.
 type RootNavigatorAccessParams = {
-  iosAuthenticated: boolean;
+  sessionUnlocked: boolean;
   isAuthenticated: boolean;
 };
 
 export const canLoadRootPermissions = ({
-  iosAuthenticated,
+  sessionUnlocked,
   isAuthenticated,
-}: RootNavigatorAccessParams) =>
-  isAuthenticated && (Platform.OS !== "ios" || iosAuthenticated);
+}: RootNavigatorAccessParams) => isAuthenticated && sessionUnlocked;
 
 export const canAccessAppNavigator = ({
-  iosAuthenticated,
+  sessionUnlocked,
   isAuthenticated,
-}: RootNavigatorAccessParams) => {
-  if (!isAuthenticated) return false;
-  if (Platform.OS !== "ios") return true;
-  return iosAuthenticated;
-};
+}: RootNavigatorAccessParams) => isAuthenticated && sessionUnlocked;

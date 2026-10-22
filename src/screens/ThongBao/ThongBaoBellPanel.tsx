@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Alert,
   FlatList,
   Modal,
   Pressable,
@@ -23,6 +22,7 @@ import ThongBaoRow from "./ThongBaoRow";
 import ThongBaoRowSkeleton, { THONG_BAO_ROW_HEIGHT } from "./ThongBaoRowSkeleton";
 import { useThongBaoContext } from "./ThongBaoProvider";
 import { BELL_PAGE_SIZE, markThongBaoRead, prependThongBao } from "./thongBaoRules";
+import { AppAlert } from "../../components/ui/AppAlert";
 
 type Props = {
   visible: boolean;
@@ -94,7 +94,7 @@ export default function ThongBaoBellPanel({ visible, onClose }: Props) {
       setSoChuaDoc(left ?? 0);
       setItems((prev) => markThongBaoRead(prev, "all"));
     } catch (err) {
-      Alert.alert("Thông báo", getWorkflowErrorMessage(err, "Không đánh dấu được đã đọc."));
+      AppAlert.alert("Thông báo", getWorkflowErrorMessage(err, "Không đánh dấu được đã đọc."));
     } finally {
       setMarkingAll(false);
     }

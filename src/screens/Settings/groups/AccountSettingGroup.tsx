@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Alert, Platform } from "react-native";
+import { Platform } from "react-native";
 import * as Keychain from "react-native-keychain";
 import { useNavigation } from "@react-navigation/native";
 import { useAuth } from "../../../context/AuthContext";
@@ -10,11 +10,15 @@ import {
   writeFaceIdEnabled,
 } from "../../../services/auth/faceIdFlag";
 import {
-  AUTH_LOGIN_SERVICE,
-  FACE_ID_LOGIN_SERVICE,
-  FACE_ID_MARKER_PASSWORD,
-  FACE_ID_MARKER_USERNAME,
-} from "../../../constants/AuthStorage";
+  BiometricKind,
+  biometricName,
+  classifyBiometricError,
+  getBiometricKind,
+  readBiometricMarker,
+  resetBiometricMarker,
+  writeBiometricMarker,
+} from "../../../services/auth/biometric";
+import { AUTH_LOGIN_SERVICE } from "../../../constants/AuthStorage";
 import type { StackNavigation } from "../../../types";
 import { C } from "../../../utils/helpers/colors";
 import { warn } from "../../../utils/Logger";
@@ -22,19 +26,28 @@ import SettingSectionGroup from "../shared/SettingSectionGroup";
 import { getSettingGroupColor } from "../shared/settingGroups";
 import { SettingRowItem, SettingSwitchRow } from "../shared/SettingRowItem";
 import ChangePasswordModal from "../shared/ChangePasswordModal";
+import { AppAlert } from "../../../components/ui/AppAlert";
 
 const isAuthExpiredError = (error: any) =>
   error?.NEED_LOGIN ||
   error?.response?.status === 401 ||
   error?.response?.status === 403;
 
-/** Nhóm Tài khoản: hồ sơ, danh thiếp QR, đổi mật khẩu, đăng nhập FaceID. */
+const capitalize = (text: string) =>
+  text.charAt(0).toUpperCase() + text.slice(1);
+
+/** Nhóm Tài khoản: hồ sơ, danh thiếp QR, đổi mật khẩu, đăng nhập FaceID / vân tay. */
 export default function AccountSettingGroup() {
   const navigation = useNavigation<StackNavigation<"SettingGroup">>();
   const { logoutReason } = useAuth();
   const isMountedRef = useRef(true);
 
   const [isFaceIdEnabled, setIsFaceIdEnabled] = useState(false);
+  // iOS: "faceid" khi máy có Face ID; Android: vân tay / khuôn mặt. `null` thì
+  // ẩn dòng công tắc.
+  const [biometricKind, setBiometricKind] = useState<BiometricKind | null>(
+    null,
+  );
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
@@ -44,12 +57,15 @@ export default function AccountSettingGroup() {
   useEffect(() => {
     isMountedRef.current = true;
     // Cờ chỉ đổi từ chính công tắc bên dưới nên đọc một lần lúc mở màn là đủ.
-    if (Platform.OS === "ios") {
-      readFaceIdEnabled()
-        .then((value) => {
-          if (isMountedRef.current) setIsFaceIdEnabled(value);
-        })
-        .catch(() => {});
+    readFaceIdEnabled()
+      .then((value) => {
+        if (isMountedRef.current) setIsFaceIdEnabled(value);
+      })
+      .catch(() => {});
+    if (Platform.OS === "android") {
+      getBiometricKind().then((kind) => {
+        if (isMountedRef.current) setBiometricKind(kind);
+      });
     }
     return () => {
       isMountedRef.current = false;
@@ -58,75 +74,71 @@ export default function AccountSettingGroup() {
 
   const handleToggleFaceID = async (value: boolean) => {
     if (!isMountedRef.current) return;
+    const label = biometricName(
+      Platform.OS === "ios" ? "faceid" : biometricKind,
+    );
+    const title = capitalize(label);
     if (!value) {
-      await Keychain.resetGenericPassword({ service: FACE_ID_LOGIN_SERVICE });
+      await resetBiometricMarker();
       await writeFaceIdEnabled(false);
       if (!isMountedRef.current) return;
       setIsFaceIdEnabled(false);
-      Alert.alert("FaceID", "Đã tắt đăng nhập bằng FaceID.");
+      AppAlert.alert(title, `Đã tắt đăng nhập bằng ${label}.`);
       return;
     }
     try {
       const { token, refreshToken } = await readStoredAuthTokens();
       if (!isMountedRef.current) return;
-      const biometryType = await Keychain.getSupportedBiometryType();
+      const kind = await getBiometricKind();
       if (!isMountedRef.current) return;
-      if (biometryType !== Keychain.BIOMETRY_TYPE.FACE_ID) {
-        Alert.alert(
-          "FaceID chưa sẵn sàng",
-          "Thiết bị chưa hỗ trợ FaceID hoặc chưa thiết lập FaceID.",
+      if (!kind) {
+        AppAlert.alert(
+          `${title} chưa sẵn sàng`,
+          Platform.OS === "ios"
+            ? "Thiết bị chưa hỗ trợ FaceID hoặc chưa thiết lập FaceID."
+            : "Thiết bị chưa cài vân tay. Vui lòng cài vân tay trong Cài đặt của máy.",
         );
         setIsFaceIdEnabled(false);
         return;
       }
       if (!token && !refreshToken) {
-        Alert.alert("Không thể bật", "Bạn cần đăng nhập trước.");
+        AppAlert.alert("Không thể bật", "Bạn cần đăng nhập trước.");
         setIsFaceIdEnabled(false);
         return;
       }
-      await Keychain.setGenericPassword(
-        FACE_ID_MARKER_USERNAME,
-        FACE_ID_MARKER_PASSWORD,
-        {
-          service: FACE_ID_LOGIN_SERVICE,
-          accessControl:
-            Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
-          accessible: Keychain.ACCESSIBLE.WHEN_PASSCODE_SET_THIS_DEVICE_ONLY,
-        },
+      // Android hỏi vân tay ngay lúc ghi; lần đọc xác nhận ngay sau đó không
+      // hỏi lại. iOS chỉ hỏi ở lần đọc.
+      const prompt = {
+        title: `Xác thực ${label}`,
+        subtitle: `Xác nhận để bật đăng nhập bằng ${label}`,
+        description: `Bật đăng nhập nhanh bằng ${label}`,
+        cancel: "Huỷ",
+      };
+      await writeBiometricMarker(
+        Platform.OS === "android" ? prompt : undefined,
       );
-      const confirmation = await Keychain.getGenericPassword({
-        service: FACE_ID_LOGIN_SERVICE,
-        authenticationPrompt: {
-          title: "Xác thực FaceID",
-          subtitle: "Xác nhận để bật đăng nhập bằng FaceID",
-          description: "Bật đăng nhập nhanh bằng FaceID",
-          cancel: "Huỷ",
-        },
-      });
+      const confirmation = await readBiometricMarker(prompt);
       if (!confirmation) {
-        await Keychain.resetGenericPassword({ service: FACE_ID_LOGIN_SERVICE });
+        await resetBiometricMarker();
         setIsFaceIdEnabled(false);
         return;
       }
       await writeFaceIdEnabled(true);
       if (!isMountedRef.current) return;
       setIsFaceIdEnabled(true);
-      Alert.alert("FaceID", "Đã bật đăng nhập bằng FaceID!");
+      AppAlert.alert(title, `Đã bật đăng nhập bằng ${label}!`);
     } catch (err: any) {
-      await Keychain.resetGenericPassword({ service: FACE_ID_LOGIN_SERVICE });
+      await resetBiometricMarker();
       if (!isMountedRef.current) return;
       setIsFaceIdEnabled(false);
-      const code = err?.code;
-      const message = String(err?.message ?? "");
-      const normalizedMessage = message.toLowerCase();
-      const isCancelled =
-        code === -128 ||
-        code === "-128" ||
-        normalizedMessage.includes("cancel") ||
-        message.includes("UserCancel") ||
-        err?.name === "LAErrorUserCancel";
-      if (!isCancelled) {
-        Alert.alert("Lỗi", "Không thể bật FaceID.");
+      const biometricError = classifyBiometricError(err);
+      if (biometricError === "lockout") {
+        AppAlert.alert(
+          "Tạm khoá",
+          `Thử ${label} sai quá nhiều lần. Vui lòng thử lại sau.`,
+        );
+      } else if (biometricError !== "cancel") {
+        AppAlert.alert("Lỗi", `Không thể bật ${label}.`);
       }
     }
   };
@@ -141,15 +153,15 @@ export default function AccountSettingGroup() {
   const handleChangePassword = async () => {
     if (isChangingPassword) return;
     if (!oldPassword || !newPassword || !confirmPassword) {
-      Alert.alert("Lỗi", "Vui lòng điền đầy đủ thông tin.");
+      AppAlert.alert("Lỗi", "Vui lòng điền đầy đủ thông tin.");
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert("Lỗi", "Mật khẩu xác nhận không khớp.");
+      AppAlert.alert("Lỗi", "Mật khẩu xác nhận không khớp.");
       return;
     }
     if (oldPassword === newPassword) {
-      Alert.alert("Lỗi", "Mật khẩu mới phải khác mật khẩu cũ.");
+      AppAlert.alert("Lỗi", "Mật khẩu mới phải khác mật khẩu cũ.");
       return;
     }
     setIsChangingPassword(true);
@@ -182,14 +194,14 @@ export default function AccountSettingGroup() {
           warn("[Settings] Update saved password failed:", storageError);
         }
 
-        Alert.alert("Thành công", "Đổi mật khẩu thành công!");
+        AppAlert.alert("Thành công", "Đổi mật khẩu thành công!");
         closeModal();
       } else {
-        Alert.alert("Lỗi", responseMessage);
+        AppAlert.alert("Lỗi", responseMessage);
       }
     } catch (error: any) {
       if (isAuthExpiredError(error) || logoutReason === "EXPIRED") return;
-      Alert.alert(
+      AppAlert.alert(
         "Lỗi",
         error.response?.data?.message ||
           "Không thể đổi mật khẩu. Vui lòng thử lại.",
@@ -199,7 +211,8 @@ export default function AccountSettingGroup() {
     }
   };
 
-  const isFaceIdAvailable = Platform.OS === "ios";
+  // iOS giữ như cũ: luôn có dòng Face ID. Android chỉ hiện khi máy có sinh trắc.
+  const isFaceIdAvailable = Platform.OS === "ios" || biometricKind !== null;
 
   return (
     <>
@@ -228,11 +241,21 @@ export default function AccountSettingGroup() {
         />
         {isFaceIdAvailable ? (
           <SettingSwitchRow
-            iconName="face-recognition"
+            iconName={
+              biometricKind === "fingerprint" ? "fingerprint" : "face-recognition"
+            }
             lib="material-community"
             iconBg={C.violet}
-            label="Đăng nhập FaceID"
-            sublabel="Dùng nhận diện khuôn mặt"
+            label={
+              Platform.OS === "ios"
+                ? "Đăng nhập FaceID"
+                : `Đăng nhập bằng ${biometricName(biometricKind)}`
+            }
+            sublabel={
+              Platform.OS === "ios"
+                ? "Dùng nhận diện khuôn mặt"
+                : `Mở app bằng ${biometricName(biometricKind)} thay vì vào thẳng`
+            }
             value={isFaceIdEnabled}
             onValueChange={handleToggleFaceID}
             isLast

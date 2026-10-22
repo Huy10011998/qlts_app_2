@@ -173,17 +173,17 @@ const makeStyles = (c: AppColors) =>
       borderRadius: 13,
       backgroundColor: "rgba(255,255,255,0.22)",
     },
-    // Cùng khoảng đệm đáy với `redZone` của SettingScreen.
+    // Như `redZone` của SettingScreen: không padding, vì iOS không tô gradient
+    // phần padding còn Android có.
     redZone: {
       overflow: "hidden",
-      paddingBottom: 24,
     },
     greyZone: {
       flexGrow: 1,
     },
     // Cùng khoảng cách với danh sách nhóm của màn thật (`groupListTop`).
     firstSection: {
-      marginTop: 0,
+      marginTop: 24,
     },
     // Đệm và ô icon theo `SettingRowItem`: dòng cao 13 + 38 + 13 = 64.
     row: {

@@ -1,7 +1,6 @@
 import React from "react";
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -56,6 +55,7 @@ import {
   getRequiredFieldErrors,
   getRequiredFieldsMessage,
 } from "./assetFormValidation";
+import { AppAlert } from "../../ui/AppAlert";
 
 type ClassConfig = {
   fieldActive: Field[];
@@ -455,7 +455,7 @@ export default function ReferenceQuickAddForm({
         return;
       }
 
-      Alert.alert("Thành công", "Tạo mới thành công!", [
+      AppAlert.alert("Thành công", "Tạo mới thành công!", [
         { text: "OK", onPress: finish },
       ]);
     } catch (error: any) {

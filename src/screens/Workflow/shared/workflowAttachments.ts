@@ -1,4 +1,4 @@
-import { Alert } from "react-native";
+import { AppAlert } from "../../../components/ui/AppAlert";
 import {
   errorCodes,
   isErrorWithCode,
@@ -67,7 +67,7 @@ const dropOversized = (files: WorkflowPickedFile[]) => {
   );
 
   if (oversized.length) {
-    Alert.alert(
+    AppAlert.alert(
       "File quá lớn",
       `Mỗi file tối đa 20MB. Đã bỏ qua:\n${oversized.map((file) => `- ${file.name}`).join("\n")}`,
     );
@@ -103,7 +103,7 @@ const pickImages = async (
     if (source === "camera") {
       alertCameraUnavailable();
     } else {
-      Alert.alert(
+      AppAlert.alert(
         "Không mở được thư viện",
         "Thiết bị không mở được thư viện ảnh. Vui lòng thử lại.",
       );
@@ -147,7 +147,7 @@ const pickDocuments = async (multiple: boolean): Promise<WorkflowPickedFile[]> =
     }
 
     error("[workflowAttachments] pick document error", err);
-    Alert.alert("Không chọn được file", "Vui lòng thử lại.");
+    AppAlert.alert("Không chọn được file", "Vui lòng thử lại.");
     return [];
   }
 };

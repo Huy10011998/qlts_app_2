@@ -17,6 +17,7 @@ import {
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { DatePicker } from "../../components/dataPicker/DataPicker";
+import { nextRangeEnd } from "../../components/dataPicker/shared/pickerValue";
 import EnumAndReferencePickerModal from "../../components/modal/EnumAndReferencePickerModal";
 import VehicleFilterSkeleton from "./shared/VehicleFilterSkeleton";
 import VehicleTimelineSkeleton from "./shared/VehicleTimelineSkeleton";
@@ -299,11 +300,22 @@ export default function VehicleTrackingScreen() {
         <View style={styles.dateRow}>
           <View style={styles.dateField}>
             <Text style={styles.label}>Từ ngày</Text>
-            <DatePicker value={fromDate} onChange={setFromDate} />
+            <DatePicker
+              value={fromDate}
+              onChange={(next) => {
+                setFromDate(next);
+                // Từ ngày vượt quá Đến ngày thì kéo Đến ngày theo.
+                setToDate((end) => nextRangeEnd(next, end));
+              }}
+            />
           </View>
           <View style={styles.dateField}>
             <Text style={styles.label}>Đến ngày</Text>
-            <DatePicker value={toDate} onChange={setToDate} />
+            <DatePicker
+              value={toDate}
+              minDate={fromDate || undefined}
+              onChange={setToDate}
+            />
           </View>
         </View>
         <View style={styles.actions}>

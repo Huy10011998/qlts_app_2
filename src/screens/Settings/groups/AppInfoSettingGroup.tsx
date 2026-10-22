@@ -1,7 +1,6 @@
 import React from "react";
 import {
   ActivityIndicator,
-  Alert,
   Platform,
   StyleSheet,
   Text,
@@ -20,6 +19,7 @@ import { startAndroidFlexibleUpdate } from "../../../services/appUpdate/androidI
 import SettingSectionGroup from "../shared/SettingSectionGroup";
 import { getSettingGroupColor } from "../shared/settingGroups";
 import { useStoreVersionCheck } from "../shared/useStoreVersionCheck";
+import { AppAlert } from "../../../components/ui/AppAlert";
 
 /** Nhóm Thông tin ứng dụng: phiên bản đang cài, bản mới trên store. */
 export default function AppInfoSettingGroup() {
@@ -57,7 +57,7 @@ export default function AppInfoSettingGroup() {
         }
       }
 
-      Alert.alert(
+      AppAlert.alert(
         "Không thể mở Store",
         "Vui lòng mở Store và cập nhật ứng dụng thủ công.",
       );

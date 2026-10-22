@@ -1,6 +1,5 @@
 import React, { useRef, useState } from "react";
 import {
-  Alert,
   Image,
   StyleSheet,
   Text,
@@ -22,6 +21,7 @@ import {
   recropImageBase64,
 } from "../../utils/imageBase64Picker";
 import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
+import { AppAlert } from "../../components/ui/AppAlert";
 
 const AVATAR_SIZE = 96;
 
@@ -70,7 +70,7 @@ export default function ProfileAvatarCard({ user }: Props) {
       setSaving(true);
       await save(next);
     } catch (err) {
-      Alert.alert(
+      AppAlert.alert(
         "Lỗi",
         getApiErrorMessage(err, "Không thể lưu ảnh đại diện. Vui lòng thử lại."),
       );
@@ -84,7 +84,7 @@ export default function ProfileAvatarCard({ user }: Props) {
     run(async () => (await picker()) ?? undefined);
 
   const confirmRemove = () =>
-    Alert.alert("Xoá ảnh đại diện", "Bạn chắc chắn muốn xoá ảnh đại diện?", [
+    AppAlert.alert("Xoá ảnh đại diện", "Bạn chắc chắn muốn xoá ảnh đại diện?", [
       { text: "Huỷ", style: "cancel" },
       {
         text: "Xoá",

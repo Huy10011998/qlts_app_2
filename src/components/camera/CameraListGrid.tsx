@@ -9,7 +9,6 @@ import {
   Image,
   ActivityIndicator,
   Platform,
-  Alert,
   PermissionsAndroid,
   StatusBar,
   BackHandler,
@@ -83,6 +82,7 @@ import {
   TAB_HEIGHT,
   createTabBarStyle,
 } from "../../navigation/shared/tabBarTheme";
+import { AppAlert } from "../ui/AppAlert";
 
 const PORTRAIT_CELL_ASPECT = 4 / 3;
 
@@ -1216,7 +1216,7 @@ const CameraListGrid: React.FC = () => {
           PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
         );
         if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-          Alert.alert("Không có quyền", "Cần quyền lưu trữ để chụp ảnh.");
+          AppAlert.alert("Không có quyền", "Cần quyền lưu trữ để chụp ảnh.");
           return;
         }
       }
@@ -1229,9 +1229,9 @@ const CameraListGrid: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Fetch failed");
-      Alert.alert("Chụp ảnh", "Đã chụp ảnh thành công.");
+      AppAlert.alert("Chụp ảnh", "Đã chụp ảnh thành công.");
     } catch (e) {
-      Alert.alert("Lỗi", "Không thể chụp ảnh camera.");
+      AppAlert.alert("Lỗi", "Không thể chụp ảnh camera.");
     }
   }, [activeIndex, cameraTokenRef]);
 

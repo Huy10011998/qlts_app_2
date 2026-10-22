@@ -1,5 +1,6 @@
 import { API_ENDPOINTS } from "../../config";
 import { getApiErrorMessage } from "../../utils/helpers/api";
+import { log } from "../../utils/Logger";
 import { callApi } from "./httpClient";
 
 export const SOLAR_DASHBOARD_PERMISSION = "Solar_Dashboard";
@@ -27,10 +28,38 @@ export class SolarApiError extends Error {
 export const getSolarErrorMessage = (error: unknown) =>
   error instanceof SolarApiError ? error.message : SOLAR_FALLBACK_MESSAGE;
 
+/**
+ * Các API dashboard-* giờ bọc số liệu của nhà cung cấp thêm một lớp:
+ * `data: { data: {...}, ngayCapNhat }` (BE lưu đệm, `ngayCapNhat` là lúc lấy).
+ * `get-list-solar` vẫn trả mảng thẳng trong `data`.
+ */
+type SolarCachedPayload<T> = {
+  data?: T | null;
+  ngayCapNhat?: string | null;
+};
+
 type SolarEnvelope<T> = {
   message?: string | null;
-  data?: T | null;
+  data?: T | SolarCachedPayload<T> | null;
 };
+
+const isCachedPayload = <T>(
+  payload: T | SolarCachedPayload<T> | null | undefined,
+): payload is SolarCachedPayload<T> =>
+  payload != null &&
+  typeof payload === "object" &&
+  !Array.isArray(payload) &&
+  "data" in payload;
+
+/** Nhận cả dạng có lớp bọc lẫn dạng cũ, để BE đổi qua lại không làm màn trống. */
+const unwrapSolarData = <T>(envelope: SolarEnvelope<T>): T | null => {
+  const payload = envelope?.data;
+  if (payload == null) return null;
+
+  return isCachedPayload(payload) ? payload.data ?? null : payload;
+};
+
+const endpointName = (url: string) => url.split("/").pop() ?? url;
 
 const callSolar = async <T>(url: string, body: object): Promise<T> => {
   let envelope: SolarEnvelope<T>;
@@ -38,6 +67,11 @@ const callSolar = async <T>(url: string, body: object): Promise<T> => {
   try {
     envelope = await callApi<SolarEnvelope<T>>("POST", url, body);
   } catch (error: any) {
+    log(
+      `[SOLAR] ${endpointName(url)} ${JSON.stringify(body)} -> lỗi`,
+      error?.response?.status ?? error?.message,
+    );
+
     if (error?.response?.status === 403) {
       throw new SolarApiError(SOLAR_NO_PERMISSION_MESSAGE, true);
     }
@@ -48,13 +82,26 @@ const callSolar = async <T>(url: string, body: object): Promise<T> => {
     );
   }
 
-  if (envelope?.data == null) {
+  const data = unwrapSolarData(envelope);
+
+  log(
+    `[SOLAR] ${endpointName(url)} ${JSON.stringify(body)} ->`,
+    JSON.stringify({
+      message: envelope?.message,
+      ngayCapNhat: isCachedPayload(envelope?.data)
+        ? envelope.data.ngayCapNhat
+        : undefined,
+      data: JSON.stringify(data)?.slice(0, 400),
+    }),
+  );
+
+  if (data == null) {
     throw new SolarApiError(
       envelope?.message?.trim() || SOLAR_FALLBACK_MESSAGE,
     );
   }
 
-  return envelope.data;
+  return data;
 };
 
 export type SolarUnit = "W" | "kW" | "MW" | "Wh" | "kWh" | "MWh" | string;

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
@@ -42,6 +42,7 @@ import {
 } from "../shared/workflowFields";
 import { loadClassFields } from "../shared/workflowMetadata";
 import { KH_DYNAMIC_SAVE_KEYS } from "./keHoachRules";
+import { AppAlert } from "../../../components/ui/AppAlert";
 
 /**
  * Form thêm / sửa kế hoạch (mục 4). Phần động theo metadata (TieuDe, TuNgay,
@@ -160,23 +161,23 @@ export default function KeHoachFormScreen() {
   const handleSave = async () => {
     const requiredMessage = form.validateRequired();
     if (requiredMessage) {
-      Alert.alert("Thiếu thông tin", requiredMessage);
+      AppAlert.alert("Thiếu thông tin", requiredMessage);
       return;
     }
 
     const payload = buildPayload();
     if (!payload.TieuDe) {
-      Alert.alert("Thiếu thông tin", "Vui lòng nhập tiêu đề.");
+      AppAlert.alert("Thiếu thông tin", "Vui lòng nhập tiêu đề.");
       return;
     }
     const tu = parseBeDate(payload.TuNgay);
     const den = parseBeDate(payload.DenNgay);
     if (!tu || !den) {
-      Alert.alert("Thiếu thông tin", "Vui lòng chọn Từ ngày và Đến ngày.");
+      AppAlert.alert("Thiếu thông tin", "Vui lòng chọn Từ ngày và Đến ngày.");
       return;
     }
     if (den < tu) {
-      Alert.alert("Ngày không hợp lệ", "Đến ngày phải sau hoặc bằng Từ ngày.");
+      AppAlert.alert("Ngày không hợp lệ", "Đến ngày phải sau hoặc bằng Từ ngày.");
       return;
     }
 
@@ -184,14 +185,14 @@ export default function KeHoachFormScreen() {
       setSubmitting(true);
       const result = isEdit ? await khSua(payload) : await khThem(payload);
       if (result.loi || !(result.id > 0)) {
-        Alert.alert("Không lưu được", result.loi || "Vui lòng thử lại.");
+        AppAlert.alert("Không lưu được", result.loi || "Vui lòng thử lại.");
         return;
       }
       markChanged();
       showAppToast({ message: isEdit ? "Đã lưu kế hoạch" : "Đã tạo kế hoạch" });
       leaveWithoutPrompt(() => navigation.goBack());
     } catch (err) {
-      Alert.alert("Không lưu được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
+      AppAlert.alert("Không lưu được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
     } finally {
       setSubmitting(false);
     }

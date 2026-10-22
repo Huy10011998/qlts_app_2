@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -16,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import IsLoading from "../../../../components/ui/IconLoading";
 import { AppColors, useAppColors, useStyles } from "../../../../utils/helpers/colors";
+import { AppAlert } from "../../../../components/ui/AppAlert";
 
 type Props = {
   visible: boolean;
@@ -48,7 +48,7 @@ export const confirmCloseSheet = (dirty: boolean | undefined, onClose: () => voi
     return;
   }
 
-  Alert.alert("Bỏ nội dung đang nhập?", "Đóng lại thì nội dung vừa nhập sẽ mất.", [
+  AppAlert.alert("Bỏ nội dung đang nhập?", "Đóng lại thì nội dung vừa nhập sẽ mất.", [
     { text: "Ở lại", style: "cancel" },
     { text: "Bỏ", style: "destructive", onPress: onClose },
   ]);

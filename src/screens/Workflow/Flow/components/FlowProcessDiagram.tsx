@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import Svg, { Line, Path } from "react-native-svg";
 
@@ -16,6 +16,7 @@ import {
   FlowDiagram,
   FlowPoint,
 } from "../flowProcessRules";
+import { AppAlert } from "../../../../components/ui/AppAlert";
 
 type Props = {
   diagram: FlowDiagram;
@@ -36,7 +37,7 @@ const PAD_TOP = 8;
 
 /** Giữ nhãn trả bước (web: rê chuột): bước trả → bước về, người, ngày, lý do. */
 const showTraBuoc = (tra: FlowTraBuoc) =>
-  Alert.alert(
+  AppAlert.alert(
     "Trả bước",
     [
       [tra.tenBuocTu, tra.tenBuocVe].filter(Boolean).join(" → "),

@@ -57,34 +57,34 @@ const flushMicrotasks = async () => {
 
 type HarnessProps = {
   authReady?: boolean;
-  iosAuthenticated: boolean;
+  sessionUnlocked: boolean;
   isAuthenticated: boolean;
   onReady: (check: () => Promise<void>) => void;
 };
 
 function Harness({
   authReady,
-  iosAuthenticated,
+  sessionUnlocked,
   isAuthenticated,
   onReady,
 }: HarnessProps) {
   const isAuthenticatedRef = useRef(isAuthenticated);
   const authReadyRef = useRef(authReady);
-  const iosAuthenticatedRef = useRef(iosAuthenticated);
+  const sessionUnlockedRef = useRef(sessionUnlocked);
 
   useEffect(() => {
     isAuthenticatedRef.current = isAuthenticated;
     authReadyRef.current = authReady;
-    iosAuthenticatedRef.current = iosAuthenticated;
-  }, [authReady, iosAuthenticated, isAuthenticated]);
+    sessionUnlockedRef.current = sessionUnlocked;
+  }, [authReady, sessionUnlocked, isAuthenticated]);
 
   const { checkAppUpdateRef } = useAppUpdateChecker({
     isAuthenticated,
     authReady,
-    iosAuthenticated,
+    sessionUnlocked,
     isAuthenticatedRef,
     authReadyRef,
-    iosAuthenticatedRef,
+    sessionUnlockedRef,
   });
 
   useEffect(() => {
@@ -117,7 +117,7 @@ describe("useAppUpdateChecker", () => {
       ReactTestRenderer.create(
         <Harness
           authReady
-          iosAuthenticated
+          sessionUnlocked
           isAuthenticated
           onReady={(check) => {
             checkAppUpdate = check;
@@ -145,7 +145,7 @@ describe("useAppUpdateChecker", () => {
       ReactTestRenderer.create(
         <Harness
           authReady
-          iosAuthenticated
+          sessionUnlocked
           isAuthenticated
           onReady={(check) => {
             checkAppUpdate = check;
@@ -185,7 +185,7 @@ describe("useAppUpdateChecker", () => {
 
     await ReactTestRenderer.act(async () => {
       ReactTestRenderer.create(
-        <Harness authReady iosAuthenticated isAuthenticated onReady={() => {}} />,
+        <Harness authReady sessionUnlocked isAuthenticated onReady={() => {}} />,
       );
       await flushMicrotasks();
     });
@@ -212,7 +212,7 @@ describe("useAppUpdateChecker", () => {
         ReactTestRenderer.create(
           <Harness
             authReady
-            iosAuthenticated={false}
+            sessionUnlocked
             isAuthenticated
             onReady={() => {}}
           />,
@@ -235,7 +235,7 @@ describe("useAppUpdateChecker", () => {
         ReactTestRenderer.create(
           <Harness
             authReady
-            iosAuthenticated={false}
+            sessionUnlocked
             isAuthenticated
             onReady={() => {}}
           />,

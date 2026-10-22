@@ -5,7 +5,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { Alert, TouchableOpacity } from "react-native";
+import { TouchableOpacity } from "react-native";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useNetworkAwareReload } from "../../../hooks/useNetworkAwareReload";
@@ -40,6 +40,7 @@ import {
   VotingChoice,
 } from "./shareholdersMeetingHelpers";
 import { error, log } from "../../../utils/Logger";
+import { AppAlert } from "../../../components/ui/AppAlert";
 
 const getApiErrorDetail = (err: unknown) => {
   const apiError = err as
@@ -275,12 +276,12 @@ export function useShareholdersMeetingController() {
 
   const openScanner = useCallback(() => {
     if (!activeMeeting?.id) {
-      Alert.alert("Thông báo", "Chưa có đại hội cổ đông đang hoạt động.");
+      AppAlert.alert("Thông báo", "Chưa có đại hội cổ đông đang hoạt động.");
       return;
     }
 
     if (!canScan) {
-      Alert.alert(
+      AppAlert.alert(
         "Không có quyền",
         activeTab === "voting"
           ? "Tài khoản hiện tại không có quyền ghi ý kiến cổ đông."
@@ -290,7 +291,7 @@ export function useShareholdersMeetingController() {
     }
 
     if (isMeetingLocked) {
-      Alert.alert(
+      AppAlert.alert(
         "Đại hội đã khóa",
         "Dữ liệu đại hội cổ đông đã khóa, bạn chỉ có thể xem thông tin.",
       );
@@ -299,12 +300,12 @@ export function useShareholdersMeetingController() {
 
     if (activeTab === "voting") {
       if (!selectedOpinion) {
-        Alert.alert("Thông báo", "Vui lòng chọn ý kiến trước khi quét QR.");
+        AppAlert.alert("Thông báo", "Vui lòng chọn ý kiến trước khi quét QR.");
         return;
       }
 
       if (!selectedVotingChoice) {
-        Alert.alert(
+        AppAlert.alert(
           "Thông báo",
           "Vui lòng chọn phân loại ý kiến trước khi quét QR.",
         );
@@ -541,7 +542,7 @@ export function useShareholdersMeetingController() {
       const shareholder = shareholders.find((item) => item.id === id);
 
       if (shareholder?.isLock) {
-        Alert.alert(
+        AppAlert.alert(
           "Cổ đông đã khóa",
           `Cổ đông ${shareholderId} đã khóa, bạn chỉ có thể xem thông tin.`,
         );
@@ -550,7 +551,7 @@ export function useShareholdersMeetingController() {
       }
 
       if (!canDiemDanh) {
-        Alert.alert(
+        AppAlert.alert(
           "Không có quyền",
           "Tài khoản hiện tại không có quyền điểm danh cổ đông.",
         );
@@ -558,7 +559,7 @@ export function useShareholdersMeetingController() {
         return;
       }
 
-      Alert.alert(
+      AppAlert.alert(
         "Xác nhận điểm danh",
         `Xác nhận điểm danh cổ đông ${shareholderId}?`,
         [
@@ -579,7 +580,7 @@ export function useShareholdersMeetingController() {
                 handledSuccess = true;
                 options?.onSuccess?.();
               } catch {
-                Alert.alert("Lỗi", "Không thể điểm danh cổ đông này.");
+                AppAlert.alert("Lỗi", "Không thể điểm danh cổ đông này.");
               } finally {
                 setSubmittingAttendanceId(null);
                 if (!handledSuccess) {
@@ -599,7 +600,7 @@ export function useShareholdersMeetingController() {
       const shareholder = shareholders.find((item) => item.id === id);
 
       if (shareholder?.isLock) {
-        Alert.alert(
+        AppAlert.alert(
           "Cổ đông đã khóa",
           `Cổ đông ${shareholderId} đã khóa, bạn chỉ có thể xem thông tin.`,
         );
@@ -607,14 +608,14 @@ export function useShareholdersMeetingController() {
       }
 
       if (!canHuyDiemDanh) {
-        Alert.alert(
+        AppAlert.alert(
           "Không có quyền",
           "Tài khoản hiện tại không có quyền huỷ điểm danh cổ đông.",
         );
         return;
       }
 
-      Alert.alert(
+      AppAlert.alert(
         "Huỷ điểm danh",
         `Bạn có chắc muốn huỷ điểm danh cổ đông ${shareholderId}?`,
         [
@@ -628,7 +629,7 @@ export function useShareholdersMeetingController() {
                 await huyDiemDanhDhcd(Number(id));
                 syncShareholderAttendance(id, "pending");
               } catch {
-                Alert.alert("Lỗi", "Không thể huỷ điểm danh cổ đông này.");
+                AppAlert.alert("Lỗi", "Không thể huỷ điểm danh cổ đông này.");
               } finally {
                 setSubmittingAttendanceId(null);
               }

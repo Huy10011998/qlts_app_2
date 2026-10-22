@@ -27,6 +27,7 @@ import AddActionFab from "../../components/add/shared/AddActionFab";
 import { makeSharedAssetListStyles } from "../../components/assets/shared/listStyles";
 import { BRAND_RED } from "../../components/assets/shared/listTheme";
 import { DatePicker } from "../../components/dataPicker/DataPicker";
+import { nextRangeEnd } from "../../components/dataPicker/shared/pickerValue";
 import {
   getNoiDiaErrorMessage,
   getXacNhanViTriTuLanhLichSu,
@@ -329,11 +330,22 @@ export default function XacNhanViTriTuLanhLichSuScreen() {
             <View style={styles.dateRow}>
               <View style={styles.dateField}>
                 <Text style={styles.dateLabel}>Từ ngày</Text>
-                <DatePicker value={fromDate} onChange={setFromDate} />
+                <DatePicker
+                  value={fromDate}
+                  onChange={(next) => {
+                    setFromDate(next);
+                    // Từ ngày vượt quá Đến ngày thì kéo Đến ngày theo.
+                    setToDate((end) => nextRangeEnd(next, end));
+                  }}
+                />
               </View>
               <View style={styles.dateField}>
                 <Text style={styles.dateLabel}>Đến ngày</Text>
-                <DatePicker value={toDate} onChange={setToDate} />
+                <DatePicker
+                  value={toDate}
+                  minDate={fromDate || undefined}
+                  onChange={setToDate}
+                />
               </View>
             </View>
 

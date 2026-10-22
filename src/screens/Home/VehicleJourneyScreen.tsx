@@ -24,6 +24,7 @@ import {
 } from "../../services/data/callApi";
 import { error, log } from "../../utils/Logger";
 import { DatePicker } from "../../components/dataPicker/DataPicker";
+import { nextRangeEnd } from "../../components/dataPicker/shared/pickerValue";
 import EmptyState from "../../components/ui/EmptyState";
 import EnumAndReferencePickerModal from "../../components/modal/EnumAndReferencePickerModal";
 import VehicleFilterSkeleton from "./shared/VehicleFilterSkeleton";
@@ -388,11 +389,22 @@ export default function VehicleJourneyScreen() {
         <View style={styles.dateRow}>
           <View style={styles.dateField}>
             <Text style={styles.fieldLabel}>Từ ngày</Text>
-            <DatePicker value={fromDate} onChange={setFromDate} />
+            <DatePicker
+              value={fromDate}
+              onChange={(next) => {
+                setFromDate(next);
+                // Từ ngày vượt quá Đến ngày thì kéo Đến ngày theo.
+                setToDate((end) => nextRangeEnd(next, end));
+              }}
+            />
           </View>
           <View style={styles.dateField}>
             <Text style={styles.fieldLabel}>Đến ngày</Text>
-            <DatePicker value={toDate} onChange={setToDate} />
+            <DatePicker
+              value={toDate}
+              minDate={fromDate || undefined}
+              onChange={setToDate}
+            />
           </View>
         </View>
 

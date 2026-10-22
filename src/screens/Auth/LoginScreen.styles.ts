@@ -308,6 +308,10 @@ export const makeStyles = (c: AppColors) =>
       shadowRadius: 8,
       elevation: 1,
     },
+    localNetworkNoticeGranted: {
+      backgroundColor: c.greenLight,
+      borderColor: c.greenBorder,
+    },
     localNetworkNoticeDenied: {
       backgroundColor: c.orangeSurface,
       borderColor: c.amberBorder,
@@ -322,6 +326,9 @@ export const makeStyles = (c: AppColors) =>
       borderRadius: 13,
       alignItems: "center",
       justifyContent: "center",
+    },
+    localNetworkIconGranted: {
+      backgroundColor: c.greenLight,
     },
     localNetworkIconDenied: {
       backgroundColor: c.redSurface,
@@ -341,6 +348,9 @@ export const makeStyles = (c: AppColors) =>
     localNetworkStatusText: {
       fontSize: 12,
       fontWeight: "800",
+    },
+    localNetworkStatusGranted: {
+      color: "#15803D",
     },
     localNetworkStatusDenied: {
       color: "#B91C1C",

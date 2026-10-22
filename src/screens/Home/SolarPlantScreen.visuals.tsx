@@ -1,4 +1,4 @@
-import { useStyles } from "../../utils/helpers/colors";
+import { C, useStyles } from "../../utils/helpers/colors";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   Animated,
@@ -153,16 +153,16 @@ export const DateCalendarIcon: React.FC = () => (
       height={22}
       rx={2.5}
       fill="none"
-      stroke="#6EA0F6"
+      stroke={C.red}
       strokeWidth={1.8}
     />
-    <Line x1={5} y1={12} x2={27} y2={12} stroke="#6EA0F6" strokeWidth={1.8} />
+    <Line x1={5} y1={12} x2={27} y2={12} stroke={C.red} strokeWidth={1.8} />
     <Line
       x1={11}
       y1={4}
       x2={11}
       y2={9}
-      stroke="#6EA0F6"
+      stroke={C.red}
       strokeWidth={2.1}
       strokeLinecap="round"
     />
@@ -171,7 +171,7 @@ export const DateCalendarIcon: React.FC = () => (
       y1={4}
       x2={21}
       y2={9}
-      stroke="#6EA0F6"
+      stroke={C.red}
       strokeWidth={2.1}
       strokeLinecap="round"
     />
@@ -183,12 +183,12 @@ export const DateCalendarIcon: React.FC = () => (
           y={y - 1.2}
           width={2.4}
           height={2.4}
-          fill="#6EA0F6"
+          fill={C.red}
         />
       )),
     )}
-    <Rect x={10} y={14.8} width={2.4} height={2.4} fill="#6EA0F6" />
-    <Rect x={15} y={14.8} width={2.4} height={2.4} fill="#6EA0F6" />
+    <Rect x={10} y={14.8} width={2.4} height={2.4} fill={C.red} />
+    <Rect x={15} y={14.8} width={2.4} height={2.4} fill={C.red} />
   </Svg>
 );
 
@@ -203,7 +203,7 @@ export const DateChevron: React.FC<{
       <Path
         d={path}
         fill="none"
-        stroke={muted ? "#969696" : "#6EA0F6"}
+        stroke={muted ? "#969696" : C.red}
         strokeWidth={2.4}
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -217,7 +217,7 @@ export const DateSkipIcon: React.FC<{ muted?: boolean }> = ({ muted }) => (
     <Path
       d="M9 7 L17 16 L9 25"
       fill="none"
-      stroke={muted ? "#969696" : "#6EA0F6"}
+      stroke={muted ? "#969696" : C.red}
       strokeWidth={2.4}
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -227,7 +227,7 @@ export const DateSkipIcon: React.FC<{ muted?: boolean }> = ({ muted }) => (
       y1={8}
       x2={23}
       y2={24}
-      stroke={muted ? "#969696" : "#6EA0F6"}
+      stroke={muted ? "#969696" : C.red}
       strokeWidth={2.4}
       strokeLinecap="round"
     />

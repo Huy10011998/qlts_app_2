@@ -153,7 +153,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
       blocks: [
         {
           kind: "paragraph",
-          text: "Phiên làm việc có thời hạn; hết hạn là app đưa về màn Đăng nhập. Đăng nhập lại bằng tài khoản hoặc Face ID là dùng tiếp được.",
+          text: "Phiên làm việc có thời hạn; hết hạn là app đưa về màn Đăng nhập. Đăng nhập lại bằng tài khoản, Face ID hoặc vân tay là dùng tiếp được.",
         },
         {
           kind: "paragraph",
@@ -164,18 +164,18 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     {
       id: "faq-faceid",
       group: "Đăng nhập & quyền",
-      heading: 'Nút Face ID bị mờ, bấm vào báo "FaceID chưa bật"',
+      heading: 'Nút Face ID / vân tay bị mờ, bấm vào báo "chưa bật"',
       blocks: [
         {
           kind: "paragraph",
-          text: "Tài khoản chưa bật Face ID trên chính máy đang dùng. Face ID bật riêng cho từng tài khoản, từng máy; bấm Đăng xuất là Face ID của máy đó tắt theo.",
+          text: "Tài khoản chưa bật Face ID (iPhone) hoặc vân tay (Android) trên chính máy đang dùng. Mục này bật riêng cho từng tài khoản, từng máy; bấm Đăng xuất là máy đó tắt theo.",
         },
         {
           kind: "steps",
           items: [
             "Đăng nhập bằng tài khoản và mật khẩu.",
-            "Vào tab Cài đặt → Tài khoản → bật Đăng nhập FaceID và xác thực khuôn mặt.",
-            "Lần sau mở app, máy tự hỏi Face ID ở màn Đăng nhập; lỡ bỏ qua thì bấm nút Face ID.",
+            "Vào tab Cài đặt → Tài khoản → bật Đăng nhập FaceID (iPhone) hoặc Đăng nhập bằng vân tay (Android) rồi xác thực khi máy hỏi.",
+            "Lần sau mở app, máy tự hỏi ở màn Đăng nhập; lỡ bỏ qua thì bấm nút Face ID / vân tay cạnh nút Đăng nhập.",
           ],
         },
       ],
@@ -664,7 +664,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
       blocks: [
         {
           kind: "paragraph",
-          text: "App mở thẳng hình trực tiếp của đúng camera vừa báo. Nếu app đang khoá bằng Face ID thì mở sau khi xác thực xong. Thông báo không kèm ảnh hiện trường, nên muốn biết chuyện gì thì phải mở xem trực tiếp.",
+          text: "App mở thẳng hình trực tiếp của đúng camera vừa báo. Nếu app đang khoá bằng Face ID / vân tay thì mở sau khi xác thực xong. Thông báo không kèm ảnh hiện trường, nên muốn biết chuyện gì thì phải mở xem trực tiếp.",
         },
         {
           kind: "paragraph",

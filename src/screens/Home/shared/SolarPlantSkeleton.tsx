@@ -13,16 +13,15 @@ import {
   useStyles,
 } from "../../../utils/helpers/colors";
 import { useSkeletonAutoFill } from "../../../components/ui/useSkeletonAutoFill";
+import { getSolarContentWidth } from "../SolarPlantScreen.helpers";
 import {
-  getSolarContentWidth,
-  MAX_SOLAR_CONTENT_WIDTH,
-} from "../SolarPlantScreen.helpers";
-import {
-  ChartSkeleton,
-  getSceneHeight,
-  getSceneTopSpace,
-  getSolarHeroScale,
-} from "../SolarPlantScreen.visuals";
+  FLOW_HERO_CARD_BORDER,
+  FLOW_HERO_CARD_MARGIN,
+  FLOW_HERO_CARD_RADIUS,
+  getFlowHeroCardInnerWidth,
+  getFlowHeroHeight,
+} from "../SolarPlantScreen.flowHero";
+import { ChartSkeleton, getSolarHeroScale } from "../SolarPlantScreen.visuals";
 
 /**
  * Ba ô số của thẻ "Sản lượng tích luỹ" — Tháng này · Năm nay · Từ đầu, xem
@@ -64,12 +63,10 @@ export default function SolarPlantSkeleton() {
   const colors = useAppColors();
   const { width } = useWindowDimensions();
   const { opacity } = useSkeletonAutoFill(1, 1);
-  // Cùng phép tính của `SolarHeroSection`, để dải hero cao đúng bằng lúc thật.
+  // Cùng phép tính của `SolarFlowHero`, để card hero cao đúng bằng lúc thật.
   const contentWidth = getSolarContentWidth(width);
-  const visualWidth = Math.min(contentWidth, MAX_SOLAR_CONTENT_WIDTH);
-  const heroScale = getSolarHeroScale(visualWidth);
-  const heroVisualHeight =
-    getSceneHeight(visualWidth) + getSceneTopSpace(visualWidth);
+  const heroHeight = getFlowHeroHeight(getFlowHeroCardInnerWidth(contentWidth));
+  const heroScale = heroHeight / getFlowHeroHeight(390);
   // Hệ số thu của các con số lớn bên dưới (`sizeScale` của màn thật) và bề
   // ngang biểu đồ.
   const sizeScale = getSolarHeroScale(contentWidth);
@@ -83,17 +80,26 @@ export default function SolarPlantSkeleton() {
       showsVerticalScrollIndicator={false}
       accessibilityLabel="Đang tải dữ liệu điện mặt trời"
     >
-      <View style={[styles.hero, { backgroundColor: colors.solarHero }]}>
+      <View
+        style={[
+          styles.hero,
+          {
+            backgroundColor: colors.solarHero,
+            borderColor: colors.border,
+            height: heroHeight + FLOW_HERO_CARD_BORDER * 2,
+          },
+        ]}
+      >
         <View style={styles.heroTopRow}>
           <View style={styles.productionBlock}>
             <Animated.View style={[styles.prodLabel, { opacity }]} />
-            {/* Số 36pt × hệ số hero: dòng cao ~43 × hệ số. */}
+            {/* Số ~21pt × hệ số hero: dòng cao ~25 × hệ số. */}
             <Animated.View
               style={[
                 styles.prodValue,
                 {
-                  height: 30 * heroScale,
-                  marginVertical: 6.5 * heroScale,
+                  height: 20 * heroScale,
+                  marginVertical: 5 * heroScale,
                   opacity,
                 },
               ]}
@@ -101,8 +107,6 @@ export default function SolarPlantSkeleton() {
           </View>
           <Animated.View style={[styles.temp, { opacity }]} />
         </View>
-
-        <View style={{ height: heroVisualHeight }} />
       </View>
 
       <View
@@ -401,6 +405,9 @@ const makeStyles = (c: AppColors) =>
       paddingBottom: 24,
     },
     hero: {
+      margin: FLOW_HERO_CARD_MARGIN,
+      borderRadius: FLOW_HERO_CARD_RADIUS,
+      borderWidth: FLOW_HERO_CARD_BORDER,
       overflow: "hidden",
     },
     // Cùng `heroTopRow` / `productionBlock` của màn thật.

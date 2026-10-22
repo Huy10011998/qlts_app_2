@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Alert, StyleSheet, Text } from "react-native";
+import { StyleSheet, Text } from "react-native";
 
 import { cvGiaHan } from "../../../../services/data/congViecApi";
 import { getThaoTacError } from "../../../../services/data/workflowApi";
@@ -10,6 +10,7 @@ import WorkflowSheet, { confirmCloseSheet } from "../../shared/components/Workfl
 import WorkflowTextArea from "../../shared/components/WorkflowTextArea";
 import { formatDayTime, parseBeDate, toBeDateTime } from "../../shared/workflowDate";
 import { getWorkflowErrorMessage } from "../../shared/workflowErrors";
+import { AppAlert } from "../../../../components/ui/AppAlert";
 
 type Props = {
   visible: boolean;
@@ -35,7 +36,7 @@ export default function GiaHanSheet({ visible, idCongViec, denNgay, onClose, onD
 
   const submit = async () => {
     if (!denNgayMoi) {
-      Alert.alert("Thiếu thông tin", "Vui lòng chọn hạn mới.");
+      AppAlert.alert("Thiếu thông tin", "Vui lòng chọn hạn mới.");
       return;
     }
 
@@ -44,12 +45,12 @@ export default function GiaHanSheet({ visible, idCongViec, denNgay, onClose, onD
       const result = await cvGiaHan(idCongViec, toBeDateTime(denNgayMoi), ghiChu.trim() || null);
       const loi = getThaoTacError(result);
       if (loi) {
-        Alert.alert("Không gia hạn được", loi);
+        AppAlert.alert("Không gia hạn được", loi);
         return;
       }
       onDone();
     } catch (err) {
-      Alert.alert("Không gia hạn được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
+      AppAlert.alert("Không gia hạn được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
     } finally {
       setSubmitting(false);
     }

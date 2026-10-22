@@ -1,5 +1,12 @@
 import React from "react";
-import { Alert, AppState, StyleSheet, Text, TextInput } from "react-native";
+import {
+  Alert,
+  AppState,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+} from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as Keychain from "react-native-keychain";
 import ReactTestRenderer from "react-test-renderer";
@@ -20,7 +27,7 @@ jest.mock("../src/context/AuthContext", () => ({
   useAuth: () => ({
     setToken: jest.fn(),
     setRefreshToken: jest.fn(),
-    setIosAuthenticated: jest.fn(),
+    setSessionUnlocked: jest.fn(),
     syncSession: jest.fn(),
     token: null,
   }),
@@ -28,6 +35,7 @@ jest.mock("../src/context/AuthContext", () => ({
 
 jest.mock("../src/services/auth/faceIdFlag", () => ({
   readFaceIdEnabled: () => mockReadFaceIdEnabled(),
+  writeFaceIdEnabled: jest.fn(async () => {}),
 }));
 
 jest.mock("../src/context/authStorage", () => ({
@@ -65,6 +73,13 @@ jest.mock("../src/services/data/callApi", () => ({
 }));
 
 const getGenericPassword = Keychain.getGenericPassword as jest.Mock;
+const getSupportedBiometryType = Keychain.getSupportedBiometryType as jest.Mock;
+const hasGenericPassword = Keychain.hasGenericPassword as jest.Mock;
+
+/** Platform.OS là hằng đọc-chỉ nên phải ghi đè qua defineProperty. */
+const setPlatform = (os: "ios" | "android") => {
+  Object.defineProperty(Platform, "OS", { configurable: true, value: os });
+};
 
 const setup = ({
   faceIdEnabled,
@@ -135,6 +150,7 @@ const faceIdPromptCalls = () =>
 
 beforeEach(() => {
   jest.clearAllMocks();
+  setPlatform("ios");
   (AppState as any).currentState = "active";
   jest.spyOn(Alert, "alert").mockImplementation(() => {});
   jest.spyOn(console, "log").mockImplementation(() => {});
@@ -215,6 +231,77 @@ describe("LoginScreen – Face ID", () => {
   });
 });
 
+/* Android: nút vân tay cùng ô với nút Face ID, chỉ hiện khi máy có sinh trắc. */
+describe("LoginScreen – vân tay Android", () => {
+  const fingerprintButton = (tree: ReactTestRenderer.ReactTestRenderer) =>
+    tree.root.findAll(
+      (node) =>
+        typeof node.type !== "string" &&
+        node.props.accessibilityLabel === "Đăng nhập bằng vân tay",
+    )[0];
+
+  beforeEach(() => {
+    setPlatform("android");
+    getSupportedBiometryType.mockResolvedValue("Fingerprint");
+    hasGenericPassword.mockResolvedValue(true);
+  });
+
+  it("ẩn nút khi máy không có hoặc chưa cài vân tay", async () => {
+    getSupportedBiometryType.mockResolvedValue(null);
+    setup({
+      faceIdEnabled: true,
+      tokens: { token: "access", refreshToken: "refresh" },
+    });
+
+    const tree = await render();
+
+    expect(fingerprintButton(tree)).toBeUndefined();
+    expect(faceIdButton(tree)).toBeUndefined();
+    expect(mockCheckServerReachability).not.toHaveBeenCalled();
+  });
+
+  it("nút mờ và không tự hỏi khi chưa bật", async () => {
+    setup({
+      faceIdEnabled: false,
+      tokens: { token: "access", refreshToken: "refresh" },
+    });
+
+    const tree = await render();
+    const button = fingerprintButton(tree);
+
+    expect(button).toBeTruthy();
+    expect(StyleSheet.flatten(button.props.style)?.opacity).toBeLessThan(1);
+    expect(mockCheckServerReachability).not.toHaveBeenCalled();
+  });
+
+  it("tự hỏi vân tay khi đã bật và còn phiên", async () => {
+    setup({
+      faceIdEnabled: true,
+      tokens: { token: "access", refreshToken: "refresh" },
+    });
+
+    const tree = await render();
+
+    expect(mockCheckServerReachability).toHaveBeenCalledTimes(1);
+    expect(fingerprintButton(tree)).toBeTruthy();
+  });
+
+  it("mất marker thì tắt cờ, không tự hỏi", async () => {
+    hasGenericPassword.mockResolvedValue(false);
+    setup({
+      faceIdEnabled: true,
+      tokens: { token: "access", refreshToken: "refresh" },
+    });
+
+    const tree = await render();
+
+    expect(mockCheckServerReachability).not.toHaveBeenCalled();
+    expect(
+      StyleSheet.flatten(fingerprintButton(tree).props.style)?.opacity,
+    ).toBeLessThan(1);
+  });
+});
+
 describe("LoginScreen – tài khoản và mạng nội bộ", () => {
   it("điền sẵn tài khoản đã lưu", async () => {
     setup({
@@ -229,7 +316,7 @@ describe("LoginScreen – tài khoản và mạng nội bộ", () => {
     expect(usernameInput.props.value).toBe("nguyenvana");
   });
 
-  it("ẩn thẻ mạng nội bộ khi đã cấp quyền", async () => {
+  it("vẫn hiện thẻ mạng nội bộ khi đã cấp quyền", async () => {
     setup({
       faceIdEnabled: false,
       tokens: { token: null, refreshToken: null },
@@ -237,7 +324,8 @@ describe("LoginScreen – tài khoản và mạng nội bộ", () => {
 
     const tree = await render();
 
-    expect(texts(tree)).not.toContain("Mạng nội bộ");
+    expect(texts(tree)).toContain("Mạng nội bộ");
+    expect(texts(tree)).toContain("Đã cấp quyền");
   });
 
   it("nhắc mạng nội bộ khi chưa cấp quyền", async () => {

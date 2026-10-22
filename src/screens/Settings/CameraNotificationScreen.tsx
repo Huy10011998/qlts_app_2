@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -21,6 +20,7 @@ import {
   useDanhSachCameraNoti,
   type CameraNotiChon,
 } from "./shared/useDanhSachCameraNoti";
+import { AppAlert } from "../../components/ui/AppAlert";
 
 /**
  * Các mốc tạm dừng cố định.
@@ -150,7 +150,7 @@ export default function CameraNotificationScreen() {
         ? `thông báo của camera ${cameraChon.ma} - ${cameraChon.ten}`
         : "thông báo camera";
 
-      Alert.alert(
+      AppAlert.alert(
         "Tắt thông báo cả công ty?",
         `Trong ${thoiLuong} tới, MỌI NGƯỜI sẽ không nhận được ${phamViMoTa}, không riêng bạn.`,
         [
@@ -187,7 +187,7 @@ export default function CameraNotificationScreen() {
       return;
     }
 
-    Alert.alert(
+    AppAlert.alert(
       "Bật lại cho cả công ty?",
       `Lệnh này do ${
         lenhChinh.iD_User_Tao_MoTa ?? "người khác"

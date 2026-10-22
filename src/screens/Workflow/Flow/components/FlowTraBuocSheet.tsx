@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import { flowDuyetHoSo } from "../../../../services/data/flowApi";
 import { getThaoTacError } from "../../../../services/data/workflowApi";
@@ -10,6 +10,7 @@ import WorkflowSheet, { confirmCloseSheet } from "../../shared/components/Workfl
 import WorkflowTextArea from "../../shared/components/WorkflowTextArea";
 import { FLOW_KET_QUA, FLOW_TRA_BUOC_COLOR, tint } from "../../shared/workflowConstants";
 import { getWorkflowErrorMessage } from "../../shared/workflowErrors";
+import { AppAlert } from "../../../../components/ui/AppAlert";
 
 type Props = {
   visible: boolean;
@@ -69,12 +70,12 @@ export default function FlowTraBuocSheet({
       const loi = getThaoTacError(result);
       if (loi) {
         // Người khác vừa xử lý trước / phiếu đã kết thúc: báo rồi nạp lại để nút tự ẩn.
-        Alert.alert("Không trả bước được", loi, [{ text: "OK", onPress: () => onDone(false) }]);
+        AppAlert.alert("Không trả bước được", loi, [{ text: "OK", onPress: () => onDone(false) }]);
         return;
       }
       onDone(true);
     } catch (err) {
-      Alert.alert("Không trả bước được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
+      AppAlert.alert("Không trả bước được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
     } finally {
       setSubmitting(false);
     }
