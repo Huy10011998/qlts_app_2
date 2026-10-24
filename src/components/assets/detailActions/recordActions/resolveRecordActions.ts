@@ -8,6 +8,11 @@ import type { RecordAction, RecordActionBuilderContext } from "./types";
 
 export type ResolveRecordActionsContext = RecordActionBuilderContext & {
   can: (nameClass: string, action: string) => boolean;
+  /**
+   * false = bỏ việc tạo bản ghi con, chỉ giữ nghiệp vụ riêng của app — và khỏi
+   * tải danh mục con. Thiếu = có. Xem `RecordActionBar.includeChildClasses`.
+   */
+  includeChildClasses?: boolean;
   loadChildClasses: (nameClass?: string) => Promise<MenuItemResponse[]>;
   navigate: (screen: string, params?: Record<string, any>) => void;
   openAddForm: (args: OpenAddFormArgs) => Promise<boolean> | void;
@@ -35,6 +40,7 @@ export async function resolveRecordActions(
 ): Promise<ResolveRecordActionsResult> {
   const {
     can,
+    includeChildClasses = true,
     item,
     loadChildClasses,
     nameClass,
@@ -46,12 +52,14 @@ export async function resolveRecordActions(
   let childClasses: MenuItemResponse[] = [];
   let childClassesFailed = false;
 
-  try {
-    const all = await loadChildClasses(nameClass);
-    childClasses = all.filter((child) => can(child.name, "Insert"));
-  } catch (e) {
-    if (!isNetworkRequestError(e)) error("Tải danh mục con lỗi:", e);
-    childClassesFailed = true;
+  if (includeChildClasses) {
+    try {
+      const all = await loadChildClasses(nameClass);
+      childClasses = all.filter((child) => can(child.name, "Insert"));
+    } catch (e) {
+      if (!isNetworkRequestError(e)) error("Tải danh mục con lỗi:", e);
+      childClassesFailed = true;
+    }
   }
 
   const actions = [

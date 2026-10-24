@@ -47,8 +47,16 @@ export type DangNhapEvent = {
   dangNhap: boolean;
 };
 
+export type BinhLuanThuHoiEvent = {
+  tenBang: string;
+  iD_HoSo: number;
+  iD_BinhLuan: number;
+};
+
 export type TraoDoiRoomHandlers = {
   onBinhLuanMoi: (binhLuan: WorkflowComment) => void;
+  /** Có người thu hồi 1 bình luận (kể cả mình ở máy khác) — mục 8. */
+  onBinhLuanThuHoi: (idBinhLuan: number) => void;
   onDangNhap: (event: DangNhapEvent) => void;
   /** Nối lại sau khi rớt mạng — có thể đã lỡ bình luận, nạp lại danh sách. */
   onReconnected: () => void;
@@ -120,6 +128,10 @@ const getConnection = () => {
   next.on("BinhLuanMoi", (event: BinhLuanMoiEvent) => {
     if (!event?.binhLuan) return;
     roomOf(event)?.handlers.forEach((handler) => handler.onBinhLuanMoi(event.binhLuan));
+  });
+  next.on("BinhLuanThuHoi", (event: BinhLuanThuHoiEvent) => {
+    if (event?.iD_BinhLuan == null) return;
+    roomOf(event)?.handlers.forEach((handler) => handler.onBinhLuanThuHoi(event.iD_BinhLuan));
   });
   next.on("DangNhap", (event: DangNhapEvent) => {
     roomOf(event)?.handlers.forEach((handler) => handler.onDangNhap(event));

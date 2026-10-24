@@ -32,12 +32,15 @@ export const makeStyles = (c: AppColors) =>
       borderColor: "#e53935",
     },
     cellTop: { flexDirection: "row", padding: 4 },
+    // Nền mờ dưới tên camera: chữ trắng nằm thẳng trên hình thì gặp khung sáng
+    // (tường trắng, đèn) là không đọc được.
     cellBottom: {
       marginTop: "auto",
       paddingHorizontal: 5,
       paddingVertical: 3,
+      backgroundColor: "rgba(0,0,0,0.45)",
     },
-    cellLabel: { color: "#fff", fontSize: 8 },
+    cellLabel: { color: "#fff", fontSize: 10 },
     // WKWebView vẽ nền trắng mặc định cho tới khi HTML parse xong — trên nền
     // đen của lưới thì đó là một cú chớp trắng trông như lỗi render. Phải đi
     // kèm opaque={false}, không thì iOS bỏ qua backgroundColor này.
@@ -50,7 +53,7 @@ export const makeStyles = (c: AppColors) =>
     },
     cellPlaceholderText: {
       color: c.textMuted,
-      fontSize: 8,
+      fontSize: 10,
       textAlign: "center",
     },
     liveBadge: {
@@ -63,7 +66,7 @@ export const makeStyles = (c: AppColors) =>
       gap: 4,
     },
     liveDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: "#fff" },
-    liveText: { color: "#fff", fontSize: 8, fontWeight: "700" },
+    liveText: { color: "#fff", fontSize: 10, fontWeight: "700" },
     paginationRow: {
       alignSelf: "stretch",
       flexDirection: "row",
@@ -96,14 +99,6 @@ export const makeStyles = (c: AppColors) =>
       paddingVertical: 18,
     },
     toolBtn: { alignItems: "center", justifyContent: "center" },
-    sdBadge: {
-      borderWidth: 1.5,
-      borderColor: c.textSecondary,
-      borderRadius: 6,
-      paddingHorizontal: 10,
-      paddingVertical: 3,
-    },
-    sdText: { fontSize: 12, fontWeight: "700", color: c.textSecondary },
     divider: {
       height: StyleSheet.hairlineWidth,
       backgroundColor: c.border,
@@ -144,7 +139,6 @@ export const makeStyles = (c: AppColors) =>
       alignItems: "center",
       justifyContent: "center",
     },
-    chevronWrapper: { alignItems: "center", paddingBottom: 8 },
     modalOverlay: {
       flex: 1,
       justifyContent: "flex-end",

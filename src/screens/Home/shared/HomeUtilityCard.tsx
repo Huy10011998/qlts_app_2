@@ -6,10 +6,10 @@ import { formatHomeCount, HOME_NO_DATA } from "./homeFormat";
 import {
   AppColors,
   useAppColors,
-  useHairlineBorderColor,
   useSeparatorColor,
   useStyles,
 } from "../../../utils/helpers/colors";
+import { useHomeCardChrome } from "./homeBlockTone";
 
 export type HomeUtilityRow = HomeDashboardUtility & {
   iconBg: string;
@@ -33,19 +33,12 @@ export default function HomeUtilityCard({
 }: HomeUtilityCardProps) {
   const styles = useStyles(makeStyles);
   const colors = useAppColors();
-  const hairlineBorderColor = useHairlineBorderColor();
   const separatorColor = useSeparatorColor();
+  const chrome = useHomeCardChrome();
 
   return (
     <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: colors.surface,
-          borderColor: hairlineBorderColor,
-          shadowColor: colors.shadow,
-        },
-      ]}
+      style={[styles.card, chrome, { backgroundColor: colors.surface }]}
     >
       {isLoading && rows.length === 0
         ? Array.from({ length: UTILITY_ROW_COUNT }).map((_, index) => (
@@ -176,7 +169,7 @@ export default function HomeUtilityCard({
                           ]}
                           numberOfLines={1}
                         >
-                          {`VL ${formatHomeCount(row.vinhLoc, decimals)}`}
+                          {`Vĩnh Lộc ${formatHomeCount(row.vinhLoc, decimals)}`}
                         </Text>
                       </View>
                       <View style={styles.plantItem}>
@@ -193,7 +186,7 @@ export default function HomeUtilityCard({
                           ]}
                           numberOfLines={1}
                         >
-                          {`BL ${formatHomeCount(row.benLuc, decimals)}`}
+                          {`Bến Lức ${formatHomeCount(row.benLuc, decimals)}`}
                         </Text>
                       </View>
                     </View>
@@ -213,7 +206,7 @@ export default function HomeUtilityCard({
         <Text
           style={[styles.footer, { color: colors.textMuted }]}
         >
-          {`${periodLabel} (kỳ tháng trước) · VL = Vĩnh Lộc, BL = Bến Lức · ${HOME_NO_DATA} = chưa có số liệu`}
+          {`${periodLabel} (kỳ tháng trước) · ${HOME_NO_DATA} = chưa có số liệu`}
         </Text>
       ) : null}
     </View>
@@ -222,20 +215,14 @@ export default function HomeUtilityCard({
 
 const makeStyles = (c: AppColors) =>
   StyleSheet.create({
+    // Viền, bóng và mép trên do `useHomeCardChrome` lo.
     card: {
       backgroundColor: c.surface,
       borderRadius: 18,
       paddingHorizontal: 14,
-      paddingTop: 4,
+      paddingTop: 2,
       paddingBottom: 10,
       marginBottom: 14,
-      shadowColor: c.shadow,
-      shadowOpacity: 0.07,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 3 },
-      elevation: 2,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border,
     },
     row: {
       paddingVertical: 11,
@@ -292,9 +279,13 @@ const makeStyles = (c: AppColors) =>
     trackFill: {
       height: "100%",
     },
+    // Tên nhà máy viết đủ (trước là "VL" / "BL" kèm chú thích tận cuối card) nên
+    // dài hơn: màn hẹp thì nhà máy thứ hai xuống dòng, không cắt mất con số.
     plantRow: {
       flexDirection: "row",
-      gap: 14,
+      flexWrap: "wrap",
+      columnGap: 14,
+      rowGap: 3,
       marginTop: 6,
     },
     plantItem: {

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
@@ -39,9 +39,10 @@ import {
 import { useOnWorkflowInfoStale } from "../shared/workflowInfoRefresh";
 import { formatBeDate } from "../shared/workflowDate";
 import { getWorkflowErrorMessage } from "../shared/workflowErrors";
-import { getCardFields, getDetailFields, WorkflowField } from "../shared/workflowFields";
-import { loadClassFields } from "../shared/workflowMetadata";
+import { getCardFields, getDetailFields } from "../shared/workflowFields";
+import { useClassFields } from "../shared/workflowMetadata";
 import { getKeHoachProgress } from "./keHoachRules";
+import { AppAlert } from "../../../components/ui/AppAlert";
 
 type Tab = "thongTin" | "congViec";
 
@@ -69,18 +70,14 @@ export default function KeHoachDetailScreen() {
   const [congViecError, setCongViecError] = useState<string | null>(null);
   /** cv-thong-tin của các việc đang hiện: số bình luận / file + cờ quyền. */
   const [cvInfos, setCvInfos] = useState<Record<number, CongViecThongTin>>({});
-  const [khFields, setKhFields] = useState<WorkflowField[]>([]);
-  const [cvFields, setCvFields] = useState<WorkflowField[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("thongTin");
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    loadClassFields(CV_KE_HOACH_NAME_CLASS).then(setKhFields).catch(() => undefined);
-    loadClassFields(CV_CONG_VIEC_NAME_CLASS).then(setCvFields).catch(() => undefined);
-  }, []);
+  const { fields: khFields, ready: khFieldsReady } = useClassFields(CV_KE_HOACH_NAME_CLASS);
+  const { fields: cvFields, ready: cvFieldsReady } = useClassFields(CV_CONG_VIEC_NAME_CLASS);
 
   const load = useCallback(
     async (mode: "initial" | "refresh" | "silent" = "initial") => {
@@ -117,7 +114,7 @@ export default function KeHoachDetailScreen() {
         setErrorMessage(null);
       } catch (err) {
         if (isWorkflowNotFound(err)) {
-          Alert.alert("Thông báo", "Không tìm thấy kế hoạch.", [
+          AppAlert.alert("Thông báo", "Không tìm thấy kế hoạch.", [
             { text: "OK", onPress: () => navigation.goBack() },
           ]);
           return;
@@ -158,7 +155,15 @@ export default function KeHoachDetailScreen() {
   const isChuTri = !!data?.quyen?.isChuTri;
 
   const confirmDelete = () => {
-    Alert.alert("Xoá kế hoạch", "Xoá kế hoạch này?", [
+    // Còn việc thì không xoá được. Nút vẫn để bấm được (trước đây chỉ mờ đi,
+    // người dùng không biết vì sao) — bấm thì nói lý do.
+    const soCongViec = Number(keHoach?.soCongViec ?? 0);
+    if (soCongViec > 0) {
+      AppAlert.alert("Không xoá được", `Kế hoạch còn ${soCongViec} công việc, không xoá được.`);
+      return;
+    }
+
+    AppAlert.alert("Xoá kế hoạch", "Xoá kế hoạch này?", [
       { text: "Huỷ", style: "cancel" },
       {
         text: "Xoá",
@@ -169,13 +174,13 @@ export default function KeHoachDetailScreen() {
             const result = await khXoa(id);
             const loi = getThaoTacError(result);
             if (loi) {
-              Alert.alert("Không xoá được", loi);
+              AppAlert.alert("Không xoá được", loi);
               return;
             }
             markChanged();
             navigation.goBack();
           } catch (err) {
-            Alert.alert("Không xoá được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
+            AppAlert.alert("Không xoá được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
           } finally {
             setDeleting(false);
           }
@@ -184,7 +189,11 @@ export default function KeHoachDetailScreen() {
     ]);
   };
 
-  if (loading) return <WorkflowDetailSkeleton variant="keHoach" fields={detailFields} />;
+  // Chờ cả field (kế hoạch + thẻ công việc ở tab Công việc): vẽ trước metadata
+  // thì mất các dòng rồi mới hiện.
+  if (loading || !khFieldsReady || !cvFieldsReady) {
+    return <WorkflowDetailSkeleton variant="keHoach" fields={detailFields} />;
+  }
 
   if (!keHoach) {
     return (
@@ -251,7 +260,6 @@ export default function KeHoachDetailScreen() {
               icon="trash-outline"
               label="Xoá"
               loading={deleting}
-              disabled={Number(keHoach.soCongViec ?? 0) > 0}
               onPress={confirmDelete}
             />
           ) : null}

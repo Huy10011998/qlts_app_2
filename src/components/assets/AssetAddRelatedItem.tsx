@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { StyleSheet, Alert } from "react-native";
+import { StyleSheet } from "react-native";
 import { useParams } from "../../hooks/useParams";
 import type {
   AssetAddRelatedItemNavigationProp,
@@ -15,11 +15,7 @@ import {
 import { fetchImage, pickImage } from "../../utils/Image";
 import { parseCsv } from "../../utils/helpers/string";
 import { isEffectivelyEmptyCodeValue } from "../../utils/helpers/string";
-import {
-  AppColors,
-  useAppColors,
-  useStyles,
-} from "../../utils/helpers/colors";
+import { AppColors, useStyles } from "../../utils/helpers/colors";
 import { useImageLoader } from "../../hooks/useImageLoader";
 import {
   checkValidation,
@@ -48,11 +44,13 @@ import { useLoadParentValue } from "../../hooks/AssetAddItem/useLoadParentValue"
 import { useOpenReferenceModal } from "../../hooks/AssetAddItem/useOpenReferenceModal";
 import { useModalItems } from "../../hooks/AssetAddItem/useModalItems";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
+import { useUnsavedChangesGuard } from "../../hooks/useUnsavedChangesGuard";
+import { showAppToast } from "../ui/AppToast";
 import AssetFormGroupedFields from "./shared/AssetFormGroupedFields";
-import AssetFormHeroCard from "./shared/AssetFormHeroCard";
 import AssetFormReferencePickerModal from "./shared/AssetFormReferencePickerModal";
 import AssetFormScreenShell from "./shared/AssetFormScreenShell";
 import { createAssetFormHeaderSubmitRight } from "./shared/AssetFormHeaderSubmitButton";
+import { useAssetFormDirty } from "./shared/useAssetFormDirty";
 import {
   getRequiredFieldErrors,
   getRequiredFieldsMessage,
@@ -70,12 +68,12 @@ import {
   backToQrScanner,
   openAssetRelatedList,
 } from "../../navigation/shared/assetNavigationReset";
+import { AppAlert } from "../ui/AppAlert";
 
 const BRAND_RED = ASSET_FORM_BRAND_RED;
 
 export default function AssetAddRelatedItem() {
   const styles = useStyles(makeStyles);
-  const c = useAppColors();
   const {
     field,
     nameClass,
@@ -111,6 +109,9 @@ export default function AssetAddRelatedItem() {
   const [activeEnumField, setActiveEnumField] = useState<Field | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // State trong closure của nút header có thể còn cũ ở cú bấm thứ hai, nên chặn
+  // bấm đúp bằng ref — đọc được ngay, không đợi render.
+  const submittingRef = React.useRef(false);
   const [validationErrors, setValidationErrors] = useState<
     Record<string, string>
   >({});
@@ -179,6 +180,20 @@ export default function AssetAddRelatedItem() {
     [baseHandleChange, setFormData, validationErrors],
   );
 
+  /* Hỏi "Bỏ thay đổi?" khi rời form đang nhập dở. Chỉ đường sửa tay mới đánh
+     dấu: cây danh mục, giá trị mặc định, bộ cặp cấp cha đều tự điền vào form,
+     tính cả chúng thì mở form rồi thoát ngay cũng bị hỏi. */
+  const { isDirty, markUserEdit } = useAssetFormDirty(formData);
+  const { leaveWithoutPrompt } = useUnsavedChangesGuard(isDirty);
+
+  const handleUserChange = React.useCallback(
+    (name: string, value: any) => {
+      markUserEdit();
+      handleChange(name, value);
+    },
+    [handleChange, markUserEdit],
+  );
+
   useTreeToForm({
     selectedTreeProperty,
     selectedTreeValue,
@@ -188,7 +203,7 @@ export default function AssetAddRelatedItem() {
     setReferenceData,
   });
 
-  useEnumAndReferenceLoader(
+  const { pendingEnumFields } = useEnumAndReferenceLoader(
     fieldActive,
     setEnumData,
     setReferenceData,
@@ -273,17 +288,19 @@ export default function AssetAddRelatedItem() {
   }, [isReviewClass, navigation]);
 
   const handleCreate = async () => {
+    if (submittingRef.current) return;
+
     if (nameClass && !can(nameClass, "Insert")) {
-      Alert.alert("Không có quyền", "Bạn không có quyền tạo mới dữ liệu!");
+      AppAlert.alert("Không có quyền", "Bạn không có quyền tạo mới dữ liệu!");
       return;
     }
     if (!Object.keys(formData).length) {
-      Alert.alert("Thông báo", "Vui lòng nhập ít nhất một trường!");
+      AppAlert.alert("Thông báo", "Vui lòng nhập ít nhất một trường!");
       return;
     }
 
     if (!nameClass) {
-      Alert.alert("Lỗi", "Không xác định được danh mục!");
+      AppAlert.alert("Lỗi", "Không xác định được danh mục!");
       return;
     }
 
@@ -291,14 +308,17 @@ export default function AssetAddRelatedItem() {
     if (Object.keys(requiredErrors).length) {
       setValidationErrors((prev) => ({ ...prev, ...requiredErrors }));
       expandGroupsWithErrors(requiredErrors);
-      Alert.alert(
+      AppAlert.alert(
         "Thiếu thông tin",
         getRequiredFieldsMessage(fieldActive, requiredErrors),
       );
       return;
     }
 
+    let saved = false;
+
     try {
+      submittingRef.current = true;
       setIsSubmitting(true);
 
       const payloadData = { ...formData };
@@ -346,15 +366,14 @@ export default function AssetAddRelatedItem() {
       });
 
       await insert(nameClass, payload);
+      saved = true;
 
-      // Luồng đánh giá nhanh: về thẳng máy quét, báo bằng dải toast chứ không
-      // phải Alert. Đi kiểm kê hàng loạt thì mỗi bản ghi một lần bấm OK là một
-      // thao tác thừa nhân lên theo số thiết bị.
+      dispatch(setShouldRefreshList(true));
+
+      // Luồng đánh giá nhanh: về thẳng máy quét, báo bằng dải toast của chính
+      // màn quét (kèm nút "Xem") chứ không phải Alert. Đi kiểm kê hàng loạt thì
+      // mỗi bản ghi một lần bấm OK là một thao tác thừa nhân lên theo số thiết bị.
       if (returnTo === "qrScan") {
-        setFormData({});
-        setImages({});
-
-        dispatch(setShouldRefreshList(true));
         dispatch(
           setLastSavedNotice({
             message: isReviewClass ? "Đã lưu đánh giá" : "Đã lưu bản ghi",
@@ -366,84 +385,89 @@ export default function AssetAddRelatedItem() {
             titleHeader,
           }),
         );
-        backToQrScanner(navigation);
-        return;
+      } else {
+        // Dải toast nằm ở gốc app nên vẫn hiện sau khi màn này đóng.
+        showAppToast({
+          message: isReviewClass ? "Đã lưu đánh giá" : "Tạo mới thành công",
+        });
       }
 
-      showAlertIfActive(
-        "Thành công",
-        "Tạo mới thành công!",
-        [
-          {
-            text: "OK",
-            onPress: () => {
-              setFormData({});
-              setImages({});
+      // Người dùng đã rời màn trong lúc chờ lưu thì không kéo họ đi đâu nữa.
+      if (!isMounted()) return;
 
-              dispatch(setShouldRefreshList(true));
-              if (returnTo === "qrReview") {
-                navigation.goBack();
-                return;
-              }
+      setFormData({});
+      setImages({});
 
-              if (
-                (returnTo === "assetRelatedList" ||
-                  returnTo === "openAssetRelatedList") &&
-                nameClass &&
-                idRoot &&
-                propertyReference
-              ) {
-                const goToRelatedList =
-                  returnTo === "openAssetRelatedList"
-                    ? openAssetRelatedList
-                    : backToAssetRelatedList;
+      leaveWithoutPrompt(() => {
+        if (returnTo === "qrScan") {
+          backToQrScanner(navigation);
+          return;
+        }
 
-                goToRelatedList(navigation, {
-                  assetContext: {
-                    groupMenuId,
-                    viewPermission,
-                    assetTitleHeader,
-                  },
-                  relatedListParams: {
-                    nameClass,
-                    idRoot,
-                    propertyReference,
-                    nameClassRoot,
-                    rootRecordLabel,
-                    titleHeader,
-                    groupMenuId,
-                    viewPermission,
-                    assetTitleHeader,
-                  },
-                });
-                return;
-              }
+        if (returnTo === "qrReview") {
+          navigation.goBack();
+          return;
+        }
 
-              backToAssetList(navigation, {
-                assetContext: {
-                  groupMenuId,
-                  viewPermission,
-                  assetTitleHeader,
-                },
-                listParams: {
-                  nameClass,
-                  titleHeader,
-                  groupMenuId,
-                  viewPermission,
-                  assetTitleHeader,
-                },
-              });
+        if (
+          (returnTo === "assetRelatedList" ||
+            returnTo === "openAssetRelatedList") &&
+          nameClass &&
+          idRoot &&
+          propertyReference
+        ) {
+          const goToRelatedList =
+            returnTo === "openAssetRelatedList"
+              ? openAssetRelatedList
+              : backToAssetRelatedList;
+
+          goToRelatedList(navigation, {
+            assetContext: {
+              groupMenuId,
+              viewPermission,
+              assetTitleHeader,
             },
+            relatedListParams: {
+              nameClass,
+              idRoot,
+              propertyReference,
+              nameClassRoot,
+              rootRecordLabel,
+              titleHeader,
+              groupMenuId,
+              viewPermission,
+              assetTitleHeader,
+            },
+          });
+          return;
+        }
+
+        backToAssetList(navigation, {
+          assetContext: {
+            groupMenuId,
+            viewPermission,
+            assetTitleHeader,
           },
-        ],
-        { cancelable: false },
-      );
+          listParams: {
+            nameClass,
+            titleHeader,
+            groupMenuId,
+            viewPermission,
+            assetTitleHeader,
+          },
+        });
+      });
     } catch (err: any) {
       setValidationErrors(getApiValidationFieldErrors(err));
       showAlertIfActive("Lỗi", getApiErrorMessage(err, "Không thể tạo mới!"));
     } finally {
-      if (isMounted()) {
-        setIsSubmitting(false);
+      // Lưu xong thì giữ khoá: màn đang đóng, không để lọt thêm một lượt lưu
+      // nào trong lúc chuyển màn.
+      if (!saved) {
+        submittingRef.current = false;
+        if (isMounted()) {
+          setIsSubmitting(false);
+        }
       }
     }
   };
@@ -454,13 +478,13 @@ export default function AssetAddRelatedItem() {
   React.useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: createAssetFormHeaderSubmitRight({
-        disabled: !!nameClass && !can(nameClass, "Insert"),
+        disabled: isSubmitting || (!!nameClass && !can(nameClass, "Insert")),
         iconName: "checkmark-circle-outline",
         label: isReviewClass ? "Xác nhận" : "Tạo",
         onPress: () => handleCreateRef.current(),
       }),
     });
-  }, [can, isReviewClass, nameClass, navigation]);
+  }, [can, isReviewClass, isSubmitting, nameClass, navigation]);
 
   return (
     <AssetFormScreenShell
@@ -472,9 +496,10 @@ export default function AssetAddRelatedItem() {
       style={styles.container}
       modal={
         <AssetFormReferencePickerModal
+          pendingEnumFields={pendingEnumFields}
           activeEnumField={activeEnumField}
           formData={formData}
-          handleChange={handleChange}
+          handleChange={handleUserChange}
           loadReferenceModalData={loadReferenceModalData}
           modalItems={modalItems}
           modalVisible={modalVisible}
@@ -496,29 +521,12 @@ export default function AssetAddRelatedItem() {
         />
       }
     >
-      <AssetFormHeroCard
-        iconBgColor={c.redSurface}
-        iconColor={BRAND_RED}
-        iconName="link-outline"
-        styles={styles}
-        title={
-          isReviewClass
-            ? "Đánh giá dữ liệu liên quan"
-            : "Thêm dữ liệu liên quan"
-        }
-        subtitle={
-          isReviewClass
-            ? "Đánh giá bản ghi gắn với tài sản hiện tại theo từng nhóm thông tin."
-            : "Tạo mới bản ghi gắn với tài sản hiện tại theo từng nhóm thông tin."
-        }
-      />
-
       <AssetFormGroupedFields
         collapsedGroups={collapsedGroups}
         enumData={enumData}
         formData={formData}
         groupedFields={groupedFields}
-        handleChange={handleChange}
+        handleChange={handleUserChange}
         images={images}
         loadingImages={loadingImages}
         mode="add"
@@ -539,7 +547,4 @@ export default function AssetAddRelatedItem() {
 const makeStyles = (c: AppColors) =>
   StyleSheet.create({
     ...createAssetFormBaseStyles(c),
-    heroIconWrap: {
-      backgroundColor: c.redSurface,
-    },
   });

@@ -1,5 +1,8 @@
 import { GUIDE_TOPICS, getGuideTopic } from "../src/screens/Guide/shared/guideContent";
-import { filterGuideTopics } from "../src/screens/Guide/shared/guideSearch";
+import {
+  filterGuideSections,
+  filterGuideTopics,
+} from "../src/screens/Guide/shared/guideSearch";
 
 describe("tìm kiếm trong tài liệu hướng dẫn", () => {
   it("không có từ khoá thì trả về đủ chủ đề, không đánh dấu mục nào", () => {
@@ -40,13 +43,13 @@ describe("tìm kiếm trong tài liệu hướng dẫn", () => {
     expect(ids).toContain("faq");
   });
 
-  it("tra được câu hỏi vì sao mất thông báo Tạo mới thành công", () => {
+  it("tra được câu hỏi vì sao mất hộp thoại Tạo mới thành công", () => {
     const hit = filterGuideTopics("tao moi thanh cong").find(
       (entry) => entry.topic.id === "faq",
     );
 
     expect(hit?.matchedHeadings).toContain(
-      'Lưu xong không thấy thông báo "Tạo mới thành công"',
+      'Lưu xong không thấy hộp thoại "Tạo mới thành công" để bấm OK',
     );
   });
 
@@ -121,6 +124,51 @@ describe("mục lục hướng dẫn", () => {
       topic.sections.forEach((section) => {
         expect(section.blocks.length).toBeGreaterThan(0);
       });
+    });
+  });
+});
+
+describe("tìm câu hỏi trong Câu hỏi thường gặp", () => {
+  const faq = getGuideTopic("faq")!;
+
+  it("không có từ khoá thì trả về đủ câu hỏi, đúng thứ tự", () => {
+    expect(filterGuideSections("faq", "  ")).toEqual(faq.sections);
+  });
+
+  it("gõ không dấu vẫn ra câu hỏi có dấu", () => {
+    const headings = filterGuideSections("faq", "phien dang nhap da het").map(
+      (section) => section.heading,
+    );
+
+    expect(headings).toContain('App báo "Phiên đăng nhập đã hết"');
+  });
+
+  it("tìm cả trong câu trả lời, không chỉ trong câu hỏi", () => {
+    const sections = filterGuideSections("faq", "huy hieu bieu tuong");
+
+    expect(sections.length).toBeGreaterThan(0);
+    expect(
+      sections.every(
+        (section) => !/huy hiệu biểu tượng/i.test(section.heading),
+      ),
+    ).toBe(true);
+  });
+
+  it("không khớp gì thì trả về danh sách rỗng", () => {
+    expect(filterGuideSections("faq", "zzzz khong co cau nay")).toEqual([]);
+  });
+
+  // Màn chỉ vẽ nhóm có trong `sectionGroups`: câu hỏi thiếu nhóm hoặc gõ sai tên
+  // nhóm sẽ biến mất khỏi màn mà không báo gì.
+  it("câu hỏi nào cũng thuộc một nhóm có trong danh sách, nhóm nào cũng có câu", () => {
+    const groups = faq.sectionGroups ?? [];
+
+    expect(groups.length).toBeGreaterThan(0);
+    faq.sections.forEach((section) => {
+      expect(groups).toContain(section.group);
+    });
+    groups.forEach((group) => {
+      expect(faq.sections.some((section) => section.group === group)).toBe(true);
     });
   });
 });

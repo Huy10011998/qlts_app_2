@@ -1,25 +1,24 @@
 import React from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import BottomSheetModalShell from "../../shared/BottomSheetModalShell";
-import { useAppColors, useStyles } from "../../../utils/helpers/colors";
-import { makeStyles } from "../CameraPlayback.styles";
-import PlaybackTimeSheet from "./PlaybackTimeSheet";
+import CalendarPanel from "../../dataPicker/shared/CalendarPanel";
+import PickerSheetFrame from "../../dataPicker/shared/PickerSheetFrame";
+import { formatLongDate } from "../../dataPicker/shared/calendarGrid";
 import {
-  addMonths,
-  formatClock,
-  getCalendarDates,
-  isSameDay,
-  startOfDay,
-  startOfMonth,
-} from "./cameraPlaybackHelpers";
-
-const WEEK_DAYS = ["CN", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7"];
+  AppColors,
+  C,
+  useAppColors,
+  useStyles,
+} from "../../../utils/helpers/colors";
+import PlaybackTimeSheet from "./PlaybackTimeSheet";
+import { formatClock, startOfDay } from "./cameraPlaybackHelpers";
 
 type PlaybackDateSheetProps = {
   onClose: () => void;
   onConfirm: (date: Date, startTimeSec: number | null) => void;
+  /** Lịch chuyển sang tháng khác: nơi gọi nạp `recordingDays` của tháng đó. */
   onVisibleMonthChange?: (date: Date) => void;
+  /** Các ngày (1–31) có bản ghi của tháng được nạp gần nhất. */
   recordingDays?: number[];
   selectedDate: Date;
   selectedStartTimeSec: number | null;
@@ -27,6 +26,20 @@ type PlaybackDateSheetProps = {
   visible: boolean;
 };
 
+type MonthRef = { year: number; month: number };
+
+const monthOf = (date: Date): MonthRef => ({
+  year: date.getFullYear(),
+  month: date.getMonth(),
+});
+
+/**
+ * Chọn ngày + giờ bắt đầu xem lại camera. Cùng lịch với mọi ô ngày trong app;
+ * riêng ở đây ngày tương lai bị khoá và ngày có bản ghi có chấm đỏ.
+ *
+ * Bấm "Thời gian bắt đầu" thì sheet giờ thế chỗ sheet lịch; xác nhận giờ là
+ * xác nhận luôn cả ngày.
+ */
 export default function PlaybackDateSheet({
   onClose,
   onConfirm,
@@ -44,40 +57,57 @@ export default function PlaybackDateSheet({
     selectedStartTimeSec,
   );
   const [isTimeSheetVisible, setIsTimeSheetVisible] = React.useState(false);
-  const [visibleMonth, setVisibleMonth] = React.useState(() =>
-    startOfMonth(selectedDate),
+
+  // Mở lại thì bắt đầu lại từ giá trị đang dùng; lịch dựng lại (key mới) để về
+  // đúng tháng của ngày đang chọn.
+  const [wasVisible, setWasVisible] = React.useState(visible);
+  const [session, setSession] = React.useState(0);
+  if (visible !== wasVisible) {
+    setWasVisible(visible);
+    if (visible) {
+      setTempDate(selectedDate);
+      setTempStartTimeSec(selectedStartTimeSec);
+      setIsTimeSheetVisible(false);
+      setSession((n) => n + 1);
+    }
+  }
+
+  /**
+   * `recordingDays` chỉ là số ngày, không kèm tháng — phải nhớ tháng nào vừa
+   * nhờ nạp để chấm không lọt sang tháng khác. Nơi gọi tự nạp tháng của
+   * `selectedDate`, nên đó là mốc ban đầu.
+   */
+  const markedMonthRef = React.useRef<MonthRef>(monthOf(selectedDate));
+  const [markedMonth, setMarkedMonth] = React.useState(markedMonthRef.current);
+  const showMonth = React.useCallback(
+    (year: number, month: number) => {
+      const current = markedMonthRef.current;
+      if (current.year === year && current.month === month) return;
+      markedMonthRef.current = { year, month };
+      setMarkedMonth(markedMonthRef.current);
+      onVisibleMonthChange?.(new Date(year, month, 1));
+    },
+    [onVisibleMonthChange],
   );
 
+  // Lịch luôn mở (và dựng lại khi từ sheet giờ quay về) ở tháng của ngày đang
+  // chọn; lần trước lật sang tháng khác rồi đóng thì chấm đang là của tháng đó
+  // — nạp lại cho đúng. Chọn ngày thì vẫn trong tháng đang xem nên không nạp.
   React.useEffect(() => {
-    if (!visible) return;
-    setTempDate(selectedDate);
-    setTempStartTimeSec(selectedStartTimeSec);
-    setVisibleMonth(startOfMonth(selectedDate));
-  }, [selectedDate, selectedStartTimeSec, visible]);
+    if (!visible || isTimeSheetVisible) return;
+    showMonth(tempDate.getFullYear(), tempDate.getMonth());
+  }, [visible, isTimeSheetVisible, tempDate, showMonth]);
 
-  const calendarDates = React.useMemo(
-    () => getCalendarDates(visibleMonth),
-    [visibleMonth],
-  );
-  const canGoNextMonth =
-    startOfMonth(visibleMonth).getTime() < startOfMonth(today).getTime();
-  const monthLabel = `${visibleMonth.getFullYear()}-${String(
-    visibleMonth.getMonth() + 1,
-  ).padStart(2, "0")}`;
   const recordingDaySet = React.useMemo(
     () => new Set(recordingDays),
     [recordingDays],
   );
-
-  const changeVisibleMonth = React.useCallback(
-    (amount: number) => {
-      setVisibleMonth((current) => {
-        const next = addMonths(current, amount);
-        onVisibleMonthChange?.(next);
-        return next;
-      });
-    },
-    [onVisibleMonthChange],
+  const isMarked = React.useCallback(
+    (date: Date) =>
+      date.getFullYear() === markedMonth.year &&
+      date.getMonth() === markedMonth.month &&
+      recordingDaySet.has(date.getDate()),
+    [markedMonth, recordingDaySet],
   );
 
   if (isTimeSheetVisible) {
@@ -96,131 +126,86 @@ export default function PlaybackDateSheet({
   }
 
   return (
-    <BottomSheetModalShell
+    <PickerSheetFrame
       visible={visible}
-      onClose={onClose}
-      closeOnBackdropPress
-      sheetStyle={styles.calendarSheet}
-      statusBarTranslucent
+      title="Ngày xem lại"
+      headline={formatLongDate(tempDate)}
+      onCancel={onClose}
+      onConfirm={() => onConfirm(tempDate, tempStartTimeSec)}
     >
-      <View style={styles.calendarHeader}>
-        <TouchableOpacity
-          style={styles.calendarHeaderBtn}
-          onPress={onClose}
-          hitSlop={8}
-          accessibilityLabel="Đóng lịch"
-        >
-          <Ionicons name="close" size={28} color={c.text} />
-        </TouchableOpacity>
+      <CalendarPanel
+        key={session}
+        value={tempDate}
+        onChange={(date) => setTempDate(startOfDay(date))}
+        maxDate={today}
+        isMarked={isMarked}
+        onVisibleMonthChange={showMonth}
+      />
 
-        <View style={styles.calendarMonthNav}>
-          <TouchableOpacity
-            style={styles.calendarMonthBtn}
-            onPress={() => changeVisibleMonth(-1)}
-            accessibilityLabel="Tháng trước"
-          >
-            <Ionicons name="chevron-back" size={22} color={c.textSecondary} />
-          </TouchableOpacity>
-          <Text style={styles.calendarMonthText}>
-            {monthLabel}
-          </Text>
-          <TouchableOpacity
-            style={styles.calendarMonthBtn}
-            disabled={!canGoNextMonth}
-            onPress={() => changeVisibleMonth(1)}
-            accessibilityLabel="Tháng sau"
-          >
-            <Ionicons
-              name="chevron-forward"
-              size={22}
-              color={canGoNextMonth ? c.textSecondary : c.placeholder}
-            />
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity
-          style={styles.calendarConfirmBtn}
-          onPress={() => onConfirm(tempDate, tempStartTimeSec)}
-          accessibilityLabel="Xác nhận ngày"
-        >
-          <Text style={styles.calendarConfirmText}>
-            OK
-          </Text>
-        </TouchableOpacity>
+      <View style={styles.legendRow}>
+        <View style={styles.legendDot} />
+        <Text style={styles.legendText}>Ngày có bản ghi</Text>
       </View>
 
-      <View style={styles.calendarWeekRow}>
-        {WEEK_DAYS.map((day) => (
-          <Text
-            key={day}
-            style={styles.calendarWeekText}
-          >
-            {day}
-          </Text>
-        ))}
-      </View>
-
-      <View style={styles.calendarGrid}>
-        {calendarDates.map((date) => {
-          const isCurrentMonth = date.getMonth() === visibleMonth.getMonth();
-          const isSelected = isSameDay(date, tempDate);
-          const isFuture =
-            startOfDay(date).getTime() > startOfDay(today).getTime();
-
-          return (
-            <TouchableOpacity
-              key={date.toISOString()}
-              style={styles.calendarDayCell}
-              activeOpacity={0.75}
-              disabled={isFuture}
-              onPress={() => setTempDate(startOfDay(date))}
-              accessibilityLabel={`Chọn ngày ${date.getDate()}`}
-            >
-              <View
-                style={[
-                  styles.calendarDayCircle,
-                  isSelected && styles.calendarDaySelected,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.calendarDayText,
-                    (!isCurrentMonth || isFuture) &&
-                      styles.calendarDayTextMuted,
-                    isSelected && styles.calendarDayTextSelected,
-                  ]}
-                >
-                  {date.getDate()}
-                </Text>
-              </View>
-              {isCurrentMonth &&
-              !isFuture &&
-              recordingDaySet.has(date.getDate()) ? (
-                <View style={styles.calendarRecordingDot} />
-              ) : null}
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      <TouchableOpacity
-        style={styles.calendarStartTimeRow}
+      <Pressable
+        style={({ pressed }) => [styles.startTimeRow, pressed && styles.pressed]}
         onPress={() => setIsTimeSheetVisible(true)}
-        activeOpacity={0.75}
+        accessibilityRole="button"
         accessibilityLabel="Chọn thời gian bắt đầu"
       >
-        <Text style={styles.calendarStartTimeLabel}>
-          Thời gian bắt đầu
+        <Ionicons name="time-outline" size={20} color={c.textSecondary} />
+        <Text style={styles.startTimeLabel}>Thời gian bắt đầu</Text>
+        <Text style={styles.startTimeValue}>
+          {tempStartTimeSec === null ? "Chưa đặt" : formatClock(tempStartTimeSec)}
         </Text>
-        <View style={styles.calendarStartTimeValueWrap}>
-          <Text style={styles.calendarStartTimeValue}>
-            {tempStartTimeSec === null
-              ? "Chưa đặt"
-              : formatClock(tempStartTimeSec)}
-          </Text>
-          <Ionicons name="chevron-forward" size={20} color={c.placeholder} />
-        </View>
-      </TouchableOpacity>
-    </BottomSheetModalShell>
+        <Ionicons name="chevron-forward" size={18} color={c.placeholder} />
+      </Pressable>
+    </PickerSheetFrame>
   );
 }
+
+const makeStyles = (c: AppColors) =>
+  StyleSheet.create({
+    legendRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      paddingHorizontal: 8,
+      marginTop: 2,
+    },
+    legendDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: C.red,
+    },
+    legendText: {
+      fontSize: 12,
+      color: c.textSub,
+    },
+    startTimeRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      marginTop: 12,
+      paddingHorizontal: 14,
+      minHeight: 52,
+      borderRadius: 14,
+      backgroundColor: c.surfaceAlt,
+    },
+    pressed: {
+      opacity: 0.7,
+    },
+    startTimeLabel: {
+      flex: 1,
+      fontSize: 15,
+      fontWeight: "600",
+      color: c.text,
+    },
+    startTimeValue: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: c.textSecondary,
+      fontVariant: ["tabular-nums"],
+    },
+  });

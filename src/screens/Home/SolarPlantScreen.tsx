@@ -64,7 +64,6 @@ import {
   getDateRangeForPeriod,
   getSolarContentWidth,
   hasNumber,
-  MAX_SOLAR_CONTENT_WIDTH,
   isCurrentPeriodRange,
   NO_VALUE,
   type CompareMode,
@@ -94,14 +93,12 @@ import {
   ChartTransition,
   DonutChart,
   EnergyBarChart,
-  getSceneHeight,
-  getSceneTopSpace,
   getSolarHeroScale,
-  SceneView,
-  StatBubble,
-  WeatherIcon,
 } from "./SolarPlantScreen.visuals";
-import { getPlantScene } from "./shared/plantScenes";
+import {
+  getFlowHeroCardInnerWidth,
+  SolarFlowHero,
+} from "./SolarPlantScreen.flowHero";
 import SolarPlantSkeleton from "./shared/SolarPlantSkeleton";
 import {
   useSolarDashboard,
@@ -1017,8 +1014,6 @@ const COMPARE_MODE_LABELS: Record<CompareMode, string> = {
 type SolarHeroSectionProps = {
   flow: SolarBlockState<SolarPowerFlowView>;
   overview: SolarBlockState<SolarOverviewView>;
-  /** Tên nhà máy đang xem, để lấy đúng ảnh nền. */
-  plantName?: string | null;
   screenWidth: number;
   weather: PlantWeatherState;
 };
@@ -1026,37 +1021,11 @@ type SolarHeroSectionProps = {
 const SolarHeroSection: React.FC<SolarHeroSectionProps> = ({
   flow,
   overview,
-  plantName,
   screenWidth,
   weather,
 }) => {
   const styles = useStyles(makeStyles);
   const contentWidth = getSolarContentWidth(screenWidth);
-  const visualWidth = Math.min(contentWidth, MAX_SOLAR_CONTENT_WIDTH);
-  const visualInset = (contentWidth - visualWidth) / 2;
-  // Cao theo đúng khung cảnh nhà máy: cảnh giữ tỉ lệ theo chiều rộng nên vùng
-  // hero phải nới theo, không thì trên tablet ảnh bị cắt cụt ở đáy.
-  // Màn hẹp hơn bản canh (máy nhỏ, bật Thu phóng) thì cả cụm thu lại theo cùng
-  // một hệ số, thay vì giữ cỡ tối thiểu làm hero chiếm gần hết màn hình.
-  const heroScale = getSolarHeroScale(visualWidth);
-  const heroVisualHeight =
-    getSceneHeight(visualWidth) + getSceneTopSpace(visualWidth);
-  const heroCenterBubbleSize = clamp(visualWidth * 0.31, 108 * heroScale, 126);
-  const heroSideBubbleSize = clamp(visualWidth * 0.23, 82 * heroScale, 90);
-  const heroSideBubbleTop = clamp(visualWidth * 0.17, 54 * heroScale, 72);
-  // Sát mép trái, chừa đúng lề như bong bóng bên phải trên màn hẹp.
-  const heroToHomeLeft = visualInset + 8;
-  const heroSolarPowerLeft =
-    visualInset +
-    visualWidth * 0.46 +
-    14 * heroScale -
-    heroCenterBubbleSize / 2;
-  // Bong bóng có cỡ tối thiểu nên trên màn hẹp (bật Thu phóng) mốc 87% đẩy nó
-  // chạm mép phải — chặn để luôn chừa lề như bong bóng bên trái.
-  const heroFromGridLeft = Math.min(
-    visualInset + visualWidth * 0.87 - heroSideBubbleSize / 2,
-    visualInset + visualWidth - heroSideBubbleSize - 8,
-  );
 
   const flowData = flow.data;
   const todayEnergy: MetricParts = formatEnergy(overview.data?.today);
@@ -1070,118 +1039,31 @@ const SolarHeroSection: React.FC<SolarHeroSectionProps> = ({
     : "Mua từ lưới";
 
   return (
-    <View style={[styles.heroSection, styles.blockShell]}>
-      {flow.isLoading || overview.isLoading ? <RefreshBar /> : null}
-      <View style={styles.heroContent}>
-        <View style={styles.heroTopRow}>
-          <View style={styles.productionBlock}>
-            <Text
-              allowFontScaling={false}
-              numberOfLines={1}
-              style={styles.prodLabel}
-            >
-              Sản lượng hôm nay
-            </Text>
-            <Text
-              adjustsFontSizeToFit
-              allowFontScaling={false}
-              minimumFontScale={0.8}
-              numberOfLines={1}
-              style={[styles.prodValue, { fontSize: 36 * heroScale }]}
-            >
-              {todayEnergy.value}{" "}
-              <Text
-                allowFontScaling={false}
-                style={[styles.prodUnit, { fontSize: 19 * heroScale }]}
-              >
-                {todayEnergy.unit}
-              </Text>
-            </Text>
-          </View>
-          <View style={styles.weatherRow}>
-            {weather.isLoading || weather.temperature == null ? null : (
-              <WeatherIcon weatherCode={weather.weatherCode} scale={heroScale} />
-            )}
-            <Text
-              allowFontScaling={false}
-              numberOfLines={1}
-              style={[styles.tempText, { fontSize: 20 * heroScale }]}
-            >
-              {weather.temperature == null
-                ? `${NO_VALUE} °C`
-                : `${weather.temperature} °C`}
-            </Text>
-          </View>
-        </View>
-
-        <View style={[styles.heroVisual, { height: heroVisualHeight }]}>
-          <View
-            style={[
-              styles.toHomeBubblePosition,
-              { top: heroSideBubbleTop, left: heroToHomeLeft },
-            ]}
-          >
-            <StatBubble
-              value={loadPower.value}
-              unit={loadPower.unit}
-              label="Nhà máy"
-              size={heroSideBubbleSize}
-              borderColor="#cccccc"
-              borderWidth={2}
-              valueSize={20 * heroScale}
-            />
-          </View>
-
-          <View
-            style={[
-              styles.solarPowerBubblePosition,
-              { left: heroSolarPowerLeft },
-            ]}
-          >
-            <StatBubble
-              value={pvPower.value}
-              unit={pvPower.unit}
-              label={`Điện mặt trời\nhiện tại`}
-              size={heroCenterBubbleSize}
-              borderColor="#1baf7a"
-              borderWidth={4}
-              valueSize={27 * heroScale}
-            />
-          </View>
-
-          <View
-            style={[
-              styles.fromGridBubblePosition,
-              { top: heroSideBubbleTop, left: heroFromGridLeft },
-            ]}
-          >
-            <StatBubble
-              value={gridPower.value}
-              unit={gridPower.unit}
-              label={gridLabel}
-              size={heroSideBubbleSize}
-              borderColor="#eb6834"
-              borderWidth={2.5}
-              valueSize={20 * heroScale}
-            />
-          </View>
-
-          <View style={styles.sceneWrap}>
-            <SceneView
-              plantScene={getPlantScene(plantName)}
-              width={visualWidth}
-            />
-          </View>
-        </View>
-
-        {/* Lỗi của khối overview hiển thị ở khối "Sản lượng tích luỹ" ngay bên
-            dưới, ở đây chỉ báo lỗi của dòng năng lượng. */}
-        {flow.error ? (
-          <View style={styles.contentFrame}>
-            <BlockError message={flow.error} />
-          </View>
-        ) : null}
+    <View style={styles.heroSection}>
+      <View style={[styles.heroCard, styles.blockShell]}>
+        <SolarFlowHero
+          gridLabel={gridLabel}
+          gridPower={gridPower}
+          gridWatt={flowData?.gridPower ?? null}
+          isExportingToGrid={flowData?.isExportingToGrid ?? false}
+          loadPower={loadPower}
+          pvPower={pvPower}
+          todayEnergy={todayEnergy}
+          weather={weather}
+          width={getFlowHeroCardInnerWidth(contentWidth)}
+        />
+        {/* Sau cảnh để vạch tải nằm đè lên bầu trời, trong card để bị bo
+            theo góc. */}
+        {flow.isLoading || overview.isLoading ? <RefreshBar /> : null}
       </View>
+
+      {/* Lỗi của khối overview hiển thị ở khối "Sản lượng tích luỹ" ngay bên
+          dưới, ở đây chỉ báo lỗi của dòng năng lượng. */}
+      {flow.error ? (
+        <View style={styles.contentFrame}>
+          <BlockError message={flow.error} />
+        </View>
+      ) : null}
     </View>
   );
 };
@@ -1723,7 +1605,6 @@ const SolarFullScreen: React.FC = () => {
         <SolarHeroSection
           flow={blocks.flow}
           overview={blocks.overview}
-          plantName={selectedSite?.text}
           screenWidth={screenWidth}
           weather={weather}
         />

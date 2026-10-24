@@ -22,6 +22,7 @@ class MainApplication : Application(), ReactApplication {
               add(SplashGatePackage())
               add(ImmersiveModePackage())
               add(AppUpdatePackage())
+              add(BiometricGatePackage())
             }
 
         override fun getJSMainModuleName(): String = "index"

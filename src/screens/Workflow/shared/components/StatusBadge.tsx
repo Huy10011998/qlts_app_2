@@ -1,6 +1,7 @@
 import React from "react";
 import { StyleProp, StyleSheet, Text, View, ViewStyle } from "react-native";
 
+import { useSchemeColor } from "../../../../utils/helpers/colors";
 import { tint } from "../workflowConstants";
 
 type Props = {
@@ -10,7 +11,10 @@ type Props = {
   dot?: boolean;
   /** Nền đặc, chữ trắng — nhãn tình trạng phiếu theo tài liệu BE. */
   solid?: boolean;
-  /** Chữ trên nền đặc khi khác chữ trắng (nền quá nhạt). */
+  /**
+   * Chữ khi `color` quá nhạt để đọc: trên nền đặc thay cho chữ trắng; trên nền
+   * nhạt thay cho chính `color` (chỉ giao diện sáng — nền tối thì màu nhạt đã đọc rõ).
+   */
   textColor?: string;
   style?: StyleProp<ViewStyle>;
 };
@@ -19,7 +23,8 @@ const SOLID_TEXT = "#FFFFFF";
 
 /** Nhãn màu dạng viên thuốc: mặc định chữ màu đậm trên nền nhạt cùng màu. */
 export default function StatusBadge({ label, color, dot, solid, textColor, style }: Props) {
-  const labelColor = solid ? textColor ?? SOLID_TEXT : color;
+  const tintedText = useSchemeColor(textColor ?? color, color);
+  const labelColor = solid ? textColor ?? SOLID_TEXT : tintedText;
 
   return (
     <View style={[styles.badge, { backgroundColor: solid ? color : tint(color) }, style]}>

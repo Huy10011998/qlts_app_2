@@ -10,6 +10,7 @@ import { useAppColors, useStyles } from "../../utils/helpers/colors";
 import FeatureTile, { type FeatureTileGroup } from "./shared/FeatureTile";
 import FeaturesScreenSkeleton from "./shared/FeaturesScreenSkeleton";
 import { HOME_BRAND_RED } from "./shared/homeTheme";
+import { getHomeCardChrome } from "./shared/homeBlockTone";
 import { useMenuScreenData } from "./shared/useMenuScreenData";
 import { makeFeatureStyles } from "./FeaturesScreen.styles";
 
@@ -82,6 +83,15 @@ const FeaturesScreen: React.FC = () => {
     />
   );
 
+  // Viền thẻ nhóm cùng màu icon trong nhóm (đỏ · xanh · tím, như `FeatureTile`),
+  // giống card trên Trang chủ viền theo màu của chính nó. Gạch dưới tiêu đề
+  // nhóm cũng lấy màu này để không lệch tông với viền.
+  const sectionColorByGroup: Record<FeatureTileGroup, string> = {
+    feature: colors.red,
+    vehicle: colors.sky,
+    report: colors.violet,
+  };
+
   const renderSection = (
     title: string,
     items: { id: string; iconName: string; label: string; onPress?: () => void; notificationCount?: number }[],
@@ -89,9 +99,22 @@ const FeaturesScreen: React.FC = () => {
   ) => {
     if (items.length === 0) return null;
 
+    const sectionColor = sectionColorByGroup[group];
+
     return (
-      <View style={styles.sectionCard}>
-        <View style={styles.sectionHeader}>
+      <View
+        style={[
+          styles.sectionCard,
+          getHomeCardChrome({
+            borderColor: sectionColor,
+            shadowColor: colors.shadow,
+            accent: sectionColor,
+          }),
+        ]}
+      >
+        <View
+          style={[styles.sectionHeader, { borderBottomColor: sectionColor }]}
+        >
           <Text style={styles.sectionTitle}>
             {title}
           </Text>
@@ -123,7 +146,10 @@ const FeaturesScreen: React.FC = () => {
           <EmptyState
             iconName="cloud-offline-outline"
             title="Không thể tải danh mục chức năng"
-            subtitle="Vui lòng kiểm tra kết nối hoặc kéo xuống để thử lại."
+            subtitle="Vui lòng kiểm tra kết nối rồi bấm Thử lại."
+            // Kéo xuống vẫn làm mới được, nhưng ít ai đoán ra trên một màn lỗi.
+            actionLabel="Thử lại"
+            onActionPress={refresh}
           />
         </ScrollView>
       </View>

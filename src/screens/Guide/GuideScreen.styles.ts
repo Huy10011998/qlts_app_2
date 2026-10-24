@@ -2,7 +2,7 @@ import { StyleSheet } from "react-native";
 import { scaledLineHeight } from "../../utils/helpers/textScaling";
 
 import { AppColors, C } from "../../utils/helpers/colors";
-import { elevation } from "../../utils/helpers/tokens";
+import { ROW_DIVIDER_OPACITY, elevation } from "../../utils/helpers/tokens";
 
 /**
  * Hình thức của hai màn hướng dẫn.
@@ -12,6 +12,14 @@ import { elevation } from "../../utils/helpers/tokens";
  * không phải học một kiểu bố cục riêng chỉ để đọc hướng dẫn.
  */
 export const GUIDE_SCREEN_PADDING = 16;
+
+/** Tô viền + mép trên của `card` theo một màu khác màu mặc định. */
+export const guideCardAccent = (color: string | undefined) =>
+  color ? { borderColor: color, borderTopColor: color } : null;
+
+/** Gạch dưới tiêu đề thẻ (`cardHeader`) theo cùng màu đã truyền `guideCardAccent`. */
+export const guideCardHeaderAccent = (color: string | undefined) =>
+  color ? { borderBottomColor: color } : null;
 
 export const makeGuideStyles = (c: AppColors) =>
   StyleSheet.create({
@@ -41,20 +49,26 @@ export const makeGuideStyles = (c: AppColors) =>
       paddingHorizontal: 2,
     },
 
+    // Viền 1pt + mép trên 3pt như card Trang chủ / Cài đặt. Màu mặc định là màu
+    // của Hướng dẫn sử dụng ở Cài đặt; màn một chủ đề tô lại theo màu chủ đề đó
+    // (`guideCardAccent`).
     card: {
       backgroundColor: c.surface,
       borderRadius: 20,
       overflow: "hidden",
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.hairline,
+      borderWidth: 1,
+      borderTopWidth: 3,
+      borderColor: C.emerald,
       ...elevation(c.shadow, 2),
     },
+    // Gạch dưới tiêu đề cùng màu và dày bằng viền thẻ, như thẻ nhóm ở màn Chức
+    // năng. Thẻ tô màu khác thì tô lại bằng `guideCardHeaderAccent`.
     cardHeader: {
       paddingHorizontal: 14,
       paddingTop: 13,
       paddingBottom: 11,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: c.separator,
+      borderBottomWidth: 1,
+      borderBottomColor: C.emerald,
     },
     cardHeaderTitle: {
       fontSize: 11,
@@ -65,15 +79,14 @@ export const makeGuideStyles = (c: AppColors) =>
     },
 
     // ─── Hàng chủ đề ─────────────────────────────────────────────────────────
+    // Vạch ngăn các dòng là `sectionDivider` đặt giữa hai dòng: thụt vào bằng lề
+    // ngang, viền dưới của dòng thì kéo sát hai mép thẻ.
     topicRow: {
       flexDirection: "row",
       alignItems: "center",
       paddingVertical: 13,
       paddingHorizontal: 14,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: c.separator,
     },
-    topicRowLast: { borderBottomWidth: 0 },
     topicIcon: {
       width: 38,
       height: 38,
@@ -140,9 +153,13 @@ export const makeGuideStyles = (c: AppColors) =>
       fontWeight: "700",
       color: c.text,
     },
+    // Gạch giữa tiêu đề và nội dung, và giữa các dòng của thẻ nhóm: cùng tông
+    // màu viền thẻ nhưng nhạt (màu mặc định của `card`, mục có `accent` thì tô
+    // lại theo đó).
     sectionDivider: {
-      height: StyleSheet.hairlineWidth,
-      backgroundColor: c.separator,
+      height: 1,
+      backgroundColor: C.emerald,
+      opacity: ROW_DIVIDER_OPACITY,
       marginHorizontal: 14,
     },
     sectionBody: {
@@ -239,10 +256,7 @@ export const makeGuideStyles = (c: AppColors) =>
       alignItems: "center",
       paddingHorizontal: 14,
       paddingVertical: 13,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: c.separator,
     },
-    contactRowLast: { borderBottomWidth: 0 },
     contactIcon: {
       width: 34,
       height: 34,
@@ -274,8 +288,9 @@ export const makeGuideStyles = (c: AppColors) =>
       borderRadius: 20,
       paddingVertical: 20,
       paddingHorizontal: 12,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.hairline,
+      borderWidth: 1,
+      borderTopWidth: 3,
+      borderColor: C.emerald,
       ...elevation(c.shadow, 2),
     },
   });

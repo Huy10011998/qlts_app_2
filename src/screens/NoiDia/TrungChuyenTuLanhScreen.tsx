@@ -87,7 +87,17 @@ export default function TrungChuyenTuLanhScreen() {
     })
   )
     return (
-      <RecordListSkeleton hasSearchBar hasSummaryCard lines={4} trailing="chevron" />
+      /* Bốn vạch nhịp mặc định (~71) vừa khít bốn dòng thật: tên 14.5 đậm,
+         "Seri" 3 + 13, hai dòng phụ 3 + 12 (~70, cỡ chữ iOS). Avatar thật đứng
+         ở đỉnh thẻ, và `listContent` có `paddingTop` 2 dưới thẻ tổng số. */
+      <RecordListSkeleton
+        hasSearchBar
+        hasSummaryCard
+        lines={4}
+        avatarAlign="top"
+        trailing="chevron"
+        contentStyle={styles.listContent}
+      />
     );
 
   const hasSearch = Boolean(searchText.trim());

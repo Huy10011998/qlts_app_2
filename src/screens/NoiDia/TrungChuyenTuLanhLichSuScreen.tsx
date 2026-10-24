@@ -152,12 +152,22 @@ export default function TrungChuyenTuLanhLichSuScreen() {
     shouldShowListSkeleton({ isFetching: isLoading, isEmpty: items.length === 0 })
   )
     return (
-      <RecordListSkeleton
-        hasSummaryCard
-        hasFab={canThemTrungChuyen}
-        variant="compact"
-        lines={1}
-      />
+      /* Thẻ tủ lấy từ tham số route nên vẽ THẬT ngay, cùng chỗ với màn thật
+         (đứng ngoài danh sách) — thẻ xám 2 dòng cũ thấp hơn thẻ 3 dòng thật
+         ~20pt. Khối thẻ lấy đúng `listContent` của danh sách bên dưới. */
+      <ScreenContainer>
+        <FridgeSummaryHeader
+          ma={fridge.ma}
+          ten={fridge.ten}
+          serialNumber={fridge.serialNumber}
+        />
+        <RecordListSkeleton
+          hasFab={canThemTrungChuyen}
+          variant="compact"
+          lines={1}
+          contentStyle={listStyles.listContent}
+        />
+      </ScreenContainer>
     );
 
   if (!canXemTrungChuyen) {

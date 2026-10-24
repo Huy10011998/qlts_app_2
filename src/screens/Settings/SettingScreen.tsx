@@ -1,892 +1,91 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  Alert,
   ActivityIndicator,
-  AppState,
   Platform,
   StatusBar,
   TouchableOpacity,
 } from "react-native";
-import * as Keychain from "react-native-keychain";
-import DeviceInfo from "react-native-device-info";
-import { useIsFocused, useNavigation } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import LinearGradient from "react-native-linear-gradient";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { useAuth } from "../../context/AuthContext";
-import { changePasswordApi } from "../../services";
 import type { StackNavigation } from "../../types";
-import {
-  clearTokenStorage,
-  hardResetApi,
-  resetAuthState,
-} from "../../services/data/callApi";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { clearPermissions } from "../../store/PermissionSlice";
-import { useAppDispatch } from "../../store/hooks";
-import {
-  AUTH_LOGIN_SERVICE,
-  FACE_ID_LOGIN_SERVICE,
-  FACE_ID_MARKER_PASSWORD,
-  FACE_ID_MARKER_USERNAME,
-} from "../../constants/AuthStorage";
-import {
-  readFaceIdEnabled,
-  writeFaceIdEnabled,
-} from "../../services/auth/faceIdFlag";
 import { C, useAppColors } from "../../utils/helpers/colors";
-import { useTextScale } from "../../context/FontScaleContext";
-import EmptyState from "../../components/ui/EmptyState";
-import { warn } from "../../utils/Logger";
-import SettingWaveDivider from "./shared/SettingWaveDivider";
 import SettingProfileHeader from "./shared/SettingProfileHeader";
 import SettingScreenSkeleton from "./shared/SettingScreenSkeleton";
 import SettingSectionGroup from "./shared/SettingSectionGroup";
-import { SettingRowItem, SettingSwitchRow } from "./shared/SettingRowItem";
-import ChangePasswordModal from "./shared/ChangePasswordModal";
-import { useColorScheme } from "../../hooks/useColorScheme";
+import { SettingRowItem } from "./shared/SettingRowItem";
+import SettingLogoutRow from "./shared/SettingLogoutRow";
+import { SETTING_GROUPS, SettingGroupId } from "./shared/settingGroups";
+import { useStoreVersionCheck } from "./shared/useStoreVersionCheck";
 import { useNhanVienInfo } from "../../hooks/useNhanVienInfo";
-import { readStoredAuthTokens } from "../../context/authStorage";
-import {
-  getLocalNetworkPermissionLabel,
-  readStoredLocalNetworkPermission,
-  requestLocalNetworkPermission,
-  refreshStoredLocalNetworkPermission,
-  StoredLocalNetworkPermissionState,
-} from "../../services/localNetworkPermission";
-import {
-  AppCameraPermissionStatus,
-  checkCameraPermission,
-  getCameraPermissionLabel,
-  openAppPermissionSettings,
-  requestCameraPermission,
-} from "../../services/cameraPermission";
-import {
-  AppLocationPermissionStatus,
-  checkLocationPermission,
-  getLocationPermissionLabel,
-  requestLocationPermission,
-} from "../../services/locationPermission";
-import {
-  AppNotificationPermissionStatus,
-  checkNotificationPermission,
-  getNotificationPermissionLabel,
-  openNotificationSettings,
-  requestNotificationPermission,
-  unregisterPushToken,
-} from "../../services/notifications";
-import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { usePermission } from "../../hooks/usePermission";
-import {
-  ANDROID_STORE_URL,
-  getStoreVersionInfo,
-  IOS_STORE_URL,
-  openStoreForUpdate,
-  StoreVersionInfo,
-} from "../../utils/AppVersion";
-import { startAndroidFlexibleUpdate } from "../../services/appUpdate/androidInAppUpdate";
-
-const LOCAL_NETWORK_FALLBACK_STATE: StoredLocalNetworkPermissionState = {
-  hasShownNotice: false,
-  hasRequestedPermission: false,
-  status: "unknown",
-};
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
+/**
+ * Màn Cài đặt chỉ còn danh sách nhóm; từng dòng cài đặt nằm trong màn của nhóm
+ * đó (`SettingGroupScreen`), riêng Đăng xuất để ngay cuối màn. Dòng phụ dưới tên nhóm tóm tắt bên trong có gì —
+ * riêng Thông tin ứng dụng báo luôn trạng thái phiên bản để thấy có bản mới mà
+ * không phải mở vào.
+ */
 const SettingScreen = () => {
-  const isDark = useColorScheme() === "dark";
   const colors = useAppColors();
-  const { factor: textScaleFactor } = useTextScale();
-  const [isLoading, setIsLoading] = useState(false);
-  const appVersionLabel = `v${DeviceInfo.getVersion()}`;
-  const [storeVersionInfo, setStoreVersionInfo] =
-    useState<StoreVersionInfo | null>(null);
-  const [isCheckingAppVersion, setIsCheckingAppVersion] = useState(false);
-  const [hasAppVersionCheckFailed, setHasAppVersionCheckFailed] =
-    useState(false);
-
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [oldPassword, setOldPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [isFaceIdEnabled, setIsFaceIdEnabled] = useState(false);
-  const [localNetworkState, setLocalNetworkState] =
-    useState<StoredLocalNetworkPermissionState>({
-      hasShownNotice: false,
-      hasRequestedPermission: false,
-      status: "unknown",
-    });
-  const [cameraPermissionStatus, setCameraPermissionStatus] =
-    useState<AppCameraPermissionStatus>("unknown");
-  const [locationPermissionStatus, setLocationPermissionStatus] =
-    useState<AppLocationPermissionStatus>("unknown");
-  const [isUpdatingLocationPermission, setIsUpdatingLocationPermission] =
-    useState(false);
-  const [notificationPermissionStatus, setNotificationPermissionStatus] =
-    useState<AppNotificationPermissionStatus>("unknown");
-  const [
-    isUpdatingLocalNetworkPermission,
-    setIsUpdatingLocalNetworkPermission,
-  ] = useState(false);
-  const [isUpdatingCameraPermission, setIsUpdatingCameraPermission] =
-    useState(false);
-  const [
-    isUpdatingNotificationPermission,
-    setIsUpdatingNotificationPermission,
-  ] = useState(false);
-
-  const navigation = useNavigation<StackNavigation<"Profile">>();
-  const { can } = usePermission();
-  // Quyền do IT cấp ở Admin → Nhóm → Phân quyền → Camera → "Noti Camera Mobile".
-  const canUseCameraNoti = can("Camera", "NotiCameraMobile");
-  const { logout, logoutReason } = useAuth();
-  const isFocused = useIsFocused();
-  const dispatch = useAppDispatch();
+  const navigation = useNavigation<StackNavigation<"Settings">>();
   const insets = useSafeAreaInsets();
+  const { can } = usePermission();
+  const canUseCameraNoti = can("Camera", "NotiCameraMobile");
+  const { installedVersionLabel, hasNewVersion, resultLabel } =
+    useStoreVersionCheck();
   /* Danh thiếp nạp sẵn lúc đăng nhập — nguồn của tên + ảnh trên đầu màn. */
-  const { info: nhanVien, isLoading: isLoadingNhanVien } = useNhanVienInfo();
-  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
-  const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
+  const {
+    info: nhanVien,
+    isLoading: isLoadingNhanVien,
+    errorMessage: nhanVienErrorMessage,
+    reload: reloadNhanVien,
+  } = useNhanVienInfo();
+  /* Trang đã hiện lần nào chưa. Sau đó nạp lại danh thiếp (bấm "Thử lại",
+     có mạng lại, quay lại màn) chỉ quay vòng trên nút — không thì cả màn nháy
+     về khung chờ rồi mới hiện lại. */
+  const [hasShownContent, setHasShownContent] = useState(false);
 
-  const hasLoadedOnceRef = useRef(false);
-  const loadingRef = useRef(false);
-  const isLoggingOutRef = useRef(false);
-  const isMountedRef = useRef(true);
-  const isScreenActiveRef = useRef(false);
-  const isFocusedRef = useRef(false);
-  const blockingLoaderActiveRef = useRef(false);
-  const isFaceIdPromptActiveRef = useRef(false);
-
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-      isScreenActiveRef.current = false;
-    };
-  }, []);
+  const shouldShowSkeleton = isLoadingNhanVien && !hasShownContent;
 
   useEffect(() => {
-    hasLoadedOnceRef.current = hasLoadedOnce;
-  }, [hasLoadedOnce]);
-  useEffect(() => {
-    isFocusedRef.current = isFocused;
-  }, [isFocused]);
+    if (!shouldShowSkeleton) setHasShownContent(true);
+  }, [shouldShowSkeleton]);
 
-  const canUpdateScreen = useCallback(
-    () =>
-      isMountedRef.current &&
-      isScreenActiveRef.current &&
-      isFocusedRef.current &&
-      !isLoggingOutRef.current &&
-      logoutReason !== "EXPIRED",
-    [logoutReason],
-  );
-
-  const canCommitRequest = useCallback(
-    () =>
-      isMountedRef.current &&
-      !isLoggingOutRef.current &&
-      logoutReason !== "EXPIRED",
-    [logoutReason],
-  );
-
-  const isAuthExpiredError = useCallback(
-    (error: any) =>
-      error?.NEED_LOGIN ||
-      error?.response?.status === 401 ||
-      error?.response?.status === 403,
-    [],
-  );
-
-  const refreshPermissionState = useCallback(
-    async (probeLocalNetwork = false) => {
-      try {
-        const [
-          nextCameraPermissionStatus,
-          nextLocationPermissionStatus,
-          nextNotificationPermissionStatus,
-          nextLocalNetworkState,
-        ] = await Promise.all([
-          checkCameraPermission().catch(() => "unknown" as const),
-          checkLocationPermission().catch(() => "unknown" as const),
-          checkNotificationPermission().catch(() => "unknown" as const),
-          (probeLocalNetwork
-            ? refreshStoredLocalNetworkPermission()
-            : readStoredLocalNetworkPermission()
-          ).catch(() => LOCAL_NETWORK_FALLBACK_STATE),
-        ]);
-
-        if (!canUpdateScreen()) return;
-        setCameraPermissionStatus(nextCameraPermissionStatus);
-        setLocationPermissionStatus(nextLocationPermissionStatus);
-        setNotificationPermissionStatus(nextNotificationPermissionStatus);
-        setLocalNetworkState(nextLocalNetworkState);
-      } catch {
-        // Permission status is auxiliary; keep the previous values if refresh fails.
-      }
-    },
-    [canUpdateScreen],
-  );
-
-  const fetchData = React.useCallback(async () => {
-    if (loadingRef.current) return;
-
-    const isInitialLoad = !hasLoadedOnceRef.current;
-
-    // Lượt tải đầu được phép chạy khi màn chưa focus — xem effect theo
-    // `isFocused` bên dưới. Các lượt sau vẫn phải đúng màn đang xem, để lần quay
-    // lại nào cũng làm mới dữ liệu chứ không nạp nền vô ích.
-    if (!(isInitialLoad ? canCommitRequest() : canUpdateScreen())) return;
-
-    loadingRef.current = true;
-    const shouldShowBlockingLoader = isInitialLoad;
-    blockingLoaderActiveRef.current = shouldShowBlockingLoader;
-    if (isMountedRef.current && shouldShowBlockingLoader) setIsLoading(true);
-    try {
-      /* Tên và ảnh đại diện lấy từ danh thiếp đã nạp sẵn lúc đăng nhập
-         (`useNhanVienInfo`), màn này không gọi API người dùng nữa. */
-      const faceIdFlag = await readFaceIdEnabled();
-      // SettingScreen remains mounted underneath Appearance. The request may
-      // finish while Appearance has focus, and its data is still valid for the
-      // mounted Settings screen. Dropping it here can leave the blocking loader
-      // active when returning while a second fetch is rejected by loadingRef.
-      if (!canCommitRequest()) return;
-      hasLoadedOnceRef.current = true;
-      setHasLoadedOnce(true);
-      setLoadErrorMessage(null);
-      setIsFaceIdEnabled(faceIdFlag);
-      refreshPermissionState();
-    } catch (error: any) {
-      if (canCommitRequest()) {
-        hasLoadedOnceRef.current = true;
-        setHasLoadedOnce(true);
-      }
-      const isOffline = !error?.response || error?.code === "ECONNABORTED";
-      if (
-        isOffline ||
-        error?.OFFLINE ||
-        isAuthExpiredError(error) ||
-        !canCommitRequest()
-      ) {
-        if (canCommitRequest() && !isAuthExpiredError(error)) {
-          setLoadErrorMessage(
-            "Vui lòng kiểm tra kết nối mạng và thử mở lại màn hình này.",
-          );
-        }
-        return;
-      }
-
-      if (canCommitRequest()) {
-        setLoadErrorMessage("Không thể tải dữ liệu tài khoản hiện tại.");
-      }
-    } finally {
-      loadingRef.current = false;
-      if (blockingLoaderActiveRef.current && isMountedRef.current) {
-        setIsLoading(false);
-        blockingLoaderActiveRef.current = false;
-      }
-    }
-  }, [
-    canCommitRequest,
-    canUpdateScreen,
-    isAuthExpiredError,
-    refreshPermissionState,
-  ]);
-
-  useEffect(() => {
-    const subscription = AppState.addEventListener("change", (nextState) => {
-      if (nextState === "active" && isFocusedRef.current) {
-        if (isFaceIdPromptActiveRef.current) return;
-        refreshPermissionState(true);
-      }
-    });
-
-    return () => {
-      subscription.remove();
-    };
-  }, [refreshPermissionState]);
-
-  useEffect(() => {
-    if (!isFocused) {
-      isScreenActiveRef.current = false;
-
-      // Màn này có thể mount trong lúc CHƯA focus: đổi cỡ chữ remount cả cây
-      // điều hướng và dựng lại stack đang mở, khi đó màn Cỡ chữ nằm trên. Đợi
-      // focus mới tải thì lúc người dùng back về, vòng xoay chặn màn nhảy ra
-      // ngay giữa animation — thấy rõ như một cú giật. Nạp sẵn ở đây; dữ liệu
-      // về lúc chưa focus vẫn nhận được (`canCommitRequest`).
-      if (!hasLoadedOnceRef.current) fetchData();
-
-      return;
-    }
-    isScreenActiveRef.current = true;
-    fetchData();
-    return () => {
-      isScreenActiveRef.current = false;
-    };
-  }, [fetchData, isFocused]);
-
-  useEffect(() => {
-    if (!isFocused) return;
-
-    let isCancelled = false;
-    setIsCheckingAppVersion(true);
-    setHasAppVersionCheckFailed(false);
-
-    getStoreVersionInfo()
-      .then((versionInfo) => {
-        if (isCancelled) return;
-        setStoreVersionInfo(versionInfo);
-        setHasAppVersionCheckFailed(!versionInfo);
-      })
-      .catch(() => {
-        if (isCancelled) return;
-        setStoreVersionInfo(null);
-        setHasAppVersionCheckFailed(true);
-      })
-      .finally(() => {
-        if (!isCancelled) setIsCheckingAppVersion(false);
-      });
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [isFocused]);
-
-  useNetworkAwareReload(
-    () => {
-      fetchData();
-    },
-    {
-      enabled: isFocused,
-      hasError: Boolean(loadErrorMessage),
-      onOffline: () => {
-        setLoadErrorMessage(
-          "Vui lòng kiểm tra kết nối mạng và thử mở lại màn hình này.",
-        );
-      },
-    },
-  );
-
-  const handleToggleFaceID = async (value: boolean) => {
-    if (!isMountedRef.current) return;
-    if (!value) {
-      await Keychain.resetGenericPassword({ service: FACE_ID_LOGIN_SERVICE });
-      await writeFaceIdEnabled(false);
-      if (!isMountedRef.current) return;
-      setIsFaceIdEnabled(false);
-      Alert.alert("FaceID", "Đã tắt đăng nhập bằng FaceID.");
-      return;
-    }
-    try {
-      const { token, refreshToken } = await readStoredAuthTokens();
-      if (!isMountedRef.current) return;
-      const biometryType = await Keychain.getSupportedBiometryType();
-      if (!isMountedRef.current) return;
-      if (biometryType !== Keychain.BIOMETRY_TYPE.FACE_ID) {
-        Alert.alert(
-          "FaceID chưa sẵn sàng",
-          "Thiết bị chưa hỗ trợ FaceID hoặc chưa thiết lập FaceID.",
-        );
-        setIsFaceIdEnabled(false);
-        return;
-      }
-      if (!token && !refreshToken) {
-        Alert.alert("Không thể bật", "Bạn cần đăng nhập trước.");
-        setIsFaceIdEnabled(false);
-        return;
-      }
-      await Keychain.setGenericPassword(
-        FACE_ID_MARKER_USERNAME,
-        FACE_ID_MARKER_PASSWORD,
-        {
-          service: FACE_ID_LOGIN_SERVICE,
-          accessControl:
-            Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
-          accessible: Keychain.ACCESSIBLE.WHEN_PASSCODE_SET_THIS_DEVICE_ONLY,
-        },
-      );
-      isFaceIdPromptActiveRef.current = true;
-      let confirmation: false | Keychain.UserCredentials = false;
-      try {
-        confirmation = await Keychain.getGenericPassword({
-          service: FACE_ID_LOGIN_SERVICE,
-          authenticationPrompt: {
-            title: "Xác thực FaceID",
-            subtitle: "Xác nhận để bật đăng nhập bằng FaceID",
-            description: "Bật đăng nhập nhanh bằng FaceID",
-            cancel: "Huỷ",
-          },
-        });
-      } finally {
-        isFaceIdPromptActiveRef.current = false;
-      }
-      if (!confirmation) {
-        await Keychain.resetGenericPassword({ service: FACE_ID_LOGIN_SERVICE });
-        setIsFaceIdEnabled(false);
-        return;
-      }
-      await writeFaceIdEnabled(true);
-      if (!isMountedRef.current) return;
-      setIsFaceIdEnabled(true);
-      Alert.alert("FaceID", "Đã bật đăng nhập bằng FaceID!");
-    } catch (err: any) {
-      await Keychain.resetGenericPassword({ service: FACE_ID_LOGIN_SERVICE });
-      if (!isMountedRef.current) return;
-      setIsFaceIdEnabled(false);
-      const code = err?.code;
-      const message = String(err?.message ?? "");
-      const normalizedMessage = message.toLowerCase();
-      const isCancelled =
-        code === -128 ||
-        code === "-128" ||
-        normalizedMessage.includes("cancel") ||
-        message.includes("UserCancel") ||
-        err?.name === "LAErrorUserCancel";
-      if (!isCancelled) {
-        Alert.alert("Lỗi", "Không thể bật FaceID.");
-      }
-    }
-  };
-
-  const handlePressLogout = async () => {
-    if (isLoading) return;
-    isLoggingOutRef.current = true;
-    if (isMountedRef.current) setIsLoading(true);
-    try {
-      // PHẢI gọi trước khi xoá access token: request tắt token cần Authorization.
-      // Bỏ qua bước này thì máy vẫn nhận noti của user cũ cho tới khi có người
-      // khác đăng nhập trên chính máy đó — điện thoại dùng chung sẽ lộ thông tin.
-      await unregisterPushToken();
-      hardResetApi();
-      resetAuthState();
-      await clearTokenStorage();
-      await logout();
-      dispatch(clearPermissions());
-    } finally {
-      if (isMountedRef.current) setIsLoading(false);
-    }
-  };
-
-  const localNetworkStatusLabel = getLocalNetworkPermissionLabel(
-    localNetworkState.status,
-  );
-  const cameraStatusLabel = getCameraPermissionLabel(cameraPermissionStatus);
-  const locationStatusLabel = getLocationPermissionLabel(locationPermissionStatus);
-  const notificationStatusLabel = getNotificationPermissionLabel(
-    notificationPermissionStatus,
-  );
-  const localNetworkStatusBackground =
-    localNetworkState.status === "granted"
-      ? colors.greenLight
-      : localNetworkState.status === "denied"
-      ? colors.redSurface
-      : colors.amberLight;
-
-  const handleToggleLocalNetworkPermission = useCallback(
-    async (value: boolean) => {
-      if (isUpdatingLocalNetworkPermission) return;
-
-      if (Platform.OS === "android") {
-        Alert.alert(
-          "Quyền mạng nội bộ",
-          "Android không có công tắc riêng cho quyền mạng nội bộ. Quyền này đã được mở mặc định để app kết nối server nội bộ.",
-        );
-        const refreshedState = await refreshStoredLocalNetworkPermission();
-        setLocalNetworkState(refreshedState);
-        return;
-      }
-
-      if (!value) {
-        Alert.alert(
-          "Quyền mạng nội bộ",
-          "Hệ điều hành không cho tắt trực tiếp quyền này trong app. Bạn có thể mở Cài đặt để thay đổi quyền thủ công.",
-          [
-            { text: "Để sau", style: "cancel" },
-            {
-              text: "Mở Cài đặt",
-              onPress: () => {
-                openAppPermissionSettings();
-              },
-            },
-          ],
-        );
-        return;
-      }
-
-      setIsUpdatingLocalNetworkPermission(true);
-      try {
-        const nextStatus = await requestLocalNetworkPermission();
-        const refreshedState = await refreshStoredLocalNetworkPermission();
-        setLocalNetworkState({
-          ...refreshedState,
-          hasRequestedPermission: true,
-          status: nextStatus,
-        });
-
-        if (nextStatus !== "granted") {
-          Alert.alert(
-            "Quyền mạng nội bộ",
-            "Không thể bật trực tiếp quyền này. Vui lòng mở Cài đặt nếu bạn đã từ chối trước đó.",
-            [
-              { text: "Đóng", style: "cancel" },
-              {
-                text: "Mở Cài đặt",
-                onPress: () => {
-                  openAppPermissionSettings();
-                },
-              },
-            ],
-          );
-        }
-      } catch {
-        Alert.alert(
-          "Lỗi",
-          "Chưa thể cập nhật quyền mạng nội bộ lúc này. Vui lòng thử lại.",
-        );
-      } finally {
-        if (isMountedRef.current) setIsUpdatingLocalNetworkPermission(false);
-      }
-    },
-    [isUpdatingLocalNetworkPermission],
-  );
-
-  const handleToggleCameraPermission = useCallback(
-    async (value: boolean) => {
-      if (isUpdatingCameraPermission) return;
-
-      if (!value) {
-        Alert.alert(
-          "Quyền camera",
-          "Hệ điều hành không cho tắt trực tiếp quyền camera trong app. Bạn có thể mở Cài đặt để thay đổi quyền này.",
-          [
-            { text: "Để sau", style: "cancel" },
-            {
-              text: "Mở Cài đặt",
-              onPress: () => {
-                openAppPermissionSettings();
-              },
-            },
-          ],
-        );
-        return;
-      }
-
-      setIsUpdatingCameraPermission(true);
-      try {
-        const nextStatus = await requestCameraPermission();
-        setCameraPermissionStatus(nextStatus);
-
-        if (nextStatus === "blocked") {
-          Alert.alert(
-            "Quyền camera",
-            "Camera đang bị chặn. Vui lòng mở Cài đặt để cấp lại quyền.",
-            [
-              { text: "Đóng", style: "cancel" },
-              {
-                text: "Mở Cài đặt",
-                onPress: () => {
-                  openAppPermissionSettings();
-                },
-              },
-            ],
-          );
-          return;
-        }
-
-        if (nextStatus === "denied" || nextStatus === "unavailable") {
-          Alert.alert(
-            "Quyền camera",
-            "Chưa thể bật quyền camera trên thiết bị này.",
-          );
-        }
-      } catch {
-        Alert.alert("Lỗi", "Chưa thể cập nhật quyền camera lúc này.");
-      } finally {
-        if (isMountedRef.current) setIsUpdatingCameraPermission(false);
-      }
-    },
-    [isUpdatingCameraPermission],
-  );
-
-  const handleToggleLocationPermission = useCallback(
-    async (value: boolean) => {
-      if (isUpdatingLocationPermission) return;
-
-      // Tắt hoặc đang "Gần đúng" (muốn đổi sang chính xác): app không tự đổi
-      // được, chỉ mở Cài đặt của máy.
-      if (!value || locationPermissionStatus === "approximate") {
-        Alert.alert(
-          "Quyền vị trí",
-          value
-            ? "Máy đang chỉ cho vị trí gần đúng. Mở Cài đặt, vào Quyền > Vị trí và bật Dùng vị trí chính xác để toạ độ trên ảnh đúng hơn."
-            : "Hệ điều hành không cho tắt trực tiếp quyền vị trí trong app. Bạn có thể mở Cài đặt để thay đổi quyền này.",
-          [
-            { text: "Để sau", style: "cancel" },
-            { text: "Mở Cài đặt", onPress: () => openAppPermissionSettings() },
-          ],
-        );
-        return;
-      }
-
-      setIsUpdatingLocationPermission(true);
-      try {
-        const nextStatus = await requestLocationPermission();
-        setLocationPermissionStatus(nextStatus);
-
-        if (nextStatus === "blocked") {
-          Alert.alert(
-            "Quyền vị trí",
-            "Vị trí đang bị chặn. Vui lòng mở Cài đặt để cấp lại quyền.",
-            [
-              { text: "Đóng", style: "cancel" },
-              { text: "Mở Cài đặt", onPress: () => openAppPermissionSettings() },
-            ],
-          );
-          return;
-        }
-
-        if (nextStatus === "denied" || nextStatus === "unavailable") {
-          Alert.alert("Quyền vị trí", "Chưa thể bật quyền vị trí trên thiết bị này.");
-        }
-      } catch {
-        Alert.alert("Lỗi", "Chưa thể cập nhật quyền vị trí lúc này.");
-      } finally {
-        if (isMountedRef.current) setIsUpdatingLocationPermission(false);
-      }
-    },
-    [isUpdatingLocationPermission, locationPermissionStatus],
-  );
-
-  const handleToggleNotificationPermission = useCallback(
-    async (value: boolean) => {
-      if (isUpdatingNotificationPermission) return;
-
-      if (!value) {
-        Alert.alert(
-          "Quyền thông báo",
-          "Hệ điều hành không cho tắt trực tiếp quyền thông báo trong app. Bạn có thể mở Cài đặt để thay đổi quyền này.",
-          [
-            { text: "Để sau", style: "cancel" },
-            {
-              text: "Mở Cài đặt",
-              onPress: () => {
-                openNotificationSettings();
-              },
-            },
-          ],
-        );
-        return;
-      }
-
-      // Đã bị chặn thì gọi dialog hệ thống cũng không hiện gì (iOS chỉ hiện đúng
-      // một lần trong đời app) → dẫn user vào Cài đặt luôn.
-      if (notificationPermissionStatus === "blocked") {
-        Alert.alert(
-          "Quyền thông báo",
-          "Thông báo đang bị chặn. Vui lòng mở Cài đặt để cấp lại quyền.",
-          [
-            { text: "Đóng", style: "cancel" },
-            {
-              text: "Mở Cài đặt",
-              onPress: () => {
-                openNotificationSettings();
-              },
-            },
-          ],
-        );
-        return;
-      }
-
-      setIsUpdatingNotificationPermission(true);
-      try {
-        const nextStatus = await requestNotificationPermission();
-        setNotificationPermissionStatus(nextStatus);
-
-        if (nextStatus === "blocked") {
-          Alert.alert(
-            "Quyền thông báo",
-            "Thông báo đang bị chặn. Vui lòng mở Cài đặt để cấp lại quyền.",
-            [
-              { text: "Đóng", style: "cancel" },
-              {
-                text: "Mở Cài đặt",
-                onPress: () => {
-                  openNotificationSettings();
-                },
-              },
-            ],
-          );
-          return;
-        }
-
-        if (nextStatus !== "granted") {
-          Alert.alert(
-            "Quyền thông báo",
-            "Chưa thể bật quyền thông báo trên thiết bị này.",
-          );
-        }
-      } catch {
-        Alert.alert("Lỗi", "Chưa thể cập nhật quyền thông báo lúc này.");
-      } finally {
-        if (isMountedRef.current) setIsUpdatingNotificationPermission(false);
-      }
-    },
-    [isUpdatingNotificationPermission, notificationPermissionStatus],
-  );
-
-  const closeModal = () => {
-    setIsModalVisible(false);
-    setOldPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-  };
-
-  const handleChangePassword = async () => {
-    if (!oldPassword || !newPassword || !confirmPassword) {
-      Alert.alert("Lỗi", "Vui lòng điền đầy đủ thông tin.");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      Alert.alert("Lỗi", "Mật khẩu xác nhận không khớp.");
-      return;
-    }
-    if (oldPassword === newPassword) {
-      Alert.alert("Lỗi", "Mật khẩu mới phải khác mật khẩu cũ.");
-      return;
-    }
-    setIsLoading(true);
-    try {
-      const response = await changePasswordApi(oldPassword, newPassword);
-      const isChangePasswordSuccess =
-        response?.success === true ||
-        response?.data === 1 ||
-        (typeof response?.data === "object" &&
-          response?.data?.success === true);
-      const responseMessage =
-        response?.message ||
-        (typeof response?.data === "object"
-          ? response?.data?.message
-          : undefined) ||
-        "Đổi mật khẩu thất bại!";
-
-      if (isChangePasswordSuccess) {
-        try {
-          const saved = await Keychain.getGenericPassword({
-            service: AUTH_LOGIN_SERVICE,
-          });
-          if (saved) {
-            await Keychain.setGenericPassword(saved.username, newPassword, {
-              service: AUTH_LOGIN_SERVICE,
-              accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-            });
-          }
-        } catch (storageError) {
-          warn("[Settings] Update saved password failed:", storageError);
-        }
-
-        Alert.alert("Thành công", "Đổi mật khẩu thành công!");
-        closeModal();
-      } else {
-        Alert.alert("Lỗi", responseMessage);
-      }
-    } catch (error: any) {
-      if (isAuthExpiredError(error) || logoutReason === "EXPIRED") return;
-      Alert.alert(
-        "Lỗi",
-        error.response?.data?.message ||
-          "Không thể đổi mật khẩu. Vui lòng thử lại.",
-      );
-    } finally {
-      if (isMountedRef.current) setIsLoading(false);
-    }
-  };
-
-  const hasNewAppVersion = storeVersionInfo?.hasUpdate ?? false;
-  /**
-   * Bản không cài từ store (debug, sideload) thì Play không dò được — đó là
-   * chuyện bình thường, ẩn hẳn dòng trạng thái thay vì hiện như một lỗi.
-   */
-  const shouldShowVersionStatus =
-    isCheckingAppVersion || !storeVersionInfo?.isCheckUnsupported;
-  const appVersionStatus = isCheckingAppVersion
-    ? "Đang kiểm tra phiên bản..."
-    : hasNewAppVersion
-    ? // Android không có số: Play In-App Updates chỉ trả versionCode.
-      storeVersionInfo?.latestVersion
-      ? `Đã có phiên bản ${storeVersionInfo.latestVersion}`
-      : "Đã có phiên bản mới"
-    : hasAppVersionCheckFailed
-    ? "Chưa thể kiểm tra phiên bản trên Store"
-    : "Phiên bản mới nhất";
-
-  const handlePressUpdateApp = async () => {
-    if (!storeVersionInfo || !hasNewAppVersion) return;
-
-    try {
-      if (Platform.OS === "android") {
-        await startAndroidFlexibleUpdate();
-        return;
-      }
-
-      await openStoreForUpdate(IOS_STORE_URL);
-    } catch (error) {
-      warn("[Settings] Open app store failed:", error);
-
-      // Không mở được luồng cập nhật trong app thì vẫn còn đường ra store.
-      if (Platform.OS === "android") {
-        try {
-          await openStoreForUpdate(ANDROID_STORE_URL);
-          return;
-        } catch (linkError) {
-          warn("[Settings] Open Play Store failed:", linkError);
-        }
-      }
-
-      Alert.alert(
-        "Không thể mở Store",
-        "Vui lòng mở Store và cập nhật ứng dụng thủ công.",
-      );
-    }
-  };
-
-  if (isLoading || isLoadingNhanVien || !hasLoadedOnce) {
+  if (shouldShowSkeleton) {
     return <SettingScreenSkeleton safeTop={insets.top} />;
   }
 
-  if (loadErrorMessage) {
-    return (
-      <View style={[styles.emptyStateRoot, { backgroundColor: colors.bg }]}>
-        <StatusBar
-          barStyle={isDark ? "light-content" : "dark-content"}
-          backgroundColor={isDark ? "#09111B" : "#F0F2F8"}
-        />
-        <EmptyState
-          iconName="cloud-offline-outline"
-          title="Không thể tải dữ liệu Cài đặt"
-          subtitle={loadErrorMessage}
-        />
-      </View>
-    );
-  }
+  const groupSublabels: Record<SettingGroupId, string> = {
+    account:
+      Platform.OS === "ios"
+        ? "Hồ sơ, danh thiếp QR, mật khẩu, FaceID"
+        : "Hồ sơ, danh thiếp QR, mật khẩu, vân tay",
+    support: "Hướng dẫn sử dụng, câu hỏi thường gặp",
+    system: [
+      Platform.OS === "ios" ? "Quyền mạng, camera" : "Quyền camera",
+      "vị trí",
+      "thông báo",
+      ...(canUseCameraNoti ? ["thông báo camera"] : []),
+    ].join(", "),
+    appInfo: resultLabel
+      ? `${installedVersionLabel} • ${resultLabel}`
+      : installedVersionLabel,
+    other: "Hiển thị, cỡ chữ",
+  };
 
-  if (!nhanVien) {
-    return (
-      <View style={[styles.emptyStateRoot, { backgroundColor: colors.bg }]}>
-        <StatusBar
-          barStyle={isDark ? "light-content" : "dark-content"}
-          backgroundColor={isDark ? "#09111B" : "#F0F2F8"}
-        />
-        <EmptyState
-          iconName="person-circle-outline"
-          title="Không có thông tin người dùng"
-          subtitle="Không thể tải dữ liệu tài khoản hiện tại."
-        />
-      </View>
-    );
-  }
+  /* Lỗi tải KHÔNG được chiếm cả màn: vẫn dựng đủ danh sách (phần lớn là cài
+     đặt cục bộ, dùng được khi mất mạng) và báo lỗi gọn trong một thẻ có nút
+     "Thử lại". */
+  const inlineErrorMessage = nhanVien
+    ? null
+    : nhanVienErrorMessage || "Không thể tải dữ liệu tài khoản hiện tại.";
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
@@ -902,287 +101,98 @@ const SettingScreen = () => {
           end={{ x: 1, y: 1 }}
           style={styles.redZone}
         >
+          {/* Chưa có danh thiếp thì header tự hiện tên "---" và chữ "?". */}
           <SettingProfileHeader
-            name={nhanVien.ten}
-            avatarUrl={nhanVien.hinhAnh ?? undefined}
+            name={nhanVien?.ten}
+            title={nhanVien?.chucDanh?.trim() || undefined}
+            avatarUrl={nhanVien?.hinhAnh ?? undefined}
             safeTop={insets.top}
           />
-          <SettingWaveDivider />
         </LinearGradient>
 
         <View style={[styles.greyZone, { backgroundColor: colors.bg }]}>
-          <SettingSectionGroup title="TÀI KHOẢN" tightTop>
-            <SettingRowItem
-              iconName="person-outline"
-              iconBg={C.blue}
-              label="Hồ sơ cá nhân"
-              sublabel="Xem thông tin, đổi ảnh đại diện"
-              onPress={() => navigation.navigate("Profile")}
-            />
-            <SettingRowItem
-              iconName="qr-code-outline"
-              iconBg={C.emerald}
-              label="Thông tin QrCode"
-              sublabel="Danh thiếp QR của bạn"
-              onPress={() => navigation.navigate("QrCode")}
-            />
-            <SettingRowItem
-              iconName="lock-closed-outline"
-              iconBg={C.amber}
-              label="Đổi mật khẩu"
-              sublabel="Cập nhật mật khẩu đăng nhập"
-              onPress={() => setIsModalVisible(true)}
-            />
-            {Platform.OS === "ios" && (
-              <SettingSwitchRow
-                iconName="face-recognition"
-                lib="material-community"
-                iconBg={C.violet}
-                label="Đăng nhập FaceID"
-                sublabel="Dùng nhận diện khuôn mặt"
-                value={isFaceIdEnabled}
-                onValueChange={handleToggleFaceID}
-                isLast
-              />
-            )}
-          </SettingSectionGroup>
-
-          <SettingSectionGroup title="KHÁC">
-            <SettingRowItem
-              iconName="contrast-outline"
-              iconBg={C.violet}
-              label="Hiển thị"
-              sublabel="Theo thiết bị, giao diện sáng hoặc tối"
-              onPress={() => navigation.navigate("Appearance")}
-            />
-            <SettingRowItem
-              iconName="text-outline"
-              iconBg={C.blue}
-              label="Cỡ chữ"
-              sublabel={`${Math.round(textScaleFactor * 100)}% • cỡ chữ toàn ứng dụng`}
-              onPress={() => navigation.navigate("TextSize")}
-            />
-            <SettingSwitchRow
-              iconName="wifi-outline"
-              iconBg={C.sky}
-              label="Quyền mạng nội bộ"
-              sublabel={`Kết nối server nội bộ • ${localNetworkStatusLabel}${
-                isUpdatingLocalNetworkPermission ? " • Đang cập nhật..." : ""
-              }`}
-              value={localNetworkState.status === "granted"}
-              onValueChange={handleToggleLocalNetworkPermission}
-            />
-            <SettingSwitchRow
-              iconName="camera-outline"
-              iconBg={C.emerald}
-              label="Quyền camera"
-              sublabel={`Quét QR và chụp hình • ${cameraStatusLabel}${
-                isUpdatingCameraPermission ? " • Đang cập nhật..." : ""
-              }`}
-              value={cameraPermissionStatus === "granted"}
-              onValueChange={handleToggleCameraPermission}
-            />
-            <SettingSwitchRow
-              iconName="location-outline"
-              iconBg={C.rose}
-              label="Quyền vị trí"
-              sublabel={`Gắn toạ độ vào ảnh chụp • ${locationStatusLabel}${
-                isUpdatingLocationPermission ? " • Đang cập nhật..." : ""
-              }`}
-              value={
-                locationPermissionStatus === "granted" ||
-                locationPermissionStatus === "approximate"
-              }
-              onValueChange={handleToggleLocationPermission}
-            />
-            <SettingSwitchRow
-              iconName="notifications-outline"
-              iconBg={C.amber}
-              label="Quyền thông báo"
-              sublabel={`Nhận thông báo từ hệ thống • ${notificationStatusLabel}${
-                isUpdatingNotificationPermission ? " • Đang cập nhật..." : ""
-              }`}
-              value={notificationPermissionStatus === "granted"}
-              onValueChange={handleToggleNotificationPermission}
-            />
-            {/* Chỉ hiện với người được cấp quyền nhận noti camera — 3 API bên
-                trong đều trả 403 nếu thiếu quyền. */}
-            {canUseCameraNoti ? (
-              <SettingRowItem
-                iconName="videocam-outline"
-                iconBg={C.rose}
-                label="Thông báo camera"
-                sublabel="Tạm dừng thông báo AI phát hiện"
-                onPress={() => navigation.navigate("CameraNotification")}
-              />
-            ) : null}
-            <SettingRowItem
-              iconName="log-out-outline"
-              label="Đăng xuất"
-              sublabel="Thoát khỏi tài khoản hiện tại"
-              danger
-              isLast
-              onPress={() =>
-                Alert.alert("Xác nhận", "Bạn muốn đăng xuất?", [
-                  { text: "Hủy", style: "cancel" },
-                  {
-                    text: "Đăng xuất",
-                    style: "destructive",
-                    onPress: handlePressLogout,
-                  },
-                ])
-              }
-            />
-          </SettingSectionGroup>
-
-          <SettingSectionGroup title="HỖ TRỢ">
-            <SettingRowItem
-              iconName="book-outline"
-              iconBg={C.emerald}
-              label="Hướng dẫn sử dụng"
-              sublabel="Các bước dùng từng chức năng"
-              onPress={() => navigation.navigate("Guide")}
-            />
-            <SettingRowItem
-              iconName="help-circle-outline"
-              iconBg={C.violet}
-              label="Câu hỏi thường gặp"
-              sublabel="Lỗi kết nối, quyền, Face ID, Workflow"
-              isLast
-              onPress={() =>
-                navigation.navigate("GuideTopic", {
-                  topicId: "faq",
-                  titleHeader: "Câu hỏi thường gặp",
-                })
-              }
-            />
-          </SettingSectionGroup>
-
-          <SettingSectionGroup title="THÔNG TIN ỨNG DỤNG">
-            <View style={styles.appVersionRow}>
-              <View
-                style={[styles.appVersionIcon, { backgroundColor: C.emerald }]}
-              >
-                <Ionicons
-                  name="cloud-download-outline"
-                  size={18}
-                  color="#fff"
-                />
-              </View>
-              <View style={styles.appVersionContent}>
-                <Text style={[styles.appVersionTitle, { color: colors.text }]}>
-                  Phiên bản ứng dụng
-                </Text>
-                <Text
-                  style={[
-                    styles.appVersionInstalled,
-                    { color: colors.textSub },
-                  ]}
-                >
-                  Đã cài đặt: {appVersionLabel}
-                </Text>
-                {shouldShowVersionStatus ? (
-                  <View style={styles.appVersionStatusRow}>
-                    {isCheckingAppVersion ? (
-                      <ActivityIndicator
-                        size="small"
-                        color={colors.textMuted}
-                        style={styles.appVersionSpinner}
-                      />
-                    ) : (
-                      <View
-                        style={[
-                          styles.appVersionStatusDot,
-                          {
-                            backgroundColor: hasNewAppVersion
-                              ? C.amber
-                              : hasAppVersionCheckFailed
-                              ? colors.textMuted
-                              : C.emerald,
-                          },
-                        ]}
-                      />
-                    )}
-                    <Text
-                      style={[
-                        styles.appVersionStatusText,
-                        {
-                          color: hasNewAppVersion ? C.amber : colors.textMuted,
-                        },
-                      ]}
-                    >
-                      {appVersionStatus}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-              {hasNewAppVersion ? (
-                <TouchableOpacity
-                  style={[styles.updateButton, { backgroundColor: C.red }]}
-                  onPress={handlePressUpdateApp}
-                  activeOpacity={0.75}
-                >
-                  <Text style={styles.updateButtonText}>Cập nhật</Text>
-                </TouchableOpacity>
-              ) : null}
-            </View>
-          </SettingSectionGroup>
-
-          <View
-            style={[
-              styles.localNetworkSummary,
-              {
-                backgroundColor: colors.surface,
-                shadowColor: colors.shadow,
-              },
-            ]}
-          >
+          {inlineErrorMessage ? (
             <View
               style={[
-                styles.localNetworkStatusBadge,
-                { backgroundColor: localNetworkStatusBackground },
+                styles.inlineError,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.redBorder,
+                  shadowColor: colors.shadow,
+                },
               ]}
             >
-              <Text
+              <View
                 style={[
-                  styles.localNetworkStatusBadgeText,
-                  { color: colors.text },
+                  styles.inlineErrorIcon,
+                  { backgroundColor: colors.redSurface },
                 ]}
               >
-                {localNetworkStatusLabel}
-              </Text>
+                <Ionicons
+                  name="cloud-offline-outline"
+                  size={18}
+                  color={C.red}
+                />
+              </View>
+              <View style={styles.inlineErrorContent}>
+                <Text style={[styles.inlineErrorTitle, { color: colors.text }]}>
+                  Không thể tải dữ liệu tài khoản
+                </Text>
+                <Text
+                  style={[styles.inlineErrorText, { color: colors.textSub }]}
+                >
+                  {inlineErrorMessage}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={[
+                  styles.inlineErrorButton,
+                  {
+                    backgroundColor: colors.redSurface,
+                    borderColor: colors.redBorder,
+                  },
+                ]}
+                onPress={reloadNhanVien}
+                disabled={isLoadingNhanVien}
+                activeOpacity={0.75}
+                accessibilityRole="button"
+                accessibilityLabel="Thử lại"
+              >
+                {isLoadingNhanVien ? (
+                  <ActivityIndicator size="small" color={C.red} />
+                ) : (
+                  <Text style={styles.inlineErrorButtonText}>Thử lại</Text>
+                )}
+              </TouchableOpacity>
             </View>
-            <Text
-              style={[styles.localNetworkSummaryText, { color: colors.text }]}
-            >
-              Ứng dụng đã lưu trạng thái quyền mạng nội bộ để hỗ trợ kết nối
-              server nội bộ.
-            </Text>
-            <Text
-              style={[
-                styles.localNetworkSummaryHint,
-                { color: colors.textSub },
-              ]}
-            >
-              Bạn có thể đổi quyền mạng nội bộ, camera và vị trí trong Cài đặt hệ thống
-              bất kỳ lúc nào.
-            </Text>
-          </View>
+          ) : null}
+
+          <SettingSectionGroup
+            accent={C.red}
+            style={inlineErrorMessage ? undefined : styles.groupListTop}
+          >
+            {SETTING_GROUPS.map((group, index) => (
+              <SettingRowItem
+                key={group.id}
+                iconName={group.iconName}
+                iconBg={group.iconBg}
+                label={group.title}
+                sublabel={groupSublabels[group.id]}
+                badge={group.id === "appInfo" && hasNewVersion ? "Mới" : undefined}
+                isLast={index === SETTING_GROUPS.length - 1}
+                onPress={() =>
+                  navigation.navigate("SettingGroup", { group: group.id })
+                }
+              />
+            ))}
+          </SettingSectionGroup>
+
+          {/* Đăng xuất để riêng ngoài màn chính cho bấm nhanh, không gom vào nhóm. */}
+          <SettingSectionGroup accent={C.rose}>
+            <SettingLogoutRow />
+          </SettingSectionGroup>
         </View>
       </ScrollView>
-
-      <ChangePasswordModal
-        visible={isModalVisible}
-        isLoading={isLoading}
-        oldPassword={oldPassword}
-        newPassword={newPassword}
-        confirmPassword={confirmPassword}
-        onChangeOldPassword={setOldPassword}
-        onChangeNewPassword={setNewPassword}
-        onChangeConfirmPassword={setConfirmPassword}
-        onClose={closeModal}
-        onSubmit={handleChangePassword}
-      />
     </View>
   );
 };
@@ -1190,105 +200,63 @@ const SettingScreen = () => {
 // ─── Global Styles ────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  emptyStateRoot: {
-    flex: 1,
-  },
   scroll: { flex: 1 },
   scrollContent: { flexGrow: 1 },
+  // Đáy thẳng như header Trang chủ và các màn khác. Màu gradient truyền inline.
+  // KHÔNG đặt padding ở đây: iOS chỉ tô gradient trong phần nội dung (trừ
+  // padding) còn Android tô cả padding, nên khoảng cách với card phải nằm ở
+  // marginTop phía dưới thì hai máy mới giống nhau.
   redZone: {
-    /* gradient applied inline */
+    overflow: "hidden",
   },
   greyZone: { flexGrow: 1, paddingBottom: 48 },
-  localNetworkSummary: {
+  groupListTop: { marginTop: 24 },
+  inlineError: {
+    flexDirection: "row",
+    alignItems: "center",
     marginHorizontal: 16,
-    marginTop: 14,
-    borderRadius: 18,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    marginTop: 24,
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     shadowOpacity: 0.06,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
     elevation: 2,
   },
-  localNetworkStatusBadge: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-    marginBottom: 10,
-  },
-  localNetworkStatusBadgeText: {
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  localNetworkSummaryText: {
-    fontSize: 13,
-  },
-  localNetworkSummaryHint: {
-    marginTop: 6,
-    fontSize: 12,
-  },
-  appVersionRow: {
-    minHeight: 88,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  appVersionIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 11,
+  inlineErrorIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 14,
-    shadowOpacity: 0.12,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    marginRight: 12,
   },
-  appVersionContent: {
+  inlineErrorContent: {
     flex: 1,
     paddingRight: 10,
   },
-  appVersionTitle: {
-    fontSize: 14.5,
-    fontWeight: "600",
+  inlineErrorTitle: {
+    fontSize: 13.5,
+    fontWeight: "700",
   },
-  appVersionInstalled: {
-    fontSize: 11.5,
+  inlineErrorText: {
+    fontSize: 12,
     marginTop: 2,
   },
-  appVersionStatusRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 5,
-  },
-  appVersionSpinner: {
-    width: 8,
-    height: 8,
-    marginRight: 6,
-    transform: [{ scale: 0.6 }],
-  },
-  appVersionStatusDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    marginRight: 6,
-  },
-  appVersionStatusText: {
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  updateButton: {
+  inlineErrorButton: {
+    minWidth: 76,
     minHeight: 34,
+    alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 13,
-    borderRadius: 10,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    borderWidth: 1,
   },
-  updateButtonText: {
-    color: "#fff",
-    fontSize: 12,
+  inlineErrorButtonText: {
+    color: C.red,
+    fontSize: 12.5,
     fontWeight: "700",
   },
 });

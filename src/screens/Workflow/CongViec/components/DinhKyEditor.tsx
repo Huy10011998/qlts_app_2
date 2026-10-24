@@ -224,6 +224,7 @@ export default function DinhKyEditor({ value, onChange, tuNgay, denNgay }: Props
               label="Ngày kết thúc"
               required
               withTime={false}
+              minDate={value.ngayBatDau}
               value={value.ketThucNgay}
               onChange={(ketThucNgay) => set({ ketThucNgay })}
             />

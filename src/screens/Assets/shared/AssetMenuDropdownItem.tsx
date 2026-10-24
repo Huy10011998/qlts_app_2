@@ -4,6 +4,7 @@ import {
 } from "../../../utils/helpers/colors";
 import React from "react";
 import {
+  ActivityIndicator,
   Image,
   LayoutAnimation,
   Pressable,
@@ -31,6 +32,11 @@ type AssetMenuDropdownItemProps = DropdownProps & {
   onOpenItem: (item: Item) => void;
   isSearching: boolean;
   searchText: string;
+  /**
+   * Mục đang mở dở (báo cáo chờ `getConfigReport`): quay vòng thay mũi tên để
+   * người dùng biết đã bấm trúng, khỏi bấm lại.
+   */
+  busyId?: Item["id"] | null;
 };
 
 function AssetMenuDropdownItem({
@@ -41,7 +47,9 @@ function AssetMenuDropdownItem({
   onOpenItem,
   isSearching,
   searchText,
+  busyId = null,
 }: AssetMenuDropdownItemProps) {
+  const busy = busyId !== null && item.id === busyId;
   const childCount = item.children?.length ?? 0;
   const hasChildren = childCount > 0;
   const expanded = expandedIds.includes(item.id);
@@ -89,6 +97,7 @@ function AssetMenuDropdownItem({
           pressed && styles.cardPressed,
         ]}
         onPress={handlePress}
+        accessibilityState={{ busy }}
         android_ripple={{ color: "rgba(0,0,0,0.04)" }}
       >
         <View style={[styles.accent, { backgroundColor: theme.color }]} />
@@ -153,6 +162,8 @@ function AssetMenuDropdownItem({
               />
             </View>
           </>
+        ) : busy ? (
+          <ActivityIndicator size="small" color={colors.textMuted} />
         ) : (
           <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
         )}
@@ -169,6 +180,7 @@ function AssetMenuDropdownItem({
               onOpenItem={onOpenItem}
               isSearching={isSearching}
               searchText={searchText}
+              busyId={busyId}
             />
           ))
         : null}

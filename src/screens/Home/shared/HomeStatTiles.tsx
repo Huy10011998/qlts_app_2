@@ -3,6 +3,7 @@ import { StyleSheet, View } from "react-native";
 import HomeStatCard from "./HomeStatCard";
 import { AppColors, useAppColors, useStyles } from "../../../utils/helpers/colors";
 import { HOME_FEATURE_GRID_GAP } from "../HomeScreen.styles";
+import { useHomeCardChrome } from "./homeBlockTone";
 
 export type HomeStatTile = {
   key: string;
@@ -23,10 +24,10 @@ type HomeStatTilesProps = {
   tiles: HomeStatTile[];
   isLoading?: boolean;
   /**
-   * Số ô của khung chờ. Mặc định 4 — ba ô thiết bị luôn có, ô điểm danh thì theo
-   * quyền, nên nơi gọi nào biết quyền thì truyền đúng số để hàng cuối không thừa
-   * một ô. Khung chờ cả Trang chủ (`HomeScreenSkeleton`) chạy trước lúc đọc xong
-   * quyền nên cứ để mặc định.
+   * Số ô của khung chờ. Mặc định 4 — mỗi ô đi theo một quyền Dashboard riêng,
+   * nên nơi gọi nào biết quyền thì truyền đúng số để khung chờ không thừa ô.
+   * Khung chờ cả Trang chủ (`HomeScreenSkeleton`) nhận số này từ `HomeScreen`
+   * khi đã đọc xong quyền; trước đó để mặc định.
    */
   skeletonCount?: number;
 };
@@ -47,12 +48,15 @@ const toRows = <T,>(items: T[]) => {
 function HomeStatTileSkeleton() {
   const styles = useStyles(makeStyles);
   const colors = useAppColors();
+  // Cùng viền và mép trên với ô thật, để lúc số về ô không đổi khung.
+  const chrome = useHomeCardChrome();
 
   return (
     <View
       style={[
         styles.skeletonCard,
-        { backgroundColor: colors.surface, borderColor: colors.hairline },
+        chrome,
+        { backgroundColor: colors.surface },
       ]}
     >
       <View style={[styles.skeletonIcon, { backgroundColor: colors.border }]} />
@@ -138,8 +142,6 @@ const makeStyles = (c: AppColors) =>
       borderRadius: 16,
       padding: 14,
       minHeight: 108,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.hairline,
     },
     skeletonIcon: {
       width: 34,

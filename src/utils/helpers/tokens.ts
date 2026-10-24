@@ -40,6 +40,13 @@ export const fontWeight = {
   heavy: "800",
 } as const;
 
+/**
+ * Vạch ngăn dòng trong card viền màu: cùng màu viền nhưng phủ mờ cho nhạt đi, để
+ * viền và gạch dưới tiêu đề vẫn là nét chính. Đặt lên chính View vạch (opacity)
+ * nên chế độ tối tự ăn theo, không phải pha màu riêng.
+ */
+export const ROW_DIVIDER_OPACITY = 0.3;
+
 export type ElevationLevel = 1 | 2 | 3;
 
 const ELEVATION_SPECS: Record<

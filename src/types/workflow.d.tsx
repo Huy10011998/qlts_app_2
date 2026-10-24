@@ -68,6 +68,18 @@ export type WorkflowComment = {
   tenFile?: string | null;
   /** KB. */
   fileSize?: number | null;
+  /** Trả lời tin nào (7-Mobile-Realtime-BinhLuan mục 7): null = tin thường. */
+  iD_TraLoi?: number | null;
+  /** Tên người viết tin gốc. */
+  traLoi_Ten?: string | null;
+  /** Nội dung tin gốc — null nếu tin gốc chỉ có file. */
+  traLoi_NoiDung?: string | null;
+  traLoi_TenFile?: string | null;
+  /** Đã thu hồi (mục 8): noiDung / iD_File / tenFile trả null. */
+  isThuHoi?: boolean | null;
+  ngayThuHoi?: string | null;
+  /** Tin GỐC của câu trả lời này đã bị thu hồi. */
+  traLoi_ThuHoi?: boolean | null;
 };
 
 export type WorkflowFileItem = {

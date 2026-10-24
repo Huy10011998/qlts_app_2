@@ -9,3 +9,6 @@ export const FACE_ID_ENABLED_KEY = "faceid-enabled";
 export const FACE_ID_ENABLED_SERVICE = "faceid-enabled-flag";
 export const FACE_ID_MARKER_USERNAME = "faceid";
 export const FACE_ID_MARKER_PASSWORD = "enabled";
+// Android: cờ "Đăng nhập bằng khoá màn hình" (mẫu hình / mã PIN / mật khẩu
+// máy). Dùng chung marker `FACE_ID_LOGIN_SERVICE` với vân tay.
+export const DEVICE_LOCK_ENABLED_SERVICE = "device-lock-enabled-flag";

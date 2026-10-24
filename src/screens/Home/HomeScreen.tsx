@@ -39,8 +39,20 @@ import {
   isHomeBlockKey,
   type HomeBlockKey,
 } from "./shared/homeBlockOrder";
-import HomeScreenSkeleton from "./shared/HomeScreenSkeleton";
+import HomeScreenSkeleton, { AttendanceSkeleton } from "./shared/HomeScreenSkeleton";
+import HomeJumpBar from "./shared/HomeJumpBar";
 import { HOME_BRAND_RED } from "./shared/homeTheme";
+import {
+  getHomeCardChrome,
+  HOME_BLOCK_TONES,
+  HomeBlockToneContext,
+  useHomePageBackground,
+} from "./shared/homeBlockTone";
+import {
+  HOME_COLLAPSED_BLOCKS_KEY,
+  HOME_HIDDEN_BLOCKS_KEY,
+} from "./shared/homeBlockLists";
+import { useStoredHomeBlockList } from "./shared/useStoredHomeBlockList";
 import {
   formatHomeCount,
   formatHomeNumber,
@@ -59,11 +71,7 @@ import { useAppDispatch } from "../../store/hooks";
 import { reloadPermissions } from "../../store/PermissionActions";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { markAppReady } from "../../services/splash/splashGate";
-import {
-  useAppColors,
-  useHairlineBorderColor,
-  useStyles,
-} from "../../utils/helpers/colors";
+import { useAppColors, useStyles } from "../../utils/helpers/colors";
 import {
   makeStyles,
   getHomeShortcutCardWidth,
@@ -87,15 +95,26 @@ const ASSET_MENU_ID_MACHINE = 177;
 const ASSET_VIEW_IT = "IT";
 const ASSET_MENU_ID_IT = 67;
 
+/**
+ * Quyền xem từng phần số liệu Trang chủ — nhóm "Dashboard Tài sản" quản trị khai
+ * bên web. BE trả nguyên mã (không có tiền tố `View.`) nên kiểm bằng
+ * `hasPermission`, không dùng `canView`.
+ */
+const DASHBOARD_PERMISSION_MACHINE = "Dashboard.TaiSan.MayMoc";
+const DASHBOARD_PERMISSION_IT = "Dashboard.TaiSan.CNTT";
+const DASHBOARD_PERMISSION_CAMERA = "Dashboard.TaiSan.Camera";
+const DASHBOARD_PERMISSION_ATTENDANCE = "Dashboard.TaiSan.DiemDanh";
+const DASHBOARD_PERMISSION_UTILITIES = "Dashboard.TaiSan.TieuThu";
+
 const HomeScreen: React.FC = () => {
   const styles = useStyles(makeStyles);
   const navigation = useNavigation<HomeNavigationProp>();
   const colors = useAppColors();
-  const hairlineBorderColor = useHairlineBorderColor();
+  const pageBackground = useHomePageBackground();
   const { width: windowWidth } = useWindowDimensions();
   const tabsNavigation = navigation.getParent() as any;
   const isFocused = useIsFocused();
-  const { canView, loaded } = usePermission();
+  const { canView, hasPermission, loaded } = usePermission();
   const dispatch = useAppDispatch();
   const {
     menuItems,
@@ -125,8 +144,10 @@ const HomeScreen: React.FC = () => {
   const {
     blockOrder,
     closeBlockOrderSheet,
+    isBlockOrderLoading,
     isBlockOrderSheetVisible,
     moveBlock,
+    openBlockOrderSheet,
     registerHomeRefresh,
   } = useHomeMenuContext();
   const [hasLoadError, setHasLoadError] = useState(false);
@@ -135,20 +156,42 @@ const HomeScreen: React.FC = () => {
   const [shortcutPage, setShortcutPage] = useState(0);
   const shortcutPagerRef = useRef<ScrollView>(null);
   const scrollRef = useRef<ScrollView>(null);
-  /** Vị trí khối điểm danh trong trang — đo bằng onLayout vì thứ tự khối đổi được. */
-  const attendanceBlockYRef = useRef<number | null>(null);
-  // Ô "Đã điểm danh hôm nay" chỉ là số tổng; chi tiết theo bộ phận nằm ở khối
-  // điểm danh phía dưới nên bấm vào ô là trượt xuống đó.
-  const scrollToAttendanceBlock = useCallback(() => {
-    const y = attendanceBlockYRef.current;
-    if (y == null) return;
+  // Thu gọn = chạm nhãn màu, khối còn dòng tiêu đề. Ẩn = bỏ chọn khối trong bảng
+  // Sắp xếp, khối biến hẳn. Cả hai lưu theo tài khoản.
+  const {
+    keys: collapsedKeys,
+    setIncluded: setBlockCollapsed,
+    isLoading: isCollapsedKeysLoading,
+  } = useStoredHomeBlockList(HOME_COLLAPSED_BLOCKS_KEY);
+  const {
+    keys: hiddenKeys,
+    setIncluded: setBlockHidden,
+    isLoading: isHiddenKeysLoading,
+  } = useStoredHomeBlockList(HOME_HIDDEN_BLOCKS_KEY);
+  const collapsedKeySet = useMemo(() => new Set(collapsedKeys), [collapsedKeys]);
+  const hiddenKeySet = useMemo(() => new Set(hiddenKeys), [hiddenKeys]);
+  /** Vị trí từng khối trong trang — đo bằng onLayout vì thứ tự khối đổi được. */
+  const blockYRef = useRef<Partial<Record<HomeBlockKey, number>>>({});
+  /** Hàng chip dính trên cùng che mất phần đầu khối vừa cuộn tới — phải chừa ra. */
+  const jumpBarHeightRef = useRef(0);
+  // Hàng chip đi tới khối, và ô "Đã điểm danh hôm nay" (chỉ là số tổng; chi tiết
+  // theo bộ phận nằm ở khối điểm danh phía dưới) đều trượt tới khối bằng hàm này.
+  const scrollToBlock = useCallback(
+    (key: HomeBlockKey) => {
+      // Đang thu gọn thì mở ra luôn: chạm để tới mà chỉ thấy dòng tiêu đề là vô ích.
+      setBlockCollapsed(key, false);
 
-    scrollRef.current?.scrollTo({
-      // Chừa một chút để dòng tiêu đề khối không dính sát mép trên.
-      y: Math.max(y - 8, 0),
-      animated: true,
-    });
-  }, []);
+      const y = blockYRef.current[key];
+      if (y == null) return;
+
+      scrollRef.current?.scrollTo({
+        // Chừa một chút để dòng tiêu đề khối không dính sát hàng chip.
+        y: Math.max(y - jumpBarHeightRef.current - 8, 0),
+        animated: true,
+      });
+    },
+    [setBlockCollapsed],
+  );
   const openCustomizeSheet = useCallback(() => setIsCustomizeVisible(true), []);
   const closeCustomizeSheet = useCallback(
     () => setIsCustomizeVisible(false),
@@ -288,7 +331,13 @@ const HomeScreen: React.FC = () => {
   //
   // Không dùng `menuItems.length === 0` được: danh sách luôn có sẵn mục tĩnh
   // "Điện mặt trời" nên vế đó không bao giờ đúng — cổng chờ coi như không có.
-  const isInitialMenuLoading = !hasLoadedMenuOnce || isPinnedFeatureIdsLoading;
+  //
+  // Thứ tự / ẩn / thu gọn khối cũng đọc từ máy theo username (Keychain) như
+  // danh sách ghim — chờ luôn, không thì khối nhảy chỗ, loé lên rồi mới ẩn.
+  const isBlockPrefsLoading =
+    isBlockOrderLoading || isCollapsedKeysLoading || isHiddenKeysLoading;
+  const isInitialMenuLoading =
+    !hasLoadedMenuOnce || isPinnedFeatureIdsLoading || isBlockPrefsLoading;
   // Splash native bên Android giữ tới đây rồi mới gỡ. Màn lỗi cũng tính là xong:
   // thà thấy lý do hỏng còn hơn ngồi nhìn splash tới lúc trần thời gian đá ra.
   const isHomeSettled =
@@ -314,18 +363,25 @@ const HomeScreen: React.FC = () => {
 
     return itemsByPermission;
   }, [visibleMenuItems]);
-  // Số liệu Trang chủ KHÔNG chặn theo quyền phía app: chỉ là số tổng hợp, muốn
-  // xem chi tiết thì vẫn phải vào chức năng — chỗ đó đã chặn quyền sẵn. Chỉ khi
-  // BE khai `viewPermission` cho khối thì mới chặn theo đúng mã đó.
-  const canViewBlock = useCallback(
-    (viewPermission?: string) => {
-      if (!viewPermission) return true;
-
-      return loaded && canView(viewPermission);
-    },
-    [canView, loaded],
-  );
-  const canViewAttendance = canViewBlock(dashboard?.attendance?.viewPermission);
+  // Mỗi phần số liệu đi theo một mã quyền Dashboard Tài sản, thiếu mã nào thì
+  // phần đó ẩn hẳn (kể cả khung chờ):
+  // - MayMoc: ô thiết bị máy móc + hai trang cơ cấu / tăng trưởng máy móc.
+  // - CNTT: ô thiết bị CNTT + trang cơ cấu thiết bị CNTT.
+  // - Camera: ô camera.
+  // - DiemDanh: ô đã điểm danh + khối điểm danh.
+  // - TieuThu: khối tiêu thụ điện · nước · hơi.
+  // `hasPermission` trả false khi quyền chưa tải xong.
+  const canViewMachine = hasPermission(DASHBOARD_PERMISSION_MACHINE);
+  const canViewIt = hasPermission(DASHBOARD_PERMISSION_IT);
+  const canViewCamera = hasPermission(DASHBOARD_PERMISSION_CAMERA);
+  const canViewAttendance = hasPermission(DASHBOARD_PERMISSION_ATTENDANCE);
+  const canViewUtilities = hasPermission(DASHBOARD_PERMISSION_UTILITIES);
+  const statTileCount = [
+    canViewMachine,
+    canViewIt,
+    canViewCamera,
+    canViewAttendance,
+  ].filter(Boolean).length;
   // Hai ô thiết bị mở màn Asset của nhóm tương ứng nhưng chỉ hiện đúng nhánh
   // của nó: máy móc là mục 177 nhóm Tài sản, CNTT là mục 67 nhóm IT (id do quản
   // trị khai, không đổi theo tài khoản). Không tra được nhóm (mất quyền) thì ô
@@ -351,41 +407,48 @@ const HomeScreen: React.FC = () => {
     const tiles: HomeStatTile[] = [];
     const { attendance, devices } = dashboard;
 
-    // Số nào API trả thì hiện. Tài khoản không có quyền tài sản / camera chỉ là
-    // ô không bấm được (`menuItemByPermission` không có chức năng tương ứng),
-    // chứ không mất số.
-    tiles.push({
-      key: "device-machines",
-      iconName: "cube-outline",
-      iconBg: colors.redIconSurface,
-      iconColor: colors.redLight,
-      label: "Thiết bị máy móc đang quản lý",
-      value: formatHomeNumber(devices.machines),
-      onPress: openAssetBranch(ASSET_VIEW_MACHINE, ASSET_MENU_ID_MACHINE),
-    });
+    // Hiện ô theo quyền Dashboard; còn bấm được hay không lại theo quyền chức
+    // năng (View.TaiSan / IT / Camera). Có quyền xem số mà thiếu quyền chức năng
+    // thì ô vẫn hiện, chỉ không bấm được (`menuItemByPermission` không có mục).
+    if (canViewMachine) {
+      tiles.push({
+        key: "device-machines",
+        iconName: "cube-outline",
+        iconBg: colors.redIconSurface,
+        iconColor: colors.redLight,
+        // Nhãn ngắn để vừa hai dòng cạnh mũi tên ›, không bị cắt "…".
+        label: "Máy móc đang quản lý",
+        value: formatHomeNumber(devices.machines),
+        onPress: openAssetBranch(ASSET_VIEW_MACHINE, ASSET_MENU_ID_MACHINE),
+      });
+    }
 
-    tiles.push({
-      key: "device-it",
-      iconName: "hardware-chip-outline",
-      iconBg: colors.indigoSurface,
-      iconColor: colors.blue,
-      label: "Thiết bị CNTT đang sử dụng",
-      value: formatHomeNumber(devices.it),
-      // Camera đếm riêng ở ô dưới, tổng CNTT của API không gồm camera — ghi rõ
-      // để không ai cộng hai ô lại rồi thắc mắc lệch số.
-      sub: "Chưa gồm camera",
-      onPress: openAssetBranch(ASSET_VIEW_IT, ASSET_MENU_ID_IT),
-    });
+    if (canViewIt) {
+      tiles.push({
+        key: "device-it",
+        iconName: "hardware-chip-outline",
+        iconBg: colors.indigoSurface,
+        iconColor: colors.blue,
+        label: "Thiết bị CNTT đang dùng",
+        value: formatHomeNumber(devices.it),
+        // Camera đếm riêng ở ô khác, tổng CNTT của API không gồm camera — ghi
+        // rõ để không ai cộng hai ô lại rồi thắc mắc lệch số.
+        sub: "Chưa gồm camera",
+        onPress: openAssetBranch(ASSET_VIEW_IT, ASSET_MENU_ID_IT),
+      });
+    }
 
-    tiles.push({
-      key: "device-camera",
-      iconName: "videocam-outline",
-      iconBg: colors.blueSurface,
-      iconColor: colors.sky,
-      label: "Camera đang hoạt động",
-      value: formatHomeNumber(devices.camera),
-      onPress: menuItemByPermission.get("Camera")?.onPress,
-    });
+    if (canViewCamera) {
+      tiles.push({
+        key: "device-camera",
+        iconName: "videocam-outline",
+        iconBg: colors.blueSurface,
+        iconColor: colors.sky,
+        label: "Camera đang hoạt động",
+        value: formatHomeNumber(devices.camera),
+        onPress: menuItemByPermission.get("Camera")?.onPress,
+      });
+    }
 
     if (canViewAttendance) {
       // Ô này LUÔN là số toàn công ty, không đổi theo combobox bộ phận ở khối
@@ -403,34 +466,34 @@ const HomeScreen: React.FC = () => {
                 attendance.total,
               )}`,
         sub: attendance.total == null ? undefined : "người",
-        // Không có khối điểm danh phía dưới thì không có chỗ nào để trượt tới.
-        onPress: attendance ? scrollToAttendanceBlock : undefined,
+        // Không có khối điểm danh phía dưới (không có số, hoặc user đã tắt khối
+        // trong Sắp xếp) thì không có chỗ nào để trượt tới.
+        onPress:
+          attendance && !hiddenKeySet.has("attendance")
+            ? () => scrollToBlock("attendance")
+            : undefined,
       });
     }
 
     return tiles;
   }, [
     canViewAttendance,
+    canViewCamera,
+    canViewIt,
+    canViewMachine,
     colors,
     dashboard,
+    hiddenKeySet,
     menuItemByPermission,
     openAssetBranch,
-    scrollToAttendanceBlock,
+    scrollToBlock,
   ]);
-  const canViewItStructure = canViewBlock(
-    dashboard?.itStructure?.viewPermission,
-  );
   const itStructure = useMemo(() => {
-    if (!canViewItStructure) return null;
+    if (!canViewIt) return null;
     if (!dashboard?.itStructure?.items?.length) return null;
 
     return dashboard.itStructure;
-  }, [canViewItStructure, dashboard]);
-  // Tính riêng khỏi `utilityRows` vì khung chờ (skeleton) cũng phải theo quyền:
-  // lần mở app đầu tiên chưa có cache, nếu chỉ chặn ở phần dữ liệu thì tài khoản
-  // không được xem vẫn thấy khung "ĐIỆN · NƯỚC · HƠI" nhá lên rồi mất — chỉ xảy
-  // ra khi BE khai `viewPermission` cho khối này.
-  const canViewUtilities = canViewBlock(dashboard?.utilities?.viewPermission);
+  }, [canViewIt, dashboard]);
   const utilityRows = useMemo<HomeUtilityRow[]>(() => {
     // Payload trong cache có thể là của bản app cũ, chưa có khối này.
     if (!dashboard?.utilities?.items?.length) return [];
@@ -472,26 +535,36 @@ const HomeScreen: React.FC = () => {
   // lại — nếu không cả trang chỉ còn hàng shortcut và user không biết là hôm nay
   // không có số liệu hay app hỏng.
   const hasDashboardLoadFailure = hasDashboardError && !dashboard;
-  // Ba ô đếm thiết bị luôn hiện nên lưới số liệu luôn có phần để hiện; lúc chưa
-  // có dữ liệu thì `statTiles` rỗng vì lý do khác, vẫn phải dựng khung chờ / thẻ
-  // lỗi kèm nút Tải lại.
+  // Lúc chưa có dữ liệu thì `statTiles` rỗng dù có quyền, vẫn phải dựng khung
+  // chờ. Thẻ lỗi kèm nút Tải lại thì hiện cho ai được xem BẤT KỲ phần nào của
+  // endpoint này (cả người chỉ có quyền tiêu thụ): khối của họ đang trống vì
+  // lỗi, không có chỗ nào khác báo.
   const hasStatSection =
-    statTiles.length > 0 || isFirstDashboardLoad || hasDashboardLoadFailure;
+    statTiles.length > 0 ||
+    (statTileCount > 0 && isFirstDashboardLoad) ||
+    ((statTileCount > 0 || canViewUtilities) && hasDashboardLoadFailure);
   const hasUtilitySection =
     utilityRows.length > 0 || (canViewUtilities && isFirstDashboardLoad);
   const hasItStructureSection =
-    itStructure !== null || (canViewItStructure && isFirstDashboardLoad);
+    itStructure !== null || (canViewIt && isFirstDashboardLoad);
+  // Như các khối cùng endpoint: lượt tải đầu vẫn chiếm chỗ (thẻ tự vẽ khung
+  // chờ), không thì khối chen vào sau đẩy cả trang xuống.
+  const hasAttendanceSection =
+    attendance !== null || (canViewAttendance && isFirstDashboardLoad);
   // Hai card máy móc có nguồn riêng nên lượt tải đầu cũng riêng: endpoint kia đã
   // có cache mà endpoint này chưa về thì trang 1-2 mới là phần đang chờ.
   const isFirstMachineLoad = isMachineLoading && !machine;
-  // Khu cuộn ngang luôn giữ đủ ba trang, chỉ cần MỘT trong ba có gì để hiện.
-  const hasAssetStructureSection =
-    hasItStructureSection ||
-    machine !== null ||
-    hasMachineError ||
-    isFirstMachineLoad;
+  const hasMachineSection =
+    canViewMachine &&
+    (machine !== null || hasMachineError || isFirstMachineLoad);
+  // Khu cuộn ngang giữ đủ các trang được phép xem, chỉ cần MỘT trang có gì để
+  // hiện.
+  const hasAssetStructureSection = hasItStructureSection || hasMachineSection;
   const homeContentWidth = windowWidth - HOME_CONTENT_HORIZONTAL_PADDING * 2;
-  const shortcutCardWidth = getHomeShortcutCardWidth(homeContentWidth);
+  const shortcutCardWidth = getHomeShortcutCardWidth(
+    homeContentWidth,
+    shortcutItems.length,
+  );
   const shortcutPagerHeight = getHomeShortcutPagerHeight(shortcutItems.length);
   const shortcutPages = useMemo(
     () => chunkHomeShortcutPages(shortcutItems),
@@ -553,22 +626,34 @@ const HomeScreen: React.FC = () => {
       // Lọc theo quyền View.Workflow ngay dưới (ngoài memo).
       workflow: true,
       assetStructure: hasAssetStructureSection,
-      attendance: attendance !== null,
+      attendance: hasAttendanceSection,
       utilities: hasUtilitySection,
     };
 
     return blockOrder.filter((key) => isBlockVisible[key]);
   }, [
-    attendance,
+    hasAttendanceSection,
     blockOrder,
     hasAssetStructureSection,
     hasStatSection,
     hasUtilitySection,
   ]);
   const canViewWorkflow = loaded && canView(WORKFLOW_VIEW_CODE);
-  const visibleBlockKeys = canViewWorkflow
+  // Khối tài khoản này có thể xem (đủ quyền, có dữ liệu). Bảng Sắp xếp liệt kê
+  // đủ chừng này — kể cả khối user đã tắt, để còn bật lại.
+  const availableBlockKeys = canViewWorkflow
     ? orderedBlockKeys
     : orderedBlockKeys.filter((key) => key !== "workflow");
+  // Khối thật sự hiện trên Trang chủ: bỏ những khối user đã tắt.
+  const visibleBlockKeys = availableBlockKeys.filter(
+    (key) => !hiddenKeySet.has(key),
+  );
+  // Một hai khối thì cuộn chút là thấy hết, hàng chip chỉ chiếm chỗ.
+  const showJumpBar = visibleBlockKeys.length >= 3;
+
+  useEffect(() => {
+    if (!showJumpBar) jumpBarHeightRef.current = 0;
+  }, [showJumpBar]);
   const handleMoveBlock = useCallback(
     ({
       fromIndex,
@@ -594,7 +679,7 @@ const HomeScreen: React.FC = () => {
       <ScrollView
         contentContainerStyle={[
           styles.centerState,
-          { backgroundColor: colors.bg },
+          { backgroundColor: pageBackground },
         ]}
         refreshControl={
           <RefreshControl
@@ -615,214 +700,239 @@ const HomeScreen: React.FC = () => {
   }
 
   if (!loaded || isInitialMenuLoading) {
-    return <HomeScreenSkeleton />;
+    return (
+      <HomeScreenSkeleton
+        // Đọc xong quyền thì đã biết đúng các khối sắp hiện; chưa thì đoán theo
+        // thứ tự đã lưu, bỏ những khối user đã tắt.
+        blockKeys={
+          loaded
+            ? visibleBlockKeys
+            : blockOrder.filter((key) => !hiddenKeySet.has(key))
+        }
+        collapsedKeys={collapsedKeys}
+        statTileCount={loaded ? statTileCount : undefined}
+      />
+    );
   }
 
-  // Mỗi khối là một hàm dựng, nhận sẵn tay nắm kéo thả để gắn vào dòng tiêu đề.
-  // Thứ tự hiển thị do `visibleBlockKeys` quyết định, không còn nằm trong JSX.
-  const blockNodes: Record<HomeBlockKey, React.ReactNode> = {
-    stats: (
-      <>
-        {/* Còn giữ số cũ vì lượt gọi mới nhất thất bại thì phải ghi rõ ở
-          đây — lưới số liệu không có chỗ nào khác để báo. */}
+  // Mỗi khối: nhãn màu của nhóm (chạm để thu gọn / mở) + nội dung, bọc trong
+  // context màu nhóm để card bên trong tự tô mép trên. Thu gọn là gỡ hẳn nội
+  // dung, không chỉ ẩn — khối đang gập không tải gì thêm.
+  const renderBlock = (
+    key: HomeBlockKey,
+    title: Omit<
+      React.ComponentProps<typeof HomeSectionTitle>,
+      "tone" | "iconName" | "collapsed" | "onToggleCollapsed"
+    >,
+    content: React.ReactNode,
+  ) => {
+    const isCollapsed = collapsedKeySet.has(key);
+
+    return (
+      <HomeBlockToneContext.Provider value={HOME_BLOCK_TONES[key]}>
         <HomeSectionTitle
-          label="SỐ LIỆU TOÀN CÔNG TY"
-          // Giờ SERVER lúc chạy proc, không phải giờ máy — người xem cần biết
-          // đang xem số cũ hay số mới.
-          note={
-            updatedAtLabel
-              ? `${
-                  isDashboardStale ? "Số cũ · s" : "S"
-                }ố liệu lúc ${updatedAtLabel}`
-              : undefined
-          }
+          {...title}
+          tone={HOME_BLOCK_TONES[key]}
+          iconName={HOME_BLOCK_META[key].iconName}
+          collapsed={isCollapsed}
+          onToggleCollapsed={() => setBlockCollapsed(key, !isCollapsed)}
         />
-        {hasDashboardLoadFailure ? (
-          <View
-            style={[
-              styles.overviewErrorCard,
-              {
-                backgroundColor: colors.surface,
-                borderColor: hairlineBorderColor,
-                shadowColor: colors.shadow,
-              },
-            ]}
+        {isCollapsed ? null : content}
+      </HomeBlockToneContext.Provider>
+    );
+  };
+  // Thẻ lỗi / thẻ trống dựng thẳng ở đây (ngoài context khối) nên tự lấy viền và
+  // mép trên theo màu nhãn khối của nó.
+  const statsCardChrome = getHomeCardChrome({
+    borderColor: HOME_BLOCK_TONES.stats.label,
+    shadowColor: colors.shadow,
+    accent: HOME_BLOCK_TONES.stats.label,
+  });
+  const shortcutsCardChrome = getHomeCardChrome({
+    borderColor: HOME_BLOCK_TONES.shortcuts.label,
+    shadowColor: colors.shadow,
+    accent: HOME_BLOCK_TONES.shortcuts.label,
+  });
+
+  // Thứ tự hiển thị do `visibleBlockKeys` quyết định, không nằm trong JSX.
+  const blockNodes: Record<HomeBlockKey, React.ReactNode> = {
+    stats: renderBlock(
+      "stats",
+      {
+        label: "SỐ LIỆU TOÀN CÔNG TY",
+        // Còn giữ số cũ vì lượt gọi mới nhất thất bại thì phải ghi rõ ở đây —
+        // lưới số liệu không có chỗ nào khác để báo. Giờ SERVER lúc chạy proc,
+        // không phải giờ máy — người xem cần biết đang xem số cũ hay số mới.
+        note: updatedAtLabel
+          ? `${isDashboardStale ? "Số cũ · s" : "S"}ố liệu lúc ${updatedAtLabel}`
+          : undefined,
+      },
+      hasDashboardLoadFailure ? (
+        <View
+          style={[
+            styles.overviewErrorCard,
+            statsCardChrome,
+            { backgroundColor: colors.surface },
+          ]}
+        >
+          <Ionicons
+            name="cloud-offline-outline"
+            size={18}
+            color={colors.textMuted}
+          />
+          <Text
+            style={[styles.overviewErrorText, { color: colors.textSecondary }]}
           >
-            <Ionicons
-              name="cloud-offline-outline"
-              size={18}
-              color={colors.textMuted}
-            />
+            Không lấy được số liệu dashboard. Vui lòng thử lại.
+          </Text>
+          <TouchableOpacity onPress={refreshDashboard} activeOpacity={0.7}>
             <Text
-              style={[
-                styles.overviewErrorText,
-                { color: colors.textSecondary },
-              ]}
+              style={[styles.overviewErrorAction, { color: HOME_BRAND_RED }]}
             >
-              Không lấy được số liệu dashboard. Vui lòng thử lại.
+              Tải lại
             </Text>
-            <TouchableOpacity onPress={refreshDashboard} activeOpacity={0.7}>
-              <Text
-                style={[styles.overviewErrorAction, { color: HOME_BRAND_RED }]}
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <HomeStatTiles
+          tiles={statTiles}
+          isLoading={isFirstDashboardLoad}
+          // Quyền đã đọc xong ở nhánh này, nên khung chờ ra đúng số ô sắp hiện.
+          skeletonCount={statTileCount}
+        />
+      ),
+    ),
+    shortcuts: renderBlock(
+      "shortcuts",
+      {
+        label: "TRUY CẬP NHANH",
+        note:
+          shortcutItems.length > 0
+            ? `Đã ghim ${shortcutItems.length} mục`
+            : undefined,
+        // Không có chức năng nào khả dụng thì bảng tuỳ chỉnh cũng rỗng — ẩn nút
+        // đi thay vì mở ra một danh sách trắng.
+        action: hasNoViewFeatures ? undefined : "Tuỳ chỉnh",
+        actionIconName: "options-outline",
+        onAction: openCustomizeSheet,
+      },
+      hasNoViewFeatures ? (
+        <View
+          style={[
+            styles.noPermissionCard,
+            shortcutsCardChrome,
+            { backgroundColor: colors.surface },
+          ]}
+        >
+          <EmptyState
+            iconName="lock-closed-outline"
+            title="Chưa có chức năng khả dụng"
+            subtitle="Tài khoản hiện tại chưa được cấp quyền xem chức năng nào. Vui lòng liên hệ IT nếu bạn cần thêm quyền truy cập."
+            fullHeight={false}
+          />
+        </View>
+      ) : hasNoShortcuts ? (
+        <TouchableOpacity
+          style={[
+            styles.noPermissionCard,
+            shortcutsCardChrome,
+            { backgroundColor: colors.surface },
+          ]}
+          activeOpacity={0.78}
+          onPress={openCustomizeSheet}
+        >
+          <EmptyState
+            iconName="add-circle-outline"
+            title="Chưa ghim chức năng nào"
+            subtitle="Bấm vào đây hoặc nút Tuỳ chỉnh để chọn chức năng, báo cáo hiện ra Trang chủ."
+            fullHeight={false}
+          />
+        </TouchableOpacity>
+      ) : (
+        <>
+          <ScrollView
+            ref={shortcutPagerRef}
+            style={[styles.shortcutPager, { height: shortcutPagerHeight }]}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            decelerationRate="fast"
+            onMomentumScrollEnd={handleShortcutPagerScrollEnd}
+            scrollEventThrottle={16}
+          >
+            {shortcutPages.map((page, pageIndex) => (
+              <View
+                key={`shortcut-page-${pageIndex}`}
+                style={[styles.shortcutPage, { width: homeContentWidth }]}
               >
-                Tải lại
-              </Text>
+                {page.map((item, indexInPage) => (
+                  <View
+                    key={item.id}
+                    style={[styles.shortcutCard, { width: shortcutCardWidth }]}
+                  >
+                    <HomeMenuItemCard
+                      {...item}
+                      index={pageIndex * HOME_SHORTCUT_PAGE_SIZE + indexInPage}
+                      fixedHeight
+                    />
+                  </View>
+                ))}
+              </View>
+            ))}
+          </ScrollView>
+          <View style={styles.shortcutFooter}>
+            {/* Nhiều hơn một trang mới có gì để chỉ; một trang thì hàng này
+                chỉ còn "Xem tất cả" nằm bên phải. */}
+            <View style={styles.shortcutDots}>
+              {shortcutPageCount > 1
+                ? shortcutVisiblePageIndexes.map((pageIndex) => (
+                    <TouchableOpacity
+                      key={`shortcut-dot-${pageIndex}`}
+                      onPress={() => goToShortcutPage(pageIndex)}
+                      activeOpacity={0.7}
+                      hitSlop={{ top: 8, right: 4, bottom: 8, left: 4 }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Trang ${pageIndex + 1}`}
+                    >
+                      <View
+                        style={[
+                          styles.shortcutDot,
+                          pageIndex === shortcutPage &&
+                            styles.shortcutDotActive,
+                        ]}
+                      />
+                    </TouchableOpacity>
+                  ))
+                : null}
+            </View>
+            <TouchableOpacity
+              style={styles.shortcutViewAll}
+              onPress={openFeatureTab}
+              activeOpacity={0.7}
+              hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Xem tất cả"
+            >
+              <Text style={styles.shortcutViewAllText}>Xem tất cả</Text>
+              <Ionicons
+                name="chevron-forward"
+                size={13}
+                color={HOME_BRAND_RED}
+              />
             </TouchableOpacity>
           </View>
-        ) : (
-          <HomeStatTiles
-            tiles={statTiles}
-            isLoading={isFirstDashboardLoad}
-            // Quyền đã đọc xong ở nhánh này, nên khung chờ ra đúng số ô sắp hiện.
-            skeletonCount={canViewAttendance ? 4 : 3}
-          />
-        )}
-      </>
+        </>
+      ),
     ),
-    shortcuts: (
-      <>
-        <HomeSectionTitle
-          label="TRUY CẬP NHANH"
-          note={
-            shortcutItems.length > 0
-              ? `Đã ghim ${shortcutItems.length} mục`
-              : undefined
-          }
-          // Không có chức năng nào khả dụng thì bảng tuỳ chỉnh cũng rỗng — ẩn nút
-          // đi thay vì mở ra một danh sách trắng.
-          action={hasNoViewFeatures ? undefined : "Tuỳ chỉnh"}
-          actionIconName="options-outline"
-          onAction={openCustomizeSheet}
-        />
-        {hasNoViewFeatures ? (
-          <View
-            style={[
-              styles.noPermissionCard,
-              {
-                backgroundColor: colors.surface,
-                borderColor: hairlineBorderColor,
-                shadowColor: colors.shadow,
-              },
-            ]}
-          >
-            <EmptyState
-              iconName="lock-closed-outline"
-              title="Chưa có chức năng khả dụng"
-              subtitle="Tài khoản hiện tại chưa được cấp quyền xem chức năng nào. Vui lòng liên hệ IT nếu bạn cần thêm quyền truy cập."
-              fullHeight={false}
-            />
-          </View>
-        ) : hasNoShortcuts ? (
-          <TouchableOpacity
-            style={[
-              styles.noPermissionCard,
-              {
-                backgroundColor: colors.surface,
-                borderColor: hairlineBorderColor,
-                shadowColor: colors.shadow,
-              },
-            ]}
-            activeOpacity={0.78}
-            onPress={openCustomizeSheet}
-          >
-            <EmptyState
-              iconName="add-circle-outline"
-              title="Chưa ghim chức năng nào"
-              subtitle="Bấm vào đây hoặc nút Tuỳ chỉnh để chọn chức năng, báo cáo hiện ra Trang chủ."
-              fullHeight={false}
-            />
-          </TouchableOpacity>
-        ) : (
-          <>
-            <ScrollView
-              ref={shortcutPagerRef}
-              style={[styles.shortcutPager, { height: shortcutPagerHeight }]}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              decelerationRate="fast"
-              onMomentumScrollEnd={handleShortcutPagerScrollEnd}
-              scrollEventThrottle={16}
-            >
-              {shortcutPages.map((page, pageIndex) => (
-                <View
-                  key={`shortcut-page-${pageIndex}`}
-                  style={[styles.shortcutPage, { width: homeContentWidth }]}
-                >
-                  {page.map((item, indexInPage) => (
-                    <View
-                      key={item.id}
-                      style={[
-                        styles.shortcutCard,
-                        { width: shortcutCardWidth },
-                      ]}
-                    >
-                      <HomeMenuItemCard
-                        {...item}
-                        index={
-                          pageIndex * HOME_SHORTCUT_PAGE_SIZE + indexInPage
-                        }
-                        fixedHeight
-                      />
-                    </View>
-                  ))}
-                </View>
-              ))}
-            </ScrollView>
-            <View style={styles.shortcutFooter}>
-              {/* Nhiều hơn một trang mới có gì để chỉ; một trang thì hàng này
-                  chỉ còn "Xem tất cả" nằm bên phải. */}
-              <View style={styles.shortcutDots}>
-                {shortcutPageCount > 1
-                  ? shortcutVisiblePageIndexes.map((pageIndex) => (
-                      <TouchableOpacity
-                        key={`shortcut-dot-${pageIndex}`}
-                        onPress={() => goToShortcutPage(pageIndex)}
-                        activeOpacity={0.7}
-                        hitSlop={{ top: 8, right: 4, bottom: 8, left: 4 }}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Trang ${pageIndex + 1}`}
-                      >
-                        <View
-                          style={[
-                            styles.shortcutDot,
-                            pageIndex === shortcutPage &&
-                              styles.shortcutDotActive,
-                          ]}
-                        />
-                      </TouchableOpacity>
-                    ))
-                  : null}
-              </View>
-              <TouchableOpacity
-                style={styles.shortcutViewAll}
-                onPress={openFeatureTab}
-                activeOpacity={0.7}
-                hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
-                accessibilityRole="button"
-                accessibilityLabel="Xem tất cả"
-              >
-                <Text
-                  style={styles.shortcutViewAllText}
-                >
-                  Xem tất cả
-                </Text>
-                <Ionicons
-                  name="chevron-forward"
-                  size={13}
-                  color={HOME_BRAND_RED}
-                />
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
-      </>
-    ),
-    // Khu cuộn ngang cố tình KHÔNG có tiêu đề chung: mỗi trang tự mang tiêu đề
-    // của nó, vuốt sang trang khác mà tiêu đề không đổi thì người xem đọc nhầm số.
-    assetStructure: (
+    // Một nhãn cho cả khu cuộn ngang; tiêu đề riêng của từng trang vẫn nằm trong
+    // card, vuốt sang trang khác là tiêu đề đổi theo — không đọc nhầm số.
+    assetStructure: renderBlock(
+      "assetStructure",
+      { label: "CƠ CẤU TÀI SẢN" },
       <HomeAssetStructurePager
         pageWidth={homeContentWidth}
+        showMachinePages={canViewMachine}
+        showItPage={canViewIt}
         itStructure={itStructure}
         machine={machine}
         isDashboardLoading={isFirstDashboardLoad}
@@ -830,62 +940,69 @@ const HomeScreen: React.FC = () => {
         hasMachineError={hasMachineError}
         onRetryMachine={refreshMachineDashboard}
         resetToken={dashboard?.updatedAt ?? ""}
-      />
+      />,
     ),
-    workflow: canViewWorkflow ? (
-      <>
-        <HomeSectionTitle
-          label="TỔNG QUAN CÔNG VIỆC"
-          action="Xem chi tiết"
-          onAction={() => navigateFromRef("CongViec")}
-        />
-        {/* Tự tải; Trang chủ làm mới (dashboard đổi updatedAt) là tải lại theo. */}
-        <WorkflowDashboardCard reloadKey={dashboard?.updatedAt ?? ""} />
-      </>
-    ) : null,
-    attendance: (
-      <>
-        <HomeSectionTitle label="ĐIỂM DANH NHÂN SỰ HÔM NAY" />
+    workflow: canViewWorkflow
+      ? renderBlock(
+          "workflow",
+          {
+            label: "TỔNG QUAN CÔNG VIỆC",
+            action: "Xem chi tiết",
+            onAction: () => navigateFromRef("CongViec"),
+          },
+          // Tự tải; Trang chủ làm mới (dashboard đổi updatedAt) là tải lại theo.
+          <WorkflowDashboardCard reloadKey={dashboard?.updatedAt ?? ""} />,
+        )
+      : null,
+    attendance: renderBlock(
+      "attendance",
+      { label: "ĐIỂM DANH NHÂN SỰ HÔM NAY" },
+      // Lượt tải đầu chưa có số: khung chờ (thẻ thật chưa có số là báo lỗi Bravo8).
+      attendance === null ? (
+        <AttendanceSkeleton />
+      ) : (
         <HomeAttendanceCard
-          total={attendance?.total ?? null}
-          checkedIn={attendance?.checkedIn ?? null}
-          notCheckedIn={attendance?.notCheckedIn ?? null}
-          departments={attendance?.departments ?? []}
+          total={attendance.total ?? null}
+          checkedIn={attendance.checkedIn ?? null}
+          notCheckedIn={attendance.notCheckedIn ?? null}
+          departments={attendance.departments ?? []}
           isLoading={isFirstDashboardLoad}
         />
-      </>
+      ),
     ),
-    utilities: (
-      <>
-        {/* Kỳ tiêu thụ là THÁNG TRƯỚC và do SQL tự quyết — tiêu đề phải ghi
-          rõ tháng nhận được, không tự trừ thêm một tháng. */}
-        <HomeSectionTitle
-          label={
-            utilityPeriodLabel
-              ? `TIÊU THỤ ${utilityPeriodLabel.toUpperCase()}`
-              : "TIÊU THỤ ĐIỆN · NƯỚC · HƠI"
-          }
-        />
-        <HomeUtilityCard
-          rows={utilityRows}
-          periodLabel={utilityPeriodLabel || undefined}
-          isLoading={isFirstDashboardLoad}
-        />
-      </>
+    utilities: renderBlock(
+      "utilities",
+      {
+        // Kỳ tiêu thụ là THÁNG TRƯỚC và do SQL tự quyết — tiêu đề phải ghi rõ
+        // tháng nhận được, không tự trừ thêm một tháng.
+        label: utilityPeriodLabel
+          ? `TIÊU THỤ ${utilityPeriodLabel.toUpperCase()}`
+          : "TIÊU THỤ ĐIỆN · NƯỚC · HƠI",
+      },
+      <HomeUtilityCard
+        rows={utilityRows}
+        periodLabel={utilityPeriodLabel || undefined}
+        isLoading={isFirstDashboardLoad}
+      />,
     ),
   };
-  const reorderItems: HomeReorderItem[] = visibleBlockKeys.map((key) => ({
+  const reorderItems: HomeReorderItem[] = availableBlockKeys.map((key) => ({
     key,
     ...HOME_BLOCK_META[key],
+    hidden: hiddenKeySet.has(key),
+    accent: HOME_BLOCK_TONES[key].label,
+    iconColor: HOME_BLOCK_TONES[key].accent,
   }));
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.bg }]}>
+    <View style={[styles.root, { backgroundColor: pageBackground }]}>
       <ScrollView
         ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        // Hàng chip là con đầu tiên và dính trên cùng khi cuộn.
+        stickyHeaderIndices={showJumpBar ? [0] : undefined}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -895,26 +1012,52 @@ const HomeScreen: React.FC = () => {
           />
         }
       >
+        {showJumpBar ? (
+          <HomeJumpBar
+            keys={visibleBlockKeys}
+            onJump={scrollToBlock}
+            backgroundColor={pageBackground}
+            onLayout={(event) => {
+              jumpBarHeightRef.current = event.nativeEvent.layout.height;
+            }}
+          />
+        ) : null}
         {visibleBlockKeys.map((key) => (
           <View
             key={key}
-            onLayout={
-              key === "attendance"
-                ? (event) => {
-                    attendanceBlockYRef.current = event.nativeEvent.layout.y;
-                  }
-                : undefined
-            }
+            style={styles.block}
+            onLayout={(event) => {
+              blockYRef.current[key] = event.nativeEvent.layout.y;
+            }}
           >
             {blockNodes[key]}
           </View>
         ))}
+        {/* Tắt hết khối trong Sắp xếp thì Trang chủ trắng trơn — phải chỉ đường
+            bật lại, không thì tưởng app hỏng. */}
+        {visibleBlockKeys.length === 0 && availableBlockKeys.length > 0 ? (
+          <View
+            style={[styles.noPermissionCard, { backgroundColor: colors.surface }]}
+          >
+            <EmptyState
+              iconName="eye-off-outline"
+              title="Bạn đã ẩn hết các khối"
+              subtitle="Mở Sắp xếp (nút mũi tên lên xuống trên đầu trang) rồi chọn lại khối muốn xem."
+              actionLabel="Mở Sắp xếp"
+              onActionPress={openBlockOrderSheet}
+              fullHeight={false}
+            />
+          </View>
+        ) : null}
       </ScrollView>
 
       <HomeBlockOrderSheet
         visible={isBlockOrderSheetVisible}
         items={reorderItems}
         onMove={handleMoveBlock}
+        onToggleHidden={(key, hidden) => {
+          if (isHomeBlockKey(key)) setBlockHidden(key, hidden);
+        }}
         onClose={closeBlockOrderSheet}
       />
 

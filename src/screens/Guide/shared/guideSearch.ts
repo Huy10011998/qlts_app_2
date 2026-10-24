@@ -1,6 +1,11 @@
 import { removeVietnameseTones } from "../../../utils/helpers/string";
 import { GUIDE_TOPICS } from "./guideContent";
-import type { GuideBlock, GuideSection, GuideTopic } from "./guideTypes";
+import type {
+  GuideBlock,
+  GuideSection,
+  GuideTopic,
+  GuideTopicId,
+} from "./guideTypes";
 
 /**
  * Tìm kiếm trong tài liệu: gõ không dấu vẫn ra kết quả, vì mọi chữ trong tài liệu
@@ -31,7 +36,7 @@ type IndexedTopic = {
   /** Toàn bộ chữ của chủ đề, đã bỏ dấu. */
   haystack: string;
   /** Từng section kèm chữ đã bỏ dấu, để biết section nào khớp. */
-  sections: { heading: string; haystack: string }[];
+  sections: { section: GuideSection; heading: string; haystack: string }[];
 };
 
 const INDEX: IndexedTopic[] = GUIDE_TOPICS.map((topic) => ({
@@ -45,6 +50,7 @@ const INDEX: IndexedTopic[] = GUIDE_TOPICS.map((topic) => ({
     ].join(" "),
   ),
   sections: topic.sections.map((section) => ({
+    section,
     heading: section.heading,
     haystack: removeVietnameseTones(sectionText(section)),
   })),
@@ -72,4 +78,22 @@ export const filterGuideTopics = (query: string): GuideSearchHit[] => {
         .map((section) => section.heading),
     }),
   );
+};
+
+/**
+ * Lọc các mục của một chủ đề (với Câu hỏi thường gặp: từng câu hỏi) — so khớp
+ * bỏ dấu y như `filterGuideTopics`, trên cả câu hỏi lẫn câu trả lời. Chuỗi rỗng
+ * trả về đủ các mục.
+ */
+export const filterGuideSections = (
+  topicId: GuideTopicId,
+  query: string,
+): GuideSection[] => {
+  const entry = INDEX.find((indexed) => indexed.topic.id === topicId);
+  if (!entry) return [];
+
+  const keyword = removeVietnameseTones(query.trim());
+  return entry.sections
+    .filter((indexed) => !keyword || indexed.haystack.includes(keyword))
+    .map((indexed) => indexed.section);
 };

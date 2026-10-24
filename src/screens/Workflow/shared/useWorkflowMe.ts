@@ -12,19 +12,35 @@ type GetInfoResult = Pick<WorkflowMe, "iD_NhanVien">;
  * nhập tài khoản khác không đọc nhầm nhân viên cũ — token xoay vòng khi refresh
  * chỉ làm tốn thêm một lượt gọi nhẹ.
  */
-let cached: { token: string | null; promise: Promise<GetInfoResult> } | null = null;
+let cached: {
+  token: string | null;
+  promise: Promise<GetInfoResult>;
+  /** Kết quả đã về — đọc đồng bộ để màn mở sau không có khung "chưa biết là ai". */
+  value?: GetInfoResult;
+} | null = null;
 
 const loadWorkflowMe = (token: string | null) => {
   if (cached && cached.token === token) return cached.promise;
 
-  const promise = getWorkflowMe().catch((err) => {
-    if (cached?.promise === promise) cached = null;
-    throw err;
-  });
+  const entry: NonNullable<typeof cached> = {
+    token,
+    promise: getWorkflowMe()
+      .then((result) => {
+        entry.value = result;
+        return result;
+      })
+      .catch((err) => {
+        if (cached === entry) cached = null;
+        throw err;
+      }),
+  };
 
-  cached = { token, promise };
-  return promise;
+  cached = entry;
+  return entry.promise;
 };
+
+const peekWorkflowMe = (token: string | null) =>
+  cached && cached.token === token ? cached.value ?? null : null;
 
 /**
  * Người đăng nhập của view Workflow.
@@ -40,14 +56,16 @@ const loadWorkflowMe = (token: string | null) => {
 export function useWorkflowMe() {
   const { token } = useAuth();
   const { info: nhanVien, isLoading: nhanVienLoading } = useNhanVienInfo();
-  const [getInfo, setGetInfo] = useState<GetInfoResult | null>(null);
+  // Đã có trong phiên thì dùng ngay: khởi đầu bằng null là nút Duyệt / Sửa,
+  // bên của tin nhắn… thiếu một khung rồi mới hiện.
+  const [getInfo, setGetInfo] = useState<GetInfoResult | null>(() => peekWorkflowMe(token));
   const [failed, setFailed] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !peekWorkflowMe(token));
 
   useEffect(() => {
     let alive = true;
 
-    setLoading(true);
+    if (!peekWorkflowMe(token)) setLoading(true);
     loadWorkflowMe(token)
       .then((result) => {
         if (!alive) return;

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import NetInfo from "@react-native-community/netinfo";
-import { Alert, Linking, Platform } from "react-native";
+import { Linking, Platform } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import AppNavigator from "./AppNavigator.tsx";
 import AuthNavigator from "./AuthNavigator.tsx";
@@ -19,12 +19,13 @@ import {
   checkServerReachability,
   SERVER_UNAVAILABLE_MESSAGE,
 } from "../services/network/reachability";
+import { AppAlert } from "../components/ui/AppAlert";
 
 export default function RootNavigator() {
   const {
     isAuthenticated,
     isLoading,
-    iosAuthenticated,
+    sessionUnlocked,
     authReady,
     logoutReason,
     clearLogoutReason,
@@ -71,7 +72,7 @@ export default function RootNavigator() {
     if (hasShownAndroidOfflineRef.current) return;
     hasShownAndroidOfflineRef.current = true;
 
-    Alert.alert("Lỗi", SERVER_UNAVAILABLE_MESSAGE, [
+    AppAlert.alert("Lỗi", SERVER_UNAVAILABLE_MESSAGE, [
       { text: "Chấp nhận", style: "cancel" },
       {
         text: "Chi tiết",
@@ -98,7 +99,7 @@ export default function RootNavigator() {
     if (logoutReason === "EXPIRED" && !hasShownExpiredRef.current) {
       hasShownExpiredRef.current = true;
 
-      Alert.alert(
+      AppAlert.alert(
         "Phiên đăng nhập đã hết",
         "Vui lòng đăng nhập lại.",
         [
@@ -175,7 +176,7 @@ export default function RootNavigator() {
   // ===== LOAD PERMISSIONS =====
   useEffect(() => {
     const canLoadPermissions = canLoadRootPermissions({
-      iosAuthenticated,
+      sessionUnlocked,
       isAuthenticated,
     });
 
@@ -211,7 +212,7 @@ export default function RootNavigator() {
     return () => {
       cancelled = true;
     };
-  }, [dispatch, iosAuthenticated, isAuthenticated, loaded]);
+  }, [dispatch, sessionUnlocked, isAuthenticated, loaded]);
 
   // ===== LOADING STATE =====
   // Chặn offline chỉ có tác dụng lúc bootstrap, khi chưa có gì để mất. Một lượt
@@ -219,7 +220,7 @@ export default function RootNavigator() {
   const isOfflineBlocking = isAndroidOfflineBlocked && !hasEnteredAppRef.current;
   const isBootstrapping = !authReady || isLoading || isOfflineBlocking;
   const canEnterApp = canAccessAppNavigator({
-    iosAuthenticated,
+    sessionUnlocked,
     isAuthenticated,
   });
 

@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Alert,
   Linking,
   StyleSheet,
   Text,
@@ -49,6 +48,7 @@ import {
 } from "./shared/shareholdersMeetingHelpers";
 import { useAutoReload } from "../../hooks/useAutoReload";
 import { isNetworkRequestError } from "../../utils/helpers/api";
+import { AppAlert } from "../../components/ui/AppAlert";
 
 type AttendanceActionResponse = {
   message?: string;
@@ -180,7 +180,7 @@ export default function ShareholdersMeetingScannerScreen() {
 
   const handleInvalidQr = useCallback(
     (message?: string) => {
-      Alert.alert("Mã QR không hợp lệ", message, [
+      AppAlert.alert("Mã QR không hợp lệ", message, [
         {
           text: "OK",
           onPress: resumeScanner,
@@ -225,7 +225,7 @@ export default function ShareholdersMeetingScannerScreen() {
       }
 
       if (shareholder.isLock) {
-        Alert.alert(
+        AppAlert.alert(
           "Cổ đông đã khóa",
           `Cổ đông ${shareholder.shareholderId} đã khóa, bạn chỉ có thể xem thông tin.`,
           [
@@ -239,7 +239,7 @@ export default function ShareholdersMeetingScannerScreen() {
       }
 
       if (scanMode === "voting" && shareholder.status !== "present") {
-        Alert.alert(
+        AppAlert.alert(
           "Chưa điểm danh",
           `Cổ đông ${shareholder.shareholderId} chưa điểm danh nên chưa thể lấy ý kiến.`,
           [
@@ -255,7 +255,7 @@ export default function ShareholdersMeetingScannerScreen() {
       // Chốt quyền lần nữa ngay trước khi ghi: màn gọi đã chặn từ nút quét,
       // nhưng quyền có thể bị thu hồi trong lúc màn quét đang mở.
       if (!canWrite) {
-        Alert.alert(
+        AppAlert.alert(
           "Không có quyền",
           scanMode === "attendance"
             ? "Tài khoản hiện tại không có quyền điểm danh cổ đông."
@@ -278,7 +278,7 @@ export default function ShareholdersMeetingScannerScreen() {
               votingChoice ? VOTING_CHOICE_LABEL_MAP[votingChoice] : ""
             }"?`;
 
-      Alert.alert(confirmTitle, confirmMessage, [
+      AppAlert.alert(confirmTitle, confirmMessage, [
         {
           text: "Huỷ",
           style: "cancel",
@@ -306,7 +306,7 @@ export default function ShareholdersMeetingScannerScreen() {
                     reloadShareholders();
                   }
 
-                  Alert.alert("Thông báo", backendMessage, [
+                  AppAlert.alert("Thông báo", backendMessage, [
                     {
                       text: "OK",
                       onPress: resumeScanner,
@@ -317,7 +317,7 @@ export default function ShareholdersMeetingScannerScreen() {
 
                 applyAttendanceStatus(shareholder.id);
                 reloadShareholders();
-                Alert.alert(
+                AppAlert.alert(
                   "Điểm danh thành công",
                   `Cổ đông ${shareholder.shareholderId} đã được điểm danh.`,
                   [
@@ -338,7 +338,7 @@ export default function ShareholdersMeetingScannerScreen() {
                 "Không thể ghi nhận ý kiến cổ đông này.";
 
               if (backendResult === 0) {
-                Alert.alert("Thông báo", backendMessage, [
+                AppAlert.alert("Thông báo", backendMessage, [
                   {
                     text: "OK",
                     onPress: resumeScanner,
@@ -347,7 +347,7 @@ export default function ShareholdersMeetingScannerScreen() {
                 return;
               }
 
-              Alert.alert(
+              AppAlert.alert(
                 "Ghi nhận thành công",
                 `Đã lưu "${votingOpinionTitle || "ý kiến"}" cho cổ đông ${
                   shareholder.shareholderId
@@ -364,7 +364,7 @@ export default function ShareholdersMeetingScannerScreen() {
             } catch (error) {
               const isNetworkError = isNetworkRequestError(error);
 
-              Alert.alert(
+              AppAlert.alert(
                 isNetworkError ? "Lỗi kết nối" : "Lỗi",
                 isNetworkError
                   ? "Không thể gửi thông tin mã QR. Vui lòng kiểm tra kết nối mạng rồi thử lại."

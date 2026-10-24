@@ -82,7 +82,7 @@ const haiLanTra: FlowTienTrinh = {
 
 const summary = (data: FlowTienTrinh) =>
   buildFlowDiagram(data, "2026-10-04T16:19:00").runs.map((run) =>
-    run.points.map((point) => [point.col, point.state, point.sub.split(" · ")[0]]),
+    run.points.map((point) => [point.col, point.state, point.count ?? point.sub]),
   );
 
 describe("buildFlowDiagram (mục 6b–d)", () => {
@@ -109,6 +109,12 @@ describe("buildFlowDiagram (mục 6b–d)", () => {
     ]);
     const traPoint = buildFlowDiagram(motLanTra, null).runs[0].points[2];
     expect(traPoint.childDots.map((dot) => dot.state)).toEqual(["tra", "wait"]);
+    // "x/n" và ngày tách 2 dòng; bị trả cũng kèm ngày trả (mục 6c).
+    expect(traPoint.sub).toMatch(/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/);
+    expect(buildFlowDiagram(motLanTra, null).runs[1].points[1]).toMatchObject({
+      count: "2/2",
+      sub: expect.stringMatching(/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/),
+    });
   });
 
   it("trả 2 lần (traBuocs về lộn thứ tự vẫn xếp theo lan): 3 dòng thẳng cột", () => {
@@ -136,6 +142,38 @@ describe("buildFlowDiagram (mục 6b–d)", () => {
   });
 });
 
+describe("đường nối + chip (PHỤ LỤC TinhTrang BƯỚC)", () => {
+  // Bước 1 duyệt, bước 2 tinhTrang 4 (có / không người bấm Không ý kiến), bước 3 đang chờ.
+  const data = (khongYKien: boolean) =>
+    ({
+      buocs: [
+        { id: 1, buoc: 1, buocCon: null, ten: "Trưởng bộ phận", tinhTrang: 2 },
+        { id: 2, buoc: 2, buocCon: null, ten: "Kế toán", tinhTrang: 4 },
+        { id: 3, buoc: 3, buocCon: null, ten: "Giám đốc", tinhTrang: 1 },
+      ],
+      nguoiDuyets: [
+        { iD_Flow_HoSo_Buoc: 1, ketQua: 1, ngayDuyet: "2026-10-12T16:19:00" },
+        { iD_Flow_HoSo_Buoc: 2, ketQua: khongYKien ? 3 : null, ngayDuyet: khongYKien ? "2026-10-12T16:20:00" : null },
+      ],
+    } as unknown as FlowTienTrinh);
+
+  it("xanh sau điểm Đã duyệt / Không ý kiến, xám sau Bỏ qua / đang xử lý", () => {
+    const passed = (khongYKien: boolean) =>
+      buildFlowDiagram(data(khongYKien), null).runs[0].points.map((point) => point.passed);
+    expect(passed(true)).toEqual([true, true, true, false]);
+    expect(passed(false)).toEqual([true, true, false, false]);
+  });
+
+  it("chip theo state; nhãn tinhTrang 4 là Không ý kiến hoặc Bỏ qua", () => {
+    const statusOf = (khongYKien: boolean) => {
+      const diagram = buildFlowDiagram(data(khongYKien), null);
+      return getFlowPointDetail(data(khongYKien), diagram.runs[0].points[2], diagram)?.status;
+    };
+    expect(statusOf(true)).toEqual({ label: "Không ý kiến", state: "skip" });
+    expect(statusOf(false)).toEqual({ label: "Bỏ qua", state: "skip" });
+  });
+});
+
 describe("getFlowPointDetail (mục 6e)", () => {
   it("dòng cuối: tiêu đề ĐANG Ở BƯỚC, 1 dòng mỗi bước con", () => {
     const diagram = buildFlowDiagram(haiLanTra, null);
@@ -149,10 +187,19 @@ describe("getFlowPointDetail (mục 6e)", () => {
     expect(detail?.note).toBe("↳ Các bước con chạy tuần tự");
   });
 
+  it("bước đơn: 1 dòng chỉ ghi tên, không lặp số bước", () => {
+    const diagram = buildFlowDiagram(haiLanTra, null);
+    const giamDoc = diagram.runs[2].points.find((point) => point.column.kind === "buoc" && point.column.buoc.id === 4);
+    const detail = giamDoc && getFlowPointDetail(haiLanTra, giamDoc, diagram);
+    expect(detail?.title).toBe("4. Giám đốc duyệt");
+    expect(detail?.rows.map((row) => row.label)).toEqual(["Giám đốc duyệt"]);
+    expect(detail?.note).toBeNull();
+  });
+
   it("dòng cũ: dựng lại kết quả lúc đó, điểm bấm trả có khung lý do", () => {
     const diagram = buildFlowDiagram(haiLanTra, null);
     const detail = getFlowPointDetail(haiLanTra, diagram.runs[1].points[0], diagram);
-    expect(detail?.kicker).toBe("LẦN 2 · BƯỚC");
+    expect(detail?.kicker).toBe("BƯỚC");
     expect(detail?.rows.map((row) => row.status.label)).toEqual(["Đã duyệt", "Trả bước"]);
     expect(detail?.tra?.lan).toBe(2);
 
@@ -168,12 +215,12 @@ describe("getFlowPointDetail (mục 6e)", () => {
 });
 
 describe("getFlowHistory có Trả bước", () => {
-  it("thêm dòng Trả bước (lần N) màu cam, ghi chú là Lý do; bỏ dòng ketQua 4 của nguoiDuyetCus", () => {
+  it("thêm dòng Trả bước (không số lần) màu cam, ghi chú là Lý do; bỏ dòng ketQua 4 của nguoiDuyetCus", () => {
     const history = getFlowHistory(motLanTra, null, null);
     const tra = history.filter((event) => event.title.startsWith("Trả bước"));
     expect(tra).toEqual([
       expect.objectContaining({
-        title: "Trả bước (lần 1)",
+        title: "Trả bước",
         content: "2.1. Kế toán viên → 1. Trưởng bộ phận duyệt",
         noteLabel: "Lý do",
         color: "#f9a825",

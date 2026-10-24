@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import { flowDuyetHoSo, flowKiemTaoCongViec } from "../../../../services/data/flowApi";
 import type { FlowThaoTacResult } from "../../../../types/index";
 import { AppColors, useAppColors, useStyles } from "../../../../utils/helpers/colors";
 import WorkflowButton from "../../shared/components/WorkflowButton";
-import WorkflowSheet from "../../shared/components/WorkflowSheet";
+import WorkflowSheet, { confirmCloseSheet } from "../../shared/components/WorkflowSheet";
 import WorkflowTextArea from "../../shared/components/WorkflowTextArea";
 import { FLOW_KET_QUA } from "../../shared/workflowConstants";
 import { getWorkflowErrorMessage } from "../../shared/workflowErrors";
+import { AppAlert } from "../../../../components/ui/AppAlert";
 
 export type FlowBulkOutcome = {
   result: FlowThaoTacResult;
@@ -72,7 +73,7 @@ export default function FlowBulkApproveSheet({
         // Không biết phiếu nào đang ở lượt "Tạo công việc" thì KHÔNG cho duyệt
         // nhiều — duyệt rồi là mất bước giao việc, không quay lại được.
         if (!alive) return;
-        Alert.alert("Không kiểm tra được phiếu", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
+        AppAlert.alert("Không kiểm tra được phiếu", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
         onClose();
       })
       .finally(() => {
@@ -90,7 +91,7 @@ export default function FlowBulkApproveSheet({
     const targetIds = ids.filter((id) => !skipped.includes(id));
 
     if (!targetIds.length) {
-      Alert.alert(
+      AppAlert.alert(
         "Không còn phiếu",
         "Không còn phiếu nào để duyệt - mở duyệt từng phiếu để tạo công việc.",
       );
@@ -107,11 +108,14 @@ export default function FlowBulkApproveSheet({
       });
       onDone({ result, skippedTaoCongViec: skipped.length });
     } catch (err) {
-      Alert.alert("Không gửi được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
+      AppAlert.alert("Không gửi được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
     } finally {
       setSubmitting(false);
     }
   };
+
+  // Ý kiến đã gõ mà chạm nhầm ra nền tối là mất — sheet hỏi trước khi đóng.
+  const dirty = !!yKien.trim();
 
   return (
     <WorkflowSheet
@@ -121,9 +125,15 @@ export default function FlowBulkApproveSheet({
       loading={checking || submitting}
       loadingText={checking ? "Đang kiểm tra phiếu..." : "Đang gửi..."}
       closableWhileLoading={checking}
+      dirty={dirty}
       footer={
         <>
-          <WorkflowButton label="Đóng" variant="neutral" flex onPress={onClose} />
+          <WorkflowButton
+            label="Đóng"
+            variant="neutral"
+            flex
+            onPress={() => confirmCloseSheet(dirty, onClose)}
+          />
           <WorkflowButton
             label="Duyệt"
             icon="checkmark-done-outline"

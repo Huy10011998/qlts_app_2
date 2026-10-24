@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { StyleSheet, Alert } from "react-native";
+import { StyleSheet } from "react-native";
 
 import type {
   AssetEditItemNavigationProp,
@@ -13,11 +13,7 @@ import {
   getApiValidationFieldErrors,
 } from "../../utils/helpers/api";
 import { isEffectivelyEmptyCodeValue } from "../../utils/helpers/string";
-import {
-  AppColors,
-  useAppColors,
-  useStyles,
-} from "../../utils/helpers/colors";
+import { AppColors, useStyles } from "../../utils/helpers/colors";
 import { useParams } from "../../hooks/useParams";
 import { fetchImage, pickImage } from "../../utils/Image";
 import { useCascadeParentReload } from "../../hooks/AssetAddItem/useCascadeParentReload";
@@ -41,11 +37,13 @@ import { useGroupedFields } from "../../hooks/AssetAddItem/useGroupedFields";
 import { useOpenReferenceModal } from "../../hooks/AssetAddItem/useOpenReferenceModal";
 import { useModalItems } from "../../hooks/AssetAddItem/useModalItems";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
+import { useUnsavedChangesGuard } from "../../hooks/useUnsavedChangesGuard";
+import { showAppToast } from "../ui/AppToast";
 import AssetFormGroupedFields from "./shared/AssetFormGroupedFields";
-import AssetFormHeroCard from "./shared/AssetFormHeroCard";
 import AssetFormReferencePickerModal from "./shared/AssetFormReferencePickerModal";
 import AssetFormScreenShell from "./shared/AssetFormScreenShell";
 import { createAssetFormHeaderSubmitRight } from "./shared/AssetFormHeaderSubmitButton";
+import { useAssetFormDirty } from "./shared/useAssetFormDirty";
 import {
   getRequiredFieldErrors,
   getRequiredFieldsMessage,
@@ -57,6 +55,7 @@ import {
 import { toBase64FieldPayload } from "../../utils/imageBase64";
 import { createAssetFormBaseStyles } from "./shared/assetFormStyles";
 import { ASSET_FORM_BRAND_RED } from "./shared/assetFormTheme";
+import { AppAlert } from "../ui/AppAlert";
 
 const BRAND_RED = ASSET_FORM_BRAND_RED;
 
@@ -143,7 +142,6 @@ const areUpdateValuesEqual = (
 
 export default function AssetEditItem() {
   const styles = useStyles(makeStyles);
-  const c = useAppColors();
   const { item, field, nameClass } = useParams();
   const navigation = useNavigation<AssetEditItemNavigationProp>();
   const dispatch = useAppDispatch();
@@ -162,6 +160,10 @@ export default function AssetEditItem() {
   const [validationErrors, setValidationErrors] = useState<
     Record<string, string>
   >({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  // State trong closure của nút header có thể còn cũ ở cú bấm thứ hai, nên chặn
+  // bấm đúp bằng ref — đọc được ngay, không đợi render.
+  const submittingRef = React.useRef(false);
 
   const PAGE_SIZE = 20;
   const [refPage, setRefPage] = useState(0);
@@ -196,6 +198,15 @@ export default function AssetEditItem() {
   const hasFormChanges = useMemo(
     () => !areUpdateValuesEqual(currentEntity, originalEntity),
     [currentEntity, originalEntity],
+  );
+
+  /* Chỉ hỏi "Bỏ thay đổi?" khi người dùng đã thật sự sửa. `hasFormChanges` một
+     mình là chưa đủ: ở lượt render đầu form còn rỗng (effect nạp giá trị chưa
+     chạy) nên nó báo "có thay đổi", và ô Bool đang trống (null) nạp lên form
+     thành false cũng lệch so với bản gốc dù không ai đụng vào. */
+  const { isDirty: hasUserEdits, markUserEdit } = useAssetFormDirty(formData);
+  const { leaveWithoutPrompt } = useUnsavedChangesGuard(
+    hasUserEdits && hasFormChanges,
   );
 
   useEffect(() => {
@@ -265,7 +276,7 @@ export default function AssetEditItem() {
     setOriginalItem(item ? { ...item } : {});
   }, [fieldActive, item]);
 
-  useEnumAndReferenceLoader(
+  const { pendingEnumFields } = useEnumAndReferenceLoader(
     fieldActive,
     setEnumData,
     setReferenceData,
@@ -305,6 +316,13 @@ export default function AssetEditItem() {
     });
   };
 
+  /* Đường sửa của người dùng (ô nhập, picker, ảnh) — tách khỏi `handleChange`
+     để mốc "đã sửa" chỉ tính thao tác tay. */
+  const handleUserChange = (name: string, value: any) => {
+    markUserEdit();
+    handleChange(name, value);
+  };
+
   const { openReferenceModal, loadReferenceModalData } = useOpenReferenceModal({
     formData,
     fieldActive,
@@ -325,17 +343,21 @@ export default function AssetEditItem() {
     formData,
     refKeyword,
   );
-  const { showAlertIfActive } = useSafeAlert();
+  const { isMounted, showAlertIfActive } = useSafeAlert();
 
   const handleUpdate = async () => {
+    if (submittingRef.current) return;
+
+    let saved = false;
+
     try {
       if (!originalItem?.id) {
-        Alert.alert("Lỗi", "Không tìm thấy ID để cập nhật!");
+        AppAlert.alert("Lỗi", "Không tìm thấy ID để cập nhật!");
         return;
       }
 
       if (!hasFormChanges) {
-        Alert.alert("Thông báo", "Chưa có thay đổi để lưu.");
+        AppAlert.alert("Thông báo", "Chưa có thay đổi để lưu.");
         return;
       }
 
@@ -343,7 +365,7 @@ export default function AssetEditItem() {
       if (Object.keys(requiredErrors).length) {
         setValidationErrors((prev) => ({ ...prev, ...requiredErrors }));
         expandGroupsWithErrors(requiredErrors);
-        Alert.alert(
+        AppAlert.alert(
           "Thiếu thông tin",
           getRequiredFieldsMessage(fieldActive, requiredErrors),
         );
@@ -371,9 +393,12 @@ export default function AssetEditItem() {
       };
 
       if (!nameClass) {
-        Alert.alert("Lỗi", "Không tìm thấy nameClass để update!");
+        AppAlert.alert("Lỗi", "Không tìm thấy nameClass để update!");
         return;
       }
+
+      submittingRef.current = true;
+      setIsSubmitting(true);
 
       await checkValidation(nameClass, {
         data: entity,
@@ -381,30 +406,38 @@ export default function AssetEditItem() {
       });
 
       await update(nameClass, body);
+      saved = true;
 
-      showAlertIfActive("Thành công", "Cập nhật thành công!", [
-        {
-          text: "OK",
-          onPress: () => {
-            setFormData({});
-            setImages({});
-            dispatch(setShouldRefreshDetails(true));
-            dispatch(
-              setUpdatedListItem({
-                id: String(originalItem.id),
-                nameClass,
-              }),
-            );
-            navigation.goBack();
-          },
-        },
-      ]);
+      dispatch(setShouldRefreshDetails(true));
+      dispatch(
+        setUpdatedListItem({
+          id: String(originalItem.id),
+          nameClass,
+        }),
+      );
+      // Dải toast nằm ở gốc app nên vẫn hiện sau khi màn này đóng — khỏi bắt
+      // bấm OK cho mỗi lần lưu.
+      showAppToast({ message: "Cập nhật thành công" });
+
+      // Người dùng đã rời màn trong lúc chờ lưu thì không kéo họ đi đâu nữa.
+      if (!isMounted()) return;
+
+      setFormData({});
+      setImages({});
+      leaveWithoutPrompt(() => navigation.goBack());
     } catch (err: any) {
       setValidationErrors(getApiValidationFieldErrors(err));
       showAlertIfActive(
         "Lỗi",
         getApiErrorMessage(err, "Không thể cập nhật dữ liệu!"),
       );
+    } finally {
+      // Lưu xong thì giữ khoá: màn đang đóng, không để lọt thêm một lượt lưu
+      // nào trong lúc chuyển màn.
+      if (!saved) {
+        submittingRef.current = false;
+        if (isMounted()) setIsSubmitting(false);
+      }
     }
   };
 
@@ -414,24 +447,27 @@ export default function AssetEditItem() {
   React.useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: createAssetFormHeaderSubmitRight({
-        disabled: !hasFormChanges,
+        disabled: !hasFormChanges || isSubmitting,
         iconName: "save-outline",
         label: "Lưu",
         onPress: () => handleUpdateRef.current(),
       }),
     });
-  }, [hasFormChanges, navigation]);
+  }, [hasFormChanges, isSubmitting, navigation]);
 
   return (
     <AssetFormScreenShell
       brandColor={BRAND_RED}
       contentContainerStyle={styles.scrollContent}
+      isSubmitting={isSubmitting}
+      loadingOverlayStyle={styles.loadingOverlay}
       style={styles.container}
       modal={
         <AssetFormReferencePickerModal
+          pendingEnumFields={pendingEnumFields}
           activeEnumField={activeEnumField}
           formData={formData}
-          handleChange={handleChange}
+          handleChange={handleUserChange}
           loadReferenceModalData={loadReferenceModalData}
           modalItems={modalItems}
           modalVisible={modalVisible}
@@ -453,21 +489,12 @@ export default function AssetEditItem() {
         />
       }
     >
-      <AssetFormHeroCard
-        iconBgColor={c.indigoSurface}
-        iconColor="#3B5BDB"
-        iconName="create-outline"
-        styles={styles}
-        title="Cập nhật tài sản"
-        subtitle="Chỉnh sửa thông tin theo từng nhóm và lưu lại khi hoàn tất."
-      />
-
       <AssetFormGroupedFields
         collapsedGroups={collapsedGroups}
         enumData={enumData}
         formData={formData}
         groupedFields={groupedFields}
-        handleChange={handleChange}
+        handleChange={handleUserChange}
         images={images}
         loadingImages={loadingImages}
         mode="edit"
@@ -487,7 +514,4 @@ export default function AssetEditItem() {
 const makeStyles = (c: AppColors) =>
   StyleSheet.create({
     ...createAssetFormBaseStyles(c),
-    heroIconWrap: {
-      backgroundColor: c.indigoSurface,
-    },
   });

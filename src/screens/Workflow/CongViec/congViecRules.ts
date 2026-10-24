@@ -4,7 +4,7 @@ import type {
   CongViecSavePayload,
   CongViecThamGiaPayload,
 } from "../../../types/index";
-import { CV_VAI_TRO, isCongViecChuaXong } from "../shared/workflowConstants";
+import { CV_MA_MAU, CV_VAI_TRO, isCongViecChuaXong } from "../shared/workflowConstants";
 
 /**
  * Luật ẩn / hiện của màn Công việc (mục 3, 4-Mobile-CongViec). Luật thật ở
@@ -97,6 +97,36 @@ export const validateTuDen = (tuNgay: Date | null, denNgay: Date | null) => {
     return "Đến ngày phải sau hoặc bằng Từ ngày.";
   }
   return null;
+};
+
+/**
+ * Đến ngày sau khi người dùng đổi Từ ngày. Đến ngày vẫn sau Từ ngày mới thì giữ
+ * nguyên; rơi về trước thì dời theo đúng khoảng Từ ngày vừa dời — giữ thời lượng
+ * việc (8h–17h dời sang hôm sau vẫn 8h–17h), khỏi bắt chọn lại Đến ngày rồi mới
+ * lưu được.
+ */
+export const shiftDenNgay = (
+  tuNgayCu: Date | null,
+  tuNgayMoi: Date | null,
+  denNgay: Date | null,
+): Date | null => {
+  if (!tuNgayMoi || !denNgay) return denNgay;
+  if (denNgay.getTime() >= tuNgayMoi.getTime()) return denNgay;
+
+  const shifted = tuNgayCu
+    ? new Date(denNgay.getTime() + (tuNgayMoi.getTime() - tuNgayCu.getTime()))
+    : null;
+  // Không biết Từ ngày cũ, hoặc khoảng cũ vốn đã âm: về bằng Từ ngày mới.
+  return shifted && shifted.getTime() >= tuNgayMoi.getTime() ? shifted : new Date(tuNgayMoi);
+};
+
+/**
+ * Nhãn cảnh báo hạn (maMau Quá hạn / Gia hạn) đặt cạnh nhãn trạng thái ở thẻ và
+ * màn chi tiết. Các màu khác trùng nghĩa nhãn trạng thái nên không lặp lại.
+ */
+export const getCongViecHanBadge = (maMau: unknown) => {
+  const option = CV_MA_MAU.find((item) => item.key === maMau);
+  return option && (option.key === "QuaHan" || option.key === "GiaHan") ? option : null;
 };
 
 /** Lỗi của định kỳ, null = hợp lệ. */

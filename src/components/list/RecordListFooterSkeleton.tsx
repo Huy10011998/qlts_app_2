@@ -18,12 +18,19 @@ import RecordCardSkeleton, {
 export default function RecordListFooterSkeleton({
   variant = "avatar",
   lines = 3,
+  media = 0,
+  lineHeight,
+  avatarAlign,
   trailing = "none",
   rows = 2,
   cardStyle,
 }: {
   variant?: RecordCardVariant;
   lines?: number;
+  media?: number;
+  /** Xem `RecordCardSkeleton` — truyền y như khung chờ lúc mở màn. */
+  lineHeight?: number;
+  avatarAlign?: "center" | "top";
   trailing?: RecordCardTrailing;
   rows?: number;
   /**
@@ -42,6 +49,9 @@ export default function RecordListFooterSkeleton({
           key={index}
           variant={variant}
           lines={lines}
+          media={media}
+          lineHeight={lineHeight}
+          avatarAlign={avatarAlign}
           trailing={trailing}
           separator={variant === "plain"}
           opacity={opacity}

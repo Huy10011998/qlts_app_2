@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import IsLoading from "../../../../components/ui/IconLoading";
 import { AppColors, useAppColors, useStyles } from "../../../../utils/helpers/colors";
+import { AppAlert } from "../../../../components/ui/AppAlert";
 
 type Props = {
   visible: boolean;
@@ -30,6 +31,27 @@ type Props = {
   closableWhileLoading?: boolean;
   /** Phần tử vẽ thêm bên trong Modal (vd modal chọn nhân viên lồng bên trong). */
   overlay?: React.ReactNode;
+  /**
+   * Đang có nội dung nhập dở (ý kiến, lý do...): chạm nền tối, nút X, nút back
+   * Android hỏi "Bỏ nội dung đang nhập?" trước khi đóng.
+   */
+  dirty?: boolean;
+};
+
+/**
+ * Hỏi trước khi đóng sheet đang có nội dung nhập dở — chạm nhầm ra nền tối là
+ * mất cả đoạn ý kiến vừa gõ. Nút "Đóng" ở footer của các sheet cũng gọi hàm này.
+ */
+export const confirmCloseSheet = (dirty: boolean | undefined, onClose: () => void) => {
+  if (!dirty) {
+    onClose();
+    return;
+  }
+
+  AppAlert.alert("Bỏ nội dung đang nhập?", "Đóng lại thì nội dung vừa nhập sẽ mất.", [
+    { text: "Ở lại", style: "cancel" },
+    { text: "Bỏ", style: "destructive", onPress: onClose },
+  ]);
 };
 
 /**
@@ -46,13 +68,14 @@ export default function WorkflowSheet({
   loadingText,
   closableWhileLoading,
   overlay,
+  dirty,
 }: Props) {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
   const insets = useSafeAreaInsets();
   const canClose = !loading || closableWhileLoading;
   const handleClose = () => {
-    if (canClose) onClose();
+    if (canClose) confirmCloseSheet(dirty, onClose);
   };
 
   return (

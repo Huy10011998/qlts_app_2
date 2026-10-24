@@ -7,7 +7,8 @@ import { AppColors, useAppColors, useStyles } from "../../../../utils/helpers/co
 type Props = {
   icon: string;
   iconSize: number;
-  count: number;
+  /** Không truyền thì viên chỉ có icon (vd. Quy trình). */
+  count?: number;
   /** Đọc cho trình đọc màn hình, kèm số: "Bình luận (2)". */
   label: string;
   /** Không truyền thì chỉ là chữ — bấm vào rơi xuống thẻ bên dưới. */
@@ -31,20 +32,23 @@ export default function WorkflowCounter({
 }: Props) {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
+  const a11yLabel = count === undefined ? label : `${label} (${count})`;
   const pillContent = (
     <>
       <Ionicons name={icon} size={iconSize + 3} color={c.red} />
-      <Text style={styles.pillText}>
-        {count}
-      </Text>
+      {count === undefined ? null : (
+        <Text style={styles.pillText}>
+          {count}
+        </Text>
+      )}
     </>
   );
 
   if (disabled) {
     return (
       <View
-        style={[styles.pill, styles.pillDisabled]}
-        accessibilityLabel={`${label} (${count})`}
+        style={[styles.pill, count === undefined && styles.pillIconOnly, styles.pillDisabled]}
+        accessibilityLabel={a11yLabel}
         accessibilityState={{ disabled: true }}
       >
         {pillContent}
@@ -66,9 +70,9 @@ export default function WorkflowCounter({
       activeOpacity={0.6}
       hitSlop={6}
       onPress={onPress}
-      style={styles.pill}
+      style={[styles.pill, count === undefined && styles.pillIconOnly]}
       accessibilityRole="button"
-      accessibilityLabel={`${label} (${count})`}
+      accessibilityLabel={a11yLabel}
     >
       {pillContent}
     </TouchableOpacity>
@@ -97,6 +101,12 @@ const makeStyles = (c: AppColors) =>
       borderWidth: 1,
       borderColor: c.redBorder,
       backgroundColor: c.redSurface,
+    },
+    // Chỉ icon: tròn, hẹp hơn viên có số để chân thẻ đủ chỗ cho hàng nút duyệt.
+    pillIconOnly: {
+      width: 30,
+      paddingHorizontal: 0,
+      justifyContent: "center",
     },
     // Cùng độ mờ với WorkflowButton đang tắt.
     pillDisabled: {

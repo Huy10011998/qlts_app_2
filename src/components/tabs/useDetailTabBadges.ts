@@ -17,9 +17,10 @@ import { error } from "../../utils/Logger";
 const COUNT_PAGE_SIZE = 1;
 
 /**
- * Danh mục liên kết là cấu hình của class, không đổi trong một lần dùng app, nên
- * giữ lại theo class: mở lại chi tiết của cùng loại tài sản thì badge có ngay,
- * không gọi mạng nữa.
+ * Số danh mục liên kết đã biết, theo class: mở lại chi tiết của cùng loại tài sản
+ * thì badge có ngay, không chờ mạng. Vẫn hỏi lại mỗi lần vào màn — cấu hình class
+ * đổi được giữa phiên (BE ẩn Công việc / Kế hoạch khỏi Nhân viên ngày 23/10/2026:
+ * danh sách trong mục đã trống mà badge còn số cũ tới khi tắt app).
  */
 const referenceCountCache = new Map<string, number>();
 
@@ -39,6 +40,10 @@ const referenceCountCache = new Map<string, number>();
  * - Tệp: đếm được, nhưng `AssetAttachFile` chỉ tải khi mở mục đó. Muốn có số
  *   ngay khi vào màn thì phải xin `totalCount` riêng — một request `pageSize: 1`,
  *   và chỉ khi có quyền AttachFile (trùng điều kiện mục Tệp được hiện).
+ *
+ * Ba số đếm lại mỗi khi màn nạp lại bản ghi (`item` là state của màn, chỉ đổi
+ * tham chiếu lúc đó): sửa xong quay về, kéo làm mới, mở lại app. Chỉ theo `id`
+ * thì sửa xong lịch sử đã thêm dòng mà badge vẫn số cũ, vì quay về là cùng màn.
  */
 export function useDetailTabBadges({
   tabs,
@@ -75,11 +80,7 @@ export function useDetailTabBadges({
       return;
     }
 
-    const cached = referenceCountCache.get(nameClass);
-    if (cached !== undefined) {
-      setReferenceCount(cached);
-      return;
-    }
+    setReferenceCount(referenceCountCache.get(nameClass) ?? null);
 
     let active = true;
 
@@ -92,15 +93,19 @@ export function useDetailTabBadges({
         if (active && isMounted()) setReferenceCount(data.length);
       })
       .catch((e) => {
-        // Badge là thông tin phụ: đếm không được thì ẩn, không báo lỗi cho user.
+        // Badge là thông tin phụ: đếm không được thì giữ số đã biết (mất mạng
+        // vẫn còn badge như trước), chưa biết thì ẩn; không báo lỗi cho user.
         if (!isNetworkRequestError(e)) error("Đếm danh mục liên kết lỗi:", e);
-        if (active) setReferenceCount(null);
+        if (active && !referenceCountCache.has(nameClass)) {
+          setReferenceCount(null);
+        }
       });
 
     return () => {
       active = false;
     };
-  }, [hasDetailsTab, isMounted, nameClass]);
+    // `item`: đếm lại khi màn nạp lại bản ghi (xem chú thích hook).
+  }, [hasDetailsTab, isMounted, item, nameClass]);
 
   useEffect(() => {
     if (!hasHistoryTab || !id || !nameClass) {
@@ -126,7 +131,7 @@ export function useDetailTabBadges({
     return () => {
       active = false;
     };
-  }, [hasHistoryTab, id, isMounted, nameClass]);
+  }, [hasHistoryTab, id, isMounted, item, nameClass]);
 
   useEffect(() => {
     if (!canAttach || !id || !nameClass) {
@@ -165,7 +170,7 @@ export function useDetailTabBadges({
     return () => {
       active = false;
     };
-  }, [canAttach, id, isMounted, nameClass]);
+  }, [canAttach, id, isMounted, item, nameClass]);
 
   return useMemo(() => {
     if (!tabs) return tabs;

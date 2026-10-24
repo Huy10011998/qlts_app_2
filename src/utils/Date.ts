@@ -1,4 +1,4 @@
-import { Alert } from "react-native";
+import { AppAlert } from "../components/ui/AppAlert";
 
 // Convert "dd-MM-yyyy" → "dd/MM/yyyy"
 export const formatToSlash = (str: string) => str.replace(/-/g, "/");
@@ -63,12 +63,12 @@ export const validateDates = (
   const to = parseWithCurrentTime(toDate);
 
   if (!from || !to) {
-    Alert.alert("Lỗi", "Ngày nhập không hợp lệ.");
+    AppAlert.alert("Lỗi", "Ngày nhập không hợp lệ.");
     return null;
   }
 
   if (from > to) {
-    Alert.alert("Lỗi", "Từ ngày không được lớn hơn Đến ngày.");
+    AppAlert.alert("Lỗi", "Từ ngày không được lớn hơn Đến ngày.");
     return null;
   }
 

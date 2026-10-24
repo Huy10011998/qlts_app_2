@@ -5,6 +5,11 @@ import {
   COMPARE_CURRENT_YEAR_COLOR,
   COMPARE_PREVIOUS_YEAR_COLOR,
 } from "./SolarPlantScreen.helpers";
+import {
+  FLOW_HERO_CARD_BORDER,
+  FLOW_HERO_CARD_MARGIN,
+  FLOW_HERO_CARD_RADIUS,
+} from "./SolarPlantScreen.flowHero";
 
 export const makeStyles = (c: AppColors) =>
   StyleSheet.create({
@@ -38,7 +43,19 @@ export const makeStyles = (c: AppColors) =>
     },
 
     // Hero section
-    heroSection: { backgroundColor: c.solarHero, overflow: "hidden" },
+    // Hero là một card bo góc có viền, cách mép màn — cùng số với khung chờ
+    // (`FLOW_HERO_CARD_*` trong SolarPlantScreen.flowHero).
+    heroSection: {
+      backgroundColor: c.bg,
+      padding: FLOW_HERO_CARD_MARGIN,
+    },
+    heroCard: {
+      backgroundColor: c.solarHero,
+      borderColor: c.border,
+      borderRadius: FLOW_HERO_CARD_RADIUS,
+      borderWidth: FLOW_HERO_CARD_BORDER,
+      overflow: "hidden",
+    },
     heroContent: {
       width: "100%",
       alignSelf: "center",
@@ -196,7 +213,7 @@ export const makeStyles = (c: AppColors) =>
       alignItems: "center",
       justifyContent: "center",
     },
-    tabChipActive: { backgroundColor: "#4285f4" },
+    tabChipActive: { backgroundColor: C.red },
     tabText: { color: c.textSecondary, fontSize: 13, textAlign: "center" },
     tabTextActive: { color: "white", fontWeight: "600" },
 
@@ -245,183 +262,9 @@ export const makeStyles = (c: AppColors) =>
     dateNavCenterText: {
       flexShrink: 1,
       fontSize: 15,
-      color: "#6EA0F6",
-      fontWeight: "300",
+      color: C.red,
+      fontWeight: "700",
       textAlign: "center",
-    },
-    calendarOverlay: {
-      flex: 1,
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: "rgba(0,0,0,0.5)",
-      paddingHorizontal: 24,
-    },
-    calendarDialog: {
-      width: "100%",
-      maxWidth: 420,
-      minHeight: 456,
-      borderRadius: 18,
-      backgroundColor: c.surface,
-      overflow: "hidden",
-    },
-    calendarTitle: {
-      color: c.text,
-      fontSize: 18,
-      fontWeight: "600",
-      paddingHorizontal: 28,
-      paddingTop: 24,
-    },
-    calendarSelectedRow: {
-      minHeight: 92,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingHorizontal: 28,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: c.border,
-    },
-    calendarSelectedText: {
-      flex: 1,
-      color: c.text,
-      fontSize: 34,
-      fontWeight: "400",
-      marginRight: 16,
-    },
-    calendarMonthRow: {
-      minHeight: 56,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingHorizontal: 28,
-    },
-    calendarMonthText: {
-      color: c.textMuted,
-      fontSize: 20,
-      fontWeight: "400",
-    },
-    calendarMonthControls: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 28,
-    },
-    calendarMonthButton: {
-      width: 36,
-      height: 36,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    calendarMonthButtonDisabled: {
-      opacity: 0.35,
-    },
-    calendarWeekRow: {
-      flexDirection: "row",
-      paddingHorizontal: 28,
-      marginTop: 8,
-    },
-    calendarWeekText: {
-      flex: 1,
-      color: c.text,
-      fontSize: 20,
-      textAlign: "center",
-    },
-    calendarGrid: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      paddingHorizontal: 28,
-      paddingTop: 18,
-    },
-    calendarDayCell: {
-      width: `${100 / 7}%`,
-      height: 52,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    calendarDayInRange: {
-      backgroundColor: c.accentLight,
-    },
-    calendarDayCircle: {
-      width: 46,
-      height: 46,
-      borderRadius: 23,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    calendarDaySelected: {
-      backgroundColor: "#5d8ff6",
-    },
-    calendarDayText: {
-      color: c.textMuted,
-      fontSize: 22,
-      fontWeight: "400",
-    },
-    calendarDayMuted: {
-      color: c.placeholder,
-    },
-    // Ngày tương lai: chưa có số liệu nên không cho chọn.
-    calendarDayDisabled: {
-      opacity: 0.35,
-    },
-    calendarDayDisabledText: {
-      color: c.textMuted,
-    },
-    calendarDaySelectedText: {
-      color: "#fff",
-    },
-    calendarOptionGrid: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      minHeight: 280,
-      paddingHorizontal: 28,
-      paddingTop: 24,
-    },
-    calendarOptionCell: {
-      width: "25%",
-      height: 76,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    calendarOptionCircle: {
-      minWidth: 76,
-      height: 76,
-      borderRadius: 38,
-      alignItems: "center",
-      justifyContent: "center",
-      paddingHorizontal: 10,
-    },
-    calendarOptionSelected: {
-      backgroundColor: "#5d8ff6",
-    },
-    calendarOptionDisabled: {
-      opacity: 0.35,
-    },
-    calendarOptionText: {
-      color: c.text,
-      fontSize: 22,
-      fontWeight: "400",
-    },
-    calendarOptionSelectedText: {
-      color: "#fff",
-    },
-    calendarOptionDisabledText: {
-      color: c.textMuted,
-    },
-    calendarActionRow: {
-      minHeight: 72,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "flex-end",
-      paddingHorizontal: 24,
-      gap: 28,
-    },
-    calendarActionBtn: {
-      minWidth: 64,
-      minHeight: 44,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    calendarActionText: {
-      color: "#6EA0F6",
-      fontSize: 18,
     },
 
     // White sections

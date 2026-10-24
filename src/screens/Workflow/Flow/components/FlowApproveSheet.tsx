@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import { flowChonNguoiDuyet, flowDuyetHoSo } from "../../../../services/data/flowApi";
@@ -11,12 +11,13 @@ import type {
 } from "../../../../types/index";
 import { AppColors, useAppColors, useStyles } from "../../../../utils/helpers/colors";
 import WorkflowButton from "../../shared/components/WorkflowButton";
-import WorkflowSheet from "../../shared/components/WorkflowSheet";
+import WorkflowSheet, { confirmCloseSheet } from "../../shared/components/WorkflowSheet";
 import WorkflowTextArea from "../../shared/components/WorkflowTextArea";
 import { FLOW_KET_QUA } from "../../shared/workflowConstants";
 import { getWorkflowErrorMessage } from "../../shared/workflowErrors";
 import { getMissingSteps } from "../flowRules";
 import ApproverStepPicker from "./ApproverStepPicker";
+import { AppAlert } from "../../../../components/ui/AppAlert";
 
 export type FlowKetQua = 1 | 2 | 3;
 
@@ -28,8 +29,11 @@ type Props = {
   /** Số phiếu (hoặc "#<id>") cho tiêu đề sheet. */
   phieuLabel?: string;
   onClose: () => void;
-  /** Đã gửi xong — màn gọi nạp lại. */
-  onDone: () => void;
+  /**
+   * Màn gọi nạp lại. `sent` = true: server đã nhận lượt xử lý; false: server từ
+   * chối vì người khác vừa xử lý trước / phiếu đã kết thúc (mục 8e) — chỉ nạp lại.
+   */
+  onDone: (sent: boolean) => void;
   /** Lượt duyệt cuối chọn "Tạo công việc": màn gọi mở form công việc. */
   onTaoCongViec: (args: { yKien: string | null; prefill: FlowTaoCongViecPrefill | null }) => void;
 };
@@ -88,7 +92,7 @@ export default function FlowApproveSheet({
       })
       .catch((err) => {
         if (!alive) return;
-        Alert.alert("Không kiểm tra được phiếu", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
+        AppAlert.alert("Không kiểm tra được phiếu", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
         onClose();
       })
       .finally(() => {
@@ -121,16 +125,16 @@ export default function FlowApproveSheet({
       if (loi) {
         // Mục 8e: người khác vừa duyệt / trả bước / từ chối trước, hoặc phiếu đã
         // kết thúc — báo nguyên văn rồi nạp lại để nút Duyệt tự ẩn.
-        Alert.alert("Không gửi được", loi, [{ text: "OK", onPress: onDone }]);
+        AppAlert.alert("Không gửi được", loi, [{ text: "OK", onPress: () => onDone(false) }]);
         return;
       }
       if ((result.soCanChonNguoi ?? 0) > 0) {
-        Alert.alert("Cần chọn người duyệt", "Phiếu cần chọn người duyệt cho bước kế tiếp.");
+        AppAlert.alert("Cần chọn người duyệt", "Phiếu cần chọn người duyệt cho bước kế tiếp.");
         return;
       }
-      onDone();
+      onDone(true);
     } catch (err) {
-      Alert.alert("Không gửi được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
+      AppAlert.alert("Không gửi được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
     } finally {
       setSubmitting(false);
     }
@@ -144,12 +148,12 @@ export default function FlowApproveSheet({
 
     if (needPick && getMissingSteps(data, chons).length) {
       setShowErrors(true);
-      Alert.alert("Thiếu người duyệt", "Mỗi bước phải chọn ít nhất 1 người.");
+      AppAlert.alert("Thiếu người duyệt", "Mỗi bước phải chọn ít nhất 1 người.");
       return;
     }
 
     if (ketQua === FLOW_KET_QUA.TuChoi) {
-      Alert.alert("Từ chối phiếu", "Từ chối sẽ đóng phiếu, không quay lại được. Tiếp tục?", [
+      AppAlert.alert("Từ chối phiếu", "Từ chối sẽ đóng phiếu, không quay lại được. Tiếp tục?", [
         { text: "Huỷ", style: "cancel" },
         { text: "Từ chối", style: "destructive", onPress: send },
       ]);
@@ -168,6 +172,9 @@ export default function FlowApproveSheet({
       ? "Không ý kiến"
       : "Duyệt";
 
+  // Ý kiến đã gõ mà chạm nhầm ra nền tối là mất — sheet hỏi trước khi đóng.
+  const dirty = !!yKien.trim();
+
   return (
     <WorkflowSheet
       visible={visible}
@@ -176,9 +183,15 @@ export default function FlowApproveSheet({
       loading={checking || submitting}
       loadingText={checking ? "Đang kiểm tra phiếu..." : "Đang gửi..."}
       closableWhileLoading={checking}
+      dirty={dirty}
       footer={
         <>
-          <WorkflowButton label="Đóng" variant="neutral" flex onPress={onClose} />
+          <WorkflowButton
+            label="Đóng"
+            variant="neutral"
+            flex
+            onPress={() => confirmCloseSheet(dirty, onClose)}
+          />
           <WorkflowButton
             label={submitLabel}
             flex

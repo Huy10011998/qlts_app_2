@@ -18,6 +18,8 @@ type HomeBlockOrderSheetProps = {
     toIndex: number;
     keys: string[];
   }) => void;
+  /** Hiện / ẩn một khối trên Trang chủ (nút tròn ở mép phải mỗi hàng). */
+  onToggleHidden?: (key: string, hidden: boolean) => void;
   visible: boolean;
 };
 
@@ -25,6 +27,7 @@ export default function HomeBlockOrderSheet({
   items,
   onClose,
   onMove,
+  onToggleHidden,
   visible,
 }: HomeBlockOrderSheetProps) {
   const styles = useStyles(makeStyles);
@@ -51,19 +54,25 @@ export default function HomeBlockOrderSheet({
           style={[styles.subtitle, { color: colors.textSub }]}
         >
           {items.length > 1
-            ? "Kéo tên khối lên hoặc xuống để đổi thứ tự. Thứ tự lưu riêng theo tài khoản của bạn."
-            : "Thứ tự lưu riêng theo tài khoản của bạn."}
+            ? "Kéo tên khối lên hoặc xuống để đổi thứ tự. Bấm nút tròn bên phải để ẩn / hiện khối (có dấu tích là đang hiện). Lưu riêng theo tài khoản của bạn."
+            : "Bấm nút tròn bên phải để ẩn / hiện khối (có dấu tích là đang hiện). Lưu riêng theo tài khoản của bạn."}
         </Text>
       </View>
 
       <View style={styles.body}>
-        {items.length > 1 ? (
-          <HomeReorderList items={items} onMove={onMove} />
+        {/* Một khối cũng dựng danh sách: chưa có gì để kéo nhưng vẫn cần nút
+            ẩn / hiện khối đó. */}
+        {items.length > 0 ? (
+          <HomeReorderList
+            items={items}
+            onMove={onMove}
+            onToggleHidden={onToggleHidden}
+          />
         ) : (
           <EmptyState
             iconName="layers-outline"
-            title="Chưa cần sắp xếp"
-            subtitle="Trang chủ đang chỉ hiện một khối. Khi có thêm khối, bạn có thể kéo để đổi thứ tự tại đây."
+            title="Chưa có khối nào"
+            subtitle="Tài khoản chưa có khối nào để hiện trên Trang chủ. Cần xem số liệu thì nhờ IT cấp quyền."
             fullHeight={false}
           />
         )}

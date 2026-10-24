@@ -3,7 +3,6 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   FlatList,
-  Alert,
   StyleSheet,
   Platform,
   UIManager,
@@ -19,6 +18,7 @@ import type { AssetDetailsNavigationProp, StackRoute } from "../../types/index";
 import { mapPropertyResponseToPropertyClass } from "../../utils/helpers/propertyClass";
 import RecordListFooterSkeleton from "../../components/list/RecordListFooterSkeleton";
 import RecordListSkeleton from "../../components/list/RecordListSkeleton";
+import { getListCardShape } from "../../components/list/listCardShape";
 import { shouldShowListSkeleton } from "../../components/ui/shouldShowListSkeleton";
 import ListCardAsset from "../../components/list/ListCardAsset";
 import { AddItem } from "../add/AddItem";
@@ -34,12 +34,12 @@ import {
 } from "../../store/AssetSlice";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
 import AssetListSearchBar from "./shared/AssetListSearchBar";
-import AssetListSummaryCard from "./shared/AssetListSummaryCard";
 import AssetListEmptyState from "./shared/AssetListEmptyState";
 import { BRAND_RED } from "./shared/listTheme";
 import { makeSharedAssetListStyles } from "./shared/listStyles";
 import { useRelatedAssetListData } from "../../hooks/useRelatedAssetListData";
 import { useHeaderRecordPill } from "./shared/useHeaderRecordPill";
+import { AppAlert } from "../ui/AppAlert";
 
 if (
   Platform.OS === "android" &&
@@ -113,6 +113,7 @@ export default function AssetRelatedList() {
     fetchData,
     mergeItemById,
     refreshTop,
+    retry,
     handleLoadMore,
   } = useRelatedAssetListData({
     conditions,
@@ -200,12 +201,14 @@ export default function AssetRelatedList() {
   }, [debouncedSearch, isSearching, refreshAndroidListLayout]);
 
   if (!hasRequiredParams) {
-    Alert.alert("Lỗi", "Thiếu param bắt buộc");
+    AppAlert.alert("Lỗi", "Thiếu param bắt buộc");
     return null;
   }
 
   // Một điều kiện duy nhất cho cả nút và khoảng chừa ở đáy danh sách.
   const showAddFab = Boolean(loaded && can(nameClass, "Insert"));
+  // Khung chờ vẽ theo dáng thẻ thật (số dòng, cột ảnh / QR).
+  const cardShape = getListCardShape(nameClass, fieldShowMobile);
 
   if (
     shouldShowListSkeleton({
@@ -219,7 +222,7 @@ export default function AssetRelatedList() {
     })
   ) {
     return (
-      <RecordListSkeleton hasSearchBar hasSummaryCard hasFab={showAddFab} />
+      <RecordListSkeleton hasSearchBar hasFab={showAddFab} {...cardShape} />
     );
   }
 
@@ -229,16 +232,23 @@ export default function AssetRelatedList() {
         <AssetListEmptyState
           iconName="cloud-offline-outline"
           title="Không thể tải dữ liệu liên quan"
-          subtitle={loadErrorMessage}
+          // Màn lỗi không kéo xuống được, nên không dùng câu "kéo xuống để thử
+          // lại" của hook mà chỉ thẳng vào nút bên dưới.
+          subtitle="Vui lòng kiểm tra kết nối mạng rồi bấm Thử lại."
+          actionLabel="Thử lại"
+          onActionPress={retry}
         />
       </View>
     );
   }
 
   const isEmpty = data.length === 0;
+  const trimmedSearch = debouncedSearch.trim();
 
   return (
     <View style={styles.container}>
+      {/* Một dòng đếm duy nhất — thẻ tóm tắt bên dưới trước đây lặp lại đúng con
+          số này, còn "Đã tải Y" là chuyện phân trang người dùng không cần biết. */}
       <AssetListSearchBar
         placeholder="Tìm kiếm dữ liệu liên quan..."
         value={searchText}
@@ -246,16 +256,8 @@ export default function AssetRelatedList() {
         isSearching={isSearching}
         onClear={() => setSearchText("")}
         badgeText="Dữ liệu liên quan"
-        summaryText={`Tổng ${total} • Đã tải ${data.length}`}
+        summaryText={`${total} bản ghi`}
       />
-
-      {!isEmpty ? (
-        <AssetListSummaryCard
-          iconName="link-outline"
-          title="Danh sách liên quan"
-          subtitle={`${total} kết quả • hiển thị ${data.length}`}
-        />
-      ) : null}
 
       <View style={styles.listWrap}>
         <FlatList
@@ -287,7 +289,9 @@ export default function AssetRelatedList() {
           removeClippedSubviews={Platform.OS === "android"}
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
-          ListFooterComponent={isLoadingMore ? <RecordListFooterSkeleton /> : null}
+          ListFooterComponent={
+            isLoadingMore ? <RecordListFooterSkeleton {...cardShape} /> : null
+          }
           ListHeaderComponent={null}
           stickyHeaderIndices={[]}
           contentContainerStyle={[
@@ -298,8 +302,18 @@ export default function AssetRelatedList() {
           ListEmptyComponent={
             <AssetListEmptyState
               iconName="albums-outline"
-              title="Không có dữ liệu liên quan"
-              subtitle="Thử tìm kiếm bằng từ khóa khác hoặc thêm mới dữ liệu liên kết"
+              title={
+                trimmedSearch
+                  ? "Không tìm thấy dữ liệu liên quan"
+                  : "Không có dữ liệu liên quan"
+              }
+              subtitle={
+                trimmedSearch
+                  ? `Không có bản ghi nào khớp "${trimmedSearch}".`
+                  : "Dữ liệu liên kết sẽ hiển thị tại đây khi có dữ liệu."
+              }
+              actionLabel={trimmedSearch ? "Xoá từ khoá" : undefined}
+              onActionPress={trimmedSearch ? () => setSearchText("") : undefined}
             />
           }
         />

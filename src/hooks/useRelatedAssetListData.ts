@@ -231,6 +231,18 @@ export function useRelatedAssetListData({
     await Promise.all([fetchData(false, { isRefresh: true }), reloadPerms()]);
   };
 
+  /* Nút "Thử lại" của màn lỗi. Bật `isLoading` để khung chờ thay chỗ màn lỗi
+     trong lúc gọi lại — `fetchData` chỉ tự bật cờ này ở lần tải đầu.
+     Màn nào gắn nút này thì tự đổi câu chữ lỗi sang "bấm Thử lại": câu
+     `loadErrorMessage` vẫn nói "kéo xuống" cho màn chưa có nút. */
+  const retry = useCallback(() => {
+    if (!enabled || !nameClass) return;
+
+    setLoadErrorMessage(null);
+    setIsLoading(true);
+    fetchData(false);
+  }, [enabled, fetchData, nameClass]);
+
   const handleLoadMore = () => {
     if (!enabled || !nameClass) return;
     if (isLoading || isLoadingMore || isSearching || data.length >= total) {
@@ -255,6 +267,7 @@ export function useRelatedAssetListData({
     fetchData,
     mergeItemById,
     refreshTop,
+    retry,
     handleLoadMore,
   };
 }

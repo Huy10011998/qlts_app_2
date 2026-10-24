@@ -55,6 +55,8 @@ export interface Field {
   width: string;
   isReadOnly: boolean;
   stT_Grid: number;
+  /** STT_Mobile: thứ tự field trên mobile, null thì theo stt. */
+  stT_Mobile?: number | null;
   notShowReference: boolean;
   notShowSplit: boolean;
   isShowMobile: boolean;

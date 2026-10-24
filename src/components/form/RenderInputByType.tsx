@@ -23,6 +23,12 @@ import { SkeletonFill } from "../ui/SkeletonBlock";
 import Base64ImageField from "./Base64ImageField";
 import { parseLinkHtml } from "../../utils/Link";
 import { DatePicker, TimePicker } from "../dataPicker/DataPicker";
+import {
+  findFieldKey,
+  nextRangeEnd,
+  RANGE_END_FIELD,
+  RANGE_START_FIELD,
+} from "../dataPicker/shared/pickerValue";
 import { makePickerFieldTriggerStyles } from "../dataPicker/shared/pickerFieldTriggerStyles";
 import { log } from "../../utils/Logger";
 import { getParentGateMessage } from "../../utils/cascade/parentGate";
@@ -163,7 +169,7 @@ const makeLocalStyles = (c: AppColors) => ({
   },
   linkText: {
     fontSize: 14,
-    color: "blue",
+    color: c.blue,
   },
   selectText: {
     color: c.text,
@@ -251,7 +257,7 @@ function LinkInputField({
           { borderColor: strongBorderColor },
           localStyles.inputText,
         ]}
-        placeholder="Nhập label"
+        placeholder="Nhập tên hiển thị"
         placeholderTextColor={c.textMuted}
         value={label}
         onFocus={() => {
@@ -508,21 +514,52 @@ export const RenderInputByType = ({
         </View>
       );
 
-    case TypeProperty.Date:
+    case TypeProperty.Date: {
+      const lowerName = f.name.toLowerCase();
+      // Cặp Từ ngày – Đến ngày: Đến ngày không chọn được ngày trước Từ ngày, và
+      // Từ ngày vượt quá Đến ngày thì Đến ngày dời theo — khỏi để tới lúc lưu
+      // mới báo "Từ ngày không được lớn hơn Đến ngày".
+      const startKey =
+        lowerName === RANGE_END_FIELD
+          ? findFieldKey(formData, RANGE_START_FIELD)
+          : undefined;
+      const endKey =
+        lowerName === RANGE_START_FIELD
+          ? findFieldKey(formData, RANGE_END_FIELD)
+          : undefined;
+
       return (
         <View
           style={hasValidationError ? localStyles.fieldWrapInvalid : undefined}
         >
-          <DatePicker value={value} onChange={(d) => handleChange(f.name, d)} />
+          <DatePicker
+            clearable={!f.isRequired && !isLocked}
+            disabled={isLocked}
+            minDate={startKey ? formData[startKey] || undefined : undefined}
+            value={value}
+            onChange={(d) => {
+              handleChange(f.name, d);
+              if (!endKey || !d) return;
+              const end = String(formData[endKey] ?? "");
+              const nextEnd = nextRangeEnd(d, end);
+              if (nextEnd !== end) handleChange(endKey, nextEnd);
+            }}
+          />
         </View>
       );
+    }
 
     case TypeProperty.Time:
       return (
         <View
           style={hasValidationError ? localStyles.fieldWrapInvalid : undefined}
         >
-          <TimePicker value={value} onChange={(d) => handleChange(f.name, d)} />
+          <TimePicker
+            clearable={!f.isRequired && !isLocked}
+            disabled={isLocked}
+            value={value}
+            onChange={(d) => handleChange(f.name, d)}
+          />
         </View>
       );
 

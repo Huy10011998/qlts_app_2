@@ -6,7 +6,12 @@ import React, {
   useEffect,
   useState,
 } from "react";
+import { Platform } from "react-native";
 import { error, log } from "../utils/Logger";
+import {
+  getUsableUnlockMethods,
+  hasUnlockMethod,
+} from "../services/auth/biometric";
 import {
   hardResetApi,
   setOnAuthLogout,
@@ -32,7 +37,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [token, setTokenState] = useState<string | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [iosAuthenticated, setIosAuthenticated] = useState(false);
+  const [sessionUnlocked, setSessionUnlocked] = useState(false);
   const [logoutReason, setLogoutReason] = useState<LogoutReason | undefined>();
 
   const isAuthenticated = !!token;
@@ -42,7 +47,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     setLogoutReason(reason);
     setIsLoading(true);
     setTokenState(null);
-    setIosAuthenticated(false);
+    setSessionUnlocked(false);
     hardResetApi();
 
     try {
@@ -120,14 +125,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       try {
         const { token: storedToken, refreshToken: storedRefresh } =
           await readStoredAuthTokens();
+        // Android chưa bật vân tay / khoá màn hình thì mở khoá sẵn — vào thẳng
+        // như trước. iOS luôn chờ Face ID hoặc mật khẩu ở màn Đăng nhập.
+        const unlockAtBoot =
+          Platform.OS === "android" &&
+          !(
+            storedToken &&
+            (await getUsableUnlockMethods()
+              .then(hasUnlockMethod)
+              .catch(() => false))
+          );
 
+        // Không `await` gì từ đây tới `setAuthReady` để các setState gộp một
+        // lần render — tách ra thì Android nháy màn Đăng nhập một nhịp.
         setTokenState(storedToken);
         setTokenInApi(storedToken);
         setRefreshInApi(storedRefresh);
+        if (unlockAtBoot) setSessionUnlocked(true);
 
         log("[Auth] Bootstrap done", {
           token: !!storedToken,
           refresh: !!storedRefresh,
+          unlocked: unlockAtBoot,
         });
       } catch (e) {
         error("[Auth] Bootstrap failed", e);
@@ -155,8 +174,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         isAuthenticated,
         authReady,
         isLoading,
-        iosAuthenticated,
-        setIosAuthenticated,
+        sessionUnlocked,
+        setSessionUnlocked,
         setToken,
         setRefreshToken,
         syncSession,

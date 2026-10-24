@@ -24,7 +24,7 @@ import type { PushTapPayload } from "./types";
  * Cần hàng đợi vì thời điểm nhận sự kiện bấm thường SỚM HƠN thời điểm có thể
  * điều hướng:
  * - app mở từ trạng thái quit: NavigationContainer chưa mount;
- * - iOS: còn phải chờ xác thực Face ID (iosAuthenticated) mới vào được AppNavigator.
+ * - đã bật Face ID / vân tay: còn phải chờ mở khoá (sessionUnlocked) mới vào được AppNavigator.
  *
  * Chỉ giữ lần bấm mới nhất — nếu user bấm nhiều thông báo trước khi app kịp mở
  * thì đích đến hợp lý là thông báo cuối cùng.

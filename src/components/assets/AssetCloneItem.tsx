@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet, Alert } from "react-native";
+import { StyleSheet } from "react-native";
 
 import type {
   AssetCloneItemNavigationProp,
@@ -16,11 +16,7 @@ import {
 } from "../../utils/helpers/api";
 import { fetchImage, pickImage } from "../../utils/Image";
 import { isEffectivelyEmptyCodeValue } from "../../utils/helpers/string";
-import {
-  AppColors,
-  useAppColors,
-  useStyles,
-} from "../../utils/helpers/colors";
+import { AppColors, useStyles } from "../../utils/helpers/colors";
 import { useCascadeParentReload } from "../../hooks/AssetAddItem/useCascadeParentReload";
 import { handleCascadeChange } from "../../utils/cascade/index";
 import { useImageLoader } from "../../hooks/useImageLoader";
@@ -42,11 +38,13 @@ import { useAutoIncrementCode } from "../../hooks/AssetAddItem/useAutoIncrementC
 import { useOpenReferenceModal } from "../../hooks/AssetAddItem/useOpenReferenceModal";
 import { useModalItems } from "../../hooks/AssetAddItem/useModalItems";
 import { useSafeAlert } from "../../hooks/useSafeAlert";
+import { useUnsavedChangesGuard } from "../../hooks/useUnsavedChangesGuard";
+import { showAppToast } from "../ui/AppToast";
 import AssetFormGroupedFields from "./shared/AssetFormGroupedFields";
-import AssetFormHeroCard from "./shared/AssetFormHeroCard";
 import AssetFormReferencePickerModal from "./shared/AssetFormReferencePickerModal";
 import AssetFormScreenShell from "./shared/AssetFormScreenShell";
 import { createAssetFormHeaderSubmitRight } from "./shared/AssetFormHeaderSubmitButton";
+import { useAssetFormDirty } from "./shared/useAssetFormDirty";
 import {
   getRequiredFieldErrors,
   getRequiredFieldsMessage,
@@ -61,12 +59,12 @@ import {
   backToAssetList,
   backToAssetRelatedList,
 } from "../../navigation/shared/assetNavigationReset";
+import { AppAlert } from "../ui/AppAlert";
 
 const BRAND_RED = ASSET_FORM_BRAND_RED;
 
 export default function AssetCloneItem() {
   const styles = useStyles(makeStyles);
-  const c = useAppColors();
   const {
     item,
     field,
@@ -97,6 +95,10 @@ export default function AssetCloneItem() {
   const [validationErrors, setValidationErrors] = useState<
     Record<string, string>
   >({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  // State trong closure của nút header có thể còn cũ ở cú bấm thứ hai, nên chặn
+  // bấm đúp bằng ref — đọc được ngay, không đợi render.
+  const submittingRef = useRef(false);
 
   const PAGE_SIZE = 20;
   const [refPage, setRefPage] = useState(0);
@@ -199,7 +201,7 @@ export default function AssetCloneItem() {
     setFormData(initial);
   }, [fieldActive, item, propertyClass?.propertyTuDongTang]);
 
-  useEnumAndReferenceLoader(
+  const { pendingEnumFields } = useEnumAndReferenceLoader(
     fieldActive,
     setEnumData,
     setReferenceData,
@@ -250,6 +252,17 @@ export default function AssetCloneItem() {
     });
   };
 
+  /* Hỏi "Bỏ thay đổi?" khi rời bản sao đã sửa dở. Form điền sẵn từ bản ghi gốc
+     nên mở ra rồi thoát ngay không phải là "có thay đổi" — chỉ thao tác tay mới
+     đánh dấu. */
+  const { isDirty, markUserEdit } = useAssetFormDirty(formData);
+  const { leaveWithoutPrompt } = useUnsavedChangesGuard(isDirty);
+
+  const handleUserChange = (name: string, value: any) => {
+    markUserEdit();
+    handleChange(name, value);
+  };
+
   const { openReferenceModal, loadReferenceModalData } = useOpenReferenceModal({
     formData,
     fieldActive,
@@ -269,16 +282,18 @@ export default function AssetCloneItem() {
     enumData,
     formData,
   );
-  const { showAlertIfActive } = useSafeAlert();
+  const { isMounted, showAlertIfActive } = useSafeAlert();
 
   const handleClone = async () => {
+    if (submittingRef.current) return;
+
     if (!Object.keys(formData).length) {
-      Alert.alert("Thông báo", "Không có dữ liệu để clone!");
+      AppAlert.alert("Thông báo", "Không có dữ liệu để clone!");
       return;
     }
 
     if (!nameClass) {
-      Alert.alert("Lỗi", "Không xác định được danh mục!");
+      AppAlert.alert("Lỗi", "Không xác định được danh mục!");
       return;
     }
 
@@ -286,14 +301,19 @@ export default function AssetCloneItem() {
     if (Object.keys(requiredErrors).length) {
       setValidationErrors((prev) => ({ ...prev, ...requiredErrors }));
       expandGroupsWithErrors(requiredErrors);
-      Alert.alert(
+      AppAlert.alert(
         "Thiếu thông tin",
         getRequiredFieldsMessage(fieldActive, requiredErrors),
       );
       return;
     }
 
+    let saved = false;
+
     try {
+      submittingRef.current = true;
+      setIsSubmitting(true);
+
       const payloadData: Record<string, any> = { ...formData };
       ["id", "ID", "Id"].forEach(
         (k) => payloadData[k] && delete payloadData[k],
@@ -355,75 +375,80 @@ export default function AssetCloneItem() {
       });
 
       await insert(nameClass, payload);
+      saved = true;
 
-      showAlertIfActive(
-        "Thành công",
-        "Đã tạo bản sao!",
-        [
-          {
-            text: "OK",
-            onPress: () => {
-              setFormData({});
-              setImages({});
+      dispatch(setShouldRefreshList(true));
+      // Dải toast nằm ở gốc app nên vẫn hiện sau khi màn này đóng — khỏi bắt
+      // bấm OK cho mỗi bản ghi.
+      showAppToast({ message: "Đã tạo bản sao" });
 
-              dispatch(setShouldRefreshList(true));
-              if (returnTo === "qrReview") {
-                navigation.dispatch(StackActions.pop(2));
-                return;
-              }
+      // Người dùng đã rời màn trong lúc chờ lưu thì không kéo họ đi đâu nữa.
+      if (!isMounted()) return;
 
-              if (
-                returnTo === "assetRelatedList" &&
-                nameClass &&
-                idRoot &&
-                propertyReference
-              ) {
-                backToAssetRelatedList(navigation, {
-                  assetContext: {
-                    groupMenuId,
-                    viewPermission,
-                    assetTitleHeader,
-                  },
-                  relatedListParams: {
-                    nameClass,
-                    idRoot,
-                    propertyReference,
-                    nameClassRoot,
-                    rootRecordLabel,
-                    titleHeader,
-                    groupMenuId,
-                    viewPermission,
-                    assetTitleHeader,
-                  },
-                });
-                return;
-              }
+      setFormData({});
+      setImages({});
 
-              backToAssetList(navigation, {
-                assetContext: {
-                  groupMenuId,
-                  viewPermission,
-                  assetTitleHeader,
-                },
-                listParams: {
-                  nameClass,
-                  titleHeader,
-                  groupMenuId,
-                  viewPermission,
-                  assetTitleHeader,
-                },
-              });
+      leaveWithoutPrompt(() => {
+        if (returnTo === "qrReview") {
+          navigation.dispatch(StackActions.pop(2));
+          return;
+        }
+
+        if (
+          returnTo === "assetRelatedList" &&
+          nameClass &&
+          idRoot &&
+          propertyReference
+        ) {
+          backToAssetRelatedList(navigation, {
+            assetContext: {
+              groupMenuId,
+              viewPermission,
+              assetTitleHeader,
             },
+            relatedListParams: {
+              nameClass,
+              idRoot,
+              propertyReference,
+              nameClassRoot,
+              rootRecordLabel,
+              titleHeader,
+              groupMenuId,
+              viewPermission,
+              assetTitleHeader,
+            },
+          });
+          return;
+        }
+
+        backToAssetList(navigation, {
+          assetContext: {
+            groupMenuId,
+            viewPermission,
+            assetTitleHeader,
           },
-        ],
-        { cancelable: false },
-      );
+          listParams: {
+            nameClass,
+            titleHeader,
+            groupMenuId,
+            viewPermission,
+            assetTitleHeader,
+          },
+        });
+      });
     } catch (err: any) {
       setValidationErrors(getApiValidationFieldErrors(err));
       showAlertIfActive(
         "Lỗi",
         getApiErrorMessage(err, "Không thể tạo bản sao!"),
       );
+    } finally {
+      // Lưu xong thì giữ khoá: màn đang đóng, không để lọt thêm một lượt lưu
+      // nào trong lúc chuyển màn.
+      if (!saved) {
+        submittingRef.current = false;
+        if (isMounted()) setIsSubmitting(false);
+      }
     }
   };
 
@@ -433,23 +458,27 @@ export default function AssetCloneItem() {
   React.useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: createAssetFormHeaderSubmitRight({
+        disabled: isSubmitting,
         iconName: "copy-outline",
         label: "Bản sao",
         onPress: () => handleCloneRef.current(),
       }),
     });
-  }, [navigation]);
+  }, [isSubmitting, navigation]);
 
   return (
     <AssetFormScreenShell
       brandColor={BRAND_RED}
       contentContainerStyle={styles.scrollContent}
+      isSubmitting={isSubmitting}
+      loadingOverlayStyle={styles.loadingOverlay}
       style={styles.container}
       modal={
         <AssetFormReferencePickerModal
+          pendingEnumFields={pendingEnumFields}
           activeEnumField={activeEnumField}
           formData={formData}
-          handleChange={handleChange}
+          handleChange={handleUserChange}
           loadReferenceModalData={loadReferenceModalData}
           modalItems={modalItems}
           modalVisible={modalVisible}
@@ -471,21 +500,12 @@ export default function AssetCloneItem() {
         />
       }
     >
-      <AssetFormHeroCard
-        iconBgColor={c.orangeSurface}
-        iconColor="#E67700"
-        iconName="copy-outline"
-        styles={styles}
-        title="Tạo bản sao tài sản"
-        subtitle="Sao chép nhanh dữ liệu hiện có và điều chỉnh lại những trường cần thiết."
-      />
-
       <AssetFormGroupedFields
         collapsedGroups={collapsedGroups}
         enumData={enumData}
         formData={formData}
         groupedFields={groupedFields}
-        handleChange={handleChange}
+        handleChange={handleUserChange}
         images={images}
         loadingImages={loadingImages}
         mode="clone"
@@ -505,7 +525,4 @@ export default function AssetCloneItem() {
 const makeStyles = (c: AppColors) =>
   StyleSheet.create({
     ...createAssetFormBaseStyles(c),
-    heroIconWrap: {
-      backgroundColor: c.amberLight,
-    },
   });

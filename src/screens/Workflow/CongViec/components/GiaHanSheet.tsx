@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { Alert, StyleSheet, Text } from "react-native";
+import { StyleSheet, Text } from "react-native";
 
 import { cvGiaHan } from "../../../../services/data/congViecApi";
 import { getThaoTacError } from "../../../../services/data/workflowApi";
 import { AppColors, useStyles } from "../../../../utils/helpers/colors";
 import DateTimeField from "../../shared/components/DateTimeField";
 import WorkflowButton from "../../shared/components/WorkflowButton";
-import WorkflowSheet from "../../shared/components/WorkflowSheet";
+import WorkflowSheet, { confirmCloseSheet } from "../../shared/components/WorkflowSheet";
 import WorkflowTextArea from "../../shared/components/WorkflowTextArea";
 import { formatDayTime, parseBeDate, toBeDateTime } from "../../shared/workflowDate";
 import { getWorkflowErrorMessage } from "../../shared/workflowErrors";
+import { AppAlert } from "../../../../components/ui/AppAlert";
 
 type Props = {
   visible: boolean;
@@ -35,7 +36,7 @@ export default function GiaHanSheet({ visible, idCongViec, denNgay, onClose, onD
 
   const submit = async () => {
     if (!denNgayMoi) {
-      Alert.alert("Thiếu thông tin", "Vui lòng chọn hạn mới.");
+      AppAlert.alert("Thiếu thông tin", "Vui lòng chọn hạn mới.");
       return;
     }
 
@@ -44,16 +45,19 @@ export default function GiaHanSheet({ visible, idCongViec, denNgay, onClose, onD
       const result = await cvGiaHan(idCongViec, toBeDateTime(denNgayMoi), ghiChu.trim() || null);
       const loi = getThaoTacError(result);
       if (loi) {
-        Alert.alert("Không gia hạn được", loi);
+        AppAlert.alert("Không gia hạn được", loi);
         return;
       }
       onDone();
     } catch (err) {
-      Alert.alert("Không gia hạn được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
+      AppAlert.alert("Không gia hạn được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
     } finally {
       setSubmitting(false);
     }
   };
+
+  // Ghi chú đã gõ mà chạm nhầm ra nền tối là mất — sheet hỏi trước khi đóng.
+  const dirty = !!ghiChu.trim();
 
   return (
     <WorkflowSheet
@@ -62,9 +66,15 @@ export default function GiaHanSheet({ visible, idCongViec, denNgay, onClose, onD
       onClose={onClose}
       loading={submitting}
       loadingText="Đang lưu..."
+      dirty={dirty}
       footer={
         <>
-          <WorkflowButton label="Đóng" variant="neutral" flex onPress={onClose} />
+          <WorkflowButton
+            label="Đóng"
+            variant="neutral"
+            flex
+            onPress={() => confirmCloseSheet(dirty, onClose)}
+          />
           <WorkflowButton label="Gia hạn" icon="time-outline" flex onPress={submit} />
         </>
       }

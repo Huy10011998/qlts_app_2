@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
@@ -40,20 +40,24 @@ import {
 import { useOnWorkflowInfoStale } from "../shared/workflowInfoRefresh";
 import {
   CV_KIEU_LAP,
-  CV_MA_MAU,
   CV_THU_TRONG_TUAN,
   CV_VAI_TRO_OPTIONS,
   getCongViecTrangThai,
 } from "../shared/workflowConstants";
 import { formatBeDate, formatDayTime, parseBeDate } from "../shared/workflowDate";
 import { getWorkflowErrorMessage } from "../shared/workflowErrors";
-import { getDetailFields, WorkflowField } from "../shared/workflowFields";
-import { loadClassFields } from "../shared/workflowMetadata";
+import { getDetailFields } from "../shared/workflowFields";
+import { useClassFields } from "../shared/workflowMetadata";
 import ChuyenTrangThaiSheet from "./components/ChuyenTrangThaiSheet";
 import DoiChuTriSheet from "./components/DoiChuTriSheet";
 import GiaHanSheet from "./components/GiaHanSheet";
 import LichSuTimeline from "./components/LichSuTimeline";
-import { CV_CARD_CUSTOM_FIELDS, getCongViecActions } from "./congViecRules";
+import {
+  CV_CARD_CUSTOM_FIELDS,
+  getCongViecActions,
+  getCongViecHanBadge,
+} from "./congViecRules";
+import { AppAlert } from "../../../components/ui/AppAlert";
 
 type Sheet = "trangThai" | "giaHan" | "doiChuTri" | null;
 type Tab = "thongTin" | "lichSu";
@@ -94,7 +98,6 @@ export default function CongViecDetailScreen() {
   const [data, setData] = useState<CongViecChiTiet | null>(null);
   const [info, setInfo] = useState<CongViecThongTin | null>(null);
   const [lichSu, setLichSu] = useState<CongViecLichSu[]>([]);
-  const [fields, setFields] = useState<WorkflowField[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -102,11 +105,7 @@ export default function CongViecDetailScreen() {
   const [sheet, setSheet] = useState<Sheet>(null);
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    loadClassFields(CV_CONG_VIEC_NAME_CLASS)
-      .then(setFields)
-      .catch(() => setFields([]));
-  }, []);
+  const { fields, ready: fieldsReady } = useClassFields(CV_CONG_VIEC_NAME_CLASS);
 
   const load = useCallback(
     async (mode: "initial" | "refresh" | "silent" = "initial") => {
@@ -123,7 +122,7 @@ export default function CongViecDetailScreen() {
         setErrorMessage(null);
       } catch (err) {
         if (isWorkflowNotFound(err)) {
-          Alert.alert("Thông báo", "Không tìm thấy công việc.", [
+          AppAlert.alert("Thông báo", "Không tìm thấy công việc.", [
             { text: "OK", onPress: () => navigation.goBack() },
           ]);
           return;
@@ -176,7 +175,7 @@ export default function CongViecDetailScreen() {
   };
 
   const confirmDelete = () => {
-    Alert.alert("Xoá công việc", "Xoá công việc này? Thao tác không hoàn tác được.", [
+    AppAlert.alert("Xoá công việc", "Xoá công việc này? Thao tác không hoàn tác được.", [
       { text: "Huỷ", style: "cancel" },
       {
         text: "Xoá",
@@ -188,7 +187,7 @@ export default function CongViecDetailScreen() {
             markChanged();
             navigation.goBack();
           } catch (err) {
-            Alert.alert("Không xoá được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
+            AppAlert.alert("Không xoá được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
           } finally {
             setDeleting(false);
           }
@@ -197,7 +196,8 @@ export default function CongViecDetailScreen() {
     ]);
   };
 
-  if (loading) return <WorkflowDetailSkeleton variant="congViec" fields={detailFields} />;
+  // Chờ cả field: vẽ trước metadata thì mất số / tiêu đề / các dòng rồi mới hiện.
+  if (loading || !fieldsReady) return <WorkflowDetailSkeleton variant="congViec" fields={detailFields} />;
 
   if (!congViec) {
     return (
@@ -215,8 +215,7 @@ export default function CongViecDetailScreen() {
   }
 
   const trangThai = getCongViecTrangThai(congViec.trangThai);
-  const maMau = CV_MA_MAU.find((item) => item.key === congViec.maMau);
-  const showMaMau = maMau && (maMau.key === "QuaHan" || maMau.key === "GiaHan");
+  const hanBadge = getCongViecHanBadge(congViec.maMau);
   const tuNgay = parseBeDate(congViec.tuNgay);
   const denNgay = parseBeDate(congViec.denNgay);
   const hanBanDau = parseBeDate(congViec.hanBanDau);
@@ -232,8 +231,14 @@ export default function CongViecDetailScreen() {
           <View style={styles.heroTop}>
             <Text style={styles.code}>{congViec.soCongViec}</Text>
             <View style={styles.badges}>
-              {showMaMau ? <StatusBadge label={maMau.label} color={maMau.color} dot /> : null}
-              {trangThai ? <StatusBadge label={trangThai.label} color={trangThai.color} /> : null}
+              {hanBadge ? <StatusBadge label={hanBadge.label} color={hanBadge.color} dot /> : null}
+              {trangThai ? (
+                <StatusBadge
+                  label={trangThai.label}
+                  color={trangThai.color}
+                  textColor={trangThai.textColor}
+                />
+              ) : null}
             </View>
           </View>
           <Text style={styles.title}>{congViec.tieuDe}</Text>

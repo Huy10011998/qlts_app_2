@@ -113,11 +113,10 @@ export const makeStyles = (c: AppColors) =>
     },
 
     // ── Card ──
+    // Mép trên thẳng, không bo góc — giống đáy header các màn trong app.
     card: {
       flex: 1,
       backgroundColor: c.surface,
-      borderTopLeftRadius: 28,
-      borderTopRightRadius: 28,
       shadowColor: c.shadow,
       shadowOffset: { width: 0, height: -4 },
       shadowOpacity: 0.08,

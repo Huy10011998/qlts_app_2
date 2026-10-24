@@ -8,29 +8,29 @@ import { useNhanVienInfoLoader } from "./bootstrap/useNhanVienInfoLoader";
 import { usePushNotifications } from "./bootstrap/usePushNotifications";
 
 export default function AppBootstrap() {
-  const { isAuthenticated, authReady, iosAuthenticated } =
+  const { isAuthenticated, authReady, sessionUnlocked } =
     useAuth() as BootstrapAuthState;
 
-  const { isAuthenticatedRef, authReadyRef, iosAuthenticatedRef } =
+  const { isAuthenticatedRef, authReadyRef, sessionUnlockedRef } =
     useBootstrapAuthRefs({
       isAuthenticated,
       authReady,
-      iosAuthenticated,
+      sessionUnlocked,
     });
 
   const { checkAppUpdateRef } = useAppUpdateChecker({
     isAuthenticated,
     authReady,
-    iosAuthenticated,
+    sessionUnlocked,
     isAuthenticatedRef,
     authReadyRef,
-    iosAuthenticatedRef,
+    sessionUnlockedRef,
   });
 
   const { retryTimer, safeReloadRef } = usePermissionReloader({
     isAuthenticatedRef,
     authReadyRef,
-    iosAuthenticatedRef,
+    sessionUnlockedRef,
   });
 
   useAppLifecycle({
@@ -42,13 +42,13 @@ export default function AppBootstrap() {
   useNhanVienInfoLoader({
     isAuthenticated,
     authReady,
-    iosAuthenticated,
+    sessionUnlocked,
   });
 
   usePushNotifications({
     isAuthenticated,
     authReady,
-    iosAuthenticated,
+    sessionUnlocked,
   });
 
   return null;

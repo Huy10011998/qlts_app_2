@@ -1,5 +1,12 @@
-import React from "react";
-import { StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
+import React, { useContext } from "react";
+import {
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
+  ViewStyle,
+} from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import {
@@ -7,8 +14,25 @@ import {
   useAppColors,
   useSeparatorColor,
 } from "../../../utils/helpers/colors";
+import { ROW_DIVIDER_OPACITY } from "../../../utils/helpers/tokens";
+import { SettingSectionAccentContext } from "./SettingSectionGroup";
 
 type IconLib = "ionicons" | "material-community";
+
+const SETTING_ROW_PADDING_HORIZONTAL = 16;
+
+/**
+ * Vạch ngăn dưới dòng: trong nhóm có `accent` thì cùng tông màu viền card nhưng
+ * nhạt (`ROW_DIVIDER_OPACITY`), ngoài ra xám mảnh.
+ */
+function useRowSeparatorStyle(): ViewStyle {
+  const separatorColor = useSeparatorColor();
+  const accent = useContext(SettingSectionAccentContext);
+
+  return accent
+    ? { backgroundColor: accent, height: 1, opacity: ROW_DIVIDER_OPACITY }
+    : { backgroundColor: separatorColor };
+}
 
 type SettingRowBaseProps = {
   iconName: string;
@@ -22,6 +46,9 @@ type SettingRowBaseProps = {
 type SettingRowItemProps = SettingRowBaseProps & {
   onPress: () => void;
   danger?: boolean;
+  /** Nhãn nhỏ nổi bật cạnh mũi tên, vd báo có bản cập nhật. */
+  badge?: string;
+  disabled?: boolean;
 };
 
 type SettingSwitchRowProps = SettingRowBaseProps & {
@@ -57,40 +84,55 @@ export function SettingRowItem({
   lib,
   iconBg,
   danger,
+  badge,
+  disabled,
   isLast,
 }: SettingRowItemProps) {
   const colors = useAppColors();
-  const separatorColor = useSeparatorColor();
+  const separatorStyle = useRowSeparatorStyle();
 
   return (
-    <TouchableOpacity
-      style={[
-        styles.row,
-        { borderBottomColor: separatorColor },
-        isLast && styles.rowLast,
-      ]}
-      onPress={onPress}
-      activeOpacity={0.65}
-    >
-      <SettingItemIcon
-        iconName={iconName}
-        lib={lib}
-        bg={danger ? C.rose : iconBg ?? C.red}
-      />
-      <View style={styles.textCol}>
-        <Text style={[styles.label, { color: danger ? C.rose : colors.text }]}>
-          {label}
-        </Text>
-        {sublabel ? (
-          <Text style={[styles.sub, { color: colors.textSub }]}>
-            {sublabel}
+    <>
+      <TouchableOpacity
+        style={styles.row}
+        onPress={onPress}
+        disabled={disabled}
+        activeOpacity={0.65}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: Boolean(disabled) }}
+      >
+        <SettingItemIcon
+          iconName={iconName}
+          lib={lib}
+          bg={danger ? C.rose : iconBg ?? C.red}
+        />
+        <View style={styles.textCol}>
+          <Text
+            style={[styles.label, { color: danger ? C.rose : colors.text }]}
+          >
+            {label}
           </Text>
+          {sublabel ? (
+            <Text style={[styles.sub, { color: colors.textSub }]}>
+              {sublabel}
+            </Text>
+          ) : null}
+        </View>
+        {badge ? (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{badge}</Text>
+          </View>
         ) : null}
-      </View>
-      <View style={[styles.chevronWrap, { backgroundColor: colors.border }]}>
-        <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
-      </View>
-    </TouchableOpacity>
+        <View style={[styles.chevronWrap, { backgroundColor: colors.border }]}>
+          <Ionicons
+            name="chevron-forward"
+            size={14}
+            color={colors.textMuted}
+          />
+        </View>
+      </TouchableOpacity>
+      {isLast ? null : <View style={[styles.separator, separatorStyle]} />}
+    </>
   );
 }
 
@@ -105,33 +147,30 @@ export function SettingSwitchRow({
   isLast,
 }: SettingSwitchRowProps) {
   const colors = useAppColors();
-  const separatorColor = useSeparatorColor();
+  const separatorStyle = useRowSeparatorStyle();
 
   return (
-    <View
-      style={[
-        styles.row,
-        { borderBottomColor: separatorColor },
-        isLast && styles.rowLast,
-      ]}
-    >
-      <SettingItemIcon iconName={iconName} lib={lib} bg={iconBg ?? C.red} />
-      <View style={styles.textCol}>
-        <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
-        {sublabel ? (
-          <Text style={[styles.sub, { color: colors.textSub }]}>
-            {sublabel}
-          </Text>
-        ) : null}
+    <>
+      <View style={styles.row}>
+        <SettingItemIcon iconName={iconName} lib={lib} bg={iconBg ?? C.red} />
+        <View style={styles.textCol}>
+          <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
+          {sublabel ? (
+            <Text style={[styles.sub, { color: colors.textSub }]}>
+              {sublabel}
+            </Text>
+          ) : null}
+        </View>
+        <Switch
+          value={value}
+          onValueChange={onValueChange}
+          trackColor={{ false: colors.borderStrong, true: C.red }}
+          thumbColor="#fff"
+          ios_backgroundColor={colors.borderStrong}
+        />
       </View>
-      <Switch
-        value={value}
-        onValueChange={onValueChange}
-        trackColor={{ false: colors.borderStrong, true: C.red }}
-        thumbColor="#fff"
-        ios_backgroundColor={colors.borderStrong}
-      />
-    </View>
+      {isLast ? null : <View style={[styles.separator, separatorStyle]} />}
+    </>
   );
 }
 
@@ -152,11 +191,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 13,
-    paddingHorizontal: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: SETTING_ROW_PADDING_HORIZONTAL,
   },
-  rowLast: {
-    borderBottomWidth: 0,
+  // Thụt vào bằng lề ngang của dòng: vạch thẳng mép icon và mũi tên, không
+  // chạm viền card.
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: SETTING_ROW_PADDING_HORIZONTAL,
   },
   textCol: {
     flex: 1,
@@ -173,6 +214,19 @@ const styles = StyleSheet.create({
   sub: {
     fontSize: 11.5,
     marginTop: 2,
+  },
+  badge: {
+    marginLeft: 8,
+    marginRight: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: C.red,
+  },
+  badgeText: {
+    color: "#fff",
+    fontSize: 10.5,
+    fontWeight: "700",
   },
   chevronWrap: {
     width: 24,

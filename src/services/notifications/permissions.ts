@@ -1,4 +1,5 @@
 import { Linking, NativeModules, Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import notifee, {
   AuthorizationStatus as NotifeeAuthorizationStatus,
 } from "@notifee/react-native";
@@ -12,7 +13,9 @@ import {
   checkNotifications,
   RESULTS,
 } from "react-native-permissions";
+import { AppAlert } from "../../components/ui/AppAlert";
 import { log, warn } from "../../utils/Logger";
+import { PERMISSION_AUTO_ASKED_KEY } from "./constants";
 
 /**
  * Trạng thái quyền thông báo dùng cho màn Cài đặt.
@@ -159,8 +162,50 @@ export const getNotificationPermissionLabel = (
 };
 
 /**
- * Đảm bảo đã có quyền: kiểm tra trước, chỉ hiện dialog khi thật sự cần.
- * Dùng trong luồng lấy FCM token.
+ * Hộp của app nói vì sao cần quyền, hiện ngay trước dialog của hệ điều hành.
+ *
+ * Dialog hệ thống theo cỡ chữ và giao diện sáng/tối của điện thoại, app không
+ * đổi được; iOS cũng không cho chèn lời giải thích vào dialog thông báo (xem
+ * requestNotificationPermission). Nên lời giải thích nằm ở hộp này, đúng kiểu
+ * chữ của app.
+ *
+ * Chỉ một nút "Tiếp tục" và luôn dẫn tới dialog hệ thống: Apple không chấp nhận
+ * nút "Cho phép / Không cho phép" giả ở bước này.
+ */
+const explainBeforeAsking = () =>
+  new Promise<void>((resolve) => {
+    AppAlert.alert(
+      "Bật thông báo",
+      "App sẽ báo ngay khi có việc cần bạn duyệt, việc mới được giao hay cảnh báo từ camera. Bạn có thể tắt lại bất cứ lúc nào trong Cài đặt.",
+      [{ text: "Tiếp tục", onPress: () => resolve() }],
+      { cancelable: false },
+    );
+  });
+
+const hasAutoAsked = async () => {
+  try {
+    return (await AsyncStorage.getItem(PERMISSION_AUTO_ASKED_KEY)) === "1";
+  } catch {
+    return false;
+  }
+};
+
+const markAutoAsked = async () => {
+  try {
+    await AsyncStorage.setItem(PERMISSION_AUTO_ASKED_KEY, "1");
+  } catch (err) {
+    warn("[Push] Không ghi được dấu đã hỏi quyền thông báo", err);
+  }
+};
+
+/**
+ * Đảm bảo đã có quyền: kiểm tra trước, chỉ hỏi khi thật sự cần.
+ * Dùng trong luồng lấy FCM token, tự chạy sau đăng nhập và mỗi lần mở lại app.
+ *
+ * Tự động chỉ hỏi MỘT lần, có hộp giải thích đi trước. Android 13+ từ chối lần
+ * đầu vẫn còn hỏi lại được, nhưng bật lại mỗi lần mở app là làm phiền — người
+ * dùng tự bật ở Cài đặt › Hệ thống › Quyền thông báo (gọi thẳng
+ * requestNotificationPermission, không qua đây).
  */
 export const ensureNotificationPermission = async (): Promise<boolean> => {
   const status = await checkNotificationPermission();
@@ -168,8 +213,14 @@ export const ensureNotificationPermission = async (): Promise<boolean> => {
   if (status === "granted") return true;
   // Đã bị chặn thì gọi dialog cũng không hiện gì — khỏi mất một round-trip native.
   if (status === "blocked") return false;
+  if (await hasAutoAsked()) return false;
 
-  return (await requestNotificationPermission()) === "granted";
+  await explainBeforeAsking();
+  const next = await requestNotificationPermission();
+  // Ghi sau khi hỏi xong: tắt app lúc đang hiện hộp giải thích thì lần sau hỏi lại.
+  await markAutoAsked();
+
+  return next === "granted";
 };
 
 /**

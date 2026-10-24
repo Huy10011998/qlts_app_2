@@ -25,6 +25,13 @@ import { BRAND_RED } from "./shared/listTheme";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { isNetworkRequestError } from "../../utils/helpers/api";
 import { normalizeIconImageUri } from "../../utils/iconImage";
+import {
+  buildRelatedConditions,
+  getWorkflowListRoute,
+  type WorkflowRelatedFilter,
+} from "../../screens/Workflow/shared/workflowRelated";
+
+const LOAD_ERROR_MESSAGE = "Vui lòng kiểm tra kết nối mạng rồi bấm Thử lại.";
 
 export default function AssetDeTailsTab({
   nameClassRoot,
@@ -75,9 +82,7 @@ export default function AssetDeTailsTab({
     } catch (e) {
       if (!isNetworkRequestError(e)) error(e);
       setItems([]);
-      setLoadErrorMessage(
-        "Vui lòng kiểm tra kết nối mạng hoặc quay lại để thử lại.",
-      );
+      setLoadErrorMessage(LOAD_ERROR_MESSAGE);
     } finally {
       if (isMounted()) {
         setIsLoading(false);
@@ -94,13 +99,31 @@ export default function AssetDeTailsTab({
     refetchOnAppResume: true,
     onOffline: () => {
       setItems([]);
-      setLoadErrorMessage(
-        "Vui lòng kiểm tra kết nối mạng hoặc quay lại để thử lại.",
-      );
+      setLoadErrorMessage(LOAD_ERROR_MESSAGE);
     },
   });
 
   const handlePress = (item: MenuItemResponse) => {
+    // Công việc / Kế hoạch: BE chặn get-list chung (400), đọc qua màn Workflow.
+    const workflowRoute = getWorkflowListRoute(item.name);
+    const related: WorkflowRelatedFilter = {
+      property: item.propertyReference,
+      idRoot: String(id),
+      nameClassRoot,
+      rootRecordLabel,
+      groupMenuId,
+      viewPermission,
+      assetTitleHeader,
+    };
+
+    if (workflowRoute && buildRelatedConditions(related).length) {
+      navigation.navigate(workflowRoute, {
+        titleHeader: item.moTa ?? undefined,
+        related,
+      });
+      return;
+    }
+
     navigation.navigate("AssetRelatedList", {
       nameClass: item.name,
       propertyReference: item.propertyReference,
@@ -133,7 +156,9 @@ export default function AssetDeTailsTab({
   );
 
   if (isLoading) {
-    return <MenuCardSkeleton />;
+    // Đúng dáng dòng thật bên dưới: thẻ 56 + 8, mũi tên trơn, lề trên 14 như
+    // `listContent` — dáng thẻ menu mặc định lệch cả ba chỗ.
+    return <MenuCardSkeleton variant="related" paddingTop={14} />;
   }
 
   const isEmpty = items.length === 0;
@@ -162,6 +187,9 @@ export default function AssetDeTailsTab({
               loadErrorMessage ||
               "Danh mục liên kết sẽ hiển thị tại đây khi có dữ liệu"
             }
+            // `fetchDetails` tự bật khung chờ nên bấm là thấy đang tải lại ngay.
+            actionLabel={loadErrorMessage ? "Thử lại" : undefined}
+            onActionPress={loadErrorMessage ? fetchDetails : undefined}
           />
         }
       />

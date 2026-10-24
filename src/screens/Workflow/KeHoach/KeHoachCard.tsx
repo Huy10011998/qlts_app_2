@@ -21,6 +21,18 @@ type Props = {
 const HEADER_FIELDS = ["SoKeHoach", "TieuDe"];
 
 /**
+ * Phần nào của thẻ hiện theo metadata: Số và tiêu đề đứng đầu thẻ, còn lại thành
+ * dòng "Nhãn: giá trị". Khung chờ của danh sách dựng theo đúng hàm này.
+ */
+export const getKeHoachCardLayout = (fields: WorkflowField[]) => ({
+  showSo: !!findWorkflowField(fields, "SoKeHoach"),
+  showTieuDe: !!findWorkflowField(fields, "TieuDe"),
+  lineFields: fields.filter(
+    (field) => !HEADER_FIELDS.some((name) => name.toLowerCase() === field.name.toLowerCase()),
+  ),
+});
+
+/**
  * Thẻ kế hoạch: Số · Tiêu đề · các field động · vòng tiến độ + "x/y việc"
  * (cột tính, không có trong metadata).
  */
@@ -28,11 +40,7 @@ export default function KeHoachCard({ item, fields, onPress }: Props) {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
   const progress = getKeHoachProgress(item);
-  const showSo = !!findWorkflowField(fields, "SoKeHoach");
-  const showTieuDe = !!findWorkflowField(fields, "TieuDe");
-  const lineFields = fields.filter(
-    (field) => !HEADER_FIELDS.some((name) => name.toLowerCase() === field.name.toLowerCase()),
-  );
+  const { showSo, showTieuDe, lineFields } = getKeHoachCardLayout(fields);
 
   return (
     <TouchableOpacity activeOpacity={0.75} onPress={onPress} style={styles.card}>

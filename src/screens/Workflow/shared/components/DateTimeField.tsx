@@ -13,6 +13,8 @@ type Props = {
   /** false: chỉ chọn ngày (ngày của kế hoạch, ngày bắt đầu định kỳ). */
   withTime?: boolean;
   error?: string | null;
+  /** Ngày nhỏ nhất chọn được — vd. Đến ngày không được trước Từ ngày. */
+  minDate?: Date | null;
 };
 
 /** Ô ngày + giờ tách đôi (form công việc: Từ ngày / Đến ngày, gia hạn). */
@@ -23,6 +25,7 @@ export default function DateTimeField({
   required,
   withTime = true,
   error,
+  minDate,
 }: Props) {
   const styles = useStyles(makeStyles);
   const dateValue = toPickerDate(value);
@@ -39,6 +42,9 @@ export default function DateTimeField({
           <DatePicker
             value={dateValue}
             placeholder="Chọn ngày"
+            minDate={minDate ? toPickerDate(minDate) : undefined}
+            // Không bắt buộc thì cho xoá trống: ngày "" ra `null`, cả giá trị trống.
+            clearable={!required}
             onChange={(next) => onChange(fromPickerDateTime(next, withTime ? timeValue : "00:00"))}
           />
         </View>

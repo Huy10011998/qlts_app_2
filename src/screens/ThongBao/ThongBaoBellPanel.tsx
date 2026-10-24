@@ -1,13 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
   FlatList,
   Modal,
   Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -16,17 +15,22 @@ import { navigateFromRef } from "../../navigation/navigationService";
 import { thongBaoDaDoc, thongBaoGetList } from "../../services/data/thongBaoApi";
 import { subscribeThongBao } from "../../services/realtime/traoDoiHub";
 import type { ThongBaoItem } from "../../types/index";
-import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
+import { AppColors, useStyles } from "../../utils/helpers/colors";
 import { elevation } from "../../utils/helpers/tokens";
 import { getWorkflowErrorMessage } from "../Workflow/shared/workflowErrors";
 import ThongBaoRow from "./ThongBaoRow";
+import ThongBaoRowSkeleton, { THONG_BAO_ROW_HEIGHT } from "./ThongBaoRowSkeleton";
 import { useThongBaoContext } from "./ThongBaoProvider";
 import { BELL_PAGE_SIZE, markThongBaoRead, prependThongBao } from "./thongBaoRules";
+import { AppAlert } from "../../components/ui/AppAlert";
 
 type Props = {
   visible: boolean;
   onClose: () => void;
 };
+
+/** `maxHeight` của bảng, phần trăm chiều cao cửa sổ (Modal phủ kín màn). */
+const PANEL_MAX_PERCENT = 72;
 
 /**
  * Bảng thả xuống khi bấm chuông (mục 1): 20 thông báo mới nhất, "Đánh dấu tất
@@ -34,8 +38,8 @@ type Props = {
  */
 export default function ThongBaoBellPanel({ visible, onClose }: Props) {
   const styles = useStyles(makeStyles);
-  const c = useAppColors();
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const { soChuaDoc, setSoChuaDoc, openThongBao, setBellOpen } = useThongBaoContext();
 
   const [items, setItems] = useState<ThongBaoItem[]>([]);
@@ -90,14 +94,28 @@ export default function ThongBaoBellPanel({ visible, onClose }: Props) {
       setSoChuaDoc(left ?? 0);
       setItems((prev) => markThongBaoRead(prev, "all"));
     } catch (err) {
-      Alert.alert("Thông báo", getWorkflowErrorMessage(err, "Không đánh dấu được đã đọc."));
+      AppAlert.alert("Thông báo", getWorkflowErrorMessage(err, "Không đánh dấu được đã đọc."));
     } finally {
       setMarkingAll(false);
     }
   };
 
+  /*
+   * Lần mở đầu (bảng nằm sẵn trong HeaderHome, mở lại thì danh sách cũ vẫn còn
+   * nên không tới đây): vòng xoay cũ chỉ cao ~76 rồi bảng giãn vọt tới trần 72%
+   * khi 20 dòng về. BE trả 20 thông báo mới nhất bất kể đã đọc, nên thường là
+   * đầy bảng — dựng đủ dòng để chạm trần ngay từ đầu; dòng thừa bị danh sách
+   * cắt (FlatList co lại dưới `maxHeight`, chính là lúc có 20 dòng thật).
+   *
+   * Số dòng cố định chứ không tự đo: danh sách `flexGrow: 0` cao theo nội dung,
+   * khung chờ tự đếm theo chiều cao của chính nó thì chạy vòng.
+   */
+  const skeletonRows = Math.ceil(
+    (windowHeight * PANEL_MAX_PERCENT) / 100 / THONG_BAO_ROW_HEIGHT,
+  );
+
   const renderEmpty = () => {
-    if (loading) return <ActivityIndicator style={styles.state} color={c.textSub} />;
+    if (loading) return <ThongBaoRowSkeleton rows={skeletonRows} />;
     if (errorMessage) {
       return (
         <View style={styles.state}>
@@ -169,7 +187,7 @@ const makeStyles = (c: AppColors) =>
       position: "absolute",
       left: 10,
       right: 10,
-      maxHeight: "72%",
+      maxHeight: `${PANEL_MAX_PERCENT}%` as const,
       backgroundColor: c.surface,
       borderRadius: 14,
       overflow: "hidden",

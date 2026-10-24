@@ -1,0 +1,63 @@
+diff --git a/node_modules/react-native-keychain/.DS_Store b/node_modules/react-native-keychain/.DS_Store
+new file mode 100644
+index 0000000..cc65f9c
+Binary files /dev/null and b/node_modules/react-native-keychain/.DS_Store differ
+diff --git a/node_modules/react-native-keychain/android/src/main/java/com/oblador/keychain/KeychainModule.kt b/node_modules/react-native-keychain/android/src/main/java/com/oblador/keychain/KeychainModule.kt
+index 722a5ed..5f50558 100644
+--- a/node_modules/react-native-keychain/android/src/main/java/com/oblador/keychain/KeychainModule.kt
++++ b/node_modules/react-native-keychain/android/src/main/java/com/oblador/keychain/KeychainModule.kt
+@@ -766,6 +766,12 @@ class KeychainModule(reactContext: ReactApplicationContext) :
+         usePasscode ->
+           BiometricManager.Authenticators.DEVICE_CREDENTIAL
+ 
++        // Không đặt thì androidx mặc định BIOMETRIC_WEAK (prompt không kèm
++        // CryptoObject) — khuôn mặt Class 2 qua được prompt nhưng không mở được
++        // khoá Keystore (chỉ nhận STRONG), nên báo lỗi dù người dùng đã xác thực.
++        useBiometry ->
++          BiometricManager.Authenticators.BIOMETRIC_STRONG
++
+         else ->
+           null
+       }
+diff --git a/node_modules/react-native-keychain/android/src/main/java/com/oblador/keychain/cipherStorage/CipherStorageKeystoreAesGcm.kt b/node_modules/react-native-keychain/android/src/main/java/com/oblador/keychain/cipherStorage/CipherStorageKeystoreAesGcm.kt
+index 6b6e626..949bf2e 100644
+--- a/node_modules/react-native-keychain/android/src/main/java/com/oblador/keychain/cipherStorage/CipherStorageKeystoreAesGcm.kt
++++ b/node_modules/react-native-keychain/android/src/main/java/com/oblador/keychain/cipherStorage/CipherStorageKeystoreAesGcm.kt
+@@ -91,6 +91,21 @@ class CipherStorageKeystoreAesGcm(
+         try {
+             key = extractGeneratedKey(safeAlias, level, retries)
+ 
++            // Khoá có 5 giây hiệu lực sau lần mở khoá máy gần nhất — thử mã hoá
++            // trước thì mở máy xong vào app ngay sẽ qua mà không hỏi. Luôn hỏi.
++            if (requiresAuth) {
++                handler.askAccessPermissions(
++                    CryptoContext(
++                        safeAlias,
++                        key,
++                        password.toByteArray(),
++                        username.toByteArray(),
++                        CryptoOperation.ENCRYPT
++                    )
++                )
++                return
++            }
++
+             val result = CipherStorage.EncryptionResult(
+                 encryptString(key, username), encryptString(key, password), this
+             )
+@@ -128,6 +143,15 @@ class CipherStorageKeystoreAesGcm(
+ 
+         try {
+             key = extractGeneratedKey(safeAlias, level, retries)
++
++            // Như `encrypt`: không thử giải mã im lặng, luôn hiện hộp hỏi.
++            if (requiresAuth) {
++                handler.askAccessPermissions(
++                    CryptoContext(safeAlias, key, password, username, CryptoOperation.DECRYPT)
++                )
++                return
++            }
++
+             val results = CipherStorage.DecryptionResult(
+                 decryptBytes(key, username), decryptBytes(key, password)
+             )

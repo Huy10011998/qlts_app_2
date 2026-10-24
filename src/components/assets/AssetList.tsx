@@ -29,12 +29,13 @@ import {
 } from "../../services";
 import RecordListFooterSkeleton from "../list/RecordListFooterSkeleton";
 import RecordListSkeleton from "../list/RecordListSkeleton";
+import { getListCardShape } from "../list/listCardShape";
 import MenuCardSkeleton, {
   MENU_CARD_ROW_HEIGHT,
 } from "../ui/MenuCardSkeleton";
 import { shouldShowListSkeleton } from "../ui/shouldShowListSkeleton";
 import ListCardAsset from "../../components/list/ListCardAsset";
-import SwipeableListRow from "../../components/list/SwipeableListRow";
+import SwipeableListRow, { useSingleOpenRow } from "../../components/list/SwipeableListRow";
 import { useDebounce } from "../../hooks/useDebounce";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { AddItem } from "../add/AddItem";
@@ -58,7 +59,6 @@ import { useReloadPermissionsOnFocus } from "../../hooks/useReloadPermissionsOnF
 import { useSlideInPanel } from "../../hooks/useSlideInPanel";
 import SlideInSidePanel from "../shared/SlideInSidePanel";
 import AssetListSearchBar from "./shared/AssetListSearchBar";
-import AssetListSummaryCard from "./shared/AssetListSummaryCard";
 import AssetListEmptyState from "./shared/AssetListEmptyState";
 import AssetTreeNodeItem from "./shared/AssetTreeNodeItem";
 import {
@@ -82,11 +82,25 @@ if (
 const { width } = Dimensions.get("window");
 const MENU_WIDTH = width * 0.6;
 
+const LOAD_ERROR_MESSAGE = "Vui lòng kiểm tra kết nối mạng rồi bấm Thử lại.";
+const TREE_ERROR_MESSAGE =
+  "Vui lòng kiểm tra kết nối mạng rồi thử mở lại danh mục.";
+
+/** Mảng điều kiện mới mỗi lần là đổi deps của `fetchData` — chỉ thay khi cần. */
+const clearConditions = (prev: AssetFilterCondition[]) =>
+  prev.length ? [] : prev;
+
 function AssetListMenuButton({ onPress }: { onPress: () => void }) {
   const styles = useStyles(makeStyles);
   return (
-    <TouchableOpacity onPress={onPress} style={styles.headerButton}>
-      <Ionicons name="menu" size={26} color="#fff" />
+    <TouchableOpacity
+      onPress={onPress}
+      style={styles.headerButton}
+      hitSlop={10}
+      accessibilityRole="button"
+      accessibilityLabel="Lọc theo danh mục"
+    >
+      <Ionicons name="funnel-outline" size={24} color="#fff" />
     </TouchableOpacity>
   );
 }
@@ -182,6 +196,7 @@ export default function AssetList() {
     actionLabel: addChildLabel,
     busyItemId,
     canAddChild,
+    childClassesSettled,
     hasChildClasses,
     openFor: openAddChild,
     sheetProps: addChildSheetProps,
@@ -192,24 +207,7 @@ export default function AssetList() {
     nameClass,
     viewPermission,
   });
-  // Chỉ một thẻ được mở tại một thời điểm. Thẻ cũ đóng ngay khi ngón tay bắt
-  // đầu kéo thẻ mới, để hai chuyển động chạy cùng lúc thay vì giật nối tiếp.
-  const openRowCloseRef = useRef<(() => void) | null>(null);
-  const closeOpenRow = useCallback((except?: () => void) => {
-    const close = openRowCloseRef.current;
-    if (close && close !== except) {
-      openRowCloseRef.current = null;
-      close();
-    }
-  }, []);
-  const handleRowOpened = useCallback((close: () => void) => {
-    openRowCloseRef.current = close;
-  }, []);
-  const handleRowClosed = useCallback((close: () => void) => {
-    if (openRowCloseRef.current === close) {
-      openRowCloseRef.current = null;
-    }
-  }, []);
+  const { closeOpenRow, rowHandlers } = useSingleOpenRow();
 
   const refreshTop = async () => {
     if (isRefreshingTop) return;
@@ -230,9 +228,7 @@ export default function AssetList() {
     if (loadErrorMessage) {
       setTreeData([]);
       treeLoadedRef.current = false;
-      setTreeErrorMessage(
-        "Vui lòng kiểm tra kết nối mạng rồi thử mở lại danh mục.",
-      );
+      setTreeErrorMessage(TREE_ERROR_MESSAGE);
       return;
     }
     if (treeLoadedRef.current) return;
@@ -258,6 +254,7 @@ export default function AssetList() {
 
   const {
     closePanel: closeMenu,
+    openPanel: openMenu,
     togglePanel,
     translateAnim: slideAnim,
     visible: menuVisible,
@@ -270,6 +267,15 @@ export default function AssetList() {
     if (!propertyClass?.isBuildTree) return;
     togglePanel();
   }, [propertyClass?.isBuildTree, togglePanel]);
+
+  /* Bỏ lọc phải dọn cả ba chỗ: nút đang chọn trong cây, điều kiện gửi get-list,
+     và nhánh cây lưu trong store (form thêm mới đọc nó để điền sẵn). Chỉ dọn
+     nút chọn như trước thì nhãn về "Tất cả" mà danh sách vẫn đang lọc. */
+  const clearFilter = useCallback(() => {
+    setSelectedNode(null);
+    setConditions(clearConditions);
+    dispatch(resetSelectedTreeNode());
+  }, [dispatch]);
 
   const renderHeaderRight = useCallback(
     () =>
@@ -359,16 +365,11 @@ export default function AssetList() {
         }
         if (!isLoadMore) {
           setAssetItems([]);
-          setSelectedNode(null);
-          dispatch(resetSelectedTreeNode());
+          clearFilter();
           setTreeData([]);
           treeLoadedRef.current = false;
-          setTreeErrorMessage(
-            "Vui lòng kiểm tra kết nối mạng rồi thử mở lại danh mục.",
-          );
-          setLoadErrorMessage(
-            "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại.",
-          );
+          setTreeErrorMessage(TREE_ERROR_MESSAGE);
+          setLoadErrorMessage(LOAD_ERROR_MESSAGE);
         }
       } finally {
         if (isMounted()) {
@@ -379,15 +380,24 @@ export default function AssetList() {
       }
     },
     [
+      clearFilter,
       conditions,
       debouncedSearch,
-      dispatch,
       refreshAndroidListLayout,
       isMounted,
       nameClass,
       showAlertIfActive,
     ],
   );
+
+  /* Màn lỗi không còn kéo xuống được (không có FlatList), nên phải có nút. Bật
+     `isLoading` để khung chờ thay chỗ màn lỗi trong lúc gọi lại — `fetchData`
+     chỉ tự bật cờ này ở lần tải đầu. */
+  const retryLoad = useCallback(() => {
+    setLoadErrorMessage(null);
+    setIsLoading(true);
+    fetchData(false);
+  }, [fetchData]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -427,16 +437,11 @@ export default function AssetList() {
     hasError: Boolean(loadErrorMessage),
     onOffline: () => {
       setAssetItems([]);
-      setSelectedNode(null);
-      dispatch(resetSelectedTreeNode());
+      clearFilter();
       setTreeData([]);
       treeLoadedRef.current = false;
-      setTreeErrorMessage(
-        "Vui lòng kiểm tra kết nối mạng rồi thử mở lại danh mục.",
-      );
-      setLoadErrorMessage(
-        "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại.",
-      );
+      setTreeErrorMessage(TREE_ERROR_MESSAGE);
+      setLoadErrorMessage(LOAD_ERROR_MESSAGE);
     },
   });
 
@@ -513,15 +518,17 @@ export default function AssetList() {
   const renderItem = useCallback(
     ({ item }: { item: Record<string, any> }) => (
       <SwipeableListRow
-        actionIcon={addChildIcon}
-        actionLabel={addChildLabel}
-        busy={busyItemId === String(item.id)}
+        actions={[
+          {
+            key: "addChild",
+            icon: addChildIcon,
+            label: addChildLabel,
+            busy: busyItemId === String(item.id),
+            onPress: () => openAddChild(item),
+          },
+        ]}
         disabled={!canAddChild}
-        onAction={() => openAddChild(item)}
-        onClosed={handleRowClosed}
-        onOpened={handleRowOpened}
-        onOpenStartDrag={closeOpenRow}
-        onTouchStart={closeOpenRow}
+        {...rowHandlers}
       >
         <ListCardAsset
           item={item}
@@ -536,14 +543,12 @@ export default function AssetList() {
       addChildLabel,
       busyItemId,
       canAddChild,
-      closeOpenRow,
       fieldActive,
       fieldShowMobile,
       handlePress,
-      handleRowClosed,
-      handleRowOpened,
       openAddChild,
       propertyClass,
+      rowHandlers,
     ],
   );
 
@@ -572,8 +577,12 @@ export default function AssetList() {
         số cố định 8 dòng như trước bỏ trống hẳn một mảng dưới đáy panel.
       */}
       {showTreeSkeleton ? (
+        // Panel đã có padding 16 và thẻ thật nằm sát mép nội dung: thêm lề của
+        // khung chờ là thẻ hẹp đi 28 và tụt xuống 4.
         <MenuCardSkeleton
           rows={Math.ceil(windowHeight / MENU_CARD_ROW_HEIGHT)}
+          paddingTop={0}
+          paddingHorizontal={0}
         />
       ) : null}
       {!showTreeSkeleton && treeErrorMessage ? (
@@ -607,6 +616,12 @@ export default function AssetList() {
   // Một điều kiện duy nhất cho cả nút và khoảng chừa ở đáy danh sách, để không
   // bao giờ lệch nhau.
   const showAddFab = Boolean(loaded && nameClass && can(nameClass, "Insert"));
+  // Khung chờ vẽ theo dáng thẻ thật (số dòng, cột ảnh / QR), không theo dáng
+  // thẻ tài sản cố định.
+  const cardShape = getListCardShape(
+    nameClass,
+    fieldShowMobile.length ? fieldShowMobile : fieldActive,
+  );
 
   if (
     shouldShowListSkeleton({
@@ -614,14 +629,17 @@ export default function AssetList() {
       isEmpty: assetItems.length === 0,
       isRefreshing: isRefreshingTop,
       isSearching,
-    })
+    }) ||
+    // Chưa biết có danh mục con không: hiện thẻ trước thì dải nhắc vuốt chen vào
+    // sau, đẩy cả danh sách xuống. Lượt hỏi này luôn kết thúc (lỗi cũng tính).
+    (!childClassesSettled && !loadErrorMessage && !isRefreshingTop && !isSearching)
   ) {
     return (
       <RecordListSkeleton
         hasSearchBar
-        hasSummaryCard
         hasBanner={hasChildClasses}
         hasFab={showAddFab}
+        {...cardShape}
       />
     );
   }
@@ -634,6 +652,8 @@ export default function AssetList() {
             iconName="cloud-offline-outline"
             title="Không thể tải danh sách tài sản"
             subtitle={loadErrorMessage}
+            actionLabel="Thử lại"
+            onActionPress={retryLoad}
           />
         </View>
         {renderTreePanel()}
@@ -642,11 +662,23 @@ export default function AssetList() {
   }
 
   const isEmpty = assetItems.length === 0;
-  const hasSearchOrFilter =
-    Boolean(debouncedSearch.trim()) || Boolean(selectedNode);
+  const hasSearch = Boolean(debouncedSearch.trim());
+  const hasSearchOrFilter = hasSearch || Boolean(selectedNode);
+  const canFilterByTree = Boolean(propertyClass?.isBuildTree);
+
+  // Danh sách rỗng vì từ khoá/bộ lọc thì cho gỡ ngay tại chỗ, khỏi phải tìm
+  // ngược lên ô tìm kiếm hay nhãn lọc. Từ khoá gỡ trước vì nó dễ gõ nhầm hơn.
+  const emptyAction = hasSearch
+    ? { label: "Xoá từ khoá", onPress: () => setSearchText("") }
+    : selectedNode
+    ? { label: "Bỏ lọc danh mục", onPress: clearFilter }
+    : null;
 
   return (
     <View style={styles.container}>
+      {/* Một dòng đếm duy nhất. Thẻ tóm tắt "X kết quả • hiển thị Y" bên dưới
+          trước đây lặp đúng con số này, còn "Đã tải Y" là chuyện phân trang của
+          app — người dùng không cần biết. */}
       <AssetListSearchBar
         placeholder={`Tìm kiếm ${titleHeader?.toLowerCase() || "tài sản"}...`}
         value={searchText}
@@ -654,16 +686,10 @@ export default function AssetList() {
         isSearching={isSearching}
         onClear={() => setSearchText("")}
         badgeText={selectedNode ? selectedNode.text : "Tất cả"}
-        summaryText={`Tổng ${total} • Đã tải ${assetItems.length}`}
+        summaryText={`${total} tài sản`}
+        onBadgePress={canFilterByTree ? openMenu : undefined}
+        onBadgeClear={canFilterByTree && selectedNode ? clearFilter : undefined}
       />
-
-      {!isEmpty ? (
-        <AssetListSummaryCard
-          iconName="funnel-outline"
-          title={selectedNode ? selectedNode.text : "Toàn bộ tài sản"}
-          subtitle={`${total} kết quả • hiển thị ${assetItems.length}`}
-        />
-      ) : null}
 
       {!isEmpty && hasChildClasses ? (
         <SwipeHintBanner actionLabel={addChildLabel} />
@@ -695,7 +721,9 @@ export default function AssetList() {
           removeClippedSubviews={Platform.OS === "android"}
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
-          ListFooterComponent={isLoadingMore ? <RecordListFooterSkeleton /> : null}
+          ListFooterComponent={
+            isLoadingMore ? <RecordListFooterSkeleton {...cardShape} /> : null
+          }
           ListHeaderComponent={null}
           stickyHeaderIndices={[]}
           contentContainerStyle={[
@@ -716,6 +744,8 @@ export default function AssetList() {
                   ? "Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc danh mục"
                   : "Danh sách tài sản sẽ hiển thị tại đây khi có dữ liệu."
               }
+              actionLabel={emptyAction?.label}
+              onActionPress={emptyAction?.onPress}
             />
           }
         />

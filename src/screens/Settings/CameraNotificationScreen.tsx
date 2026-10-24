@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -21,6 +20,7 @@ import {
   useDanhSachCameraNoti,
   type CameraNotiChon,
 } from "./shared/useDanhSachCameraNoti";
+import { AppAlert } from "../../components/ui/AppAlert";
 
 /**
  * Các mốc tạm dừng cố định.
@@ -150,7 +150,7 @@ export default function CameraNotificationScreen() {
         ? `thông báo của camera ${cameraChon.ma} - ${cameraChon.ten}`
         : "thông báo camera";
 
-      Alert.alert(
+      AppAlert.alert(
         "Tắt thông báo cả công ty?",
         `Trong ${thoiLuong} tới, MỌI NGƯỜI sẽ không nhận được ${phamViMoTa}, không riêng bạn.`,
         [
@@ -187,7 +187,7 @@ export default function CameraNotificationScreen() {
       return;
     }
 
-    Alert.alert(
+    AppAlert.alert(
       "Bật lại cho cả công ty?",
       `Lệnh này do ${
         lenhChinh.iD_User_Tao_MoTa ?? "người khác"
@@ -242,7 +242,7 @@ export default function CameraNotificationScreen() {
       <View
         style={[
           styles.card,
-          { backgroundColor: colors.card, borderColor: colors.border },
+          { backgroundColor: colors.card, borderColor: C.rose },
         ]}
       >
         <View style={styles.statusRow}>
@@ -300,7 +300,7 @@ export default function CameraNotificationScreen() {
       <View
         style={[
           styles.card,
-          { backgroundColor: colors.card, borderColor: colors.border },
+          { backgroundColor: colors.card, borderColor: C.rose },
         ]}
       >
         {/* Phạm vi camera dùng chung cho cả lệnh cá nhân lẫn lệnh toàn công ty:
@@ -392,7 +392,7 @@ export default function CameraNotificationScreen() {
       <View
         style={[
           styles.card,
-          { backgroundColor: colors.card, borderColor: colors.redBorder },
+          { backgroundColor: colors.card, borderColor: C.red },
         ]}
       >
         <Text style={[styles.warningText, { color: colors.textSecondary }]}>
@@ -446,9 +446,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginTop: 12,
   },
+  // Viền 1pt + mép trên 3pt như card Trang chủ / Cài đặt: hồng như icon
+  // Thông báo camera, riêng thẻ tắt cho cả công ty đỏ cảnh báo.
   card: {
     borderRadius: 14,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
+    borderTopWidth: 3,
     padding: 16,
   },
   errorBox: {

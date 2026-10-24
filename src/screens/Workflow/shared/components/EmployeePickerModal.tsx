@@ -12,6 +12,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import SearchBar from "../../../../components/ui/SearchBar";
 import EmptyState from "../../../../components/ui/EmptyState";
+import SkeletonBlock from "../../../../components/ui/SkeletonBlock";
+import { useSkeletonAutoFill } from "../../../../components/ui/useSkeletonAutoFill";
 import type { WorkflowEmployee } from "../../../../types/index";
 import { AppColors, useAppColors, useStyles } from "../../../../utils/helpers/colors";
 import { removeVietnameseTones } from "../../../../utils/helpers/string";
@@ -28,9 +30,24 @@ type Props = {
   allowedIds?: number[] | null;
   /** Không hiện (vd chủ trì của kế hoạch). */
   excludeIds?: number[];
+  /**
+   * Danh sách còn đang tải (nơi gọi tự gọi API lúc mở, vd Đổi chủ trì) — hiện
+   * khung chờ thay cho "Không có nhân viên để chọn". Nơi truyền sẵn danh sách
+   * đã tải thì bỏ trống.
+   */
+  loading?: boolean;
+  /** Tải danh sách hỏng: hiện lỗi + "Thử lại" (`onRetry`) thay cho danh sách rỗng. */
+  errorMessage?: string | null;
+  onRetry?: () => void;
   onClose: () => void;
   onConfirm: (ids: number[]) => void;
 };
+
+/**
+ * Một dòng nhân viên **kể cả `marginTop` 6**: viền 1 × 2 + `padding` 10 × 2 +
+ * avatar 38 (cột chữ tên 15 ≈ 18 + 2 + phụ 12 ≈ 14.3 thấp hơn avatar).
+ */
+const EMPLOYEE_ROW_HEIGHT = 6 + 2 + 20 + 38;
 
 const getInitials = (name: string) => {
   const words = name.trim().split(/\s+/).filter(Boolean);
@@ -60,6 +77,9 @@ export default function EmployeePickerModal({
   multiple = true,
   allowedIds,
   excludeIds,
+  loading = false,
+  errorMessage,
+  onRetry,
   onClose,
   onConfirm,
 }: Props) {
@@ -183,20 +203,35 @@ export default function EmployeePickerModal({
           style={styles.search}
         />
 
-        <FlatList
-          data={data}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={renderItem}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={styles.listContent}
-          initialNumToRender={20}
-          ListEmptyComponent={
-            <EmptyState
-              iconName="people-outline"
-              title={keyword ? "Không tìm thấy nhân viên" : "Không có nhân viên để chọn"}
-            />
-          }
-        />
+        {loading ? (
+          <EmployeeRowsSkeleton multiple={multiple} />
+        ) : (
+          <FlatList
+            data={data}
+            keyExtractor={(item) => String(item.id)}
+            renderItem={renderItem}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={styles.listContent}
+            initialNumToRender={20}
+            ListEmptyComponent={
+              // Lỗi chỉ thay chỗ danh sách rỗng: còn danh sách cũ thì cứ cho chọn.
+              errorMessage && !employees.length ? (
+                <EmptyState
+                  iconName="cloud-offline-outline"
+                  title="Không tải được danh sách nhân viên"
+                  subtitle={errorMessage}
+                  actionLabel={onRetry ? "Thử lại" : undefined}
+                  onActionPress={onRetry}
+                />
+              ) : (
+                <EmptyState
+                  iconName="people-outline"
+                  title={keyword ? "Không tìm thấy nhân viên" : "Không có nhân viên để chọn"}
+                />
+              )
+            }
+          />
+        )}
 
         {multiple ? (
           <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
@@ -210,6 +245,43 @@ export default function EmployeePickerModal({
         ) : null}
       </View>
     </Modal>
+  );
+}
+
+/**
+ * Khung chờ danh sách nhân viên, dưới ô tìm kiếm (thanh tiêu đề + ô tìm là
+ * thật): cùng thẻ `row`, avatar tròn 38, vạch tên + vạch phụ, và ô chọn rỗng
+ * thật bên phải — ô chọn biết trước theo `multiple`, khỏi vẽ khối xám.
+ */
+function EmployeeRowsSkeleton({ multiple }: { multiple: boolean }) {
+  const styles = useStyles(makeStyles);
+  const c = useAppColors();
+  const { onLayout, opacity, rowCount } = useSkeletonAutoFill(EMPLOYEE_ROW_HEIGHT);
+
+  return (
+    <View
+      style={[styles.listContent, styles.skeletonWrap]}
+      onLayout={onLayout}
+      accessibilityLabel="Đang tải danh sách nhân viên"
+    >
+      {Array.from({ length: rowCount }).map((_, index) => (
+        <View key={index} style={styles.row}>
+          <SkeletonBlock opacity={opacity} style={[styles.avatar, styles.skeletonAvatar]} />
+          <View style={[styles.rowBody, styles.skeletonBody]}>
+            <SkeletonBlock
+              opacity={opacity}
+              style={[styles.skeletonName, index % 3 === 1 && styles.skeletonNameShort]}
+            />
+            <SkeletonBlock opacity={opacity} style={styles.skeletonMeta} />
+          </View>
+          <Ionicons
+            name={multiple ? "square-outline" : "radio-button-off"}
+            size={22}
+            color={c.textMuted}
+          />
+        </View>
+      ))}
+    </View>
   );
 }
 
@@ -307,5 +379,30 @@ const makeStyles = (c: AppColors) =>
       fontSize: 14,
       color: c.textSecondary,
       fontWeight: "600",
+    },
+    skeletonWrap: {
+      flex: 1,
+      // Thẻ dựng vượt đáy khung thì cắt, không đẩy khung dài ra.
+      overflow: "hidden",
+    },
+    // `avatar` thật có nền accentLight — khung chờ dùng màu xám chung.
+    skeletonAvatar: {
+      backgroundColor: c.skeleton,
+    },
+    skeletonBody: {
+      gap: 7,
+    },
+    skeletonName: {
+      width: "58%",
+      height: 13,
+      borderRadius: 6,
+    },
+    skeletonNameShort: {
+      width: "42%",
+    },
+    skeletonMeta: {
+      width: "72%",
+      height: 10,
+      borderRadius: 5,
     },
   });

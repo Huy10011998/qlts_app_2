@@ -26,6 +26,8 @@ const loadSoPhieuField = (nameClass: string) =>
 
 /** Metadata theo tên bảng, giữ trong phiên (danh sách, chi tiết, form dùng chung). */
 const cache = new Map<string, Promise<FlowMeta>>();
+/** Bản đã về của `cache` — đọc đồng bộ để màn mở sau có metadata ngay khung đầu. */
+const resolved = new Map<string, FlowMeta>();
 
 export const loadFlowMeta = (nameClass: string) => {
   const cached = cache.get(nameClass);
@@ -34,7 +36,9 @@ export const loadFlowMeta = (nameClass: string) => {
   const promise = Promise.all([getFlowFields(nameClass), loadSoPhieuField(nameClass)])
     .then(([data, soPhieuField]) => {
       if (!data?.flow) throw Object.assign(new Error("FLOW_NOT_FOUND"), { response: { status: 404 } });
-      return { flow: data.flow, fields: normalizeWorkflowFields(data.fields), soPhieuField };
+      const meta = { flow: data.flow, fields: normalizeWorkflowFields(data.fields), soPhieuField };
+      resolved.set(nameClass, meta);
+      return meta;
     })
     .catch((err) => {
       cache.delete(nameClass);
@@ -51,9 +55,13 @@ export const loadFlowMeta = (nameClass: string) => {
  * 404 = tên bảng chưa khai flow. Kèm tên cột số phiếu (get-class-by-name).
  */
 export function useFlowMeta(nameClass?: string | null) {
-  const [meta, setMeta] = useState<FlowMeta | null>(null);
+  // Đã có trong phiên thì dùng ngay: khởi đầu bằng null là màn chi tiết có một
+  // khung thiếu số phiếu / các dòng rồi mới hiện.
+  const [meta, setMeta] = useState<FlowMeta | null>(() =>
+    nameClass ? resolved.get(nameClass) ?? null : null,
+  );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !(nameClass && resolved.has(nameClass)));
 
   useEffect(() => {
     if (!nameClass) {
@@ -63,7 +71,7 @@ export function useFlowMeta(nameClass?: string | null) {
     }
 
     let alive = true;
-    setLoading(true);
+    if (!resolved.has(nameClass)) setLoading(true);
     loadFlowMeta(nameClass)
       .then((result) => {
         if (!alive) return;

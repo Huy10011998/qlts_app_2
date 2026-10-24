@@ -8,10 +8,9 @@ import { useNhanVienInfo } from "../../hooks/useNhanVienInfo";
 import {
   AppColors,
   useAppColors,
-  useHairlineBorderColor,
-  useSeparatorColor,
   useStyles,
 } from "../../utils/helpers/colors";
+import { ROW_DIVIDER_OPACITY } from "../../utils/helpers/tokens";
 
 const InfoRow: React.FC<{
   iconName: string;
@@ -22,26 +21,22 @@ const InfoRow: React.FC<{
   isLast?: boolean;
 }> = ({ iconName, iconBg, iconColor, label, value, isLast }) => {
   const rowS = useStyles(makeRowS);
-  const separatorColor = useSeparatorColor();
 
   return (
-    <View
-      style={[
-        rowS.wrap,
-        { borderBottomColor: separatorColor },
-        isLast && rowS.last,
-      ]}
-    >
-      <View style={[rowS.iconBox, { backgroundColor: iconBg }]}>
-        <Ionicons name={iconName} size={15} color={iconColor} />
+    <>
+      <View style={rowS.wrap}>
+        <View style={[rowS.iconBox, { backgroundColor: iconBg }]}>
+          <Ionicons name={iconName} size={15} color={iconColor} />
+        </View>
+        <View style={rowS.col}>
+          <Text style={rowS.label}>{label}</Text>
+          <Text style={rowS.value} numberOfLines={2}>
+            {value && value.trim() ? value : "---"}
+          </Text>
+        </View>
       </View>
-      <View style={rowS.col}>
-        <Text style={rowS.label}>{label}</Text>
-        <Text style={rowS.value} numberOfLines={2}>
-          {value && value.trim() ? value : "---"}
-        </Text>
-      </View>
-    </View>
+      {isLast ? null : <View style={rowS.separator} />}
+    </>
   );
 };
 
@@ -52,11 +47,16 @@ const makeRowS = (c: AppColors) =>
       alignItems: "center",
       paddingVertical: 11,
       paddingHorizontal: 16,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: c.border,
       gap: 12,
     },
-    last: { borderBottomWidth: 0 },
+    // Vạch ngăn dòng cùng tông màu viền card (`makeSecS.card`) nhưng nhạt, thụt
+    // vào bằng lề ngang của dòng để không chạm viền.
+    separator: {
+      height: 1,
+      backgroundColor: c.red,
+      opacity: ROW_DIVIDER_OPACITY,
+      marginHorizontal: 16,
+    },
     iconBox: {
       width: 34,
       height: 34,
@@ -81,7 +81,6 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({
   children,
 }) => {
   const secS = useStyles(makeSecS);
-  const hairlineBorderColor = useHairlineBorderColor();
 
   return (
     <View style={secS.group}>
@@ -89,7 +88,7 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({
         <View style={secS.pill} />
         <Text style={secS.title}>{title}</Text>
       </View>
-      <View style={[secS.card, { borderColor: hairlineBorderColor }]}>
+      <View style={secS.card}>
         {children}
       </View>
     </View>
@@ -122,8 +121,11 @@ const makeSecS = (c: AppColors) =>
       shadowRadius: 10,
       shadowOffset: { width: 0, height: 3 },
       elevation: 2,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border,
+      // Viền 1pt + mép trên 3pt như card Trang chủ / Cài đặt, cùng màu đỏ với
+      // vạch trước tên mục.
+      borderWidth: 1,
+      borderTopWidth: 3,
+      borderColor: c.red,
     },
   });
 
@@ -132,8 +134,12 @@ const ProfileScreen: React.FC = () => {
   const c = useAppColors();
   /* Cùng nguồn với màn Thông tin QrCode: danh thiếp nạp một lần lúc đăng nhập,
      mở màn không gọi lại API. */
-  const { info: user, isLoading, errorMessage: loadErrorMessage } =
-    useNhanVienInfo();
+  const {
+    info: user,
+    isLoading,
+    errorMessage: loadErrorMessage,
+    reload,
+  } = useNhanVienInfo();
 
   if (isLoading) {
     return <ProfileScreenSkeleton />;
@@ -155,6 +161,9 @@ const ProfileScreen: React.FC = () => {
             loadErrorMessage ||
             "Không thể tải dữ liệu hồ sơ của tài khoản hiện tại."
           }
+          // Không có nút thì người dùng chỉ còn cách thoát ra vào lại màn.
+          actionLabel="Thử lại"
+          onActionPress={reload}
         />
       </View>
     );

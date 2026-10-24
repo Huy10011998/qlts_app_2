@@ -1,11 +1,8 @@
 import { useCallback, useEffect, useRef } from "react";
-import {
-  Alert,
-  AlertButton,
-  AlertOptions,
-} from "react-native";
+import { AlertButton, AlertOptions } from "react-native";
 import { useIsFocused } from "@react-navigation/native";
 import { useAuth } from "../context/AuthContext";
+import { AppAlert } from "../components/ui/AppAlert";
 
 export const useSafeAlert = () => {
   const isFocused = useIsFocused();
@@ -52,7 +49,7 @@ export const useSafeAlert = () => {
       ) {
         return;
       }
-      Alert.alert(title, message, buttons, options);
+      AppAlert.alert(title, message, buttons, options);
     },
     [],
   );

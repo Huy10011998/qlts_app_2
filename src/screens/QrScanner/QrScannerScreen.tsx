@@ -1,5 +1,6 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Linking,
   StyleSheet,
   Text,
@@ -35,55 +36,22 @@ import { useAppDispatch } from "../../store/hooks";
 import type { RootState } from "../../store";
 import { useSelector } from "react-redux";
 import { getDetailsQr } from "../../services/data/callApi";
-import { getMatchedKey } from "../../utils/Helper";
 import { isNetworkRequestError } from "../../utils/helpers/api";
-
-const QR_BASE_URL_PREFIX = "https://os.cholimexfood.com.vn/taisan";
-const QR_BASE_URL_PREFIX_MM = "https://os.cholimexfood.com.vn/taisan/MayMoc";
-const QR_BASE_URL_PREFIX_TL =
-  "https://os.cholimexfood.com.vn/taisan/NoiDia_TuLanh";
-const QR_BASE_URL_PREFIX_REGEX = new RegExp(
-  `^${QR_BASE_URL_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=/|$)`,
-  "i",
-);
-
-const normalizeQrScanValue = (value: string) => {
-  const trimmedValue = value.trim();
-  const isExternalQrUrl = QR_BASE_URL_PREFIX_REGEX.test(trimmedValue);
-
-  return {
-    isExternalQrUrl,
-    scanPath: isExternalQrUrl
-      ? trimmedValue
-          .replace(QR_BASE_URL_PREFIX_MM, QR_BASE_URL_PREFIX_TL)
-          .replace(QR_BASE_URL_PREFIX_REGEX, "")
-      : trimmedValue,
-  };
-};
-
-const getDetailIdFromItemData = (itemData: any, fallbackId: string) => {
-  const detailItem = Array.isArray(itemData) ? itemData[0] : itemData;
-
-  if (detailItem && typeof detailItem === "object") {
-    const matchedIdKey = getMatchedKey(detailItem, "id");
-    const detailId = matchedIdKey ? detailItem[matchedIdKey] : undefined;
-
-    if (
-      detailId !== null &&
-      detailId !== undefined &&
-      String(detailId).trim()
-    ) {
-      return String(detailId);
-    }
-  }
-
-  return fallbackId;
-};
+import {
+  getDetailIdFromItemData,
+  getQrScanFailureAlert,
+  isEmptyQrItemData,
+  parseAssetQr,
+  type QrScanFailure,
+} from "./qrScanHelpers";
 
 export default function QrScannerScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
-  const { showAlertIfActive } = useSafeAlert();
+  const { isActive, isMounted, showAlertIfActive } = useSafeAlert();
+  /* Đang tra mã vừa quét (get-details + cấu hình class). Camera đã tắt lúc này
+     nên không có lớp phủ thì màn đứng hình như bị treo, nhất là khi mạng chậm. */
+  const [resolving, setResolving] = useState(false);
   // Only drive the camera controller (and request the camera permission) while
   // the scanner tab is actually focused. With the tab navigator preloading all
   // tabs (lazy: false), a hardcoded `enabled: true` would request camera
@@ -166,50 +134,37 @@ export default function QrScannerScreen() {
 
       ReactNativeHapticFeedback.trigger("impactLight");
 
-      const raw = codes[0]?.value ?? "";
-      const { isExternalQrUrl, scanPath } = normalizeQrScanValue(raw);
+      const showFailure = (failure: QrScanFailure) => {
+        const { title, message } = getQrScanFailureAlert(failure);
 
-      if (!scanPath) {
-        showAlertIfActive("Mã QR không hợp lệ", "", [
+        showAlertIfActive(title, message, [
           {
             text: "OK",
             onPress: resumeScanner,
           },
         ]);
+      };
+
+      const target = parseAssetQr(codes[0]?.value ?? "");
+
+      if (!target) {
+        showFailure("notAssetTag");
         return;
       }
 
-      const parts = scanPath.replace(/^\//, "").split("/").filter(Boolean);
+      const { nameClass, idOrQr, isExternalQrUrl } = target;
+
+      setResolving(true);
 
       try {
-        if (parts.length !== 2) {
-          showAlertIfActive("Mã QR không hợp lệ", "", [
-            {
-              text: "OK",
-              onPress: resumeScanner,
-            },
-          ]);
-          return;
-        }
-
-        const [nameClass, idOrQr] = parts;
         const detailRes = isExternalQrUrl
           ? await getDetailsQr(nameClass, "QR:" + idOrQr)
           : await getDetails(nameClass, idOrQr);
         const itemData = detailRes?.data;
 
-        if (
-          !itemData ||
-          (typeof itemData === "object" &&
-            !Array.isArray(itemData) &&
-            Object.keys(itemData).length === 0)
-        ) {
-          showAlertIfActive("Mã QR không hợp lệ", "", [
-            {
-              text: "OK",
-              onPress: resumeScanner,
-            },
-          ]);
+        // Mã đúng dạng tem nhưng không còn bản ghi nào ứng với nó.
+        if (isEmptyQrItemData(itemData)) {
+          showFailure("notFound");
           return;
         }
 
@@ -221,6 +176,9 @@ export default function QrScannerScreen() {
         const detailId = isExternalQrUrl
           ? getDetailIdFromItemData(itemData, idOrQr)
           : idOrQr;
+
+        // Người dùng đã bấm quay lại trong lúc chờ thì không mở chi tiết nữa.
+        if (!isActive()) return;
 
         // Quét mã mới là bỏ qua thông báo của lần lưu trước.
         dispatch(clearLastSavedNotice());
@@ -243,18 +201,11 @@ export default function QrScannerScreen() {
           error(e);
         }
 
-        showAlertIfActive(
-          isNetworkError ? "Lỗi kết nối" : "Mã QR không hợp lệ",
-          isNetworkError
-            ? "Không thể tải thông tin mã QR. Vui lòng kiểm tra kết nối mạng rồi thử lại."
-            : "",
-          [
-            {
-              text: "OK",
-              onPress: resumeScanner,
-            },
-          ],
-        );
+        /* Mã đã qua bước kiểm dạng tem ở trên, nên lỗi từ server (404 của
+           get-details, class không còn) nghĩa là không còn tài sản để mở. */
+        showFailure(isNetworkError ? "network" : "notFound");
+      } finally {
+        if (isMounted()) setResolving(false);
       }
     },
   });
@@ -308,6 +259,20 @@ export default function QrScannerScreen() {
       />
 
       <QrScannerViewportOverlay scanLineAnim={scanLineAnim} />
+
+      {/* Trước header: nút quay lại vẫn bấm được trong lúc chờ. */}
+      {resolving ? (
+        <View
+          style={styles.resolvingOverlay}
+          accessibilityRole="progressbar"
+          accessibilityLabel="Đang tải thông tin tài sản"
+        >
+          <View style={styles.resolvingCard}>
+            <ActivityIndicator size="small" color="#fff" />
+            <Text style={styles.resolvingText}>Đang tải thông tin…</Text>
+          </View>
+        </View>
+      ) : null}
 
       {/*
         Sau lớp mặt nạ: mặt nạ là absoluteFill đen 55%, đặt header trước thì cả
@@ -408,5 +373,25 @@ const styles = StyleSheet.create({
   headerRight: {
     width: 38,
     alignItems: "flex-end",
+  },
+  resolvingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.35)",
+  },
+  resolvingCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: "rgba(0,0,0,0.72)",
+  },
+  resolvingText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "600",
   },
 });

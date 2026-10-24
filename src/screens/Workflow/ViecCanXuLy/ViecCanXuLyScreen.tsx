@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 
-import RecordListSkeleton from "../../../components/list/RecordListSkeleton";
 import EmptyState from "../../../components/ui/EmptyState";
 import { usePermission } from "../../../hooks/usePermission";
 import { cvThongBao } from "../../../services/data/congViecApi";
 import type { WorkflowThongBao } from "../../../types/index";
 import { AppColors, useStyles } from "../../../utils/helpers/colors";
+import WorkflowListSkeleton from "../shared/components/WorkflowListSkeleton";
 import WorkflowTabBar from "../shared/components/WorkflowTabBar";
 import { useReloadOnWorkflowChange } from "../shared/useWorkflowVersion";
 import { getWorkflowErrorMessage } from "../shared/workflowErrors";
@@ -15,6 +15,9 @@ import ViecCanXuLyRow, { useOpenViec } from "./ViecCanXuLyRow";
 import { VIEC_LOAI } from "./viecCanXuLyRules";
 
 const ALL = "TatCa";
+
+/** Tab của khung chờ: chỉ "Tất cả" là chắc có — tab theo loại tuỳ dữ liệu. */
+const SKELETON_TABS = [{ key: ALL, label: "Tất cả" }];
 
 /**
  * Toàn bộ "Việc cần xử lý" (cv-thong-bao), mở từ nút cạnh chuông ở Trang chủ.
@@ -75,7 +78,16 @@ export default function ViecCanXuLyScreen() {
   );
 
   if (!loaded || (allowed && loading)) {
-    return <RecordListSkeleton rows={6} lines={3} trailing="chevron" />;
+    return (
+      <View style={styles.container}>
+        {/* Hàng tab thật để danh sách bắt đầu đúng chỗ (trước đây khung chờ phủ cả
+            màn, tab về sau đẩy danh sách xuống ~50pt); chặn chạm vì chưa có gì để lọc. */}
+        <View pointerEvents="none">
+          <WorkflowTabBar tabs={SKELETON_TABS} activeKey={ALL} onChange={() => undefined} />
+        </View>
+        <WorkflowListSkeleton kind="viec" />
+      </View>
+    );
   }
 
   if (!allowed) {

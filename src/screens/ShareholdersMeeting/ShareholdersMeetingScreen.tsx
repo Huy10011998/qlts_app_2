@@ -103,6 +103,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
     isRefreshingAttendance,
     isSearching,
     isVotingLoading,
+    loadMeetingData,
     loaded,
     meetingError,
     opinionSearchQuery,
@@ -153,6 +154,8 @@ const ShareholdersMeetingScreen: React.FC = () => {
           iconName="alert-circle-outline"
           title="Không tải được dữ liệu"
           subtitle={meetingError}
+          actionLabel="Thử lại"
+          onActionPress={() => loadMeetingData()}
         />
       </SafeAreaView>
     );
@@ -174,7 +177,7 @@ const ShareholdersMeetingScreen: React.FC = () => {
     <SafeAreaView style={styles.safe} edges={["left", "right"]}>
       <StatusBar
         barStyle={isDark ? "light-content" : "dark-content"}
-        backgroundColor={isDark ? "#09111B" : "#F0F2F8"}
+        backgroundColor={c.bg}
       />
 
       <View style={styles.heroCard}>

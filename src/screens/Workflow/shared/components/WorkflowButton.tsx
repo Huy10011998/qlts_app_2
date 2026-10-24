@@ -40,12 +40,19 @@ const VARIANT_COLORS: Record<WorkflowButtonVariant, (c: AppColors) => { bg: stri
   success: () => ({ bg: "#2e7d32", fg: "#FFFFFF", border: "#2e7d32" }),
   danger: () => ({ bg: "#c62828", fg: "#FFFFFF", border: "#c62828" }),
   muted: () => ({ bg: "#607d8b", fg: "#FFFFFF", border: "#607d8b" }),
-  warning: () => ({ bg: "#f9a825", fg: "#FFFFFF", border: "#f9a825" }),
+  // Chữ trắng trên vàng cam chỉ ~2:1, đọc không ra ngoài nắng — chữ nâu đậm.
+  warning: () => ({ bg: "#f9a825", fg: "#3e2723", border: "#f9a825" }),
   // Nền trắng + viền xám: nền xám nhạt cũ (surfaceAlt) gần trùng nền trang,
   // nút trông như chữ trơn.
   neutral: (c) => ({ bg: c.surface, fg: c.textSecondary, border: c.borderStrong }),
   outline: (c) => ({ bg: c.surface, fg: c.red, border: c.red }),
 };
+
+/** Màu nền / chữ của một biến thể — cho nút vẽ riêng mà cần trùng màu (nút vuốt thẻ phiếu). */
+export const getWorkflowButtonColors = (variant: WorkflowButtonVariant, c: AppColors) =>
+  VARIANT_COLORS[variant](c);
+
+const COMPACT_HIT_SLOP = { top: 7, bottom: 7 };
 
 /** Nút thao tác của view Workflow (footer sheet, thanh nút màn chi tiết). */
 export default function WorkflowButton({
@@ -69,6 +76,8 @@ export default function WorkflowButton({
       activeOpacity={0.8}
       onPress={onPress}
       disabled={inactive}
+      // Nút gọn chỉ cao 30: nới vùng bấm lên dưới cho đủ ~44 mà không đổi dáng.
+      hitSlop={compact ? COMPACT_HIT_SLOP : undefined}
       style={[
         styles.button,
         compact && styles.compact,

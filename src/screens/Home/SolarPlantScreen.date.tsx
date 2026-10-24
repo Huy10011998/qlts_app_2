@@ -1,37 +1,24 @@
+import { useSeparatorColor, useStyles } from "../../utils/helpers/colors";
+import React, { type ComponentProps, useState } from "react";
 import {
-  useAppColors,
-  useSeparatorColor,
-  useStyles,
-} from "../../utils/helpers/colors";
-import React, { type ComponentProps, useEffect, useState } from "react";
-import {
-  Alert,
-  Modal,
   Text,
   TouchableOpacity,
   useWindowDimensions,
   View,
 } from "react-native";
-import Ionicons from "react-native-vector-icons/Ionicons";
 
+import CalendarPanel, {
+  type CalendarPickLevel,
+} from "../../components/dataPicker/shared/CalendarPanel";
+import PickerSheetFrame from "../../components/dataPicker/shared/PickerSheetFrame";
 import {
-  addMonths,
   formatDateRangeLabel,
   formatDisplayDate,
-  getCalendarDates,
   getDateRangeForPeriod,
-  getYearGridStart,
-  getYearGridYears,
-  isDateInRange,
-  isFutureDate,
-  isFutureDateRange,
-  isFutureMonth,
-  isFutureYear,
   isSameDate,
   PERIOD_TAB_LABELS,
   PERIOD_TABS,
   startOfDay,
-  startOfMonth,
   type PeriodTab,
   type SolarDateRange,
 } from "./SolarPlantScreen.helpers";
@@ -42,6 +29,7 @@ import {
   DateChevron,
   DateSkipIcon,
 } from "./SolarPlantScreen.visuals";
+import { AppAlert } from "../../components/ui/AppAlert";
 
 type SolarTextProps = ComponentProps<typeof Text>;
 
@@ -200,6 +188,28 @@ type SolarDateRangePickerProps = {
   visible: boolean;
 };
 
+const PICKER_TITLES: Record<PeriodTab, string> = {
+  Day: "Chọn ngày",
+  Week: "Chọn tuần",
+  Month: "Chọn tháng",
+  Year: "Chọn năm",
+  Billing: "Chọn kỳ hoá đơn",
+};
+
+/** Kỳ theo tháng / năm thì bấm ô tháng / năm là chọn luôn. */
+const PICK_LEVELS: Record<PeriodTab, CalendarPickLevel> = {
+  Day: "day",
+  Week: "day",
+  Month: "month",
+  Year: "year",
+  Billing: "month",
+};
+
+/**
+ * Chọn kỳ xem số liệu, dùng chung lịch với mọi ô ngày trong app. Ngày / tháng /
+ * năm chưa tới bị khoá (chưa có số liệu); kỳ tuần là 7 ngày tính tới ngày chọn,
+ * tô thành một dải trên lịch.
+ */
 export const SolarDateRangePicker: React.FC<SolarDateRangePickerProps> = ({
   dateRange,
   onCancel,
@@ -207,28 +217,22 @@ export const SolarDateRangePicker: React.FC<SolarDateRangePickerProps> = ({
   period,
   visible,
 }) => {
-  const c = useAppColors();
-  const styles = useStyles(makeStyles);
-  const separatorColor = useSeparatorColor();
   const [tempRange, setTempRange] = useState<SolarDateRange>(dateRange);
-  const [visibleMonth, setVisibleMonth] = useState(
-    startOfMonth(dateRange.fromDate)
-  );
-  const [visibleYear, setVisibleYear] = useState(
-    dateRange.fromDate.getFullYear()
-  );
 
-  useEffect(() => {
+  // Mở lại thì bắt đầu từ kỳ đang xem; lịch dựng lại (key mới) để về đúng trang.
+  const [wasVisible, setWasVisible] = useState(visible);
+  const [session, setSession] = useState(0);
+  if (visible !== wasVisible) {
+    setWasVisible(visible);
     if (visible) {
       setTempRange(dateRange);
-      setVisibleMonth(startOfMonth(dateRange.fromDate));
-      setVisibleYear(dateRange.fromDate.getFullYear());
+      setSession((n) => n + 1);
     }
-  }, [dateRange, visible]);
+  }
 
   const handleConfirm = () => {
     if (startOfDay(tempRange.fromDate) > startOfDay(tempRange.toDate)) {
-      Alert.alert("Lỗi", "Từ ngày không được lớn hơn Đến ngày.");
+      AppAlert.alert("Lỗi", "Từ ngày không được lớn hơn Đến ngày.");
       return;
     }
 
@@ -238,31 +242,6 @@ export const SolarDateRangePicker: React.FC<SolarDateRangePickerProps> = ({
     });
   };
 
-  const handleSelectDate = (date: Date) => {
-    // Không có số liệu cho ngày chưa tới; chặn ngay ở lịch thay vì để API trả về
-    // khoảng trống.
-    if (isFutureDate(date)) return;
-
-    setTempRange(getDateRangeForPeriod(period, date));
-  };
-
-  const handleSelectMonth = (monthIndex: number) => {
-    if (isFutureMonth(visibleYear, monthIndex)) return;
-
-    setTempRange(
-      getDateRangeForPeriod(period, new Date(visibleYear, monthIndex, 1))
-    );
-  };
-
-  const handleSelectYear = (year: number) => {
-    if (isFutureYear(year)) return;
-
-    setTempRange(getDateRangeForPeriod(period, new Date(year, 0, 1)));
-  };
-
-  const monthLabel = `Tháng ${
-    visibleMonth.getMonth() + 1
-  }/${visibleMonth.getFullYear()}`;
   const selectedTitle =
     period === "Month" || period === "Billing"
       ? `Tháng ${
@@ -275,256 +254,28 @@ export const SolarDateRangePicker: React.FC<SolarDateRangePickerProps> = ({
       : `${formatDisplayDate(tempRange.fromDate)} - ${formatDisplayDate(
           tempRange.toDate
         )}`;
-  const calendarDates = getCalendarDates(visibleMonth);
-  const weekDays = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
-  const monthNames = [
-    "Th 1",
-    "Th 2",
-    "Th 3",
-    "Th 4",
-    "Th 5",
-    "Th 6",
-    "Th 7",
-    "Th 8",
-    "Th 9",
-    "Th 10",
-    "Th 11",
-    "Th 12",
-  ];
-  const yearGridYears = getYearGridYears(visibleYear);
-  const isMonthPicker = period === "Month" || period === "Billing";
-  const isYearPicker = period === "Year";
-  const canGoNextCalendarPage = isYearPicker
-    ? getYearGridStart(visibleYear) + 12 <= new Date().getFullYear()
-    : isMonthPicker
-    ? visibleYear < new Date().getFullYear()
-    : !isFutureDateRange({
-        fromDate: addMonths(visibleMonth, 1),
-        toDate: addMonths(visibleMonth, 1),
-      });
 
   return (
-    <Modal
-      transparent
-      statusBarTranslucent
+    <PickerSheetFrame
       visible={visible}
-      animationType="fade"
-      onRequestClose={onCancel}
+      title={PICKER_TITLES[period]}
+      headline={selectedTitle}
+      onCancel={onCancel}
+      onConfirm={handleConfirm}
     >
-      <View style={styles.calendarOverlay}>
-        <View style={styles.calendarDialog}>
-          <Text style={styles.calendarTitle}>Chọn ngày</Text>
-          <View
-            style={[
-              styles.calendarSelectedRow,
-              { borderBottomColor: separatorColor },
-            ]}
-          >
-            <Text style={styles.calendarSelectedText}>{selectedTitle}</Text>
-            <Ionicons name="pencil-outline" size={28} color={c.text} />
-          </View>
-
-          <View style={styles.calendarMonthRow}>
-            <Text style={styles.calendarMonthText}>
-              {isYearPicker
-                ? `${getYearGridStart(visibleYear)} - ${
-                    getYearGridStart(visibleYear) + 11
-                  }`
-                : isMonthPicker
-                ? String(visibleYear)
-                : monthLabel}
-            </Text>
-            <View style={styles.calendarMonthControls}>
-              <TouchableOpacity
-                style={styles.calendarMonthButton}
-                onPress={() => {
-                  if (isYearPicker) {
-                    setVisibleYear((current) => current - 12);
-                    return;
-                  }
-
-                  if (isMonthPicker) {
-                    setVisibleYear((current) => current - 1);
-                    return;
-                  }
-
-                  setVisibleMonth((current) => addMonths(current, -1));
-                }}
-              >
-                <Ionicons name="chevron-up" size={25} color={c.textMuted} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.calendarMonthButton,
-                  !canGoNextCalendarPage && styles.calendarMonthButtonDisabled,
-                ]}
-                disabled={!canGoNextCalendarPage}
-                onPress={() => {
-                  if (isYearPicker) {
-                    setVisibleYear((current) => current + 12);
-                    return;
-                  }
-
-                  if (isMonthPicker) {
-                    setVisibleYear((current) => current + 1);
-                    return;
-                  }
-
-                  setVisibleMonth((current) => addMonths(current, 1));
-                }}
-              >
-                <Ionicons name="chevron-down" size={25} color={c.textMuted} />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {isMonthPicker ? (
-            <View style={styles.calendarOptionGrid}>
-              {monthNames.map((monthName, monthIndex) => {
-                const isSelected =
-                  tempRange.fromDate.getFullYear() === visibleYear &&
-                  tempRange.fromDate.getMonth() === monthIndex;
-                const isDisabled = isFutureMonth(visibleYear, monthIndex);
-
-                return (
-                  <TouchableOpacity
-                    key={monthName}
-                    style={styles.calendarOptionCell}
-                    activeOpacity={0.75}
-                    disabled={isDisabled}
-                    onPress={() => handleSelectMonth(monthIndex)}
-                  >
-                    <View
-                      style={[
-                        styles.calendarOptionCircle,
-                        isSelected && styles.calendarOptionSelected,
-                        isDisabled && styles.calendarOptionDisabled,
-                      ]}
-                    >
-                      <FixedText
-                        style={[
-                          styles.calendarOptionText,
-                          isSelected && styles.calendarOptionSelectedText,
-                          isDisabled && styles.calendarOptionDisabledText,
-                        ]}
-                      >
-                        {monthName}
-                      </FixedText>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          ) : isYearPicker ? (
-            <View style={styles.calendarOptionGrid}>
-              {yearGridYears.map((year) => {
-                const isSelected = tempRange.fromDate.getFullYear() === year;
-                const isDisabled = isFutureYear(year);
-
-                return (
-                  <TouchableOpacity
-                    key={year}
-                    style={styles.calendarOptionCell}
-                    activeOpacity={0.75}
-                    disabled={isDisabled}
-                    onPress={() => handleSelectYear(year)}
-                  >
-                    <View
-                      style={[
-                        styles.calendarOptionCircle,
-                        isSelected && styles.calendarOptionSelected,
-                        isDisabled && styles.calendarOptionDisabled,
-                      ]}
-                    >
-                      <FixedText
-                        style={[
-                          styles.calendarOptionText,
-                          isSelected && styles.calendarOptionSelectedText,
-                          isDisabled && styles.calendarOptionDisabledText,
-                        ]}
-                      >
-                        {year}
-                      </FixedText>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          ) : (
-            <>
-              <View style={styles.calendarWeekRow}>
-                {weekDays.map((day, index) => (
-                  <FixedText
-                    key={`${day}-${index}`}
-                    style={styles.calendarWeekText}
-                  >
-                    {day}
-                  </FixedText>
-                ))}
-              </View>
-
-              <View style={styles.calendarGrid}>
-                {calendarDates.map((date) => {
-                  const isCurrentMonth =
-                    date.getMonth() === visibleMonth.getMonth();
-                  const isStart = isSameDate(date, tempRange.fromDate);
-                  const isEnd = isSameDate(date, tempRange.toDate);
-                  const isSelected = isStart || isEnd;
-                  const isInRange = isDateInRange(date, tempRange);
-                  const isDisabled = isFutureDate(date);
-
-                  return (
-                    <TouchableOpacity
-                      key={date.toISOString()}
-                      style={[
-                        styles.calendarDayCell,
-                        isInRange && styles.calendarDayInRange,
-                      ]}
-                      activeOpacity={0.75}
-                      disabled={isDisabled}
-                      onPress={() => handleSelectDate(date)}
-                    >
-                      <View
-                        style={[
-                          styles.calendarDayCircle,
-                          isSelected && styles.calendarDaySelected,
-                          isDisabled && styles.calendarDayDisabled,
-                        ]}
-                      >
-                        <FixedText
-                          style={[
-                            styles.calendarDayText,
-                            !isCurrentMonth && styles.calendarDayMuted,
-                            isSelected && styles.calendarDaySelectedText,
-                            isDisabled && styles.calendarDayDisabledText,
-                          ]}
-                        >
-                          {date.getDate()}
-                        </FixedText>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </>
-          )}
-
-          <View style={styles.calendarActionRow}>
-            <TouchableOpacity
-              onPress={onCancel}
-              style={styles.calendarActionBtn}
-            >
-              <Text style={styles.calendarActionText}>Huỷ</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleConfirm}
-              style={styles.calendarActionBtn}
-            >
-              <Text style={styles.calendarActionText}>Đồng ý</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
+      <CalendarPanel
+        key={session}
+        // Kỳ tuần neo ở ngày cuối (ngày người dùng bấm), các kỳ khác ở ngày đầu.
+        value={period === "Week" ? tempRange.toDate : tempRange.fromDate}
+        onChange={(date) => setTempRange(getDateRangeForPeriod(period, date))}
+        pickLevel={PICK_LEVELS[period]}
+        range={
+          period === "Week"
+            ? { from: tempRange.fromDate, to: tempRange.toDate }
+            : null
+        }
+        maxDate={startOfDay(new Date())}
+      />
+    </PickerSheetFrame>
   );
 };

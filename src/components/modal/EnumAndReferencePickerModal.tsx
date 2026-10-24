@@ -34,6 +34,13 @@ type ExtraProps = {
   errorMessage?: string | null;
   isSearching?: boolean;
   loadingMore?: boolean;
+  /**
+   * Trang đầu đang về mà chưa có gì đáng tin để hiện: thân danh sách là khung
+   * chờ thay vì "Không tìm thấy dữ liệu". Có lỗi thì lỗi thắng.
+   */
+  loading?: boolean;
+  /** Có thì trạng thái lỗi kèm nút "Thử lại". */
+  onRetry?: () => void;
   total?: number;
   loadedCount?: number;
   /**
@@ -83,6 +90,8 @@ export default function EnumAndReferencePickerModal({
   errorMessage,
   isSearching,
   loadingMore,
+  loading,
+  onRetry,
   total = 0,
   loadedCount,
   onQuickAdd,
@@ -144,11 +153,13 @@ export default function EnumAndReferencePickerModal({
   const hasRealItems = orderedItems.some((item) => item.value !== "");
   const isSearchEmpty =
     searchText.trim().length > 0 && total === 0 && !isSearching;
-  const isEmpty = Boolean(errorMessage) || isSearchEmpty || !hasRealItems;
+  const isFirstLoading = Boolean(loading) && !errorMessage;
+  const isEmpty =
+    isFirstLoading || Boolean(errorMessage) || isSearchEmpty || !hasRealItems;
   const listItems = isEmpty ? [] : orderedItems;
   const listAnimationKey = `${listItems.length}-${total}-${Boolean(
     errorMessage,
-  )}`;
+  )}-${isFirstLoading}`;
   const hasSearchText = searchText.trim().length > 0;
   const showSearchSpinner = Boolean(isSearching && hasSearchText);
 
@@ -369,20 +380,36 @@ export default function EnumAndReferencePickerModal({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         removeClippedSubviews={Platform.OS === "android"}
-        onEndReached={onLoadMore}
+        /* Danh sách rỗng FlatList vẫn gọi onEndReached; đang chờ trang đầu mà
+           nạp trang kế thì trang kế đè mất trang đầu. */
+        onEndReached={isFirstLoading ? undefined : onLoadMore}
         onEndReachedThreshold={0.4}
         ListFooterComponent={
-          loadingMore ? <PickerRowsSkeleton borderColor={separatorColor} /> : null
+          loadingMore && !isFirstLoading ? (
+            <PickerRowsSkeleton borderColor={separatorColor} />
+          ) : null
         }
         ListHeaderComponent={null}
         ListEmptyComponent={
-          <EmptyState
-            iconName={errorMessage ? "cloud-offline-outline" : "search-outline"}
-            title={
-              errorMessage ? "Không thể tải dữ liệu" : "Không tìm thấy dữ liệu"
-            }
-            subtitle={errorMessage || "Thử tìm kiếm với từ khóa khác"}
-          />
+          isFirstLoading ? (
+            <PickerRowsSkeleton
+              borderColor={separatorColor}
+              widths={FIRST_LOAD_ROW_WIDTHS}
+              accessibilityLabel="Đang tải dữ liệu"
+            />
+          ) : (
+            <EmptyState
+              iconName={
+                errorMessage ? "cloud-offline-outline" : "search-outline"
+              }
+              title={
+                errorMessage ? "Không thể tải dữ liệu" : "Không tìm thấy dữ liệu"
+              }
+              subtitle={errorMessage || "Thử tìm kiếm với từ khóa khác"}
+              actionLabel={errorMessage && onRetry ? "Thử lại" : undefined}
+              onActionPress={onRetry}
+            />
+          )
         }
         stickyHeaderIndices={[]}
       />
@@ -391,17 +418,29 @@ export default function EnumAndReferencePickerModal({
 }
 
 
+/** Đủ dòng để lấp phần trên của sheet lúc chờ trang đầu, dài ngắn xen kẽ. */
+const FIRST_LOAD_ROW_WIDTHS = ["68%", "46%", "58%", "40%", "64%", "52%"];
+
 /**
- * Khung chờ ở đáy danh sách lúc nạp trang kế: vài dòng lựa chọn xám, cùng lề và
- * gạch ngăn với dòng thật (`modalItem`), thay vòng xoay nhỏ.
+ * Khung chờ dạng vài dòng lựa chọn xám, cùng lề và gạch ngăn với dòng thật
+ * (`modalItem`), thay vòng xoay nhỏ. Mặc định là hai dòng ở đáy danh sách lúc
+ * nạp trang kế; lúc chờ trang đầu thì thế chỗ cả danh sách.
  */
-function PickerRowsSkeleton({ borderColor }: { borderColor: string }) {
+function PickerRowsSkeleton({
+  borderColor,
+  widths = ["62%", "44%"],
+  accessibilityLabel = "Đang tải thêm",
+}: {
+  borderColor: string;
+  widths?: string[];
+  accessibilityLabel?: string;
+}) {
   const styles = useStyles(makeStyles);
   const opacity = useSkeletonPulse();
 
   return (
-    <View accessibilityLabel="Đang tải thêm">
-      {["62%", "44%"].map((width) => (
+    <View accessibilityLabel={accessibilityLabel}>
+      {widths.map((width) => (
         <View key={width} style={[styles.modalItem, { borderColor }]}>
           <SkeletonBlock
             opacity={opacity}

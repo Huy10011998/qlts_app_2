@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import { flowDuyetHoSo } from "../../../../services/data/flowApi";
 import { getThaoTacError } from "../../../../services/data/workflowApi";
 import { AppColors, useStyles } from "../../../../utils/helpers/colors";
 import { scaledLineHeight } from "../../../../utils/helpers/textScaling";
 import WorkflowButton from "../../shared/components/WorkflowButton";
-import WorkflowSheet from "../../shared/components/WorkflowSheet";
+import WorkflowSheet, { confirmCloseSheet } from "../../shared/components/WorkflowSheet";
 import WorkflowTextArea from "../../shared/components/WorkflowTextArea";
 import { FLOW_KET_QUA, FLOW_TRA_BUOC_COLOR, tint } from "../../shared/workflowConstants";
 import { getWorkflowErrorMessage } from "../../shared/workflowErrors";
+import { AppAlert } from "../../../../components/ui/AppAlert";
 
 type Props = {
   visible: boolean;
@@ -20,8 +21,11 @@ type Props = {
   buocHienTai?: string | null;
   traVe?: string | null;
   onClose: () => void;
-  /** Đã gửi xong, hoặc server báo không làm được — màn gọi nạp lại (mục 8e). */
-  onDone: () => void;
+  /**
+   * Màn gọi nạp lại. `sent` = true: đã trả bước; false: server báo không làm được
+   * (người khác vừa xử lý trước / phiếu đã kết thúc — mục 8e).
+   */
+  onDone: (sent: boolean) => void;
 };
 
 /**
@@ -66,16 +70,19 @@ export default function FlowTraBuocSheet({
       const loi = getThaoTacError(result);
       if (loi) {
         // Người khác vừa xử lý trước / phiếu đã kết thúc: báo rồi nạp lại để nút tự ẩn.
-        Alert.alert("Không trả bước được", loi, [{ text: "OK", onPress: onDone }]);
+        AppAlert.alert("Không trả bước được", loi, [{ text: "OK", onPress: () => onDone(false) }]);
         return;
       }
-      onDone();
+      onDone(true);
     } catch (err) {
-      Alert.alert("Không trả bước được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
+      AppAlert.alert("Không trả bước được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
     } finally {
       setSubmitting(false);
     }
   };
+
+  // Lý do đã gõ mà chạm nhầm ra nền tối là mất — sheet hỏi trước khi đóng.
+  const dirty = !!lyDo.trim();
 
   return (
     <WorkflowSheet
@@ -84,9 +91,15 @@ export default function FlowTraBuocSheet({
       onClose={onClose}
       loading={submitting}
       loadingText="Đang gửi..."
+      dirty={dirty}
       footer={
         <>
-          <WorkflowButton label="Đóng" variant="neutral" flex onPress={onClose} />
+          <WorkflowButton
+            label="Đóng"
+            variant="neutral"
+            flex
+            onPress={() => confirmCloseSheet(dirty, onClose)}
+          />
           <WorkflowButton label="Trả bước" variant="warning" icon="arrow-undo-outline" flex onPress={send} />
         </>
       }

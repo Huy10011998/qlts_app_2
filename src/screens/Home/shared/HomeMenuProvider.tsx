@@ -67,6 +67,8 @@ type HomeMenuContextValue = {
    * rồi mới nhảy ra đúng danh sách của user.
    */
   isPinnedFeatureIdsLoading: boolean;
+  /** Thứ tự khối đọc từ máy xong chưa — cùng lý do với `isPinnedFeatureIdsLoading`. */
+  isBlockOrderLoading: boolean;
   moveBlock: (args: {
     visibleKeys: HomeBlockKey[];
     fromIndex: number;
@@ -120,7 +122,11 @@ export function HomeMenuProvider({ children }: React.PropsWithChildren) {
   const [isPinnedFeatureIdsLoading, setIsPinnedFeatureIdsLoading] =
     useState(true);
   const fetchingRef = useRef(false);
-  const { blockOrder, moveBlock } = useHomeBlockOrder();
+  const {
+    blockOrder,
+    moveBlock,
+    isLoading: isBlockOrderLoading,
+  } = useHomeBlockOrder();
   const { count: workflowTileCount, reload: reloadWorkflowTileCount } =
     useWorkflowTileCount();
   // Nút mở bảng sắp xếp nằm trên header (do navigator dựng), còn bảng thì nằm
@@ -308,6 +314,7 @@ export function HomeMenuProvider({ children }: React.PropsWithChildren) {
       hasLoadedMenuOnce,
       isMenuLoading,
       isPinnedFeatureIdsLoading,
+      isBlockOrderLoading,
       moveBlock,
       openBlockOrderSheet,
       pinnedFeatureIds,
@@ -330,6 +337,7 @@ export function HomeMenuProvider({ children }: React.PropsWithChildren) {
       hasLoadedMenuOnce,
       isMenuLoading,
       isPinnedFeatureIdsLoading,
+      isBlockOrderLoading,
       moveBlock,
       openBlockOrderSheet,
       pinnedFeatureIds,

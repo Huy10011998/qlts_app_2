@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 
 import AssetFormScreenShell from "../../../components/assets/shared/AssetFormScreenShell";
 import { createAssetFormBaseStyles } from "../../../components/assets/shared/assetFormStyles";
+import { showAppToast } from "../../../components/ui/AppToast";
 import EmptyState from "../../../components/ui/EmptyState";
+import { useUnsavedChangesGuard } from "../../../hooks/useUnsavedChangesGuard";
 import {
   flowChonNguoi,
   flowCheckValidation,
@@ -31,6 +33,7 @@ import {
 } from "../shared/components/WorkflowFormFields";
 import WorkflowFormSkeleton from "../shared/components/WorkflowFormSkeleton";
 import WorkflowSection from "../shared/components/WorkflowSection";
+import { useFormDirty } from "../shared/useFormDirty";
 import { useWorkflowDynamicForm } from "../shared/useWorkflowDynamicForm";
 import { useWorkflowMe } from "../shared/useWorkflowMe";
 import { useMarkWorkflowChanged } from "../shared/useWorkflowVersion";
@@ -51,6 +54,7 @@ import {
   stripDisplayColumns,
 } from "./flowRules";
 import { useFlowMeta } from "./useFlowMeta";
+import { AppAlert } from "../../../components/ui/AppAlert";
 
 const TITLES = {
   add: "Lập phiếu",
@@ -121,6 +125,18 @@ export default function FlowFormScreen() {
     isEdit ? "edit" : mode === "clone" ? "clone" : "add",
   );
 
+  // Người duyệt đã chọn có thay đổi chưa lưu chưa; phần động do `form` tự theo
+  // dõi, file chờ tải lên tính riêng.
+  const {
+    isDirty: chonsDirty,
+    markTouched: markChonsTouched,
+    markSaved: markChonsSaved,
+  } = useFormDirty(JSON.stringify(chons));
+  const ready = !metaError && !metaLoading && !meLoading && !phongBanLoading && !!meta;
+  const { leaveWithoutPrompt } = useUnsavedChangesGuard(
+    ready && (form.isDirty || chonsDirty || files.length > 0),
+  );
+
   const loaiFieldName =
     findWorkflowField(formFields, FLOW_FIELD.ID_LoaiFlow)?.name ?? FLOW_FIELD.ID_LoaiFlow;
   const idLoaiFlow = Number(form.formData[loaiFieldName]) || 0;
@@ -179,12 +195,12 @@ export default function FlowFormScreen() {
   const save = async (submit: boolean) => {
     const requiredMessage = form.validateRequired();
     if (requiredMessage) {
-      Alert.alert("Thiếu thông tin", requiredMessage);
+      AppAlert.alert("Thiếu thông tin", requiredMessage);
       return;
     }
     if (submit && chonNguoi?.buocs.length && getMissingSteps(chonNguoi, chons).length) {
       setShowStepErrors(true);
-      Alert.alert("Thiếu người duyệt", "Mỗi bước phải chọn ít nhất 1 người duyệt.");
+      AppAlert.alert("Thiếu người duyệt", "Mỗi bước phải chọn ít nhất 1 người duyệt.");
       return;
     }
 
@@ -202,7 +218,7 @@ export default function FlowFormScreen() {
         });
         form.setValidationErrors((prev) => ({ ...prev, ...fieldErrors }));
         form.expandGroupsWithErrors(fieldErrors);
-        Alert.alert(
+        AppAlert.alert(
           "Dữ liệu chưa hợp lệ",
           errors.map((err) => err.message).filter(Boolean).join("\n") || "Vui lòng kiểm tra lại.",
         );
@@ -226,6 +242,10 @@ export default function FlowFormScreen() {
       if (chonNguoi?.buocs.length && chons.length) {
         await flowLuuChonNguoi(nameClass, idHoSo, chons);
       }
+      // Nháp trên server đã khớp form: từ đây chỉ file chưa tải lên được mới
+      // tính là "chưa lưu" khi rời màn.
+      form.markSaved();
+      markChonsSaved();
 
       // f) Đính kèm — file nào lên rồi thì bỏ khỏi danh sách chờ.
       const failed: string[] = [];
@@ -238,7 +258,7 @@ export default function FlowFormScreen() {
         }
       }
       if (failed.length) {
-        Alert.alert(
+        AppAlert.alert(
           "Đã lưu nháp",
           `Một số file chưa tải lên được, phiếu vẫn là nháp:\n${failed.join("\n")}`,
         );
@@ -250,17 +270,16 @@ export default function FlowFormScreen() {
         const result = await flowNopHoSo(nameClass, idHoSo);
         const loi = getThaoTacError(result);
         if (loi) {
-          Alert.alert("Chưa nộp được", `Phiếu đã lưu nháp.\n${loi}`);
+          AppAlert.alert("Chưa nộp được", `Phiếu đã lưu nháp.\n${loi}`);
           return;
         }
         markChanged();
       }
 
-      Alert.alert(submit ? "Đã nộp phiếu" : "Đã lưu nháp", undefined, [
-        { text: "OK", onPress: () => navigation.goBack() },
-      ]);
+      showAppToast({ message: submit ? "Đã nộp phiếu" : "Đã lưu nháp" });
+      leaveWithoutPrompt(() => navigation.goBack());
     } catch (err) {
-      Alert.alert(
+      AppAlert.alert(
         "Không lưu được",
         getWorkflowErrorMessage(err, "Vui lòng thử lại.") +
           (savedId > 0 ? "\nPhiếu vẫn là nháp, lưu lại lần sau là cập nhật." : ""),
@@ -274,7 +293,9 @@ export default function FlowFormScreen() {
     return <EmptyState iconName="alert-circle-outline" title="Không mở được form" subtitle={metaError} />;
   }
 
-  if (metaLoading || meLoading || phongBanLoading || !meta) return <WorkflowFormSkeleton />;
+  if (metaLoading || meLoading || phongBanLoading || !meta) {
+    return <WorkflowFormSkeleton flowName footerButtons={["neutral", "primary"]} />;
+  }
 
   if (!me.iD_NhanVien) {
     return (
@@ -348,7 +369,10 @@ export default function FlowFormScreen() {
           <ApproverStepPicker
             data={chonNguoi}
             value={chons}
-            onChange={setChons}
+            onChange={(next) => {
+              markChonsTouched();
+              setChons(next);
+            }}
             showErrors={showStepErrors}
           />
         </WorkflowSection>

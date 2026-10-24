@@ -1,9 +1,10 @@
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleProp, StyleSheet, Text, View, ViewStyle } from "react-native";
 import {
   useAppColors,
   useHairlineBorderColor,
 } from "../../../utils/helpers/colors";
+import { getHomeCardChrome } from "../../Home/shared/homeBlockTone";
 
 type SettingSectionGroupProps = {
   title?: string;
@@ -12,19 +13,35 @@ type SettingSectionGroupProps = {
    * là nền xám nên khoảng trắng trên nhãn bị cộng dồn, nhìn hở hơn các nhóm sau.
    */
   tightTop?: boolean;
+  style?: StyleProp<ViewStyle>;
+  /**
+   * Màu viền card + mép trên 3pt, cùng kiểu card Trang chủ (`getHomeCardChrome`).
+   * Không truyền thì card chỉ có viền mảnh trung tính.
+   */
+  accent?: string;
   children: React.ReactNode;
 };
+
+/**
+ * `accent` của nhóm đang bọc dòng, để vạch ngăn các dòng (`SettingRowItem`) cùng
+ * màu viền card. Ngoài nhóm có `accent` thì null — dòng giữ vạch xám mảnh.
+ */
+export const SettingSectionAccentContext = React.createContext<string | null>(
+  null,
+);
 
 export default function SettingSectionGroup({
   title,
   tightTop,
+  style,
+  accent,
   children,
 }: SettingSectionGroupProps) {
   const colors = useAppColors();
   const hairlineBorderColor = useHairlineBorderColor();
 
   return (
-    <View style={[styles.group, tightTop && styles.groupTightTop]}>
+    <View style={[styles.group, tightTop && styles.groupTightTop, style]}>
       {title ? (
         <View style={styles.titleRow}>
           <View
@@ -39,14 +56,22 @@ export default function SettingSectionGroup({
       <View
         style={[
           styles.card,
-          {
-            backgroundColor: colors.surface,
-            borderColor: hairlineBorderColor,
-            shadowColor: colors.shadow,
-          },
+          { backgroundColor: colors.surface },
+          accent
+            ? getHomeCardChrome({
+                borderColor: accent,
+                shadowColor: colors.shadow,
+                accent,
+              })
+            : {
+                borderColor: hairlineBorderColor,
+                shadowColor: colors.shadow,
+              },
         ]}
       >
-        {children}
+        <SettingSectionAccentContext.Provider value={accent ?? null}>
+          {children}
+        </SettingSectionAccentContext.Provider>
       </View>
     </View>
   );

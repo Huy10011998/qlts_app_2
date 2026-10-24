@@ -62,3 +62,68 @@ describe("useWorkflowPagedList", () => {
     expect(getHook().refreshing).toBe(false);
   });
 });
+
+// Cuộn tới cuối mà nạp thêm hỏng: trước đây lỗi chỉ hiện khi danh sách rỗng,
+// danh sách dừng im như đã hết dữ liệu. Chân danh sách cần biết lỗi là của lượt
+// nạp thêm để "Thử lại" gọi đúng trang kế.
+describe("useWorkflowPagedList - nạp thêm hỏng", () => {
+  it("giữ dòng cũ, đánh dấu loadMoreFailed, retry nạp lại đúng trang kế", async () => {
+    const fetchPage = jest.fn(async (skip: number) => ({
+      items: skip ? [4, 5, 6] : [1, 2, 3],
+      totalCount: 6,
+    }));
+    let hook!: Hook;
+    const Probe = () => {
+      hook = useWorkflowPagedList<number>(fetchPage, { queryKey: "k" });
+      return null;
+    };
+    await ReactTestRenderer.act(async () => {
+      ReactTestRenderer.create(<Probe />);
+    });
+
+    fetchPage.mockImplementationOnce(async () => {
+      throw new Error("Mất mạng");
+    });
+    await ReactTestRenderer.act(async () => {
+      hook.loadMore();
+    });
+    expect(hook.items).toEqual([1, 2, 3]);
+    expect(hook.errorMessage).toBeTruthy();
+    expect(hook.loadMoreFailed).toBe(true);
+
+    await ReactTestRenderer.act(async () => {
+      hook.retry();
+    });
+    expect(fetchPage).toHaveBeenLastCalledWith(3, 20);
+    expect(hook.items).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(hook.errorMessage).toBeNull();
+    expect(hook.loadMoreFailed).toBe(false);
+  });
+
+  it("nạp lại im lặng hỏng thì retry là nạp lại, không phải nạp thêm", async () => {
+    const fetchPage = jest.fn(async () => ({ items: [1, 2, 3], totalCount: 3 }));
+    let hook!: Hook;
+    const Probe = () => {
+      hook = useWorkflowPagedList<number>(fetchPage, { queryKey: "k" });
+      return null;
+    };
+    await ReactTestRenderer.act(async () => {
+      ReactTestRenderer.create(<Probe />);
+    });
+
+    fetchPage.mockImplementationOnce(async () => {
+      throw new Error("Mất mạng");
+    });
+    await ReactTestRenderer.act(async () => {
+      await hook.reload();
+    });
+    expect(hook.errorMessage).toBeTruthy();
+    expect(hook.loadMoreFailed).toBe(false);
+
+    await ReactTestRenderer.act(async () => {
+      await hook.retry();
+    });
+    expect(fetchPage).toHaveBeenLastCalledWith(0, 20);
+    expect(hook.errorMessage).toBeNull();
+  });
+});

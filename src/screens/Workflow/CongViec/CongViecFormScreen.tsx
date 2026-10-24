@@ -1,10 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Alert, StyleSheet, Switch, Text, View } from "react-native";
+import { StyleSheet, Switch, Text, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import type { NativeStackNavigationOptions } from "@react-navigation/native-stack";
 
 import AssetFormScreenShell from "../../../components/assets/shared/AssetFormScreenShell";
 import { createAssetFormBaseStyles } from "../../../components/assets/shared/assetFormStyles";
+import { showAppToast } from "../../../components/ui/AppToast";
 import EmptyState from "../../../components/ui/EmptyState";
+import { useUnsavedChangesGuard } from "../../../hooks/useUnsavedChangesGuard";
 import { cvChiTiet, cvNhanVien, cvSua, cvThem } from "../../../services/data/congViecApi";
 import { flowTaoCongViec } from "../../../services/data/flowApi";
 import {
@@ -31,6 +34,7 @@ import {
 } from "../shared/components/WorkflowFormFields";
 import WorkflowFormSkeleton from "../shared/components/WorkflowFormSkeleton";
 import WorkflowSection from "../shared/components/WorkflowSection";
+import { useFormDirty } from "../shared/useFormDirty";
 import { useWorkflowDynamicForm } from "../shared/useWorkflowDynamicForm";
 import { useWorkflowMe } from "../shared/useWorkflowMe";
 import { useMarkWorkflowChanged } from "../shared/useWorkflowVersion";
@@ -45,6 +49,7 @@ import {
   WorkflowField,
 } from "../shared/workflowFields";
 import { loadClassFields } from "../shared/workflowMetadata";
+import { formatWeekday } from "../Lich/lichHelpers";
 import DinhKyEditor, {
   createDinhKyState,
   DinhKyState,
@@ -56,10 +61,12 @@ import ThamGiaEditor from "./components/ThamGiaEditor";
 import {
   CV_DYNAMIC_SAVE_KEYS,
   CV_FORM_CUSTOM_FIELDS,
+  shiftDenNgay,
   validateDinhKy,
   validateThamGias,
   validateTuDen,
 } from "./congViecRules";
+import { AppAlert } from "../../../components/ui/AppAlert";
 
 /** "yyyy-MM-dd" (ngày bấm trên lịch) → Date lúc 00:00. */
 const parseNgay = (ngay?: string) => {
@@ -121,6 +128,18 @@ export default function CongViecFormScreen() {
     });
   }, [cloneId, fromFlow, isEdit, navigation]);
 
+  // Mở từ Lịch (bấm + của một ngày): ghi ngày đang tạo lên badge của header để
+  // người dùng biết đang thêm việc cho ngày nào. Theo Từ ngày hiện tại của form
+  // chứ không theo ngày đã bấm — đổi ngày trong form thì header đổi theo.
+  const isFromLich = !isEdit && !fromFlow && !cloneId && !!params.ngay;
+  const headerDayLabel = isFromLich && tuNgay ? formatWeekday(tuNgay) : undefined;
+  useEffect(() => {
+    navigation.setOptions({
+      headerBadgeLabel: headerDayLabel,
+      headerBadgeIcon: headerDayLabel ? "calendar-outline" : undefined,
+    } as Partial<NativeStackNavigationOptions>);
+  }, [headerDayLabel, navigation]);
+
   useEffect(() => {
     let alive = true;
 
@@ -153,7 +172,7 @@ export default function CongViecFormScreen() {
       .catch((err) => {
         if (!alive) return;
         if (isWorkflowNotFound(err)) {
-          Alert.alert("Thông báo", "Không tìm thấy công việc.", [
+          AppAlert.alert("Thông báo", "Không tìm thấy công việc.", [
             { text: "OK", onPress: () => navigation.goBack() },
           ]);
           return;
@@ -237,6 +256,18 @@ export default function CongViecFormScreen() {
 
   const form = useWorkflowDynamicForm(formFields, initialData, isEdit ? "edit" : "add");
 
+  // Phần vẽ riêng (ngày, người tham gia, định kỳ) có thay đổi chưa lưu chưa; phần
+  // động do `form` tự theo dõi, file chờ tải lên tính riêng.
+  const { isDirty: extrasDirty, markTouched } = useFormDirty(
+    JSON.stringify([
+      tuNgay?.getTime() ?? null,
+      denNgay?.getTime() ?? null,
+      isKhongChuyenChuTri,
+      thamGias,
+      dinhKy,
+    ]),
+  );
+
   const fallbackNames = useMemo(() => {
     const names: Record<number, string> = {};
     detail?.thamGias.forEach((item) => {
@@ -247,6 +278,26 @@ export default function CongViecFormScreen() {
 
   const canEditKhongChuyen = !isEdit || !!detail?.quyen.isNguoiTao;
   const showDinhKy = !isEdit && !fromFlow;
+
+  // Chỉ hỏi khi form đã hiện (sửa: bản ghi đã nạp xong) — đang khung chờ hay lỗi
+  // tải thì chưa có gì để mất. Mở từ lượt duyệt phiếu ("Tạo công việc") thì luôn
+  // hỏi: rời form là bỏ luôn lượt duyệt, phiếu vẫn nằm chờ.
+  const formReady = !loadError && !!fields && !meLoading && (!sourceId || !!detail);
+  const { leaveWithoutPrompt } = useUnsavedChangesGuard(
+    formReady && (!!fromFlow || form.isDirty || extrasDirty || files.length > 0),
+    {
+      message: fromFlow
+        ? "Phiếu chưa được duyệt. Rời màn này là bỏ lượt duyệt vừa chọn, nội dung công việc vừa nhập cũng mất."
+        : undefined,
+    },
+  );
+
+  /** Đổi Từ ngày: Đến ngày rơi về trước thì dời theo, giữ thời lượng việc. */
+  const changeTuNgay = (next: Date | null) => {
+    markTouched();
+    setDenNgay((prev) => shiftDenNgay(tuNgay, next, prev));
+    setTuNgay(next);
+  };
 
   const buildPayload = (): CongViecSavePayload => {
     const dyn = buildDynamicPayload(formFields, form.formData);
@@ -305,7 +356,7 @@ export default function CongViecFormScreen() {
     const payload = buildPayload();
     const message = validate(payload);
     if (message) {
-      Alert.alert("Thiếu thông tin", message);
+      AppAlert.alert("Thiếu thông tin", message);
       return;
     }
 
@@ -325,7 +376,7 @@ export default function CongViecFormScreen() {
         // Giao việc từ phiếu bị từ chối (vd người khác vừa xử lý phiếu — mục 8e
         // phiếu): nạp lại phiếu / danh sách khi quay về để nút Duyệt tự ẩn.
         if (fromFlow) markChanged();
-        Alert.alert("Không lưu được", result.loi || "Vui lòng thử lại.");
+        AppAlert.alert("Không lưu được", result.loi || "Vui lòng thử lại.");
         return;
       }
 
@@ -339,13 +390,25 @@ export default function CongViecFormScreen() {
         : result.soLuong > 1
         ? `Đã tạo ${result.soLuong} công việc`
         : "Đã tạo công việc";
-      const body = failed.length
-        ? `Một số file chưa tải lên được:\n${failed.join("\n")}`
-        : undefined;
+      // Đã lưu: rời form không hỏi "Bỏ thay đổi?" nữa.
+      const leave = () => leaveWithoutPrompt(() => navigation.goBack());
 
-      Alert.alert(title, body, [{ text: "OK", onPress: () => navigation.goBack() }]);
+      // File hỏng vẫn phải báo bằng Alert để người dùng đọc được tên file.
+      if (failed.length) {
+        AppAlert.alert(title, `Một số file chưa tải lên được:\n${failed.join("\n")}`, [
+          { text: "OK", onPress: leave },
+        ]);
+        return;
+      }
+
+      const soPhieu = fromFlow ? fromFlow.prefill?.soPhieu ?? fromFlow.soPhieu : null;
+      showAppToast({
+        message: title,
+        detail: fromFlow ? (soPhieu ? `Đã duyệt phiếu ${soPhieu}` : "Đã duyệt phiếu") : undefined,
+      });
+      leave();
     } catch (err) {
-      Alert.alert("Không lưu được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
+      AppAlert.alert("Không lưu được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
     } finally {
       setSubmitting(false);
     }
@@ -355,7 +418,25 @@ export default function CongViecFormScreen() {
     return <EmptyState iconName="alert-circle-outline" title="Không mở được form" subtitle={loadError} />;
   }
 
-  if (!fields || meLoading || (sourceId && !detail)) return <WorkflowFormSkeleton />;
+  // Khung "Giao công việc từ phiếu" chỉ cần route param — vẽ thật cả lúc chờ,
+  // khỏi một khối ~120pt bật vào đẩy cả form xuống khi dữ liệu về.
+  const fromFlowIntro = fromFlow ? (
+    <>
+      <Text style={styles.flowBanner}>
+        {(fromFlow.prefill?.soPhieu ?? fromFlow.soPhieu)
+          ? `Giao công việc từ phiếu ${fromFlow.prefill?.soPhieu ?? fromFlow.soPhieu}`
+          : "Giao công việc từ phiếu đề nghị"}
+      </Text>
+      <Text style={styles.notice}>
+        Lưu công việc này là DUYỆT phiếu và giao việc. Đóng form không lưu thì phiếu chưa được
+        duyệt.
+      </Text>
+    </>
+  ) : null;
+
+  if (!fields || meLoading || (sourceId && !detail)) {
+    return <WorkflowFormSkeleton header={fromFlowIntro} />;
+  }
 
   return (
     <AssetFormScreenShell
@@ -374,29 +455,21 @@ export default function CongViecFormScreen() {
         />
       }
     >
-      {fromFlow ? (
-        <Text style={styles.flowBanner}>
-          {(fromFlow.prefill?.soPhieu ?? fromFlow.soPhieu)
-            ? `Giao công việc từ phiếu ${fromFlow.prefill?.soPhieu ?? fromFlow.soPhieu}`
-            : "Giao công việc từ phiếu đề nghị"}
-        </Text>
-      ) : null}
-      {fromFlow ? (
-        <Text style={styles.notice}>
-          Lưu công việc này là DUYỆT phiếu và giao việc. Đóng form không lưu thì phiếu chưa được
-          duyệt.
-        </Text>
-      ) : null}
+      {fromFlowIntro}
 
       <WorkflowFormFields form={form} styles={styles} />
 
       <WorkflowSection title="Thời gian" icon="time-outline">
-        <DateTimeField label="Từ ngày" required value={tuNgay} onChange={setTuNgay} />
+        <DateTimeField label="Từ ngày" required value={tuNgay} onChange={changeTuNgay} />
         <DateTimeField
           label="Đến ngày"
           required
+          minDate={tuNgay}
           value={denNgay}
-          onChange={setDenNgay}
+          onChange={(next) => {
+            markTouched();
+            setDenNgay(next);
+          }}
           error={errors.tuDen}
         />
       </WorkflowSection>
@@ -405,7 +478,10 @@ export default function CongViecFormScreen() {
         <ThamGiaEditor
           employees={employees}
           value={thamGias}
-          onChange={setThamGias}
+          onChange={(next) => {
+            markTouched();
+            setThamGias(next);
+          }}
           fallbackNames={fallbackNames}
           error={errors.thamGia}
           lockChuTri={isEdit && !detail?.quyen.duocDoiChuTri}
@@ -419,7 +495,10 @@ export default function CongViecFormScreen() {
           </View>
           <Switch
             value={isKhongChuyenChuTri}
-            onValueChange={setIsKhongChuyenChuTri}
+            onValueChange={(next) => {
+              markTouched();
+              setIsKhongChuyenChuTri(next);
+            }}
             disabled={!canEditKhongChuyen}
             trackColor={{ true: c.red, false: c.borderStrong }}
             thumbColor="#FFFFFF"
@@ -429,7 +508,15 @@ export default function CongViecFormScreen() {
 
       {showDinhKy ? (
         <WorkflowSection title="Định kỳ" icon="repeat-outline">
-          <DinhKyEditor value={dinhKy} onChange={setDinhKy} tuNgay={tuNgay} denNgay={denNgay} />
+          <DinhKyEditor
+            value={dinhKy}
+            onChange={(next) => {
+              markTouched();
+              setDinhKy(next);
+            }}
+            tuNgay={tuNgay}
+            denNgay={denNgay}
+          />
           {errors.dinhKy ? <Text style={styles.error}>{errors.dinhKy}</Text> : null}
         </WorkflowSection>
       ) : null}

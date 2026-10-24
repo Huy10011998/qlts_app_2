@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from "react";
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
+import { useThemePreference } from "../../../../context/ThemeContext";
 import { cvChuyenTrangThai, cvTaiFileLichSu } from "../../../../services/data/congViecApi";
 import { getThaoTacError } from "../../../../services/data/workflowApi";
 import type { WorkflowPickedFile } from "../../../../types/index";
 import { AppColors, useStyles } from "../../../../utils/helpers/colors";
 import PendingFilesField from "../../shared/components/PendingFilesField";
 import WorkflowButton from "../../shared/components/WorkflowButton";
-import WorkflowSheet from "../../shared/components/WorkflowSheet";
+import WorkflowSheet, { confirmCloseSheet } from "../../shared/components/WorkflowSheet";
 import WorkflowTextArea from "../../shared/components/WorkflowTextArea";
 import { CV_TRANG_THAI, CV_TRANG_THAI_HUY, tint } from "../../shared/workflowConstants";
 import { getWorkflowErrorMessage } from "../../shared/workflowErrors";
+import { AppAlert } from "../../../../components/ui/AppAlert";
 
 type Props = {
   visible: boolean;
@@ -34,6 +36,7 @@ export default function ChuyenTrangThaiSheet({
   onDone,
 }: Props) {
   const styles = useStyles(makeStyles);
+  const dark = useThemePreference().resolvedColorScheme === "dark";
   const [selected, setSelected] = useState(trangThai);
   const [ghiChu, setGhiChu] = useState("");
   const [files, setFiles] = useState<WorkflowPickedFile[]>([]);
@@ -50,11 +53,11 @@ export default function ChuyenTrangThaiSheet({
     const note = ghiChu.trim();
 
     if (selected === CV_TRANG_THAI_HUY && !note) {
-      Alert.alert("Thiếu ghi chú", "Hủy công việc phải ghi lý do.");
+      AppAlert.alert("Thiếu ghi chú", "Hủy công việc phải ghi lý do.");
       return;
     }
     if (selected === trangThai && !note && !files.length) {
-      Alert.alert(
+      AppAlert.alert(
         "Thiếu nội dung",
         "Giữ nguyên trạng thái thì cần ghi chú hoặc đính kèm file kết quả.",
       );
@@ -66,7 +69,7 @@ export default function ChuyenTrangThaiSheet({
       const result = await cvChuyenTrangThai([idCongViec], selected, note || null);
       const loi = getThaoTacError(result);
       if (loi) {
-        Alert.alert("Không chuyển được trạng thái", loi);
+        AppAlert.alert("Không chuyển được trạng thái", loi);
         return;
       }
 
@@ -88,14 +91,14 @@ export default function ChuyenTrangThaiSheet({
 
       // Tải file lỗi vẫn coi là đã chuyển — không cho chuyển lại lần nữa.
       if (failed.length) {
-        Alert.alert(
+        AppAlert.alert(
           "Đã chuyển trạng thái",
           `Nhưng một số file chưa tải lên được:\n${failed.join("\n")}`,
         );
       }
       onDone();
     } catch (err) {
-      Alert.alert(
+      AppAlert.alert(
         "Không chuyển được trạng thái",
         getWorkflowErrorMessage(err, "Vui lòng thử lại."),
       );
@@ -104,6 +107,9 @@ export default function ChuyenTrangThaiSheet({
     }
   };
 
+  // Ghi chú / file kết quả đã chọn mà chạm nhầm ra nền tối là mất — hỏi trước khi đóng.
+  const dirty = !!ghiChu.trim() || files.length > 0;
+
   return (
     <WorkflowSheet
       visible={visible}
@@ -111,9 +117,15 @@ export default function ChuyenTrangThaiSheet({
       onClose={onClose}
       loading={submitting}
       loadingText="Đang lưu..."
+      dirty={dirty}
       footer={
         <>
-          <WorkflowButton label="Đóng" variant="neutral" flex onPress={onClose} />
+          <WorkflowButton
+            label="Đóng"
+            variant="neutral"
+            flex
+            onPress={() => confirmCloseSheet(dirty, onClose)}
+          />
           <WorkflowButton label="Lưu" icon="checkmark" flex onPress={submit} />
         </>
       }
@@ -121,7 +133,11 @@ export default function ChuyenTrangThaiSheet({
       <View style={styles.statusGrid}>
         {CV_TRANG_THAI.map((option) => {
           const active = option.value === selected;
-          const textColor = active ? "#FFFFFF" : option.color;
+          // Hủy: xám nhạt của web chữ trắng hay chữ xám trên nền trắng đều không
+          // đọc được — nút dùng màu chữ đậm (`textColor`) làm màu chính. Nền tối
+          // thì chữ xám nhạt lại rõ hơn.
+          const fill = option.textColor ?? option.color;
+          const textColor = active ? "#FFFFFF" : dark ? option.color : fill;
           return (
             <TouchableOpacity
               key={option.value}
@@ -129,8 +145,8 @@ export default function ChuyenTrangThaiSheet({
               onPress={() => setSelected(option.value)}
               style={[
                 styles.statusButton,
-                { borderColor: active ? option.color : tint(option.color, "55") },
-                active && { backgroundColor: option.color },
+                { borderColor: active ? fill : tint(fill, "55") },
+                active && { backgroundColor: fill },
               ]}
             >
               <Text style={[styles.statusText, { color: textColor }]}>

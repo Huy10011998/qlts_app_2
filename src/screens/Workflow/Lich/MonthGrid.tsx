@@ -3,6 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import type { CongViecItem } from "../../../types/index";
 import { AppColors, useStyles } from "../../../utils/helpers/colors";
+import { getHomeCardChrome } from "../../Home/shared/homeBlockTone";
 import { getMaMauColor } from "../shared/workflowConstants";
 import { isSameDay } from "../shared/workflowDate";
 import { dayKey, LichRange, WEEKDAY_LABELS } from "./lichHelpers";
@@ -91,10 +92,17 @@ export default function MonthGrid({ anchor, range, tasksByDay, selected, onSelec
 
 const makeStyles = (c: AppColors) =>
   StyleSheet.create({
+    // Viền + mép trên đỏ như card Trang chủ: đỏ là màu nhấn của cả màn Lịch
+    // (hôm nay, ngày đang chọn, nút Hôm nay).
     grid: {
       backgroundColor: c.surface,
       borderRadius: 16,
       padding: 6,
+      ...getHomeCardChrome({
+        borderColor: c.red,
+        shadowColor: c.shadow,
+        accent: c.red,
+      }),
     },
     weekRow: {
       flexDirection: "row",

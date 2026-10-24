@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { showAppToast } from "../../../components/ui/AppToast";
 import EmptyState from "../../../components/ui/EmptyState";
 import { flowDelete, flowGetById, flowThongTin } from "../../../services/data/flowApi";
 import type { FlowRecord, FlowThongTin, StackNavigation, StackRoute } from "../../../types/index";
@@ -27,12 +29,15 @@ import FlowTraBuocSheet from "./components/FlowTraBuocSheet";
 import {
   FLOW_CARD_CUSTOM_FIELDS,
   getFlowActions,
+  getFlowApproveButtons,
+  getFlowDoneMessage,
   getFlowHeading,
   getFlowLabel,
   getFlowSoPhieu,
   getFlowTinhTrang,
 } from "./flowRules";
 import { useFlowMeta } from "./useFlowMeta";
+import { AppAlert } from "../../../components/ui/AppAlert";
 
 /**
  * Chi tiết 1 phiếu: phần động (field isShowDetail != false — gồm cả field chỉ
@@ -45,18 +50,22 @@ import { useFlowMeta } from "./useFlowMeta";
 export default function FlowDetailScreen() {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<StackNavigation<"FlowChiTiet">>();
   const route = useRoute<StackRoute<"FlowChiTiet">>();
   const { nameClass } = route.params;
   const id = Number(route.params.id);
-  const { meta, errorMessage: metaError } = useFlowMeta(nameClass);
+  const { meta, errorMessage: metaError, loading: metaLoading } = useFlowMeta(nameClass);
   const perms = useWorkflowPermissions(nameClass);
-  const { me } = useWorkflowMe();
+  const { me, loading: meLoading } = useWorkflowMe();
   const markChanged = useMarkWorkflowChanged();
 
   const [record, setRecord] = useState<FlowRecord | null>(route.params.item ?? null);
-  const [info, setInfo] = useState<FlowThongTin | null>(null);
-  const [loading, setLoading] = useState(!route.params.item);
+  const [info, setInfo] = useState<FlowThongTin | null>(route.params.info ?? null);
+  // Danh sách đưa đủ phiếu + flow-thong-tin thì vẽ ngay; thiếu `info` (bấm khi
+  // thẻ chưa có thông tin, mở từ thông báo) thì chờ — không thì dòng bước, số
+  // bình luận / file và thanh nút duyệt hiện sau.
+  const [loading, setLoading] = useState(!(route.params.item && route.params.info));
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [approve, setApprove] = useState<FlowKetQua | typeof FLOW_KET_QUA.TraBuoc | null>(null);
@@ -76,7 +85,7 @@ export default function FlowDetailScreen() {
         if (!fresh) {
           // Mục 5: items rỗng = phiếu không còn tới tôi / đã xoá.
           if (recordRef.current) {
-            Alert.alert("Thông báo", "Không tìm thấy phiếu.", [
+            AppAlert.alert("Thông báo", "Không tìm thấy phiếu.", [
               { text: "OK", onPress: () => navigation.goBack() },
             ]);
           } else {
@@ -121,8 +130,22 @@ export default function FlowDetailScreen() {
 
   const phieuLabel = getFlowLabel(record, meta?.soPhieuField);
 
+  /**
+   * Xử lý xong lượt của tôi: báo ngắn rồi quay về danh sách — ở lại màn này
+   * chỉ còn phiếu đã hết nút. Server từ chối (`sent` = false, người khác vừa xử
+   * lý trước) thì ở lại, nạp lại để nút Duyệt tự ẩn.
+   */
+  const finishApprove = (ketQua: number, sent: boolean) => {
+    setApprove(null);
+    markChanged();
+    if (!sent) return;
+    showAppToast({ message: getFlowDoneMessage(ketQua, phieuLabel) });
+    // Mở thẳng từ thông báo khi app vừa bật thì có thể không còn màn nào phía sau.
+    if (navigation.canGoBack()) navigation.goBack();
+  };
+
   const confirmDelete = () =>
-    Alert.alert("Xoá phiếu", `Xoá phiếu ${phieuLabel}? Thao tác không hoàn tác được.`, [
+    AppAlert.alert("Xoá phiếu", `Xoá phiếu ${phieuLabel}? Thao tác không hoàn tác được.`, [
       { text: "Huỷ", style: "cancel" },
       {
         text: "Xoá",
@@ -134,7 +157,7 @@ export default function FlowDetailScreen() {
             markChanged();
             navigation.goBack();
           } catch (err) {
-            Alert.alert("Không xoá được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
+            AppAlert.alert("Không xoá được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
           } finally {
             setDeleting(false);
           }
@@ -142,7 +165,10 @@ export default function FlowDetailScreen() {
       },
     ]);
 
-  if (loading) return <WorkflowDetailSkeleton variant="flow" fields={detailFields} />;
+  // Chờ đủ: phiếu, metadata (số phiếu, các dòng), quyền và người đăng nhập (nút).
+  if (loading || metaLoading || meLoading || !perms.loaded) {
+    return <WorkflowDetailSkeleton variant="flow" fields={detailFields} />;
+  }
 
   if (!record) {
     return (
@@ -166,7 +192,12 @@ export default function FlowDetailScreen() {
           <View style={styles.heroTop}>
             <Text style={styles.flowName}>{getFlowHeading(record, meta?.flow.ten)}</Text>
             {tinhTrang ? (
-              <StatusBadge label={tinhTrang.label} color={tinhTrang.color} solid />
+              <StatusBadge
+                label={tinhTrang.label}
+                color={tinhTrang.color}
+                textColor={tinhTrang.textColor}
+                solid
+              />
             ) : null}
           </View>
           <Text style={styles.phieuLabel}>{phieuLabel}</Text>
@@ -179,35 +210,6 @@ export default function FlowDetailScreen() {
             </View>
           ) : null}
         </View>
-
-        {actions.duyet ? (
-          // Thứ tự mục 4: Trả bước (cam) · Từ chối · Không ý kiến · Duyệt. Đủ 4 nút
-          // thì xếp 2 × 2 — 4 nút một hàng nhãn bị bóp nhỏ quá.
-          <View style={styles.approveRow}>
-            {[
-              actions.traBuoc
-                ? { key: "traBuoc", variant: "warning" as const, icon: "arrow-undo-outline", label: "Trả bước", ketQua: FLOW_KET_QUA.TraBuoc }
-                : null,
-              { key: "tuChoi", variant: "danger" as const, icon: "close-circle-outline", label: "Từ chối", ketQua: FLOW_KET_QUA.TuChoi },
-              actions.khongYKien
-                ? { key: "khongYKien", variant: "muted" as const, icon: "remove-circle-outline", label: "Không ý kiến", ketQua: FLOW_KET_QUA.KhongYKien }
-                : null,
-              { key: "duyet", variant: "success" as const, icon: "checkmark-circle-outline", label: "Duyệt", ketQua: FLOW_KET_QUA.Duyet },
-            ]
-              .filter((button): button is NonNullable<typeof button> => !!button)
-              .map((button, _index, buttons) => (
-                <WorkflowButton
-                  key={button.key}
-                  flex
-                  variant={button.variant}
-                  icon={button.icon}
-                  label={button.label}
-                  style={buttons.length > 3 ? styles.approveHalf : undefined}
-                  onPress={() => setApprove(button.ketQua)}
-                />
-              ))}
-          </View>
-        ) : null}
 
         <View style={styles.actions}>
           <WorkflowButton
@@ -279,6 +281,25 @@ export default function FlowDetailScreen() {
         {detailFields.length ? <WorkflowDetailFields item={record} fields={detailFields} /> : null}
       </ScrollView>
 
+      {actions.duyet ? (
+        // Ghim dưới đáy màn: đọc nội dung phiếu xong là bấm ngay, khỏi cuộn ngược
+        // lên đầu. Thứ tự mục 4: Trả bước (cam) · Từ chối · Không ý kiến · Duyệt.
+        // Đủ 4 nút thì xếp 2 × 2 — 4 nút một hàng nhãn bị bóp nhỏ quá.
+        <View style={[styles.approveBar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+          {getFlowApproveButtons(actions).map((button, _index, buttons) => (
+            <WorkflowButton
+              key={button.key}
+              flex
+              variant={button.variant}
+              icon={button.icon}
+              label={button.label}
+              style={buttons.length > 3 ? styles.approveHalf : undefined}
+              onPress={() => setApprove(button.ketQua)}
+            />
+          ))}
+        </View>
+      ) : null}
+
       {approve === FLOW_KET_QUA.TraBuoc ? (
         <FlowTraBuocSheet
           visible
@@ -288,10 +309,7 @@ export default function FlowDetailScreen() {
           buocHienTai={info?.buocHienTai}
           traVe={info?.traVe}
           onClose={() => setApprove(null)}
-          onDone={() => {
-            setApprove(null);
-            markChanged();
-          }}
+          onDone={(sent) => finishApprove(FLOW_KET_QUA.TraBuoc, sent)}
         />
       ) : approve ? (
         <FlowApproveSheet
@@ -301,10 +319,7 @@ export default function FlowDetailScreen() {
           ketQua={approve}
           phieuLabel={phieuLabel}
           onClose={() => setApprove(null)}
-          onDone={() => {
-            setApprove(null);
-            markChanged();
-          }}
+          onDone={(sent) => finishApprove(approve, sent)}
           onTaoCongViec={({ yKien, prefill }) => {
             setApprove(null);
             navigation.navigate("CongViecForm", {
@@ -376,11 +391,17 @@ const makeStyles = (c: AppColors) =>
       color: c.red,
       fontWeight: "600",
     },
-    approveRow: {
+    // Cùng kiểu thanh "Duyệt nhiều" của danh sách phiếu, nhưng nằm trong luồng
+    // layout (dưới ScrollView) nên nội dung không bị che.
+    approveBar: {
       flexDirection: "row",
       flexWrap: "wrap",
       gap: 8,
-      marginBottom: 10,
+      paddingHorizontal: 12,
+      paddingTop: 10,
+      backgroundColor: c.surface,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: c.separator,
     },
     approveHalf: {
       flexBasis: "45%",

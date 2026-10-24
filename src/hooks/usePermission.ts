@@ -41,10 +41,21 @@ export function usePermission() {
     return hasViewPermission(permissions, viewName, isFullAccess());
   };
 
+  /**
+   * Mã quyền đúng nguyên chuỗi BE trả, không ghép tiền tố `View.` / `Class.` —
+   * vd nhóm Dashboard Tài sản trả thẳng `Dashboard.TaiSan.MayMoc`.
+   */
+  const hasPermission = (permissionKey: string) => {
+    if (!loaded) return false;
+    if (isFullAccess()) return true;
+    return hasPermissionKey(permissions, permissionKey.toLowerCase());
+  };
+
   return {
     can,
     canReport,
     canView,
+    hasPermission,
     isFullPermission: isFullAccess,
     loaded,
     permissions,

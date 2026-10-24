@@ -77,6 +77,8 @@ type ActiveReport = {
  */
 const MENU_STALE_MS = 10 * 60 * 1000;
 
+const LOAD_ERROR_MESSAGE = "Vui lòng kiểm tra kết nối mạng rồi bấm Thử lại.";
+
 const buildReportPreviewEndpoint = (direct: string) => {
   const normalizedDirect = direct.trim().replace(/^\/+/, "");
   return `${BASE_URL}/${normalizedDirect}`;
@@ -112,6 +114,10 @@ export default function AssetScreen() {
     null
   );
   const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
+  /** Báo cáo đang chờ `getConfigReport` — cùng cách với `ReportScreen`. */
+  const [openingReportId, setOpeningReportId] = useState<Item["id"] | null>(
+    null
+  );
 
   const fetchingRef = useRef(false);
   const lastLoadedAtRef = useRef(0);
@@ -125,6 +131,8 @@ export default function AssetScreen() {
   isFullAccessRef.current = isFullAccess;
 
   const handleShowReport = useCallback(async (item: Item) => {
+    if (openingReportId !== null) return;
+
     const reportName = item.contentName_Mobile?.trim();
 
     log("[AssetScreen] Select report", {
@@ -143,6 +151,7 @@ export default function AssetScreen() {
       return;
     }
 
+    setOpeningReportId(item.id);
     try {
       log("[AssetScreen] Calling getConfigReport", { nameReport: reportName });
       const configResponse = await getConfigReport<GetConfigReportResponse>(
@@ -168,8 +177,10 @@ export default function AssetScreen() {
     } catch (e) {
       error("Get config report error:", e);
       setComingSoonReportItem(item);
+    } finally {
+      if (isMounted()) setOpeningReportId(null);
     }
-  }, [openActiveReport]);
+  }, [isMounted, openActiveReport, openingReportId]);
 
   // ── Fetch ──
   const fetchData = useCallback(
@@ -206,9 +217,7 @@ export default function AssetScreen() {
         setLoadErrorMessage(null);
       } catch (e) {
         error("API error:", e);
-        setLoadErrorMessage(
-          "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại."
-        );
+        setLoadErrorMessage(LOAD_ERROR_MESSAGE);
       } finally {
         fetchingRef.current = false;
         if (isMounted()) {
@@ -225,6 +234,13 @@ export default function AssetScreen() {
 
     setIsRefreshingTop(true);
     await fetchData({ isRefresh: true });
+  };
+
+  // Màn lỗi không có danh sách để kéo xuống, nên phải có nút. Dọn lỗi trước để
+  // khung chờ (hoặc cây cũ nếu còn) thay chỗ màn lỗi trong lúc gọi lại.
+  const retryLoad = () => {
+    setLoadErrorMessage(null);
+    fetchData();
   };
 
   useEffect(() => {
@@ -250,9 +266,7 @@ export default function AssetScreen() {
       hasError: Boolean(loadErrorMessage),
       refetchOnAppResume: true,
       onOffline: () => {
-        setLoadErrorMessage(
-          "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại."
-        );
+        setLoadErrorMessage(LOAD_ERROR_MESSAGE);
       },
     }
   );
@@ -325,9 +339,20 @@ export default function AssetScreen() {
     onOpened: rememberRecent,
   });
 
+  // Hàng Truy cập nhanh và nút "Thu tất cả" đều theo trạng thái đã lưu trên máy
+  // (đọc xong trước khi cây tải về), nên người dùng quay lại thấy chúng ngay khi
+  // danh sách hiện — khung chờ phải chừa sẵn, không thì cả danh sách tụt xuống.
+  const treeSkeleton = (
+    <MenuCardSkeleton
+      hasSearchBar
+      hasCollapseAll={expandedIds.length > 0}
+      hasRecents={recents.length > 0}
+    />
+  );
+
   // Chờ quyền cũng dùng khung chờ như chờ dữ liệu: hai nhánh khác kiểu thì vào
   // màn thấy vòng xoay nhảy sang khung xám rồi mới ra nội dung.
-  if (!loaded) return <MenuCardSkeleton hasSearchBar />;
+  if (!loaded) return treeSkeleton;
 
   if (!hasViewPermission) {
     return (
@@ -351,7 +376,7 @@ export default function AssetScreen() {
       isSearching: Boolean(debouncedSearch),
     })
   ) {
-    return <MenuCardSkeleton hasSearchBar />;
+    return treeSkeleton;
   }
 
   if (loadErrorMessage) {
@@ -364,6 +389,8 @@ export default function AssetScreen() {
           iconName="cloud-offline-outline"
           title={`Không thể tải dữ liệu ${screenTitle}`}
           subtitle={loadErrorMessage}
+          actionLabel="Thử lại"
+          onActionPress={retryLoad}
         />
       </KeyboardAvoidingView>
     );
@@ -405,8 +432,10 @@ export default function AssetScreen() {
             onOpenItem={openMenuItem}
             isSearching={!!debouncedSearch}
             searchText={debouncedSearch}
+            busyId={openingReportId}
           />
         )}
+        extraData={openingReportId}
         contentContainerStyle={[s.listContent, isEmpty && s.listContentEmpty]}
         removeClippedSubviews={Platform.OS === "android"}
         initialNumToRender={20}

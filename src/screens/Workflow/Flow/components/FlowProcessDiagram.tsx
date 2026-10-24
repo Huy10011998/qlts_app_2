@@ -3,9 +3,20 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, Vi
 import Ionicons from "react-native-vector-icons/Ionicons";
 import Svg, { Line, Path } from "react-native-svg";
 
+import { useThemePreference } from "../../../../context/ThemeContext";
+import type { FlowTraBuoc } from "../../../../types/index";
 import { AppColors, useStyles } from "../../../../utils/helpers/colors";
 import { FLOW_TRA_BUOC_COLOR } from "../../shared/workflowConstants";
-import { FLOW_POINT_COLOR, FlowDiagram, FlowPoint } from "../flowProcessRules";
+import { formatBeDate } from "../../shared/workflowDate";
+import {
+  bareFlowName,
+  FLOW_CHIP_COLOR,
+  FLOW_LINE_COLOR,
+  FLOW_POINT_COLOR,
+  FlowDiagram,
+  FlowPoint,
+} from "../flowProcessRules";
+import { AppAlert } from "../../../../components/ui/AppAlert";
 
 type Props = {
   diagram: FlowDiagram;
@@ -16,13 +27,26 @@ type Props = {
 /** Mỗi cột tối thiểu ~130 (mục 6, "Màn hẹp"): rộng hơn màn thì cuộn ngang. */
 const MIN_COL_W = 130;
 const DOT = 30;
-const ROW_H = 112;
-/** Dải giữa 2 lượt chạy — chỗ cho nét đứt cam + nhãn "Trả bước lần r". */
+/** Đủ chỗ: chấm + tên 2 dòng + dòng "x/n" + dòng ngày giờ. */
+export const FLOW_DIAGRAM_ROW_H = 126;
+const ROW_H = FLOW_DIAGRAM_ROW_H;
+/** Dải giữa 2 lượt chạy — chỗ cho nét đứt cam + nhãn "↩ Trả bước". */
 const GAP_H = 46;
 const PAD_X = 8;
 const PAD_TOP = 8;
-const RUN_LABEL_W = 46;
-const LINE_GREY = "#c8ced3";
+
+/** Giữ nhãn trả bước (web: rê chuột): bước trả → bước về, người, ngày, lý do. */
+const showTraBuoc = (tra: FlowTraBuoc) =>
+  AppAlert.alert(
+    "Trả bước",
+    [
+      [tra.tenBuocTu, tra.tenBuocVe].filter(Boolean).join(" → "),
+      [bareFlowName(tra.iD_NhanVien_MoTa), formatBeDate(tra.ngayTra, true)].filter(Boolean).join(" · "),
+      tra.lyDo ? `Lý do: ${tra.lyDo}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  );
 
 const pointIcon = (point: FlowPoint): string | null => {
   switch (point.state) {
@@ -54,16 +78,17 @@ const pointName = (point: FlowPoint) => {
 export default function FlowProcessDiagram({ diagram, selectedKey, onSelect }: Props) {
   const styles = useStyles(makeStyles);
   const { width: windowWidth } = useWindowDimensions();
+  // Nhãn trả bước chữ #b26a00 như web; giao diện tối giữ cam sáng cho đọc được.
+  const traLabelColor =
+    useThemePreference().resolvedColorScheme === "dark" ? FLOW_TRA_BUOC_COLOR : FLOW_CHIP_COLOR.tra.text;
 
-  const multiRun = diagram.runs.length > 1;
-  const labelW = multiRun ? RUN_LABEL_W : 0;
   const colCount = diagram.columns.length;
   // Trừ lề ScrollView (12 × 2) của màn.
-  const colW = Math.max(MIN_COL_W, Math.floor((windowWidth - 24 - labelW) / Math.max(colCount, 1)));
-  const width = labelW + colW * colCount;
+  const colW = Math.max(MIN_COL_W, Math.floor((windowWidth - 24) / Math.max(colCount, 1)));
+  const width = colW * colCount;
   const height = diagram.runs.length * ROW_H + (diagram.runs.length - 1) * GAP_H;
 
-  const colLeft = (col: number) => labelW + col * colW;
+  const colLeft = (col: number) => col * colW;
   const rowTop = (run: number) => run * (ROW_H + GAP_H);
   const dotX = (col: number) => colLeft(col) + PAD_X + DOT / 2;
   const dotY = (run: number) => rowTop(run) + PAD_TOP + DOT / 2;
@@ -86,7 +111,7 @@ export default function FlowProcessDiagram({ diagram, selectedKey, onSelect }: P
     scrollRef.current?.scrollTo({ x, animated: true });
   };
 
-  useEffect(revealSelected, [selectedCol, colW, labelW, width]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(revealSelected, [selectedCol, colW, width]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <ScrollView
@@ -130,7 +155,7 @@ export default function FlowProcessDiagram({ diagram, selectedKey, onSelect }: P
                   y1={dotY(run.index)}
                   x2={dotX(next.col) - DOT / 2 - 4}
                   y2={dotY(run.index)}
-                  stroke={point.state === "done" ? FLOW_POINT_COLOR.done : LINE_GREY}
+                  stroke={point.passed ? FLOW_LINE_COLOR.passed : FLOW_LINE_COLOR.other}
                   strokeWidth={2}
                 />
               );
@@ -163,17 +188,6 @@ export default function FlowProcessDiagram({ diagram, selectedKey, onSelect }: P
           })}
         </Svg>
 
-        {multiRun
-          ? diagram.runs.map((run) => (
-              <Text
-                key={`lan-${run.index}`}
-                style={[styles.runLabel, { top: rowTop(run.index) + PAD_TOP + 7 }, run.isLast && styles.runLabelLast]}
-              >
-                Lần {run.index + 1}
-              </Text>
-            ))
-          : null}
-
         {diagram.runs.flatMap((run) =>
           run.points.map((point) => {
             const color = FLOW_POINT_COLOR[point.state];
@@ -186,7 +200,7 @@ export default function FlowProcessDiagram({ diagram, selectedKey, onSelect }: P
                 onPress={() => onSelect(point)}
                 style={[styles.cell, { left: colLeft(point.col), top: rowTop(run.index), width: colW }]}
                 accessibilityRole="button"
-                accessibilityLabel={`${pointName(point)}${point.sub ? `, ${point.sub}` : ""}`}
+                accessibilityLabel={[pointName(point), point.count, point.sub].filter(Boolean).join(", ")}
               >
                 <View style={[styles.dotWrap, point.state === "doing" && { backgroundColor: `${color}33` }]}>
                   <View
@@ -216,28 +230,36 @@ export default function FlowProcessDiagram({ diagram, selectedKey, onSelect }: P
                 >
                   {pointName(point)}
                 </Text>
-                <View style={styles.subRow}>
-                  {point.childDots.map((dot) => (
-                    <View
-                      key={dot.id}
-                      style={[styles.childDot, { backgroundColor: FLOW_POINT_COLOR[dot.state] }]}
-                    />
-                  ))}
-                  <Text style={styles.sub} numberOfLines={1}>
+                {point.count != null ? (
+                  <View style={styles.subRow}>
+                    {point.childDots.map((dot) => (
+                      <View
+                        key={dot.id}
+                        style={[styles.childDot, { backgroundColor: FLOW_POINT_COLOR[dot.state] }]}
+                      />
+                    ))}
+                    <Text style={styles.count}>{point.count}</Text>
+                  </View>
+                ) : null}
+                {/* Ngày giờ dòng riêng cho đọc trọn; cỡ chữ lớn thì co lại thay vì cắt "…". */}
+                {point.sub ? (
+                  <Text style={styles.sub} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
                     {point.sub}
                   </Text>
-                </View>
+                ) : null}
               </TouchableOpacity>
             );
           }),
         )}
 
-        {/* Nhãn nét đứt chỉ ghi "Trả bước lần r" — ai trả, lý do nằm ở khung chi
-            tiết; bấm nhãn là chọn điểm bấm trả của lượt đó. */}
+        {/* Nhãn nét đứt chỉ ghi "↩ Trả bước" (không số lần). Bấm là chọn điểm bấm
+            trả của lượt đó — khung chi tiết + bảng có người, giờ, lý do; giữ là
+            xem nhanh bước trả → bước về, người, ngày, lý do. */}
         {diagram.runs.slice(0, -1).map((run) => {
           const tra = run.points.find((point) => point.state === "tra");
           const nextStart = diagram.runs[run.index + 1]?.points[0];
-          if (!tra || !nextStart || !run.traBuoc) return null;
+          const traBuoc = run.traBuoc;
+          if (!tra || !nextStart || !traBuoc) return null;
           const left = Math.min(dotX(tra.col), dotX(nextStart.col)) + 6;
           const span = Math.max(Math.abs(dotX(tra.col) - dotX(nextStart.col)) - 12, colW - 12);
           return (
@@ -245,12 +267,16 @@ export default function FlowProcessDiagram({ diagram, selectedKey, onSelect }: P
               key={`tra-label-${run.index}`}
               activeOpacity={0.7}
               onPress={() => onSelect(tra)}
+              onLongPress={() => showTraBuoc(traBuoc)}
+              delayLongPress={350}
               style={[styles.traLabel, { left, width: span, top: rowTop(run.index) + ROW_H + 2 }]}
+              accessibilityRole="button"
+              accessibilityLabel={`Trả bước: ${[traBuoc.tenBuocTu, traBuoc.tenBuocVe].filter(Boolean).join(" → ")}`}
             >
               {/* Icon thay cho ký tự ↩ — iOS vẽ ký tự đó thành emoji ô xanh. */}
-              <Ionicons name="arrow-undo" size={12} color={FLOW_TRA_BUOC_COLOR} />
-              <Text style={styles.traLabelText} numberOfLines={1}>
-                Trả bước lần {run.index + 1}
+              <Ionicons name="arrow-undo" size={12} color={traLabelColor} />
+              <Text style={[styles.traLabelText, { color: traLabelColor }]} numberOfLines={1}>
+                Trả bước
               </Text>
             </TouchableOpacity>
           );
@@ -269,17 +295,6 @@ const makeStyles = (c: AppColors) =>
       position: "absolute",
       borderRadius: 12,
       backgroundColor: c.accentLight,
-    },
-    runLabel: {
-      position: "absolute",
-      left: 0,
-      width: RUN_LABEL_W,
-      fontSize: 12,
-      color: c.textMuted,
-    },
-    runLabelLast: {
-      color: c.accent,
-      fontWeight: "700",
     },
     cell: {
       position: "absolute",
@@ -304,7 +319,7 @@ const makeStyles = (c: AppColors) =>
     },
     dotWait: {
       backgroundColor: c.surface,
-      borderColor: "#9da5b1",
+      borderColor: FLOW_POINT_COLOR.wait,
       borderStyle: "dashed",
     },
     dotNumber: {
@@ -334,9 +349,14 @@ const makeStyles = (c: AppColors) =>
       height: 8,
       borderRadius: 4,
     },
-    sub: {
-      flexShrink: 1,
+    count: {
       marginLeft: 2,
+      fontSize: 11.5,
+      color: c.textSub,
+    },
+    sub: {
+      marginTop: 3,
+      paddingRight: 4,
       fontSize: 11.5,
       color: c.textSub,
     },
@@ -352,6 +372,5 @@ const makeStyles = (c: AppColors) =>
       flexShrink: 1,
       fontSize: 11.5,
       fontWeight: "700",
-      color: FLOW_TRA_BUOC_COLOR,
     },
   });

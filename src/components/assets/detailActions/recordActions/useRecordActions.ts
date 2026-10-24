@@ -14,6 +14,8 @@ import type { RecordAction } from "./types";
 
 type UseRecordActionsArgs = {
   fieldActive?: Field[];
+  /** false = chỉ nghiệp vụ riêng, bỏ việc tạo bản ghi con. Thiếu = có. */
+  includeChildClasses?: boolean;
   item: Record<string, any> | null | undefined;
   /** Màn danh sách bản ghi con của luồng đang đứng: QR có màn riêng. */
   listRoute?: "QrReview" | "AssetRelatedList";
@@ -31,6 +33,7 @@ type UseRecordActionsArgs = {
  */
 export function useRecordActions({
   fieldActive,
+  includeChildClasses = true,
   item,
   listRoute,
   nameClass,
@@ -78,6 +81,7 @@ export function useRecordActions({
       assetContext: { assetTitleHeader, groupMenuId, viewPermission },
       can,
       fieldActive: fieldActiveRef.current,
+      includeChildClasses,
       item,
       listRoute,
       loadChildClasses,
@@ -105,6 +109,7 @@ export function useRecordActions({
   }, [
     assetTitleHeader,
     groupMenuId,
+    includeChildClasses,
     itemId,
     listRoute,
     loadChildClasses,

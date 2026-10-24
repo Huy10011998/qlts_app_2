@@ -17,16 +17,6 @@ import {
 export const MENU_FEATURE_COLUMNS = 4;
 export const MENU_REPORT_COLUMNS = 3;
 
-export const chunkMenuItems = <T,>(items: T[], size: number) => {
-  const rows: T[][] = [];
-
-  for (let i = 0; i < items.length; i += size) {
-    rows.push(items.slice(i, i + size));
-  }
-
-  return rows;
-};
-
 /**
  * Phần dùng chung của màn danh mục (tab Chức năng) và Trang chủ: nạp lại quyền
  * khi focus, kéo-để-làm-mới, và chia danh sách chức năng theo nhóm.
@@ -42,8 +32,8 @@ export function useMenuScreenData(navigation: HomeNavigationProp) {
   const {
     menuItems,
     fetchHomeMenuItems,
+    hasLoadedMenuOnce,
     hasMenuLoadError,
-    isMenuLoading,
     openReportScreen,
   } = useHomeMenuItems(navigation, tabsNavigation);
   const [hasPermissionLoadError, setHasPermissionLoadError] = useState(false);
@@ -130,7 +120,10 @@ export function useMenuScreenData(navigation: HomeNavigationProp) {
   return {
     featureCardWidth,
     hasError: hasPermissionLoadError || hasMenuLoadError,
-    isLoading: !loaded || (isMenuLoading && menuItems.length === 0),
+    // `menuItems` luôn có sẵn mục tĩnh (Điện mặt trời, Camera…) nên đếm độ dài
+    // không bao giờ ra 0 — phải chờ lượt menu đầu, không thì chỉ hiện mấy ô
+    // tĩnh rồi các nhóm Phương tiện / Báo cáo mới chen vào.
+    isLoading: !loaded || !hasLoadedMenuOnce,
     isRefreshing,
     refresh,
     reportActions,

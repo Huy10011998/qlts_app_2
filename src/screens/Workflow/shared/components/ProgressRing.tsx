@@ -6,8 +6,9 @@ import {
   KH_PROGRESS_COLOR,
   KH_PROGRESS_DONE_COLOR,
   KH_PROGRESS_TRACK_COLOR,
+  KH_PROGRESS_TRACK_COLOR_DARK,
 } from "../workflowConstants";
-import { useAppColors } from "../../../../utils/helpers/colors";
+import { useAppColors, useSchemeColor } from "../../../../utils/helpers/colors";
 
 type Props = {
   /** 0–100; null = chưa có việc → vòng xám, chữ "-" (5-Mobile-KeHoach mục 1). */
@@ -19,6 +20,7 @@ type Props = {
 /** Vòng tiến độ % hoàn thành của kế hoạch (cùng màu web). */
 export default function ProgressRing({ percent, size = 48, strokeWidth = 5 }: Props) {
   const c = useAppColors();
+  const trackColor = useSchemeColor(KH_PROGRESS_TRACK_COLOR, KH_PROGRESS_TRACK_COLOR_DARK);
   const hasValue = percent != null && Number.isFinite(Number(percent));
   const value = hasValue ? Math.max(0, Math.min(100, Number(percent))) : 0;
   const radius = (size - strokeWidth) / 2;
@@ -33,7 +35,7 @@ export default function ProgressRing({ percent, size = 48, strokeWidth = 5 }: Pr
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke={KH_PROGRESS_TRACK_COLOR}
+          stroke={trackColor}
           strokeWidth={strokeWidth}
           fill="none"
         />

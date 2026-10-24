@@ -17,6 +17,8 @@ type Props = {
   name?: string | null;
   /** Bấm ảnh — thường là mở xem toàn màn. */
   onPress: () => void;
+  /** Giữ ảnh (vd ảnh trong bình luận: trả lời tin đó). */
+  onLongPress?: () => void;
   /** Chưa tải ảnh (vd màn còn đang nhảy xuống tin cuối) — khung chờ vẫn đủ cỡ. */
   defer?: boolean;
   /** Ô vuông cạnh này (ảnh thu nhỏ ở dòng file) thay khung cao cố định. */
@@ -51,6 +53,7 @@ export default function WorkflowFileImage({
   fileId,
   name,
   onPress,
+  onLongPress,
   defer = false,
   square,
 }: Props) {
@@ -89,7 +92,11 @@ export default function WorkflowFileImage({
 
   if (failed && square) {
     return (
-      <TouchableOpacity onPress={onPress} style={[styles.squareFallback, { width, height }]}>
+      <TouchableOpacity
+        onPress={onPress}
+        onLongPress={onLongPress}
+        style={[styles.squareFallback, { width, height }]}
+      >
         <Ionicons name="image-outline" size={18} color={c.textSub} />
       </TouchableOpacity>
     );
@@ -97,7 +104,7 @@ export default function WorkflowFileImage({
 
   if (failed) {
     return (
-      <TouchableOpacity onPress={onPress} style={[styles.fallback, { width }]}>
+      <TouchableOpacity onPress={onPress} onLongPress={onLongPress} style={[styles.fallback, { width }]}>
         <Ionicons name="image-outline" size={16} color={c.textSub} />
         <Text style={styles.fallbackText} numberOfLines={1}>
           Không tải được ảnh — bấm để mở
@@ -110,6 +117,7 @@ export default function WorkflowFileImage({
     <TouchableOpacity
       activeOpacity={0.85}
       onPress={onPress}
+      onLongPress={onLongPress}
       disabled={!uri}
       accessibilityRole="imagebutton"
       accessibilityLabel={name ?? "Ảnh đính kèm"}

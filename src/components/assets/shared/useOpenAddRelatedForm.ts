@@ -17,6 +17,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { useSafeAlert } from "../../../hooks/useSafeAlert";
 import { getRecordLabel } from "../detailActions/useAssetRecordActions";
 import { REVIEW_NAME_CLASSES_DANHGIA } from "../../../constants/reviewNameClasses";
+import { isWorkflowOnlyClass } from "../../../screens/Workflow/shared/workflowRelated";
 
 /** Ngữ cảnh menu/quyền của luồng tài sản, đi kèm suốt các màn con. */
 export type AddRelatedAssetContext = {
@@ -38,19 +39,57 @@ export type OpenAddFormArgs = {
 };
 
 /**
- * Cache theo class cha, để ở cấp module chứ không phải ref của từng hook: cùng
- * một class con được hỏi từ nhiều nơi (nút vuốt ở danh sách, thanh hành động ở
- * màn chi tiết, màn quét QR) nên cache riêng theo instance là gọi lại mạng vô
- * ích. Chỉ cache danh sách thô — phần lọc quyền phải tính lại mỗi lần vì quyền
- * nạp xong sau.
+ * Danh mục con đã biết theo class cha, để ở cấp module chứ không phải ref của
+ * từng hook: cùng một class được hỏi từ nhiều nơi (nút vuốt ở danh sách, thanh
+ * hành động ở màn quét QR) nên giữ riêng theo instance là gọi lại mạng vô ích.
+ * Chỉ giữ danh sách thô — phần lọc quyền phải tính lại mỗi lần vì quyền nạp xong
+ * sau.
+ *
+ * Không tin nó suốt phiên: cấu hình class đổi được giữa chừng (BE ẩn Công việc /
+ * Kế hoạch khỏi Nhân viên ngày 23/10/2026), nên mỗi lần dùng vẫn hỏi lại server.
  */
 const childClassCache = new Map<string, MenuItemResponse[]>();
+const childClassInFlight = new Map<string, Promise<MenuItemResponse[]>>();
+
+/** Dọn cache — chỉ dùng cho test. */
+export const resetChildClassCache = () => {
+  childClassCache.clear();
+  childClassInFlight.clear();
+};
 
 /**
- * Dọn cache — chỉ dùng cho test. Trong app cấu hình class không đổi giữa các lần
- * dùng nên không có chỗ nào phải gọi.
+ * Hỏi server, gộp với lượt đang chạy của cùng class. Các class con tạo được bằng
+ * form chung; ném lỗi khi mạng/dữ liệu không ổn. Bỏ Công việc / Kế hoạch (con
+ * của Nhân viên): BE chặn `insert` chung, chỉ tạo qua form Workflow — mà người
+ * tạo luôn là người đăng nhập, không gắn được vào nhân viên đang xem.
  */
-export const resetChildClassCache = () => childClassCache.clear();
+const fetchChildClasses = (nameClass: string): Promise<MenuItemResponse[]> => {
+  const existing = childClassInFlight.get(nameClass);
+  if (existing) return existing;
+
+  const request = (async () => {
+    const response = await getClassReference(nameClass);
+    const data = response?.data;
+    if (!Array.isArray(data)) throw new Error("Dữ liệu trả về không hợp lệ");
+
+    const items: MenuItemResponse[] = data
+      .filter((item: any) => !isWorkflowOnlyClass(item?.name))
+      .map((item: any) => ({
+        ...item,
+        label: item.moTa ?? "Không có mô tả",
+        icon: "document-text-outline",
+        iconImageUri: normalizeIconImageUri(item.iconMobile),
+      }));
+
+    childClassCache.set(nameClass, items);
+    return items;
+  })().finally(() => {
+    childClassInFlight.delete(nameClass);
+  });
+
+  childClassInFlight.set(nameClass, request);
+  return request;
+};
 
 const isDanhGiaClass = (name?: string) =>
   REVIEW_NAME_CLASSES_DANHGIA.includes((name || "").trim());
@@ -96,27 +135,35 @@ export function useOpenAddRelatedForm() {
   const { can, loaded } = usePermission();
   const { isMounted } = useSafeAlert();
 
-  /** Danh sách thô các class con; ném lỗi khi mạng/dữ liệu không ổn. */
+  /**
+   * Danh mục con, không bắt chờ mạng khi đã biết: trả ngay số đã biết và hỏi lại
+   * ngầm cho lượt sau (màn quét QR dựng thanh hành động từ đây — quét liên tục
+   * mà mỗi mã chờ một request là chậm). Chưa biết thì chờ mạng, lỗi thì ném.
+   */
   const loadChildClasses = useCallback(async (nameClass?: string) => {
     if (!nameClass) return [];
 
     const cached = childClassCache.get(nameClass);
-    if (cached) return cached;
+    if (cached) {
+      fetchChildClasses(nameClass).catch(() => undefined);
+      return cached;
+    }
 
-    const response = await getClassReference(nameClass);
-    const data = response?.data;
-    if (!Array.isArray(data)) throw new Error("Dữ liệu trả về không hợp lệ");
-
-    const items: MenuItemResponse[] = data.map((item: any) => ({
-      ...item,
-      label: item.moTa ?? "Không có mô tả",
-      icon: "document-text-outline",
-      iconImageUri: normalizeIconImageUri(item.iconMobile),
-    }));
-
-    childClassCache.set(nameClass, items);
-    return items;
+    return fetchChildClasses(nameClass);
   }, []);
+
+  /** Số đã biết, không gọi mạng; `null` = chưa hỏi lần nào. */
+  const peekChildClasses = useCallback(
+    (nameClass?: string) =>
+      (nameClass ? childClassCache.get(nameClass) : undefined) ?? null,
+    [],
+  );
+
+  /** Luôn hỏi server (gộp với lượt đang chạy) — để cập nhật thứ đang hiện. */
+  const refreshChildClasses = useCallback(
+    async (nameClass?: string) => (nameClass ? fetchChildClasses(nameClass) : []),
+    [],
+  );
 
   /** Lọc theo quyền `Insert`, không quan tâm quyền đã nạp xong hay chưa. */
   const filterByInsertPermission = useCallback(
@@ -181,6 +228,8 @@ export function useOpenAddRelatedForm() {
     filterByInsertPermission,
     filterInsertable,
     loadChildClasses,
+    peekChildClasses,
+    refreshChildClasses,
     openAddForm,
     permissionLoaded: loaded,
   };

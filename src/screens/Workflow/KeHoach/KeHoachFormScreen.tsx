@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import AssetFormScreenShell from "../../../components/assets/shared/AssetFormScreenShell";
 import { createAssetFormBaseStyles } from "../../../components/assets/shared/assetFormStyles";
+import { showAppToast } from "../../../components/ui/AppToast";
 import EmptyState from "../../../components/ui/EmptyState";
+import { useUnsavedChangesGuard } from "../../../hooks/useUnsavedChangesGuard";
 import { cvNhanVien } from "../../../services/data/congViecApi";
 import { khChiTiet, khSua, khThem } from "../../../services/data/keHoachApi";
 import { CV_KE_HOACH_NAME_CLASS } from "../../../services/data/workflowApi";
@@ -25,6 +27,7 @@ import {
 } from "../shared/components/WorkflowFormFields";
 import WorkflowFormSkeleton from "../shared/components/WorkflowFormSkeleton";
 import WorkflowSection from "../shared/components/WorkflowSection";
+import { useFormDirty } from "../shared/useFormDirty";
 import { useWorkflowDynamicForm } from "../shared/useWorkflowDynamicForm";
 import { useWorkflowMe } from "../shared/useWorkflowMe";
 import { useMarkWorkflowChanged } from "../shared/useWorkflowVersion";
@@ -39,6 +42,7 @@ import {
 } from "../shared/workflowFields";
 import { loadClassFields } from "../shared/workflowMetadata";
 import { KH_DYNAMIC_SAVE_KEYS } from "./keHoachRules";
+import { AppAlert } from "../../../components/ui/AppAlert";
 
 /**
  * Form thêm / sửa kế hoạch (mục 4). Phần động theo metadata (TieuDe, TuNgay,
@@ -116,6 +120,16 @@ export default function KeHoachFormScreen() {
 
   const form = useWorkflowDynamicForm(formFields, initialData, isEdit ? "edit" : "add");
 
+  // Người tham gia vẽ riêng nên theo dõi riêng; phần động do `form` tự theo dõi.
+  // Sửa: chỉ hỏi khi bản ghi đã nạp xong — đang khung chờ thì chưa có gì để mất.
+  const { isDirty: thamGiasDirty, markTouched: markThamGiasTouched } = useFormDirty(
+    JSON.stringify(thamGias),
+  );
+  const formReady = !loadError && !!fields && !meLoading && (!isEdit || !!detail);
+  const { leaveWithoutPrompt } = useUnsavedChangesGuard(
+    formReady && (form.isDirty || thamGiasDirty),
+  );
+
   // Chủ trì (chính mình khi thêm, người tạo khi sửa) không nằm trong danh sách chọn.
   const chuTriId = detail ? Number(detail.keHoach.iD_NhanVien_Tao) : me.iD_NhanVien;
 
@@ -147,23 +161,23 @@ export default function KeHoachFormScreen() {
   const handleSave = async () => {
     const requiredMessage = form.validateRequired();
     if (requiredMessage) {
-      Alert.alert("Thiếu thông tin", requiredMessage);
+      AppAlert.alert("Thiếu thông tin", requiredMessage);
       return;
     }
 
     const payload = buildPayload();
     if (!payload.TieuDe) {
-      Alert.alert("Thiếu thông tin", "Vui lòng nhập tiêu đề.");
+      AppAlert.alert("Thiếu thông tin", "Vui lòng nhập tiêu đề.");
       return;
     }
     const tu = parseBeDate(payload.TuNgay);
     const den = parseBeDate(payload.DenNgay);
     if (!tu || !den) {
-      Alert.alert("Thiếu thông tin", "Vui lòng chọn Từ ngày và Đến ngày.");
+      AppAlert.alert("Thiếu thông tin", "Vui lòng chọn Từ ngày và Đến ngày.");
       return;
     }
     if (den < tu) {
-      Alert.alert("Ngày không hợp lệ", "Đến ngày phải sau hoặc bằng Từ ngày.");
+      AppAlert.alert("Ngày không hợp lệ", "Đến ngày phải sau hoặc bằng Từ ngày.");
       return;
     }
 
@@ -171,13 +185,14 @@ export default function KeHoachFormScreen() {
       setSubmitting(true);
       const result = isEdit ? await khSua(payload) : await khThem(payload);
       if (result.loi || !(result.id > 0)) {
-        Alert.alert("Không lưu được", result.loi || "Vui lòng thử lại.");
+        AppAlert.alert("Không lưu được", result.loi || "Vui lòng thử lại.");
         return;
       }
       markChanged();
-      navigation.goBack();
+      showAppToast({ message: isEdit ? "Đã lưu kế hoạch" : "Đã tạo kế hoạch" });
+      leaveWithoutPrompt(() => navigation.goBack());
     } catch (err) {
-      Alert.alert("Không lưu được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
+      AppAlert.alert("Không lưu được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
     } finally {
       setSubmitting(false);
     }
@@ -227,7 +242,10 @@ export default function KeHoachFormScreen() {
                   {nameOf(id)}
                 </Text>
                 <TouchableOpacity
-                  onPress={() => setThamGias((prev) => prev.filter((item) => item !== id))}
+                  onPress={() => {
+                    markThamGiasTouched();
+                    setThamGias((prev) => prev.filter((item) => item !== id));
+                  }}
                   hitSlop={8}
                 >
                   <Ionicons name="close-circle" size={16} color={c.textSub} />
@@ -248,6 +266,7 @@ export default function KeHoachFormScreen() {
         excludeIds={chuTriId ? [chuTriId] : []}
         onClose={() => setPickerVisible(false)}
         onConfirm={(ids) => {
+          markThamGiasTouched();
           setThamGias(ids);
           setPickerVisible(false);
         }}
@@ -264,7 +283,8 @@ const makeStyles = (c: AppColors) =>
       alignItems: "center",
       gap: 3,
       paddingHorizontal: 10,
-      paddingVertical: 4,
+      // Nút nhỏ cạnh tiêu đề mục: 8 cho vùng bấm cao ~32, khỏi bấm trượt.
+      paddingVertical: 8,
       borderRadius: 999,
       backgroundColor: c.redSurface,
     },

@@ -49,6 +49,9 @@ export const TAP_DEDUPE_LIMIT = 30;
 /** AsyncStorage key cho lần đăng ký token gần nhất đã gửi BE thành công. */
 export const PUSH_REGISTRATION_CACHE_KEY = "push.registration.v1";
 
+/** AsyncStorage key: app đã tự hỏi quyền thông báo một lần (sau khi đăng nhập). */
+export const PERMISSION_AUTO_ASKED_KEY = "push.permission-auto-asked.v1";
+
 /**
  * iOS: FCM token chỉ lấy được sau khi APNs đã trả device token về. Poll trong
  * khoảng này trước khi gọi getToken() để tránh lỗi

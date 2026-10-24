@@ -64,7 +64,7 @@
 		<string>_http._tcp</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>Ứng dụng cần dùng camera để quét QR code</string>
+	<string>Ứng dụng cần dùng camera để quét mã QR và chụp ảnh đính kèm khi làm việc (tài sản, công việc, xác nhận vị trí tủ).</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Ứng dụng cần sử dụng Face ID để đăng nhập nhanh.</string>
 	<key>NSLocalNetworkUsageDescription</key>

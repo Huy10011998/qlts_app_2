@@ -46,6 +46,8 @@ import TrungChuyenTuLanhChonNhaPhanPhoiScreen from "../screens/NoiDia/TrungChuye
 import TrungChuyenTuLanhChonKhachHangScreen from "../screens/NoiDia/TrungChuyenTuLanhChonKhachHangScreen";
 import TrungChuyenTuLanhXacNhanScreen from "../screens/NoiDia/TrungChuyenTuLanhXacNhanScreen";
 import AppearanceScreen from "../screens/Settings/AppearanceScreen";
+import SettingGroupScreen from "../screens/Settings/SettingGroupScreen";
+import { getSettingGroupTitle } from "../screens/Settings/shared/settingGroups";
 import CameraNotificationScreen from "../screens/Settings/CameraNotificationScreen";
 import TextSizeScreen from "../screens/Settings/TextSizeScreen";
 import QrCodeScreen from "../screens/Settings/QrCodeScreen";
@@ -393,6 +395,14 @@ function AppStack() {
         }}
       />
 
+      <Stack.Screen
+        name="SettingGroup"
+        component={SettingGroupScreen}
+        options={({ route }) => ({
+          title: getSettingGroupTitle(route.params?.group),
+          ...headerWithBack,
+        })}
+      />
       <Stack.Screen
         name="Appearance"
         component={AppearanceScreen}

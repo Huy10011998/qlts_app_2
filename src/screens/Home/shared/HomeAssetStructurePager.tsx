@@ -9,7 +9,6 @@ import {
 } from "react-native";
 
 import { AppColors, useStyles } from "../../../utils/helpers/colors";
-import HomeSectionTitle from "./HomeSectionTitle";
 import HomeItStructureCard from "./HomeItStructureCard";
 import HomeMachineGrowthCard from "./HomeMachineGrowthCard";
 import HomeMachineStructureCard from "./HomeMachineStructureCard";
@@ -18,10 +17,15 @@ import type {
   HomeMachineDashboardPayload,
 } from "./homeData";
 import { HOME_BRAND_RED } from "./homeTheme";
+import { useHomeBlockTone } from "./homeBlockTone";
 
 type HomeAssetStructurePagerProps = {
   /** Bề ngang một trang = bề ngang nội dung Trang chủ. */
   pageWidth: number;
+  /** Hai trang máy móc (cơ cấu + tăng trưởng) — quyền Dashboard.TaiSan.MayMoc. */
+  showMachinePages?: boolean;
+  /** Trang cơ cấu thiết bị CNTT — quyền Dashboard.TaiSan.CNTT. */
+  showItPage?: boolean;
   itStructure: { total: number; items: HomeDashboardItCategory[] } | null;
   /** null = chưa có số của endpoint `MayMoc/dashboard`. */
   machine: HomeMachineDashboardPayload | null;
@@ -38,10 +42,11 @@ type HomeAssetStructurePagerProps = {
 
 /** Padding ngang của card, trừ ra để biểu đồ rộng đúng vùng vẽ còn lại. */
 const CARD_HORIZONTAL_PADDING = 14;
-const PAGE_COUNT = 3;
 
 export default function HomeAssetStructurePager({
   pageWidth,
+  showMachinePages = true,
+  showItPage = true,
   itStructure,
   machine,
   isDashboardLoading = false,
@@ -51,9 +56,13 @@ export default function HomeAssetStructurePager({
   resetToken,
 }: HomeAssetStructurePagerProps) {
   const styles = useStyles(makeStyles);
+  // Chấm trang đang xem cùng màu khối Cơ cấu tài sản; dựng ngoài khối (test)
+  // thì về màu đỏ thương hiệu như trước.
+  const activeDotColor = useHomeBlockTone()?.accent ?? HOME_BRAND_RED;
   const pagerRef = useRef<ScrollView>(null);
   const [page, setPage] = useState(0);
   const chartWidth = Math.max(0, pageWidth - CARD_HORIZONTAL_PADDING * 2);
+  const pageCount = (showMachinePages ? 2 : 0) + (showItPage ? 1 : 0);
 
   const goToPage = useCallback(
     (nextPage: number, animated = true) => {
@@ -71,6 +80,14 @@ export default function HomeAssetStructurePager({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetToken]);
 
+  // Quyền tải lại mỗi lần quay về Trang chủ: mất quyền máy móc thì số trang co
+  // lại, trang đang xem có thể không còn — kéo về trang cuối còn lại.
+  useEffect(() => {
+    if (pageCount === 0 || page < pageCount) return;
+
+    goToPage(pageCount - 1, false);
+  }, [goToPage, page, pageCount]);
+
   const handleScrollEnd = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       if (pageWidth <= 0) return;
@@ -86,11 +103,9 @@ export default function HomeAssetStructurePager({
 
   return (
     <>
-      {/* Tên nhóm cho cả khu, còn tiêu đề riêng của từng trang vẫn nằm trong
-          card: chú thích bên phải đếm "Trang n/3" nên dòng này vẫn đổi theo lượt
-          vuốt, không để người xem đọc số của trang này thành số của trang kia. */}
-      <HomeSectionTitle label="CƠ CẤU TÀI SẢN" />
-
+      {/* Tên nhóm cho cả khu (nhãn CƠ CẤU TÀI SẢN) do HomeScreen dựng, để chạm
+          vào là thu gọn được cả khu; tiêu đề riêng của từng trang vẫn nằm trong
+          card, không để người xem đọc số của trang này thành số của trang kia. */}
       <ScrollView
         ref={pagerRef}
         style={styles.pager}
@@ -104,55 +119,71 @@ export default function HomeAssetStructurePager({
         {/* Trang cao nhất quyết định chiều cao của cả khu: ScrollView ngang căng
             mọi trang bằng trang cao nhất nên nội dung bên dưới không nhảy lên
             nhảy xuống mỗi lần vuốt. */}
-        <View style={[styles.page, { width: pageWidth }]}>
-          <HomeMachineStructureCard
-            units={machine?.units ?? []}
-            totalQuantity={machine?.totalQuantity ?? 0}
-            totalValue={machine?.totalValue ?? 0}
-            missingRateCurrencies={machine?.missingRateCurrencies ?? []}
-            isLoading={isMachineLoading}
-            hasError={hasMachineError}
-            onRetry={onRetryMachine}
-          />
-        </View>
+        {showMachinePages ? (
+          <View style={[styles.page, { width: pageWidth }]}>
+            <HomeMachineStructureCard
+              units={machine?.units ?? []}
+              totalQuantity={machine?.totalQuantity ?? 0}
+              totalValue={machine?.totalValue ?? 0}
+              missingRateCurrencies={machine?.missingRateCurrencies ?? []}
+              isLoading={isMachineLoading}
+              hasError={hasMachineError}
+              onRetry={onRetryMachine}
+            />
+          </View>
+        ) : null}
 
-        <View style={[styles.page, { width: pageWidth }]}>
-          <HomeMachineGrowthCard
-            growth={machine?.growth ?? []}
-            totalQuantity={machine?.totalQuantity ?? 0}
-            totalValue={machine?.totalValue ?? 0}
-            chartWidth={chartWidth}
-            isLoading={isMachineLoading}
-            hasError={hasMachineError}
-            onRetry={onRetryMachine}
-          />
-        </View>
+        {showMachinePages ? (
+          <View style={[styles.page, { width: pageWidth }]}>
+            <HomeMachineGrowthCard
+              growth={machine?.growth ?? []}
+              totalQuantity={machine?.totalQuantity ?? 0}
+              totalValue={machine?.totalValue ?? 0}
+              chartWidth={chartWidth}
+              isLoading={isMachineLoading}
+              hasError={hasMachineError}
+              onRetry={onRetryMachine}
+            />
+          </View>
+        ) : null}
 
-        <View style={[styles.page, { width: pageWidth }]}>
-          <HomeItStructureCard
-            items={itStructure?.items ?? []}
-            total={itStructure?.total ?? 0}
-            isLoading={isDashboardLoading}
-          />
-        </View>
+        {showItPage ? (
+          <View style={[styles.page, { width: pageWidth }]}>
+            <HomeItStructureCard
+              items={itStructure?.items ?? []}
+              total={itStructure?.total ?? 0}
+              isLoading={isDashboardLoading}
+            />
+          </View>
+        ) : null}
       </ScrollView>
 
-      {/* Chấm chỉ báo phải bấm được: không phải ai cũng nghĩ ra là vuốt ngang. */}
+      {/* Chấm chỉ báo phải bấm được: không phải ai cũng nghĩ ra là vuốt ngang.
+          Chỉ còn một trang thì không có gì để chỉ, giữ hàng trống làm khoảng
+          cách với khối dưới. */}
       <View style={styles.dots}>
-        {Array.from({ length: PAGE_COUNT }).map((_, pageIndex) => (
-          <TouchableOpacity
-            key={`asset-dot-${pageIndex}`}
-            onPress={() => goToPage(pageIndex)}
-            activeOpacity={0.7}
-            hitSlop={{ top: 8, right: 6, bottom: 8, left: 6 }}
-            accessibilityRole="button"
-            accessibilityLabel={`Trang ${pageIndex + 1}`}
-          >
-            <View
-              style={[styles.dot, pageIndex === page && styles.dotActive]}
-            />
-          </TouchableOpacity>
-        ))}
+        {pageCount > 1
+          ? Array.from({ length: pageCount }).map((_, pageIndex) => (
+              <TouchableOpacity
+                key={`asset-dot-${pageIndex}`}
+                onPress={() => goToPage(pageIndex)}
+                activeOpacity={0.7}
+                hitSlop={{ top: 8, right: 6, bottom: 8, left: 6 }}
+                accessibilityRole="button"
+                accessibilityLabel={`Trang ${pageIndex + 1}`}
+              >
+                <View
+                  style={[
+                    styles.dot,
+                    pageIndex === page && [
+                      styles.dotActive,
+                      { backgroundColor: activeDotColor },
+                    ],
+                  ]}
+                />
+              </TouchableOpacity>
+            ))
+          : null}
       </View>
     </>
   );

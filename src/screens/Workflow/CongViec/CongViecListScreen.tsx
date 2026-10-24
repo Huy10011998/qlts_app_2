@@ -1,11 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 
+import { useHeaderRecordPill } from "../../../components/assets/shared/useHeaderRecordPill";
 import EmptyState from "../../../components/ui/EmptyState";
 import SearchBar from "../../../components/ui/SearchBar";
-import RecordListFooterSkeleton from "../../../components/list/RecordListFooterSkeleton";
-import RecordListSkeleton from "../../../components/list/RecordListSkeleton";
 import { useDebounce } from "../../../hooks/useDebounce";
 import { cvDemTab, cvGetList, cvThongTin } from "../../../services/data/congViecApi";
 import { CV_CONG_VIEC_NAME_CLASS } from "../../../services/data/workflowApi";
@@ -14,9 +13,17 @@ import type {
   CongViecTab,
   CongViecThongTin,
   StackNavigation,
+  StackRoute,
 } from "../../../types/index";
 import { AppColors, useStyles } from "../../../utils/helpers/colors";
 import WorkflowFab from "../shared/components/WorkflowFab";
+import WorkflowListFooter from "../shared/components/WorkflowListFooter";
+import WorkflowListSkeleton, {
+  countFieldLines,
+  useInfoPending,
+  type WorkflowCardSkeletonShape,
+  WorkflowListFooterSkeleton,
+} from "../shared/components/WorkflowListSkeleton";
 import WorkflowTabBar from "../shared/components/WorkflowTabBar";
 import { useWorkflowMe } from "../shared/useWorkflowMe";
 import { useWorkflowPagedList } from "../shared/useWorkflowPagedList";
@@ -24,9 +31,10 @@ import { useWorkflowPermissions } from "../shared/useWorkflowPermissions";
 import { useReloadOnWorkflowChange } from "../shared/useWorkflowVersion";
 import { useOnWorkflowInfoStale } from "../shared/workflowInfoRefresh";
 import { CV_TABS, readTabCount } from "../shared/workflowConstants";
-import { getCardFields, WorkflowField } from "../shared/workflowFields";
-import { loadClassFields } from "../shared/workflowMetadata";
-import CongViecCard from "./components/CongViecCard";
+import { getCardFields } from "../shared/workflowFields";
+import { useClassFields } from "../shared/workflowMetadata";
+import { buildRelatedConditions } from "../shared/workflowRelated";
+import CongViecCard, { getCongViecCardLayout } from "./components/CongViecCard";
 import MaMauFilter from "./components/MaMauFilter";
 import { CV_CARD_CUSTOM_FIELDS } from "./congViecRules";
 
@@ -34,41 +42,56 @@ import { CV_CARD_CUSTOM_FIELDS } from "./congViecRules";
  * Danh sách công việc (mục 1, 4-Mobile-CongViec): chỉ "việc CỦA TÔI" — tôi
  * tạo hoặc có tên trong người tham gia. Thẻ dựng động từ metadata, trừ nhãn
  * trạng thái và chủ trì vẽ riêng.
+ *
+ * `related` (mở từ tab Chi tiết của Nhân viên): thêm điều kiện khoá ngoại vào
+ * cả danh sách lẫn số trên tab, mở ở tab Tất cả, không có nút thêm — việc thêm ở
+ * đây vẫn là việc của người đăng nhập, không gắn được vào bản ghi đang xem.
  */
 export default function CongViecListScreen() {
   const styles = useStyles(makeStyles);
   const navigation = useNavigation<StackNavigation<"CongViec">>();
+  const related = useRoute<StackRoute<"CongViec">>().params?.related;
+  const relatedConditions = useMemo(() => buildRelatedConditions(related), [related]);
   const { loaded, canRead, canInsert } = useWorkflowPermissions(CV_CONG_VIEC_NAME_CLASS);
   const { me } = useWorkflowMe();
 
-  const [tab, setTab] = useState<CongViecTab>("ChuaXong");
+  const [tab, setTab] = useState<CongViecTab>(related ? "TatCa" : "ChuaXong");
   const [mau, setMau] = useState<string[]>([]);
   const [keyword, setKeyword] = useState("");
   const searchText = useDebounce(keyword, 600);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [infos, setInfos] = useState<Record<number, CongViecThongTin>>({});
-  const [fields, setFields] = useState<WorkflowField[]>([]);
-
-  useEffect(() => {
-    loadClassFields(CV_CONG_VIEC_NAME_CLASS)
-      .then(setFields)
-      .catch(() => setFields([]));
-  }, []);
+  const { pendingIds: infoPending, track: trackInfo } = useInfoPending();
+  const { fields, ready: fieldsReady } = useClassFields(CV_CONG_VIEC_NAME_CLASS);
 
   const cardFields = useMemo(
     () => getCardFields(fields, CV_CARD_CUSTOM_FIELDS),
     [fields],
   );
 
+  // Dáng khung chờ theo metadata (loadClassFields giữ trong phiên, nên từ lần mở
+  // thứ hai đã có ngay); chưa có thì khung chờ tự đoán.
+  const skeletonShape = useMemo<WorkflowCardSkeletonShape>(() => {
+    if (!fields.length) return {};
+    const layout = getCongViecCardLayout(cardFields);
+    return {
+      code: layout.showSo,
+      title: layout.showTieuDe,
+      lines: countFieldLines(layout.lineFields),
+    };
+  }, [cardFields, fields.length]);
+
   const loadCounts = useCallback(() => {
-    cvDemTab(mau, searchText)
+    cvDemTab(mau, searchText, relatedConditions)
       .then(setCounts)
       .catch(() => undefined);
-  }, [mau, searchText]);
+  }, [mau, relatedConditions, searchText]);
 
   const loadInfos = useCallback((page: CongViecItem[]) => {
-    cvThongTin(page.map((item) => item.id))
-      .then((rows) =>
+    const ids = page.map((item) => item.id);
+    trackInfo(
+      ids,
+      cvThongTin(ids).then((rows) =>
         setInfos((prev) => {
           const next = { ...prev };
           rows.forEach((row) => {
@@ -76,16 +99,18 @@ export default function CongViecListScreen() {
           });
           return next;
         }),
-      )
-      .catch(() => undefined);
-  }, []);
+      ),
+    );
+  }, [trackInfo]);
 
   const list = useWorkflowPagedList<CongViecItem>(
     (skipSize, pageSize) =>
-      cvGetList({ tab, mau, searchText, skipSize, pageSize }),
+      cvGetList({ tab, mau, searchText, conditions: relatedConditions, skipSize, pageSize }),
     {
       enabled: loaded && canRead,
-      queryKey: `${tab}|${mau.join(",")}|${searchText}`,
+      // Có cả bộ lọc `related`: navigate trùng tên route là đổi params ngay trên
+      // màn đang mở, thiếu nó thì số trên tab đổi mà danh sách vẫn cũ.
+      queryKey: `${tab}|${mau.join(",")}|${searchText}|${JSON.stringify(relatedConditions)}`,
       onPage: loadInfos,
     },
   );
@@ -99,6 +124,15 @@ export default function CongViecListScreen() {
     loadCounts();
   }, [list, loadCounts]);
 
+  useHeaderRecordPill({
+    label: related?.rootRecordLabel,
+    recordId: related?.idRoot,
+    nameClass: related?.nameClassRoot,
+    groupMenuId: related?.groupMenuId,
+    viewPermission: related?.viewPermission,
+    assetTitleHeader: related?.assetTitleHeader,
+  });
+
   useReloadOnWorkflowChange(() => {
     list.reload();
     loadCounts();
@@ -109,15 +143,18 @@ export default function CongViecListScreen() {
     if (apiBase === CV_CONG_VIEC_NAME_CLASS && list.items.length) loadInfos(list.items);
   });
 
-  const tabs = useMemo(
-    () =>
-      CV_TABS.map((item) => ({
-        key: item.key,
-        label: item.label,
-        count: item.counted ? readTabCount(counts, item.key) : undefined,
-      })),
-    [counts],
-  );
+  const tabs = useMemo(() => {
+    // Mở từ Nhân viên thì đứng ở Tất cả — đưa lên đầu, thanh tab không tự cuộn
+    // tới tab đang bật nên để cuối là khuất ngoài màn.
+    const defs = related
+      ? [...CV_TABS.filter((item) => item.key === "TatCa"), ...CV_TABS.filter((item) => item.key !== "TatCa")]
+      : CV_TABS;
+    return defs.map((item) => ({
+      key: item.key,
+      label: item.label,
+      count: item.counted ? readTabCount(counts, item.key) : undefined,
+    }));
+  }, [counts, related]);
 
   if (loaded && !canRead) {
     return (
@@ -129,7 +166,7 @@ export default function CongViecListScreen() {
     );
   }
 
-  const canAdd = canInsert && !!me.iD_NhanVien;
+  const canAdd = canInsert && !!me.iD_NhanVien && !related;
 
   return (
     <View style={styles.container}>
@@ -145,10 +182,11 @@ export default function CongViecListScreen() {
         activeKey={tab}
         onChange={(key) => setTab(key as CongViecTab)}
       />
-      <MaMauFilter value={mau} onChange={setMau} />
+      <MaMauFilter value={mau} onChange={setMau} spacious />
 
-      {list.loading && !list.items.length ? (
-        <RecordListSkeleton hasSearchBar={false} rows={5} />
+      {/* Chờ cả field: thẻ vẽ trước metadata thì trống số, tiêu đề, các dòng. */}
+      {!fieldsReady || (list.loading && !list.items.length) ? (
+        <WorkflowListSkeleton kind="congViec" shape={skeletonShape} />
       ) : (
         <FlatList
           data={list.items}
@@ -158,6 +196,7 @@ export default function CongViecListScreen() {
               item={item}
               fields={cardFields}
               info={infos[item.id]}
+              infoPending={infoPending.has(item.id)}
               onPress={() => navigation.navigate("CongViecChiTiet", { id: item.id })}
               // Cùng tham số với nút ở màn chi tiết: cv-thong-tin trả sẵn cờ quyền
               // như cv-chi-tiet, `duocTraoDoi` quyết định gửi bình luận / sửa file.
@@ -186,13 +225,19 @@ export default function CongViecListScreen() {
             <RefreshControl refreshing={list.refreshing} onRefresh={refreshAll} />
           }
           ListFooterComponent={
-            list.loadingMore ? <RecordListFooterSkeleton cardStyle={styles.footerCard} /> : null
+            <WorkflowListFooter
+              list={list}
+              skeleton={<WorkflowListFooterSkeleton kind="congViec" shape={skeletonShape} />}
+            />
           }
           ListEmptyComponent={
             <EmptyState
               iconName="checkbox-outline"
               title={list.errorMessage ? "Không tải được công việc" : "Không có công việc"}
-              subtitle={list.errorMessage ?? undefined}
+              subtitle={
+                list.errorMessage ??
+                (related ? "Chỉ hiện công việc bạn được xem." : undefined)
+              }
               actionLabel={list.errorMessage ? "Thử lại" : undefined}
               onActionPress={list.errorMessage ? refreshAll : undefined}
             />
@@ -222,9 +267,5 @@ const makeStyles = (c: AppColors) =>
       paddingTop: 4,
       paddingBottom: 96,
       flexGrow: 1,
-    },
-    // Danh sách đã có lề ngang 12 — thẻ chờ khỏi thụt thêm lần nữa.
-    footerCard: {
-      marginHorizontal: 0,
     },
   });

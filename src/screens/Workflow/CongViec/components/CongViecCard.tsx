@@ -8,14 +8,18 @@ import { elevation } from "../../../../utils/helpers/tokens";
 import StatusBadge from "../../shared/components/StatusBadge";
 import WorkflowCounter from "../../shared/components/WorkflowCounter";
 import WorkflowFieldLines from "../../shared/components/WorkflowFieldLines";
+import { CounterPendingPills } from "../../shared/components/WorkflowListSkeleton";
 import { getCongViecTrangThai, getMaMauColor } from "../../shared/workflowConstants";
 import { findWorkflowField, WorkflowField } from "../../shared/workflowFields";
+import { getCongViecHanBadge } from "../congViecRules";
 
 type Props = {
   item: CongViecItem;
   /** Field động của thẻ (`getCardFields`, đã bỏ TrangThai). */
   fields: WorkflowField[];
   info?: CongViecThongTin;
+  /** cv-thong-tin của việc đang gọi (`useInfoPending`) — giữ chỗ chân thẻ. */
+  infoPending?: boolean;
   onPress: () => void;
   /** Bấm số bình luận / số file mở thẳng màn đó; không truyền thì bấm như bấm thẻ. */
   onOpenComments?: () => void;
@@ -26,7 +30,20 @@ type Props = {
 const HEADER_FIELDS = ["SoCongViec", "TieuDe"];
 
 /**
- * Thẻ công việc: vạch màu maMau bên trái, Số + nhãn trạng thái, tiêu đề, chủ
+ * Phần nào của thẻ hiện theo metadata: Số và tiêu đề lên đầu thẻ (chỉ khi
+ * metadata cho hiện trên mobile), còn lại thành dòng "Nhãn: giá trị". Khung chờ
+ * của danh sách dựng theo đúng hàm này.
+ */
+export const getCongViecCardLayout = (fields: WorkflowField[]) => ({
+  showSo: !!findWorkflowField(fields, "SoCongViec"),
+  showTieuDe: !!findWorkflowField(fields, "TieuDe"),
+  lineFields: fields.filter(
+    (field) => !HEADER_FIELDS.some((name) => name.toLowerCase() === field.name.toLowerCase()),
+  ),
+});
+
+/**
+ * Thẻ công việc: vạch màu maMau bên trái, Số + nhãn hạn + trạng thái, tiêu đề, chủ
  * trì (cột tính, không có trong metadata), các field động, số bình luận / file.
  * Số và tiêu đề chỉ hiện khi metadata cho hiện trên mobile.
  */
@@ -34,6 +51,7 @@ export default function CongViecCard({
   item,
   fields,
   info,
+  infoPending,
   onPress,
   onOpenComments,
   onOpenFiles,
@@ -41,11 +59,10 @@ export default function CongViecCard({
   const styles = useStyles(makeStyles);
   const c = useAppColors();
   const trangThai = getCongViecTrangThai(item.trangThai);
-  const showSo = !!findWorkflowField(fields, "SoCongViec");
-  const showTieuDe = !!findWorkflowField(fields, "TieuDe");
-  const lineFields = fields.filter(
-    (field) => !HEADER_FIELDS.some((name) => name.toLowerCase() === field.name.toLowerCase()),
-  );
+  // Vạch màu bên trái chỉ 5px, dễ lướt qua — Quá hạn / Gia hạn ghi thêm thành chữ
+  // cạnh trạng thái, giống màn chi tiết.
+  const hanBadge = getCongViecHanBadge(item.maMau);
+  const { showSo, showTieuDe, lineFields } = getCongViecCardLayout(fields);
 
   return (
     <TouchableOpacity activeOpacity={0.75} onPress={onPress} style={styles.card}>
@@ -59,7 +76,16 @@ export default function CongViecCard({
           ) : (
             <View style={styles.flex} />
           )}
-          {trangThai ? <StatusBadge label={trangThai.label} color={trangThai.color} /> : null}
+          <View style={styles.badges}>
+            {hanBadge ? <StatusBadge label={hanBadge.label} color={hanBadge.color} dot /> : null}
+            {trangThai ? (
+              <StatusBadge
+                label={trangThai.label}
+                color={trangThai.color}
+                textColor={trangThai.textColor}
+              />
+            ) : null}
+          </View>
         </View>
 
         {showTieuDe && item.tieuDe ? (
@@ -79,7 +105,9 @@ export default function CongViecCard({
 
         <WorkflowFieldLines item={item} fields={lineFields} />
 
-        {info || item.iD_DinhKy ? (
+        {/* Chân thẻ chỉ mọc ra khi cv-thong-tin về (sau trang danh sách) — trong
+            lúc chờ thì giữ sẵn chỗ bằng hai viên xám, thẻ khỏi dài thêm ~47pt. */}
+        {info || item.iD_DinhKy || infoPending ? (
           <View style={styles.footer}>
             {info ? (
               <>
@@ -98,6 +126,8 @@ export default function CongViecCard({
                   onPress={onOpenFiles}
                 />
               </>
+            ) : infoPending ? (
+              <CounterPendingPills />
             ) : null}
             {item.iD_DinhKy ? (
               <View style={styles.counter}>
@@ -142,6 +172,11 @@ const makeStyles = (c: AppColors) =>
     },
     flex: {
       flex: 1,
+    },
+    badges: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
     },
     code: {
       flex: 1,

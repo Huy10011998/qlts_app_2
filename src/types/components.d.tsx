@@ -108,6 +108,8 @@ export interface GroupListProps {
     currentItem: AssetItem,
     previousItem: AssetItem,
   ) => boolean;
+  /** Toạ độ y của từng thẻ nhóm trong ScrollView cha — để nhảy nhanh tới nhóm. */
+  onGroupLayout?: (groupName: string, y: number) => void;
 }
 
 export interface DetailSectionTabsProps {

@@ -1,6 +1,7 @@
 import React from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
+import { useThemePreference } from "../../../../context/ThemeContext";
 import { AppColors, useStyles } from "../../../../utils/helpers/colors";
 import { CV_MA_MAU, tint } from "../../shared/workflowConstants";
 
@@ -9,6 +10,11 @@ type Props = {
   onChange: (next: string[]) => void;
   /** Màu không bao giờ có trong danh sách đang xem (vd lịch không trả việc Hủy). */
   exclude?: string[];
+  /**
+   * Chip cao hơn (vùng bấm ~34 thay vì ~28). Chưa để mặc định: màn Lịch vừa
+   * dựng lại theo chiều cao chip cũ.
+   */
+  spacious?: boolean;
 };
 
 /**
@@ -18,8 +24,10 @@ type Props = {
  * cùng danh sách (flex 1) là bị bóp thấp, chip mất nửa dưới chữ — nên phải
  * chốt `flexGrow: 0, flexShrink: 0` để cao đúng bằng nội dung.
  */
-export default function MaMauFilter({ value, onChange, exclude }: Props) {
+export default function MaMauFilter({ value, onChange, exclude, spacious }: Props) {
   const styles = useStyles(makeStyles);
+  // Chữ chip đang chọn: màu nhạt (Hủy) chỉ đọc được trên nền tối.
+  const dark = useThemePreference().resolvedColorScheme === "dark";
 
   const toggle = (key: string) =>
     onChange(value.includes(key) ? value.filter((item) => item !== key) : [...value, key]);
@@ -40,12 +48,16 @@ export default function MaMauFilter({ value, onChange, exclude }: Props) {
             onPress={() => toggle(item.key)}
             style={[
               styles.chip,
+              spacious && styles.chipSpacious,
               active && { backgroundColor: tint(item.color, "26"), borderColor: item.color },
             ]}
           >
             <View style={[styles.dot, { backgroundColor: item.color }]} />
             <Text
-              style={[styles.text, active && { color: item.color }]}
+              style={[
+                styles.text,
+                active && { color: dark ? item.color : item.textColor ?? item.color },
+              ]}
             >
               {item.label}
             </Text>
@@ -76,6 +88,10 @@ const makeStyles = (c: AppColors) =>
       borderWidth: 1,
       borderColor: c.borderStrong,
       backgroundColor: c.surface,
+    },
+    // Chip nhỏ hàng ngang, bấm lệch là trượt: 8 cho vùng bấm cao ~34.
+    chipSpacious: {
+      paddingVertical: 8,
     },
     dot: {
       width: 8,

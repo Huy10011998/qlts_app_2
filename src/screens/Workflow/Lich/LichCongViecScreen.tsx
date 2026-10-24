@@ -19,13 +19,15 @@ import MaMauFilter from "../CongViec/components/MaMauFilter";
 import { useWorkflowMe } from "../shared/useWorkflowMe";
 import { useWorkflowPermissions } from "../shared/useWorkflowPermissions";
 import { useReloadOnWorkflowChange } from "../shared/useWorkflowVersion";
-import { isSameDay, startOfDay } from "../shared/workflowDate";
+import { formatDay, isSameDay, startOfDay } from "../shared/workflowDate";
 import { getWorkflowErrorMessage } from "../shared/workflowErrors";
 import {
   buildRangeConditions,
   dayKey,
   formatRangeLabel,
   formatWeekday,
+  formatWeekdayName,
+  formatWeekdayShort,
   getRange,
   groupTasksByDay,
   isRangeLoaded,
@@ -72,7 +74,7 @@ export default function LichCongViecScreen() {
   // Đổi tháng / tuần là gọi lại — không cache chéo khoảng vì việc có thể bị sửa ở web.
   // Khoảng mới nằm trong khoảng vừa tải (Tháng → Tuần cùng lưới) thì việc đã đủ
   // trên màn: tải lại ngầm CẢ khoảng cũ, quay về Tháng cũng khỏi chờ. Khoảng mới
-  // thật (sang tháng / tuần khác, đổi lọc màu) mới hiện khung chờ ở ngày trống.
+  // thật (sang tháng / tuần khác, đổi lọc màu) mới hiện trạng thái chờ ở ngày trống.
   const load = useCallback(
     async (silent = false) => {
       const state = loadRef.current;
@@ -145,40 +147,116 @@ export default function LichCongViecScreen() {
     );
   }
 
+  /**
+   * Thẻ một ngày (cả danh sách Tuần lẫn ngày đang chọn dưới lưới Tháng): ô ngày
+   * kiểu tờ lịch bên trái, tên thứ + số việc ở giữa, nút + bên phải; việc của
+   * ngày xếp bên dưới. Ngày trống chỉ còn một dòng, chạm vào đâu cũng thêm việc.
+   */
   const renderDay = (day: Date, compact = false) => {
     const tasks = tasksByDay.get(dayKey(day)) ?? [];
-    const isToday = isSameDay(day, new Date());
+    const today = startOfDay(new Date());
+    const isToday = isSameDay(day, today);
+    const isPast = !isToday && day < today;
+    const isSunday = day.getDay() === 0;
+    const isEmpty = !tasks.length && !loading;
+
+    const header = (
+      <View style={styles.dayHeader}>
+        <View style={[styles.dateBadge, isToday && styles.dateBadgeToday]}>
+          <Text
+            style={[
+              styles.dateBadgeWeekday,
+              isSunday && styles.sundayText,
+              isToday && styles.dateBadgeTextToday,
+            ]}
+          >
+            {formatWeekdayShort(day)}
+          </Text>
+          <Text
+            style={[
+              styles.dateBadgeDay,
+              isPast && styles.pastText,
+              isToday && styles.dateBadgeTextToday,
+            ]}
+          >
+            {day.getDate()}
+          </Text>
+        </View>
+
+        <View style={styles.dayInfo}>
+          <View style={styles.dayNameRow}>
+            <Text style={[styles.dayName, isPast && styles.pastText]} numberOfLines={1}>
+              {formatWeekdayName(day)}
+            </Text>
+            {isToday ? (
+              <View style={styles.todayPill}>
+                <Text style={styles.todayPillText}>Hôm nay</Text>
+              </View>
+            ) : null}
+          </View>
+          {/* Ngày không kèm năm: năm đã có trên thanh tháng / tuần phía trên. */}
+          <Text style={styles.daySub} numberOfLines={1}>
+            {formatDay(day).slice(0, 5)}
+            {" · "}
+            {tasks.length ? (
+              <Text style={styles.dayCountStrong}>{`${tasks.length} việc`}</Text>
+            ) : loading ? (
+              "Đang tải…"
+            ) : (
+              // Không ghi "Bấm để thêm": nút + bên phải đã nói điều đó.
+              "Chưa có việc"
+            )}
+          </Text>
+        </View>
+
+        {canAdd ? (
+          <TouchableOpacity
+            onPress={() => addTask(day)}
+            hitSlop={8}
+            style={styles.addButton}
+            accessibilityRole="button"
+            accessibilityLabel={`Thêm việc ${formatWeekday(day)}`}
+          >
+            <Ionicons name="add" size={20} color={c.red} />
+          </TouchableOpacity>
+        ) : null}
+      </View>
+    );
 
     return (
-      <View key={dayKey(day)} style={compact ? styles.weekDay : undefined}>
-        <View style={styles.dayHeader}>
-          <Text style={[styles.dayTitle, isToday && styles.todayTitle]}>
-            {formatWeekday(day)}
-            {isToday ? " · Hôm nay" : ""}
-          </Text>
-          <Text style={styles.dayCount}>{tasks.length ? `${tasks.length} việc` : ""}</Text>
-          {canAdd ? (
-            <TouchableOpacity onPress={() => addTask(day)} hitSlop={8} style={styles.addButton}>
-              <Ionicons name="add" size={18} color={c.red} />
-            </TouchableOpacity>
-          ) : null}
-        </View>
-        {tasks.length ? (
-          tasks.map((task) => (
-            <LichTaskRow key={`${dayKey(day)}-${task.id}`} item={task} onPress={() => openTask(task)} />
-          ))
-        ) : loading ? (
-          <LichTaskRowSkeleton rows={compact ? 1 : 2} />
-        ) : canAdd ? (
-          // Mục 4: bấm 1 ngày trống → thêm việc cho ngày đó (08:00–17:00, chủ trì là mình).
-          <TouchableOpacity onPress={() => addTask(day)} activeOpacity={0.7}>
-            <Text style={styles.noTask}>
-              Không có việc · <Text style={styles.noTaskAdd}>Bấm để thêm việc</Text>
-            </Text>
+      <View
+        key={dayKey(day)}
+        style={[styles.dayCard, isToday && styles.dayCardToday, compact && styles.weekDay]}
+      >
+        {isEmpty && canAdd ? (
+          <TouchableOpacity activeOpacity={0.7} onPress={() => addTask(day)}>
+            {header}
           </TouchableOpacity>
         ) : (
-          <Text style={styles.noTask}>Không có việc</Text>
+          header
         )}
+
+        {tasks.length ? (
+          <View style={[styles.taskList, { borderTopColor: c.separator }]}>
+            {tasks.map((task) => (
+              <LichTaskRow
+                key={`${dayKey(day)}-${task.id}`}
+                item={task}
+                onPress={() => openTask(task)}
+              />
+            ))}
+          </View>
+        ) : loading && !compact ? (
+          /* Chỉ ngày đang chọn dưới lưới Tháng có việc giả: thẻ này nằm cuối
+             màn, ngày trống thì nó co lại mà không kéo gì phía dưới theo.
+             Danh sách Tuần thì không: 7 thẻ xếp chồng, mỗi ngày trống mất ~100pt
+             (gạch + một việc giả) là cả tuần co lại vài trăm pt. Để mỗi thẻ
+             ngày chỉ "Đang tải…" — ngày có việc giãn ra khi dữ liệu về, ngày
+             trống đứng yên, không chỗ nào hứa một việc rồi rút lại. */
+          <View style={[styles.taskList, { borderTopColor: c.separator }]}>
+            <LichTaskRowSkeleton rows={2} />
+          </View>
+        ) : null}
       </View>
     );
   };
@@ -332,43 +410,112 @@ const makeStyles = (c: AppColors) =>
     selectedDay: {
       marginTop: 14,
     },
+    // Thẻ một ngày: viền 1pt + mép trên 3pt như card Trang chủ. Hôm nay đỏ,
+    // ngày khác xám đậm — `slateBorder` cũ gần trùng màu nền, nhìn như không viền.
+    dayCard: {
+      backgroundColor: c.surface,
+      borderRadius: 16,
+      padding: 12,
+      borderWidth: 1,
+      borderTopWidth: 3,
+      borderColor: c.borderStrong,
+      shadowColor: c.shadow,
+      shadowOpacity: 0.06,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 3 },
+      elevation: 2,
+    },
+    dayCardToday: {
+      borderColor: c.red,
+    },
     weekDay: {
-      marginBottom: 12,
+      marginBottom: 10,
     },
     dayHeader: {
       flexDirection: "row",
       alignItems: "center",
-      marginBottom: 6,
-      gap: 8,
+      gap: 12,
     },
-    dayTitle: {
-      fontSize: 14,
+    // Ô ngày kiểu tờ lịch: thứ viết tắt ở trên, số ngày to ở dưới.
+    dateBadge: {
+      width: 48,
+      height: 52,
+      borderRadius: 12,
+      backgroundColor: c.surfaceAlt,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    dateBadgeToday: {
+      backgroundColor: c.red,
+    },
+    dateBadgeWeekday: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: c.textSub,
+    },
+    dateBadgeDay: {
+      fontSize: 19,
+      fontWeight: "800",
+      color: c.text,
+      marginTop: 1,
+    },
+    dateBadgeTextToday: {
+      color: "#fff",
+    },
+    sundayText: {
+      color: c.red,
+    },
+    // Ngày đã qua nhạt đi một nấc — vẫn đọc được, nhưng mắt bám vào hôm nay và
+    // các ngày tới trước.
+    pastText: {
+      color: c.textMuted,
+    },
+    dayInfo: {
+      flex: 1,
+      minWidth: 0,
+    },
+    dayNameRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    dayName: {
+      flexShrink: 1,
+      fontSize: 15,
       fontWeight: "700",
       color: c.text,
     },
-    todayTitle: {
+    todayPill: {
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 999,
+      backgroundColor: c.redSurface,
+    },
+    todayPillText: {
+      fontSize: 11,
+      fontWeight: "700",
       color: c.red,
     },
-    dayCount: {
-      flex: 1,
-      fontSize: 12,
+    daySub: {
+      fontSize: 12.5,
       color: c.textSub,
+      marginTop: 3,
+    },
+    dayCountStrong: {
+      fontWeight: "700",
+      color: c.text,
     },
     addButton: {
-      width: 30,
-      height: 30,
-      borderRadius: 15,
+      width: 34,
+      height: 34,
+      borderRadius: 17,
       backgroundColor: c.redSurface,
       alignItems: "center",
       justifyContent: "center",
     },
-    noTask: {
-      fontSize: 13,
-      color: c.textMuted,
-      paddingVertical: 6,
-    },
-    noTaskAdd: {
-      fontWeight: "700",
-      color: c.red,
+    taskList: {
+      marginTop: 12,
+      paddingTop: 12,
+      borderTopWidth: StyleSheet.hairlineWidth,
     },
   });

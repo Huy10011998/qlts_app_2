@@ -16,7 +16,10 @@ const itemsFor = (count: number): HomeReorderItem[] =>
     ...HOME_BLOCK_META[key],
   }));
 
-const renderSheet = async (items: HomeReorderItem[]) => {
+const renderSheet = async (
+  items: HomeReorderItem[],
+  onToggleHidden?: (key: string, hidden: boolean) => void
+) => {
   let tree: ReactTestRenderer.ReactTestRenderer;
 
   await ReactTestRenderer.act(async () => {
@@ -32,6 +35,7 @@ const renderSheet = async (items: HomeReorderItem[]) => {
             visible
             items={items}
             onMove={() => undefined}
+            onToggleHidden={onToggleHidden}
             onClose={() => undefined}
           />
         </ThemeProvider>
@@ -41,6 +45,16 @@ const renderSheet = async (items: HomeReorderItem[]) => {
 
   return tree!;
 };
+
+/** Nút ẩn / hiện tròn ở mép phải mỗi hàng (giống bảng Tuỳ chỉnh). */
+const findToggles = (tree: ReactTestRenderer.ReactTestRenderer) =>
+  tree.root.findAll(
+    (instance) =>
+      typeof instance.type === "string" &&
+      instance.props?.accessibilityRole === "switch" &&
+      typeof instance.props?.onClick === "function",
+    { deep: true }
+  );
 
 /** Hàng kéo được: có nhãn trợ năng và tự nhận cử chỉ. */
 const findRows = (tree: ReactTestRenderer.ReactTestRenderer) =>
@@ -65,15 +79,52 @@ describe("HomeBlockOrderSheet", () => {
     expect(rows[3].props.accessibilityLabel).toContain("vị trí 4");
   });
 
-  it("chỉ một khối đang hiện thì không dựng danh sách kéo thả", async () => {
-    const tree = await renderSheet(itemsFor(1));
+  it("chỉ một khối vẫn dựng hàng, vì còn cần nút để ẩn khối đó", async () => {
+    const tree = await renderSheet(itemsFor(1), () => undefined);
 
-    expect(findRows(tree)).toHaveLength(0);
-    // Thay vào đó phải nói rõ vì sao chưa kéo được, không để sheet trắng.
+    expect(findRows(tree)).toHaveLength(1);
+    expect(findToggles(tree)).toHaveLength(1);
+  });
+
+  it("nút tròn: bỏ chọn là ẩn khối, khối đang ẩn thì chọn lại được", async () => {
+    const onToggleHidden = jest.fn();
+    const items = itemsFor(3).map((item) =>
+      item.key === "workflow" ? { ...item, hidden: true } : item
+    );
+    const tree = await renderSheet(items, onToggleHidden);
+    const toggles = findToggles(tree);
+
     expect(
-      tree.root.findAll(
-        (instance) => instance.props?.title === "Chưa cần sắp xếp"
-      ).length
-    ).toBeGreaterThan(0);
+      toggles.map((node) => node.props.accessibilityState?.checked)
+    ).toEqual([true, true, false]);
+    // Khối đang ẩn vẫn ghi rõ trong nhãn trợ năng.
+    expect(findRows(tree)[2].props.accessibilityLabel).toContain("đang ẩn");
+
+    await ReactTestRenderer.act(async () => {
+      toggles[0].props.onClick();
+      toggles[2].props.onClick();
+    });
+
+    expect(onToggleHidden).toHaveBeenNthCalledWith(1, "stats", true);
+    expect(onToggleHidden).toHaveBeenNthCalledWith(2, "workflow", false);
+  });
+
+  it("nút nằm ngoài vùng kéo, chạm nút không nhấc hàng lên", async () => {
+    const tree = await renderSheet(itemsFor(2), () => undefined);
+    const [firstToggle] = findToggles(tree);
+    let node = firstToggle.parent;
+
+    // Mấy lớp bọc của chính TouchableOpacity cũng mang bộ nhận chạm — bỏ qua,
+    // chỉ xét từ chỗ ra khỏi nút trở lên.
+    while (node && node.props?.accessibilityRole === "switch") {
+      node = node.parent;
+    }
+
+    while (node) {
+      expect(typeof node.props?.onStartShouldSetResponder).not.toBe(
+        "function"
+      );
+      node = node.parent;
+    }
   });
 });

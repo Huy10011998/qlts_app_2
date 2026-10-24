@@ -146,6 +146,16 @@ describe("BottomSheetModalShell", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  // Nút X chỉ có icon: thiếu nhãn thì trình đọc màn hình chỉ đọc "nút".
+  it("nút đóng có nhãn trợ năng", async () => {
+    const harness = await mount({ visible: true, showCloseButton: true });
+    const closeButton = harness.tree.root.findByProps({
+      accessibilityLabel: "Đóng",
+    });
+
+    expect(closeButton.props.accessibilityRole).toBe("button");
+  });
+
   it("tháo cây giữa lúc animate không nổ", async () => {
     const harness = await mount({ visible: true });
 

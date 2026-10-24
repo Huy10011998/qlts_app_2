@@ -27,6 +27,7 @@ import AddActionFab from "../../components/add/shared/AddActionFab";
 import { makeSharedAssetListStyles } from "../../components/assets/shared/listStyles";
 import { BRAND_RED } from "../../components/assets/shared/listTheme";
 import { DatePicker } from "../../components/dataPicker/DataPicker";
+import { nextRangeEnd } from "../../components/dataPicker/shared/pickerValue";
 import {
   getNoiDiaErrorMessage,
   getXacNhanViTriTuLanhLichSu,
@@ -66,6 +67,20 @@ const openMap = (lat: string, lng: string, label: string) => {
     ),
   );
 };
+
+/**
+ * Dáng thẻ lượt xác nhận cho khung chờ, đo từ `noiDiaListStyles` (cỡ chữ iOS):
+ * ngày 13 đậm + `marginBottom` 2 = 17.5; "Seri" và "Cách khách hàng" mỗi dòng
+ * `marginTop` 3 + chữ 13 = 18.5; chân thẻ `marginTop` 8 + "NV" 12 = 22.3; dòng
+ * "Xem bản đồ" riêng `marginTop` 4 + đệm 2·2 + chữ 12 = 22.3 → năm dòng 99, thẻ
+ * ~131. Bốn vạch nhịp mặc định như cũ chỉ ~103, mỗi thẻ hụt gần 30pt. Ghi chú
+ * tuỳ lượt nên không tính. Ảnh 48 đứng ở đỉnh thẻ (thẻ không căn giữa).
+ */
+const CARD_SKELETON = {
+  lines: 5,
+  lineHeight: (17.5 + 18.5 * 2 + 22.3 * 2) / 5,
+  avatarAlign: "top",
+} as const;
 
 /** "06-08-2026" (định dạng của DatePicker) → "2026-08-06" cho API. */
 const toApiDate = (value: string) => {
@@ -211,13 +226,27 @@ export default function XacNhanViTriTuLanhLichSuScreen() {
     })
   )
     return (
-      <RecordListSkeleton
-        hasSummaryCard
-        hasBanner
-        hasFilterCard
-        hasFab={canThemXacNhanViTri}
-        lines={4}
-      />
+      /* Thẻ tủ lấy từ tham số route nên vẽ THẬT ngay, đúng chỗ của nó trong
+         danh sách (dưới `paddingTop` của `listContent`) — thẻ xám 2 dòng cũ thấp
+         hơn thẻ 3 dòng thật ~20pt.
+
+         Không vẽ banner cập nhật toạ độ: nó chỉ hiện khi đã có lượt + có quyền
+         + khách chưa có toạ độ hoặc lệch xa, tức là thường KHÔNG có; vẽ sẵn một
+         khối xám thì phần lớn lần mở danh sách bị kéo lên một nhịp. */
+      <ScreenContainer>
+        <View style={{ paddingTop: styles.listContent.paddingTop }}>
+          <FridgeSummaryHeader
+            ma={fridge.ma}
+            ten={fridge.ten}
+            serialNumber={fridge.serialNumber}
+          />
+        </View>
+        <RecordListSkeleton
+          hasFilterCard
+          hasFab={canThemXacNhanViTri}
+          {...CARD_SKELETON}
+        />
+      </ScreenContainer>
     );
 
   if (!canXemXacNhanViTri) {
@@ -301,11 +330,22 @@ export default function XacNhanViTriTuLanhLichSuScreen() {
             <View style={styles.dateRow}>
               <View style={styles.dateField}>
                 <Text style={styles.dateLabel}>Từ ngày</Text>
-                <DatePicker value={fromDate} onChange={setFromDate} />
+                <DatePicker
+                  value={fromDate}
+                  onChange={(next) => {
+                    setFromDate(next);
+                    // Từ ngày vượt quá Đến ngày thì kéo Đến ngày theo.
+                    setToDate((end) => nextRangeEnd(next, end));
+                  }}
+                />
               </View>
               <View style={styles.dateField}>
                 <Text style={styles.dateLabel}>Đến ngày</Text>
-                <DatePicker value={toDate} onChange={setToDate} />
+                <DatePicker
+                  value={toDate}
+                  minDate={fromDate || undefined}
+                  onChange={setToDate}
+                />
               </View>
             </View>
 
@@ -370,7 +410,7 @@ export default function XacNhanViTriTuLanhLichSuScreen() {
         }
         ListEmptyComponent={
           isFiltering ? (
-            <RecordListFooterSkeleton rows={4} lines={4} />
+            <RecordListFooterSkeleton rows={4} {...CARD_SKELETON} />
           ) : (
             <AssetListEmptyState
               iconName={

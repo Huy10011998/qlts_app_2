@@ -7,6 +7,7 @@ import type { ReferenceDataMap } from "../../../types";
 import ReferenceQuickAddForm from "./ReferenceQuickAddForm";
 import { getParentGate } from "../../../utils/cascade/parentGate";
 import { buildQuickAddPrefill } from "./assetFormPayload";
+import { isReferenceFirstPageLoading } from "../../../hooks/AssetAddItem/useOpenReferenceModal";
 
 type AssetFormReferencePickerModalProps = {
   activeEnumField: any;
@@ -44,6 +45,12 @@ type AssetFormReferencePickerModalProps = {
    * picker nằm trong chính form thêm nhanh, để không lồng thêm cấp nữa.
    */
   enableQuickAdd?: boolean;
+  /**
+   * Field Enum chưa xong lượt tải đầu (`useEnumAndReferenceLoader`). Không
+   * truyền thì Enum mở sớm vẫn báo rỗng như cũ; Reference không cần — cờ chờ
+   * của nó nằm sẵn trong `referenceData`.
+   */
+  pendingEnumFields?: Record<string, boolean>;
 };
 
 export default function AssetFormReferencePickerModal({
@@ -70,6 +77,7 @@ export default function AssetFormReferencePickerModal({
   setRefPage,
   setRefSearching,
   enableQuickAdd = true,
+  pendingEnumFields,
 }: AssetFormReferencePickerModalProps) {
   const [showSearchingIndicator, setShowSearchingIndicator] =
     React.useState(false);
@@ -219,6 +227,12 @@ export default function AssetFormReferencePickerModal({
       }
       isSearching={showSearchingIndicator}
       errorMessage={referenceErrorMessage}
+      loading={
+        isReferenceField
+          ? isReferenceFirstPageLoading(referenceData, activeEnumField?.name)
+          : Boolean(activeEnumField && pendingEnumFields?.[activeEnumField.name])
+      }
+      onRetry={isReferenceField ? retryReferenceLoad : undefined}
       loadingMore={refLoadingMore}
       visible={modalVisible}
       title={`${activeEnumField?.moTa || activeEnumField?.name}`}

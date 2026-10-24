@@ -1,4 +1,5 @@
 import { Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import notifee from "@notifee/react-native";
 import {
   hasPermission,
@@ -12,7 +13,19 @@ import {
   hasNotificationPermission,
   requestNotificationPermission,
 } from "../src/services/notifications/permissions";
+import { AppAlert } from "../src/components/ui/AppAlert";
 
+// Hộp giải thích của app: mặc định bấm luôn nút đầu tiên ("Tiếp tục").
+jest.mock("../src/components/ui/AppAlert", () => ({
+  AppAlert: {
+    alert: jest.fn(
+      (_title: string, _message?: string, buttons?: { onPress?: () => void }[]) =>
+        buttons?.[0]?.onPress?.(),
+    ),
+  },
+}));
+
+const mockedAppAlert = AppAlert.alert as jest.Mock;
 const mockedNotifee = notifee as jest.Mocked<typeof notifee>;
 const mockedHasPermission = hasPermission as jest.Mock;
 const mockedRequestPermission = requestPermission as jest.Mock;
@@ -25,8 +38,9 @@ const setPlatform = (os: "ios" | "android") => {
 
 const originalPlatform = Platform.OS;
 
-beforeEach(() => {
+beforeEach(async () => {
   jest.clearAllMocks();
+  await AsyncStorage.clear();
 });
 
 afterEach(() => {
@@ -175,12 +189,29 @@ describe("ensureNotificationPermission", () => {
     expect(mockedRequestPermission).not.toHaveBeenCalled();
   });
 
-  it("chưa hỏi lần nào → gọi dialog hệ thống", async () => {
+  it("chưa hỏi lần nào → hộp giải thích của app trước, rồi mới tới dialog hệ thống", async () => {
     mockedHasPermission.mockResolvedValue(-1);
     mockedRequestPermission.mockResolvedValue(1);
 
     await expect(ensureNotificationPermission()).resolves.toBe(true);
-    expect(mockedRequestPermission).toHaveBeenCalled();
+    expect(mockedAppAlert).toHaveBeenCalledTimes(1);
+    expect(mockedAppAlert.mock.calls[0][2]).toEqual([
+      expect.objectContaining({ text: "Tiếp tục" }),
+    ]);
+    expect(mockedAppAlert.mock.invocationCallOrder[0]).toBeLessThan(
+      mockedRequestPermission.mock.invocationCallOrder[0],
+    );
+  });
+
+  it("chưa bấm Tiếp tục thì chưa hiện dialog hệ thống", async () => {
+    mockedHasPermission.mockResolvedValue(-1);
+    mockedAppAlert.mockImplementationOnce(() => {});
+
+    ensureNotificationPermission();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(mockedAppAlert).toHaveBeenCalledTimes(1);
+    expect(mockedRequestPermission).not.toHaveBeenCalled();
   });
 
   it("đã bị chặn → bỏ qua dialog vì gọi cũng không hiện gì", async () => {
@@ -188,5 +219,38 @@ describe("ensureNotificationPermission", () => {
 
     await expect(ensureNotificationPermission()).resolves.toBe(false);
     expect(mockedRequestPermission).not.toHaveBeenCalled();
+    expect(mockedAppAlert).not.toHaveBeenCalled();
+  });
+
+  // Android 13+ từ chối lần đầu vẫn hỏi lại được, nhưng mỗi lần mở app lại bật
+  // hộp là làm phiền — lần sau người dùng tự bật trong Cài đặt của app.
+  it("Android từ chối lần đầu → lần mở app sau không tự hỏi lại", async () => {
+    setPlatform("android");
+    mockedNotifee.getNotificationSettings.mockResolvedValue({
+      authorizationStatus: 0,
+    } as never);
+    mockedCheckNotifications.mockResolvedValue({ status: "denied" });
+    mockedNotifee.requestPermission.mockResolvedValue({
+      authorizationStatus: 0,
+    } as never);
+
+    await expect(ensureNotificationPermission()).resolves.toBe(false);
+    expect(mockedNotifee.requestPermission).toHaveBeenCalledTimes(1);
+
+    await expect(ensureNotificationPermission()).resolves.toBe(false);
+    expect(mockedNotifee.requestPermission).toHaveBeenCalledTimes(1);
+    expect(mockedAppAlert).toHaveBeenCalledTimes(1);
+  });
+
+  it("nút trong Cài đặt vẫn hỏi lại được, không qua hộp giải thích", async () => {
+    setPlatform("android");
+    await AsyncStorage.setItem("push.permission-auto-asked.v1", "1");
+    mockedNotifee.requestPermission.mockResolvedValue({
+      authorizationStatus: 1,
+    } as never);
+
+    await expect(requestNotificationPermission()).resolves.toBe("granted");
+    expect(mockedNotifee.requestPermission).toHaveBeenCalledTimes(1);
+    expect(mockedAppAlert).not.toHaveBeenCalled();
   });
 });

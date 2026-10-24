@@ -3,9 +3,9 @@ import { StyleSheet, Text, View } from "react-native";
 import {
   AppColors,
   useAppColors,
-  useHairlineBorderColor,
   useStyles,
 } from "../../../utils/helpers/colors";
+import { useHomeCardChrome } from "./homeBlockTone";
 
 type HomeAssetPageCardProps = {
   /**
@@ -33,18 +33,11 @@ export default function HomeAssetPageCard({
 }: HomeAssetPageCardProps) {
   const styles = useStyles(makeStyles);
   const colors = useAppColors();
-  const hairlineBorderColor = useHairlineBorderColor();
+  const chrome = useHomeCardChrome();
 
   return (
     <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: colors.surface,
-          borderColor: hairlineBorderColor,
-          shadowColor: colors.shadow,
-        },
-      ]}
+      style={[styles.card, chrome, { backgroundColor: colors.surface }]}
     >
       <View style={styles.header}>
         <Text
@@ -70,19 +63,14 @@ export default function HomeAssetPageCard({
 
 const makeStyles = (c: AppColors) =>
   StyleSheet.create({
+    // Viền, bóng và mép trên do `useHomeCardChrome` lo.
     card: {
       flex: 1,
       backgroundColor: c.surface,
       borderRadius: 18,
       paddingHorizontal: 14,
-      paddingVertical: 12,
-      shadowColor: c.shadow,
-      shadowOpacity: 0.07,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 3 },
-      elevation: 2,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border,
+      paddingTop: 10,
+      paddingBottom: 12,
     },
     header: {
       flexDirection: "row",

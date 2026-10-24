@@ -1,20 +1,21 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
-import RecordListFooterSkeleton from "../../components/list/RecordListFooterSkeleton";
-import RecordListSkeleton from "../../components/list/RecordListSkeleton";
 import EmptyState from "../../components/ui/EmptyState";
 import { thongBaoDaDoc, thongBaoGetList } from "../../services/data/thongBaoApi";
 import { subscribeThongBao } from "../../services/realtime/traoDoiHub";
 import type { ThongBaoItem, ThongBaoNhom } from "../../types/index";
 import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
+import WorkflowListFooter from "../Workflow/shared/components/WorkflowListFooter";
 import WorkflowTabBar from "../Workflow/shared/components/WorkflowTabBar";
 import { useWorkflowPagedList } from "../Workflow/shared/useWorkflowPagedList";
 import { getWorkflowErrorMessage } from "../Workflow/shared/workflowErrors";
 import ThongBaoRow from "./ThongBaoRow";
+import ThongBaoRowSkeleton from "./ThongBaoRowSkeleton";
 import { useThongBaoContext } from "./ThongBaoProvider";
 import { markThongBaoRead, PAGE_SIZE, prependThongBao, THONG_BAO_NHOM } from "./thongBaoRules";
+import { AppAlert } from "../../components/ui/AppAlert";
 
 const ALL = "TatCa";
 const TABS = [{ key: ALL, label: "Tất cả" }, ...THONG_BAO_NHOM];
@@ -83,7 +84,7 @@ export default function ThongBaoScreen() {
       setSoChuaDoc(left ?? 0);
       setItems((prev) => markThongBaoRead(prev, "all"));
     } catch (err) {
-      Alert.alert("Thông báo", getWorkflowErrorMessage(err, "Không đánh dấu được đã đọc."));
+      AppAlert.alert("Thông báo", getWorkflowErrorMessage(err, "Không đánh dấu được đã đọc."));
     } finally {
       setMarkingAll(false);
     }
@@ -122,8 +123,9 @@ export default function ThongBaoScreen() {
         ) : null}
       </View>
 
+      {/* Thanh tab + "Chỉ chưa đọc" ở trên vẫn là thật; chỉ phần danh sách chờ. */}
       {list.loading ? (
-        <RecordListSkeleton rows={8} lines={2} />
+        <ThongBaoRowSkeleton />
       ) : (
         <FlatList
           data={list.items}
@@ -133,7 +135,14 @@ export default function ThongBaoScreen() {
           onEndReached={list.loadMore}
           onEndReachedThreshold={0.5}
           refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={list.refresh} />}
-          ListFooterComponent={list.loadingMore ? <RecordListFooterSkeleton /> : null}
+          ListFooterComponent={
+            <WorkflowListFooter
+              list={list}
+              // Dòng phẳng tràn ngang như dòng thật — thẻ bản ghi mặc định là
+              // thẻ nổi có lề, lệch hẳn giữa danh sách tràn viền.
+              skeleton={<ThongBaoRowSkeleton rows={2} accessibilityLabel="Đang tải thêm" />}
+            />
+          }
           ListEmptyComponent={
             <EmptyState
               iconName="notifications-outline"

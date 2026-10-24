@@ -41,13 +41,14 @@ export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
     try {
       if (!id || !nameClass) throw new Error("Thiếu ID hoặc nameClass");
 
-      const response = await getDetailsHistory(nameClass, id);
+      // Hai bản cùng lúc và cùng hiện: hiện bản này trước thì mọi dòng là chữ
+      // thường, bản trước về mới tô đỏ "cũ -> mới" và trang nhảy.
+      const [response, prevResponse] = await Promise.all([
+        getDetailsHistory(nameClass, id),
+        id_previous ? getDetailsHistory(nameClass, id_previous) : null,
+      ]);
       setItem(response.data);
-
-      if (id_previous) {
-        const prevResponse = await getDetailsHistory(nameClass, id_previous);
-        setPreviousItem(prevResponse.data);
-      }
+      setPreviousItem(prevResponse?.data ?? null);
       setLoadErrorMessage(null);
     } catch (e) {
       error(e);
@@ -96,7 +97,7 @@ export default function AssetHistoryDetail({ children }: DetailsHistoryProps) {
 
   // Như `AssetDetails`: nhãn field đã có sẵn từ route, chỉ giá trị phải chờ.
   if (isLoading && !item && !loadErrorMessage) {
-    return <AssetDetailsSkeleton groupedFields={groupedFields} tabCount={0} />;
+    return <AssetDetailsSkeleton groupedFields={groupedFields} />;
   }
 
   return (

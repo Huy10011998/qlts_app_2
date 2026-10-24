@@ -16,6 +16,7 @@ import { TypeProperty } from "../../../utils/Enum";
 import { useParams } from "../../../hooks/useParams";
 import { usePermission } from "../../../hooks/usePermission";
 import { useSafeAlert } from "../../../hooks/useSafeAlert";
+import { showAppToast } from "../../ui/AppToast";
 
 type UseAssetRecordActionsArgs = {
   item: AssetItem | null | undefined;
@@ -90,30 +91,32 @@ export function useAssetRecordActions({
         saveHistory: true,
       });
 
-      showAlertIfActive("Thành công", "Đã xoá thông tin!", [
-        {
-          text: "OK",
-          onPress: () => {
-            dispatch(setShouldRefreshList(true));
-            // Bản ghi vừa bị xoá mà còn treo lệnh "nạp lại đúng item này" từ lần
-            // sửa trước thì lệnh đó thành rác: danh sách sẽ gọi get-details cho
-            // một id không còn tồn tại và ăn 404.
-            if (
-              updatedListItem?.id === String(item.id) &&
-              updatedListItem.nameClass === nameClass
-            ) {
-              dispatch(resetUpdatedListItem());
-            }
-            navigation.goBack();
-          },
-        },
-      ]);
+      dispatch(setShouldRefreshList(true));
+      // Bản ghi vừa bị xoá mà còn treo lệnh "nạp lại đúng item này" từ lần sửa
+      // trước thì lệnh đó thành rác: danh sách sẽ gọi get-details cho một id
+      // không còn tồn tại và ăn 404.
+      if (
+        updatedListItem?.id === String(item.id) &&
+        updatedListItem.nameClass === nameClass
+      ) {
+        dispatch(resetUpdatedListItem());
+      }
+
+      // Toast thay cho Alert "Đã xoá" phải bấm OK: dải toast nằm ở gốc app nên
+      // vẫn hiện sau khi màn chi tiết đóng.
+      const label = getRecordLabel(item, fieldActive);
+      showAppToast({
+        message: "Đã xoá thông tin",
+        detail: label || undefined,
+      });
+      navigation.goBack();
     } catch (err) {
       error(err);
       showAlertIfActive("Lỗi", "Không thể xoá thông tin!");
     }
   }, [
     dispatch,
+    fieldActive,
     item,
     nameClass,
     navigation,

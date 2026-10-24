@@ -1,7 +1,9 @@
 import {
   applyDangNhap,
+  applyThuHoi,
   DANG_NHAP_TTL_MS,
   formatDangNhapLabel,
+  getReplyPreview,
   getThumbnailSize,
   mergeRealtimeComment,
   pruneDangNhap,
@@ -73,5 +75,55 @@ describe("ảnh thu nhỏ", () => {
     expect(getThumbnailSize(240, 2)).toBe(480);
     expect(getThumbnailSize(20, 1)).toBe(64);
     expect(getThumbnailSize(900, 3)).toBe(1600);
+  });
+});
+
+describe("trả lời bình luận", () => {
+  it("tóm tắt tin gốc 1 dòng; không có nội dung thì 📎 tên file", () => {
+    expect(getReplyPreview("dòng 1\n  dòng 2 ", "abc.jpg")).toBe("dòng 1 dòng 2");
+    expect(getReplyPreview(null, "abc.jpg")).toBe("📎 abc.jpg");
+    expect(getReplyPreview("   ", "abc.jpg")).toBe("📎 abc.jpg");
+    expect(getReplyPreview(null, null)).toBe("");
+  });
+});
+
+describe("thu hồi bình luận", () => {
+  const goc: WorkflowComment = {
+    ...binhLuan(5, "2026-10-22T09:00:00"),
+    iD_File: 7791,
+    tenFile: "abc.jpg",
+    fileSize: 892,
+  };
+  const traLoi: WorkflowComment = {
+    ...binhLuan(6, "2026-10-22T09:05:00", 203),
+    iD_TraLoi: 5,
+    traLoi_Ten: "Nhân viên Test 2",
+    traLoi_NoiDung: "bình luận 5",
+    traLoi_TenFile: "abc.jpg",
+  };
+  const items = [goc, traLoi, binhLuan(7, "2026-10-22T09:10:00")];
+
+  it("tin bị thu hồi mất nội dung + file; tin trả lời nó ghi trích dẫn đã thu hồi", () => {
+    const next = applyThuHoi(items, 5);
+    expect(next[0]).toMatchObject({
+      isThuHoi: true,
+      noiDung: null,
+      iD_File: null,
+      tenFile: null,
+      fileSize: null,
+    });
+    expect(next[1]).toMatchObject({
+      traLoi_ThuHoi: true,
+      traLoi_NoiDung: null,
+      traLoi_TenFile: null,
+      noiDung: "bình luận 6",
+    });
+    expect(next[2]).toBe(items[2]);
+  });
+
+  it("id lạ hoặc đã thu hồi rồi (nhận lại sự kiện) thì giữ nguyên mảng", () => {
+    expect(applyThuHoi(items, 99)).toBe(items);
+    const once = applyThuHoi(items, 5);
+    expect(applyThuHoi(once, 5)).toBe(once);
   });
 });

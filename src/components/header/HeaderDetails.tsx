@@ -3,7 +3,6 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  useWindowDimensions,
   View,
 } from "react-native";
 import {
@@ -13,13 +12,19 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import Svg, { Path } from "react-native-svg";
 import type { HeaderOptionsProps } from "../../types";
 import { getGuideTopicTitle } from "../../screens/Guide/shared/guideContent";
 import { AppColors, useStyles } from "../../utils/helpers/colors";
 
 const makeStyles = (c: AppColors) =>
   StyleSheet.create({
+    // Lớp ngoài mang nền trang theo giao diện sáng / tối — dải sóng cũ tô cứng
+    // #F0F2F8 nên giao diện tối bị lộ một vệt sáng dưới header.
+    shell: {
+      backgroundColor: c.bg,
+    },
+    // Đáy thẳng như header Trang chủ. `overflow: hidden` cắt các vòng tròn
+    // trang trí tràn ra ngoài header.
     outer: {
       backgroundColor: c.red,
       overflow: "hidden",
@@ -126,6 +131,8 @@ const makeStyles = (c: AppColors) =>
       fontSize: 18,
       textAlign: "center",
     },
+    // Icon chỉ ~26pt; các nút dùng style này đều kèm `hitSlop` để vùng bấm
+    // đạt cỡ ngón tay mà không nới rộng header.
     iconButton: {
       paddingHorizontal: 5,
     },
@@ -143,12 +150,10 @@ const makeStyles = (c: AppColors) =>
       borderWidth: 1,
       borderColor: c.red,
     },
-    waveContainer: {
+    // Cao đúng bằng dải sóng cũ (20) để header không đổi chiều cao — nội dung
+    // của hơn 90 màn bên dưới không bị đẩy lên xuống.
+    bottomSpacer: {
       height: 20,
-    },
-    headerWave: {
-      position: "absolute",
-      bottom: 0,
     },
   });
 
@@ -194,49 +199,55 @@ export function HeaderDetailsModalHeader({
   const resolvedIconName = iconName ?? meta.iconName;
 
   return (
-    <View style={[styles.outer, { paddingTop: insets.top }]}>
-      <View style={styles.decoLarge} />
-      <View style={styles.decoMid} />
-      <View style={styles.decoSoft} />
-      <View style={styles.decoBubbleOne} />
-      <View style={styles.decoBubbleTwo} />
+    <View style={styles.shell}>
+      <View style={[styles.outer, { paddingTop: insets.top }]}>
+        <View style={styles.decoLarge} />
+        <View style={styles.decoMid} />
+        <View style={styles.decoSoft} />
+        <View style={styles.decoBubbleOne} />
+        <View style={styles.decoBubbleTwo} />
 
-      <View style={styles.topBar}>
-        <View style={styles.sideSlot}>
-          {onBack ? (
-            <TouchableOpacity onPress={onBack} style={styles.iconButton}>
-              <Ionicons name={backIcon} size={26} color="#fff" />
-            </TouchableOpacity>
-          ) : null}
-        </View>
+        <View style={styles.topBar}>
+          <View style={styles.sideSlot}>
+            {onBack ? (
+              <TouchableOpacity
+                onPress={onBack}
+                style={styles.iconButton}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel={backIcon === "close" ? "Đóng" : "Quay lại"}
+              >
+                <Ionicons name={backIcon} size={26} color="#fff" />
+              </TouchableOpacity>
+            ) : null}
+          </View>
 
-        <View style={styles.titleWrap}>
-          <View style={styles.titleBadge}>
-            <Ionicons
-              name={resolvedIconName}
-              size={12}
-              color="rgba(255,255,255,0.82)"
-              style={styles.titleBadgeIcon}
-            />
-            <Text style={styles.titleBadgeText}>
-              {resolvedBadgeLabel}
+          <View style={styles.titleWrap}>
+            <View style={styles.titleBadge}>
+              <Ionicons
+                name={resolvedIconName}
+                size={12}
+                color="rgba(255,255,255,0.82)"
+                style={styles.titleBadgeIcon}
+              />
+              <Text style={styles.titleBadgeText}>
+                {resolvedBadgeLabel}
+              </Text>
+            </View>
+            <Text
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+              numberOfLines={1}
+              style={styles.title}
+            >
+              {title}
             </Text>
           </View>
-          <Text
-            adjustsFontSizeToFit
-            minimumFontScale={0.7}
-            numberOfLines={1}
-            style={styles.title}
-          >
-            {title}
-          </Text>
+
+          <View style={[styles.sideSlot, styles.rightSlot]}>{rightSlot}</View>
         </View>
 
-        <View style={[styles.sideSlot, styles.rightSlot]}>{rightSlot}</View>
-      </View>
-
-      <View style={styles.waveContainer}>
-        <HeaderWave />
+        <View style={styles.bottomSpacer} />
       </View>
     </View>
   );
@@ -260,12 +271,16 @@ function HeaderDetailsBar({
   const meta = getHeaderMeta(title);
   // Màn chi tiết ghi mã bản ghi vào đây (xem AssetDetailHeaderActions): tiêu đề
   // là tên loại tài sản, cuộn qua khỏi dòng "Mã:" thì badge là chỗ duy nhất còn
-  // cho biết đang xem bản ghi nào.
-  const recordLabel = (options as { headerBadgeLabel?: string })
-    .headerBadgeLabel;
-  const badgeLabel = recordLabel?.trim() || meta.badgeLabel;
-  const badgeIconName = recordLabel?.trim()
-    ? ("pricetag-outline" as const)
+  // cho biết đang xem bản ghi nào. Màn thêm việc mở từ Lịch ghi ngày đang tạo,
+  // kèm icon lịch (`headerBadgeIcon`).
+  const headerBadge = options as {
+    headerBadgeLabel?: string;
+    headerBadgeIcon?: React.ComponentProps<typeof Ionicons>["name"];
+  };
+  const recordLabel = headerBadge.headerBadgeLabel?.trim();
+  const badgeLabel = recordLabel || meta.badgeLabel;
+  const badgeIconName = recordLabel
+    ? headerBadge.headerBadgeIcon ?? "pricetag-outline"
     : meta.iconName;
   const customHeaderRight =
     typeof options.headerRight === "function"
@@ -308,121 +323,103 @@ function HeaderDetailsBar({
   );
 
   return (
-    <View style={[styles.outer, { paddingTop: insets.top }]}>
-      <View style={styles.decoLarge} />
-      <View style={styles.decoMid} />
-      <View style={styles.decoSoft} />
-      <View style={styles.decoBubbleOne} />
-      <View style={styles.decoBubbleTwo} />
+    <View style={styles.shell}>
+      <View style={[styles.outer, { paddingTop: insets.top }]}>
+        <View style={styles.decoLarge} />
+        <View style={styles.decoMid} />
+        <View style={styles.decoSoft} />
+        <View style={styles.decoBubbleOne} />
+        <View style={styles.decoBubbleTwo} />
 
-      <View style={styles.topBar}>
-        <View style={[styles.sideSlot, { minWidth: sideSlotMinWidth }]}>
-          {showBackButton ? (
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={styles.iconButton}
-            >
-              <Ionicons name="arrow-back" size={26} color="#fff" />
-            </TouchableOpacity>
-          ) : null}
-        </View>
-
-        <View style={styles.titleWrap}>
-          <View style={styles.titleBadge}>
-            <Ionicons
-              name={badgeIconName}
-              size={12}
-              color="rgba(255,255,255,0.82)"
-              style={styles.titleBadgeIcon}
-            />
-            <Text style={styles.titleBadgeText}>
-              {badgeLabel}
-            </Text>
-          </View>
-          <Text
-            adjustsFontSizeToFit
-            minimumFontScale={0.7}
-            numberOfLines={1}
-            style={styles.title}
-          >
-            {title}
-          </Text>
-        </View>
-
-        <View
-          style={[
-            styles.sideSlot,
-            styles.rightSlot,
-            { minWidth: sideSlotMinWidth },
-          ]}
-        >
-          <View style={styles.rightActions}>
-            {customHeaderRight}
-            {helpTopicId ? (
+        <View style={styles.topBar}>
+          <View style={[styles.sideSlot, { minWidth: sideSlotMinWidth }]}>
+            {showBackButton ? (
               <TouchableOpacity
-                onPress={handleHelpPress}
+                onPress={() => navigation.goBack()}
                 style={styles.iconButton}
+                hitSlop={10}
                 accessibilityRole="button"
-                accessibilityLabel="Hướng dẫn sử dụng màn hình này"
+                accessibilityLabel="Quay lại"
               >
-                <Ionicons name="help-circle-outline" size={24} color="#fff" />
+                <Ionicons name="arrow-back" size={26} color="#fff" />
               </TouchableOpacity>
             ) : null}
-            {showQrScannerButton ? (
-              <View style={styles.qrButtonWrap}>
+          </View>
+
+          <View style={styles.titleWrap}>
+            <View style={styles.titleBadge}>
+              <Ionicons
+                name={badgeIconName}
+                size={12}
+                color="rgba(255,255,255,0.82)"
+                style={styles.titleBadgeIcon}
+              />
+              <Text style={styles.titleBadgeText}>
+                {badgeLabel}
+              </Text>
+            </View>
+            <Text
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+              numberOfLines={1}
+              style={styles.title}
+            >
+              {title}
+            </Text>
+          </View>
+
+          <View
+            style={[
+              styles.sideSlot,
+              styles.rightSlot,
+              { minWidth: sideSlotMinWidth },
+            ]}
+          >
+            <View style={styles.rightActions}>
+              {customHeaderRight}
+              {helpTopicId ? (
                 <TouchableOpacity
-                  onPress={handleQrPress}
+                  onPress={handleHelpPress}
                   style={styles.iconButton}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel="Hướng dẫn sử dụng màn hình này"
                 >
-                  <MaterialCommunityIcons
-                    name="qrcode-scan"
-                    size={24}
-                    color="#fff"
-                  />
+                  <Ionicons name="help-circle-outline" size={24} color="#fff" />
                 </TouchableOpacity>
-                <View style={styles.qrButtonDot} />
-              </View>
-            ) : null}
+              ) : null}
+              {showQrScannerButton ? (
+                <View style={styles.qrButtonWrap}>
+                  <TouchableOpacity
+                    onPress={handleQrPress}
+                    style={styles.iconButton}
+                    hitSlop={10}
+                    accessibilityRole="button"
+                    accessibilityLabel="Quét QR"
+                  >
+                    <MaterialCommunityIcons
+                      name="qrcode-scan"
+                      size={24}
+                      color="#fff"
+                    />
+                  </TouchableOpacity>
+                  <View style={styles.qrButtonDot} />
+                </View>
+              ) : null}
+            </View>
           </View>
         </View>
-      </View>
 
-      <View style={styles.waveContainer}>
-        <HeaderWave />
+        <View style={styles.bottomSpacer} />
       </View>
     </View>
   );
 }
 
-const HeaderWave: React.FC = () => {
-  const styles = useStyles(makeStyles);
-  const { width } = useWindowDimensions();
-
-  return (
-    <Svg
-      width={width}
-      height={20}
-      viewBox={`0 0 ${width} 20`}
-      style={styles.headerWave}
-    >
-      <Path
-        d={`M0,6 C${width * 0.22},20 ${width * 0.44},0 ${width * 0.66},12 C${
-          width * 0.82
-        },20 ${width * 0.92},6 ${width},12 L${width},20 L0,20 Z`}
-        fill="rgba(255,255,255,0.14)"
-      />
-      <Path
-        d={`M0,10 C${width * 0.28},20 ${width * 0.52},4 ${width * 0.78},14 C${
-          width * 0.9
-        },18 ${width},8 ${width},20 L${width},20 L0,20 Z`}
-        fill="#F0F2F8"
-      />
-    </Svg>
-  );
-};
-
 function getHeaderMeta(title: string) {
-  const normalizedTitle = title.trim().toLowerCase();
+  // NFC: tiêu đề lấy từ menu server có thể ở dạng dấu tổ hợp (NFD), khi đó
+  // "mới" gõ trong code sẽ không khớp.
+  const normalizedTitle = title.normalize("NFC").trim().toLowerCase();
 
   if (normalizedTitle.includes("camera")) {
     return {
@@ -433,25 +430,25 @@ function getHeaderMeta(title: string) {
 
   if (normalizedTitle.includes("đại hội")) {
     return {
-      badgeLabel: "Bieu quyet",
+      badgeLabel: "Biểu quyết",
       iconName: "people-outline" as const,
     };
   }
 
   if (normalizedTitle.includes("chỉnh sửa")) {
     return {
-      badgeLabel: "Cap nhat",
+      badgeLabel: "Cập nhật",
       iconName: "create-outline" as const,
     };
   }
 
   if (
     normalizedTitle.includes("thêm") ||
-    normalizedTitle.includes("moi") ||
+    normalizedTitle.includes("mới") ||
     normalizedTitle.includes("bản sao")
   ) {
     return {
-      badgeLabel: "Tao moi",
+      badgeLabel: "Tạo mới",
       iconName: "add-circle-outline" as const,
     };
   }
@@ -461,20 +458,20 @@ function getHeaderMeta(title: string) {
     normalizedTitle.includes("tài sản")
   ) {
     return {
-      badgeLabel: "Danh sach",
+      badgeLabel: "Danh sách",
       iconName: "list-outline" as const,
     };
   }
 
   if (normalizedTitle.includes("chi tiết")) {
     return {
-      badgeLabel: "Chi tiet",
+      badgeLabel: "Chi tiết",
       iconName: "document-text-outline" as const,
     };
   }
 
   return {
-    badgeLabel: "Thong tin",
+    badgeLabel: "Thông tin",
     iconName: "sparkles-outline" as const,
   };
 }

@@ -2,7 +2,7 @@ import type { Field } from "../../../types/index";
 import { formatDateForBE, normalizeDateFromBE } from "../../../utils/Date";
 import { TypeProperty } from "../../../utils/Enum";
 import { getFieldValue } from "../../../utils/fields/GetFieldValue";
-import { getMatchedKey } from "../../../utils/helpers/field";
+import { getMatchedKey, getMobileOrder } from "../../../utils/helpers/field";
 import { CV_MUC_DO_KHAN, CV_MUC_DO_QUAN_TRONG } from "./workflowConstants";
 import { formatBeDate } from "./workflowDate";
 
@@ -22,8 +22,10 @@ const ENUM_LABELS: Record<string, Array<{ value: number; label: string }>> = {
  *
  * Tài liệu BE giả định bộ dựng DataClass của app đã sắp theo `stt` /
  * `stt_Grid`, lọc `isShowDetail`, hiện tên Enum ở `<name>_MoTa`, kèm giờ khi
- * `showTime`. Bộ dựng của màn Tài sản chưa làm các việc đó — viết riêng ở đây
- * để không đổi hành vi màn Tài sản.
+ * `showTime`. Bộ dựng của màn Tài sản chưa làm các việc đó (trừ sắp theo
+ * STT_Mobile) — viết riêng ở đây để không đổi hành vi màn Tài sản.
+ *
+ * Mobile sắp theo cột riêng `STT_Mobile` thay cho `stt` (thứ tự của web).
  */
 
 export type WorkflowField = Field & {
@@ -43,14 +45,15 @@ const isOff = (value: unknown) =>
  * tính FlowAttributes không có thì để trống.
  *
  * Tài liệu ghi `stt_Grid` nhưng .NET đổi `STT_Grid` thành `stT_Grid` — đọc cả
- * hai. `isShowDetail` giữ nguyên null vì luật Flow ("khác false") và luật CV
- * ("bằng true") hiểu null khác nhau.
+ * hai (STT_Mobile cũng vậy: `stT_Mobile`). `isShowDetail` giữ nguyên null vì
+ * luật Flow ("khác false") và luật CV ("bằng true") hiểu null khác nhau.
  */
 export const normalizeWorkflowField = (
   raw: Record<string, any>,
   index = 0,
 ): WorkflowField => {
   const gridOrder = raw.stT_Grid ?? raw.stt_Grid ?? raw.STT_Grid;
+  const stt = Number(raw.stt ?? index);
 
   return {
     ...raw,
@@ -58,8 +61,9 @@ export const normalizeWorkflowField = (
     name: String(raw.name ?? ""),
     moTa: raw.moTa ?? raw.name ?? "",
     typeProperty: Number(raw.typeProperty ?? TypeProperty.String),
-    stt: Number(raw.stt ?? index),
+    stt,
     stT_Grid: gridOrder == null ? (null as any) : Number(gridOrder),
+    stT_Mobile: getMobileOrder({ ...raw, stt }),
     isShowMobile: isOn(raw.isShowMobile),
     isShowGrid: isOn(raw.isShowGrid),
     isRequired: isOn(raw.isRequired),
@@ -86,11 +90,9 @@ const sortBy = (fields: WorkflowField[], orderOf: (f: WorkflowField) => number) 
     .map(({ field }) => field);
 
 const gridOrderOf = (field: WorkflowField) =>
-  Number(field.stT_Grid ?? field.stt ?? 0);
+  Number(field.stT_Grid ?? getMobileOrder(field));
 
-const formOrderOf = (field: WorkflowField) => Number(field.stt ?? 0);
-
-/** Danh sách / thẻ: isShowMobile, theo stt_Grid (null thì lấy stt). */
+/** Danh sách / thẻ: isShowMobile, theo stt_Grid (null thì lấy STT_Mobile). */
 export const getCardFields = (
   fields: WorkflowField[],
   exclude?: readonly string[],
@@ -106,8 +108,8 @@ export const getCardFields = (
 };
 
 /**
- * Xem chi tiết, theo stt. Flow: `isShowDetail != false` (gồm cả field chỉ đọc
- * như Số, Người lập). CV / KH: `isShowDetail = true`.
+ * Xem chi tiết, theo STT_Mobile. Flow: `isShowDetail != false` (gồm cả field
+ * chỉ đọc như Số, Người lập). CV / KH: `isShowDetail = true`.
  */
 export const getDetailFields = (
   fields: WorkflowField[],
@@ -123,14 +125,14 @@ export const getDetailFields = (
         ? field.isShowDetail === true
         : (field.isShowDetail as unknown) !== false;
     }),
-    formOrderOf,
+    getMobileOrder,
   );
 };
 
 /**
- * Form thêm / sửa: isReadOnly != true, theo stt. `only` dùng cho CV / KH —
- * API lưu không động, chỉ nhận một bộ khoá cố định, nên form chỉ hiện các
- * field nằm trong bộ đó (field mới vẫn hiện ở thẻ / chi tiết).
+ * Form thêm / sửa: isReadOnly != true, theo STT_Mobile. `only` dùng cho CV /
+ * KH — API lưu không động, chỉ nhận một bộ khoá cố định, nên form chỉ hiện
+ * các field nằm trong bộ đó (field mới vẫn hiện ở thẻ / chi tiết).
  */
 export const getFormFields = (
   fields: WorkflowField[],
@@ -145,7 +147,7 @@ export const getFormFields = (
       if (field.isReadOnly || excluded.has(name)) return false;
       return only ? only.has(name) : true;
     }),
-    formOrderOf,
+    getMobileOrder,
   );
 };
 

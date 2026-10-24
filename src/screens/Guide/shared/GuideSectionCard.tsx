@@ -10,7 +10,7 @@ import {
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import { useAppColors, useStyles } from "../../../utils/helpers/colors";
-import { makeGuideStyles } from "../GuideScreen.styles";
+import { guideCardAccent, makeGuideStyles } from "../GuideScreen.styles";
 import GuideBlockRenderer from "./GuideBlockRenderer";
 import type { GuideSection } from "./guideTypes";
 
@@ -31,9 +31,24 @@ if (
 export default function GuideSectionCard({
   section,
   collapsible = false,
+  accent,
+  asRow = false,
+  isLast = false,
 }: {
   section: GuideSection;
   collapsible?: boolean;
+  /**
+   * Màu của chủ đề chứa mục này: viền thẻ và các gạch ngang trong thẻ. Là dòng
+   * trong thẻ nhóm thì truyền đúng màu của thẻ nhóm đó.
+   */
+  accent?: string;
+  /**
+   * Thành một dòng trong thẻ nhóm (Câu hỏi thường gặp gom theo nhóm) thay vì
+   * thẻ riêng: bỏ khung, kẻ mảnh ngăn với dòng dưới.
+   */
+  asRow?: boolean;
+  /** Dòng cuối của thẻ nhóm thì không kẻ phía dưới. */
+  isLast?: boolean;
 }) {
   const styles = useStyles(makeGuideStyles);
   const colors = useAppColors();
@@ -44,9 +59,14 @@ export default function GuideSectionCard({
     setIsExpanded((expanded) => !expanded);
   };
 
+  const dividerStyle = [
+    styles.sectionDivider,
+    accent ? { backgroundColor: accent } : null,
+  ];
+
   const body = isExpanded ? (
     <>
-      <View style={styles.sectionDivider} />
+      <View style={dividerStyle} />
       <View style={styles.sectionBody}>
         {section.blocks.map((block, index) => (
           <GuideBlockRenderer key={`${section.id}-${index}`} block={block} />
@@ -55,19 +75,24 @@ export default function GuideSectionCard({
     </>
   ) : null;
 
+  const cardStyle = asRow ? null : [styles.card, guideCardAccent(accent)];
+  const rowDivider =
+    asRow && !isLast ? <View style={dividerStyle} /> : null;
+
   if (!collapsible) {
     return (
-      <View style={styles.card}>
+      <View style={cardStyle}>
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionHeading}>{section.heading}</Text>
         </View>
         {body}
+        {rowDivider}
       </View>
     );
   }
 
   return (
-    <View style={styles.card}>
+    <View style={cardStyle}>
       <TouchableOpacity
         style={styles.sectionHeaderRow}
         onPress={toggle}
@@ -83,6 +108,7 @@ export default function GuideSectionCard({
         />
       </TouchableOpacity>
       {body}
+      {rowDivider}
     </View>
   );
 }

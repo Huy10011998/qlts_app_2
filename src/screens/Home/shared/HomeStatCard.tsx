@@ -4,10 +4,10 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import {
   AppColors,
   useAppColors,
-  useHairlineBorderColor,
   useStyles,
 } from "../../../utils/helpers/colors";
 import { getTextScaleFactor } from "../../../utils/helpers/textScaling";
+import { useHomeCardChrome } from "./homeBlockTone";
 
 /**
  * Bề rộng tối thiểu để nhãn đứng cạnh icon. Ô hẹp hơn (màn nhỏ, bật Thu phóng,
@@ -54,19 +54,12 @@ export default function HomeStatCard({
   const trendStyles = useStyles(makeTrendStyles);
   const styles = useStyles(makeStyles);
   const c = useAppColors();
-  const hairlineBorderColor = useHairlineBorderColor();
+  const chrome = useHomeCardChrome();
   const resolvedSubColor = subColor ?? c.textMuted;
   const Wrapper: React.ComponentType<any> = onPress ? TouchableOpacity : View;
   return (
     <Wrapper
-      style={[
-        styles.card,
-        {
-          backgroundColor: c.surface,
-          borderColor: hairlineBorderColor,
-          shadowColor: c.shadow,
-        },
-      ]}
+      style={[styles.card, chrome, { backgroundColor: c.surface }]}
       activeOpacity={0.78}
       onPress={onPress}
       accessibilityRole={onPress ? "button" : undefined}
@@ -95,6 +88,15 @@ export default function HomeStatCard({
           </View>
         ) : null}
       </View>
+      {/* Ô bấm được trông y như ô chữ tĩnh thì không ai nghĩ ra mà bấm — mũi
+          tên chỉ có ở ô mở được màn khác. Nằm đè ở góc chứ không đứng trong
+          hàng tiêu đề: đứng trong hàng thì nó ăn mất chỗ của nhãn, "Thiết bị
+          CNTT đang dùng" bị cắt còn "Thiết bị CNTT đang…". */}
+      {onPress ? (
+        <View style={styles.chevronWrap} pointerEvents="none">
+          <Ionicons name="chevron-forward" size={14} color={c.textMuted} />
+        </View>
+      ) : null}
       <View style={styles.valueRow}>
         <Text
           style={[styles.value, { color: iconColor }]}
@@ -127,18 +129,15 @@ export default function HomeStatCard({
 
 const makeStyles = (c: AppColors) =>
   StyleSheet.create({
+    // Viền, bóng và mép trên màu nhóm do `useHomeCardChrome` lo.
     card: {
       flex: 1,
       backgroundColor: c.surface,
       borderRadius: 16,
-      padding: 14,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border,
-      shadowColor: c.shadow,
-      shadowOpacity: 0.07,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 3 },
-      elevation: 2,
+      paddingTop: 12,
+      paddingBottom: 14,
+      paddingLeft: 14,
+      paddingRight: 10,
     },
     top: {
       flexDirection: "row",
@@ -152,13 +151,23 @@ const makeStyles = (c: AppColors) =>
       flexWrap: "wrap",
       alignItems: "center",
       gap: 8,
-      paddingRight: 8,
+      // Chừa chỗ cho mũi tên › nằm đè ở góc phải.
+      paddingRight: 12,
     },
     iconWrap: {
       width: 34,
       height: 34,
       borderRadius: 10,
       alignItems: "center",
+      justifyContent: "center",
+    },
+    // Cao bằng ô icon và cùng mép trên với hàng tiêu đề (paddingTop của card)
+    // để mũi tên nằm ngang tâm icon.
+    chevronWrap: {
+      position: "absolute",
+      top: 12,
+      right: 6,
+      height: 34,
       justifyContent: "center",
     },
     trendBadge: {

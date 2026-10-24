@@ -62,6 +62,7 @@ export function WorkflowFormPickerModal({ form }: { form: WorkflowDynamicForm })
       setRefLoadingMore={form.setRefLoadingMore}
       setRefPage={form.setRefPage}
       setRefSearching={form.setRefSearching}
+      pendingEnumFields={form.pendingEnumFields}
       enableQuickAdd={false}
     />
   );

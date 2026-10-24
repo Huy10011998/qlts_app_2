@@ -6,11 +6,14 @@ import type {
 } from "../services/data/noiDiaApi";
 import type { FridgeSummary } from "../screens/NoiDia/shared/fridgeLookup";
 import type { GuideTopicId } from "../screens/Guide/shared/guideTypes";
+import type { SettingGroupId } from "../screens/Settings/shared/settingGroups";
+import type { WorkflowRelatedFilter } from "../screens/Workflow/shared/workflowRelated";
 import type {
   CongViecFormParams,
   FlowFormParams,
   FlowRecord,
   FlowTab,
+  FlowThongTin,
   WorkflowCommentsParams,
   WorkflowFilesParams,
 } from "./workflow.d";
@@ -156,6 +159,8 @@ export type RootStackParamList = {
   HomeTab: NavigatorScreenParams<HomeTabParamList>;
   /** ================= SETTINGS ================= */
   Settings: undefined;
+  /** Một nhóm của màn Cài đặt (Tài khoản, Hỗ trợ, Hệ thống...). */
+  SettingGroup: { group: SettingGroupId };
   Profile: undefined;
   Appearance: undefined;
   /** Chọn trần phóng to cỡ chữ cho toàn ứng dụng. */
@@ -446,13 +451,15 @@ export type RootStackParamList = {
   /** Danh sách phiếu đề nghị — một màn cho mọi flow, `nameClass` = tên bảng. */
   Flow: { nameClass?: string; titleHeader?: string; tab?: FlowTab } | undefined;
   /** `id` có thể là chuỗi khi mở từ push (params là JSON). */
-  FlowChiTiet: { nameClass: string; id: number | string; item?: FlowRecord };
+  /** `item` + `info`: danh sách đưa sẵn phiếu và flow-thong-tin để mở là đủ, khỏi khung chờ. */
+  FlowChiTiet: { nameClass: string; id: number | string; item?: FlowRecord; info?: FlowThongTin };
   FlowForm: FlowFormParams;
   FlowTienTrinh: { nameClass: string; id: number; item?: FlowRecord };
-  CongViec: { titleHeader?: string } | undefined;
+  /** `related`: mở từ tab Chi tiết của một bản ghi (vd Nhân viên) — xem `workflowRelated.ts`. */
+  CongViec: { titleHeader?: string; related?: WorkflowRelatedFilter } | undefined;
   CongViecChiTiet: { id: number | string };
   CongViecForm: CongViecFormParams;
-  KeHoach: { titleHeader?: string } | undefined;
+  KeHoach: { titleHeader?: string; related?: WorkflowRelatedFilter } | undefined;
   KeHoachChiTiet: { id: number | string };
   KeHoachForm: { mode: "add" | "edit"; id?: number };
   /** Bình luận dạng chat — dùng chung phiếu đề nghị và công việc. */

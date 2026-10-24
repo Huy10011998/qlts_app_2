@@ -33,7 +33,7 @@ import {
 type UsePushNotificationsParams = {
   isAuthenticated: boolean;
   authReady?: boolean;
-  iosAuthenticated: boolean;
+  sessionUnlocked: boolean;
 };
 
 /** Số lần thử điều hướng lại khi NavigationContainer chưa kịp mount AppNavigator. */
@@ -64,10 +64,10 @@ const toStringRecord = (
 export function usePushNotifications({
   isAuthenticated,
   authReady,
-  iosAuthenticated,
+  sessionUnlocked,
 }: UsePushNotificationsParams) {
   const canNavigate = canAccessAppNavigator({
-    iosAuthenticated,
+    sessionUnlocked,
     isAuthenticated,
   });
 
@@ -257,7 +257,7 @@ export function usePushNotifications({
     if (!authReady) return;
 
     const canRegister = canAccessAppNavigator({
-      iosAuthenticated,
+      sessionUnlocked,
       isAuthenticated,
     });
 
@@ -275,7 +275,7 @@ export function usePushNotifications({
       clearPendingPushTap();
       unregisterPushToken();
     }
-  }, [authReady, isAuthenticated, iosAuthenticated]);
+  }, [authReady, isAuthenticated, sessionUnlocked]);
 
   // ===== TOKEN BỊ FIREBASE LÀM MỚI =====
   useEffect(() => {

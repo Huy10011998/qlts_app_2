@@ -24,43 +24,50 @@ export default function GuideTopicRow({
   const colors = useAppColors();
 
   return (
-    <TouchableOpacity
-      style={[styles.topicRow, isLast && styles.topicRowLast]}
-      onPress={onPress}
-      activeOpacity={0.65}
-      accessibilityRole="button"
-      accessibilityLabel={`${topic.title}. ${topic.summary}`}
-    >
-      <View style={[styles.topicIcon, { backgroundColor: topic.iconBg }]}>
-        {topic.lib === "material-community" ? (
-          <MaterialCommunityIcons
-            name={topic.iconName}
-            size={18}
-            color={C.onBrand}
+    <>
+      <TouchableOpacity
+        style={styles.topicRow}
+        onPress={onPress}
+        activeOpacity={0.65}
+        accessibilityRole="button"
+        accessibilityLabel={`${topic.title}. ${topic.summary}`}
+      >
+        <View style={[styles.topicIcon, { backgroundColor: topic.iconBg }]}>
+          {topic.lib === "material-community" ? (
+            <MaterialCommunityIcons
+              name={topic.iconName}
+              size={18}
+              color={C.onBrand}
+            />
+          ) : (
+            <Ionicons name={topic.iconName} size={18} color={C.onBrand} />
+          )}
+        </View>
+
+        <View style={styles.topicTextCol}>
+          <Text style={styles.topicTitle}>{topic.title}</Text>
+          <Text style={styles.topicSummary}>{topic.summary}</Text>
+          {/* Chỉ hiện vài mục đầu: gõ một từ chung như "quyen" thì gần như mọi
+              mục đều khớp, liệt kê hết là hàng dài hơn cả thẻ. */}
+          {matchedHeadings.length > 0 ? (
+            <Text style={styles.topicMatch} numberOfLines={2}>
+              {matchedHeadings.slice(0, 2).join(" • ")}
+              {matchedHeadings.length > 2
+                ? ` • +${matchedHeadings.length - 2} mục`
+                : ""}
+            </Text>
+          ) : null}
+        </View>
+
+        <View style={styles.chevronWrap}>
+          <Ionicons
+            name="chevron-forward"
+            size={14}
+            color={colors.textMuted}
           />
-        ) : (
-          <Ionicons name={topic.iconName} size={18} color={C.onBrand} />
-        )}
-      </View>
-
-      <View style={styles.topicTextCol}>
-        <Text style={styles.topicTitle}>{topic.title}</Text>
-        <Text style={styles.topicSummary}>{topic.summary}</Text>
-        {/* Chỉ hiện vài mục đầu: gõ một từ chung như "quyen" thì gần như mọi mục
-            đều khớp, liệt kê hết là hàng dài hơn cả thẻ. */}
-        {matchedHeadings.length > 0 ? (
-          <Text style={styles.topicMatch} numberOfLines={2}>
-            {matchedHeadings.slice(0, 2).join(" • ")}
-            {matchedHeadings.length > 2
-              ? ` • +${matchedHeadings.length - 2} mục`
-              : ""}
-          </Text>
-        ) : null}
-      </View>
-
-      <View style={styles.chevronWrap}>
-        <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
-      </View>
-    </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+      {isLast ? null : <View style={styles.sectionDivider} />}
+    </>
   );
 }

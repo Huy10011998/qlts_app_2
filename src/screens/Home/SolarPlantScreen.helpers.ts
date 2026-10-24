@@ -45,6 +45,8 @@ type ExpandedChart =
 type PlantWeatherState = {
   temperature: number | null;
   weatherCode?: number;
+  /** Open-Meteo `is_day`: false là trời đã tối — hero vẽ cảnh đêm. */
+  isDay?: boolean;
   isLoading: boolean;
 };
 
@@ -1253,6 +1255,7 @@ type OpenMeteoCurrentResponse = {
   current?: {
     temperature_2m?: number;
     weather_code?: number;
+    is_day?: number;
   };
 };
 
@@ -1262,7 +1265,7 @@ async function fetchPlantWeather(signal?: AbortSignal) {
     "https://api.open-meteo.com/v1/forecast" +
     `?latitude=${latitude}` +
     `&longitude=${longitude}` +
-    "&current=temperature_2m,weather_code" +
+    "&current=temperature_2m,weather_code,is_day" +
     "&timezone=Asia%2FHo_Chi_Minh";
 
   const response = await externalFetch(url, { signal });
@@ -1278,9 +1281,12 @@ async function fetchPlantWeather(signal?: AbortSignal) {
     throw new Error("Weather response missing temperature");
   }
 
+  const isDay = payload.current?.is_day;
+
   return {
     temperature: Math.round(temperature),
     weatherCode: payload.current?.weather_code,
+    isDay: typeof isDay === "number" ? isDay === 1 : undefined,
   };
 }
 
@@ -1302,6 +1308,7 @@ const usePlantWeather = () => {
         setWeather((current) => ({
           temperature: current.temperature,
           weatherCode: current.weatherCode,
+          isDay: current.isDay,
           isLoading: false,
         }));
       }

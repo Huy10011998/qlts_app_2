@@ -11,6 +11,7 @@ import React, {
   useState,
 } from "react";
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -146,9 +147,12 @@ function ReportGroupHeader({ section }: { section: ReportSection }) {
 function ReportListCard({
   report,
   onPress,
+  busy = false,
 }: {
   report: ReportListItem;
   onPress: (item: Item) => void;
+  /** Đang chờ cấu hình báo cáo để mở — xem `openingReportId`. */
+  busy?: boolean;
 }) {
   const hairlineBorderColor = useHairlineBorderColor();
   const violetBorderColor = useSchemeColor("#DDD2FF", "#554778");
@@ -166,6 +170,7 @@ function ReportListCard({
       ]}
       onPress={() => onPress(report.item)}
       activeOpacity={0.76}
+      accessibilityState={{ busy }}
     >
       <View style={s.reportAccent} />
       <View
@@ -202,7 +207,11 @@ function ReportListCard({
       <View
         style={[s.reportChevronWrap, { backgroundColor: colors.violetSurface }]}
       >
-        <Ionicons name="chevron-forward" size={15} color="#7048E8" />
+        {busy ? (
+          <ActivityIndicator size="small" color="#7048E8" />
+        ) : (
+          <Ionicons name="chevron-forward" size={15} color="#7048E8" />
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -220,7 +229,9 @@ export default function ReportScreen() {
   const normalizedTitle = titleHeader || "Tài sản";
   const isFullAccess = isFullPermission();
   const [reports, setReports] = useState<ReportListItem[]>([]);
-  const [isFetching, setIsFetching] = useState(false);
+  // true sẵn: khung chờ ngay từ khung đầu, không loé danh sách rỗng trước khi
+  // effect kịp gọi tải. Không có quyền thì effect tự tắt.
+  const [isFetching, setIsFetching] = useState(true);
   const [isRefreshingTop, setIsRefreshingTop] = useState(false);
   const [search, setSearch] = useState("");
   const {
@@ -231,6 +242,12 @@ export default function ReportScreen() {
     handleDismiss: handleReportDismiss,
   } = useDismissableModal<ActiveReport>();
   const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
+  /**
+   * Báo cáo vừa bấm, đang chờ `getConfigReport` rồi mới mở được. Trước đây lúc
+   * chờ màn đứng im, người dùng tưởng chưa bấm trúng nên bấm lại; giờ thẻ đó
+   * quay vòng thay mũi tên, và mọi lần bấm thêm bị bỏ qua tới khi xong.
+   */
+  const [openingReportId, setOpeningReportId] = useState<string | null>(null);
 
   const fetchingRef = useRef(false);
   const debouncedSearch = useDebounce(search, 400);
@@ -244,6 +261,8 @@ export default function ReportScreen() {
 
   const handleShowReport = useCallback(
     async (item: Item) => {
+      if (openingReportId) return;
+
       const reportName = item.contentName_Mobile?.trim();
 
       log("[ReportScreen] Select report", {
@@ -262,6 +281,7 @@ export default function ReportScreen() {
         return;
       }
 
+      setOpeningReportId(String(item.id));
       try {
         log("[ReportScreen] Calling getConfigReport", {
           nameReport: reportName,
@@ -289,9 +309,11 @@ export default function ReportScreen() {
       } catch (e) {
         error("Get config report error:", e);
         showAlertIfActive("Lỗi", "Không thể tải cấu hình báo cáo.");
+      } finally {
+        if (isMounted()) setOpeningReportId(null);
       }
     },
-    [openActiveReport, showAlertIfActive]
+    [isMounted, openActiveReport, openingReportId, showAlertIfActive]
   );
 
   const fetchData = useCallback(
@@ -338,9 +360,7 @@ export default function ReportScreen() {
         setLoadErrorMessage(null);
       } catch (e) {
         error("API error:", e);
-        setLoadErrorMessage(
-          "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại."
-        );
+        setLoadErrorMessage("Vui lòng kiểm tra kết nối mạng rồi bấm Thử lại.");
       } finally {
         fetchingRef.current = false;
         if (isMounted()) {
@@ -378,9 +398,7 @@ export default function ReportScreen() {
       refetchOnAppResume: false,
       onOffline: () => {
         if (activeReport) return;
-        setLoadErrorMessage(
-          "Vui lòng kiểm tra kết nối mạng hoặc kéo xuống để thử lại."
-        );
+        setLoadErrorMessage("Vui lòng kiểm tra kết nối mạng rồi bấm Thử lại.");
       },
     }
   );
@@ -408,7 +426,18 @@ export default function ReportScreen() {
     setIsSearching(search !== debouncedSearch);
   }, [debouncedSearch, search]);
 
-  if (!loaded) return <MenuCardSkeleton hasSearchBar hasGroupHeader />;
+  // Dáng thẻ báo cáo hai dòng (cao ~67 + 9), lề trên 6 như `listContent`; màn
+  // này không có hàng Truy cập nhanh hay nút "Thu tất cả".
+  const listSkeleton = (
+    <MenuCardSkeleton
+      hasSearchBar
+      hasGroupHeader
+      variant="report"
+      paddingTop={6}
+    />
+  );
+
+  if (!loaded) return listSkeleton;
 
   if (!hasViewPermission) {
     return (
@@ -433,7 +462,7 @@ export default function ReportScreen() {
       isSearching: Boolean(debouncedSearch),
     })
   ) {
-    return <MenuCardSkeleton hasSearchBar hasGroupHeader />;
+    return listSkeleton;
   }
 
   if (loadErrorMessage) {
@@ -446,6 +475,9 @@ export default function ReportScreen() {
           iconName="cloud-offline-outline"
           title="Không thể tải danh sách báo cáo"
           subtitle={loadErrorMessage}
+          // Màn lỗi không nằm trong ScrollView nên kéo xuống không làm mới được.
+          actionLabel="Thử lại"
+          onActionPress={() => fetchData()}
         />
       </KeyboardAvoidingView>
     );
@@ -478,8 +510,14 @@ export default function ReportScreen() {
         sections={reportSections}
         keyExtractor={(report) => report.id}
         renderItem={({ item }) => (
-          <ReportListCard report={item} onPress={handleShowReport} />
+          <ReportListCard
+            report={item}
+            onPress={handleShowReport}
+            busy={item.id === openingReportId}
+          />
         )}
+        // Thẻ đang mở phải vẽ lại khi cờ đổi, dữ liệu thì không đổi.
+        extraData={openingReportId}
         renderSectionHeader={({ section }) => (
           <ReportGroupHeader section={section} />
         )}

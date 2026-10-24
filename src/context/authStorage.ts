@@ -12,6 +12,7 @@ import {
   writeRefreshToken,
 } from "../services/auth/tokenStore";
 import { clearFaceIdEnabled } from "../services/auth/faceIdFlag";
+import { writeDeviceLockEnabled } from "../services/auth/biometric";
 
 export const AUTH_TOKEN_KEY = "token";
 export const AUTH_REFRESH_TOKEN_KEY = "refreshToken";
@@ -69,6 +70,7 @@ export const clearStoredAuthTokens = () => clearAuthTokens();
 export const clearStoredFaceIdData = async () => {
   await clearFaceIdEnabled();
   await Promise.all([
+    writeDeviceLockEnabled(false),
     Keychain.resetGenericPassword({ service: AUTH_LOGIN_SERVICE }),
     Keychain.resetGenericPassword({ service: FACE_ID_LOGIN_SERVICE }),
   ]);

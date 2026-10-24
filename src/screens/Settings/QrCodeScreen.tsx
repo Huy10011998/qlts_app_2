@@ -52,7 +52,7 @@ const QrCodeScreen: React.FC = () => {
   const c = useAppColors();
   const insets = useSafeAreaInsets();
   /* Dữ liệu đã nạp sẵn lúc đăng nhập — mở màn không gọi API nữa. */
-  const { info: nhanVien, isLoading, errorMessage } = useNhanVienInfo();
+  const { info: nhanVien, isLoading, errorMessage, reload } = useNhanVienInfo();
 
   if (isLoading) {
     return <QrCodeScreenSkeleton />;
@@ -75,6 +75,9 @@ const QrCodeScreen: React.FC = () => {
             errorMessage ||
             "Không thể tải dữ liệu danh thiếp của tài khoản hiện tại."
           }
+          // Không có nút thì người dùng chỉ còn cách thoát ra vào lại màn.
+          actionLabel="Thử lại"
+          onActionPress={reload}
         />
       </View>
     );

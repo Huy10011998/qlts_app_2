@@ -27,15 +27,28 @@ import { getFlowBuocTinhTrangHienThi } from "./flowRules";
 
 export type FlowPointState = "done" | "doing" | "wait" | "reject" | "skip" | "tra";
 
-/** Màu chấm tròn (mục 6c). */
+/** Màu chấm tròn (mục 6c, PHỤ LỤC); wait là viền đứt của chấm trắng. */
 export const FLOW_POINT_COLOR: Record<FlowPointState, string> = {
   done: "#2eb85c",
   doing: "#2f6fb2",
-  wait: "#c8ced3",
+  wait: "#b0b8c1",
   reject: "#c62828",
   skip: "#9da5b1",
   tra: FLOW_TRA_BUOC_COLOR,
 };
+
+/** Chip trạng thái — nền / chữ (PHỤ LỤC, web data-flow.css .df-st-*). "Chưa xử lý" dùng wait. */
+export const FLOW_CHIP_COLOR: Record<FlowPointState, { bg: string; text: string }> = {
+  wait: { bg: "#eef1f4", text: "#5c6873" },
+  doing: { bg: "#e3edf9", text: "#2f6fb2" },
+  done: { bg: "#e3f5e9", text: "#1e7e3e" },
+  reject: { bg: "#fdecea", text: "#c62828" },
+  skip: { bg: "#eef0f2", text: "#5c6873" },
+  tra: { bg: "#fff4d6", text: "#b26a00" },
+};
+
+/** Đường nối 2 điểm: xanh nếu điểm trái Đã duyệt / Không ý kiến, còn lại xám (PHỤ LỤC). */
+export const FLOW_LINE_COLOR = { passed: "#2eb85c", other: "#d5dae0" };
 
 export type FlowColumn =
   | { kind: "lap"; key: string }
@@ -53,8 +66,12 @@ export type FlowPoint = {
   state: FlowPointState;
   /** Chấm nhỏ của từng bước con (rỗng = bước đơn). */
   childDots: FlowChildDot[];
-  /** Dòng phụ dưới tên: "x/n · ngày", ngày xong, "Đang xử lý", "Chờ xử lý"... */
+  /** "x/n" cạnh chấm con (x = con Duyệt / Không ý kiến); null = bước đơn. */
+  count: string | null;
+  /** Dòng phụ dưới tên: ngày xong / trả / từ chối, "Đang xử lý", "Chờ xử lý"... */
   sub: string;
+  /** Đã duyệt / Không ý kiến (khác Bỏ qua) — đường nối sang điểm kế tô xanh. */
+  passed: boolean;
 };
 
 export type FlowRun = {
@@ -112,10 +129,12 @@ const stateOfKetQua = (ketQua: number | null | undefined): FlowPointState => {
 };
 
 /** Bước tinhTrang 4: có người bấm Không ý kiến thì là "Không ý kiến", không thì "Bỏ qua". */
-const isKhongYKien = (buoc: FlowBuoc, nguoiDuyets: FlowNguoiDuyet[]) =>
-  nguoiDuyets.some(
-    (nguoi) => nguoi.iD_Flow_HoSo_Buoc === buoc.id && nguoi.ketQua === FLOW_KET_QUA.KhongYKien,
+const isKhongYKien = (buoc: FlowBuoc, nguoiDuyets: FlowNguoiDuyet[], children: FlowBuoc[] = []) => {
+  const ids = new Set([buoc.id, ...children.map((child) => child.id)]);
+  return nguoiDuyets.some(
+    (nguoi) => ids.has(nguoi.iD_Flow_HoSo_Buoc) && nguoi.ketQua === FLOW_KET_QUA.KhongYKien,
   );
+};
 
 /**
  * Bộ dữ liệu đã sắp + tra cứu dùng chung cho sơ đồ và khung chi tiết.
@@ -217,9 +236,6 @@ const doneAt = (index: Index, buoc: FlowBuoc, children: FlowBuoc[]) => {
   return latest != null ? formatBeDate(new Date(latest), true) : "";
 };
 
-const countLabel = (dots: FlowChildDot[], doneCount: number, tail: string) =>
-  `${doneCount}/${dots.length}${tail ? ` · ${tail}` : ""}`;
-
 const buildPoint = (
   index: Index,
   column: FlowColumn,
@@ -229,15 +245,16 @@ const buildPoint = (
   ngayLap: unknown,
 ): FlowPoint => {
   const key = `${run}-${col}`;
-  const base = { key, run, col, column };
+  const base = { key, run, col, column, childDots: [], count: null };
 
   if (column.kind === "lap") {
-    return { ...base, state: "done", childDots: [], sub: formatBeDate(ngayLap, true) };
+    return { ...base, state: "done", sub: formatBeDate(ngayLap, true), passed: true };
   }
 
   if (column.kind === "congViec") {
     const trangThai = getCongViecTrangThai(column.link.trangThai);
-    return { ...base, state: congViecState(column.link), childDots: [], sub: trangThai?.label ?? "" };
+    const state = congViecState(column.link);
+    return { ...base, state, sub: trangThai?.label ?? "", passed: state === "done" };
   }
 
   const { buoc, children } = column;
@@ -256,18 +273,26 @@ const buildPoint = (
         const at = time(result?.ngayDuyet);
         return at != null && (max == null || at > max) ? at : max;
       }, null);
-      const tail = state === "done" && latest != null ? formatBeDate(new Date(latest), true) : "";
-      return { ...base, state, childDots, sub: countLabel(childDots, doneCount, tail) };
+      // Bị trả cũng kèm ngày (mục 6c: "1/2 · 12/10/2026 16:19").
+      const sub =
+        state === "tra"
+          ? formatBeDate(tra.ngayTra, true)
+          : latest != null
+          ? formatBeDate(new Date(latest), true)
+          : "";
+      return { ...base, state, childDots, count: `${doneCount}/${childDots.length}`, sub, passed: state === "done" };
     }
     const sub =
       state === "tra"
         ? formatBeDate(tra.ngayTra, true)
         : formatBeDate(index.resultAt(buoc.id, run)?.ngayDuyet, true);
-    return { ...base, state, childDots: [], sub };
+    return { ...base, state, sub, passed: state === "done" };
   }
 
   // DÒNG CUỐI: theo tinhTrang server trả.
   const state = lastRunState(buoc, children);
+  const khongYKien = state === "skip" && isKhongYKien(buoc, index.nguoiDuyets, children);
+  const passed = state === "done" || khongYKien;
   if (children.length) {
     const childDots = children.map((child) => ({ id: child.id, state: stateOfTinhTrang(child.tinhTrang) }));
     const doneCount = children.filter(
@@ -275,17 +300,17 @@ const buildPoint = (
         child.tinhTrang === 2 ||
         (child.tinhTrang === FLOW_BUOC_KHONG_Y_KIEN && isKhongYKien(child, index.nguoiDuyets)),
     ).length;
-    const tail = state === "done" ? doneAt(index, buoc, children) : "";
-    return { ...base, state, childDots, sub: countLabel(childDots, doneCount, tail) };
+    // Xong hay bị từ chối đều kèm ngày; đang chạy / chờ chỉ "x/n" như web.
+    const sub = state === "done" || state === "reject" ? doneAt(index, buoc, children) : "";
+    return { ...base, state, childDots, count: `${doneCount}/${childDots.length}`, sub, passed };
   }
 
   let sub = "";
   if (state === "doing") sub = "Đang xử lý";
   else if (state === "wait") sub = "Chờ xử lý";
-  else if (state === "skip")
-    sub = isKhongYKien(buoc, index.nguoiDuyets) ? SKIP_LABELS.khongYKien : SKIP_LABELS.boQua;
+  else if (state === "skip") sub = khongYKien ? SKIP_LABELS.khongYKien : SKIP_LABELS.boQua;
   else sub = doneAt(index, buoc, []) || (state === "reject" ? "Đã từ chối" : "");
-  return { ...base, state, childDots: [], sub };
+  return { ...base, state, sub, passed };
 };
 
 export const buildFlowDiagram = (
@@ -355,7 +380,8 @@ export type FlowDetailPerson = {
   faded?: boolean;
 };
 
-export type FlowDetailStatus = { label: string; color: string };
+/** Màu chip lấy theo state (FLOW_CHIP_COLOR); label có thể khác (Không ý kiến / Bỏ qua / Chưa xử lý). */
+export type FlowDetailStatus = { label: string; state: FlowPointState };
 
 export type FlowDetailRow = {
   key: string;
@@ -386,7 +412,7 @@ const POINT_LABEL: Record<FlowPointState, string> = {
 
 const statusOf = (state: FlowPointState, label?: string): FlowDetailStatus => ({
   label: label ?? POINT_LABEL[state],
-  color: FLOW_POINT_COLOR[state] === FLOW_POINT_COLOR.wait ? "#78909c" : FLOW_POINT_COLOR[state],
+  state,
 });
 
 const personOf = (nguoi: FlowNguoiDuyet): FlowDetailPerson => ({
@@ -478,20 +504,21 @@ export const getFlowPointDetail = (
     ([...index.nguoiDuyets, ...index.nguoiDuyetCus].some((nguoi) => nguoi.iD_Flow_HoSo_Buoc === buoc.id) ||
       index.luatNguois.some((luat) => luat.iD_Flow_HoSo_Buoc === buoc.id));
 
+  // Bước con ghi "2.1 Kế toán viên"; bước đơn chỉ ghi tên — số bước đã có ở tiêu đề khung.
   const rows = children.length
     ? [
         ...children.map((child) => rowOf(child, `${child.buoc}.${child.buocCon} ${child.ten}`)),
         ...(parentHasOwn ? [rowOf(buoc, "Duyệt bước cha")] : []),
       ]
-    : [rowOf(buoc, `${buoc.buoc} ${buoc.ten}`)];
-
-  const skipLabel =
-    point.state === "skip" && isLast && !isKhongYKien(buoc, index.nguoiDuyets) ? SKIP_LABELS.boQua : undefined;
+    : [rowOf(buoc, buoc.ten)];
 
   return {
-    kicker: !isLast ? `LẦN ${point.run + 1} · BƯỚC` : point.state === "doing" ? "ĐANG Ở BƯỚC" : "BƯỚC",
+    kicker: isLast && point.state === "doing" ? "ĐANG Ở BƯỚC" : "BƯỚC",
     title: `${buoc.buoc}. ${buoc.ten}`,
-    status: statusOf(point.state, point.state === "skip" ? skipLabel ?? SKIP_LABELS.khongYKien : undefined),
+    status: statusOf(
+      point.state,
+      point.state === "skip" ? (point.passed ? SKIP_LABELS.khongYKien : SKIP_LABELS.boQua) : undefined,
+    ),
     rows,
     note: children.length
       ? `↳ Các bước con chạy ${buoc.loaiXuLy === 1 ? "song song" : "tuần tự"}${

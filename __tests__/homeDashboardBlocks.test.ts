@@ -269,15 +269,6 @@ describe("mapTaiSanDashboard", () => {
       new Set(payload.attendance.departments.map((dept) => dept.key)).size,
     ).toBe(3);
   });
-
-  it("không tự khai viewPermission cho khối nào", () => {
-    // Quyền của khối số liệu do BE quyết. API hiện không trả viewPermission nên
-    // các khối này hiện cho mọi tài khoản đăng nhập được; mapper tự gán mã là
-    // app tự chặn thay BE, đúng thứ đã bỏ.
-    expect(payload.utilities.viewPermission).toBeUndefined();
-    expect(payload.attendance.viewPermission).toBeUndefined();
-    expect(payload.itStructure.viewPermission).toBeUndefined();
-  });
 });
 
 /** JSON mẫu của `MayMoc/dashboard` trong tài liệu BE, đã cắt bớt cho ngắn. */

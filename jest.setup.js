@@ -105,11 +105,39 @@ jest.mock('react-native-keychain', () => ({
   getGenericPassword: jest.fn(async () => false),
   setGenericPassword: jest.fn(async () => true),
   resetGenericPassword: jest.fn(async () => true),
+  hasGenericPassword: jest.fn(async () => false),
+  getSupportedBiometryType: jest.fn(async () => null),
+  isPasscodeAuthAvailable: jest.fn(async () => false),
   ACCESSIBLE: {
     AFTER_FIRST_UNLOCK: 'AccessibleAfterFirstUnlock',
     WHEN_UNLOCKED: 'AccessibleWhenUnlocked',
+    WHEN_PASSCODE_SET_THIS_DEVICE_ONLY: 'AccessibleWhenPasscodeSetThisDeviceOnly',
+    WHEN_UNLOCKED_THIS_DEVICE_ONLY: 'AccessibleWhenUnlockedThisDeviceOnly',
+  },
+  ACCESS_CONTROL: {
+    BIOMETRY_ANY: 'BiometryAny',
+    BIOMETRY_ANY_OR_DEVICE_PASSCODE: 'BiometryAnyOrDevicePasscode',
+    DEVICE_PASSCODE: 'DevicePasscode',
+  },
+  BIOMETRY_TYPE: {
+    FACE_ID: 'FaceID',
+    TOUCH_ID: 'TouchID',
+    FINGERPRINT: 'Fingerprint',
+    FACE: 'Face',
+    IRIS: 'Iris',
+  },
+  STORAGE_TYPE: {
+    AES_GCM: 'KeystoreAESGCM',
+    AES_GCM_NO_AUTH: 'KeystoreAESGCM_NoAuth',
   },
 }));
+
+// Module tự viết bên Android (BiometricGateModule.kt): hộp hỏi vân tay /
+// khuôn mặt / khoá màn hình.
+require('react-native').NativeModules.BiometricGate = {
+  getBiometricKind: jest.fn(async () => null),
+  authenticate: jest.fn(async () => true),
+};
 
 jest.mock('react-native-haptic-feedback', () => ({
   __esModule: true,

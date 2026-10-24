@@ -18,16 +18,16 @@ export const handleCascadeChange = ({
   setFormData((prev: any) => {
     const next = { ...prev, [name]: value };
 
-    const fieldIndex = fieldActive.findIndex((f) => f.name === name);
-    if (fieldIndex === -1) return next;
+    if (!fieldActive.some((f) => f.name === name)) return next;
 
     const isInvalid =
       value === null ||
       value === "" ||
       (typeof value === "number" && value < 0);
 
-    // ⭐ tất cả field phía sau
-    const cascadeFields = fieldActive.slice(fieldIndex + 1);
+    // ⭐ mọi field con, không chỉ field phía sau: thứ tự mobile (STT_Mobile)
+    // có thể đặt field con lên trước field cha.
+    const cascadeFields = fieldActive.filter((f) => f.name !== name);
 
     cascadeFields.forEach((f) => {
       if (!f.parentsFields) return;

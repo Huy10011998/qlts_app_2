@@ -5,6 +5,7 @@ import {
   PanResponder,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
@@ -35,6 +36,8 @@ const SETTLE_DURATION = 200;
 const LIFT_DURATION = 120;
 /** Thứ tự đổi từ bên ngoài (nạp từ storage, đổi quyền...) thì trượt tới chỗ mới. */
 const REORDER_DURATION = 220;
+/** Nền ô icon: màu khối ở ~12%. */
+const ICON_SURFACE_ALPHA = "1F";
 
 const HAPTIC_OPTIONS = {
   enableVibrateFallback: false,
@@ -53,6 +56,15 @@ export type HomeReorderItem = {
   key: string;
   label: string;
   iconName: string;
+  /** User đã tắt khối này — vẫn nằm trong danh sách để còn bật lại. */
+  hidden?: boolean;
+  /** Màu của khối (nhãn ngoài Trang chủ). Không có thì dùng đỏ thương hiệu. */
+  accent?: string;
+  /**
+   * Màu icon khối, tông sáng hơn `accent`: icon đặt thẳng trên nền thẻ, mà tông
+   * đậm của nhãn (xanh lá, xanh biển đậm) chìm hẳn vào nền ở giao diện tối.
+   */
+  iconColor?: string;
 };
 
 type HomeReorderListProps = {
@@ -66,6 +78,8 @@ type HomeReorderListProps = {
     toIndex: number;
     keys: string[];
   }) => void;
+  /** Có thì mỗi hàng có nút ẩn / hiện khối ở bên phải. */
+  onToggleHidden?: (key: string, hidden: boolean) => void;
 };
 
 type DragState = {
@@ -93,6 +107,7 @@ type DragState = {
 export default function HomeReorderList({
   items,
   onMove,
+  onToggleHidden,
 }: HomeReorderListProps) {
   const styles = useStyles(makeStyles);
   const colors = useAppColors();
@@ -325,12 +340,20 @@ export default function HomeReorderList({
         return (
           <ReorderRow
             key={item.key}
+            accent={item.accent ?? HOME_BRAND_RED}
+            iconColor={item.iconColor ?? item.accent ?? HOME_BRAND_RED}
             colors={colors}
             borderColor={hairlineBorderColor}
+            hidden={item.hidden === true}
             iconName={item.iconName}
             index={index}
             isActive={item.key === activeKey}
             label={item.label}
+            onToggleHidden={
+              onToggleHidden
+                ? (hidden) => onToggleHidden(item.key, hidden)
+                : undefined
+            }
             lift={liftRef.current}
             onDragEnd={handleDragEnd}
             onDragMove={handleDragMove}
@@ -346,8 +369,11 @@ export default function HomeReorderList({
 }
 
 type ReorderRowProps = {
+  accent: string;
   borderColor: string;
   colors: AppColors;
+  hidden: boolean;
+  iconColor: string;
   iconName: string;
   index: number;
   isActive: boolean;
@@ -356,18 +382,23 @@ type ReorderRowProps = {
   onDragEnd: () => void;
   onDragMove: (dy: number) => void;
   onDragStart: (index: number) => void;
+  onToggleHidden?: (hidden: boolean) => void;
   position: number;
   styles: ReturnType<typeof makeStyles>;
   translateY: Animated.Value;
 };
 
 /**
- * Cả hàng là vùng kéo, không cần nhắm vào tay nắm nhỏ: trong hàng không có gì
- * bấm được nên không phải giành ngón với ai.
+ * Gần cả hàng là vùng kéo, không cần nhắm vào tay nắm nhỏ. Chỉ nút ẩn / hiện ở
+ * mép phải nằm NGOÀI vùng kéo — nằm trong thì vùng kéo giành mất ngón, chạm nút
+ * lại thành nhấc hàng lên.
  */
 function ReorderRow({
+  accent,
   borderColor,
   colors,
+  hidden,
+  iconColor,
   iconName,
   index,
   isActive,
@@ -376,6 +407,7 @@ function ReorderRow({
   onDragEnd,
   onDragMove,
   onDragStart,
+  onToggleHidden,
   position,
   styles,
   translateY,
@@ -407,9 +439,6 @@ function ReorderRow({
 
   return (
     <Animated.View
-      {...panResponder.panHandlers}
-      accessibilityRole="adjustable"
-      accessibilityLabel={`${label} — vị trí ${position}, kéo để đổi thứ tự`}
       style={[
         styles.row,
         {
@@ -420,25 +449,82 @@ function ReorderRow({
         { transform: [{ translateY }, { scale }] },
       ]}
     >
-      <View style={[styles.rowIcon, { backgroundColor: colors.redIconSurface }]}>
-        <Ionicons name={iconName} size={17} color={HOME_BRAND_RED} />
+      <View
+        {...panResponder.panHandlers}
+        style={styles.dragArea}
+        accessibilityRole="adjustable"
+        accessibilityLabel={`${label} — vị trí ${position}${
+          hidden ? ", đang ẩn" : ""
+        }, kéo để đổi thứ tự`}
+      >
+        {/* Giống bảng Tuỳ chỉnh: khối đang hiện thì icon mang màu khối, đang
+            ẩn thì icon xám. */}
+        <View
+          style={[
+            styles.rowIcon,
+            {
+              backgroundColor: hidden
+                ? colors.surfaceAlt
+                : `${iconColor}${ICON_SURFACE_ALPHA}`,
+            },
+          ]}
+        >
+          <Ionicons
+            name={iconName}
+            size={17}
+            color={hidden ? colors.textSub : iconColor}
+          />
+        </View>
+        <View style={styles.rowText}>
+          <Text
+            style={[styles.rowLabel, { color: colors.text }]}
+            numberOfLines={1}
+          >
+            {label}
+          </Text>
+          {hidden ? (
+            <Text
+              style={[styles.rowHint, { color: colors.textMuted }]}
+              numberOfLines={1}
+            >
+              Đang ẩn khỏi Trang chủ
+            </Text>
+          ) : null}
+        </View>
+        <Text style={[styles.rowPosition, { color: colors.textMuted }]}>
+          {position}
+        </Text>
+        <Ionicons
+          name="reorder-two-outline"
+          size={20}
+          color={isActive ? HOME_BRAND_RED : colors.textMuted}
+        />
       </View>
-      <Text
-        style={[styles.rowLabel, { color: colors.text }]}
-        numberOfLines={1}
-      >
-        {label}
-      </Text>
-      <Text
-        style={[styles.rowPosition, { color: colors.textMuted }]}
-      >
-        {position}
-      </Text>
-      <Ionicons
-        name="reorder-two-outline"
-        size={20}
-        color={isActive ? HOME_BRAND_RED : colors.textMuted}
-      />
+
+      {/* Nút tròn giống bảng Tuỳ chỉnh (chọn chức năng ghim): đặc + dấu tích là
+          đang hiện, rỗng + dấu cộng là đang ẩn. */}
+      {onToggleHidden ? (
+        <TouchableOpacity
+          style={[
+            styles.toggle,
+            hidden
+              ? { borderColor: colors.borderStrong }
+              : { backgroundColor: accent, borderColor: accent },
+          ]}
+          onPress={() => onToggleHidden(!hidden)}
+          activeOpacity={0.6}
+          hitSlop={{ top: 12, right: 8, bottom: 12, left: 8 }}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: !hidden }}
+          accessibilityLabel={`Hiện khối ${label} trên Trang chủ`}
+        >
+          {hidden ? (
+            <Ionicons name="add" size={15} color={colors.textSub} />
+          ) : (
+            <Ionicons name="checkmark" size={15} color="#fff" />
+          )}
+        </TouchableOpacity>
+      ) : null}
     </Animated.View>
   );
 }
@@ -470,6 +556,14 @@ const makeStyles = (c: AppColors) =>
       elevation: 10,
       zIndex: 10,
     },
+    // Vùng kéo: mọi thứ trừ nút ẩn / hiện ở mép phải.
+    dragArea: {
+      flex: 1,
+      alignSelf: "stretch",
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
     rowIcon: {
       width: 32,
       height: 32,
@@ -477,11 +571,28 @@ const makeStyles = (c: AppColors) =>
       alignItems: "center",
       justifyContent: "center",
     },
-    rowLabel: {
+    rowText: {
       flex: 1,
+    },
+    rowLabel: {
       fontSize: 13.5,
       fontWeight: "600",
       color: c.text,
+    },
+    rowHint: {
+      marginTop: 1,
+      fontSize: 11,
+      fontWeight: "600",
+      color: c.textMuted,
+    },
+    // Cùng kích thước nút chọn của bảng Tuỳ chỉnh.
+    toggle: {
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      borderWidth: 1.5,
+      alignItems: "center",
+      justifyContent: "center",
     },
     rowPosition: {
       fontSize: 12,

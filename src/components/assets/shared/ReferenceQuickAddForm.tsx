@@ -1,7 +1,6 @@
 import React from "react";
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -56,6 +55,7 @@ import {
   getRequiredFieldErrors,
   getRequiredFieldsMessage,
 } from "./assetFormValidation";
+import { AppAlert } from "../../ui/AppAlert";
 
 type ClassConfig = {
   fieldActive: Field[];
@@ -261,7 +261,7 @@ export default function ReferenceQuickAddForm({
     [baseHandleChange, setFormData, setValidationErrors],
   );
 
-  useEnumAndReferenceLoader(
+  const { pendingEnumFields } = useEnumAndReferenceLoader(
     fieldActive,
     setEnumData,
     setReferenceData,
@@ -455,7 +455,7 @@ export default function ReferenceQuickAddForm({
         return;
       }
 
-      Alert.alert("Thành công", "Tạo mới thành công!", [
+      AppAlert.alert("Thành công", "Tạo mới thành công!", [
         { text: "OK", onPress: finish },
       ]);
     } catch (error: any) {
@@ -587,6 +587,7 @@ export default function ReferenceQuickAddForm({
       {/* Picker của chính form này. `enableQuickAdd={false}`: thêm nhanh chỉ đi
           một cấp, không lồng vô tận. */}
       <AssetFormReferencePickerModal
+        pendingEnumFields={pendingEnumFields}
         enableQuickAdd={false}
         activeEnumField={activeEnumField}
         formData={formData}
