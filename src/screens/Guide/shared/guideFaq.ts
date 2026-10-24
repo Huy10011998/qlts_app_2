@@ -791,6 +791,25 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
       ],
     },
     {
+      id: "faq-mo-thong-bao-quay-lai",
+      group: "Workflow & thông báo",
+      heading: "Bấm thông báo xong, quay lại thì về đâu?",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Về đúng chỗ bạn đang đứng lúc bấm. Màn mở từ thông báo chồng lên màn đang xem chứ không thay nó, dù bấm ở bảng chuông, khung nổi trên đầu màn hình hay thông báo trên điện thoại.",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Mở từ bảng chuông: quay lại là thấy lại bảng chuông, danh sách và chỗ đang cuộn còn nguyên, bấm tiếp thông báo khác được ngay.",
+            "Thông báo bình luận: mở thẳng màn Bình luận. Quay lại một lần là tới chi tiết phiếu / việc, thêm lần nữa là về chỗ cũ.",
+            "Đang xem một việc mà bấm thông báo của việc khác: việc mới mở chồng lên, quay lại là về việc đang xem dở. Đang mở đúng việc đó rồi thì app không mở thêm bản nữa.",
+          ],
+        },
+      ],
+    },
+    {
       id: "faq-so-tren-bieu-tuong-app",
       group: "Workflow & thông báo",
       heading: "Số trên biểu tượng app khác số trên chuông (Android)",
@@ -900,17 +919,18 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     {
       id: "faq-khong-thay-nut-cong-viec",
       group: "Workflow & thông báo",
-      heading: "Không thấy nút Sửa / Gia hạn / Đổi chủ trì / Xoá ở công việc",
+      heading: "Không thấy nút Sửa / Gia hạn / Đổi chủ trì / Nhân bản / Xoá ở công việc",
       blocks: [
         {
           kind: "paragraph",
-          text: "Nút nào hiện là do hệ thống tính theo vai trò của bạn trong từng việc, không phải do app lỗi.",
+          text: "Các nút này nằm ở hàng icon ngay dưới nút đỏ Chuyển trạng thái, trong màn Chi tiết công việc. Nút nào hiện là do hệ thống tính theo vai trò của bạn trong từng việc, không phải do app lỗi.",
         },
         {
           kind: "bullets",
           items: [
             "Sửa, Gia hạn, Đổi chủ trì: chỉ khi việc chưa xong. Việc đã Hoàn thành hoặc Hủy thì các nút này ẩn.",
             "Xoá: chỉ người tạo, khi việc còn Mới và không sinh từ phiếu đề nghị. Việc sinh từ phiếu muốn bỏ thì Chuyển trạng thái → Hủy.",
+            "Nhân bản: cần quyền thêm công việc, cùng quyền với nút + ở danh sách Công việc.",
             "Bạn là chủ trì mà không có Đổi chủ trì: người tạo việc đã bật Không được chuyển người chủ trì.",
             "Có dòng \"Bạn đang xem ở chế độ chỉ xem.\": bạn chỉ được xem việc này (ví dụ chủ trì kế hoạch chứa việc), không thao tác được.",
           ],
@@ -943,7 +963,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
             "Ảnh chụp: chọn Chụp ảnh hoặc Ảnh trong máy — app tự nén nhỏ hơn ảnh gốc.",
             "Tài liệu: xuất PDF thay vì gửi file gốc nặng, hoặc tách thành nhiều file.",
             "Lưu phiếu mà có file chưa tải lên được: app báo Đã lưu nháp — phiếu vẫn là nháp, CHƯA nộp. Mở lại nháp ở tab Nháp, bấm Sửa, thêm lại file rồi Lưu phiếu.",
-            "Lưu công việc mà có file chưa tải lên được: việc đã lưu rồi, mở File (n) ở màn chi tiết để thêm lại file đó.",
+            "Lưu công việc mà có file chưa tải lên được: việc đã lưu rồi, mở Đính kèm ở đáy thẻ đầu màn chi tiết để thêm lại file đó.",
           ],
         },
       ],

@@ -588,8 +588,11 @@ export type WorkflowCommentsParams = {
   apiBase: WorkflowApiBase;
   idHoSo: number;
   titleHeader?: string;
-  /** Được gửi bình luận (CV: quyen.duocTraoDoi; phiếu: ai xem được là gửi được). */
-  canSend: boolean;
+  /**
+   * Được gửi bình luận (CV: quyen.duocTraoDoi; phiếu: ai xem được là gửi được).
+   * Bỏ trống = công việc mở thẳng từ thông báo: màn tự hỏi cv-thong-tin.
+   */
+  canSend?: boolean;
 };
 
 export type WorkflowFilesParams = {

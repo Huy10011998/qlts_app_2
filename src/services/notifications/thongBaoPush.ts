@@ -39,7 +39,7 @@ const ID_KEY_BY_NHOM: Record<string, string> = {
 export const buildThongBaoPushTarget = (data: Record<string, string>) => {
   const key = ID_KEY_BY_NHOM[data.nhom ?? ""];
   const id = toPositiveInt(key ? data[key] : undefined) ?? toPositiveInt(data.iD_DoiTuong);
-  return id ? resolveThongBaoTarget({ tenBang: data.tenBang, iD_DoiTuong: id }) : null;
+  return id ? resolveThongBaoTarget({ tenBang: data.tenBang, iD_DoiTuong: id, loai: data.loai }) : null;
 };
 
 export const getThongBaoPushId = (data: Record<string, string>) =>

@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import EmptyState from "../../../components/ui/EmptyState";
 import IsLoading from "../../../components/ui/IconLoading";
+import { cvThongTin } from "../../../services/data/congViecApi";
 import {
   addWorkflowComment,
   getWorkflowComments,
@@ -33,6 +34,7 @@ import {
   useAppColors,
   useStyles,
 } from "../../../utils/helpers/colors";
+import { warn } from "../../../utils/Logger";
 import { useAttachmentPicker } from "../shared/components/AttachmentPicker";
 import CommentActionSheet, {
   COMMENT_SHEET_CLOSE_DELAY,
@@ -88,7 +90,7 @@ export default function WorkflowCommentsScreen() {
   const c = useAppColors();
   const insets = useSafeAreaInsets();
   const route = useRoute<StackRoute<"WorkflowBinhLuan">>();
-  const { apiBase, idHoSo, canSend } = route.params;
+  const { apiBase, idHoSo } = route.params;
   const { me, loading: meLoading } = useWorkflowMe();
   const markChanged = useMarkWorkflowChanged();
   const fileOpener = useWorkflowFileOpener();
@@ -101,6 +103,9 @@ export default function WorkflowCommentsScreen() {
   // nạp ảnh; sau đó tin mới đến thì cuộn trượt (tài liệu 7 mục 5).
   const [jumpedToEnd, setJumpedToEnd] = useState(false);
 
+  // null = đang hỏi quyền (mở thẳng từ thông báo công việc): chưa hiện ô soạn
+  // lẫn dòng "chỉ xem".
+  const [canSend, setCanSend] = useState<boolean | null>(route.params.canSend ?? null);
   const [items, setItems] = useState<WorkflowComment[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -159,6 +164,21 @@ export default function WorkflowCommentsScreen() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Như danh sách Công việc: cv-thong-tin trả sẵn cờ duocTraoDoi.
+  useEffect(() => {
+    if (route.params.canSend != null) return;
+    let active = true;
+    cvThongTin([idHoSo])
+      .then((rows) => active && setCanSend(!!rows[0]?.duocTraoDoi))
+      .catch((err) => {
+        warn("[BinhLuan] Tải quyền trao đổi thất bại", err);
+        if (active) setCanSend(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [idHoSo, route.params.canSend]);
 
   // apiBase chính là tenBang của phòng ("Ticket_PhongBan" / "CV_CongViec").
   const realtime = useRealtimeComments({
@@ -286,7 +306,7 @@ export default function WorkflowCommentsScreen() {
     const hasBubble =
       recalled || !!item.noiDung || (!!item.iD_File && !isImage);
     const onRed = mine && !recalled;
-    const canReply = canSend && !recalled;
+    const canReply = !!canSend && !recalled;
     const time = formatBeDate(item.ngayTao, true);
     // Giữ tin: của mình → sheet Trả lời · Thu hồi; người khác → trả lời luôn.
     const onLongPressMessage = recalled
@@ -528,7 +548,7 @@ export default function WorkflowCommentsScreen() {
         />
       )}
 
-      {canSend ? (
+      {canSend == null ? null : canSend ? (
         <View
           style={[styles.composer, { paddingBottom: composerPaddingBottom }]}
         >
@@ -640,7 +660,7 @@ export default function WorkflowCommentsScreen() {
       {picker.sheet}
       <CommentActionSheet
         comment={actionFor}
-        canReply={canSend}
+        canReply={!!canSend}
         onReply={replyFromSheet}
         onRecall={confirmRecall}
         onClose={() => setActionFor(null)}

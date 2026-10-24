@@ -1,5 +1,5 @@
 import React from "react";
-import { Keyboard, Platform, StyleSheet, type ViewStyle } from "react-native";
+import { Keyboard, Platform, StyleSheet, View, type ViewStyle } from "react-native";
 import {
   BottomTabBar,
   BottomTabBarProps,
@@ -17,6 +17,7 @@ import ScanTabButton from "./shared/ScanTabButton";
 import TabBarBackground from "./shared/TabBarBackground";
 import { createTabBarButton } from "./shared/TabBarItemButton";
 import { HomeMenuProvider } from "../screens/Home/shared/HomeMenuProvider";
+import ThongBaoBellPanel from "../screens/ThongBao/ThongBaoBellPanel";
 import {
   INVERTED_TAB_BAR_MARKER,
   TAB_INVERTED_BG,
@@ -144,75 +145,84 @@ export default function Tabs() {
 
   return (
     <HomeMenuProvider>
-      <Tab.Navigator
-        tabBar={renderTabBar}
-        screenOptions={{
-          headerShown: false,
-          tabBarHideOnKeyboard: Platform.OS !== "ios",
-          lazy: false,
-          tabBarAllowFontScaling: false,
-          // Trên tablet react-navigation tự chuyển sang xếp nhãn cạnh icon; các
-          // ô tab ở đây tự vẽ icon + nhãn theo chiều dọc nên phải chốt cứng,
-          // không thì thanh tab đổi hình trên máy màn rộng.
-          tabBarLabelPosition: "below-icon",
-          tabBarStyle: createTabBarStyle({ bottomInset: insets.bottom }),
-        }}
-      >
-        <Tab.Screen
-          name="HomeTab"
-          component={HomeStack}
-          options={{ title: "Trang chủ", tabBarButton: HomeTabButton }}
-        />
-
-        <Tab.Screen
-          name="FeatureTab"
-          component={FeatureStack}
-          options={{ title: "Chức năng", tabBarButton: FeatureTabButton }}
-        />
-
-        <Tab.Screen
-          name="ScanTab"
-          component={ScanStack}
-          options={({ route }) => {
-            const routeName = getFocusedRouteNameFromRoute(route) ?? "Scan";
-            const isScanScreen = routeName === "Scan";
-
-            return {
-              title: "Quét QR",
-              tabBarButton: ScanTabButton,
-              // Màu nền thật do ThemeAwareTabBar quyết định; đây chỉ là cờ báo
-              // màn quét muốn thanh tab nền tối.
-              tabBarBackground: isScanScreen
-                ? INVERTED_TAB_BAR_MARKER
-                : undefined,
-            };
+      <View style={styles.root}>
+        <Tab.Navigator
+          tabBar={renderTabBar}
+          screenOptions={{
+            headerShown: false,
+            tabBarHideOnKeyboard: Platform.OS !== "ios",
+            lazy: false,
+            tabBarAllowFontScaling: false,
+            // Trên tablet react-navigation tự chuyển sang xếp nhãn cạnh icon; các
+            // ô tab ở đây tự vẽ icon + nhãn theo chiều dọc nên phải chốt cứng,
+            // không thì thanh tab đổi hình trên máy màn rộng.
+            tabBarLabelPosition: "below-icon",
+            tabBarStyle: createTabBarStyle({ bottomInset: insets.bottom }),
           }}
-        />
-
-        {showLichTab ? (
+        >
           <Tab.Screen
-            name="LichTab"
-            component={LichStack}
-            // Không nạp lịch lúc mở app — chỉ khi người dùng vào tab.
-            options={{ title: "Lịch", tabBarButton: LichTabButton, lazy: true }}
+            name="HomeTab"
+            component={HomeStack}
+            options={{ title: "Trang chủ", tabBarButton: HomeTabButton }}
           />
-        ) : (
-          <Tab.Screen
-            name="CameraTab"
-            component={CameraStack}
-            options={{ title: "Camera", tabBarButton: CameraTabButton }}
-          />
-        )}
 
-        <Tab.Screen
-          name="SettingTab"
-          component={SettingStack}
-          options={{
-            title: "Cài đặt",
-            tabBarButton: SettingTabButton,
-          }}
-        />
-      </Tab.Navigator>
+          <Tab.Screen
+            name="FeatureTab"
+            component={FeatureStack}
+            options={{ title: "Chức năng", tabBarButton: FeatureTabButton }}
+          />
+
+          <Tab.Screen
+            name="ScanTab"
+            component={ScanStack}
+            options={({ route }) => {
+              const routeName = getFocusedRouteNameFromRoute(route) ?? "Scan";
+              const isScanScreen = routeName === "Scan";
+
+              return {
+                title: "Quét QR",
+                tabBarButton: ScanTabButton,
+                // Màu nền thật do ThemeAwareTabBar quyết định; đây chỉ là cờ báo
+                // màn quét muốn thanh tab nền tối.
+                tabBarBackground: isScanScreen
+                  ? INVERTED_TAB_BAR_MARKER
+                  : undefined,
+              };
+            }}
+          />
+
+          {showLichTab ? (
+            <Tab.Screen
+              name="LichTab"
+              component={LichStack}
+              // Không nạp lịch lúc mở app — chỉ khi người dùng vào tab.
+              options={{ title: "Lịch", tabBarButton: LichTabButton, lazy: true }}
+            />
+          ) : (
+            <Tab.Screen
+              name="CameraTab"
+              component={CameraStack}
+              options={{ title: "Camera", tabBarButton: CameraTabButton }}
+            />
+          )}
+
+          <Tab.Screen
+            name="SettingTab"
+            component={SettingStack}
+            options={{
+              title: "Cài đặt",
+              tabBarButton: SettingTabButton,
+            }}
+          />
+        </Tab.Navigator>
+        {/* Bảng chuông (nút ở HeaderHome) phủ cả thanh tab nhưng nằm DƯỚI các màn
+            của stack gốc: mở chi tiết từ bảng rồi back là thấy lại bảng ngay. */}
+        <ThongBaoBellPanel />
+      </View>
     </HomeMenuProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+});

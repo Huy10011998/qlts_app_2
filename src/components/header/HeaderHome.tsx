@@ -18,7 +18,6 @@ import { useHomePageBackground } from "../../screens/Home/shared/homeBlockTone";
 import { usePermission } from "../../hooks/usePermission";
 import { navigateFromRef } from "../../navigation/navigationService";
 import { WORKFLOW_VIEW_CODE } from "../../screens/Workflow/workflowMenu";
-import ThongBaoBellPanel from "../../screens/ThongBao/ThongBaoBellPanel";
 import { useThongBaoContext } from "../../screens/ThongBao/ThongBaoProvider";
 import type { HeaderHomeProps } from "../../types/components.d";
 import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
@@ -60,8 +59,8 @@ export default function HeaderHome(_props: HeaderHomeProps) {
   } = useHomeMenuContext();
   const { canView, loaded: permissionLoaded } = usePermission();
   const canViewWorkflow = permissionLoaded && canView(WORKFLOW_VIEW_CODE);
-  const { soChuaDoc } = useThongBaoContext();
-  const [isBellOpen, setIsBellOpen] = useState(false);
+  // Bảng chuông dựng ở Tabs.tsx (nằm dưới các màn mở từ nó), không ở header.
+  const { soChuaDoc, setBellOpen } = useThongBaoContext();
 
   const [now, setNow] = useState(new Date());
   const spin = useRef(new Animated.Value(0)).current;
@@ -219,7 +218,7 @@ export default function HeaderHome(_props: HeaderHomeProps) {
             <TouchableOpacity
               style={styles.iconBtn}
               activeOpacity={0.75}
-              onPress={() => setIsBellOpen(true)}
+              onPress={() => setBellOpen(true)}
               accessibilityRole="button"
               accessibilityLabel={
                 soChuaDoc ? `Thông báo, ${soChuaDoc} chưa đọc` : "Thông báo"
@@ -272,10 +271,6 @@ export default function HeaderHome(_props: HeaderHomeProps) {
 
         <View style={styles.bottomSpacer} />
 
-        <ThongBaoBellPanel
-          visible={isBellOpen}
-          onClose={() => setIsBellOpen(false)}
-        />
       </View>
     </View>
   );

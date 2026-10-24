@@ -2,6 +2,7 @@ import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../types/index";
 import Tabs from "./Tabs";
+import { insertBelowListeners } from "./navigationService";
 import ReportScreen from "../screens/Home/ReportScreen";
 import SolarPlantScreen from "../screens/Home/SolarPlantScreen";
 import VehicleJourneyScreen from "../screens/Home/VehicleJourneyScreen";
@@ -85,7 +86,7 @@ export default function AppNavigator() {
 
 function AppStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false }} screenListeners={insertBelowListeners}>
       <Stack.Screen name="Tabs" component={Tabs} />
       <Stack.Screen
         name="CameraList"

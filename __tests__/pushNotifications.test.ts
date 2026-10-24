@@ -9,7 +9,12 @@ import {
   isKnownPushRoute,
   navigateToPushRoute,
 } from "../src/services/notifications/pushRoutes";
-import { navigationRef } from "../src/navigation/navigationService";
+import {
+  INSERT_BELOW_PARAM,
+  insertBelowListeners,
+  navigationRef,
+  pushScreensFromRef,
+} from "../src/navigation/navigationService";
 import {
   DEFAULT_CHANNEL_ID,
   SILENT_CHANNEL_ID,
@@ -272,5 +277,117 @@ describe("pushRoutes", () => {
     });
 
     expect(navigateToPushRoute("Asset")).toBe(false);
+  });
+});
+
+describe("pushScreensFromRef (bấm thông báo bình luận)", () => {
+  // Tạo spy trong beforeAll: spy tạo lúc khai báo trùng với spy của khối
+  // pushRoutes, bị afterAll của khối đó gỡ mất.
+  let dispatchSpy: jest.SpyInstance;
+  let currentSpy: jest.SpyInstance;
+  let isReadySpy: jest.SpyInstance;
+  const detailB = { route: "FlowChiTiet", params: { nameClass: "Ticket_PhongBan", id: 21 } };
+  const binhLuanB = {
+    route: "WorkflowBinhLuan",
+    params: { apiBase: "Ticket_PhongBan", idHoSo: 21, canSend: true },
+  };
+  const pushed = () =>
+    dispatchSpy.mock.calls.map(([action]) => (action as { payload: { name: string } }).payload.name);
+  const pushedParams = () =>
+    (dispatchSpy.mock.calls[0][0] as { payload: { params: Record<string, unknown> } }).payload.params;
+  const setCurrent = (name: string, params?: object) =>
+    currentSpy.mockReturnValue({ key: "k", name, params });
+
+  beforeAll(() => {
+    dispatchSpy = jest.spyOn(navigationRef, "dispatch");
+    currentSpy = jest.spyOn(navigationRef, "getCurrentRoute");
+    isReadySpy = jest.spyOn(navigationRef, "isReady");
+  });
+
+  beforeEach(() => {
+    dispatchSpy.mockReset();
+    dispatchSpy.mockImplementation(() => {});
+    isReadySpy.mockReturnValue(true);
+  });
+
+  afterAll(() => {
+    dispatchSpy.mockRestore();
+    currentSpy.mockRestore();
+    isReadySpy.mockRestore();
+  });
+
+  it("chỉ trượt màn bình luận, chi tiết chờ chèn dưới (không hiện chi tiết trước)", () => {
+    setCurrent("Home");
+    expect(pushScreensFromRef([detailB, binhLuanB])).toBe(true);
+    expect(pushed()).toEqual(["WorkflowBinhLuan"]);
+    expect(pushedParams()).toEqual({ ...binhLuanB.params, [INSERT_BELOW_PARAM]: [detailB] });
+  });
+
+  it("đang ở chi tiết phiếu KHÁC cùng loại vẫn chồng màn mới (back về phiếu cũ)", () => {
+    setCurrent("FlowChiTiet", { nameClass: "Ticket_PhongBan", id: 5 });
+    pushScreensFromRef([detailB, binhLuanB]);
+    expect(pushed()).toEqual(["WorkflowBinhLuan"]);
+    expect(pushedParams()[INSERT_BELOW_PARAM]).toEqual([detailB]);
+  });
+
+  it("đang ở đúng chi tiết đó → chỉ chồng bình luận; đang ở đúng bình luận → thôi", () => {
+    // id chuỗi (mở từ push) vẫn là cùng phiếu; params thừa (item) không tính.
+    setCurrent("FlowChiTiet", { nameClass: "Ticket_PhongBan", id: "21", item: {} });
+    pushScreensFromRef([detailB, binhLuanB]);
+    expect(pushed()).toEqual(["WorkflowBinhLuan"]);
+    expect(pushedParams()).toEqual(binhLuanB.params);
+
+    dispatchSpy.mockClear();
+    setCurrent("WorkflowBinhLuan", { apiBase: "Ticket_PhongBan", idHoSo: 21, canSend: true });
+    expect(pushScreensFromRef([detailB, binhLuanB])).toBe(true);
+    expect(pushed()).toEqual([]);
+  });
+
+  it("trả false khi NavigationContainer chưa sẵn sàng", () => {
+    isReadySpy.mockReturnValue(false);
+    expect(pushScreensFromRef([detailB])).toBe(false);
+    expect(dispatchSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("insertBelowListeners", () => {
+  const binhLuanRoute = {
+    key: "bl-1",
+    name: "WorkflowBinhLuan",
+    params: { apiBase: "Ticket_PhongBan", idHoSo: 21, [INSERT_BELOW_PARAM]: [{ route: "FlowChiTiet", params: { id: 21 } }] },
+  };
+  const makeNavigation = (routes: object[]) => {
+    const state = { key: "root", index: routes.length - 1, routes, stale: false, type: "stack", routeNames: [] };
+    return { getState: () => state, dispatch: jest.fn() };
+  };
+  const fire = (navigation: ReturnType<typeof makeNavigation>, closing: boolean) =>
+    insertBelowListeners({
+      navigation: navigation as never,
+      route: binhLuanRoute as never,
+    }).transitionEnd({ data: { closing } } as never);
+
+  it("trượt xong thì chèn chi tiết ngay dưới bình luận, bỏ param tạm", () => {
+    const navigation = makeNavigation([{ key: "tabs", name: "Tabs" }, binhLuanRoute]);
+    fire(navigation, false);
+    const action = navigation.dispatch.mock.calls[0][0];
+    expect(action.type).toBe("RESET");
+    expect(action.payload.index).toBe(2);
+    expect(action.payload.routes.map((item: { name: string }) => item.name)).toEqual([
+      "Tabs",
+      "FlowChiTiet",
+      "WorkflowBinhLuan",
+    ]);
+    expect(action.payload.routes[1].params).toEqual({ id: 21 });
+    expect(action.payload.routes[2]).toMatchObject({ key: "bl-1", params: { apiBase: "Ticket_PhongBan", idHoSo: 21 } });
+    expect(action.payload.routes[2].params[INSERT_BELOW_PARAM]).toBeUndefined();
+  });
+
+  it("đang đóng / không có màn chờ chèn → không làm gì", () => {
+    const navigation = makeNavigation([{ key: "tabs", name: "Tabs" }, binhLuanRoute]);
+    fire(navigation, true);
+    const plain = makeNavigation([{ key: "tabs", name: "Tabs" }, { ...binhLuanRoute, params: { idHoSo: 21 } }]);
+    fire(plain, false);
+    expect(navigation.dispatch).not.toHaveBeenCalled();
+    expect(plain.dispatch).not.toHaveBeenCalled();
   });
 });
