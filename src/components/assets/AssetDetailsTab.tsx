@@ -25,6 +25,11 @@ import { BRAND_RED } from "./shared/listTheme";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { isNetworkRequestError } from "../../utils/helpers/api";
 import { normalizeIconImageUri } from "../../utils/iconImage";
+import {
+  buildRelatedConditions,
+  getWorkflowListRoute,
+  type WorkflowRelatedFilter,
+} from "../../screens/Workflow/shared/workflowRelated";
 
 const LOAD_ERROR_MESSAGE = "Vui lòng kiểm tra kết nối mạng rồi bấm Thử lại.";
 
@@ -99,6 +104,26 @@ export default function AssetDeTailsTab({
   });
 
   const handlePress = (item: MenuItemResponse) => {
+    // Công việc / Kế hoạch: BE chặn get-list chung (400), đọc qua màn Workflow.
+    const workflowRoute = getWorkflowListRoute(item.name);
+    const related: WorkflowRelatedFilter = {
+      property: item.propertyReference,
+      idRoot: String(id),
+      nameClassRoot,
+      rootRecordLabel,
+      groupMenuId,
+      viewPermission,
+      assetTitleHeader,
+    };
+
+    if (workflowRoute && buildRelatedConditions(related).length) {
+      navigation.navigate(workflowRoute, {
+        titleHeader: item.moTa ?? undefined,
+        related,
+      });
+      return;
+    }
+
     navigation.navigate("AssetRelatedList", {
       nameClass: item.name,
       propertyReference: item.propertyReference,

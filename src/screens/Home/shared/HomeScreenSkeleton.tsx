@@ -303,11 +303,11 @@ function AssetStructureSkeleton() {
 }
 
 /**
- * Khối điểm danh chỉ hiện khi đã có số nên không có khung chờ riêng; ở đây vẽ
- * phần đầu thẻ thật (ô chọn bộ phận, tỉ lệ, vạch, ba ô số). Khối này luôn nằm
- * dưới mép màn lúc mở app nên chỉ cần xấp xỉ.
+ * Phần đầu thẻ điểm danh thật (ô chọn bộ phận, tỉ lệ, vạch, ba ô số). Trang chủ
+ * cũng dùng ở lượt tải dashboard đầu tiên — thẻ thật chưa có số sẽ báo lỗi mất
+ * kết nối Bravo8. Khối này luôn nằm dưới mép màn lúc mở app nên chỉ cần xấp xỉ.
  */
-function AttendanceSkeleton() {
+export function AttendanceSkeleton() {
   const styles = useStyles(makeStyles);
   const colors = useAppColors();
   const chrome = useHomeCardChrome();

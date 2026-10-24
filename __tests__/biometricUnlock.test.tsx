@@ -1,8 +1,9 @@
 import React from "react";
-import { Platform } from "react-native";
+import { NativeModules, Platform } from "react-native";
 import * as Keychain from "react-native-keychain";
 import ReactTestRenderer from "react-test-renderer";
 
+import { DEVICE_LOCK_ENABLED_SERVICE } from "../src/constants/AuthStorage";
 import { AuthProvider, useAuth } from "../src/context/AuthContext";
 import { canAccessAppNavigator } from "../src/navigation/shared/rootNavigationHelpers";
 import { classifyBiometricError } from "../src/services/auth/biometric";
@@ -34,8 +35,20 @@ jest.mock("../src/services/data/callApi", () => ({
   resetAuthState: jest.fn(),
 }));
 
-const getSupportedBiometryType = Keychain.getSupportedBiometryType as jest.Mock;
+const getBiometricKind = NativeModules.BiometricGate
+  .getBiometricKind as jest.Mock;
 const hasGenericPassword = Keychain.hasGenericPassword as jest.Mock;
+const getGenericPassword = Keychain.getGenericPassword as jest.Mock;
+const resetGenericPassword = Keychain.resetGenericPassword as jest.Mock;
+const isPasscodeAuthAvailable = Keychain.isPasscodeAuthAvailable as jest.Mock;
+
+/** Cờ "Đăng nhập bằng khoá màn hình" đọc từ Keychain. */
+const setDeviceLockFlag = (on: boolean) =>
+  getGenericPassword.mockImplementation(async (options) =>
+    on && options?.service === DEVICE_LOCK_ENABLED_SERVICE
+      ? { service: DEVICE_LOCK_ENABLED_SERVICE, username: "x", password: "1" }
+      : false,
+  );
 
 /** Platform.OS là hằng đọc-chỉ nên phải ghi đè qua defineProperty. */
 const setPlatform = (os: "ios" | "android") => {
@@ -69,8 +82,10 @@ beforeEach(() => {
     refreshToken: "refresh",
   });
   mockReadFaceIdEnabled.mockResolvedValue(false);
-  getSupportedBiometryType.mockResolvedValue("Fingerprint");
-  hasGenericPassword.mockResolvedValue(true);
+  getBiometricKind.mockResolvedValue("fingerprint");
+  hasGenericPassword.mockResolvedValue(false);
+  isPasscodeAuthAvailable.mockResolvedValue(false);
+  setDeviceLockFlag(false);
 });
 
 afterEach(() => {
@@ -97,9 +112,20 @@ describe("Khởi động Android", () => {
     expect(canAccessAppNavigator(auth)).toBe(false);
   });
 
-  it("bật mà mất marker thì tắt cờ và vào thẳng", async () => {
+  it("khuôn mặt Class 2 (Samsung) đã bật thì cũng khoá, không cần marker", async () => {
     mockReadFaceIdEnabled.mockResolvedValue(true);
-    hasGenericPassword.mockResolvedValue(false);
+    getBiometricKind.mockResolvedValue("face");
+
+    const auth = await bootstrap();
+
+    expect(auth.sessionUnlocked).toBe(false);
+    expect(hasGenericPassword).not.toHaveBeenCalled();
+    expect(mockWriteFaceIdEnabled).not.toHaveBeenCalled();
+  });
+
+  it("bật mà máy đã xoá hết vân tay / khuôn mặt thì tắt cờ và vào thẳng", async () => {
+    mockReadFaceIdEnabled.mockResolvedValue(true);
+    getBiometricKind.mockResolvedValue(null);
 
     const auth = await bootstrap();
 
@@ -107,14 +133,26 @@ describe("Khởi động Android", () => {
     expect(mockWriteFaceIdEnabled).toHaveBeenCalledWith(false);
   });
 
-  it("bật mà máy đã xoá hết vân tay thì tắt cờ và vào thẳng", async () => {
-    mockReadFaceIdEnabled.mockResolvedValue(true);
-    getSupportedBiometryType.mockResolvedValue(null);
+  it("chỉ bật khoá màn hình (máy không có vân tay) thì cũng khoá", async () => {
+    getBiometricKind.mockResolvedValue(null);
+    isPasscodeAuthAvailable.mockResolvedValue(true);
+    setDeviceLockFlag(true);
+
+    const auth = await bootstrap();
+
+    expect(auth.sessionUnlocked).toBe(false);
+    expect(canAccessAppNavigator(auth)).toBe(false);
+  });
+
+  it("bật khoá màn hình mà máy đã gỡ khoá màn hình thì tắt cờ và vào thẳng", async () => {
+    setDeviceLockFlag(true);
 
     const auth = await bootstrap();
 
     expect(auth.sessionUnlocked).toBe(true);
-    expect(mockWriteFaceIdEnabled).toHaveBeenCalledWith(false);
+    expect(resetGenericPassword).toHaveBeenCalledWith({
+      service: DEVICE_LOCK_ENABLED_SERVICE,
+    });
   });
 
   it("iOS vẫn luôn chờ Face ID hoặc mật khẩu", async () => {

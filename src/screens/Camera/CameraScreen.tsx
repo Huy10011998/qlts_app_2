@@ -65,7 +65,9 @@ export default function CameraScreen() {
   const { canView, loaded } = usePermission();
   const hasViewPermission = loaded && canView("Camera");
   const [data, setData] = useState<CameraItem[]>([]);
-  const [isFetching, setIsFetching] = useState(false);
+  // true sẵn: khung chờ ngay từ khung đầu, không loé danh sách rỗng trước khi
+  // effect kịp gọi tải. Không có quyền thì effect tự tắt.
+  const [isFetching, setIsFetching] = useState(true);
   const [isRefreshingTop, setIsRefreshingTop] = useState(false);
   const [search, setSearch] = useState("");
   const [isSearching, setIsSearching] = useState(false);

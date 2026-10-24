@@ -35,7 +35,7 @@ import MenuCardSkeleton, {
 } from "../ui/MenuCardSkeleton";
 import { shouldShowListSkeleton } from "../ui/shouldShowListSkeleton";
 import ListCardAsset from "../../components/list/ListCardAsset";
-import SwipeableListRow from "../../components/list/SwipeableListRow";
+import SwipeableListRow, { useSingleOpenRow } from "../../components/list/SwipeableListRow";
 import { useDebounce } from "../../hooks/useDebounce";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { AddItem } from "../add/AddItem";
@@ -196,6 +196,7 @@ export default function AssetList() {
     actionLabel: addChildLabel,
     busyItemId,
     canAddChild,
+    childClassesSettled,
     hasChildClasses,
     openFor: openAddChild,
     sheetProps: addChildSheetProps,
@@ -206,24 +207,7 @@ export default function AssetList() {
     nameClass,
     viewPermission,
   });
-  // Chỉ một thẻ được mở tại một thời điểm. Thẻ cũ đóng ngay khi ngón tay bắt
-  // đầu kéo thẻ mới, để hai chuyển động chạy cùng lúc thay vì giật nối tiếp.
-  const openRowCloseRef = useRef<(() => void) | null>(null);
-  const closeOpenRow = useCallback((except?: () => void) => {
-    const close = openRowCloseRef.current;
-    if (close && close !== except) {
-      openRowCloseRef.current = null;
-      close();
-    }
-  }, []);
-  const handleRowOpened = useCallback((close: () => void) => {
-    openRowCloseRef.current = close;
-  }, []);
-  const handleRowClosed = useCallback((close: () => void) => {
-    if (openRowCloseRef.current === close) {
-      openRowCloseRef.current = null;
-    }
-  }, []);
+  const { closeOpenRow, rowHandlers } = useSingleOpenRow();
 
   const refreshTop = async () => {
     if (isRefreshingTop) return;
@@ -534,15 +518,17 @@ export default function AssetList() {
   const renderItem = useCallback(
     ({ item }: { item: Record<string, any> }) => (
       <SwipeableListRow
-        actionIcon={addChildIcon}
-        actionLabel={addChildLabel}
-        busy={busyItemId === String(item.id)}
+        actions={[
+          {
+            key: "addChild",
+            icon: addChildIcon,
+            label: addChildLabel,
+            busy: busyItemId === String(item.id),
+            onPress: () => openAddChild(item),
+          },
+        ]}
         disabled={!canAddChild}
-        onAction={() => openAddChild(item)}
-        onClosed={handleRowClosed}
-        onOpened={handleRowOpened}
-        onOpenStartDrag={closeOpenRow}
-        onTouchStart={closeOpenRow}
+        {...rowHandlers}
       >
         <ListCardAsset
           item={item}
@@ -557,14 +543,12 @@ export default function AssetList() {
       addChildLabel,
       busyItemId,
       canAddChild,
-      closeOpenRow,
       fieldActive,
       fieldShowMobile,
       handlePress,
-      handleRowClosed,
-      handleRowOpened,
       openAddChild,
       propertyClass,
+      rowHandlers,
     ],
   );
 
@@ -645,7 +629,10 @@ export default function AssetList() {
       isEmpty: assetItems.length === 0,
       isRefreshing: isRefreshingTop,
       isSearching,
-    })
+    }) ||
+    // Chưa biết có danh mục con không: hiện thẻ trước thì dải nhắc vuốt chen vào
+    // sau, đẩy cả danh sách xuống. Lượt hỏi này luôn kết thúc (lỗi cũng tính).
+    (!childClassesSettled && !loadErrorMessage && !isRefreshingTop && !isSearching)
   ) {
     return (
       <RecordListSkeleton

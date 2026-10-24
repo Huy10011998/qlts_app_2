@@ -1,12 +1,16 @@
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleProp, StyleSheet, Text, View, ViewStyle } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { AppColors, useStyles } from "../../../utils/helpers/colors";
 import { BRAND_RED } from "./listTheme";
 
 type SwipeHintBannerProps = {
   /** Việc sẽ làm, lấy đúng nhãn của nút vuốt (ví dụ "Thêm bảo trì"). */
-  actionLabel: string;
+  actionLabel?: string;
+  /** Câu nhắc riêng, thay cho câu dựng từ `actionLabel` (vd danh sách phiếu). */
+  text?: string;
+  /** Đè lề của khung ngoài — khi dải nằm chung hàng với nút khác. */
+  style?: StyleProp<ViewStyle>;
 };
 
 /**
@@ -14,12 +18,14 @@ type SwipeHintBannerProps = {
  * dấu hiệu nào tự thấy được, nên nhắc thường trực thay vì cho tắt.
  */
 export default function SwipeHintBanner({
-  actionLabel,
+  actionLabel = "",
+  text,
+  style,
 }: SwipeHintBannerProps) {
   const styles = useStyles(makeStyles);
 
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, style]}>
       <View style={styles.banner}>
         <Ionicons
           name="arrow-back-circle-outline"
@@ -27,7 +33,8 @@ export default function SwipeHintBanner({
           color={BRAND_RED}
         />
         <Text style={styles.text} numberOfLines={2}>
-          Vuốt thẻ sang trái để {actionLabel.toLowerCase()} cho bản ghi đó.
+          {text ??
+            `Vuốt thẻ sang trái để ${actionLabel.toLowerCase()} cho bản ghi đó.`}
         </Text>
       </View>
     </View>

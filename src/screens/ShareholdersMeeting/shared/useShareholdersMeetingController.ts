@@ -110,7 +110,10 @@ export function useShareholdersMeetingController() {
   const [isSearching, setIsSearching] = useState(false);
   const [attendanceFilter, setAttendanceFilter] =
     useState<AttendanceFilter>("all");
-  const [isMeetingLoading, setIsMeetingLoading] = useState(false);
+  // true sẵn: quyền về là khung chờ ngay, không loé "Chưa có đợt đại hội cổ
+  // đông" một khung trước khi effect kịp gọi tải. Không có quyền thì
+  // `loadMeetingData` tự tắt.
+  const [isMeetingLoading, setIsMeetingLoading] = useState(true);
   const [isVotingLoading, setIsVotingLoading] = useState(false);
   const [meetingError, setMeetingError] = useState<string | null>(null);
   const [votingError, setVotingError] = useState<string | null>(null);

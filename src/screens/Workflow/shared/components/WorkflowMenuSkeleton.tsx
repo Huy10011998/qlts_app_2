@@ -8,9 +8,9 @@ import { elevation } from "../../../../utils/helpers/tokens";
 import { WORKFLOW_MENU_GROUPS } from "../../workflowMenu";
 
 /**
- * Khung chờ màn Workflow lúc bộ quyền chưa nạp xong. Chưa biết nhóm nào được
+ * Khung chờ màn Workflow lúc bộ quyền / số nhắc chưa về. Chưa biết nhóm nào được
  * xem nên dựng theo menu đầy đủ (`WORKFLOW_MENU_GROUPS`) — cùng số nhóm, số thẻ
- * và kích thước thẻ của màn thật.
+ * và kích thước thẻ của màn thật, kể cả hàng số nhắc của chức năng có đếm.
  */
 export default function WorkflowMenuSkeleton() {
   const styles = useStyles(makeStyles);
@@ -32,6 +32,13 @@ export default function WorkflowMenuSkeleton() {
               <View style={styles.body}>
                 <SkeletonBlock opacity={opacity} style={styles.label} />
                 <SkeletonBlock opacity={opacity} style={styles.description} />
+                {/* Phiếu và Công việc có số nhắc (dem-tab); Kế hoạch không có API đếm. */}
+                {item.route === "Flow" || item.route === "CongViec" ? (
+                  <View style={styles.hints}>
+                    <SkeletonBlock opacity={opacity} style={styles.hint} />
+                    <SkeletonBlock opacity={opacity} style={[styles.hint, styles.hintShort]} />
+                  </View>
+                ) : null}
               </View>
               <SkeletonBlock opacity={opacity} style={styles.chevron} />
             </View>
@@ -95,6 +102,19 @@ const makeStyles = (c: AppColors) =>
       width: "68%",
       height: 12,
       borderRadius: 6,
+    },
+    // Viên số nhắc: chữ 12 + paddingVertical 2.
+    hints: {
+      flexDirection: "row",
+      gap: 6,
+    },
+    hint: {
+      width: 72,
+      height: 18,
+      borderRadius: 999,
+    },
+    hintShort: {
+      width: 56,
     },
     chevron: {
       width: 16,

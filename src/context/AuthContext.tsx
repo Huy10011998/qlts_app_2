@@ -8,7 +8,10 @@ import React, {
 } from "react";
 import { Platform } from "react-native";
 import { error, log } from "../utils/Logger";
-import { isBiometricUnlockUsable } from "../services/auth/biometric";
+import {
+  getUsableUnlockMethods,
+  hasUnlockMethod,
+} from "../services/auth/biometric";
 import {
   hardResetApi,
   setOnAuthLogout,
@@ -122,11 +125,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       try {
         const { token: storedToken, refreshToken: storedRefresh } =
           await readStoredAuthTokens();
-        // Android chưa bật vân tay thì mở khoá sẵn — vào thẳng như trước. iOS
-        // luôn chờ Face ID hoặc mật khẩu ở màn Đăng nhập.
+        // Android chưa bật vân tay / khoá màn hình thì mở khoá sẵn — vào thẳng
+        // như trước. iOS luôn chờ Face ID hoặc mật khẩu ở màn Đăng nhập.
         const unlockAtBoot =
           Platform.OS === "android" &&
-          !(storedToken && (await isBiometricUnlockUsable().catch(() => false)));
+          !(
+            storedToken &&
+            (await getUsableUnlockMethods()
+              .then(hasUnlockMethod)
+              .catch(() => false))
+          );
 
         // Không `await` gì từ đây tới `setAuthReady` để các setState gộp một
         // lần render — tách ra thì Android nháy màn Đăng nhập một nhịp.

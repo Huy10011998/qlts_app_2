@@ -365,14 +365,19 @@ export function useSolarDashboard({
       lastRunAtRef.current = Date.now();
       setIsRefreshing(true);
 
+      // Khối trong lượt này đều là "đang tải" ngay từ đầu, kể cả khối còn xếp
+      // hàng (chạy tuần tự): để `isLoading` false tới lượt mình thì khối chưa có
+      // số hiện "Không có dữ liệu" / "—" vài giây rồi mới thành khung chờ.
       setBlocks(
         (current) =>
           Object.fromEntries(
             (Object.keys(current) as SolarBlockKey[]).map((key) => [
               key,
-              sequence.includes(key) || !current[key].isLoading
-                ? current[key]
-                : { ...current[key], isLoading: false },
+              sequence.includes(key)
+                ? { ...current[key], isLoading: true, error: null }
+                : current[key].isLoading
+                ? { ...current[key], isLoading: false }
+                : current[key],
             ]),
           ) as SolarBlocks,
       );

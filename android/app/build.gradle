@@ -137,8 +137,8 @@ android {
         applicationId "com.qlts_app_2"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 140
-        versionName "2.44"
+        versionCode 141
+        versionName "2.45"
     }
     signingConfigs {
         release {
@@ -176,6 +176,9 @@ dependencies {
     implementation "androidx.core:core-splashscreen:1.0.1"
     // In-App Updates: dò bản mới qua Play thay vì scrape HTML trang store.
     implementation "com.google.android.play:app-update-ktx:2.1.0"
+    // Hộp hỏi vân tay / khuôn mặt / khoá màn hình (BiometricGateModule). Cùng
+    // bản với react-native-keychain.
+    implementation "androidx.biometric:biometric:1.1.0"
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")

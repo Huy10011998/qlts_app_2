@@ -39,8 +39,8 @@ import {
 import { useOnWorkflowInfoStale } from "../shared/workflowInfoRefresh";
 import { formatBeDate } from "../shared/workflowDate";
 import { getWorkflowErrorMessage } from "../shared/workflowErrors";
-import { getCardFields, getDetailFields, WorkflowField } from "../shared/workflowFields";
-import { loadClassFields } from "../shared/workflowMetadata";
+import { getCardFields, getDetailFields } from "../shared/workflowFields";
+import { useClassFields } from "../shared/workflowMetadata";
 import { getKeHoachProgress } from "./keHoachRules";
 import { AppAlert } from "../../../components/ui/AppAlert";
 
@@ -70,18 +70,14 @@ export default function KeHoachDetailScreen() {
   const [congViecError, setCongViecError] = useState<string | null>(null);
   /** cv-thong-tin của các việc đang hiện: số bình luận / file + cờ quyền. */
   const [cvInfos, setCvInfos] = useState<Record<number, CongViecThongTin>>({});
-  const [khFields, setKhFields] = useState<WorkflowField[]>([]);
-  const [cvFields, setCvFields] = useState<WorkflowField[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("thongTin");
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    loadClassFields(CV_KE_HOACH_NAME_CLASS).then(setKhFields).catch(() => undefined);
-    loadClassFields(CV_CONG_VIEC_NAME_CLASS).then(setCvFields).catch(() => undefined);
-  }, []);
+  const { fields: khFields, ready: khFieldsReady } = useClassFields(CV_KE_HOACH_NAME_CLASS);
+  const { fields: cvFields, ready: cvFieldsReady } = useClassFields(CV_CONG_VIEC_NAME_CLASS);
 
   const load = useCallback(
     async (mode: "initial" | "refresh" | "silent" = "initial") => {
@@ -193,7 +189,11 @@ export default function KeHoachDetailScreen() {
     ]);
   };
 
-  if (loading) return <WorkflowDetailSkeleton variant="keHoach" fields={detailFields} />;
+  // Chờ cả field (kế hoạch + thẻ công việc ở tab Công việc): vẽ trước metadata
+  // thì mất các dòng rồi mới hiện.
+  if (loading || !khFieldsReady || !cvFieldsReady) {
+    return <WorkflowDetailSkeleton variant="keHoach" fields={detailFields} />;
+  }
 
   if (!keHoach) {
     return (

@@ -1,20 +1,30 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   ActivityIndicator,
   Animated,
+  StyleProp,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  ViewStyle,
 } from "react-native";
 import { Swipeable } from "react-native-gesture-handler";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
 
-/** Bề rộng nút hành động lộ ra khi vuốt thẻ sang trái. */
+/** Bề rộng nút hành động lộ ra khi vuốt thẻ sang trái (thẻ chỉ có một nút). */
 const ACTION_WIDTH = 88;
-/** Kèm khoảng chừa phải, bằng lề ngang của thẻ trong danh sách. */
-const ACTION_TOTAL_WIDTH = ACTION_WIDTH + 12;
+/** Nhiều nút thì hẹp lại cho vừa một hàng (vd 4 nút duyệt phiếu); nhãn dài xuống 2 dòng. */
+const MULTI_ACTION_WIDTH = 72;
+const ACTION_GAP = 8;
+/** Khoảng chừa phải, bằng lề ngang của thẻ trong danh sách. */
+const ACTION_EDGE_INSET = 12;
+
+const getActionsTotalWidth = (count: number) =>
+  count * (count > 1 ? MULTI_ACTION_WIDTH : ACTION_WIDTH) +
+  (count - 1) * ACTION_GAP +
+  ACTION_EDGE_INSET;
 
 /**
  * Spring mặc định của `Swipeable` khá chậm và mềm, nên thẻ cũ đóng lại trong khi
@@ -27,14 +37,34 @@ const ROW_ANIMATION_OPTIONS = {
   speed: 24,
 };
 
-type SwipeableListRowProps = {
-  actionIcon?: string;
-  actionLabel: string;
+export type SwipeRowAction = {
+  key: string;
+  label: string;
+  icon?: string;
+  onPress: () => void;
+  /** Nền nút; mặc định đỏ thương hiệu. */
+  color?: string;
+  /** Màu icon + chữ; mặc định chữ trên nền thương hiệu. */
+  textColor?: string;
   /** Đang tải cấu hình cho hành động: hiện spinner và chặn bấm thêm. */
   busy?: boolean;
+  /**
+   * Đóng thẻ ngay khi bấm — cho hành động mở hộp thoại tại chỗ. Mặc định thẻ
+   * giữ mở tới khi `busy` tắt (xem `handlePress`).
+   */
+  closeOnPress?: boolean;
+};
+
+type SwipeableListRowProps = {
+  /** Các nút lộ ra ở mép phải, xếp trái sang phải. */
+  actions: SwipeRowAction[];
+  /**
+   * Lề dọc của cụm nút, đặt bằng lề dọc của thẻ để nút cao đúng bằng thẻ. Mặc
+   * định theo ListCardAsset (marginVertical 6).
+   */
+  actionsStyle?: StyleProp<ViewStyle>;
   children: React.ReactNode;
   disabled?: boolean;
-  onAction: () => void;
   /** Thẻ vừa đóng lại — nơi gọi bỏ nó khỏi "thẻ đang mở". */
   onClosed?: (close: () => void) => void;
   /**
@@ -53,18 +83,53 @@ type SwipeableListRowProps = {
 };
 
 /**
- * Bọc một thẻ danh sách để vuốt sang trái lộ ra một nút hành động ở mép phải.
+ * Chỉ một thẻ được mở tại một thời điểm. Thẻ cũ đóng ngay khi ngón tay bắt
+ * đầu kéo thẻ mới, để hai chuyển động chạy cùng lúc thay vì giật nối tiếp.
+ * `rowHandlers` rải thẳng vào `SwipeableListRow`; `closeOpenRow()` cho lúc bắt
+ * đầu cuộn danh sách.
+ */
+export function useSingleOpenRow() {
+  const openRowCloseRef = useRef<(() => void) | null>(null);
+  const closeOpenRow = useCallback((except?: () => void) => {
+    const close = openRowCloseRef.current;
+    if (close && close !== except) {
+      openRowCloseRef.current = null;
+      close();
+    }
+  }, []);
+  const handleRowOpened = useCallback((close: () => void) => {
+    openRowCloseRef.current = close;
+  }, []);
+  const handleRowClosed = useCallback((close: () => void) => {
+    if (openRowCloseRef.current === close) {
+      openRowCloseRef.current = null;
+    }
+  }, []);
+
+  const rowHandlers = useMemo(
+    () => ({
+      onClosed: handleRowClosed,
+      onOpened: handleRowOpened,
+      onOpenStartDrag: closeOpenRow,
+      onTouchStart: closeOpenRow,
+    }),
+    [closeOpenRow, handleRowClosed, handleRowOpened],
+  );
+
+  return { closeOpenRow, rowHandlers };
+}
+
+/**
+ * Bọc một thẻ danh sách để vuốt sang trái lộ ra các nút hành động ở mép phải.
  *
  * Dùng `Swipeable` bản Animated của react-native-gesture-handler (không phải
  * `ReanimatedSwipeable`) vì repo không cài react-native-reanimated.
  */
 export default function SwipeableListRow({
-  actionIcon = "add-circle-outline",
-  actionLabel,
-  busy = false,
+  actions,
+  actionsStyle,
   children,
   disabled = false,
-  onAction,
   onClosed,
   onOpened,
   onOpenStartDrag,
@@ -73,17 +138,23 @@ export default function SwipeableListRow({
   const styles = useStyles(makeStyles);
   const c = useAppColors();
   const swipeableRef = useRef<Swipeable>(null);
+  const busy = actions.some((action) => action.busy);
 
   const close = useCallback(() => {
     swipeableRef.current?.close();
   }, []);
 
-  const handlePress = useCallback(() => {
-    if (busy) return;
-    // Cố ý KHÔNG đóng thẻ ở đây: đóng ngay thì spinner `busy` không ai thấy, và
-    // trên mạng chậm người dùng tưởng bấm không ăn. Thẻ tự đóng khi việc xong.
-    onAction();
-  }, [busy, onAction]);
+  const handlePress = useCallback(
+    (action: SwipeRowAction) => {
+      if (busy) return;
+      // Mặc định KHÔNG đóng thẻ ở đây: đóng ngay thì spinner `busy` không ai
+      // thấy, và trên mạng chậm người dùng tưởng bấm không ăn. Thẻ tự đóng khi
+      // việc xong.
+      if (action.closeOnPress) close();
+      action.onPress();
+    },
+    [busy, close],
+  );
 
   // Đóng thẻ khi hành động vừa chạy xong (đã điều hướng, hoặc lỗi đã báo), nhờ
   // đó lúc quay lại danh sách thẻ không còn hé ra.
@@ -101,10 +172,11 @@ export default function SwipeableListRow({
 
   const renderRightActions = useCallback(
     (progress: Animated.AnimatedInterpolation<number>) => {
+      const totalWidth = getActionsTotalWidth(actions.length);
       // Nội dung trượt vào cùng thẻ chứ không đứng yên ở mép phải.
       const translateX = progress.interpolate({
         inputRange: [0, 1],
-        outputRange: [ACTION_TOTAL_WIDTH, 0],
+        outputRange: [totalWidth, 0],
         extrapolate: "clamp",
       });
 
@@ -112,27 +184,48 @@ export default function SwipeableListRow({
         // Animate ngay ở khung ngoài để nút thừa hưởng chiều cao của cả hàng,
         // nhờ đó cao và bo góc y như thẻ bên cạnh.
         <Animated.View
-          style={[styles.actionWrap, { transform: [{ translateX }] }]}
+          style={[
+            styles.actionWrap,
+            { width: totalWidth },
+            actionsStyle,
+            { transform: [{ translateX }] },
+          ]}
         >
-          <TouchableOpacity
-            accessibilityLabel={actionLabel}
-            accessibilityRole="button"
-            onPress={handlePress}
-            style={styles.actionButton}
-          >
-            {busy ? (
-              <ActivityIndicator color={c.onBrand} size="small" />
-            ) : (
-              <Ionicons name={actionIcon} size={22} color={c.onBrand} />
-            )}
-            <Text numberOfLines={2} style={styles.actionText}>
-              {actionLabel}
-            </Text>
-          </TouchableOpacity>
+          {actions.map((action) => {
+            const fg = action.textColor ?? c.onBrand;
+            return (
+              <TouchableOpacity
+                key={action.key}
+                accessibilityLabel={action.label}
+                accessibilityRole="button"
+                onPress={() => handlePress(action)}
+                style={[
+                  styles.actionButton,
+                  { backgroundColor: action.color ?? c.red },
+                ]}
+              >
+                {action.busy ? (
+                  <ActivityIndicator color={fg} size="small" />
+                ) : (
+                  <Ionicons
+                    name={action.icon ?? "add-circle-outline"}
+                    size={22}
+                    color={fg}
+                  />
+                )}
+                <Text
+                  numberOfLines={2}
+                  style={[styles.actionText, { color: fg }]}
+                >
+                  {action.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </Animated.View>
       );
     },
-    [actionIcon, actionLabel, busy, c, handlePress, styles],
+    [actions, actionsStyle, c, handlePress, styles],
   );
 
   if (disabled) {
@@ -165,15 +258,15 @@ const makeStyles = (c: AppColors) =>
     actionWrap: {
       // Cùng lề với ListCardAsset (marginVertical 6 / marginHorizontal 12) để
       // nút và thẻ trông như hai khối cùng một hàng.
-      width: ACTION_TOTAL_WIDTH,
+      flexDirection: "row",
+      gap: ACTION_GAP,
       marginVertical: 6,
-      paddingRight: 12,
+      paddingRight: ACTION_EDGE_INSET,
     },
     actionButton: {
       // Cao bằng cả hàng, bo góc trùng với thẻ.
       flex: 1,
       borderRadius: 16,
-      backgroundColor: c.red,
       alignItems: "center",
       justifyContent: "center",
       paddingHorizontal: 6,

@@ -5,7 +5,6 @@ import ReactTestRenderer from "react-test-renderer";
 import { ThemeProvider } from "../src/context/ThemeContext";
 import CongViecCard from "../src/screens/Workflow/CongViec/components/CongViecCard";
 import FlowCard from "../src/screens/Workflow/Flow/components/FlowCard";
-import type { FlowActions } from "../src/screens/Workflow/Flow/flowRules";
 import WorkflowCounter from "../src/screens/Workflow/shared/components/WorkflowCounter";
 import WorkflowListSkeleton, {
   CounterPendingPills,
@@ -137,18 +136,6 @@ describe("khung chờ danh sách Workflow", () => {
   });
 });
 
-const NO_ACTIONS: FlowActions = {
-  sua: false,
-  xoa: false,
-  duyet: false,
-  khongYKien: false,
-  traBuoc: false,
-  nhanBan: false,
-  quyTrinh: false,
-  dinhKem: false,
-  suaFile: false,
-};
-
 describe("thẻ giữ chỗ thông tin phụ", () => {
   const congViec = { id: 1, trangThai: 0, chuTri_MoTa: "Nhân viên Test 1" } as CongViecItem;
   const cvInfo = { id: 1, soBinhLuan: 2, soFile: 1 } as any;
@@ -187,7 +174,6 @@ describe("thẻ giữ chỗ thông tin phụ", () => {
       item={{ id: 7, ...item }}
       fields={[]}
       soPhieuField={null}
-      actions={NO_ACTIONS}
       onPress={() => undefined}
       {...props}
     />

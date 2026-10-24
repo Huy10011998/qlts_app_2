@@ -39,7 +39,7 @@ import {
   isHomeBlockKey,
   type HomeBlockKey,
 } from "./shared/homeBlockOrder";
-import HomeScreenSkeleton from "./shared/HomeScreenSkeleton";
+import HomeScreenSkeleton, { AttendanceSkeleton } from "./shared/HomeScreenSkeleton";
 import HomeJumpBar from "./shared/HomeJumpBar";
 import { HOME_BRAND_RED } from "./shared/homeTheme";
 import {
@@ -144,6 +144,7 @@ const HomeScreen: React.FC = () => {
   const {
     blockOrder,
     closeBlockOrderSheet,
+    isBlockOrderLoading,
     isBlockOrderSheetVisible,
     moveBlock,
     openBlockOrderSheet,
@@ -157,10 +158,16 @@ const HomeScreen: React.FC = () => {
   const scrollRef = useRef<ScrollView>(null);
   // Thu gọn = chạm nhãn màu, khối còn dòng tiêu đề. Ẩn = bỏ chọn khối trong bảng
   // Sắp xếp, khối biến hẳn. Cả hai lưu theo tài khoản.
-  const { keys: collapsedKeys, setIncluded: setBlockCollapsed } =
-    useStoredHomeBlockList(HOME_COLLAPSED_BLOCKS_KEY);
-  const { keys: hiddenKeys, setIncluded: setBlockHidden } =
-    useStoredHomeBlockList(HOME_HIDDEN_BLOCKS_KEY);
+  const {
+    keys: collapsedKeys,
+    setIncluded: setBlockCollapsed,
+    isLoading: isCollapsedKeysLoading,
+  } = useStoredHomeBlockList(HOME_COLLAPSED_BLOCKS_KEY);
+  const {
+    keys: hiddenKeys,
+    setIncluded: setBlockHidden,
+    isLoading: isHiddenKeysLoading,
+  } = useStoredHomeBlockList(HOME_HIDDEN_BLOCKS_KEY);
   const collapsedKeySet = useMemo(() => new Set(collapsedKeys), [collapsedKeys]);
   const hiddenKeySet = useMemo(() => new Set(hiddenKeys), [hiddenKeys]);
   /** Vị trí từng khối trong trang — đo bằng onLayout vì thứ tự khối đổi được. */
@@ -324,7 +331,13 @@ const HomeScreen: React.FC = () => {
   //
   // Không dùng `menuItems.length === 0` được: danh sách luôn có sẵn mục tĩnh
   // "Điện mặt trời" nên vế đó không bao giờ đúng — cổng chờ coi như không có.
-  const isInitialMenuLoading = !hasLoadedMenuOnce || isPinnedFeatureIdsLoading;
+  //
+  // Thứ tự / ẩn / thu gọn khối cũng đọc từ máy theo username (Keychain) như
+  // danh sách ghim — chờ luôn, không thì khối nhảy chỗ, loé lên rồi mới ẩn.
+  const isBlockPrefsLoading =
+    isBlockOrderLoading || isCollapsedKeysLoading || isHiddenKeysLoading;
+  const isInitialMenuLoading =
+    !hasLoadedMenuOnce || isPinnedFeatureIdsLoading || isBlockPrefsLoading;
   // Splash native bên Android giữ tới đây rồi mới gỡ. Màn lỗi cũng tính là xong:
   // thà thấy lý do hỏng còn hơn ngồi nhìn splash tới lúc trần thời gian đá ra.
   const isHomeSettled =
@@ -534,6 +547,10 @@ const HomeScreen: React.FC = () => {
     utilityRows.length > 0 || (canViewUtilities && isFirstDashboardLoad);
   const hasItStructureSection =
     itStructure !== null || (canViewIt && isFirstDashboardLoad);
+  // Như các khối cùng endpoint: lượt tải đầu vẫn chiếm chỗ (thẻ tự vẽ khung
+  // chờ), không thì khối chen vào sau đẩy cả trang xuống.
+  const hasAttendanceSection =
+    attendance !== null || (canViewAttendance && isFirstDashboardLoad);
   // Hai card máy móc có nguồn riêng nên lượt tải đầu cũng riêng: endpoint kia đã
   // có cache mà endpoint này chưa về thì trang 1-2 mới là phần đang chờ.
   const isFirstMachineLoad = isMachineLoading && !machine;
@@ -609,13 +626,13 @@ const HomeScreen: React.FC = () => {
       // Lọc theo quyền View.Workflow ngay dưới (ngoài memo).
       workflow: true,
       assetStructure: hasAssetStructureSection,
-      attendance: attendance !== null,
+      attendance: hasAttendanceSection,
       utilities: hasUtilitySection,
     };
 
     return blockOrder.filter((key) => isBlockVisible[key]);
   }, [
-    attendance,
+    hasAttendanceSection,
     blockOrder,
     hasAssetStructureSection,
     hasStatSection,
@@ -940,13 +957,18 @@ const HomeScreen: React.FC = () => {
     attendance: renderBlock(
       "attendance",
       { label: "ĐIỂM DANH NHÂN SỰ HÔM NAY" },
-      <HomeAttendanceCard
-        total={attendance?.total ?? null}
-        checkedIn={attendance?.checkedIn ?? null}
-        notCheckedIn={attendance?.notCheckedIn ?? null}
-        departments={attendance?.departments ?? []}
-        isLoading={isFirstDashboardLoad}
-      />,
+      // Lượt tải đầu chưa có số: khung chờ (thẻ thật chưa có số là báo lỗi Bravo8).
+      attendance === null ? (
+        <AttendanceSkeleton />
+      ) : (
+        <HomeAttendanceCard
+          total={attendance.total ?? null}
+          checkedIn={attendance.checkedIn ?? null}
+          notCheckedIn={attendance.notCheckedIn ?? null}
+          departments={attendance.departments ?? []}
+          isLoading={isFirstDashboardLoad}
+        />
+      ),
     ),
     utilities: renderBlock(
       "utilities",

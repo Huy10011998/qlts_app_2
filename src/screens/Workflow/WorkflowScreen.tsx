@@ -67,6 +67,8 @@ export default function WorkflowScreen() {
   const navigation = useNavigation<StackNavigation<"Workflow">>();
   const { can, canView, loaded, permissions } = usePermission();
   const [hints, setHints] = useState<Record<string, Hint[]>>({});
+  /** Lượt số nhắc đầu tiên đã về — trước đó giữ khung chờ, không thì thẻ cao lên khi số tới. */
+  const [hintsLoaded, setHintsLoaded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const groups = useMemo(
@@ -92,6 +94,8 @@ export default function WorkflowScreen() {
   }, []);
 
   const loadHints = useCallback(async () => {
+    // Quyền chưa về thì chưa biết chức năng nào — đừng đánh dấu đã tải.
+    if (!loaded) return;
     const items = groups.flatMap((group) => group.items);
     const results = await Promise.all(items.map(loadHint));
     const next: Record<string, Hint[]> = {};
@@ -99,7 +103,8 @@ export default function WorkflowScreen() {
       next[item.key] = results[index];
     });
     setHints(next);
-  }, [groups, loadHint]);
+    setHintsLoaded(true);
+  }, [groups, loadHint, loaded]);
 
   // Quay lại từ một chức năng (vừa duyệt / chuyển trạng thái) là số đổi theo.
   useFocusEffect(
@@ -116,7 +121,8 @@ export default function WorkflowScreen() {
     }
   };
 
-  if (!loaded) return <WorkflowMenuSkeleton />;
+  // Chờ cả lượt số nhắc đầu tiên (lỗi thì `loadHint` trả rỗng, không kẹt).
+  if (!loaded || !hintsLoaded) return <WorkflowMenuSkeleton />;
 
   if (!canView(WORKFLOW_VIEW_CODE)) {
     return (

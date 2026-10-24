@@ -229,7 +229,9 @@ export default function ReportScreen() {
   const normalizedTitle = titleHeader || "Tài sản";
   const isFullAccess = isFullPermission();
   const [reports, setReports] = useState<ReportListItem[]>([]);
-  const [isFetching, setIsFetching] = useState(false);
+  // true sẵn: khung chờ ngay từ khung đầu, không loé danh sách rỗng trước khi
+  // effect kịp gọi tải. Không có quyền thì effect tự tắt.
+  const [isFetching, setIsFetching] = useState(true);
   const [isRefreshingTop, setIsRefreshingTop] = useState(false);
   const [search, setSearch] = useState("");
   const {

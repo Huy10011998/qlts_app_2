@@ -2,6 +2,7 @@ import React from "react";
 import {
   Alert,
   AppState,
+  NativeModules,
   Platform,
   StyleSheet,
   Text,
@@ -12,7 +13,10 @@ import * as Keychain from "react-native-keychain";
 import ReactTestRenderer from "react-test-renderer";
 
 import { ThemeProvider } from "../src/context/ThemeContext";
-import { FACE_ID_LOGIN_SERVICE } from "../src/constants/AuthStorage";
+import {
+  DEVICE_LOCK_ENABLED_SERVICE,
+  FACE_ID_LOGIN_SERVICE,
+} from "../src/constants/AuthStorage";
 // jest.mock bên dưới được babel-jest đẩy lên trên các import này.
 import LoginScreen from "../src/screens/Auth/LoginScreen";
 
@@ -73,8 +77,10 @@ jest.mock("../src/services/data/callApi", () => ({
 }));
 
 const getGenericPassword = Keychain.getGenericPassword as jest.Mock;
-const getSupportedBiometryType = Keychain.getSupportedBiometryType as jest.Mock;
-const hasGenericPassword = Keychain.hasGenericPassword as jest.Mock;
+const getBiometricKind = NativeModules.BiometricGate
+  .getBiometricKind as jest.Mock;
+const authenticate = NativeModules.BiometricGate.authenticate as jest.Mock;
+const isPasscodeAuthAvailable = Keychain.isPasscodeAuthAvailable as jest.Mock;
 
 /** Platform.OS là hằng đọc-chỉ nên phải ghi đè qua defineProperty. */
 const setPlatform = (os: "ios" | "android") => {
@@ -242,12 +248,149 @@ describe("LoginScreen – vân tay Android", () => {
 
   beforeEach(() => {
     setPlatform("android");
-    getSupportedBiometryType.mockResolvedValue("Fingerprint");
-    hasGenericPassword.mockResolvedValue(true);
+    getBiometricKind.mockResolvedValue("fingerprint");
+    isPasscodeAuthAvailable.mockResolvedValue(false);
+    // Bấm "Dùng mật khẩu": dừng ngay sau hộp hỏi, đủ để xem hộp nhận gì.
+    authenticate.mockRejectedValue(new Error("code: 13, msg: Dùng mật khẩu"));
+  });
+
+  const buttonLabelled = (
+    tree: ReactTestRenderer.ReactTestRenderer,
+    label: string,
+  ) =>
+    tree.root.findAll(
+      (node) =>
+        typeof node.type !== "string" &&
+        node.props.accessibilityLabel === label,
+    )[0];
+
+  const press = async (button: ReactTestRenderer.ReactTestInstance) => {
+    await ReactTestRenderer.act(async () => {
+      await button.props.onPress();
+    });
+  };
+
+  /** Cờ "Đăng nhập bằng khoá màn hình" đọc từ Keychain; marker thì không có. */
+  const setDeviceLockFlag = (on: boolean) =>
+    getGenericPassword.mockImplementation(async (options) =>
+      on && options?.service === DEVICE_LOCK_ENABLED_SERVICE
+        ? { service: DEVICE_LOCK_ENABLED_SERVICE, username: "x", password: "1" }
+        : false,
+    );
+
+  it("máy chỉ có khoá màn hình vẫn hiện nút, mờ khi chưa bật", async () => {
+    getBiometricKind.mockResolvedValue(null);
+    isPasscodeAuthAvailable.mockResolvedValue(true);
+    setup({
+      faceIdEnabled: false,
+      tokens: { token: "access", refreshToken: "refresh" },
+    });
+
+    const tree = await render();
+    const button = buttonLabelled(tree, "Đăng nhập bằng khoá màn hình");
+
+    expect(button).toBeTruthy();
+    expect(StyleSheet.flatten(button.props.style)?.opacity).toBeLessThan(1);
+    expect(mockCheckServerReachability).not.toHaveBeenCalled();
+  });
+
+  it("chỉ bật khoá màn hình thì hộp hỏi chỉ nhận khoá máy", async () => {
+    getBiometricKind.mockResolvedValue(null);
+    isPasscodeAuthAvailable.mockResolvedValue(true);
+    mockCheckServerReachability.mockResolvedValue({ canReachServer: true });
+    setup({
+      faceIdEnabled: false,
+      tokens: { token: "access", refreshToken: "refresh" },
+    });
+    setDeviceLockFlag(true);
+
+    const tree = await render();
+    await press(buttonLabelled(tree, "Đăng nhập bằng khoá màn hình"));
+
+    expect(authenticate).toHaveBeenCalledTimes(1);
+    expect(authenticate.mock.calls[0][0]).toMatchObject({
+      biometric: false,
+      deviceLock: true,
+    });
+    expect(faceIdPromptCalls()).toHaveLength(0);
+  });
+
+  it("bật cả vân tay lẫn khoá màn hình thì hộp hỏi nhận cả hai", async () => {
+    isPasscodeAuthAvailable.mockResolvedValue(true);
+    mockCheckServerReachability.mockResolvedValue({ canReachServer: true });
+    setup({
+      faceIdEnabled: true,
+      tokens: { token: "access", refreshToken: "refresh" },
+    });
+    setDeviceLockFlag(true);
+
+    const tree = await render();
+    await press(
+      buttonLabelled(tree, "Đăng nhập bằng vân tay hoặc khoá màn hình"),
+    );
+
+    expect(authenticate.mock.calls[0][0]).toMatchObject({
+      biometric: true,
+      deviceLock: true,
+    });
+  });
+
+  it("chỉ bật vân tay thì hộp hỏi chỉ nhận vân tay", async () => {
+    isPasscodeAuthAvailable.mockResolvedValue(true);
+    mockCheckServerReachability.mockResolvedValue({ canReachServer: true });
+    setup({
+      faceIdEnabled: true,
+      tokens: { token: "access", refreshToken: "refresh" },
+    });
+
+    const tree = await render();
+    await press(fingerprintButton(tree));
+
+    expect(authenticate.mock.calls[0][0]).toMatchObject({
+      biometric: true,
+      deviceLock: false,
+    });
+  });
+
+  it("máy chỉ cài khuôn mặt (Samsung) thì nút là khuôn mặt, hộp hỏi nhận sinh trắc", async () => {
+    getBiometricKind.mockResolvedValue("face");
+    mockCheckServerReachability.mockResolvedValue({ canReachServer: true });
+    setup({
+      faceIdEnabled: true,
+      tokens: { token: "access", refreshToken: "refresh" },
+    });
+
+    const tree = await render();
+    const button = buttonLabelled(tree, "Đăng nhập bằng khuôn mặt");
+    expect(button).toBeTruthy();
+
+    await press(button);
+    expect(authenticate.mock.calls[0][0]).toMatchObject({
+      subtitle: "Dùng khuôn mặt để mở ứng dụng",
+      biometric: true,
+    });
+  });
+
+  it("máy có cả vân tay lẫn khuôn mặt thì gọi chung", async () => {
+    getBiometricKind.mockResolvedValue("fingerprint-face");
+    isPasscodeAuthAvailable.mockResolvedValue(true);
+    setup({
+      faceIdEnabled: false,
+      tokens: { token: "access", refreshToken: "refresh" },
+    });
+
+    const tree = await render();
+
+    expect(
+      buttonLabelled(
+        tree,
+        "Đăng nhập bằng vân tay / khuôn mặt hoặc khoá màn hình",
+      ),
+    ).toBeTruthy();
   });
 
   it("ẩn nút khi máy không có hoặc chưa cài vân tay", async () => {
-    getSupportedBiometryType.mockResolvedValue(null);
+    getBiometricKind.mockResolvedValue(null);
     setup({
       faceIdEnabled: true,
       tokens: { token: "access", refreshToken: "refresh" },
@@ -274,31 +417,21 @@ describe("LoginScreen – vân tay Android", () => {
     expect(mockCheckServerReachability).not.toHaveBeenCalled();
   });
 
-  it("tự hỏi vân tay khi đã bật và còn phiên", async () => {
+  it("đã bật và còn phiên thì không tự hỏi, bấm icon mới hỏi", async () => {
     setup({
       faceIdEnabled: true,
       tokens: { token: "access", refreshToken: "refresh" },
     });
 
     const tree = await render();
+    const button = fingerprintButton(tree);
 
-    expect(mockCheckServerReachability).toHaveBeenCalledTimes(1);
-    expect(fingerprintButton(tree)).toBeTruthy();
-  });
-
-  it("mất marker thì tắt cờ, không tự hỏi", async () => {
-    hasGenericPassword.mockResolvedValue(false);
-    setup({
-      faceIdEnabled: true,
-      tokens: { token: "access", refreshToken: "refresh" },
-    });
-
-    const tree = await render();
-
+    expect(button).toBeTruthy();
+    expect(StyleSheet.flatten(button.props.style)?.opacity ?? 1).toBe(1);
     expect(mockCheckServerReachability).not.toHaveBeenCalled();
-    expect(
-      StyleSheet.flatten(fingerprintButton(tree).props.style)?.opacity,
-    ).toBeLessThan(1);
+
+    await press(button);
+    expect(mockCheckServerReachability).toHaveBeenCalledTimes(1);
   });
 });
 

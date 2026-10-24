@@ -181,7 +181,7 @@ describe("useAddChildShortcut", () => {
     await harness.unmount();
   });
 
-  it("chỉ gọi getClassReference một lần cho cùng class cha", async () => {
+  it("trong một lần mở danh sách chỉ gọi getClassReference một lần", async () => {
     const harness = await mount();
 
     await ReactTestRenderer.act(async () => {
@@ -247,6 +247,52 @@ describe("useAddChildShortcut", () => {
     expect(harness.result.actionIcon).toBe("clipboard-outline");
 
     await harness.unmount();
+  });
+
+  /* Con của Nhân viên: BE chặn insert chung của hai bảng Workflow (400), chỉ
+     tạo được qua form Công việc / Kế hoạch. */
+  it("bỏ Công việc / Kế hoạch dù có quyền thêm", async () => {
+    mockedGetClassReference.mockResolvedValue({
+      data: [
+        { id: "270", name: "CV_CongViec", moTa: "Công việc", propertyReference: "ID_NhanVien_Tao" },
+        { id: "271", name: "CV_KeHoach", moTa: "Kế hoạch", propertyReference: "ID_NhanVien_Tao" },
+      ],
+    } as any);
+    mockAllowedInsertClasses = ["CV_CongViec", "CV_KeHoach"];
+    const harness = await mount();
+
+    expect(harness.result.canAddChild).toBe(false);
+
+    await harness.unmount();
+  });
+
+  /* Cấu hình class đổi giữa phiên (23/10/2026 BE ẩn Công việc / Kế hoạch khỏi
+     Nhân viên): mở lại danh sách phải theo server, không theo số đã nhớ. */
+  it("mở lại danh sách thì hỏi lại danh mục con", async () => {
+    const first = await mount();
+    expect(first.result.actionLabel).toBe("Thêm mục con");
+    await first.unmount();
+
+    mockedGetClassReference.mockResolvedValue({ data: [CHILD_CLASSES[1]] } as any);
+    const again = await mount();
+
+    expect(mockedGetClassReference).toHaveBeenCalledTimes(2);
+    expect(again.result.actionLabel).toBe("Thêm bảo trì");
+
+    await again.unmount();
+  });
+
+  it("mất mạng khi mở lại thì giữ danh mục đã biết", async () => {
+    const first = await mount();
+    await first.unmount();
+
+    mockedGetClassReference.mockRejectedValue(new Error("offline"));
+    const again = await mount();
+
+    expect(again.result.canAddChild).toBe(true);
+    expect(again.result.actionLabel).toBe("Thêm mục con");
+
+    await again.unmount();
   });
 
   it("nhãn chung khi có nhiều danh mục con", async () => {

@@ -3,6 +3,11 @@ import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } fr
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import SwipeHintBanner from "../../../components/assets/shared/SwipeHintBanner";
+import SwipeableListRow, {
+  type SwipeRowAction,
+  useSingleOpenRow,
+} from "../../../components/list/SwipeableListRow";
 import EmptyState from "../../../components/ui/EmptyState";
 import InlineToast from "../../../components/ui/InlineToast";
 import SearchBar from "../../../components/ui/SearchBar";
@@ -15,8 +20,8 @@ import type {
   StackNavigation,
   StackRoute,
 } from "../../../types/index";
-import { AppColors, useStyles } from "../../../utils/helpers/colors";
-import WorkflowButton from "../shared/components/WorkflowButton";
+import { AppColors, useAppColors, useStyles } from "../../../utils/helpers/colors";
+import WorkflowButton, { getWorkflowButtonColors } from "../shared/components/WorkflowButton";
 import WorkflowFab from "../shared/components/WorkflowFab";
 import WorkflowListFooter from "../shared/components/WorkflowListFooter";
 import WorkflowListSkeleton, {
@@ -43,7 +48,9 @@ import FlowBulkApproveSheet, { FlowBulkOutcome } from "./components/FlowBulkAppr
 import FlowCard, { getFlowCardLineFields } from "./components/FlowCard";
 import {
   FLOW_CARD_CUSTOM_FIELDS,
+  type FlowActions,
   getFlowActions,
+  getFlowApproveButtons,
   getFlowDoneMessage,
   getFlowLabel,
   getFlowSoPhieu,
@@ -76,6 +83,7 @@ type ToastState = { message: string; detail?: string; tone: "success" | "warning
  */
 export default function FlowListScreen() {
   const styles = useStyles(makeStyles);
+  const c = useAppColors();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<StackNavigation<"Flow">>();
   const route = useRoute<StackRoute<"Flow">>();
@@ -97,6 +105,7 @@ export default function FlowListScreen() {
   const [bulk, setBulk] = useState<BulkState | null>(null);
   const [preparingBulk, setPreparingBulk] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
+  const { closeOpenRow, rowHandlers } = useSingleOpenRow();
 
   useEffect(() => {
     if (meta?.flow?.ten) navigation.setOptions({ title: meta.flow.ten });
@@ -193,11 +202,29 @@ export default function FlowListScreen() {
   const actionsOf = (item: FlowRecord) =>
     getFlowActions(item, infos[item.id], me.iD_NhanVien, perms);
 
+  /**
+   * Nút lộ ra khi vuốt thẻ sang trái — phiếu tới lượt tôi. Duyệt sát mép phải,
+   * gần ngón cái nhất; bấm là thẻ đóng lại và mở hộp xác nhận như nút cũ trên thẻ.
+   */
+  const swipeActionsOf = (item: FlowRecord, actions: FlowActions): SwipeRowAction[] =>
+    getFlowApproveButtons(actions).map((button) => {
+      const colors = getWorkflowButtonColors(button.variant, c);
+      return {
+        key: button.key,
+        icon: button.icon,
+        label: button.label,
+        color: colors.bg,
+        textColor: colors.fg,
+        closeOnPress: true,
+        onPress: () => setApprove({ record: item, ketQua: button.ketQua }),
+      };
+    });
+
   const toggleSelect = (id: number) =>
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
 
   const openDetail = (item: FlowRecord) =>
-    navigation.navigate("FlowChiTiet", { nameClass, id: item.id, item });
+    navigation.navigate("FlowChiTiet", { nameClass, id: item.id, item, info: infos[item.id] });
 
   /**
    * Bắt đầu duyệt nhiều (mục 8c, B1): chỉ giữ phiếu isToiLuot. Không còn phiếu
@@ -378,9 +405,11 @@ export default function FlowListScreen() {
       <WorkflowTabBar tabs={tabs} activeKey={tab} onChange={(key) => setTab(key as FlowTab)} />
       {showApproveAll ? (
         <View style={styles.approveAllRow}>
-          <Text style={styles.hint} numberOfLines={2}>
-            Nhấn giữ một phiếu để chọn nhiều.
-          </Text>
+          {/* Cùng dải nhắc của danh sách tài sản — nút duyệt nằm sau thao tác vuốt. */}
+          <SwipeHintBanner
+            text="Vuốt thẻ sang trái để duyệt, nhấn giữ để chọn nhiều."
+            style={styles.swipeHint}
+          />
           <WorkflowButton
             compact
             variant="success"
@@ -411,57 +440,62 @@ export default function FlowListScreen() {
             const actions = actionsOf(item);
             const canSelect = tab === "ChoDuyet" && actions.duyet;
             return (
-              <FlowCard
-                item={item}
-                fields={cardFields}
-                soPhieuField={soPhieuField}
-                info={infos[item.id]}
-                infoPending={infoPending.has(item.id)}
-                actions={actions}
-                selectable={selecting && canSelect}
-                selected={selectedIds.includes(item.id)}
-                onPress={() => (selecting && canSelect ? toggleSelect(item.id) : openDetail(item))}
-                onLongPress={canSelect ? () => toggleSelect(item.id) : undefined}
-                onApprove={() => setApprove({ record: item, ketQua: FLOW_KET_QUA.Duyet })}
-                onReject={() => setApprove({ record: item, ketQua: FLOW_KET_QUA.TuChoi })}
-                onNoOpinion={() => setApprove({ record: item, ketQua: FLOW_KET_QUA.KhongYKien })}
-                onTraBuoc={() => setApprove({ record: item, ketQua: FLOW_KET_QUA.TraBuoc })}
-                // Cùng tham số với nút ở màn chi tiết; đang chọn nhiều thì bấm là chọn.
-                onOpenComments={
-                  selecting
-                    ? undefined
-                    : () =>
-                        navigation.navigate("WorkflowBinhLuan", {
-                          apiBase: nameClass,
-                          idHoSo: item.id,
-                          // Ai xem được phiếu thì bình luận được.
-                          canSend: true,
-                          titleHeader: getFlowLabel(item, soPhieuField),
-                        })
-                }
-                // Cùng luật nút Đính kèm ở chi tiết (tắt khi 0 file, trừ nháp của tôi).
-                filesDisabled={!selecting && !actions.dinhKem}
-                onOpenFiles={
-                  selecting || !actions.dinhKem
-                    ? undefined
-                    : () =>
-                        navigation.navigate("WorkflowFile", {
-                          apiBase: nameClass,
-                          idHoSo: item.id,
-                          canEdit: actions.suaFile,
-                          titleHeader: getFlowLabel(item, soPhieuField),
-                        })
-                }
-                // Cùng luật nút Quy trình ở chi tiết (phiếu đã có bước); đang chọn nhiều thì ẩn.
-                onOpenProcess={
-                  selecting || !actions.quyTrinh
-                    ? undefined
-                    : () => navigation.navigate("FlowTienTrinh", { nameClass, id: item.id, item })
-                }
-              />
+              <SwipeableListRow
+                actions={swipeActionsOf(item, actions)}
+                actionsStyle={styles.swipeActions}
+                // Đang chọn nhiều thì chỉ còn Duyệt nhiều ở thanh dưới — tắt vuốt.
+                disabled={!actions.duyet || selecting}
+                {...rowHandlers}
+              >
+                <FlowCard
+                  style={styles.card}
+                  item={item}
+                  fields={cardFields}
+                  soPhieuField={soPhieuField}
+                  info={infos[item.id]}
+                  infoPending={infoPending.has(item.id)}
+                  selectable={selecting && canSelect}
+                  selected={selectedIds.includes(item.id)}
+                  onPress={() => (selecting && canSelect ? toggleSelect(item.id) : openDetail(item))}
+                  onLongPress={canSelect ? () => toggleSelect(item.id) : undefined}
+                  // Cùng tham số với nút ở màn chi tiết; đang chọn nhiều thì bấm là chọn.
+                  onOpenComments={
+                    selecting
+                      ? undefined
+                      : () =>
+                          navigation.navigate("WorkflowBinhLuan", {
+                            apiBase: nameClass,
+                            idHoSo: item.id,
+                            // Ai xem được phiếu thì bình luận được.
+                            canSend: true,
+                            titleHeader: getFlowLabel(item, soPhieuField),
+                          })
+                  }
+                  // Cùng luật nút Đính kèm ở chi tiết (tắt khi 0 file, trừ nháp của tôi).
+                  filesDisabled={!selecting && !actions.dinhKem}
+                  onOpenFiles={
+                    selecting || !actions.dinhKem
+                      ? undefined
+                      : () =>
+                          navigation.navigate("WorkflowFile", {
+                            apiBase: nameClass,
+                            idHoSo: item.id,
+                            canEdit: actions.suaFile,
+                            titleHeader: getFlowLabel(item, soPhieuField),
+                          })
+                  }
+                  // Cùng luật nút Quy trình ở chi tiết (phiếu đã có bước); đang chọn nhiều thì ẩn.
+                  onOpenProcess={
+                    selecting || !actions.quyTrinh
+                      ? undefined
+                      : () => navigation.navigate("FlowTienTrinh", { nameClass, id: item.id, item })
+                  }
+                />
+              </SwipeableListRow>
             );
           }}
           contentContainerStyle={[styles.listContent, selecting && styles.listWithBar]}
+          onScrollBeginDrag={() => closeOpenRow()}
           onEndReached={list.loadMore}
           onEndReachedThreshold={0.5}
           refreshControl={
@@ -476,7 +510,11 @@ export default function FlowListScreen() {
           ListFooterComponent={
             <WorkflowListFooter
               list={list}
-              skeleton={<WorkflowListFooterSkeleton kind="flow" shape={skeletonShape} />}
+              skeleton={
+                <View style={styles.footerSkeleton}>
+                  <WorkflowListFooterSkeleton kind="flow" shape={skeletonShape} />
+                </View>
+              }
             />
           }
           ListEmptyComponent={
@@ -591,16 +629,34 @@ const makeStyles = (c: AppColors) =>
       paddingHorizontal: 12,
       paddingBottom: 8,
     },
-    hint: {
+    // Dải nằm chung hàng với nút: bỏ lề riêng của nó, lề ngang đã có ở hàng.
+    swipeHint: {
       flex: 1,
-      fontSize: 12,
-      color: c.textSub,
+      paddingHorizontal: 0,
+      paddingBottom: 0,
+      marginTop: 0,
     },
+    // Lề ngang / trên nằm ở từng thẻ (`card`) chứ không ở đây: Swipeable cắt
+    // (overflow hidden) sát mép hàng, lề trong hàng mới chừa chỗ cho bóng thẻ
+    // và cụm nút vuốt.
     listContent: {
-      paddingHorizontal: 12,
-      paddingTop: 4,
       paddingBottom: 96,
       flexGrow: 1,
+    },
+    // Cộng lại vẫn đúng nhịp cũ (lề trên danh sách 4, thẻ cách nhau 10) mà
+    // khung chờ đang đo theo.
+    card: {
+      marginHorizontal: 12,
+      marginTop: 4,
+      marginBottom: 6,
+    },
+    swipeActions: {
+      marginTop: 4,
+      marginBottom: 6,
+    },
+    footerSkeleton: {
+      paddingHorizontal: 12,
+      paddingTop: 4,
     },
     listWithBar: {
       paddingBottom: 150,

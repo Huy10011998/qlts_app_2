@@ -43,12 +43,18 @@ export function useAddChildShortcut({
     filterInsertable,
     loadChildClasses,
     openAddForm,
+    peekChildClasses,
+    refreshChildClasses,
   } = useOpenAddRelatedForm();
 
   const [busyItemId, setBusyItemId] = useState<string | null>(null);
   // `null` = chưa biết (chưa tải xong / tải lỗi): vẫn cho bấm, nhãn để chung.
   const [childClasses, setChildClasses] = useState<MenuItemResponse[] | null>(
     null,
+  );
+  // Đã có câu trả lời về danh mục con (đọc sẵn được, tải xong hoặc tải lỗi).
+  const [childClassesSettled, setChildClassesSettled] = useState(
+    () => !nameClass || peekChildClasses(nameClass) !== null,
   );
   const [sheetItems, setSheetItems] = useState<MenuItemResponse[]>([]);
   const [sheetVisible, setSheetVisible] = useState(false);
@@ -59,21 +65,27 @@ export function useAddChildShortcut({
 
   // Tải trước danh mục con để nhãn nút vuốt gọi đúng tên việc ("Đánh giá",
   // "Thêm bảo trì") và ẩn nút khi không có gì để thêm — đồng thời lần bấm đầu
-  // không phải chờ mạng nữa.
+  // không phải chờ mạng nữa. Đã biết thì hiện ngay, vẫn hỏi lại server: cấu
+  // hình class đổi được giữa phiên.
   useEffect(() => {
     let cancelled = false;
-    setChildClasses(null);
+    const peeked = peekChildClasses(nameClass);
+    setChildClasses(peeked);
+    setChildClassesSettled(!nameClass || peeked !== null);
 
     if (!nameClass) return;
 
-    loadChildClasses(nameClass)
+    refreshChildClasses(nameClass)
       .then((items) => {
-        if (!cancelled) setChildClasses(items);
+        if (cancelled) return;
+        setChildClasses(items);
+        setChildClassesSettled(true);
       })
       .catch((e) => {
         // Lỗi ở đây là im lặng: nút vẫn hiện với nhãn chung, bấm vào sẽ thử lại
         // và báo lỗi tử tế nếu vẫn không được.
         if (!isNetworkRequestError(e)) error(e);
+        if (!cancelled) setChildClassesSettled(true);
       });
 
     return () => {
@@ -81,7 +93,7 @@ export function useAddChildShortcut({
     };
     // Cờ `cancelled` đã lo phần unmount; không lấy `isMounted` làm dependency
     // để effect không chạy lại theo từng lần render của nơi gọi.
-  }, [loadChildClasses, nameClass]);
+  }, [nameClass, peekChildClasses, refreshChildClasses]);
 
   /** Danh mục con mà người dùng có quyền thêm; `null` khi chưa biết. */
   const allowedChildClasses = useMemo(
@@ -211,6 +223,11 @@ export function useAddChildShortcut({
      * không có mục con nào, dòng nhắc sẽ loé lên rồi mất.
      */
     hasChildClasses: (allowedChildClasses?.length ?? 0) > 0,
+    /**
+     * Đã biết class có danh mục con hay không. Danh sách giữ khung chờ tới lúc
+     * này, để dải chỉ dẫn hiện cùng lúc với thẻ chứ không chen vào đẩy thẻ xuống.
+     */
+    childClassesSettled,
     openFor,
     sheetProps: {
       items: sheetItems,

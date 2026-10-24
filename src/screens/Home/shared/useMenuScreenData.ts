@@ -32,8 +32,8 @@ export function useMenuScreenData(navigation: HomeNavigationProp) {
   const {
     menuItems,
     fetchHomeMenuItems,
+    hasLoadedMenuOnce,
     hasMenuLoadError,
-    isMenuLoading,
     openReportScreen,
   } = useHomeMenuItems(navigation, tabsNavigation);
   const [hasPermissionLoadError, setHasPermissionLoadError] = useState(false);
@@ -120,7 +120,10 @@ export function useMenuScreenData(navigation: HomeNavigationProp) {
   return {
     featureCardWidth,
     hasError: hasPermissionLoadError || hasMenuLoadError,
-    isLoading: !loaded || (isMenuLoading && menuItems.length === 0),
+    // `menuItems` luôn có sẵn mục tĩnh (Điện mặt trời, Camera…) nên đếm độ dài
+    // không bao giờ ra 0 — phải chờ lượt menu đầu, không thì chỉ hiện mấy ô
+    // tĩnh rồi các nhóm Phương tiện / Báo cáo mới chen vào.
+    isLoading: !loaded || !hasLoadedMenuOnce,
     isRefreshing,
     refresh,
     reportActions,

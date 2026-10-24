@@ -1,13 +1,19 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 
+import { useHeaderRecordPill } from "../../../components/assets/shared/useHeaderRecordPill";
 import EmptyState from "../../../components/ui/EmptyState";
 import SearchBar from "../../../components/ui/SearchBar";
 import { useDebounce } from "../../../hooks/useDebounce";
 import { khGetList } from "../../../services/data/keHoachApi";
 import { CV_KE_HOACH_NAME_CLASS } from "../../../services/data/workflowApi";
-import type { KeHoachItem, KeHoachTab, StackNavigation } from "../../../types/index";
+import type {
+  KeHoachItem,
+  KeHoachTab,
+  StackNavigation,
+  StackRoute,
+} from "../../../types/index";
 import { AppColors, useStyles } from "../../../utils/helpers/colors";
 import WorkflowFab from "../shared/components/WorkflowFab";
 import WorkflowListFooter from "../shared/components/WorkflowListFooter";
@@ -22,30 +28,31 @@ import { useWorkflowPagedList } from "../shared/useWorkflowPagedList";
 import { useWorkflowPermissions } from "../shared/useWorkflowPermissions";
 import { useReloadOnWorkflowChange } from "../shared/useWorkflowVersion";
 import { KH_TABS } from "../shared/workflowConstants";
-import { getCardFields, WorkflowField } from "../shared/workflowFields";
-import { loadClassFields } from "../shared/workflowMetadata";
+import { getCardFields } from "../shared/workflowFields";
+import { useClassFields } from "../shared/workflowMetadata";
+import { buildRelatedConditions } from "../shared/workflowRelated";
 import KeHoachCard, { getKeHoachCardLayout } from "./KeHoachCard";
 
 /**
  * Danh sách kế hoạch (mục 1, 5-Mobile-KeHoach): kế hoạch tôi chủ trì hoặc
  * tham gia. Thẻ dựng động từ metadata + vòng tiến độ vẽ riêng.
+ *
+ * `related` (mở từ tab Chi tiết của Nhân viên): lọc thêm khoá ngoại, bỏ thanh
+ * tab (Tôi chủ trì / Tôi tham gia nói về người đăng nhập, ghép với "kế hoạch
+ * của người khác" là rối) và nút thêm.
  */
 export default function KeHoachListScreen() {
   const styles = useStyles(makeStyles);
   const navigation = useNavigation<StackNavigation<"KeHoach">>();
+  const related = useRoute<StackRoute<"KeHoach">>().params?.related;
+  const relatedConditions = useMemo(() => buildRelatedConditions(related), [related]);
   const { loaded, canRead, canInsert } = useWorkflowPermissions(CV_KE_HOACH_NAME_CLASS);
   const { me } = useWorkflowMe();
 
   const [tab, setTab] = useState<KeHoachTab>("TatCa");
   const [keyword, setKeyword] = useState("");
   const searchText = useDebounce(keyword, 600);
-  const [fields, setFields] = useState<WorkflowField[]>([]);
-
-  useEffect(() => {
-    loadClassFields(CV_KE_HOACH_NAME_CLASS)
-      .then(setFields)
-      .catch(() => setFields([]));
-  }, []);
+  const { fields, ready: fieldsReady } = useClassFields(CV_KE_HOACH_NAME_CLASS);
 
   const cardFields = useMemo(() => getCardFields(fields), [fields]);
 
@@ -62,11 +69,24 @@ export default function KeHoachListScreen() {
   }, [cardFields, fields.length]);
 
   const list = useWorkflowPagedList<KeHoachItem>(
-    (skipSize, pageSize) => khGetList({ tab, searchText, skipSize, pageSize }),
-    { enabled: loaded && canRead, queryKey: `${tab}|${searchText}` },
+    (skipSize, pageSize) =>
+      khGetList({ tab, searchText, conditions: relatedConditions, skipSize, pageSize }),
+    {
+      enabled: loaded && canRead,
+      queryKey: `${tab}|${searchText}|${JSON.stringify(relatedConditions)}`,
+    },
   );
 
   useReloadOnWorkflowChange(list.reload);
+
+  useHeaderRecordPill({
+    label: related?.rootRecordLabel,
+    recordId: related?.idRoot,
+    nameClass: related?.nameClassRoot,
+    groupMenuId: related?.groupMenuId,
+    viewPermission: related?.viewPermission,
+    assetTitleHeader: related?.assetTitleHeader,
+  });
 
   if (loaded && !canRead) {
     return (
@@ -87,13 +107,16 @@ export default function KeHoachListScreen() {
         isSearching={list.loading && !!keyword}
         style={styles.search}
       />
-      <WorkflowTabBar
-        tabs={KH_TABS.map((item) => ({ key: item.key, label: item.label }))}
-        activeKey={tab}
-        onChange={(key) => setTab(key as KeHoachTab)}
-      />
+      {related ? null : (
+        <WorkflowTabBar
+          tabs={KH_TABS.map((item) => ({ key: item.key, label: item.label }))}
+          activeKey={tab}
+          onChange={(key) => setTab(key as KeHoachTab)}
+        />
+      )}
 
-      {list.loading && !list.items.length ? (
+      {/* Chờ cả field: thẻ vẽ trước metadata thì trống số, tiêu đề, các dòng. */}
+      {!fieldsReady || (list.loading && !list.items.length) ? (
         <WorkflowListSkeleton kind="keHoach" shape={skeletonShape} />
       ) : (
         <FlatList
@@ -120,7 +143,10 @@ export default function KeHoachListScreen() {
             <EmptyState
               iconName="flag-outline"
               title={list.errorMessage ? "Không tải được kế hoạch" : "Không có kế hoạch"}
-              subtitle={list.errorMessage ?? undefined}
+              subtitle={
+                list.errorMessage ??
+                (related ? "Chỉ hiện kế hoạch bạn chủ trì hoặc tham gia." : undefined)
+              }
               actionLabel={list.errorMessage ? "Thử lại" : undefined}
               onActionPress={list.errorMessage ? list.refresh : undefined}
             />
@@ -128,7 +154,7 @@ export default function KeHoachListScreen() {
         />
       )}
 
-      {canInsert && me.iD_NhanVien ? (
+      {canInsert && me.iD_NhanVien && !related ? (
         <WorkflowFab onPress={() => navigation.navigate("KeHoachForm", { mode: "add" })} />
       ) : null}
     </View>

@@ -12,7 +12,7 @@ import type { GuideTopic } from "./guideTypes";
 export const GUIDE_FAQ_TOPIC: GuideTopic = {
   id: "faq",
   title: "Câu hỏi thường gặp",
-  summary: "Lỗi kết nối, hết phiên, quyền, GPS, camera, tệp, Workflow, Trang chủ, danh thiếp QR",
+  summary: "Lỗi kết nối, hết phiên, vân tay, quyền, GPS, camera, tệp, Workflow, Trang chủ, danh thiếp QR",
   iconName: "help-circle-outline",
   iconBg: C.violet,
   group: "Trợ giúp",
@@ -39,6 +39,11 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     "loi",
     "khong ket noi",
     "het phien",
+    "van tay",
+    "khoa man hinh",
+    "mau hinh",
+    "vao thang",
+    "tam khoa",
     "quyen",
     "gps",
     "camera",
@@ -153,7 +158,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
       blocks: [
         {
           kind: "paragraph",
-          text: "Phiên làm việc có thời hạn; hết hạn là app đưa về màn Đăng nhập. Đăng nhập lại bằng tài khoản, Face ID hoặc vân tay là dùng tiếp được.",
+          text: "Phiên làm việc có thời hạn; hết hạn là app đưa về màn Đăng nhập. Đăng nhập lại bằng tài khoản và mật khẩu là dùng tiếp được. Face ID / vân tay / khoá màn hình đã bật vẫn giữ nguyên, lần sau mở app dùng lại bình thường.",
         },
         {
           kind: "paragraph",
@@ -164,18 +169,74 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     {
       id: "faq-faceid",
       group: "Đăng nhập & quyền",
-      heading: 'Nút Face ID / vân tay bị mờ, bấm vào báo "chưa bật"',
+      heading: 'Nút Face ID / vân tay / khoá màn hình bị mờ, bấm vào báo "chưa bật"',
       blocks: [
         {
           kind: "paragraph",
-          text: "Tài khoản chưa bật Face ID (iPhone) hoặc vân tay (Android) trên chính máy đang dùng. Mục này bật riêng cho từng tài khoản, từng máy; bấm Đăng xuất là máy đó tắt theo.",
+          text: "Tài khoản chưa bật Face ID (iPhone) hoặc vân tay / khuôn mặt / khoá màn hình (Android) trên chính máy đang dùng. Mục này bật riêng cho từng tài khoản, từng máy; bấm Đăng xuất là máy đó tắt theo.",
         },
         {
           kind: "steps",
           items: [
             "Đăng nhập bằng tài khoản và mật khẩu.",
-            "Vào tab Cài đặt → Tài khoản → bật Đăng nhập FaceID (iPhone) hoặc Đăng nhập bằng vân tay (Android) rồi xác thực khi máy hỏi.",
-            "Lần sau mở app, máy tự hỏi ở màn Đăng nhập; lỡ bỏ qua thì bấm nút Face ID / vân tay cạnh nút Đăng nhập.",
+            "Vào tab Cài đặt → Tài khoản → bật Đăng nhập FaceID (iPhone) hoặc Đăng nhập bằng vân tay / khuôn mặt / khoá màn hình (Android) rồi xác thực khi máy hỏi.",
+            "Lần sau mở app: iPhone tự hỏi Face ID ở màn Đăng nhập (lỡ bỏ qua thì bấm nút Face ID); máy Android bấm nút vân tay / khuôn mặt / khoá màn hình cạnh nút Đăng nhập.",
+          ],
+        },
+      ],
+    },
+    {
+      id: "faq-android-vao-thang",
+      group: "Đăng nhập & quyền",
+      heading: "Máy Android mở app vào thẳng, không hỏi vân tay / khoá màn hình",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Mặc định máy Android vào thẳng. App chỉ dừng ở màn Đăng nhập khi đã bật Đăng nhập bằng vân tay / khuôn mặt hoặc Đăng nhập bằng khoá màn hình trên chính máy đó.",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Chưa bật, hoặc đã bấm Đăng xuất (đăng xuất là tắt theo): đăng nhập rồi bật lại ở Cài đặt → Tài khoản.",
+            "Điện thoại vừa xoá hết vân tay và khuôn mặt hoặc gỡ khoá màn hình: app tự tắt mục tương ứng. Cài lại trên điện thoại rồi bật lại trong app.",
+            "Chỉ ra màn hình chính rồi quay lại app thì không hỏi là đúng. App chỉ hỏi khi mở lại từ đầu (vuốt tắt app hoặc khởi động lại máy).",
+          ],
+        },
+      ],
+    },
+    {
+      id: "faq-android-khong-thay-muc",
+      group: "Đăng nhập & quyền",
+      heading: "Không thấy mục Đăng nhập bằng vân tay / khuôn mặt / khoá màn hình trong Cài đặt",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "App chỉ hiện mục mà điện thoại dùng được. iPhone/iPad chỉ có Đăng nhập FaceID.",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Không thấy Đăng nhập bằng vân tay / khuôn mặt: máy chưa cài vân tay hay khuôn mặt nào. Cài trong Cài đặt của điện thoại.",
+            "Không thấy Đăng nhập bằng khoá màn hình: máy chưa đặt mẫu hình / mã PIN / mật khẩu, hoặc chạy Android 10 trở xuống.",
+            "Vừa cài xong trên điện thoại mà vẫn chưa thấy: thoát màn Cài đặt của app rồi vào lại.",
+          ],
+        },
+      ],
+    },
+    {
+      id: "faq-van-tay-tam-khoa",
+      group: "Đăng nhập & quyền",
+      heading: 'Bấm vân tay / khuôn mặt báo "Tạm khoá"',
+      blocks: [
+        {
+          kind: "paragraph",
+          text: 'Thông báo "Thử … sai quá nhiều lần. Vui lòng đăng nhập bằng mật khẩu." nghĩa là điện thoại tạm khoá vân tay / khuôn mặt sau nhiều lần thử sai.',
+        },
+        {
+          kind: "steps",
+          items: [
+            "Nhập Tài khoản, Mật khẩu rồi bấm Đăng nhập để vào app ngay.",
+            "Đợi một lúc, hoặc khoá rồi mở khoá điện thoại bằng mẫu hình / mã PIN, là dùng vân tay / khuôn mặt lại được.",
           ],
         },
       ],
@@ -593,7 +654,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
           kind: "steps",
           items: [
             "Vào tab Cài đặt → Hệ thống xem có dòng Thông báo camera không. Không thấy nghĩa là tài khoản chưa được cấp quyền — nhờ IT thêm quyền nhận thông báo camera.",
-            "Vẫn ở màn Hệ thống, xem dòng Quyền thông báo đã ở trạng thái Đã cấp quyền chưa. Đang bị chặn thì bấm vào dòng đó để mở Cài đặt của điện thoại.",
+            "Vẫn ở màn Hệ thống, xem dòng Quyền thông báo đã ở trạng thái Đã cấp quyền chưa. Chưa cấp quyền thì bấm vào dòng đó để app hỏi lại (app chỉ tự hỏi một lần sau khi đăng nhập); đang bị chặn thì bấm vào để mở Cài đặt của điện thoại.",
             "Mở Thông báo camera, xem phần trạng thái có đang Tạm dừng không — kể cả lệnh do người khác tắt cho cả công ty. Phần Phạm vi cho biết lệnh đang tắt tất cả camera hay chỉ một camera.",
             "Ba bước trên đều ổn mà vẫn không có thì đóng hẳn app rồi mở lại một lần, app sẽ đăng ký lại với máy chủ.",
           ],
@@ -664,7 +725,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
       blocks: [
         {
           kind: "paragraph",
-          text: "App mở thẳng hình trực tiếp của đúng camera vừa báo. Nếu app đang khoá bằng Face ID / vân tay thì mở sau khi xác thực xong. Thông báo không kèm ảnh hiện trường, nên muốn biết chuyện gì thì phải mở xem trực tiếp.",
+          text: "App mở thẳng hình trực tiếp của đúng camera vừa báo. Nếu app đang khoá bằng Face ID / vân tay / khoá màn hình thì mở sau khi xác thực xong. Thông báo không kèm ảnh hiện trường, nên muốn biết chuyện gì thì phải mở xem trực tiếp.",
         },
         {
           kind: "paragraph",
@@ -788,6 +849,10 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
           text: "Nút Duyệt / Từ chối chỉ hiện khi phiếu đang tới lượt bạn — dòng Bước hiện tại ở màn Chi tiết phiếu và tên bước trên thẻ ở danh sách hiện chữ đỏ.",
         },
         {
+          kind: "paragraph",
+          text: "Ở danh sách, nút duyệt không nằm sẵn trên thẻ: vuốt thẻ sang trái là hiện nút (tab Chờ duyệt có dải nhắc màu đỏ nhạt ngay dưới các tab). Hoặc mở phiếu ra, nút nằm ở thanh dưới đáy màn Chi tiết phiếu.",
+        },
+        {
           kind: "bullets",
           items: [
             "Phiếu đang chờ bước của người khác: bấm Quy trình để xem đang chờ ai.",
@@ -895,7 +960,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
         {
           kind: "bullets",
           items: [
-            "Vào tab Cài đặt → Hệ thống của app, xem dòng Quyền thông báo đã ở trạng thái Đã cấp quyền chưa. Đang bị chặn thì bấm vào dòng đó để mở Cài đặt của điện thoại.",
+            "Vào tab Cài đặt → Hệ thống của app, xem dòng Quyền thông báo đã ở trạng thái Đã cấp quyền chưa. Chưa cấp quyền thì bấm vào dòng đó để app hỏi lại (app chỉ tự hỏi một lần sau khi đăng nhập); đang bị chặn thì bấm vào để mở Cài đặt của điện thoại.",
             "Đăng xuất thì máy không nhận thông báo nữa — đăng nhập lại là nhận tiếp.",
             "Máy Xiaomi, Oppo, Vivo, Realme: vuốt tắt app trong đa nhiệm có thể làm máy chặn luôn thông báo. Bật Tự khởi động cho app, hoặc khoá app trong đa nhiệm.",
             "Việc do chính bạn làm không tạo thông báo cho bạn.",

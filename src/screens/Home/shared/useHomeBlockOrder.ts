@@ -20,6 +20,9 @@ export function useHomeBlockOrder() {
   const [blockOrder, setBlockOrder] = useState<HomeBlockKey[]>(
     DEFAULT_HOME_BLOCK_ORDER
   );
+  // Đọc máy xong chưa (lỗi cũng tính) — Trang chủ chờ, không thì khối hiện theo
+  // thứ tự mặc định rồi mới nhảy về thứ tự user đã xếp.
+  const [isLoading, setIsLoading] = useState(true);
   // Ref thay vì state: `moveBlock` được gọi ngay lúc thả tay, không được phép
   // ghi bằng key cũ chỉ vì closure chưa kịp cập nhật.
   const storageKeyRef = useRef(HOME_BLOCK_ORDER_KEY);
@@ -44,6 +47,8 @@ export function useHomeBlockOrder() {
         if (isActive) {
           setBlockOrder(DEFAULT_HOME_BLOCK_ORDER);
         }
+      } finally {
+        if (isActive) setIsLoading(false);
       }
     };
 
@@ -76,5 +81,5 @@ export function useHomeBlockOrder() {
     []
   );
 
-  return { blockOrder, moveBlock };
+  return { blockOrder, moveBlock, isLoading };
 }

@@ -154,7 +154,9 @@ export default function HomeAttendanceDetailSheet({
   const colors = useAppColors();
   const hairlineBorderColor = useHairlineBorderColor();
   const [employees, setEmployees] = useState<HomeAttendanceEmployee[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  // true sẵn: sheet mở ra là khung chờ ngay, không loé "danh sách trống" một
+  // khung trước khi effect kịp gọi tải.
+  const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [filterKey, setFilterKey] = useState<AttendanceFilterKey>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -163,7 +165,10 @@ export default function HomeAttendanceDetailSheet({
   const deptTotal = department?.total ?? 0;
 
   const loadDetail = useCallback(async () => {
-    if (!deptCode) return;
+    if (!deptCode) {
+      setIsLoading(false);
+      return;
+    }
 
     setIsLoading(true);
     setErrorMessage(null);
@@ -204,6 +209,7 @@ export default function HomeAttendanceDetailSheet({
       setErrorMessage(null);
       setFilterKey("all");
       setSearchQuery("");
+      setIsLoading(true);
       return;
     }
 
@@ -211,6 +217,14 @@ export default function HomeAttendanceDetailSheet({
   }, [loadDetail, visible]);
 
   const counts = useMemo(() => {
+    // Đang tải: số của bộ phận đã có sẵn từ thẻ — hiện "(0)" rồi mới nhảy số là sai.
+    if (isLoading && employees.length === 0 && department) {
+      return {
+        all: department.total,
+        checkedIn: department.checkedIn,
+        notCheckedIn: department.notCheckedIn,
+      };
+    }
     const checkedIn = employees.filter((employee) => employee.checkedIn).length;
 
     return {
@@ -218,7 +232,7 @@ export default function HomeAttendanceDetailSheet({
       checkedIn,
       notCheckedIn: employees.length - checkedIn,
     };
-  }, [employees]);
+  }, [department, employees, isLoading]);
 
   const visibleEmployees = useMemo(
     () => filterAttendanceEmployees(employees, filterKey, searchQuery),

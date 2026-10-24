@@ -29,6 +29,7 @@ import FlowTraBuocSheet from "./components/FlowTraBuocSheet";
 import {
   FLOW_CARD_CUSTOM_FIELDS,
   getFlowActions,
+  getFlowApproveButtons,
   getFlowDoneMessage,
   getFlowHeading,
   getFlowLabel,
@@ -54,14 +55,17 @@ export default function FlowDetailScreen() {
   const route = useRoute<StackRoute<"FlowChiTiet">>();
   const { nameClass } = route.params;
   const id = Number(route.params.id);
-  const { meta, errorMessage: metaError } = useFlowMeta(nameClass);
+  const { meta, errorMessage: metaError, loading: metaLoading } = useFlowMeta(nameClass);
   const perms = useWorkflowPermissions(nameClass);
-  const { me } = useWorkflowMe();
+  const { me, loading: meLoading } = useWorkflowMe();
   const markChanged = useMarkWorkflowChanged();
 
   const [record, setRecord] = useState<FlowRecord | null>(route.params.item ?? null);
-  const [info, setInfo] = useState<FlowThongTin | null>(null);
-  const [loading, setLoading] = useState(!route.params.item);
+  const [info, setInfo] = useState<FlowThongTin | null>(route.params.info ?? null);
+  // Danh sách đưa đủ phiếu + flow-thong-tin thì vẽ ngay; thiếu `info` (bấm khi
+  // thẻ chưa có thông tin, mở từ thông báo) thì chờ — không thì dòng bước, số
+  // bình luận / file và thanh nút duyệt hiện sau.
+  const [loading, setLoading] = useState(!(route.params.item && route.params.info));
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [approve, setApprove] = useState<FlowKetQua | typeof FLOW_KET_QUA.TraBuoc | null>(null);
@@ -161,7 +165,10 @@ export default function FlowDetailScreen() {
       },
     ]);
 
-  if (loading) return <WorkflowDetailSkeleton variant="flow" fields={detailFields} />;
+  // Chờ đủ: phiếu, metadata (số phiếu, các dòng), quyền và người đăng nhập (nút).
+  if (loading || metaLoading || meLoading || !perms.loaded) {
+    return <WorkflowDetailSkeleton variant="flow" fields={detailFields} />;
+  }
 
   if (!record) {
     return (
@@ -279,28 +286,17 @@ export default function FlowDetailScreen() {
         // lên đầu. Thứ tự mục 4: Trả bước (cam) · Từ chối · Không ý kiến · Duyệt.
         // Đủ 4 nút thì xếp 2 × 2 — 4 nút một hàng nhãn bị bóp nhỏ quá.
         <View style={[styles.approveBar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
-          {[
-            actions.traBuoc
-              ? { key: "traBuoc", variant: "warning" as const, icon: "arrow-undo-outline", label: "Trả bước", ketQua: FLOW_KET_QUA.TraBuoc }
-              : null,
-            { key: "tuChoi", variant: "danger" as const, icon: "close-circle-outline", label: "Từ chối", ketQua: FLOW_KET_QUA.TuChoi },
-            actions.khongYKien
-              ? { key: "khongYKien", variant: "muted" as const, icon: "remove-circle-outline", label: "Không ý kiến", ketQua: FLOW_KET_QUA.KhongYKien }
-              : null,
-            { key: "duyet", variant: "success" as const, icon: "checkmark-circle-outline", label: "Duyệt", ketQua: FLOW_KET_QUA.Duyet },
-          ]
-            .filter((button): button is NonNullable<typeof button> => !!button)
-            .map((button, _index, buttons) => (
-              <WorkflowButton
-                key={button.key}
-                flex
-                variant={button.variant}
-                icon={button.icon}
-                label={button.label}
-                style={buttons.length > 3 ? styles.approveHalf : undefined}
-                onPress={() => setApprove(button.ketQua)}
-              />
-            ))}
+          {getFlowApproveButtons(actions).map((button, _index, buttons) => (
+            <WorkflowButton
+              key={button.key}
+              flex
+              variant={button.variant}
+              icon={button.icon}
+              label={button.label}
+              style={buttons.length > 3 ? styles.approveHalf : undefined}
+              onPress={() => setApprove(button.ketQua)}
+            />
+          ))}
         </View>
       ) : null}
 

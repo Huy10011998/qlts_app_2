@@ -116,15 +116,21 @@ export const getWorkflowComments = (apiBase: WorkflowApiBase, idHoSo: number) =>
     [],
   );
 
+/**
+ * `idTraLoi`: id bình luận được trả lời (cùng phiếu / công việc). Id lạ thì
+ * server lưu thành tin thường, không báo lỗi.
+ */
 export const addWorkflowComment = async (
   apiBase: WorkflowApiBase,
   idHoSo: number,
   noiDung: string,
   file?: WorkflowPickedFile | null,
+  idTraLoi?: number | null,
 ) => {
   const form = new FormData();
   form.append("ID_HoSo", String(idHoSo));
   form.append("NoiDung", noiDung);
+  if (idTraLoi) form.append("ID_TraLoi", String(idTraLoi));
   if (file) {
     assertFileSize(file);
     appendFile(form, file);
@@ -139,6 +145,21 @@ export const addWorkflowComment = async (
       timeout: file ? UPLOAD_TIMEOUT : undefined,
     },
   );
+};
+
+/**
+ * Thu hồi 1 bình luận (7-Mobile-Realtime-BinhLuan mục 8) — chỉ người gửi, trong
+ * 24 giờ. Trả câu báo của server để hiện nguyên văn, rỗng = thành công. `loi`
+ * đọc ở `data` của vỏ chung như các thao tác khác, server trả thẳng cũng nhận.
+ */
+export const recallWorkflowComment = async (apiBase: WorkflowApiBase, id: number) => {
+  type Result = { loi?: string[] | null };
+  const res = await callApi<(WorkflowEnvelope<Result | null> & Result) | null>(
+    "POST",
+    `/${apiBase}/flow-thu-hoi-binh-luan`,
+    { ID: id },
+  );
+  return (res?.data?.loi ?? res?.loi ?? []).filter(Boolean).join("\n");
 };
 
 export const getWorkflowFiles = (apiBase: WorkflowApiBase, idHoSo: number) =>

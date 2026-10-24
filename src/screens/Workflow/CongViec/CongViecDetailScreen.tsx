@@ -46,8 +46,8 @@ import {
 } from "../shared/workflowConstants";
 import { formatBeDate, formatDayTime, parseBeDate } from "../shared/workflowDate";
 import { getWorkflowErrorMessage } from "../shared/workflowErrors";
-import { getDetailFields, WorkflowField } from "../shared/workflowFields";
-import { loadClassFields } from "../shared/workflowMetadata";
+import { getDetailFields } from "../shared/workflowFields";
+import { useClassFields } from "../shared/workflowMetadata";
 import ChuyenTrangThaiSheet from "./components/ChuyenTrangThaiSheet";
 import DoiChuTriSheet from "./components/DoiChuTriSheet";
 import GiaHanSheet from "./components/GiaHanSheet";
@@ -98,7 +98,6 @@ export default function CongViecDetailScreen() {
   const [data, setData] = useState<CongViecChiTiet | null>(null);
   const [info, setInfo] = useState<CongViecThongTin | null>(null);
   const [lichSu, setLichSu] = useState<CongViecLichSu[]>([]);
-  const [fields, setFields] = useState<WorkflowField[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -106,11 +105,7 @@ export default function CongViecDetailScreen() {
   const [sheet, setSheet] = useState<Sheet>(null);
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    loadClassFields(CV_CONG_VIEC_NAME_CLASS)
-      .then(setFields)
-      .catch(() => setFields([]));
-  }, []);
+  const { fields, ready: fieldsReady } = useClassFields(CV_CONG_VIEC_NAME_CLASS);
 
   const load = useCallback(
     async (mode: "initial" | "refresh" | "silent" = "initial") => {
@@ -201,7 +196,8 @@ export default function CongViecDetailScreen() {
     ]);
   };
 
-  if (loading) return <WorkflowDetailSkeleton variant="congViec" fields={detailFields} />;
+  // Chờ cả field: vẽ trước metadata thì mất số / tiêu đề / các dòng rồi mới hiện.
+  if (loading || !fieldsReady) return <WorkflowDetailSkeleton variant="congViec" fields={detailFields} />;
 
   if (!congViec) {
     return (

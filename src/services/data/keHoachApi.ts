@@ -5,6 +5,7 @@ import type {
   KeHoachItem,
   KeHoachSavePayload,
   KeHoachTab,
+  WorkflowCondition,
   WorkflowListResult,
   WorkflowSaveResult,
 } from "../../types/index";
@@ -18,11 +19,14 @@ import { postWorkflow } from "./workflowApi";
 export const khGetList = ({
   tab,
   searchText,
+  conditions = [],
   pageSize = 20,
   skipSize = 0,
 }: {
   tab: KeHoachTab;
   searchText?: string | null;
+  /** Lọc thêm (PHỤ LỤC): SoKeHoach, TieuDe, MoTa, TuNgay, DenNgay, ID_NhanVien_Tao, NgayTao. */
+  conditions?: WorkflowCondition[];
   pageSize?: number;
   skipSize?: number;
 }) =>
@@ -31,7 +35,7 @@ export const khGetList = ({
     {
       Tab: tab,
       SearchText: searchText?.trim() || null,
-      Conditions: [],
+      Conditions: conditions,
       // null = DenNgay DESC.
       Orderby: null,
       PageSize: pageSize,

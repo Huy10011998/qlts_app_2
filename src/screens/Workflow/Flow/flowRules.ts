@@ -109,6 +109,35 @@ export const getFlowActions = (
   };
 };
 
+export type FlowApproveButton = {
+  key: "traBuoc" | "tuChoi" | "khongYKien" | "duyet";
+  /** Biến thể màu của `WorkflowButton`. */
+  variant: "warning" | "danger" | "muted" | "success";
+  icon: string;
+  label: string;
+  ketQua: (typeof FLOW_KET_QUA)[keyof typeof FLOW_KET_QUA];
+};
+
+/**
+ * Nút duyệt của phiếu tới lượt tôi, đúng thứ tự mục 4: Trả bước (cam) · Từ chối
+ * · Không ý kiến · Duyệt. Chung cho thanh nút màn chi tiết và nút vuốt thẻ ở
+ * danh sách. Không tới lượt thì rỗng.
+ */
+export const getFlowApproveButtons = (actions: FlowActions): FlowApproveButton[] => {
+  if (!actions.duyet) return [];
+  const buttons: (FlowApproveButton | null)[] = [
+    actions.traBuoc
+      ? { key: "traBuoc", variant: "warning", icon: "arrow-undo-outline", label: "Trả bước", ketQua: FLOW_KET_QUA.TraBuoc }
+      : null,
+    { key: "tuChoi", variant: "danger", icon: "close-circle-outline", label: "Từ chối", ketQua: FLOW_KET_QUA.TuChoi },
+    actions.khongYKien
+      ? { key: "khongYKien", variant: "muted", icon: "remove-circle-outline", label: "Không ý kiến", ketQua: FLOW_KET_QUA.KhongYKien }
+      : null,
+    { key: "duyet", variant: "success", icon: "checkmark-circle-outline", label: "Duyệt", ketQua: FLOW_KET_QUA.Duyet },
+  ];
+  return buttons.filter((button): button is FlowApproveButton => !!button);
+};
+
 /**
  * Tình trạng vẽ lên sơ đồ của một bước. Bước cha có bước con (duyệt song song)
  * giữ tinhTrang = Chờ xử lý trên server cho tới khi hoàn tất, dù bước con đã mở —

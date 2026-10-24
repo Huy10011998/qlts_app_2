@@ -1,6 +1,7 @@
 import { getCongViecActions, validateDinhKy, validateThamGias } from "../src/screens/Workflow/CongViec/congViecRules";
 import {
   getFlowActions,
+  getFlowApproveButtons,
   getFlowBuocTinhTrangHienThi,
   getFlowHeading,
   getFlowHistory,
@@ -54,6 +55,17 @@ describe("getFlowActions", () => {
     });
     expect(getFlowActions(nhapCuaToi, { ...info, duocKhongYKien: true }, 9, ALL_PERMS).khongYKien).toBe(true);
     expect(getFlowActions(nhapCuaToi, info, null, ALL_PERMS).duyet).toBe(false);
+  });
+
+  // Nút vuốt thẻ ở danh sách và thanh nút màn chi tiết dùng chung bộ này.
+  it("nút duyệt theo thứ tự mục 4, Duyệt cuối; không tới lượt thì không có nút", () => {
+    const info = { iD_HoSo: 21, soBinhLuan: 0, soFile: 0, soBuoc: 3, isToiLuot: true };
+    const keysOf = (extra: object) =>
+      getFlowApproveButtons(getFlowActions(nhapCuaToi, { ...info, ...extra }, 9, ALL_PERMS)).map((b) => b.key);
+
+    expect(keysOf({})).toEqual(["tuChoi", "duyet"]);
+    expect(keysOf({ duocKhongYKien: true, duocTraBuoc: true })).toEqual(["traBuoc", "tuChoi", "khongYKien", "duyet"]);
+    expect(keysOf({ isToiLuot: false, duocKhongYKien: true, duocTraBuoc: true })).toEqual([]);
   });
 
   it("đủ người cho mọi bước mới cho nộp / duyệt", () => {

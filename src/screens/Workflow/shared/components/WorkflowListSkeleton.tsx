@@ -152,9 +152,9 @@ export default function WorkflowListSkeleton({
   kind: WorkflowListSkeletonKind;
   shape?: WorkflowCardSkeletonShape;
   /**
-   * Hàng "Nhấn giữ… · Duyệt nhiều (n)" của tab Chờ duyệt: hàng thật chỉ hiện
-   * khi trang đầu đã về (`totalCount`), nên giữ chỗ ở đây — không thì cả danh
-   * sách bị đẩy xuống 38pt đúng lúc thẻ thật hiện ra.
+   * Hàng "dải nhắc vuốt · Duyệt nhiều (n)" của tab Chờ duyệt: hàng thật chỉ
+   * hiện khi trang đầu đã về (`totalCount`), nên giữ chỗ ở đây — không thì cả
+   * danh sách bị đẩy xuống ~55pt đúng lúc thẻ thật hiện ra.
    */
   hasApproveAllRow?: boolean;
   /** Số thẻ cố định; bỏ trống thì tự phủ kín khung. */
@@ -320,8 +320,7 @@ function FlowCardSkeleton({ shape, index, opacity }: CardProps) {
       </View>
       {shape.step ? <StepRow opacity={opacity} /> : null}
       <FieldLines count={shape.lines ?? FALLBACK_LINES} index={index} opacity={opacity} />
-      {/* Bình luận · File luôn có; Quy trình chỉ khi phiếu đã có bước. Nút duyệt
-          theo lượt (flow-thong-tin) chưa biết thì không vẽ. */}
+      {/* Bình luận · File luôn có; Quy trình chỉ khi phiếu đã có bước. */}
       <View style={[styles.footer, styles.footerFlow]}>
         <SkeletonBlock opacity={opacity} style={styles.counter} />
         <SkeletonBlock opacity={opacity} style={styles.counter} />
@@ -474,9 +473,7 @@ function ApproveAllRow({ opacity }: { opacity: Opacity }) {
 
   return (
     <View style={styles.approveRow}>
-      <View style={styles.approveHint}>
-        <SkeletonBlock opacity={opacity} style={styles.approveHintBar} />
-      </View>
+      <SkeletonBlock opacity={opacity} style={styles.approveHint} />
       <SkeletonBlock opacity={opacity} style={styles.approveButton} />
     </View>
   );
@@ -560,7 +557,7 @@ const makeStyles = (c: AppColors) =>
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: c.separator,
     },
-    // `counters` của FlowCard khít hơn để chừa chỗ cho hàng nút duyệt.
+    // `counters` của FlowCard khít hơn (gap 6).
     footerFlow: {
       gap: 6,
     },
@@ -749,15 +746,12 @@ const makeStyles = (c: AppColors) =>
       gap: 10,
       paddingBottom: 8,
     },
+    // Dải nhắc vuốt (`SwipeHintBanner`): paddingVertical 8 + viền mảnh + 2 dòng
+    // chữ 12 — hàng hẹp cạnh nút nên câu nhắc luôn xuống 2 dòng.
     approveHint: {
       flex: 1,
-      justifyContent: "center",
-      height: textLine(12),
-    },
-    approveHintBar: {
-      width: "72%",
-      height: 10,
-      borderRadius: 5,
+      height: 8 * 2 + StyleSheet.hairlineWidth * 2 + Math.max(18, textLine(12) * 2),
+      borderRadius: 12,
     },
     // Nút "Duyệt nhiều (n)": icon 14 + chữ 12 đậm + lề 10 hai bên.
     approveButton: {

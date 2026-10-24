@@ -51,13 +51,20 @@ import {
 } from "../../services/auth/faceIdFlag";
 import {
   BiometricKind,
+  biometricIcon,
   biometricName,
   classifyBiometricError,
   getBiometricKind,
-  isBiometricUnlockUsable,
-  readBiometricMarker,
+  getUsableUnlockMethods,
+  hasUnlockMethod,
+  isDeviceLockAvailable,
+  NO_UNLOCK_METHODS,
+  promptUnlock,
   resetBiometricMarker,
+  unlockMethodName,
+  UnlockMethods,
   writeBiometricMarker,
+  writeDeviceLockEnabled,
 } from "../../services/auth/biometric";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
@@ -109,18 +116,24 @@ export default function LoginScreen() {
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
   const [isTokenReady, setIsTokenReady] = useState(false);
   const [isFaceIdEnabled, setIsFaceIdEnabled] = useState(false);
-  // Android: loại sinh trắc máy có; `null` = không có / chưa cài → ẩn nút.
-  // iOS không dùng — nút Face ID luôn hiện.
+  // Android: loại sinh trắc máy có; `null` = không có / chưa cài. Không có cả
+  // sinh trắc lẫn khoá màn hình thì ẩn nút. iOS không dùng — nút Face ID luôn
+  // hiện.
   const [biometricKind, setBiometricKind] = useState<BiometricKind | null>(
     null,
   );
+  const [isDeviceLockOnDevice, setIsDeviceLockOnDevice] = useState(false);
+  // Android: cách mở khoá đang bật — quyết định icon, câu chữ và hộp hỏi.
+  const [unlockMethods, setUnlockMethods] =
+    useState<UnlockMethods>(NO_UNLOCK_METHODS);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [scrollViewportHeight, setScrollViewportHeight] = useState(0);
   const [scrollContentHeight, setScrollContentHeight] = useState(0);
   const [localNetworkStatus, setLocalNetworkStatus] =
     useState<LocalNetworkPermissionStatus>("unknown");
-  // Mở màn bằng phiên còn hạn + đã bật Face ID thì tự hỏi Face ID một lần,
-  // khỏi bắt người dùng bấm nút (xem effect bên dưới).
+  // iOS: mở màn bằng phiên còn hạn + đã bật Face ID thì tự hỏi Face ID một
+  // lần, khỏi bắt người dùng bấm nút (xem effect bên dưới). Android không tự
+  // hỏi — người dùng bấm icon cạnh nút Đăng nhập.
   const [shouldAutoPromptFaceId, setShouldAutoPromptFaceId] = useState(false);
 
   const isFaceIdRunning = useRef(false);
@@ -238,11 +251,14 @@ export default function LoginScreen() {
 
   const prepareTokenForFaceID = useCallback(async () => {
     try {
-      // Android còn kiểm máy vẫn còn vân tay + marker (mất thì tự tắt cờ).
-      const enabled =
-        Platform.OS === "ios"
-          ? await readFaceIdEnabled()
-          : await isBiometricUnlockUsable();
+      // Android còn kiểm máy vẫn còn vân tay / khuôn mặt / khoá màn hình (mất
+      // thì tự tắt cờ).
+      const methods =
+        Platform.OS === "ios" ? null : await getUsableUnlockMethods();
+      if (methods) setUnlockMethods(methods);
+      const enabled = methods
+        ? hasUnlockMethod(methods)
+        : await readFaceIdEnabled();
       if (!enabled) {
         await resetBiometricMarker();
         setIsFaceIdEnabled(false);
@@ -250,6 +266,9 @@ export default function LoginScreen() {
         return;
       }
       setIsFaceIdEnabled(true);
+      // Android: thấy màn Đăng nhập trước rồi tự chọn bấm icon hay gõ mật
+      // khẩu. Hộp hỏi có khoá màn hình còn không có nút "Dùng mật khẩu".
+      if (Platform.OS === "android") return;
       // Tự hỏi Face ID chỉ khi còn phiên để khôi phục — cùng điều kiện
       // `handleFaceIDLogin` dùng. Đăng xuất chủ động thì `logout()` đã xoá cả
       // cờ Face ID lẫn token; hết phiên (EXPIRED) thì token cũng đã bị xoá —
@@ -269,15 +288,19 @@ export default function LoginScreen() {
       prepareTokenForFaceID();
       return;
     }
-    // Android: chỉ máy có vân tay / khuôn mặt mới có nút và tự hỏi.
-    getBiometricKind().then((kind) => {
-      setBiometricKind(kind);
-      if (kind) {
-        prepareTokenForFaceID();
-      } else {
-        setIsTokenReady(true);
-      }
-    });
+    // Android: chỉ máy có vân tay / khuôn mặt / khoá màn hình mới có nút và
+    // tự hỏi.
+    Promise.all([getBiometricKind(), isDeviceLockAvailable()]).then(
+      ([kind, hasDeviceLock]) => {
+        setBiometricKind(kind);
+        setIsDeviceLockOnDevice(hasDeviceLock);
+        if (kind || hasDeviceLock) {
+          prepareTokenForFaceID();
+        } else {
+          setIsTokenReady(true);
+        }
+      },
+    );
   }, [prepareTokenForFaceID]);
 
   const handleLocalNetworkPermission = useCallback(async () => {
@@ -331,16 +354,19 @@ export default function LoginScreen() {
   }, [syncLocalNetworkState]);
 
   const syncFaceIdMarker = useCallback(async () => {
+    if (Platform.OS === "android") {
+      // Android không có marker, chỉ đọc lại cờ (máy mất cách mở thì tắt cờ).
+      // Marker cũ của bản thử trước thì xoá khi không còn bật gì.
+      const methods = await getUsableUnlockMethods();
+      if (!hasUnlockMethod(methods)) await resetBiometricMarker();
+      setUnlockMethods(methods);
+      setIsFaceIdEnabled(hasUnlockMethod(methods));
+      return;
+    }
     const enabled = await readFaceIdEnabled();
     if (!enabled) {
       await resetBiometricMarker();
       setIsFaceIdEnabled(false);
-      return;
-    }
-    if (Platform.OS === "android") {
-      // Ghi marker trên Android là phải hỏi vân tay — gõ mật khẩu xong còn bị
-      // hỏi thêm thì thừa. Còn marker thì giữ; mất thì tắt cờ để bật lại.
-      setIsFaceIdEnabled(await isBiometricUnlockUsable());
       return;
     }
     await writeBiometricMarker();
@@ -425,10 +451,24 @@ export default function LoginScreen() {
     }
   };
 
-  // iOS: "FaceID" (giữ nguyên câu chữ cũ); Android: "vân tay" / "khuôn mặt".
-  const biometricLabel = biometricName(
-    Platform.OS === "ios" ? "faceid" : biometricKind,
-  );
+  // iOS: "FaceID" (giữ nguyên câu chữ cũ). Android: cách đang bật; chưa bật
+  // thì các cách máy có — vd "vân tay hoặc khoá màn hình".
+  const biometricLabel =
+    Platform.OS === "ios"
+      ? biometricName("faceid")
+      : unlockMethodName(
+          hasUnlockMethod(unlockMethods)
+            ? unlockMethods
+            : { biometric: !!biometricKind, deviceLock: isDeviceLockOnDevice },
+          biometricKind,
+        );
+  // Android: icon vân tay / khuôn mặt khi sinh trắc đang bật, hoặc chưa bật gì
+  // mà máy có sinh trắc; chỉ bật khoá màn hình (hoặc máy chỉ có khoá màn hình)
+  // thì icon mẫu hình.
+  const androidUnlockIcon =
+    biometricKind && (unlockMethods.biometric || !unlockMethods.deviceLock)
+      ? biometricIcon(biometricKind)
+      : "lock-pattern";
 
   const handleFaceIDPress = async () => {
     if (isLoading) return;
@@ -462,7 +502,7 @@ export default function LoginScreen() {
         return;
       }
 
-      const credentials = await readBiometricMarker(
+      const unlocked = await promptUnlock(
         Platform.OS === "ios"
           ? {
               title: "Xác thực",
@@ -474,10 +514,12 @@ export default function LoginScreen() {
               title: "Đăng nhập",
               subtitle: `Dùng ${biometricLabel} để mở ứng dụng`,
               // Nút phụ của hộp hỏi Android: đóng hộp, ở lại form mật khẩu.
+              // Có khoá màn hình thì hệ thống bỏ nút này, bấm ra ngoài để đóng.
               cancel: "Dùng mật khẩu",
             },
+        unlockMethods,
       );
-      if (!credentials) {
+      if (!unlocked) {
         AppAlert.alert(
           capitalize(biometricLabel),
           "Không tìm thấy thông tin đăng nhập.",
@@ -520,7 +562,9 @@ export default function LoginScreen() {
       if (biometricError === "invalidated") {
         await resetBiometricMarker();
         await writeFaceIdEnabled(false);
+        await writeDeviceLockEnabled(false);
         setIsFaceIdEnabled(false);
+        setUnlockMethods(NO_UNLOCK_METHODS);
         AppAlert.alert(
           `${capitalize(biometricLabel)} trên máy đã thay đổi`,
           `Vui lòng đăng nhập bằng mật khẩu rồi bật lại ${biometricLabel} trong Cài đặt.`,
@@ -829,31 +873,29 @@ export default function LoginScreen() {
                   </TouchableOpacity>
                 )}
 
-                {/* Android: cùng ô với nút Face ID, chỉ hiện khi máy có sinh trắc. */}
-                {Platform.OS === "android" && biometricKind && (
-                  <TouchableOpacity
-                    style={[
-                      styles.faceIdBtn,
-                      { borderColor: hairlineBorderColor },
-                      (!isTokenReady || !isFaceIdEnabled) &&
-                        styles.faceIdBtnDimmed,
-                    ]}
-                    onPress={handleFaceIDPress}
-                    activeOpacity={0.8}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Đăng nhập bằng ${biometricLabel}`}
-                  >
-                    <MaterialCommunityIcons
-                      name={
-                        biometricKind === "face"
-                          ? "face-recognition"
-                          : "fingerprint"
-                      }
-                      size={28}
-                      color={C.blue}
-                    />
-                  </TouchableOpacity>
-                )}
+                {/* Android: cùng ô với nút Face ID, chỉ hiện khi máy có sinh
+                    trắc hoặc khoá màn hình. */}
+                {Platform.OS === "android" &&
+                  (biometricKind || isDeviceLockOnDevice) && (
+                    <TouchableOpacity
+                      style={[
+                        styles.faceIdBtn,
+                        { borderColor: hairlineBorderColor },
+                        (!isTokenReady || !isFaceIdEnabled) &&
+                          styles.faceIdBtnDimmed,
+                      ]}
+                      onPress={handleFaceIDPress}
+                      activeOpacity={0.8}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Đăng nhập bằng ${biometricLabel}`}
+                    >
+                      <MaterialCommunityIcons
+                        name={androidUnlockIcon}
+                        size={28}
+                        color={C.blue}
+                      />
+                    </TouchableOpacity>
+                  )}
               </View>
 
               {(Platform.OS === "ios" || Platform.OS === "android") && (

@@ -1,18 +1,17 @@
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleProp, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import type { FlowRecord, FlowThongTin } from "../../../../types/index";
 import { AppColors, useAppColors, useStyles } from "../../../../utils/helpers/colors";
 import { elevation } from "../../../../utils/helpers/tokens";
 import StatusBadge from "../../shared/components/StatusBadge";
-import WorkflowButton from "../../shared/components/WorkflowButton";
 import WorkflowCounter from "../../shared/components/WorkflowCounter";
 import WorkflowFieldLines from "../../shared/components/WorkflowFieldLines";
 import { FlowStepPendingRow } from "../../shared/components/WorkflowListSkeleton";
 import { getFlowTinhTrang as getTinhTrangOption } from "../../shared/workflowConstants";
 import { WorkflowField } from "../../shared/workflowFields";
-import { FlowActions, getFlowLabel, getFlowTinhTrang } from "../flowRules";
+import { getFlowLabel, getFlowTinhTrang } from "../flowRules";
 
 type Props = {
   item: FlowRecord;
@@ -23,15 +22,10 @@ type Props = {
   info?: FlowThongTin;
   /** flow-thong-tin của phiếu đang gọi (`useInfoPending`) — giữ chỗ dòng bước hiện tại. */
   infoPending?: boolean;
-  actions: FlowActions;
   selectable?: boolean;
   selected?: boolean;
   onPress: () => void;
   onLongPress?: () => void;
-  onApprove?: () => void;
-  onReject?: () => void;
-  onNoOpinion?: () => void;
-  onTraBuoc?: () => void;
   /** Bấm số bình luận / số file mở thẳng màn đó; không truyền thì bấm như bấm thẻ. */
   onOpenComments?: () => void;
   onOpenFiles?: () => void;
@@ -39,6 +33,7 @@ type Props = {
   onOpenProcess?: () => void;
   /** Số file mờ, không bấm được — khi nút Đính kèm ở chi tiết cũng tắt. */
   filesDisabled?: boolean;
+  style?: StyleProp<ViewStyle>;
 };
 
 /**
@@ -61,8 +56,8 @@ export const getFlowCardLineFields = (fields: WorkflowField[], soPhieuField: str
  * Thẻ phiếu: KHÔNG ghi cứng field của flow nào (mỗi flow một bộ field). Dòng
  * tiêu đề là số phiếu (tên cột lấy từ server, nháp chưa có số thì "#<id>"),
  * phần động còn lại là "Nhãn: giá trị". Vẽ riêng: nhãn tình trạng, bước hiện
- * tại, số bình luận / file + viên Quy trình, nút Trả bước / Từ chối / Không
- * ý kiến / Duyệt khi tới lượt tôi (đúng thứ tự mục 4).
+ * tại, số bình luận / file + viên Quy trình. Nút Trả bước / Từ chối / Không
+ * ý kiến / Duyệt không nằm trên thẻ: danh sách vuốt thẻ sang trái mới hiện.
  */
 export default function FlowCard({
   item,
@@ -70,19 +65,15 @@ export default function FlowCard({
   soPhieuField,
   info,
   infoPending,
-  actions,
   selectable,
   selected,
   onPress,
   onLongPress,
-  onApprove,
-  onReject,
-  onNoOpinion,
-  onTraBuoc,
   onOpenComments,
   onOpenFiles,
   onOpenProcess,
   filesDisabled,
+  style,
 }: Props) {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
@@ -96,7 +87,7 @@ export default function FlowCard({
       onPress={onPress}
       onLongPress={onLongPress}
       delayLongPress={350}
-      style={[styles.card, selected && styles.cardSelected]}
+      style={[styles.card, selected && styles.cardSelected, style]}
     >
       <View style={styles.headerRow}>
         {selectable ? (
@@ -154,18 +145,6 @@ export default function FlowCard({
             <WorkflowCounter icon="git-network-outline" iconSize={14} label="Quy trình" onPress={onOpenProcess} />
           ) : null}
         </View>
-        {actions.duyet && !selectable ? (
-          <View style={styles.quickActions}>
-            {actions.traBuoc ? (
-              <WorkflowButton compact variant="warning" label="Trả bước" style={styles.quickButton} onPress={onTraBuoc ?? onPress} />
-            ) : null}
-            <WorkflowButton compact variant="danger" label="Từ chối" style={styles.quickButton} onPress={onReject ?? onPress} />
-            {actions.khongYKien ? (
-              <WorkflowButton compact variant="muted" label="Không ý kiến" style={styles.quickButton} onPress={onNoOpinion ?? onPress} />
-            ) : null}
-            <WorkflowButton compact variant="success" label="Duyệt" style={styles.quickButton} onPress={onApprove ?? onPress} />
-          </View>
-        ) : null}
       </View>
     </TouchableOpacity>
   );
@@ -218,27 +197,13 @@ const makeStyles = (c: AppColors) =>
     footer: {
       flexDirection: "row",
       alignItems: "center",
-      justifyContent: "space-between",
-      flexWrap: "wrap",
-      rowGap: 8,
-      columnGap: 6,
       marginTop: 8,
       paddingTop: 8,
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: c.separator,
     },
-    // Khoảng cách / lề nút khít lại cho 3 viên + 3 nút duyệt vừa một hàng.
     counters: {
       flexDirection: "row",
       gap: 6,
-    },
-    quickActions: {
-      flexDirection: "row",
-      gap: 6,
-      // Máy hẹp thì hàng nút xuống dòng — vẫn bám mép phải như lúc chung hàng.
-      marginLeft: "auto",
-    },
-    quickButton: {
-      paddingHorizontal: 8,
     },
   });

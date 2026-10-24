@@ -17,11 +17,11 @@ const TOPICS: GuideTopic[] = [
   {
     id: "dang-nhap",
     title: "Đăng nhập, Face ID & vân tay",
-    summary: "Đăng nhập, bật Face ID / vân tay, xử lý khi hết phiên",
+    summary: "Đăng nhập, bật Face ID / vân tay / khoá màn hình, xử lý khi hết phiên",
     iconName: "log-in-outline",
     iconBg: C.blue,
     group: "Bắt đầu",
-    keywords: ["dang nhap", "login", "mat khau", "faceid", "face id", "van tay", "khuon mat", "sinh trac", "mang noi bo"],
+    keywords: ["dang nhap", "login", "mat khau", "faceid", "face id", "van tay", "khuon mat", "sinh trac", "khoa man hinh", "mau hinh", "ma pin", "mo khoa", "mang noi bo"],
     sections: [
       {
         id: "dang-nhap-thuong",
@@ -78,35 +78,75 @@ const TOPICS: GuideTopic[] = [
           },
           {
             kind: "paragraph",
-            text: "Face ID chỉ có trên iPhone/iPad. Máy Android xem mục vân tay bên dưới.",
+            text: "Face ID chỉ có trên iPhone/iPad. Máy Android xem mục vân tay / khoá màn hình bên dưới.",
           },
         ],
       },
       {
         id: "dang-nhap-van-tay",
-        heading: "Máy Android: mở app bằng vân tay",
+        heading: "Máy Android: bật vân tay / khuôn mặt hoặc khoá màn hình",
         blocks: [
           {
             kind: "paragraph",
-            text: "Mặc định máy Android đã đăng nhập thì mở app là vào thẳng. Bật vân tay để mỗi lần mở lại app phải chạm vân tay, người khác cầm máy không vào được.",
+            text: "Mặc định máy Android đã đăng nhập thì mở app là vào thẳng. Bật vân tay / khuôn mặt hoặc khoá màn hình (mẫu hình, mã PIN hoặc mật khẩu của điện thoại) thì mỗi lần mở lại app phải mở khoá mới vào được, người khác cầm máy không vào được.",
           },
           {
             kind: "steps",
             items: [
-              "Cài vân tay trong Cài đặt của điện thoại trước (máy chưa cài thì app không hiện mục này).",
-              "Đăng nhập bằng tài khoản và mật khẩu, vào tab Cài đặt → Tài khoản → bật Đăng nhập bằng vân tay rồi chạm vân tay khi máy hỏi.",
-              "Lần sau mở app, máy tự hỏi vân tay ở màn Đăng nhập. Bấm Dùng mật khẩu nếu muốn gõ mật khẩu; lỡ bỏ qua thì bấm nút vân tay cạnh nút Đăng nhập.",
+              "Cài vân tay, khuôn mặt hoặc khoá màn hình trong Cài đặt của điện thoại trước.",
+              "Đăng nhập app bằng tài khoản và mật khẩu.",
+              "Vào tab Cài đặt → Tài khoản → bật Đăng nhập bằng vân tay / khuôn mặt hoặc Đăng nhập bằng khoá màn hình. Bật cả hai cũng được.",
+              "Chạm vân tay, nhìn vào màn hình hoặc vẽ mẫu hình / nhập mã PIN khi máy hỏi. App báo \"Đã bật đăng nhập bằng …!\" là xong.",
+            ],
+          },
+          {
+            kind: "paragraph",
+            text: "App chỉ hiện mục mà điện thoại dùng được:",
+          },
+          {
+            kind: "bullets",
+            items: [
+              "Đăng nhập bằng vân tay / khuôn mặt: máy đã cài ít nhất một vân tay hoặc khuôn mặt. Máy chỉ có một loại thì mục ghi đúng loại đó, vd \"Đăng nhập bằng vân tay\".",
+              "Đăng nhập bằng khoá màn hình: máy chạy Android 11 trở lên và đã đặt mẫu hình, mã PIN hoặc mật khẩu.",
+              "Vừa cài vân tay / khuôn mặt / khoá màn hình trên điện thoại mà chưa thấy mục: thoát màn Cài đặt của app rồi vào lại.",
             ],
           },
           {
             kind: "note",
             tone: "info",
-            text: "Đa số máy Android chỉ dùng được vân tay. Mở khoá bằng khuôn mặt của nhiều hãng (Samsung, Oppo, Xiaomi…) không đủ an toàn nên Android không cho app dùng; chỉ một số máy (vd Pixel 8 trở lên) mới có Đăng nhập bằng khuôn mặt.",
+            text: "Máy có cả vân tay lẫn khuôn mặt (vd Samsung Galaxy S23): khi hỏi, điện thoại tự nhận cách đã cài trên máy — nhìn vào màn hình hoặc chạm vân tay. Hộp hỏi trông thế nào do điện thoại quyết định, mỗi hãng một kiểu.",
+          },
+        ],
+      },
+      {
+        id: "dang-nhap-mo-app-android",
+        heading: "Máy Android: mở app bằng vân tay / khuôn mặt hoặc khoá màn hình",
+        blocks: [
+          {
+            kind: "steps",
+            items: [
+              "Mở lại app (sau khi vuốt tắt app hoặc khởi động lại máy). App dừng ở màn Đăng nhập, không tự hiện hộp hỏi.",
+              "Bấm nút cạnh nút Đăng nhập: hình vân tay (hình khuôn mặt nếu máy chỉ có khuôn mặt), hoặc hình mẫu hình nếu chỉ bật khoá màn hình.",
+              "Chạm vân tay, nhìn vào màn hình, hoặc vẽ mẫu hình / nhập mã PIN. Đúng là vào app.",
+            ],
+          },
+          {
+            kind: "bullets",
+            items: [
+              "Bật cả hai: hộp hỏi vân tay / khuôn mặt có thêm nút chuyển sang mẫu hình / mã PIN. Chữ trên nút do điện thoại ghi, mỗi hãng một kiểu.",
+              "Muốn dùng mật khẩu: cứ nhập Tài khoản, Mật khẩu rồi bấm Đăng nhập như thường. Hộp hỏi đang mở thì bấm Dùng mật khẩu, hoặc bấm ra ngoài hộp / nút Quay lại để đóng.",
+              "Đang dùng mà ra màn hình chính rồi quay lại app thì vào tiếp luôn, không hỏi.",
+            ],
+          },
+          {
+            kind: "note",
+            tone: "info",
+            text: "Nút mờ, bấm vào báo \"… chưa bật\" (vd \"Vân tay hoặc khoá màn hình chưa bật\") là máy này chưa bật mục đó ở Cài đặt → Tài khoản, hoặc vừa đăng xuất. Đăng nhập bằng mật khẩu rồi bật lại.",
           },
           {
             kind: "note",
             tone: "warn",
-            text: "Xoá hết vân tay hoặc tắt khoá màn hình của điện thoại thì app tự tắt đăng nhập bằng vân tay. Đăng nhập bằng mật khẩu rồi bật lại.",
+            text: "Bấm Đăng xuất thì cả vân tay / khuôn mặt lẫn khoá màn hình đều tắt theo. Xoá hết vân tay và khuôn mặt hoặc gỡ khoá màn hình của điện thoại thì app tự tắt mục tương ứng. Đăng nhập bằng mật khẩu rồi bật lại.",
           },
         ],
       },
@@ -933,13 +973,19 @@ const TOPICS: GuideTopic[] = [
           },
           {
             kind: "paragraph",
-            text: "Phiếu tới lượt bạn có sẵn các nút Trả bước / Từ chối / Không ý kiến / Duyệt ngay trên thẻ, không phải mở chi tiết. Nút Không ý kiến và Trả bước chỉ có ở bước cho phép.",
+            text: "Phiếu tới lượt bạn (tên bước chữ đỏ): vuốt thẻ sang trái để hiện các nút Trả bước / Từ chối / Không ý kiến / Duyệt, không phải mở chi tiết. Tab Chờ duyệt có dải nhắc màu đỏ nhạt ngay dưới các tab, giống danh sách tài sản. Nút Không ý kiến và Trả bước chỉ có ở bước cho phép. Phiếu chưa tới lượt bạn thì vuốt không ra nút nào.",
           },
           {
             kind: "image",
             source: require("../../../assets/images/guide/phieu-de-nghi-02.png"),
-            caption: "Tab Chờ duyệt: nút Duyệt nhiều (n), dòng bước hiện tại và nút duyệt ngay trên thẻ",
-            aspectRatio: 0.73,
+            caption: "Tab Chờ duyệt: dải nhắc vuốt, nút Duyệt nhiều (n) và tên bước chữ đỏ khi tới lượt bạn",
+            aspectRatio: 0.74,
+          },
+          {
+            kind: "image",
+            source: require("../../../assets/images/guide/phieu-de-nghi-02-vuot.png"),
+            caption: "Vuốt thẻ sang trái: hiện nút Từ chối / Duyệt — bước cho phép thì có thêm Trả bước, Không ý kiến",
+            aspectRatio: 1.67,
           },
         ],
       },
@@ -985,7 +1031,7 @@ const TOPICS: GuideTopic[] = [
           {
             kind: "steps",
             items: [
-              "Bấm Duyệt (xanh), Từ chối (đỏ) hoặc Không ý kiến (xám xanh) — trên thẻ ở danh sách, hoặc ở thanh nút dưới đáy màn Chi tiết phiếu (thanh này chỉ hiện khi tới lượt bạn).",
+              "Bấm Duyệt (xanh), Từ chối (đỏ) hoặc Không ý kiến (xám xanh) — ở danh sách thì vuốt thẻ sang trái cho hiện nút, hoặc ở thanh nút dưới đáy màn Chi tiết phiếu (thanh này chỉ hiện khi tới lượt bạn).",
               "Ghi Ý kiến. Duyệt thì để trống cũng được; Từ chối thì nên ghi lý do.",
               "Bước kế tiếp cần chọn người thì bảng hiện thêm mục Chọn người duyệt cho bước kế tiếp — phải chọn mỗi bước ít nhất 1 người.",
               "Bấm nút xác nhận ở cuối bảng. Làm ở màn Chi tiết phiếu thì xong là app báo Đã duyệt phiếu… (hoặc Đã từ chối…) ở dưới màn và quay về danh sách.",
@@ -1013,7 +1059,7 @@ const TOPICS: GuideTopic[] = [
           {
             kind: "steps",
             items: [
-              "Bấm Trả bước trên thẻ hoặc ở màn Chi tiết phiếu.",
+              "Vuốt thẻ sang trái rồi bấm Trả bước, hoặc bấm ở màn Chi tiết phiếu.",
               "Hộp Xác nhận trả bước ghi phiếu đang ở bước nào và sẽ về bước nào.",
               "Nhập Lý do trả bước — bắt buộc — rồi bấm Trả bước.",
             ],
@@ -1704,7 +1750,7 @@ const TOPICS: GuideTopic[] = [
     iconName: "settings-outline",
     iconBg: C.amber,
     group: "Trợ giúp",
-    keywords: ["cai dat", "quyen", "tai khoan", "ho tro", "he thong", "thong tin ung dung", "khac", "ho so", "doi mat khau", "giao dien", "sang toi", "phien ban", "dang xuat", "thong bao camera", "tam dung thong bao", "thong tin qrcode", "danh thiep", "card visit", "vcard", "luu danh ba", "ma nhan vien", "anh dai dien", "doi anh", "avatar", "co chu", "chu to", "chu nho", "phong chu"],
+    keywords: ["cai dat", "quyen", "tai khoan", "ho tro", "he thong", "thong tin ung dung", "khac", "ho so", "doi mat khau", "giao dien", "sang toi", "phien ban", "dang xuat", "thong bao camera", "tam dung thong bao", "thong tin qrcode", "danh thiep", "van tay", "khoa man hinh", "mau hinh", "card visit", "vcard", "luu danh ba", "ma nhan vien", "anh dai dien", "doi anh", "avatar", "co chu", "chu to", "chu nho", "phong chu"],
     sections: [
       {
         id: "cai-dat-nhom",
@@ -1717,7 +1763,7 @@ const TOPICS: GuideTopic[] = [
           {
             kind: "bullets",
             items: [
-              "Tài khoản: hồ sơ cá nhân, danh thiếp QR, đổi mật khẩu, đăng nhập FaceID / vân tay.",
+              "Tài khoản: hồ sơ cá nhân, danh thiếp QR, đổi mật khẩu, đăng nhập FaceID / vân tay / khoá màn hình.",
               "Hỗ trợ: tài liệu hướng dẫn sử dụng này và câu hỏi thường gặp.",
               "Hệ thống: quyền mạng nội bộ, camera, vị trí, thông báo và thông báo camera.",
               "Thông tin ứng dụng: phiên bản đang cài và bản mới trên store.",
@@ -1738,7 +1784,8 @@ const TOPICS: GuideTopic[] = [
               "Ảnh đại diện (ở đầu màn Hồ sơ cá nhân): Chụp ảnh hoặc chọn từ Thư viện, cắt khung vuông rồi bấm Xong là lưu ngay. Cắt lại để chỉnh khung ảnh đang có, Xoá để bỏ ảnh. Ảnh này cũng hiện trên web và danh thiếp.",
               "Thông tin QrCode: danh thiếp của bạn kèm mã QR để người khác lưu vào danh bạ — xem mục bên dưới.",
               "Đổi mật khẩu: nhập mật khẩu cũ, mật khẩu mới và nhập lại mật khẩu mới.",
-              "Đăng nhập FaceID (iPhone/iPad) / Đăng nhập bằng vân tay (Android): bật để lần sau mở app bằng khuôn mặt hoặc vân tay.",
+              "Đăng nhập FaceID (iPhone/iPad): bật để lần sau mở app bằng khuôn mặt.",
+              "Đăng nhập bằng vân tay / khuôn mặt, Đăng nhập bằng khoá màn hình (Android): bật để mỗi lần mở lại app phải chạm vân tay, nhìn vào màn hình hoặc vẽ mẫu hình / nhập mã PIN của máy. Máy không dùng được cách nào thì không hiện mục đó — xem chủ đề Đăng nhập.",
             ],
           },
         ],

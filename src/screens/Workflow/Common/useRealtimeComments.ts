@@ -17,6 +17,7 @@ type Options = {
   idHoSo: number;
   myId: number | null | undefined;
   onBinhLuanMoi: (comment: WorkflowComment) => void;
+  onBinhLuanThuHoi: (idBinhLuan: number) => void;
   /** Nối lại sau khi rớt mạng — có thể đã lỡ bình luận. */
   onReconnected: () => void;
 };
@@ -33,11 +34,12 @@ export const useRealtimeComments = ({
   idHoSo,
   myId,
   onBinhLuanMoi,
+  onBinhLuanThuHoi,
   onReconnected,
 }: Options) => {
   const [dangNhaps, setDangNhaps] = useState<DangNhapEntry[]>([]);
-  const handlersRef = useRef({ onBinhLuanMoi, onReconnected, myId });
-  handlersRef.current = { onBinhLuanMoi, onReconnected, myId };
+  const handlersRef = useRef({ onBinhLuanMoi, onBinhLuanThuHoi, onReconnected, myId });
+  handlersRef.current = { onBinhLuanMoi, onBinhLuanThuHoi, onReconnected, myId };
   const focusedRef = useRef(false);
   const keepAliveRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -48,6 +50,7 @@ export const useRealtimeComments = ({
         // Người đó vừa gửi xong → thôi "đang nhập".
         setDangNhaps((list) => removeDangNhap(list, comment.iD_NhanVien));
       },
+      onBinhLuanThuHoi: (idBinhLuan) => handlersRef.current.onBinhLuanThuHoi(idBinhLuan),
       onDangNhap: (event) =>
         setDangNhaps((list) => applyDangNhap(list, event, handlersRef.current.myId, Date.now())),
       onReconnected: () => {

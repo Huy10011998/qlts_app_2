@@ -15,6 +15,10 @@ import type { HomeBlockKey } from "./homeBlockOrder";
  */
 export function useStoredHomeBlockList(baseKey: string) {
   const [keys, setKeys] = useState<HomeBlockKey[]>([]);
+  // Đọc máy xong chưa (lỗi cũng tính). Trang chủ giữ khung chờ tới lúc này:
+  // username đọc qua Keychain — trên Android chậm, về sau menu là khối đã ẩn
+  // loé lên, khối đã thu gọn mở ra rồi mới đóng.
+  const [isLoading, setIsLoading] = useState(true);
   // Ref thay vì state: lượt chạm phải ghi đúng key của user hiện tại ngay lúc
   // đó, không đợi closure cập nhật.
   const storageKeyRef = useRef(baseKey);
@@ -40,6 +44,8 @@ export function useStoredHomeBlockList(baseKey: string) {
         }
       } catch {
         // Đọc hỏng thì coi như danh sách rỗng — mở hết, hiện hết là an toàn nhất.
+      } finally {
+        if (isActive) setIsLoading(false);
       }
     };
 
@@ -67,5 +73,5 @@ export function useStoredHomeBlockList(baseKey: string) {
     });
   }, []);
 
-  return { keys, setIncluded };
+  return { keys, setIncluded, isLoading };
 }

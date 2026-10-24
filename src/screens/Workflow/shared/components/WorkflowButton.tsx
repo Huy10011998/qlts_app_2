@@ -48,6 +48,10 @@ const VARIANT_COLORS: Record<WorkflowButtonVariant, (c: AppColors) => { bg: stri
   outline: (c) => ({ bg: c.surface, fg: c.red, border: c.red }),
 };
 
+/** Màu nền / chữ của một biến thể — cho nút vẽ riêng mà cần trùng màu (nút vuốt thẻ phiếu). */
+export const getWorkflowButtonColors = (variant: WorkflowButtonVariant, c: AppColors) =>
+  VARIANT_COLORS[variant](c);
+
 const COMPACT_HIT_SLOP = { top: 7, bottom: 7 };
 
 /** Nút thao tác của view Workflow (footer sheet, thanh nút màn chi tiết). */
