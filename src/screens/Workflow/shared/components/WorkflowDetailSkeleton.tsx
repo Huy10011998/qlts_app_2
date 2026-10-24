@@ -15,6 +15,7 @@ import { useGroupedFields } from "../../../../hooks/AssetAddItem/useGroupedField
 import { AppColors, useAppColors, useStyles } from "../../../../utils/helpers/colors";
 import { elevation } from "../../../../utils/helpers/tokens";
 import type { WorkflowField } from "../workflowFields";
+import WorkflowHeroLinks, { WorkflowHeroLink } from "./WorkflowHeroLinks";
 import WorkflowSection from "./WorkflowSection";
 import WorkflowTabBar from "./WorkflowTabBar";
 
@@ -23,6 +24,8 @@ export type WorkflowDetailSkeletonVariant = "flow" | "congViec" | "keHoach";
 type VariantConfig = {
   /** Số nút LUÔN có ở thanh nút — nút theo quyền chưa biết thì không vẽ. */
   actionWidths: number[];
+  /** Dải Bình luận · Đính kèm ở đáy thẻ đầu — nhãn biết trước, vẽ thật. */
+  heroLinks?: WorkflowHeroLink[];
   tabs?: string[];
   /** Khối vẽ riêng dưới phần field động (tiêu đề + icon biết trước). */
   sections?: { title: string; icon: string }[];
@@ -31,11 +34,16 @@ type VariantConfig = {
 const NGUOI_THAM_GIA = { title: "Người tham gia", icon: "people-outline" };
 
 // Bám đúng phần chắc chắn có của từng màn: Flow luôn có Quy trình · Bình luận ·
-// Đính kèm; Công việc luôn có Bình luận · File; Kế hoạch chỉ chủ trì mới có nút.
+// Đính kèm; Công việc luôn có dải Bình luận · Đính kèm trong thẻ đầu, còn nút
+// thì theo quyền; Kế hoạch chỉ chủ trì mới có nút.
 const VARIANTS: Record<WorkflowDetailSkeletonVariant, VariantConfig> = {
   flow: { actionWidths: [92, 112, 104] },
   congViec: {
-    actionWidths: [112, 76],
+    actionWidths: [],
+    heroLinks: [
+      { key: "binhLuan", icon: "chatbubble-ellipses-outline", label: "Bình luận" },
+      { key: "file", icon: "attach-outline", label: "Đính kèm" },
+    ],
     tabs: ["Thông tin", "Lịch sử"],
     sections: [NGUOI_THAM_GIA],
   },
@@ -83,7 +91,7 @@ export default function WorkflowDetailSkeleton({
       {variant === "keHoach" ? (
         <KeHoachHero opacity={opacity} />
       ) : (
-        <DefaultHero variant={variant} opacity={opacity} />
+        <DefaultHero variant={variant} opacity={opacity} links={config.heroLinks} />
       )}
 
       {config.actionWidths.length ? (
@@ -122,9 +130,11 @@ export default function WorkflowDetailSkeleton({
 function DefaultHero({
   variant,
   opacity,
+  links,
 }: {
   variant: "flow" | "congViec";
   opacity: Opacity;
+  links?: WorkflowHeroLink[];
 }) {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
@@ -144,6 +154,7 @@ function DefaultHero({
           <SkeletonBlock opacity={opacity} style={[styles.line, index ? styles.w44 : styles.w60]} />
         </View>
       ))}
+      {links ? <WorkflowHeroLinks links={links} /> : null}
     </View>
   );
 }

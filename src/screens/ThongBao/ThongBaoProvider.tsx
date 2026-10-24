@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AppState } from "react-native";
 
-import { navigateFromRef, navigationRef } from "../../navigation/navigationService";
+import { navigationRef, pushScreensFromRef } from "../../navigation/navigationService";
 import { thongBaoDaDoc, thongBaoGetList } from "../../services/data/thongBaoApi";
 import {
   claimThongBaoToast,
@@ -14,7 +14,7 @@ import { reconnectTraoDoiIfNeeded, subscribeThongBao } from "../../services/real
 import type { ThongBaoItem } from "../../types/index";
 import { warn } from "../../utils/Logger";
 import ThongBaoToast from "./ThongBaoToast";
-import { resolveThongBaoTarget } from "./thongBaoRules";
+import { getThongBaoScreens, resolveThongBaoTarget } from "./thongBaoRules";
 
 type ThongBaoContextValue = {
   /** Số chưa đọc của mọi nhóm — số trên chuông. */
@@ -27,7 +27,11 @@ type ThongBaoContextValue = {
    * Danh sách đang hiện tự đổi dòng đó sang đã đọc.
    */
   openThongBao: (item: ThongBaoItem) => void;
-  /** Bảng chuông đang mở — không hiện toast trùng với dòng vừa chèn. */
+  /**
+   * Bảng chuông đang mở. Bảng nằm trên cụm tab, DƯỚI các màn mở từ nó (chi
+   * tiết, bình luận): back hết là thấy lại bảng y như lúc bấm.
+   */
+  bellOpen: boolean;
   setBellOpen: (open: boolean) => void;
 };
 
@@ -43,6 +47,7 @@ const ThongBaoContext = createContext<ThongBaoContextValue | null>(null);
 export function ThongBaoProvider({ children }: React.PropsWithChildren) {
   const [soChuaDoc, setSoChuaDocState] = useState(0);
   const [toast, setToast] = useState<ThongBaoItem | null>(null);
+  const [bellOpen, setBellOpenState] = useState(false);
   const requestRef = useRef(0);
   const bellOpenRef = useRef(false);
 
@@ -78,14 +83,16 @@ export function ThongBaoProvider({ children }: React.PropsWithChildren) {
       }
 
       // Màn đích tự báo "Không tìm thấy" khi đã xoá / hết quyền xem (mục 4).
+      // Chồng lên chỗ đang đứng: back hết là về đúng chỗ đã bấm.
       const target = resolveThongBaoTarget(item);
-      if (target) navigateFromRef(target.route, target.params);
+      if (target) pushScreensFromRef(getThongBaoScreens(target));
     },
     [setSoChuaDoc],
   );
 
   const setBellOpen = useCallback((open: boolean) => {
     bellOpenRef.current = open;
+    setBellOpenState(open);
     if (open) setToast(null);
   }, []);
 
@@ -93,12 +100,12 @@ export function ThongBaoProvider({ children }: React.PropsWithChildren) {
     refreshSoChuaDoc();
 
     // 1 toast mỗi thông báo: hub và push foreground có thể cùng tới. Đang xem
-    // danh sách thì dòng mới đã chèn lên đầu — khỏi toast.
+    // danh sách thì dòng mới đã chèn lên đầu — khỏi toast. Bảng chuông chỉ hiện
+    // khi Trang chủ ở trên cùng (màn chồng lên che mất bảng).
     const showToast = (item: ThongBaoItem) => {
       if (!claimThongBaoToast(item.id)) return;
-      const onList =
-        bellOpenRef.current ||
-        (navigationRef.isReady() && navigationRef.getCurrentRoute()?.name === "ThongBao");
+      const route = navigationRef.isReady() ? navigationRef.getCurrentRoute()?.name : undefined;
+      const onList = (bellOpenRef.current && route === "Home") || route === "ThongBao";
       if (!onList) setToast(item);
     };
 
@@ -143,8 +150,8 @@ export function ThongBaoProvider({ children }: React.PropsWithChildren) {
   }, [refreshSoChuaDoc, setSoChuaDoc]);
 
   const value = useMemo(
-    () => ({ soChuaDoc, setSoChuaDoc, refreshSoChuaDoc, openThongBao, setBellOpen }),
-    [openThongBao, refreshSoChuaDoc, setBellOpen, setSoChuaDoc, soChuaDoc],
+    () => ({ soChuaDoc, setSoChuaDoc, refreshSoChuaDoc, openThongBao, bellOpen, setBellOpen }),
+    [bellOpen, openThongBao, refreshSoChuaDoc, setBellOpen, setSoChuaDoc, soChuaDoc],
   );
 
   return (

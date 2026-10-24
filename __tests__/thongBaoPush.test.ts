@@ -57,6 +57,11 @@ describe("push THONG_BAO", () => {
     // Thiếu khoá theo nhóm thì lấy iD_DoiTuong; thiếu cả hai thì không mở gì.
     expect(buildThongBaoPushTarget({ nhom: "Flow", tenBang: "Ticket_PhongBan", iD_DoiTuong: "9" })?.params.id).toBe(9);
     expect(buildThongBaoPushTarget({ nhom: "CongViec", tenBang: "CV_CongViec" })).toBeNull();
+    // Push bình luận mở thẳng màn Bình luận như bấm trong chuông.
+    expect(
+      buildThongBaoPushTarget({ nhom: "Flow", loai: "BinhLuan", tenBang: "Ticket_PhongBan", iD_HoSo: "21" })
+        ?.binhLuan,
+    ).toEqual({ apiBase: "Ticket_PhongBan", idHoSo: 21, canSend: true });
   });
 
   it("số chưa đọc: 0 hợp lệ, thiếu / sai là null", () => {

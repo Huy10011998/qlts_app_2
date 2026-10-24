@@ -1,3 +1,5 @@
+import { pushScreensFromRef } from "../../navigation/navigationService";
+import { getThongBaoScreens } from "../../screens/ThongBao/thongBaoRules";
 import { thongBaoDaDoc } from "../data/thongBaoApi";
 import { log, warn } from "../../utils/Logger";
 import {
@@ -49,7 +51,12 @@ const isAlreadyHandled = (payload: PushTapPayload) =>
  */
 const resolveTapTarget = (
   data: Record<string, string>,
-): { route: string; params?: Record<string, unknown> } | null => {
+): {
+  route: string;
+  params?: Record<string, unknown>;
+  /** Push bình luận: chồng màn Bình luận lên chi tiết. */
+  binhLuan?: Record<string, unknown>;
+} | null => {
   if (isCameraAiPush(data)) {
     const params = buildCameraAiParams(data);
     return params ? { route: CAMERA_AI_ROUTE, params } : null;
@@ -86,7 +93,10 @@ const routePendingTap = (): boolean => {
     return true;
   }
 
-  const navigated = navigateToPushRoute(target.route, target.params);
+  // Push chuông: chồng màn như bấm trong chuông (back hết về chỗ đang đứng).
+  const navigated = isThongBaoPush(payload.data)
+    ? pushScreensFromRef(getThongBaoScreens(target))
+    : navigateToPushRoute(target.route, target.params);
 
   if (!navigated) {
     // Navigation chưa sẵn sàng — giữ pendingTap để drain lại lần sau.

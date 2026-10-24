@@ -26,9 +26,13 @@ import type {
 import { AppColors, useAppColors, useStyles } from "../../../utils/helpers/colors";
 import { elevation } from "../../../utils/helpers/tokens";
 import StatusBadge from "../shared/components/StatusBadge";
+import WorkflowActionToolbar, {
+  WorkflowToolbarAction,
+} from "../shared/components/WorkflowActionToolbar";
 import WorkflowButton from "../shared/components/WorkflowButton";
 import WorkflowDetailFields from "../shared/components/WorkflowDetailFields";
 import WorkflowDetailSkeleton from "../shared/components/WorkflowDetailSkeleton";
+import WorkflowHeroLinks from "../shared/components/WorkflowHeroLinks";
 import WorkflowSection from "../shared/components/WorkflowSection";
 import WorkflowTabBar from "../shared/components/WorkflowTabBar";
 import { useWorkflowFileOpener } from "../shared/useWorkflowFileOpener";
@@ -143,7 +147,7 @@ export default function CongViecDetailScreen() {
   // Im lặng: bật vòng xoay bằng code lúc quay lại màn làm iOS kẹt một khoảng trống.
   useReloadOnWorkflowChange(() => load("silent"));
 
-  // Đóng màn Bình luận / Đính kèm → số trên 2 nút.
+  // Đóng màn Bình luận / Đính kèm → số trên dải đáy thẻ đầu.
   useOnWorkflowInfoStale((apiBase) => {
     if (apiBase !== CV_CONG_VIEC_NAME_CLASS) return;
     cvThongTin([id])
@@ -221,6 +225,51 @@ export default function CongViecDetailScreen() {
   const hanBanDau = parseBeDate(congViec.hanBanDau);
   const daGiaHan = !!hanBanDau && !!denNgay && hanBanDau.getTime() !== denNgay.getTime();
 
+  const toolbarActions: WorkflowToolbarAction[] = [];
+  if (actions.sua) {
+    toolbarActions.push({
+      key: "sua",
+      icon: "create-outline",
+      label: "Sửa",
+      onPress: () => navigation.navigate("CongViecForm", { mode: "edit", id }),
+    });
+  }
+  if (actions.giaHan) {
+    toolbarActions.push({
+      key: "giaHan",
+      icon: "time-outline",
+      label: "Gia hạn",
+      onPress: () => setSheet("giaHan"),
+    });
+  }
+  if (actions.doiChuTri) {
+    toolbarActions.push({
+      key: "doiChuTri",
+      icon: "swap-horizontal-outline",
+      label: "Đổi chủ trì",
+      onPress: () => setSheet("doiChuTri"),
+    });
+  }
+  if (canInsert) {
+    // Mục 4b: chép sang form THÊM (không chép file, lịch sử, bình luận, định kỳ cũ).
+    toolbarActions.push({
+      key: "nhanBan",
+      icon: "copy-outline",
+      label: "Nhân bản",
+      onPress: () => navigation.navigate("CongViecForm", { mode: "add", cloneId: id }),
+    });
+  }
+  if (actions.xoa) {
+    toolbarActions.push({
+      key: "xoa",
+      icon: "trash-outline",
+      label: "Xoá",
+      tone: "danger",
+      loading: deleting,
+      onPress: confirmDelete,
+    });
+  }
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -275,93 +324,49 @@ export default function CongViecDetailScreen() {
           {isReadOnly ? (
             <Text style={styles.readOnly}>Bạn đang xem ở chế độ chỉ xem.</Text>
           ) : null}
+
+          <WorkflowHeroLinks
+            links={[
+              {
+                key: "binhLuan",
+                icon: "chatbubble-ellipses-outline",
+                label: "Bình luận",
+                count: info?.soBinhLuan ?? 0,
+                onPress: () =>
+                  navigation.navigate("WorkflowBinhLuan", {
+                    apiBase: CV_CONG_VIEC_NAME_CLASS,
+                    idHoSo: id,
+                    canSend: actions.traoDoi,
+                    titleHeader: congViec.soCongViec ?? undefined,
+                  }),
+              },
+              {
+                key: "file",
+                icon: "attach-outline",
+                label: "Đính kèm",
+                count: info?.soFile ?? 0,
+                onPress: () =>
+                  navigation.navigate("WorkflowFile", {
+                    apiBase: CV_CONG_VIEC_NAME_CLASS,
+                    idHoSo: id,
+                    canEdit: actions.traoDoi,
+                    titleHeader: congViec.soCongViec ?? undefined,
+                  }),
+              },
+            ]}
+          />
         </View>
 
-        <View style={styles.actions}>
+        {/* Việc làm nhiều nhất: một hàng riêng, cỡ chữ nào cũng không rớt dòng. */}
+        {actions.chuyenTrangThai ? (
           <WorkflowButton
-            compact
-            variant="outline"
-            icon="chatbubble-ellipses-outline"
-            label={`Bình luận (${info?.soBinhLuan ?? 0})`}
-            onPress={() =>
-              navigation.navigate("WorkflowBinhLuan", {
-                apiBase: CV_CONG_VIEC_NAME_CLASS,
-                idHoSo: id,
-                canSend: actions.traoDoi,
-                titleHeader: congViec.soCongViec ?? undefined,
-              })
-            }
+            icon="swap-vertical-outline"
+            label="Chuyển trạng thái"
+            onPress={() => setSheet("trangThai")}
+            style={styles.primaryAction}
           />
-          <WorkflowButton
-            compact
-            variant="outline"
-            icon="attach-outline"
-            label={`File (${info?.soFile ?? 0})`}
-            onPress={() =>
-              navigation.navigate("WorkflowFile", {
-                apiBase: CV_CONG_VIEC_NAME_CLASS,
-                idHoSo: id,
-                canEdit: actions.traoDoi,
-                titleHeader: congViec.soCongViec ?? undefined,
-              })
-            }
-          />
-          {actions.chuyenTrangThai ? (
-            <WorkflowButton
-              compact
-              icon="swap-vertical-outline"
-              label="Chuyển trạng thái"
-              onPress={() => setSheet("trangThai")}
-            />
-          ) : null}
-          {actions.sua ? (
-            <WorkflowButton
-              compact
-              variant="neutral"
-              icon="create-outline"
-              label="Sửa"
-              onPress={() => navigation.navigate("CongViecForm", { mode: "edit", id })}
-            />
-          ) : null}
-          {actions.giaHan ? (
-            <WorkflowButton
-              compact
-              variant="neutral"
-              icon="time-outline"
-              label="Gia hạn"
-              onPress={() => setSheet("giaHan")}
-            />
-          ) : null}
-          {actions.doiChuTri ? (
-            <WorkflowButton
-              compact
-              variant="neutral"
-              icon="swap-horizontal-outline"
-              label="Đổi chủ trì"
-              onPress={() => setSheet("doiChuTri")}
-            />
-          ) : null}
-          {canInsert ? (
-            // Mục 4b: chép sang form THÊM (không chép file, lịch sử, bình luận, định kỳ cũ).
-            <WorkflowButton
-              compact
-              variant="neutral"
-              icon="copy-outline"
-              label="Nhân bản"
-              onPress={() => navigation.navigate("CongViecForm", { mode: "add", cloneId: id })}
-            />
-          ) : null}
-          {actions.xoa ? (
-            <WorkflowButton
-              compact
-              variant="neutral"
-              icon="trash-outline"
-              label="Xoá"
-              loading={deleting}
-              onPress={confirmDelete}
-            />
-          ) : null}
-        </View>
+        ) : null}
+        <WorkflowActionToolbar actions={toolbarActions} />
 
         <WorkflowTabBar
           embedded
@@ -509,11 +514,8 @@ const makeStyles = (c: AppColors) =>
       color: c.textSub,
       fontStyle: "italic",
     },
-    actions: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: 6,
-      marginBottom: 2,
+    primaryAction: {
+      marginBottom: 8,
     },
     roleGroup: {
       marginBottom: 10,

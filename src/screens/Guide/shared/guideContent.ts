@@ -287,10 +287,11 @@ const TOPICS: GuideTopic[] = [
             kind: "bullets",
             items: [
               "Có thông báo khi: phiếu chờ bạn duyệt hoặc gửi bạn để biết; phiếu bạn lập hoàn tất, bị từ chối, bị trả bước hoặc có bình luận; bạn được giao việc hay đổi vai trò; việc chuyển trạng thái, được gia hạn, có bình luận, sắp tới hạn (trong 24 giờ) hoặc vừa quá hạn; bạn được thêm vào kế hoạch, kế hoạch bạn chủ trì có việc mới.",
-              "Thông báo chưa đọc có nền xanh nhạt, tiêu đề đậm và chấm xanh bên phải. Bấm một thông báo để đánh dấu đã đọc và mở luôn phiếu, công việc hoặc kế hoạch đó.",
+              "Thông báo chưa đọc có nền xanh nhạt, tiêu đề đậm và chấm xanh bên phải. Bấm một thông báo để đánh dấu đã đọc và mở luôn phiếu, công việc hoặc kế hoạch đó. Thông báo có bình luận mới thì mở thẳng màn Bình luận; bấm quay lại một lần là tới chi tiết phiếu / việc.",
+              "Màn mở từ thông báo chồng lên chỗ bạn đang đứng, quay lại hết là về đúng chỗ cũ. Mở từ bảng chuông thì quay về vẫn thấy bảng, danh sách và chỗ đang cuộn còn nguyên để bấm tiếp thông báo khác. Đang xem một việc mà bấm thông báo của việc khác thì việc mới mở chồng lên, quay lại là về việc đang xem dở.",
               "Ở màn Thông báo, hàng tab trên cùng lọc theo Phiếu / Công việc / Kế hoạch; bật Chỉ chưa đọc để ẩn thông báo đã xem. Đánh dấu tất cả đã đọc (có ở cả bảng chuông) đưa số trên chuông về 0.",
               "Đang mở app thì thông báo mới hiện ngay (trễ vài giây): một khung nhỏ nổi trên đầu màn hình, bấm vào để mở luôn. Đọc ở máy khác hay trên web thì số trên chuông cũng giảm theo.",
-              "App tắt hoặc đang chạy nền thì thông báo hiện trên điện thoại như tin nhắn. Bấm vào để mở luôn phiếu, việc hoặc kế hoạch đó, và thông báo được tính là đã đọc. Đọc trong app thì thông báo đó cũng tự biến khỏi danh sách thông báo của điện thoại.",
+              "App tắt hoặc đang chạy nền thì thông báo hiện trên điện thoại như tin nhắn. Bấm vào để mở luôn phiếu, việc hoặc kế hoạch đó (thông báo bình luận thì mở màn Bình luận), và thông báo được tính là đã đọc. Đọc trong app thì thông báo đó cũng tự biến khỏi danh sách thông báo của điện thoại.",
               "Số trên biểu tượng app ở màn hình chính bằng số trên chuông. iPhone luôn hiện đúng số này. Android thì điện thoại tự đếm các thông báo đang nằm trong danh sách thông báo, nên app thêm một dòng Thông báo chưa đọc để bù cho đủ số. Bấm Xoá danh sách thông báo thì biểu tượng hết số, chỉ đếm lại từ thông báo mới; đọc hết thông báo thì dòng đó mới hiện lại khi có thông báo chưa đọc. Một số máy Android (như Pixel) chỉ hiện chấm, không hiện số.",
               "Việc do chính bạn làm không tạo thông báo cho bạn. Thông báo đã đọc quá 180 ngày sẽ tự xoá.",
             ],
@@ -921,7 +922,7 @@ const TOPICS: GuideTopic[] = [
             kind: "image",
             source: require("../../../assets/images/guide/phieu-de-nghi-01.png"),
             caption: "Màn Workflow: số nhắc dưới tên từng chức năng",
-            aspectRatio: 0.78,
+            aspectRatio: 0.75,
           },
           {
             kind: "paragraph",
@@ -1093,7 +1094,7 @@ const TOPICS: GuideTopic[] = [
             kind: "image",
             source: require("../../../assets/images/guide/phieu-de-nghi-04.png"),
             caption: "Lượt duyệt cuối của loại có giao việc: chọn Duyệt hoặc Tạo công việc",
-            aspectRatio: 0.99,
+            aspectRatio: 1.07,
           },
           {
             kind: "note",
@@ -1232,7 +1233,7 @@ const TOPICS: GuideTopic[] = [
             kind: "image",
             source: require("../../../assets/images/guide/cong-viec-01.png"),
             caption: "Hàng tab theo hạn, hàng chip màu để lọc; viền trái thẻ cùng màu với chip (đỏ là quá hạn)",
-            aspectRatio: 0.54,
+            aspectRatio: 0.72,
           },
         ],
       },
@@ -1305,13 +1306,19 @@ const TOPICS: GuideTopic[] = [
             text: "Mở một việc để vào màn Chi tiết công việc. Các nút ở đây tuỳ vai trò của bạn trong việc:",
           },
           {
+            kind: "image",
+            source: require("../../../assets/images/guide/cong-viec-04.png"),
+            caption: "Bình luận · Đính kèm ở đáy thẻ đầu, nút đỏ Chuyển trạng thái, rồi hàng nút Sửa · Gia hạn · Đổi chủ trì · Nhân bản",
+            aspectRatio: 0.79,
+          },
+          {
             kind: "bullets",
             items: [
-              "Chuyển trạng thái: chọn Mới, Đang xử lý, Hoàn thành hoặc Hủy; ghi chú tiến độ, gắn File kết quả. Hủy bắt buộc ghi lý do.",
+              "Chuyển trạng thái (nút đỏ ngay dưới thẻ đầu): chọn Mới, Đang xử lý, Hoàn thành hoặc Hủy; ghi chú tiến độ, gắn File kết quả. Ô Hủy tô đỏ và bắt buộc ghi lý do.",
               "Gia hạn: chọn Hạn mới và ghi lý do. Việc đã gia hạn hiện thêm dòng Hạn ban đầu.",
               "Đổi chủ trì: chọn chủ trì mới và ghi lý do bàn giao.",
-              "Sửa, Xoá: Xoá chỉ có khi việc còn Mới, do bạn tạo và không sinh từ phiếu.",
-              "Bình luận (n), File (n): trao đổi và gửi file trong việc. Không có quyền trao đổi thì màn bình luận ghi Bạn chỉ xem được bình luận.",
+              "Sửa, Nhân bản, Xoá: Nhân bản tạo việc mới lấy sẵn nội dung việc đang xem. Xoá chỉ có khi việc còn Mới, do bạn tạo và không sinh từ phiếu.",
+              "Bình luận, Đính kèm (dải dưới cùng của thẻ đầu, kèm số lượng): trao đổi và gửi file trong việc. Không có quyền trao đổi thì màn bình luận ghi Bạn chỉ xem được bình luận.",
             ],
           },
           {

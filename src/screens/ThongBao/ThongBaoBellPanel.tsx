@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Animated,
+  BackHandler,
   FlatList,
-  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -11,7 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { navigateFromRef } from "../../navigation/navigationService";
+import { navigateFromRef, navigationRef } from "../../navigation/navigationService";
 import { thongBaoDaDoc, thongBaoGetList } from "../../services/data/thongBaoApi";
 import { subscribeThongBao } from "../../services/realtime/traoDoiHub";
 import type { ThongBaoItem } from "../../types/index";
@@ -24,23 +25,33 @@ import { useThongBaoContext } from "./ThongBaoProvider";
 import { BELL_PAGE_SIZE, markThongBaoRead, prependThongBao } from "./thongBaoRules";
 import { AppAlert } from "../../components/ui/AppAlert";
 
-type Props = {
-  visible: boolean;
-  onClose: () => void;
-};
-
-/** `maxHeight` của bảng, phần trăm chiều cao cửa sổ (Modal phủ kín màn). */
+/** `maxHeight` của bảng, phần trăm chiều cao cụm tab (phủ kín màn). */
 const PANEL_MAX_PERCENT = 72;
+const FADE_MS = 200;
 
 /**
  * Bảng thả xuống khi bấm chuông (mục 1): 20 thông báo mới nhất, "Đánh dấu tất
  * cả đã đọc", "Xem tất cả" mở màn Thông báo phân trang.
+ *
+ * Không dùng Modal (Modal luôn đè lên mọi màn): bảng là lớp phủ nằm trên cụm
+ * tab (`Tabs.tsx`), dưới các màn của stack gốc. Bấm 1 thông báo thì chi tiết /
+ * bình luận chồng lên trên, bảng vẫn mở bên dưới — back về là thấy ngay, giữ
+ * nguyên danh sách + chỗ cuộn, không mở lại.
  */
-export default function ThongBaoBellPanel({ visible, onClose }: Props) {
+export default function ThongBaoBellPanel() {
   const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
-  const { soChuaDoc, setSoChuaDoc, openThongBao, setBellOpen } = useThongBaoContext();
+  const {
+    soChuaDoc,
+    setSoChuaDoc,
+    openThongBao,
+    bellOpen: visible,
+    setBellOpen,
+  } = useThongBaoContext();
+  // Còn trên màn trong lúc mờ dần đi; mờ hẳn mới gỡ (lần mở sau cuộn từ đầu).
+  const [shown, setShown] = useState(visible);
+  const opacity = useRef(new Animated.Value(0)).current;
 
   const [items, setItems] = useState<ThongBaoItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -65,25 +76,44 @@ export default function ThongBaoBellPanel({ visible, onClose }: Props) {
     }
   }, [setSoChuaDoc]);
 
+  const close = useCallback(() => setBellOpen(false), [setBellOpen]);
+
   useEffect(() => {
-    setBellOpen(visible);
+    if (visible) setShown(true);
+    Animated.timing(opacity, {
+      toValue: visible ? 1 : 0,
+      duration: FADE_MS,
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished && !visible) setShown(false);
+    });
+  }, [opacity, visible]);
+
+  useEffect(() => {
     if (!visible) return;
 
     load();
+    // Nghe cả lúc đang ở chi tiết (bảng nằm dưới): back về danh sách đã mới.
     const unsubscribe = subscribeThongBao({
       onThongBaoMoi: (thongBao) =>
         setItems((prev) => prependThongBao(prev, thongBao).slice(0, BELL_PAGE_SIZE)),
       onReconnected: load,
     });
+    // Android back: đóng bảng như Modal cũ — trừ khi có màn chồng lên (back của màn đó).
+    const backSubscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (navigationRef.getCurrentRoute()?.name !== "Home") return false;
+      close();
+      return true;
+    });
     return () => {
       unsubscribe();
-      setBellOpen(false);
+      backSubscription.remove();
     };
-  }, [load, setBellOpen, visible]);
+  }, [close, load, visible]);
 
+  // Bảng vẫn mở bên dưới chi tiết vừa mở.
   const open = (item: ThongBaoItem) => {
     setItems((prev) => markThongBaoRead(prev, [item.id]));
-    onClose();
     openThongBao(item);
   };
 
@@ -101,7 +131,7 @@ export default function ThongBaoBellPanel({ visible, onClose }: Props) {
   };
 
   /*
-   * Lần mở đầu (bảng nằm sẵn trong HeaderHome, mở lại thì danh sách cũ vẫn còn
+   * Lần mở đầu (bảng nằm sẵn trên cụm tab, mở lại thì danh sách cũ vẫn còn
    * nên không tới đây): vòng xoay cũ chỉ cao ~76 rồi bảng giãn vọt tới trần 72%
    * khi 20 dòng về. BE trả 20 thông báo mới nhất bất kể đã đọc, nên thường là
    * đầy bảng — dựng đủ dòng để chạm trần ngay từ đầu; dòng thừa bị danh sách
@@ -133,9 +163,15 @@ export default function ThongBaoBellPanel({ visible, onClose }: Props) {
     );
   };
 
+  if (!visible && !shown) return null;
+
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Đóng thông báo" />
+    <Animated.View
+      style={[StyleSheet.absoluteFill, { opacity }]}
+      pointerEvents={visible ? "auto" : "none"}
+      accessibilityViewIsModal={visible}
+    >
+      <Pressable style={styles.backdrop} onPress={close} accessibilityLabel="Đóng thông báo" />
       <View style={[styles.panel, { top: insets.top + 54 }]}>
         <View style={styles.header}>
           <Text style={styles.heading}>
@@ -163,7 +199,7 @@ export default function ThongBaoBellPanel({ visible, onClose }: Props) {
         <TouchableOpacity
           style={styles.footer}
           onPress={() => {
-            onClose();
+            close();
             navigateFromRef("ThongBao");
           }}
           accessibilityRole="button"
@@ -173,7 +209,7 @@ export default function ThongBaoBellPanel({ visible, onClose }: Props) {
           </Text>
         </TouchableOpacity>
       </View>
-    </Modal>
+    </Animated.View>
   );
 }
 

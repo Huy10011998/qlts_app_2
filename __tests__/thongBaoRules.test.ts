@@ -4,6 +4,7 @@ import {
   getThongBaoStyle,
   markThongBaoRead,
   prependThongBao,
+  getThongBaoScreens,
   resolveThongBaoTarget,
 } from "../src/screens/ThongBao/thongBaoRules";
 import type { ThongBaoItem } from "../src/types/index";
@@ -27,6 +28,37 @@ describe("resolveThongBaoTarget", () => {
       route: "FlowChiTiet",
       params: { nameClass: "Ticket_PhongBan", id: 86 },
     });
+  });
+
+  it("bình luận phiếu / công việc → chi tiết + chồng màn Bình luận", () => {
+    expect(
+      resolveThongBaoTarget({ tenBang: "Ticket_PhongBan", iD_DoiTuong: 5, loai: "BinhLuan" }),
+    ).toEqual({
+      route: "FlowChiTiet",
+      params: { nameClass: "Ticket_PhongBan", id: 5 },
+      binhLuan: { apiBase: "Ticket_PhongBan", idHoSo: 5, canSend: true },
+    });
+    // Công việc: quyền gửi để màn bình luận tự hỏi cv-thong-tin.
+    expect(
+      resolveThongBaoTarget({ tenBang: "CV_CongViec", iD_DoiTuong: 8, loai: "BinhLuan" }),
+    ).toEqual({
+      route: "CongViecChiTiet",
+      params: { id: 8 },
+      binhLuan: { apiBase: "CV_CongViec", idHoSo: 8 },
+    });
+    expect(
+      resolveThongBaoTarget({ tenBang: "CV_CongViec", iD_DoiTuong: 8, loai: "QuaHan" })?.binhLuan,
+    ).toBeUndefined();
+  });
+
+  it("dãy màn chồng khi bấm: chi tiết, rồi Bình luận nếu có", () => {
+    const binhLuan = resolveThongBaoTarget({ tenBang: "CV_CongViec", iD_DoiTuong: 8, loai: "BinhLuan" })!;
+    expect(getThongBaoScreens(binhLuan)).toEqual([
+      { route: "CongViecChiTiet", params: { id: 8 } },
+      { route: "WorkflowBinhLuan", params: { apiBase: "CV_CongViec", idHoSo: 8 } },
+    ]);
+    const giao = resolveThongBaoTarget({ tenBang: "CV_CongViec", iD_DoiTuong: 8, loai: "Giao" })!;
+    expect(getThongBaoScreens(giao)).toEqual([{ route: "CongViecChiTiet", params: { id: 8 } }]);
   });
 
   it("thiếu tenBang / id → không mở gì", () => {

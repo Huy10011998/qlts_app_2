@@ -1,4 +1,4 @@
-import type { ThongBaoItem, ThongBaoNhom } from "../../types/index";
+import type { ThongBaoItem, ThongBaoNhom, WorkflowCommentsParams } from "../../types/index";
 import { addDays, formatDay, formatTime, isSameDay, parseBeDate } from "../Workflow/shared/workflowDate";
 
 /**
@@ -75,28 +75,56 @@ export const formatThongBaoTime = (raw: unknown, now = new Date()) => {
   return `${formatDay(date)} ${formatTime(date)}`;
 };
 
-export type ThongBaoTarget =
+export type ThongBaoTarget = (
   | { route: "CongViecChiTiet"; params: { id: number } }
   | { route: "KeHoachChiTiet"; params: { id: number } }
-  | { route: "FlowChiTiet"; params: { nameClass: string; id: number } };
+  | { route: "FlowChiTiet"; params: { nameClass: string; id: number } }
+) & {
+  /** Thông báo bình luận: chồng màn Bình luận lên chi tiết — back là về chi tiết. */
+  binhLuan?: WorkflowCommentsParams;
+};
 
-/** Bấm 1 thông báo mở đâu (mục 4): theo tenBang + iD_DoiTuong. */
+/**
+ * Bấm 1 thông báo mở đâu (mục 4): theo tenBang + iD_DoiTuong. Loại "BinhLuan"
+ * của phiếu / công việc mở thẳng bình luận, chi tiết nằm ngay dưới.
+ */
 export const resolveThongBaoTarget = (
-  item: Pick<ThongBaoItem, "tenBang" | "iD_DoiTuong">,
+  item: Pick<ThongBaoItem, "tenBang" | "iD_DoiTuong"> & Partial<Pick<ThongBaoItem, "loai">>,
 ): ThongBaoTarget | null => {
   const id = Number(item.iD_DoiTuong);
   const tenBang = item.tenBang?.trim();
   if (!tenBang || !id) return null;
+  const binhLuan = item.loai === "BinhLuan";
 
   if (tenBang.toLowerCase() === "cv_congviec") {
-    return { route: "CongViecChiTiet", params: { id } };
+    return {
+      route: "CongViecChiTiet",
+      params: { id },
+      // = CV_CONG_VIEC_NAME_CLASS (file luật không kéo httpClient vào). Không
+      // truyền canSend: màn bình luận tự hỏi cv-thong-tin (duocTraoDoi).
+      ...(binhLuan && { binhLuan: { apiBase: "CV_CongViec", idHoSo: id } }),
+    };
   }
   if (tenBang.toLowerCase() === "cv_kehoach") {
     return { route: "KeHoachChiTiet", params: { id } };
   }
-  // Bảng khác = phiếu: màn phiếu Name = tenBang.
-  return { route: "FlowChiTiet", params: { nameClass: tenBang, id } };
+  // Bảng khác = phiếu: màn phiếu Name = tenBang. Ai xem được phiếu thì bình luận được.
+  return {
+    route: "FlowChiTiet",
+    params: { nameClass: tenBang, id },
+    ...(binhLuan && { binhLuan: { apiBase: tenBang, idHoSo: id, canSend: true } }),
+  };
 };
+
+/** Các màn chồng lần lượt khi bấm thông báo: chi tiết, rồi Bình luận nếu có. */
+export const getThongBaoScreens = (target: {
+  route: string;
+  params?: Record<string, unknown>;
+  binhLuan?: Record<string, unknown>;
+}) => [
+  { route: target.route, params: target.params },
+  ...(target.binhLuan ? [{ route: "WorkflowBinhLuan", params: target.binhLuan }] : []),
+];
 
 /** Chuông = 20 mới nhất; "Xem tất cả" = 20 / trang (mục 1). */
 export const BELL_PAGE_SIZE = 20;

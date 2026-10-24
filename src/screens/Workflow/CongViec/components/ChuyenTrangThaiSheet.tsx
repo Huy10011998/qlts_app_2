@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-import { useThemePreference } from "../../../../context/ThemeContext";
 import { cvChuyenTrangThai, cvTaiFileLichSu } from "../../../../services/data/congViecApi";
 import { getThaoTacError } from "../../../../services/data/workflowApi";
 import type { WorkflowPickedFile } from "../../../../types/index";
@@ -13,6 +12,9 @@ import WorkflowTextArea from "../../shared/components/WorkflowTextArea";
 import { CV_TRANG_THAI, CV_TRANG_THAI_HUY, tint } from "../../shared/workflowConstants";
 import { getWorkflowErrorMessage } from "../../shared/workflowErrors";
 import { AppAlert } from "../../../../components/ui/AppAlert";
+
+/** Đỏ cùng tông Material với 3 nút còn lại (như màu Quá hạn). */
+const HUY_BUTTON_COLOR = "#e53935";
 
 type Props = {
   visible: boolean;
@@ -36,7 +38,6 @@ export default function ChuyenTrangThaiSheet({
   onDone,
 }: Props) {
   const styles = useStyles(makeStyles);
-  const dark = useThemePreference().resolvedColorScheme === "dark";
   const [selected, setSelected] = useState(trangThai);
   const [ghiChu, setGhiChu] = useState("");
   const [files, setFiles] = useState<WorkflowPickedFile[]>([]);
@@ -133,11 +134,10 @@ export default function ChuyenTrangThaiSheet({
       <View style={styles.statusGrid}>
         {CV_TRANG_THAI.map((option) => {
           const active = option.value === selected;
-          // Hủy: xám nhạt của web chữ trắng hay chữ xám trên nền trắng đều không
-          // đọc được — nút dùng màu chữ đậm (`textColor`) làm màu chính. Nền tối
-          // thì chữ xám nhạt lại rõ hơn.
-          const fill = option.textColor ?? option.color;
-          const textColor = active ? "#FFFFFF" : dark ? option.color : fill;
+          // Nút Hủy tô đỏ cho rõ là thao tác bỏ việc; nhãn / chấm trạng thái Hủy ở
+          // chỗ khác vẫn xám như web.
+          const fill = option.value === CV_TRANG_THAI_HUY ? HUY_BUTTON_COLOR : option.color;
+          const textColor = active ? "#FFFFFF" : fill;
           return (
             <TouchableOpacity
               key={option.value}
