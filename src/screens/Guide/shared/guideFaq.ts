@@ -180,7 +180,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
           items: [
             "Đăng nhập bằng tài khoản và mật khẩu.",
             "Vào tab Cài đặt → Tài khoản → bật Đăng nhập FaceID (iPhone) hoặc Đăng nhập bằng vân tay / khuôn mặt / khoá màn hình (Android) rồi xác thực khi máy hỏi.",
-            "Lần sau mở app: iPhone tự hỏi Face ID ở màn Đăng nhập (lỡ bỏ qua thì bấm nút Face ID); máy Android bấm nút vân tay / khuôn mặt / khoá màn hình cạnh nút Đăng nhập.",
+            "Lần sau mở app: máy tự hỏi Face ID (iPhone) hoặc vân tay / khuôn mặt / khoá màn hình (Android). Lỡ bỏ qua thì bấm nút cạnh nút Đăng nhập.",
           ],
         },
       ],

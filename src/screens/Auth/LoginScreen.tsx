@@ -266,10 +266,8 @@ export default function LoginScreen() {
         return;
       }
       setIsFaceIdEnabled(true);
-      // Android: thấy màn Đăng nhập trước rồi tự chọn bấm icon hay gõ mật
-      // khẩu. Hộp hỏi có khoá màn hình còn không có nút "Dùng mật khẩu".
-      if (Platform.OS === "android") return;
-      // Tự hỏi Face ID chỉ khi còn phiên để khôi phục — cùng điều kiện
+      // Hai nền tảng cùng tự hỏi ngay lúc còn splash: qua là vào thẳng, không
+      // thấy màn Đăng nhập. Tự hỏi chỉ khi còn phiên để khôi phục — cùng điều kiện
       // `handleFaceIDLogin` dùng. Đăng xuất chủ động thì `logout()` đã xoá cả
       // cờ Face ID lẫn token; hết phiên (EXPIRED) thì token cũng đã bị xoá —
       // cả hai trường hợp đều không tự bật Face ID lên nữa.
@@ -612,7 +610,7 @@ export default function LoginScreen() {
       handleFaceIDLoginRef.current();
     };
 
-    // Face ID không hiện được khi app chưa ở foreground (vd mở nền do push) —
+    // Hộp hỏi không hiện được khi app chưa ở foreground (vd mở nền do push) —
     // đợi tới lần app active đầu tiên rồi mới hỏi.
     if (AppState.currentState === "active") {
       prompt();

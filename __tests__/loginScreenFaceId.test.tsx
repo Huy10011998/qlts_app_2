@@ -307,8 +307,9 @@ describe("LoginScreen – vân tay Android", () => {
     const tree = await render();
     await press(buttonLabelled(tree, "Đăng nhập bằng khoá màn hình"));
 
-    expect(authenticate).toHaveBeenCalledTimes(1);
-    expect(authenticate.mock.calls[0][0]).toMatchObject({
+    // Lần 1 tự hỏi lúc mở, lần 2 do bấm nút.
+    expect(authenticate).toHaveBeenCalledTimes(2);
+    expect(authenticate.mock.calls[1][0]).toMatchObject({
       biometric: false,
       deviceLock: true,
     });
@@ -417,7 +418,8 @@ describe("LoginScreen – vân tay Android", () => {
     expect(mockCheckServerReachability).not.toHaveBeenCalled();
   });
 
-  it("đã bật và còn phiên thì không tự hỏi, bấm icon mới hỏi", async () => {
+  it("đã bật và còn phiên thì tự hỏi một lần như iOS, huỷ thì bấm icon hỏi lại", async () => {
+    mockCheckServerReachability.mockResolvedValue({ canReachServer: true });
     setup({
       faceIdEnabled: true,
       tokens: { token: "access", refreshToken: "refresh" },
@@ -428,10 +430,22 @@ describe("LoginScreen – vân tay Android", () => {
 
     expect(button).toBeTruthy();
     expect(StyleSheet.flatten(button.props.style)?.opacity ?? 1).toBe(1);
-    expect(mockCheckServerReachability).not.toHaveBeenCalled();
+    expect(authenticate).toHaveBeenCalledTimes(1);
 
     await press(button);
-    expect(mockCheckServerReachability).toHaveBeenCalledTimes(1);
+    expect(authenticate).toHaveBeenCalledTimes(2);
+  });
+
+  it("không tự hỏi khi không còn token", async () => {
+    setup({
+      faceIdEnabled: true,
+      tokens: { token: null, refreshToken: null },
+    });
+
+    await render();
+
+    expect(mockCheckServerReachability).not.toHaveBeenCalled();
+    expect(authenticate).not.toHaveBeenCalled();
   });
 });
 

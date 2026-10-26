@@ -125,9 +125,9 @@ const TOPICS: GuideTopic[] = [
           {
             kind: "steps",
             items: [
-              "Mở lại app (sau khi vuốt tắt app hoặc khởi động lại máy). App dừng ở màn Đăng nhập, không tự hiện hộp hỏi.",
-              "Bấm nút cạnh nút Đăng nhập: hình vân tay (hình khuôn mặt nếu máy chỉ có khuôn mặt), hoặc hình mẫu hình nếu chỉ bật khoá màn hình.",
-              "Chạm vân tay, nhìn vào màn hình, hoặc vẽ mẫu hình / nhập mã PIN. Đúng là vào app.",
+              "Mở lại app (sau khi vuốt tắt app hoặc khởi động lại máy). Máy tự hỏi ngay lúc còn màn hình chờ, giống Face ID trên iPhone.",
+              "Chạm vân tay, nhìn vào màn hình, hoặc vẽ mẫu hình / nhập mã PIN. Đúng là vào thẳng app, không qua màn Đăng nhập.",
+              "Lỡ đóng hộp hỏi hoặc xác thực không được thì app dừng ở màn Đăng nhập. Bấm nút cạnh nút Đăng nhập để hỏi lại: hình vân tay (hình khuôn mặt nếu máy chỉ có khuôn mặt), hoặc hình mẫu hình nếu chỉ bật khoá màn hình.",
             ],
           },
           {
