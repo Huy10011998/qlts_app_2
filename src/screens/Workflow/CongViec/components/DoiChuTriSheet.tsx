@@ -12,6 +12,7 @@ import WorkflowSheet, { confirmCloseSheet } from "../../shared/components/Workfl
 import WorkflowTextArea from "../../shared/components/WorkflowTextArea";
 import { getWorkflowErrorMessage } from "../../shared/workflowErrors";
 import { AppAlert } from "../../../../components/ui/AppAlert";
+import { showAppToast } from "../../../../components/ui/AppToast";
 
 type Props = {
   visible: boolean;
@@ -93,6 +94,10 @@ export default function DoiChuTriSheet({
         AppAlert.alert("Không đổi được chủ trì", loi);
         return;
       }
+      showAppToast({
+        message: "Đã đổi chủ trì",
+        detail: selected ? `Chủ trì mới: ${selected.ten}` : undefined,
+      });
       onDone();
     } catch (err) {
       AppAlert.alert("Không đổi được chủ trì", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
@@ -101,8 +106,8 @@ export default function DoiChuTriSheet({
     }
   };
 
-  // Ghi chú đã gõ mà chạm nhầm ra nền tối là mất — sheet hỏi trước khi đóng.
-  const dirty = !!ghiChu.trim();
+  // Người mới đã chọn / ghi chú đã gõ mà chạm nhầm ra nền tối là mất — sheet hỏi trước khi đóng.
+  const dirty = !!selectedId || !!ghiChu.trim();
 
   return (
     <WorkflowSheet
@@ -120,7 +125,14 @@ export default function DoiChuTriSheet({
             flex
             onPress={() => confirmCloseSheet(dirty, onClose)}
           />
-          <WorkflowButton label="Đổi chủ trì" icon="swap-horizontal" flex onPress={submit} />
+          <WorkflowButton
+            label="Đổi chủ trì"
+            icon="swap-horizontal"
+            flex
+            // Chưa chọn người mới thì chưa có gì để đổi.
+            disabled={!selectedId}
+            onPress={submit}
+          />
         </>
       }
       overlay={

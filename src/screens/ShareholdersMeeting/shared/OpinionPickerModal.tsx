@@ -111,7 +111,7 @@ export default function OpinionPickerModal({
           <MaterialCommunityIcons
             name={isSelected ? "radiobox-marked" : "radiobox-blank"}
             size={22}
-            color={isSelected ? c.accent : c.textMuted}
+            color={isSelected ? c.red : c.textMuted}
           />
         </TouchableOpacity>
       );
@@ -221,8 +221,8 @@ const makeStyles = (c: AppColors) =>
       borderColor: c.border,
     },
     itemActive: {
-      borderColor: c.accent,
-      backgroundColor: c.accentLight,
+      borderColor: c.red,
+      backgroundColor: c.redSurface,
     },
     itemTextWrap: { flex: 1, paddingRight: 12 },
     itemTitle: {
@@ -230,7 +230,7 @@ const makeStyles = (c: AppColors) =>
       fontSize: 13,
       fontWeight: "700",
     },
-    itemTitleActive: { color: c.accent },
+    itemTitleActive: { color: c.red },
     itemDesc: {
       color: c.textSecondary,
       fontSize: 12,

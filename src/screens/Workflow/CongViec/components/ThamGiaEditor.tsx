@@ -19,6 +19,10 @@ type Props = {
    * Để biết (4-Mobile-CongViec mục 4 — gửi Chủ trì khác thì server từ chối).
    */
   lockChuTri?: boolean;
+  /** Danh sách chọn đang tải / tải hỏng: bảng chọn hiện chờ hoặc lỗi + Thử lại. */
+  employeesLoading?: boolean;
+  employeesError?: string | null;
+  onRetryEmployees?: () => void;
 };
 
 /**
@@ -32,6 +36,9 @@ export default function ThamGiaEditor({
   fallbackNames,
   error,
   lockChuTri = false,
+  employeesLoading = false,
+  employeesError,
+  onRetryEmployees,
 }: Props) {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
@@ -115,6 +122,9 @@ export default function ThamGiaEditor({
         excludeIds={value
           .filter((item) => item.VaiTro !== pickingRole)
           .map((item) => item.ID_NhanVien)}
+        loading={employeesLoading && !employees.length}
+        errorMessage={employeesError}
+        onRetry={onRetryEmployees}
         onClose={() => setPickingRole(null)}
         onConfirm={(ids) => {
           if (pickingRole != null) replaceRole(pickingRole, ids);

@@ -147,8 +147,29 @@ describe("khung chờ tab Chức năng", () => {
   it("ba nhóm cố định, viền theo màu nhóm như màn thật", async () => {
     const tree = await mount(<FeaturesScreenSkeleton />);
 
-    expect(textsOf(tree)).toEqual(["Tiện ích", "Phương tiện", "Báo cáo"]);
+    // Chỉ lấy chữ: icon trong nhãn nhóm cũng dựng ra một Text (ký tự glyph).
+    expect(textsOf(tree).filter((text) => /\p{L}/u.test(text))).toEqual([
+      "TIỆN ÍCH",
+      "PHƯƠNG TIỆN",
+      "BÁO CÁO",
+    ]);
     expect(topAccentsOf(tree.root)).toEqual(["#E31E24", "#0EA5E9", "#7C3AED"]);
+  });
+
+  it("nhóm user đã gập chỉ còn dòng nhãn, nhãn nào cũng có mũi tên như thật", async () => {
+    const tree = await mount(
+      <FeaturesScreenSkeleton collapsedGroups={["vehicle"]} />,
+    );
+    const titles = tree.root.findAllByType(HomeSectionTitle);
+
+    expect(titles.map((node) => node.props.showChevron)).toEqual([
+      true,
+      true,
+      true,
+    ]);
+    expect(textsOf(tree)).toContain("Đã thu gọn");
+    // Còn thẻ của Tiện ích và Báo cáo, Phương tiện không còn thẻ.
+    expect(topAccentsOf(tree.root)).toEqual(["#E31E24", "#7C3AED"]);
   });
 });
 
@@ -156,7 +177,7 @@ describe("khung chờ Cài đặt", () => {
   // Thẻ nhóm dựng bằng chính `SettingSectionGroup`: viền đỏ cho 5 nhóm, hồng cho
   // Đăng xuất — đúng `accent` màn thật truyền.
   it("hai thẻ mang đúng màu viền của màn thật", async () => {
-    const tree = await mount(<SettingScreenSkeleton safeTop={0} />);
+    const tree = await mount(<SettingScreenSkeleton />);
 
     expect(topAccentsOf(tree.root)).toEqual([C.red, C.rose]);
   });

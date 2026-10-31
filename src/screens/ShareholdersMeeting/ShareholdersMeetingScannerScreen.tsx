@@ -42,13 +42,29 @@ import QrScannerGateView from "../../components/qrcode/shared/QrScannerGateView"
 import QrScannerViewportOverlay from "../../components/qrcode/shared/QrScannerViewportOverlay";
 import useQrScannerController from "../../components/qrcode/shared/useQrScannerController";
 import {
+  getScanConfirmMessage,
+  getScanSuccessMessage,
   mapShareholderItem,
   VOTING_CHOICE_LABEL_MAP,
   VOTING_CHOICE_VALUE_MAP,
 } from "./shared/shareholdersMeetingHelpers";
+import type { VotingChoice } from "./shared/shareholdersMeetingHelpers";
 import { useAutoReload } from "../../hooks/useAutoReload";
 import { isNetworkRequestError } from "../../utils/helpers/api";
 import { AppAlert } from "../../components/ui/AppAlert";
+
+/**
+ * Dải "Đang ghi" trên camera ở chế độ lấy ý kiến: màu + icon theo phân loại để
+ * người quét không ghi nhầm. Nền camera luôn tối nên màu cố định, không theo
+ * giao diện sáng / tối.
+ */
+type VotingModeStyle = { color: string; icon: string };
+
+const VOTING_MODE_STYLE: Record<VotingChoice, VotingModeStyle> = {
+  agree: { color: "#059669", icon: "thumbs-up" },
+  disagree: { color: "#E31E24", icon: "thumbs-down" },
+  noOpinion: { color: "#64748B", icon: "remove-circle" },
+};
 
 type AttendanceActionResponse = {
   message?: string;
@@ -107,6 +123,10 @@ export default function ShareholdersMeetingScannerScreen() {
       : can(DHCD_DIEM_DANH_NAME_CLASS, "Insert");
 
   const expectedQrPrefix = useMemo(() => "DaiHoiCoDong_CoDong", []);
+  const modeStyle =
+    scanMode === "voting" && votingChoice
+      ? VOTING_MODE_STYLE[votingChoice]
+      : null;
 
   const reloadShareholders = useCallback(async () => {
     const shareholderRes = await getCodongDhcd<ShareholderListResponse>(
@@ -227,7 +247,7 @@ export default function ShareholdersMeetingScannerScreen() {
       if (shareholder.isLock) {
         AppAlert.alert(
           "Cổ đông đã khóa",
-          `Cổ đông ${shareholder.shareholderId} đã khóa, bạn chỉ có thể xem thông tin.`,
+          `Cổ đông ${shareholder.name} (${shareholder.shareholderId}) đã khóa, bạn chỉ có thể xem thông tin.`,
           [
             {
               text: "OK",
@@ -241,7 +261,7 @@ export default function ShareholdersMeetingScannerScreen() {
       if (scanMode === "voting" && shareholder.status !== "present") {
         AppAlert.alert(
           "Chưa điểm danh",
-          `Cổ đông ${shareholder.shareholderId} chưa điểm danh nên chưa thể lấy ý kiến.`,
+          `Cổ đông ${shareholder.name} (${shareholder.shareholderId}) chưa điểm danh nên chưa thể lấy ý kiến.`,
           [
             {
               text: "OK",
@@ -269,14 +289,13 @@ export default function ShareholdersMeetingScannerScreen() {
         scanMode === "attendance"
           ? "Xác nhận điểm danh"
           : "Xác nhận lấy ý kiến";
-      const confirmMessage =
-        scanMode === "attendance"
-          ? `Xác nhận điểm danh cổ đông ${shareholder.shareholderId}?`
-          : `Ghi nhận "${votingOpinionTitle || "ý kiến đã chọn"}" cho cổ đông ${
-              shareholder.shareholderId
-            } với phân loại "${
-              votingChoice ? VOTING_CHOICE_LABEL_MAP[votingChoice] : ""
-            }"?`;
+      const messageInput = {
+        choice: votingChoice,
+        opinionTitle: votingOpinionTitle,
+        scanMode,
+        shareholder,
+      };
+      const confirmMessage = getScanConfirmMessage(messageInput);
 
       AppAlert.alert(confirmTitle, confirmMessage, [
         {
@@ -319,7 +338,7 @@ export default function ShareholdersMeetingScannerScreen() {
                 reloadShareholders();
                 AppAlert.alert(
                   "Điểm danh thành công",
-                  `Cổ đông ${shareholder.shareholderId} đã được điểm danh.`,
+                  getScanSuccessMessage(messageInput),
                   [
                     {
                       text: "OK",
@@ -349,11 +368,7 @@ export default function ShareholdersMeetingScannerScreen() {
 
               AppAlert.alert(
                 "Ghi nhận thành công",
-                `Đã lưu "${votingOpinionTitle || "ý kiến"}" cho cổ đông ${
-                  shareholder.shareholderId
-                } với phân loại "${
-                  votingChoice ? VOTING_CHOICE_LABEL_MAP[votingChoice] : ""
-                }".`,
+                getScanSuccessMessage(messageInput),
                 [
                   {
                     text: "OK",
@@ -449,8 +464,8 @@ export default function ShareholdersMeetingScannerScreen() {
         </TouchableOpacity>
 
         <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>
-            Quét mã QR
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            {scanMode === "voting" ? "Quét QR ghi ý kiến" : "Quét QR điểm danh"}
           </Text>
         </View>
 
@@ -470,6 +485,28 @@ export default function ShareholdersMeetingScannerScreen() {
       </View>
 
       <QrScannerViewportOverlay scanLineAnim={scanLineAnim} />
+      {/* Vẽ sau lớp che tối của khung quét để dải màu không bị phủ mờ. */}
+      {modeStyle && votingChoice ? (
+        <View
+          pointerEvents="none"
+          style={[
+            styles.modeBanner,
+            { top: insets.top + 56, backgroundColor: modeStyle.color },
+          ]}
+        >
+          <Ionicons name={modeStyle.icon} size={26} color="#fff" />
+          <View style={styles.modeTextWrap}>
+            <Text style={styles.modeChoice} numberOfLines={1}>
+              Đang ghi: {VOTING_CHOICE_LABEL_MAP[votingChoice].toUpperCase()}
+            </Text>
+            {votingOpinionTitle ? (
+              <Text style={styles.modeOpinion} numberOfLines={2}>
+                {votingOpinionTitle}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -506,5 +543,29 @@ const styles = StyleSheet.create({
   headerRight: {
     width: 38,
     alignItems: "flex-end",
+  },
+  modeBanner: {
+    position: "absolute",
+    left: 16,
+    right: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+  },
+  modeTextWrap: { flex: 1, minWidth: 0 },
+  modeChoice: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+  },
+  modeOpinion: {
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 13,
+    fontWeight: "600",
+    marginTop: 2,
   },
 });

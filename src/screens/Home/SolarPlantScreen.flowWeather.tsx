@@ -64,7 +64,27 @@ export type SceneFrame = {
   /** Lề trái khi cảnh bị chặn bề ngang (tablet); cảnh kéo dài trời sang hai bên. */
   insetX: number;
   scale: number;
+  /**
+   * Màn rộng hơn cảnh (tablet): cụm trái (vòng Nhà máy, tường bên nhà xưởng)
+   * dời sang trái, cụm phải (vòng lưới, cột điện, thời tiết) dời sang phải bấy
+   * nhiêu đơn vị ảnh mẫu; tường bên và dây điện dài ra cho liền. Điện thoại: 0.
+   */
+  spread: number;
 };
+
+/**
+ * Toạ độ x ảnh mẫu sau khi giãn ngang (`SceneFrame.spread`): bên trái nhà xưởng
+ * dời trái, từ mép phải nhà xưởng trở ra dời phải, khúc giữa đứng yên.
+ */
+export const spreadX = (x: number, spread: number) =>
+  x < 400 ? x - spread : x > 752 ? x + spread : x;
+
+/** Đổi mọi cặp "x,y" trong `d` của path / `points` của polygon theo `mapX`. */
+export const mapCoordsX = (text: string, mapX: (x: number) => number) =>
+  text.replace(
+    /(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/g,
+    (_, x: string, y: string) => `${mapX(Number(x))},${y}`,
+  );
 
 /** Mép trái và bề ngang vùng nhìn thấy, theo toạ độ ảnh mẫu. */
 const visibleRange = (frame: SceneFrame) => {
@@ -212,11 +232,35 @@ export const getSkyPalette = ({ isNight, kind }: SkyScene): SkyPalette => {
 const SUN_X = 806;
 const SUN_Y = 128;
 
+const LEFT_HILL =
+  "M-4000,677 L-5,677 C20,669 45,665 75,664 C130,662 200,672 262,714 L262,1007 L-4000,1007 Z";
+const LEFT_GROUND =
+  "M-4000,958 L-5,958 C30,948 70,940 110,933 L110,1010 L-4000,1010 Z";
+const RIGHT_HILL =
+  "M742,814 C750,803 768,790 790,784 C800,778 812,775 830,773 C842,768 852,760 862,748 C880,725 920,705 960,698 C1000,690 1030,676 1060,671 C1090,666 1110,672 1130,678 C1155,686 1172,698 1190,712 L5200,712 L5200,1007 L742,1007 Z";
+const RIGHT_GROUND =
+  "M742,900 C790,890 845,892 880,912 C905,926 930,945 958,946 C990,944 1010,926 1040,912 C1090,893 1140,878 1190,868 L5200,868 L5200,1010 L742,1010 Z";
+
+/**
+ * Đồi và đất bên phải khi giãn ngang: chân sát nhà xưởng (742) đứng yên, từ
+ * chỗ trũng dưới cột điện (958) trở ra dời theo cột điện, khúc giữa kéo dài —
+ * sườn đồi thoải ra chứ không hở trời giữa nhà xưởng và đồi.
+ */
+const stretchRightX = (x: number, spread: number) => {
+  if (x <= 742) return x;
+  if (x >= 958) return x + spread;
+  return 742 + ((x - 742) * (216 + spread)) / 216;
+};
+
 export const SkyBackdrop: React.FC<{ frame: SceneFrame; scene: SkyScene }> = ({
   frame,
   scene,
 }) => {
   const palette = getSkyPalette(scene);
+  const { spread } = frame;
+  const sunX = SUN_X + spread;
+  const shiftLeft = (x: number) => x - spread;
+  const stretchRight = (x: number) => stretchRightX(x, spread);
 
   return (
     <Svg
@@ -233,7 +277,7 @@ export const SkyBackdrop: React.FC<{ frame: SceneFrame; scene: SkyScene }> = ({
         </LinearGradient>
         <RadialGradient
           id="skySunGlow"
-          cx={SUN_X}
+          cx={sunX}
           cy={SUN_Y}
           r={320}
           gradientUnits="userSpaceOnUse"
@@ -279,22 +323,16 @@ export const SkyBackdrop: React.FC<{ frame: SceneFrame; scene: SkyScene }> = ({
         fill="url(#skyFill)"
       />
       {palette.sunGlow > 0 && !scene.isNight ? (
-        <Circle cx={SUN_X} cy={SUN_Y} r={320} fill="url(#skySunGlow)" />
+        <Circle cx={sunX} cy={SUN_Y} r={320} fill="url(#skySunGlow)" />
       ) : null}
+      <Path d={mapCoordsX(LEFT_HILL, shiftLeft)} fill={palette.hill} />
+      <Path d={mapCoordsX(RIGHT_HILL, stretchRight)} fill={palette.hill} />
       <Path
-        d="M-4000,677 L-5,677 C20,669 45,665 75,664 C130,662 200,672 262,714 L262,1007 L-4000,1007 Z"
-        fill={palette.hill}
-      />
-      <Path
-        d="M742,814 C750,803 768,790 790,784 C800,778 812,775 830,773 C842,768 852,760 862,748 C880,725 920,705 960,698 C1000,690 1030,676 1060,671 C1090,666 1110,672 1130,678 C1155,686 1172,698 1190,712 L5200,712 L5200,1007 L742,1007 Z"
-        fill={palette.hill}
-      />
-      <Path
-        d="M742,900 C790,890 845,892 880,912 C905,926 930,945 958,946 C990,944 1010,926 1040,912 C1090,893 1140,878 1190,868 L5200,868 L5200,1010 L742,1010 Z"
+        d={mapCoordsX(RIGHT_GROUND, stretchRight)}
         fill="url(#skyGroundRight)"
       />
       <Path
-        d="M-4000,958 L-5,958 C30,948 70,940 110,933 L110,1010 L-4000,1010 Z"
+        d={mapCoordsX(LEFT_GROUND, shiftLeft)}
         fill="url(#skyGroundLeft)"
       />
     </Svg>
@@ -445,7 +483,7 @@ export const WeatherGlyph: React.FC<{ scene: SkyScene }> = ({ scene }) => {
  * View), nên mưa rơi, mây trôi không làm React vẽ lại cảnh SVG. `phase` cho
  * vòng đầu bắt đầu giữa chừng để các đám mây không cùng xuất phát một lúc.
  */
-const useLoop = (enabled: boolean, duration: number, phase = 0) => {
+export const useLoop = (enabled: boolean, duration: number, phase = 0) => {
   const value = useRef(new Animated.Value(phase)).current;
 
   useEffect(() => {
@@ -787,6 +825,8 @@ const DriftingCloud: React.FC<{
 /** Ba vệt nắng chéo từ góc trên phải, mờ tỏ chậm. */
 const SunBeams: React.FC<{ frame: SceneFrame }> = ({ frame }) => {
   const progress = useLoop(true, 7000);
+  const x = (value: number) => spreadX(value, frame.spread);
+  const sun = `${x(SUN_X)},${SUN_Y}`;
 
   return (
     <Animated.View
@@ -809,9 +849,9 @@ const SunBeams: React.FC<{ frame: SceneFrame }> = ({ frame }) => {
         <Defs>
           <LinearGradient
             id="sunBeam"
-            x1={SUN_X}
+            x1={x(SUN_X)}
             y1={SUN_Y}
-            x2={200}
+            x2={x(200)}
             y2={900}
             gradientUnits="userSpaceOnUse"
           >
@@ -821,13 +861,11 @@ const SunBeams: React.FC<{ frame: SceneFrame }> = ({ frame }) => {
         </Defs>
         <G fill="url(#sunBeam)">
           <Polygon
-            points={`${SUN_X},${SUN_Y} 760,${SUN_Y + 40} 120,820 260,900`}
+            points={`${sun} ${x(760)},${SUN_Y + 40} ${x(120)},820 ${x(260)},900`}
           />
+          <Polygon points={`${sun} ${x(790)},${SUN_Y + 60} 430,1007 560,1007`} />
           <Polygon
-            points={`${SUN_X},${SUN_Y} 790,${SUN_Y + 60} 430,1007 560,1007`}
-          />
-          <Polygon
-            points={`${SUN_X},${SUN_Y} 770,${SUN_Y + 30} -200,560 -80,660`}
+            points={`${sun} ${x(770)},${SUN_Y + 30} ${x(-200)},560 ${x(-80)},660`}
           />
         </G>
       </Svg>
@@ -847,6 +885,13 @@ const PANEL_SPARKLES = [
 
 const SPARKLE_SIZE = 44;
 
+/**
+ * Mái nghiêng (106 → góc mái 537) dài ra về bên trái khi giãn ngang: chỗ lấp
+ * lánh trên đó rải đều theo, không dồn về một đầu.
+ */
+const sparkleX = (x: number, spread: number) =>
+  x >= 537 ? x : 537 - ((537 - x) * (431 + spread)) / 431;
+
 /** Tấm pin loé sáng lần lượt — nắng đang chiếu lên dàn pin. */
 const PanelSparkles: React.FC<{ frame: SceneFrame }> = ({ frame }) => {
   const progress = useLoop(true, 4200);
@@ -854,11 +899,12 @@ const PanelSparkles: React.FC<{ frame: SceneFrame }> = ({ frame }) => {
 
   return (
     <>
-      {PANEL_SPARKLES.map(([x, y], index) => {
+      {PANEL_SPARKLES.map(([sampleX, y], index) => {
+        const x = sparkleX(sampleX, frame.spread);
         const peak = (index + 0.5) / PANEL_SPARKLES.length;
         return (
           <Animated.View
-            key={`${x}-${y}`}
+            key={`${sampleX}-${y}`}
             pointerEvents="none"
             style={[
               styles.layer,
@@ -1095,7 +1141,7 @@ export const WeatherScene: React.FC<{
                 viewBox={sceneViewBox(frame)}
               >
                 <Polygon
-                  points={points}
+                  points={mapCoordsX(points, (x) => spreadX(x, frame.spread))}
                   fill="#FFF6C4"
                   stroke="#FFFFFF"
                   strokeOpacity={0.6}

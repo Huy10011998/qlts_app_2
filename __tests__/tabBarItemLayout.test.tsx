@@ -1,11 +1,12 @@
 import React from "react";
-import { StyleSheet, TouchableOpacity } from "react-native";
+import { Image, StyleSheet, Text, TouchableOpacity } from "react-native";
 import ReactTestRenderer from "react-test-renderer";
+import Ionicons from "react-native-vector-icons/Ionicons";
 
 import { ThemeProvider } from "../src/context/ThemeContext";
 import { createTabBarButton } from "../src/navigation/shared/TabBarItemButton";
 import ScanTabButton from "../src/navigation/shared/ScanTabButton";
-import { Rect } from "react-native-svg";
+import { Circle, Rect } from "react-native-svg";
 
 import { TAB_ACTIVE_COLOR } from "../src/navigation/shared/tabBarTheme";
 
@@ -69,79 +70,100 @@ describe("layout ô tab khi navigator xếp nhãn cạnh icon", () => {
     expect(rootStyle(tree).flexDirection).toBe("column");
   });
 
-  /**
-   * Vạch active luôn có mặt trong luồng layout và chỉ đổi màu: kiểu cũ chỉ render
-   * khi active bằng một lớp `position: absolute` phủ lên đỉnh ô tab, và trên
-   * Android có máy chỉ thấy vạch ở một ô tab.
-   */
-  const findIndicator = (tree: ReactTestRenderer.ReactTestRenderer) =>
-    tree.root.findAll((node) => {
-      if (typeof node.type !== "string") return false;
-      const style = StyleSheet.flatten(node.props?.style) as any;
+  const iconNames = (tree: ReactTestRenderer.ReactTestRenderer) =>
+    tree.root.findAllByType(Ionicons).map((node) => node.props.name);
 
-      return style?.height === 3 && style?.width === 48;
-    });
-
-  it("ô tab nào cũng có chỗ cho vạch active, kể cả khi không active", async () => {
-    const tree = await mount(<HomeButton {...({} as any)} />);
-    const [indicator] = findIndicator(tree);
-
-    expect(indicator).toBeDefined();
-    expect(
-      (StyleSheet.flatten(indicator.props.style) as any).backgroundColor,
-    ).toBe("transparent");
-    expect(
-      (StyleSheet.flatten(indicator.props.style) as any).position,
-    ).toBeUndefined();
-  });
-
-  /**
-   * Nền đỏ sau icon phải là hình SVG bo góc, không phải `backgroundColor` +
-   * `borderRadius` của View: trên Android đường đó không cho ra góc bo nên ô đỏ
-   * ra hình vuông trong khi iOS bo bình thường.
-   */
-  it("nền ô icon khi active là hình bo góc vẽ bằng SVG", async () => {
+  // Kiểu Facebook bản mới: chỉ có icon, tab đang chọn icon đầy màu nhấn trên
+  // nền nhạt bo tròn. Nền vẽ bằng SVG — View bo góc trên thanh tab Android từng
+  // ra hình vuông.
+  it("tab đang chọn: icon đầy màu nhấn trên nền bo tròn vẽ bằng SVG", async () => {
     const tree = await mount(
       <HomeButton {...({ "aria-selected": true } as any)} />,
     );
+    const [iconNode] = tree.root.findAllByType(Ionicons);
     const rects = tree.root.findAllByType(Rect);
 
+    expect(iconNode.props.name).toBe("home");
+    expect(iconNode.props.color).toBe(TAB_ACTIVE_COLOR);
     expect(rects).toHaveLength(1);
     expect(rects[0].props.rx).toBeGreaterThan(0);
-    expect(rects[0].props.fill).toBe(TAB_ACTIVE_COLOR);
-
-    const tile = tree.root.findAll((node) => {
-      if (typeof node.type !== "string") return false;
-      const style = StyleSheet.flatten(node.props?.style) as any;
-
-      return style?.width === 32 && style?.height === 32;
-    });
-
-    // Không còn ô View nào tự tô nền: chỉ SVG vẽ hình.
-    expect(
-      tile.map(
-        (node) =>
-          (StyleSheet.flatten(node.props.style) as any).backgroundColor,
-      ),
-    ).not.toContain(TAB_ACTIVE_COLOR);
   });
 
-  it("ô tab không active thì không vẽ nền ô icon", async () => {
+  it("tab không chọn: icon dạng viền, không có nền", async () => {
     const tree = await mount(<HomeButton {...({} as any)} />);
 
+    expect(iconNames(tree)).toEqual(["home-outline"]);
     expect(tree.root.findAllByType(Rect)).toHaveLength(0);
   });
 
-  it("ô tab đang active thì vạch tô màu nhấn", async () => {
-    const tree = await mount(
-      <HomeButton
-        {...({ style: TABLET_ITEM_STYLE, "aria-selected": true } as any)}
-      />,
-    );
-    const [indicator] = findIndicator(tree);
+  // Không có chữ trên thanh tab nên tên tab chỉ còn ở nhãn trợ năng.
+  it("không hiện chữ nhưng giữ tên tab cho trình đọc màn hình", async () => {
+    const tree = await mount(<HomeButton {...({} as any)} />);
+    const texts = tree.root
+      .findAllByType(Text)
+      .flatMap((node) => node.props.children);
 
-    expect(
-      (StyleSheet.flatten(indicator.props.style) as any).backgroundColor,
-    ).toBe(TAB_ACTIVE_COLOR);
+    expect(texts).not.toContain("Trang chủ");
+    expect(tree.root.findByType(TouchableOpacity).props["aria-label"]).toBe(
+      "Trang chủ",
+    );
+  });
+
+  describe("số đỏ trên icon", () => {
+    const makeButton = (badgeCount: number) =>
+      createTabBarButton(
+        { label: "Lịch", icon: "calendar", iconOutline: "calendar-outline" },
+        () => ({ badgeCount }),
+      );
+
+    it("hiện số, quá 99 thì ghi 99+", async () => {
+      const LichButton = makeButton(120);
+      const tree = await mount(<LichButton {...({} as any)} />);
+      const texts = tree.root
+        .findAllByType(Text)
+        .map((node) => node.props.children);
+
+      expect(texts).toContain("99+");
+    });
+
+    // `{0 ? … : null}` thì an toàn, nhưng `{0 && …}` sẽ in chữ "0" ra thanh tab.
+    it("0 thì không hiện", async () => {
+      const LichButton = makeButton(0);
+      const tree = await mount(<LichButton {...({} as any)} />);
+      const texts = tree.root
+        .findAllByType(Text)
+        .flatMap((node) => node.props.children);
+
+      expect(texts).not.toContain(0);
+      expect(texts).not.toContain("0");
+    });
+  });
+
+  describe("ảnh đại diện thay icon", () => {
+    const SettingButton = createTabBarButton(
+      { label: "Cài đặt", icon: "settings", iconOutline: "settings-outline" },
+      () => ({ avatarUrl: "https://example.com/a.jpg" }),
+    );
+
+    it("có ảnh thì không hiện bánh răng, đang chọn thì có vòng đỏ", async () => {
+      const tree = await mount(
+        <SettingButton {...({ "aria-selected": true } as any)} />,
+      );
+
+      expect(tree.root.findAllByType(Image)).toHaveLength(1);
+      expect(iconNames(tree)).toEqual([]);
+      expect(tree.root.findByType(Circle).props.stroke).toBe(TAB_ACTIVE_COLOR);
+    });
+
+    it("ảnh lỗi thì quay về bánh răng", async () => {
+      const tree = await mount(<SettingButton {...({} as any)} />);
+
+      await ReactTestRenderer.act(async () => {
+        tree.root.findByType(Image).props.onError();
+      });
+
+      expect(tree.root.findAllByType(Image)).toHaveLength(0);
+      expect(iconNames(tree)).toEqual(["settings-outline"]);
+    });
   });
 });

@@ -99,6 +99,7 @@ export const makeStyles = (c: AppColors) =>
       paddingVertical: 18,
     },
     toolBtn: { alignItems: "center", justifyContent: "center" },
+    toolBtnDisabled: { opacity: 0.35 },
     divider: {
       height: StyleSheet.hairlineWidth,
       backgroundColor: c.border,

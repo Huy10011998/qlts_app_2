@@ -76,17 +76,6 @@ export type OptionalParams = {
 export type ScanTabParamList = {
   /** Tên route thật trong `ScanStack` là "Scan" — đừng đổi, đã có nơi navigate tới. */
   Scan: undefined;
-
-  QrDetails: {
-    id: string;
-    titleHeader?: string;
-    nameClass?: string;
-    field?: AssetField;
-    propertyClass?: PropertyClass;
-    itemData?: AssetItem;
-    /** Xem chú thích ở `AssetDetails.activeTab`. */
-    activeTab?: string;
-  };
 };
 
 export type HomeTabParamList = {
@@ -230,6 +219,8 @@ export type RootStackParamList = {
      * trống là 16. Người dùng vẫn đổi được bằng nút chọn bố cục.
      */
     layoutCount?: number;
+    /** Mở từ noti camera — lần bấm noti sau thay màn này thay vì chồng thêm. */
+    fromPush?: boolean;
   };
   CameraPlayback: {
     camera: CameraRouteItem;
@@ -333,10 +324,13 @@ export type RootStackParamList = {
   ScanTab: NavigatorScreenParams<ScanTabParamList>;
 
   /**
-   * Nhánh quét đặt ở stack gốc, dùng khi mở máy quét từ một màn ngoài tab (ví
-   * dụ nút quét trên header màn danh sách tài sản). Trùng tên với route trong
-   * ScanTab là có ý: `navigate` tìm trong navigator hiện tại trước, nên mỗi
-   * nhánh tự dẫn trong nhánh của mình và back trả về đúng chỗ đã mở.
+   * Máy quét đặt ở stack gốc, dùng khi mở từ một màn ngoài tab (ví dụ nút quét
+   * trên header màn danh sách tài sản); đẩy lên trên màn đang xem nên back trả
+   * về đúng chỗ đã mở.
+   *
+   * `QrDetails`/`QrReview` chỉ có ở đây, cho cả máy quét này lẫn máy quét trong
+   * `ScanTab` (`navigate` từ tab không thấy route trong `ScanStack` nên đi lên
+   * stack gốc): màn mở ra phủ cả thanh tab như mọi màn chi tiết khác.
    */
   QrScan: undefined;
 
@@ -522,7 +516,7 @@ export type AssetCloneItemNavigationProp = StackNavigation<"AssetCloneItem">;
 /** ================= QR ================= */
 export type ScanTabNavigationProp = NativeStackNavigationProp<ScanTabParamList>;
 
-export type QrDetailsRouteProp = RouteProp<ScanTabParamList, "QrDetails">;
+export type QrDetailsRouteProp = RouteProp<RootStackParamList, "QrDetails">;
 
 export type QrReviewNavigationProp = StackNavigation<"QrReview">;
 export type QrReviewRouteProp = StackRoute<"QrReview">;

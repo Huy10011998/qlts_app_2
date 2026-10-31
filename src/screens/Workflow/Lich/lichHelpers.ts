@@ -9,13 +9,14 @@ import {
   startOfDay,
   toBeDate,
 } from "../shared/workflowDate";
+import { isCongViecChuaXong } from "../shared/workflowConstants";
 
 /**
  * Tính toán của lịch công việc (6-Mobile-Lich-CongViec). Tuần bắt đầu thứ Hai;
  * khoảng [Từ, Đến) là đúng những ngày ĐANG HIỆN trên lịch.
  */
 
-export type LichMode = "thang" | "tuan";
+export type LichMode = "thang" | "tuan" | "homnay";
 
 export type LichRange = {
   /** Ngày đầu đang hiện, 00:00. */
@@ -39,18 +40,17 @@ const listDays = (from: Date, to: Date) => {
   return days;
 };
 
-/** Lưới tháng luôn 6 hàng × 7 ô, như web — chiều cao lịch không nhảy khi đổi tháng. */
-const MONTH_GRID_DAYS = 42;
-
 /**
- * Lưới tháng: từ thứ Hai của tuần chứa ngày 1, đủ 42 ô (gồm vài ngày tháng
- * trước / sau đang lộ ra). Ví dụ của tài liệu: tháng 10/2026 lộ từ 28/09 tới
- * 08/11 → Đến = 09/11.
+ * Lưới tháng: từ thứ Hai của tuần chứa ngày 1 tới hết tuần chứa ngày cuối tháng
+ * (4–6 hàng, gồm vài ngày tháng trước / sau đang lộ ra). Tài liệu lấy ví dụ lưới
+ * 42 ô như web (tháng 10/2026 tới 08/11 → Đến = 09/11); mobile bỏ hàng toàn ngày
+ * tháng sau cho gọn nên Đến = 02/11 — vẫn đúng luật [Từ, Đến) = ngày đang hiện.
  */
 export const getMonthRange = (anchor: Date): LichRange => {
   const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
+  const last = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
   const from = startOfWeek(first);
-  const to = addDays(from, MONTH_GRID_DAYS);
+  const to = addDays(startOfWeek(last), 7);
   return { from, to, days: listDays(from, to) };
 };
 
@@ -61,17 +61,46 @@ export const getWeekRange = (anchor: Date): LichRange => {
   return { from, to, days: listDays(from, to) };
 };
 
-export const getRange = (mode: LichMode, anchor: Date) =>
-  mode === "thang" ? getMonthRange(anchor) : getWeekRange(anchor);
+/** Một ngày: 00:00 hôm đó tới 00:00 hôm sau (chế độ Hôm nay, anchor = hôm nay). */
+export const getDayRange = (anchor: Date): LichRange => {
+  const from = startOfDay(anchor);
+  const to = addDays(from, 1);
+  return { from, to, days: [from] };
+};
 
-/** Lùi / tiến 1 tháng hoặc 1 tuần. */
+export const getRange = (mode: LichMode, anchor: Date) =>
+  mode === "thang"
+    ? getMonthRange(anchor)
+    : mode === "tuan"
+      ? getWeekRange(anchor)
+      : getDayRange(anchor);
+
+/** Lùi / tiến 1 tháng hoặc 1 tuần (Hôm nay không có ‹ ›). */
 export const shiftAnchor = (mode: LichMode, anchor: Date, step: number) =>
   mode === "thang"
     ? new Date(anchor.getFullYear(), anchor.getMonth() + step, 1)
     : addDays(anchor, step * 7);
 
+/**
+ * Ngày được chọn sau khi sang tháng / tuần khác: kỳ có hôm nay thì chọn hôm nay
+ * (đi tới rồi quay về là về đúng ngày hiện tại); kỳ khác thì ngày 1 của tháng /
+ * ngày `anchor` của tuần như trước. Chế độ Hôm nay: luôn hôm nay.
+ */
+export const pickSelectedDay = (mode: LichMode, anchor: Date, now = new Date()) => {
+  const today = startOfDay(now);
+  if (mode === "homnay") return today;
+  if (mode === "thang") {
+    const sameMonth =
+      today.getFullYear() === anchor.getFullYear() && today.getMonth() === anchor.getMonth();
+    return sameMonth ? today : startOfDay(anchor);
+  }
+  const { from, to } = getWeekRange(anchor);
+  return today >= from && today < to ? today : startOfDay(anchor);
+};
+
 export const formatRangeLabel = (mode: LichMode, anchor: Date, range: LichRange) => {
   if (mode === "thang") return `Tháng ${anchor.getMonth() + 1}/${anchor.getFullYear()}`;
+  if (mode === "homnay") return formatWeekday(anchor);
   const last = addDays(range.to, -1);
   return `${formatDay(range.from).slice(0, 5)} - ${formatDay(last)}`;
 };
@@ -201,4 +230,85 @@ export const groupTasksByDay = (items: CongViecItem[], range: LichRange) => {
   );
 
   return byDay;
+};
+
+/**
+ * Chỗ vạch "Bây giờ" trong danh sách việc hôm nay (đã xếp theo giờ bắt đầu):
+ * ngay trước việc đầu tiên chưa tới giờ bắt đầu; việc nào cũng đã bắt đầu thì
+ * nằm cuối.
+ */
+export const getNowLineIndex = (tasks: Pick<CongViecItem, "tuNgay">[], now = new Date()) => {
+  const index = tasks.findIndex(
+    (task) => (parseBeDate(task.tuNgay)?.getTime() ?? 0) > now.getTime(),
+  );
+  return index === -1 ? tasks.length : index;
+};
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const daysBetween = (from: Date, to: Date) =>
+  Math.round((startOfDay(to).getTime() - startOfDay(from).getTime()) / MS_PER_DAY);
+
+export type TaskDeadline = {
+  label: string;
+  /** late: đã quá hạn · soon: hạn hôm nay / ngày mai · normal: còn xa. */
+  tone: "late" | "soon" | "normal";
+};
+
+/**
+ * Nhãn hạn bằng chữ cạnh giờ của việc trên lịch — màu viền thôi thì dễ lướt qua.
+ * Chỉ việc chưa xong (Mới / Đang xử lý). Quá hạn tính như server: Đến ngày <
+ * bây giờ, số ngày đếm từ ngày của Đến ngày. Còn hạn thì đếm tới NGÀY CUỐI của
+ * việc (Đến ngày đúng 00:00 = hết hạn đầu ngày → hạn là ngày trước đó).
+ */
+export const getTaskDeadline = (
+  item: Pick<CongViecItem, "trangThai" | "tuNgay" | "denNgay">,
+  now = new Date(),
+): TaskDeadline | null => {
+  if (!isCongViecChuaXong(item.trangThai)) return null;
+  const den = parseBeDate(item.denNgay);
+  const span = getTaskDaySpan(item);
+  if (!den || !span) return null;
+
+  if (den.getTime() < now.getTime()) {
+    const late = daysBetween(den, now);
+    return { label: late > 0 ? `Quá hạn ${late} ngày` : "Quá hạn", tone: "late" };
+  }
+
+  const left = daysBetween(now, span.end);
+  if (left <= 0) return { label: "Hạn hôm nay", tone: "soon" };
+  if (left === 1) return { label: "Hạn ngày mai", tone: "soon" };
+  return { label: `Còn ${left} ngày`, tone: "normal" };
+};
+
+/**
+ * Dòng tóm tắt dưới tên thứ của thẻ ngày: bao nhiêu việc đã quá hạn, bao nhiêu
+ * việc hạn hôm nay / ngày mai — đếm theo đúng nhãn hạn trên từng việc.
+ */
+export const countDeadlines = (
+  tasks: Pick<CongViecItem, "trangThai" | "tuNgay" | "denNgay">[],
+  now = new Date(),
+) => {
+  let late = 0;
+  let soon = 0;
+  tasks.forEach((task) => {
+    const tone = getTaskDeadline(task, now)?.tone;
+    if (tone === "late") late += 1;
+    else if (tone === "soon") soon += 1;
+  });
+  return { late, soon };
+};
+
+/** Số việc theo màu (maMau) — số trên chip lọc của lịch, mỗi việc đếm một lần. */
+export const countTasksByMau = (tasksByDay: Map<string, CongViecItem[]>) => {
+  const seen = new Set<number>();
+  const counts: Record<string, number> = {};
+  tasksByDay.forEach((list) =>
+    list.forEach((task) => {
+      if (seen.has(task.id)) return;
+      seen.add(task.id);
+      const key = String(task.maMau ?? "");
+      counts[key] = (counts[key] ?? 0) + 1;
+    }),
+  );
+  return counts;
 };

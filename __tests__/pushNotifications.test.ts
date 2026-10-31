@@ -3,7 +3,11 @@ import {
   normalizeRemoteMessage,
   parseNotificationParams,
 } from "../src/services/notifications/payload";
-import { shouldDisplayLocally } from "../src/services/notifications/display";
+import notifee from "@notifee/react-native";
+import {
+  clearDisplayedNotifications,
+  shouldDisplayLocally,
+} from "../src/services/notifications/display";
 import { resolveChannelId } from "../src/services/notifications/channels";
 import {
   isKnownPushRoute,
@@ -150,6 +154,21 @@ describe("shouldDisplayLocally", () => {
 
   it("background: tự hiển thị message data-only", () => {
     expect(shouldDisplayLocally(dataOnly, false)).toBe(true);
+  });
+});
+
+describe("clearDisplayedNotifications (đăng xuất)", () => {
+  it("xoá noti trên khay và số trên icon", async () => {
+    await clearDisplayedNotifications();
+    expect(notifee.cancelDisplayedNotifications).toHaveBeenCalled();
+    expect(notifee.setBadgeCount).toHaveBeenCalledWith(0);
+  });
+
+  it("lỗi native không làm hỏng luồng đăng xuất", async () => {
+    jest
+      .mocked(notifee.cancelDisplayedNotifications)
+      .mockRejectedValueOnce(new Error("native"));
+    await expect(clearDisplayedNotifications()).resolves.toBeUndefined();
   });
 });
 

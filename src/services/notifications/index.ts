@@ -21,6 +21,7 @@
  */
 export { ensureNotificationChannels, resolveChannelId } from "./channels";
 export {
+  clearDisplayedNotifications,
   clearNotificationBadge,
   displayPushNotification,
   shouldDisplayLocally,
@@ -40,6 +41,7 @@ export {
   buildCameraAiParams,
   CAMERA_AI_ROUTE,
   CAMERA_AI_TYPE,
+  canViewCameraPush,
   getCameraAiGroupId,
   isCameraAiPush,
 } from "./cameraPush";
@@ -65,6 +67,7 @@ export {
   drainPendingPushTap,
   handlePushTap,
   hasPendingPushTap,
+  isPendingPushTapWaitingForPermissions,
 } from "./tapHandler";
 export { fetchFcmToken } from "./token";
 export * from "./constants";

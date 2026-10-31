@@ -363,6 +363,8 @@ function CongViecCardSkeleton({ shape, index, opacity }: CardProps) {
         <View style={styles.footer}>
           <SkeletonBlock opacity={opacity} style={styles.counter} />
           <SkeletonBlock opacity={opacity} style={styles.counter} />
+          {/* Viên Lịch sử (chỉ icon) của danh sách Công việc. */}
+          <SkeletonBlock opacity={opacity} style={styles.counterIconOnly} />
         </View>
       </View>
     </View>

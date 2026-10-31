@@ -1,9 +1,10 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useIsFocused, useNavigation } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import EmptyState from "../../components/ui/EmptyState";
+import { useAutoReload } from "../../hooks/useAutoReload";
 import { usePermission } from "../../hooks/usePermission";
 import { cvDemTab } from "../../services/data/congViecApi";
 import { flowDemTab } from "../../services/data/flowApi";
@@ -65,6 +66,7 @@ export default function WorkflowScreen() {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
   const navigation = useNavigation<StackNavigation<"Workflow">>();
+  const isFocused = useIsFocused();
   const { can, canView, loaded, permissions } = usePermission();
   const [hints, setHints] = useState<Record<string, Hint[]>>({});
   /** Lượt số nhắc đầu tiên đã về — trước đó giữ khung chờ, không thì thẻ cao lên khi số tới. */
@@ -78,8 +80,8 @@ export default function WorkflowScreen() {
     [loaded, permissions],
   );
 
-  /** Số nhắc của một chức năng; lỗi thì bỏ qua — chỉ là thông tin phụ. */
-  const loadHint = useCallback(async (item: WorkflowMenuItem): Promise<Hint[]> => {
+  /** Số nhắc của một chức năng; null = lỗi (chỉ là thông tin phụ, vẫn mở được chức năng). */
+  const loadHint = useCallback(async (item: WorkflowMenuItem): Promise<Hint[] | null> => {
     try {
       if (item.route === "Flow") {
         return hintsFromTabs(await flowDemTab(item.nameClass), FLOW_TABS);
@@ -88,7 +90,7 @@ export default function WorkflowScreen() {
         return hintsFromTabs(await cvDemTab(), CV_TABS);
       }
     } catch {
-      // Không có số nhắc vẫn mở được chức năng.
+      return null;
     }
     return [];
   }, []);
@@ -98,11 +100,15 @@ export default function WorkflowScreen() {
     if (!loaded) return;
     const items = groups.flatMap((group) => group.items);
     const results = await Promise.all(items.map(loadHint));
-    const next: Record<string, Hint[]> = {};
-    items.forEach((item, index) => {
-      next[item.key] = results[index];
+    // Lỗi (mất mạng) thì giữ số cũ — không thì các số nhắc biến mất, trông như
+    // không còn việc gì.
+    setHints((prev) => {
+      const next: Record<string, Hint[]> = {};
+      items.forEach((item, index) => {
+        next[item.key] = results[index] ?? prev[item.key] ?? [];
+      });
+      return next;
     });
-    setHints(next);
     setHintsLoaded(true);
   }, [groups, loadHint, loaded]);
 
@@ -112,6 +118,10 @@ export default function WorkflowScreen() {
       loadHints();
     }, [loadHints]),
   );
+
+  // App vừa từ nền về: việc / phiếu mới do người khác giao. Màn không hiện thì
+  // lượt focus trên đã lo khi quay về.
+  useAutoReload(loadHints, { enabled: isFocused });
 
   const openItem = (item: WorkflowMenuItem) => {
     if (item.route === "Flow") {

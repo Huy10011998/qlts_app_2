@@ -263,7 +263,16 @@ này **không** gửi `route`/`params` — app tự suy ra đích đến từ `t
 | `GhiChu` | `"2 người"` | Giữ trong `data`, có thể rỗng. |
 | `ThoiGian` | `"2026-09-16 09:13:58"` | Giờ server, không có timezone offset. |
 
-Bấm vào noti → mở `CameraListGrid` với lưới 1 ô đúng camera đó.
+Bấm vào noti → mở `CameraListGrid` với lưới 1 ô đúng camera đó, **chồng lên** chỗ
+đang đứng (không `navigate`: đang ở lưới 16 cam thì navigate thay params của chính
+lưới đó). Đang ở màn mở từ noti của camera khác thì thay màn đó; đúng camera đó thì
+đứng yên (`getCameraAiOpenAction`).
+
+**Quyền**: BE hiện gửi cho cả tài khoản không có tính năng Camera. App chặn phần
+mình làm được theo `View.Camera` (cùng điều kiện màn Camera): đang mở app thì không
+hiện noti, bấm noti thì chỉ mở app; mở app từ noti thì chờ quyền nạp xong (tối đa
+~10 giây) rồi mới quyết định. App ở nền / đã tắt thì OS tự hiện noti — chỉ BE lọc
+người nhận mới hết hẳn.
 
 > **Legacy**: app vẫn chấp nhận `type = "CAMERA_MOTION"` (bản 27/08/2026, kèm
 > `ID_DauGhi` / `Kenh` / `EventType = "VMD"`) để release trước/sau BE đều chạy.

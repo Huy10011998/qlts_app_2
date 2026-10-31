@@ -6,6 +6,7 @@ import {
   Keyboard,
   Platform,
   Pressable,
+  RefreshControl,
   StyleSheet,
   Text,
   TextInput,
@@ -18,6 +19,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import EmptyState from "../../../components/ui/EmptyState";
 import IsLoading from "../../../components/ui/IconLoading";
+import { useAutoReload } from "../../../hooks/useAutoReload";
 import { cvThongTin } from "../../../services/data/congViecApi";
 import {
   addWorkflowComment,
@@ -108,6 +110,7 @@ export default function WorkflowCommentsScreen() {
   const [canSend, setCanSend] = useState<boolean | null>(route.params.canSend ?? null);
   const [items, setItems] = useState<WorkflowComment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [text, setText] = useState("");
   const [file, setFile] = useState<WorkflowPickedFile | null>(null);
@@ -147,15 +150,20 @@ export default function WorkflowCommentsScreen() {
     };
   }, []);
 
+  /** Trả câu lỗi, null = tải được — kéo làm mới cần biết để báo. */
   const load = useCallback(async () => {
     try {
       const rows = await getWorkflowComments(apiBase, idHoSo);
       setItems(rows);
       setErrorMessage(null);
+      return null;
     } catch (err) {
-      setErrorMessage(
-        getWorkflowErrorMessage(err, "Không tải được bình luận."),
+      const message = getWorkflowErrorMessage(
+        err,
+        "Không tải được bình luận.",
       );
+      setErrorMessage(message);
+      return message;
     } finally {
       setLoading(false);
     }
@@ -164,6 +172,15 @@ export default function WorkflowCommentsScreen() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Kéo để nạp lại (tài liệu 7): mất realtime vẫn xem được tin mới. Danh sách
+  // trống thì lỗi đã hiện ở khung trống, còn có tin thì báo bằng toast.
+  const refresh = async () => {
+    setRefreshing(true);
+    const loi = await load();
+    setRefreshing(false);
+    if (loi && items.length) showAppToast({ message: loi, tone: "warning" });
+  };
 
   // Như danh sách Công việc: cv-thong-tin trả sẵn cờ duocTraoDoi.
   useEffect(() => {
@@ -190,6 +207,10 @@ export default function WorkflowCommentsScreen() {
     onBinhLuanThuHoi: (idBinhLuan) => applyRecalled(idBinhLuan),
     onReconnected: load,
   });
+
+  // App vừa từ nền về: hub có khi chưa rớt (không có onReconnected) mà vẫn lỡ
+  // tin nhắn lúc nằm nền.
+  useAutoReload(load);
 
   useNotifyInfoStaleOnClose(apiBase);
 
@@ -254,14 +275,19 @@ export default function WorkflowCommentsScreen() {
     setActionFor(null);
     setTimeout(
       () =>
-        AppAlert.alert("Xác nhận thu hồi tin nhắn?", ``, [
-          { text: "Huỷ", style: "cancel" },
-          {
-            text: "Thu hồi",
-            style: "destructive",
-            onPress: () => recall(item),
-          },
-        ]),
+        // Tài liệu 7 mục 8: thu hồi xong không hoàn tác.
+        AppAlert.alert(
+          "Xác nhận thu hồi tin nhắn?",
+          `Thu hồi xong không hoàn tác. Mọi người sẽ thấy "${THU_HOI_TEXT}".`,
+          [
+            { text: "Huỷ", style: "cancel" },
+            {
+              text: "Thu hồi",
+              style: "destructive",
+              onPress: () => recall(item),
+            },
+          ],
+        ),
       COMMENT_SHEET_CLOSE_DELAY,
     );
   };
@@ -490,6 +516,9 @@ export default function WorkflowCommentsScreen() {
           renderItem={renderItem}
           extraData={flash}
           contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={refresh} />
+          }
           onContentSizeChange={() => {
             if (!jumpedToEnd) {
               listRef.current?.scrollToEnd({ animated: false });
@@ -621,6 +650,8 @@ export default function WorkflowCommentsScreen() {
               onChangeText={setText}
               onFocus={() => realtime.setComposerFocused(true)}
               onBlur={() => realtime.setComposerFocused(false)}
+              // Đang gửi thì khoá: gửi xong ô nhập bị xoá, chữ gõ thêm sẽ mất.
+              editable={!sending}
               placeholder="Viết bình luận..."
               placeholderTextColor={c.placeholder}
               multiline
@@ -666,6 +697,8 @@ export default function WorkflowCommentsScreen() {
         onClose={() => setActionFor(null)}
       />
       {fileOpener.viewer}
+      {/* File Word / Excel... tải về rồi mới mở bảng chia sẻ — có thể lâu. */}
+      {fileOpener.opening ? <IsLoading style={styles.overlay} /> : null}
     </View>
   );
 }
@@ -919,6 +952,10 @@ const makeStyles = (c: AppColors) =>
       color: c.textSub,
       paddingTop: 10,
       backgroundColor: c.surface,
+    },
+    overlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: c.loadingOverlay,
     },
   });
 

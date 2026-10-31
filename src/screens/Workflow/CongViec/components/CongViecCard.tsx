@@ -24,6 +24,8 @@ type Props = {
   /** Bấm số bình luận / số file mở thẳng màn đó; không truyền thì bấm như bấm thẻ. */
   onOpenComments?: () => void;
   onOpenFiles?: () => void;
+  /** Viên Lịch sử (chỉ icon) ở chân thẻ, sau Bình luận / File. Không truyền thì không có. */
+  onOpenLichSu?: () => void;
 };
 
 /** Hai field đứng ở đầu thẻ thay vì thành dòng "Nhãn: giá trị". */
@@ -55,6 +57,7 @@ export default function CongViecCard({
   onPress,
   onOpenComments,
   onOpenFiles,
+  onOpenLichSu,
 }: Props) {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
@@ -107,7 +110,7 @@ export default function CongViecCard({
 
         {/* Chân thẻ chỉ mọc ra khi cv-thong-tin về (sau trang danh sách) — trong
             lúc chờ thì giữ sẵn chỗ bằng hai viên xám, thẻ khỏi dài thêm ~47pt. */}
-        {info || item.iD_DinhKy || infoPending ? (
+        {info || item.iD_DinhKy || infoPending || onOpenLichSu ? (
           <View style={styles.footer}>
             {info ? (
               <>
@@ -122,12 +125,22 @@ export default function CongViecCard({
                   icon="attach-outline"
                   iconSize={15}
                   count={info.soFile ?? 0}
-                  label="File"
+                  label="Đính kèm"
                   onPress={onOpenFiles}
                 />
               </>
             ) : infoPending ? (
               <CounterPendingPills />
+            ) : null}
+            {/* Không chờ cv-thong-tin: lịch sử tự tải khi mở. */}
+            {onOpenLichSu ? (
+              <WorkflowCounter
+                icon="history"
+                iconFamily="material"
+                iconSize={15}
+                label="Lịch sử"
+                onPress={onOpenLichSu}
+              />
             ) : null}
             {item.iD_DinhKy ? (
               <View style={styles.counter}>

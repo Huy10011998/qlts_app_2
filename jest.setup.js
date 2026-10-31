@@ -78,6 +78,7 @@ jest.mock('@notifee/react-native', () => ({
     getNotificationSettings: jest.fn(async () => ({ authorizationStatus: 1 })),
     openNotificationSettings: jest.fn(async () => {}),
     setBadgeCount: jest.fn(async () => {}),
+    cancelDisplayedNotifications: jest.fn(async () => {}),
   },
   AndroidImportance: { NONE: 0, MIN: 1, LOW: 2, DEFAULT: 3, HIGH: 4 },
   AndroidVisibility: { SECRET: -1, PRIVATE: 0, PUBLIC: 1 },

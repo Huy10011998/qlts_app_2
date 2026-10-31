@@ -1,5 +1,4 @@
 import React from "react";
-import { UnscaledText } from "../../utils/helpers/textScaling";
 import {
   AccessibilityInfo,
   Animated,
@@ -10,15 +9,13 @@ import {
 } from "react-native";
 import type { BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import Svg, { Rect } from "react-native-svg";
 
 import { C } from "../../utils/helpers/colors";
-import {
-  SCAN_BUTTON_RISE,
-  SCAN_BUTTON_SIZE,
-  TAB_HEIGHT,
-} from "./tabBarTheme";
+import { SCAN_TILE_HEIGHT, SCAN_TILE_WIDTH, TAB_HEIGHT } from "./tabBarTheme";
 
-const ICON_SIZE = 24;
+const ICON_SIZE = 22;
+const TILE_RADIUS = 12;
 /** Vạch quét chạy trong lòng khung 4 góc, nên biên độ lấy theo nửa khung. */
 const SCAN_LINE_TRAVEL = ICON_SIZE / 2 - 4;
 const SCAN_LINE_DURATION = 1100;
@@ -104,7 +101,29 @@ export default function ScanTabButton({
       aria-label="Quét QR"
       aria-selected={isFocused}
     >
-      <View style={[styles.circle, isFocused && styles.circleFocused]}>
+      {/* Ô đỏ nằm gọn trong viên thanh tab — thay vòng tròn nhô lên trong mu
+          cong cũ — nhưng vẫn là ô duy nhất tô đặc nên nhìn là thấy nút quét. */}
+      <View style={styles.tile}>
+        {/* Nền bo góc vẽ bằng SVG: nền bo góc của View trên thanh tab Android
+            từng ra hình vuông. Đang ở màn quét (thanh tab nền tối) thì thêm viền
+            sáng để ô không chìm vào nền. */}
+        <Svg
+          width={SCAN_TILE_WIDTH}
+          height={SCAN_TILE_HEIGHT}
+          style={StyleSheet.absoluteFill}
+        >
+          <Rect
+            x={isFocused ? 1 : 0}
+            y={isFocused ? 1 : 0}
+            width={SCAN_TILE_WIDTH - (isFocused ? 2 : 0)}
+            height={SCAN_TILE_HEIGHT - (isFocused ? 2 : 0)}
+            rx={TILE_RADIUS}
+            ry={TILE_RADIUS}
+            fill={C.red}
+            stroke={isFocused ? "rgba(255,255,255,0.9)" : undefined}
+            strokeWidth={isFocused ? 2 : 0}
+          />
+        </Svg>
         {/* Khung 4 góc giống icon quét của MoMo, thay vì hình mã QR đặc. */}
         <MaterialCommunityIcons
           name="scan-helper"
@@ -114,11 +133,6 @@ export default function ScanTabButton({
         {reduceMotion === false ? (
           <Animated.View style={[styles.scanLine, scanLineStyle]} />
         ) : null}
-      </View>
-      <View style={styles.labelPill}>
-        <UnscaledText numberOfLines={1} allowFontScaling={false} style={styles.label}>
-          Quét QR
-        </UnscaledText>
       </View>
     </TouchableOpacity>
   );
@@ -130,31 +144,16 @@ const styles = StyleSheet.create({
     height: TAB_HEIGHT,
     flexDirection: "column",
     alignItems: "center",
-    justifyContent: "flex-start",
+    justifyContent: "center",
     paddingHorizontal: 0,
     paddingTop: 0,
-    paddingBottom: 4,
+    paddingBottom: 0,
   },
-  circle: {
-    // Nhô lên khỏi mép thanh tab, nằm gọn trong mu cong mà nền thanh tab vẽ ra.
-    marginTop: -SCAN_BUTTON_RISE,
-    width: SCAN_BUTTON_SIZE,
-    height: SCAN_BUTTON_SIZE,
-    borderRadius: SCAN_BUTTON_SIZE / 2,
-    backgroundColor: C.red,
+  tile: {
+    width: SCAN_TILE_WIDTH,
+    height: SCAN_TILE_HEIGHT,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: C.red,
-    shadowOpacity: 0.32,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 5,
-  },
-  circleFocused: {
-    // Đang ở màn quét thì thanh tab chuyển sang nền tối; viền sáng giữ cho nút
-    // không chìm vào nền.
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.9)",
   },
   scanLine: {
     position: "absolute",
@@ -162,18 +161,5 @@ const styles = StyleSheet.create({
     height: 2,
     borderRadius: 1,
     backgroundColor: "#fff",
-  },
-  labelPill: {
-    // Canh cho nhãn viên thuốc nằm ngang hàng với nhãn của các tab còn lại.
-    marginTop: 5,
-    paddingHorizontal: 9,
-    paddingVertical: 2,
-    borderRadius: 999,
-    backgroundColor: C.red,
-  },
-  label: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: "#fff",
   },
 });

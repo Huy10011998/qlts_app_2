@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 
+import { showAppToast } from "../../../components/ui/AppToast";
 import EmptyState from "../../../components/ui/EmptyState";
 import { usePermission } from "../../../hooks/usePermission";
 import { cvThongBao } from "../../../services/data/congViecApi";
@@ -34,13 +35,20 @@ export default function ViecCanXuLyScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>(ALL);
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (mode: "initial" | "refresh" | "silent" = "initial") => {
     try {
       setItems(await cvThongBao());
       setErrorMessage(null);
     } catch (err) {
-      setErrorMessage(getWorkflowErrorMessage(err, "Không tải được việc cần xử lý."));
+      const message = getWorkflowErrorMessage(err, "Không tải được việc cần xử lý.");
+      setErrorMessage(message);
+      // Kéo làm mới hỏng mà danh sách đang có dòng: lỗi trên chỉ hiện khi danh sách rỗng.
+      if (mode === "refresh" && itemsRef.current.length) {
+        showAppToast({ message: "Không làm mới được", detail: message, tone: "warning" });
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -53,7 +61,13 @@ export default function ViecCanXuLyScreen() {
   }, [allowed, load, loaded]);
 
   // Vừa duyệt phiếu / chuyển trạng thái ở màn khác → danh sách đổi theo.
-  useReloadOnWorkflowChange(load);
+  useReloadOnWorkflowChange(() => load("silent"));
+
+  /** "Thử lại" ở màn lỗi: hiện lại khung chờ cho thấy đang tải. */
+  const retry = () => {
+    setLoading(true);
+    load();
+  };
 
   const tabs = useMemo(() => {
     const countOf = (key: string) => items.filter((item) => item.loai === key).length;
@@ -117,7 +131,7 @@ export default function ViecCanXuLyScreen() {
             refreshing={refreshing}
             onRefresh={() => {
               setRefreshing(true);
-              load();
+              load("refresh");
             }}
           />
         }
@@ -127,7 +141,7 @@ export default function ViecCanXuLyScreen() {
             title={errorMessage ? "Không tải được việc cần xử lý" : "Không có việc cần xử lý"}
             subtitle={errorMessage ?? "Phiếu chờ duyệt, việc được giao, sắp hạn, quá hạn và bình luận mới sẽ hiện ở đây."}
             actionLabel={errorMessage ? "Thử lại" : undefined}
-            onActionPress={errorMessage ? load : undefined}
+            onActionPress={errorMessage ? retry : undefined}
           />
         }
       />

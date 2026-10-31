@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { getPropertyClass } from "../../../services/data/commonApi";
 import { getFlowFields } from "../../../services/data/flowApi";
@@ -62,6 +62,8 @@ export function useFlowMeta(nameClass?: string | null) {
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(() => !(nameClass && resolved.has(nameClass)));
+  // Tăng lên khi bấm "Thử lại" ở màn lỗi — chạy lại effect nạp metadata.
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (!nameClass) {
@@ -71,7 +73,10 @@ export function useFlowMeta(nameClass?: string | null) {
     }
 
     let alive = true;
-    if (!resolved.has(nameClass)) setLoading(true);
+    if (!resolved.has(nameClass)) {
+      setLoading(true);
+      setErrorMessage(null);
+    }
     loadFlowMeta(nameClass)
       .then((result) => {
         if (!alive) return;
@@ -93,7 +98,10 @@ export function useFlowMeta(nameClass?: string | null) {
     return () => {
       alive = false;
     };
-  }, [nameClass]);
+  }, [attempt, nameClass]);
 
-  return { meta, errorMessage, loading };
+  /** Nạp lại sau lỗi (mất mạng thoáng qua) — bản lỗi không nằm trong cache. */
+  const reload = useCallback(() => setAttempt((value) => value + 1), []);
+
+  return { meta, errorMessage, loading, reload };
 }

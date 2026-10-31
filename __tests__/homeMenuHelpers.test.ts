@@ -52,10 +52,22 @@ describe("id chức năng Trang chủ", () => {
 });
 
 describe("báo cáo ghim ra Trang chủ", () => {
-  const featureItems = [
+  const featureItems: {
+    id: string;
+    label: string;
+    groupMenuId?: number;
+    iconName?: string;
+    viewPermission: string;
+  }[] = [
     { id: "5", label: "Nội địa", groupMenuId: 11, viewPermission: "NoiDia" },
     { id: "3", label: "Camera", viewPermission: "Camera" },
-    { id: "6", label: "PCCC", groupMenuId: 12, viewPermission: "PCCC" },
+    {
+      id: "6",
+      label: "PCCC",
+      groupMenuId: 12,
+      iconName: "shield-checkmark-outline",
+      viewPermission: "PCCC",
+    },
   ];
 
   // Đây là lý do phải có tiền tố: báo cáo sinh ra bằng cách spread lại chính chức
@@ -84,11 +96,18 @@ describe("báo cáo ghim ra Trang chủ", () => {
     ]);
   });
 
-  it("gắn nhóm và icon để Trang chủ vẽ card màu tím", () => {
+  it("gắn nhóm để Trang chủ vẽ card màu tím", () => {
     const [report] = createReportActions(featureItems, () => undefined);
 
     expect(report.homeGroup).toBe("report");
-    expect(report.iconName).toBe("document-text-outline");
+  });
+
+  // Năm báo cáo chung một icon tờ giấy thì phải đọc chữ mới phân biệt.
+  it("giữ icon của chức năng nguồn, thiếu thì dùng icon tờ giấy", () => {
+    const [noiDia, pccc] = createReportActions(featureItems, () => undefined);
+
+    expect(pccc.iconName).toBe("shield-checkmark-outline");
+    expect(noiDia.iconName).toBe("document-text-outline");
   });
 
   it("mở báo cáo với đúng groupMenuId và quyền của chức năng nguồn", () => {

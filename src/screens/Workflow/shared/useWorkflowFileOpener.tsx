@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { AppAlert } from "../../../components/ui/AppAlert";
 import RNFS from "react-native-fs";
 import Share from "react-native-share";
@@ -39,9 +39,14 @@ export function useWorkflowFileOpener() {
   const [viewer, setViewer] = useState<ViewerState>(null);
   const [localImageUri, setLocalImageUri] = useState<string | null>(null);
   const [opening, setOpening] = useState(false);
+  // Đọc trong callback cố định — state `opening` ở đó luôn là giá trị cũ.
+  const openingRef = useRef(false);
 
   const openFile = useCallback(
     async (apiBase: WorkflowApiBase, file: { id: number; name?: string | null }) => {
+      // Đang tải 1 file để mở: bấm thêm thì bỏ qua — khỏi tải trùng, khỏi bật
+      // 2 bảng chia sẻ.
+      if (openingRef.current) return;
       const name = file.name || `tep_${file.id}`;
       const ext = getFileExtension(name);
 
@@ -54,6 +59,7 @@ export function useWorkflowFileOpener() {
       }
 
       try {
+        openingRef.current = true;
         setOpening(true);
         const { base64, contentType } = await viewWorkflowFile(apiBase, file.id);
         const path = `${RNFS.CachesDirectoryPath}/${file.id}_${safeFileName(name)}`;
@@ -69,6 +75,7 @@ export function useWorkflowFileOpener() {
         error("[useWorkflowFileOpener] open file error", err);
         AppAlert.alert("Không mở được file", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
       } finally {
+        openingRef.current = false;
         setOpening(false);
       }
     },

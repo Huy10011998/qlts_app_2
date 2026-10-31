@@ -15,6 +15,11 @@ type Props = {
    * dựng lại theo chiều cao chip cũ.
    */
   spacious?: boolean;
+  /**
+   * Số việc theo màu, hiện thành viên số sau tên chip. Màu không có trong object
+   * thì chip không có số (vd đang lọc: chưa biết số của màu không chọn).
+   */
+  counts?: Partial<Record<string, number>>;
 };
 
 /**
@@ -24,7 +29,7 @@ type Props = {
  * cùng danh sách (flex 1) là bị bóp thấp, chip mất nửa dưới chữ — nên phải
  * chốt `flexGrow: 0, flexShrink: 0` để cao đúng bằng nội dung.
  */
-export default function MaMauFilter({ value, onChange, exclude, spacious }: Props) {
+export default function MaMauFilter({ value, onChange, exclude, spacious, counts }: Props) {
   const styles = useStyles(makeStyles);
   // Chữ chip đang chọn: màu nhạt (Hủy) chỉ đọc được trên nền tối.
   const dark = useThemePreference().resolvedColorScheme === "dark";
@@ -41,6 +46,8 @@ export default function MaMauFilter({ value, onChange, exclude, spacious }: Prop
     >
       {CV_MA_MAU.filter((item) => !exclude?.includes(item.key)).map((item) => {
         const active = value.includes(item.key);
+        const count = counts?.[item.key];
+        const textColor = dark ? item.color : item.textColor ?? item.color;
         return (
           <TouchableOpacity
             key={item.key}
@@ -54,13 +61,36 @@ export default function MaMauFilter({ value, onChange, exclude, spacious }: Prop
           >
             <View style={[styles.dot, { backgroundColor: item.color }]} />
             <Text
-              style={[
-                styles.text,
-                active && { color: dark ? item.color : item.textColor ?? item.color },
-              ]}
+              style={[styles.text, active && { color: textColor }]}
             >
               {item.label}
             </Text>
+            {count != null ? (
+              // Chip đang chọn: viên đặc màu chip; còn lại nền nhạt cùng màu, số 0 xám.
+              <View
+                style={[
+                  styles.count,
+                  active
+                    ? { backgroundColor: item.color }
+                    : count > 0
+                      ? { backgroundColor: tint(item.color) }
+                      : styles.countZero,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.countText,
+                    active
+                      ? styles.countTextActive
+                      : count > 0
+                        ? { color: textColor }
+                        : styles.countTextZero,
+                  ]}
+                >
+                  {count}
+                </Text>
+              </View>
+            ) : null}
           </TouchableOpacity>
         );
       })}
@@ -103,5 +133,28 @@ const makeStyles = (c: AppColors) =>
       fontSize: 12,
       fontWeight: "600",
       color: c.textSecondary,
+    },
+    count: {
+      minWidth: 18,
+      height: 18,
+      paddingHorizontal: 5,
+      marginLeft: 6,
+      marginRight: -4,
+      borderRadius: 9,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    countZero: {
+      backgroundColor: c.surfaceAlt,
+    },
+    countText: {
+      fontSize: 11,
+      fontWeight: "700",
+    },
+    countTextActive: {
+      color: "#FFFFFF",
+    },
+    countTextZero: {
+      color: c.textMuted,
     },
   });

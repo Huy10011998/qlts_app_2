@@ -5,6 +5,8 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { useHeaderRecordPill } from "../../../components/assets/shared/useHeaderRecordPill";
 import EmptyState from "../../../components/ui/EmptyState";
 import SearchBar from "../../../components/ui/SearchBar";
+import HeaderSearchReveal from "../../../components/ui/HeaderSearchReveal";
+import { useHeaderSearch } from "../../../hooks/useHeaderSearch";
 import { useDebounce } from "../../../hooks/useDebounce";
 import { cvDemTab, cvGetList, cvThongTin } from "../../../services/data/congViecApi";
 import { CV_CONG_VIEC_NAME_CLASS } from "../../../services/data/workflowApi";
@@ -35,6 +37,7 @@ import { getCardFields } from "../shared/workflowFields";
 import { useClassFields } from "../shared/workflowMetadata";
 import { buildRelatedConditions } from "../shared/workflowRelated";
 import CongViecCard, { getCongViecCardLayout } from "./components/CongViecCard";
+import CongViecLichSuSheet from "./components/CongViecLichSuSheet";
 import MaMauFilter from "./components/MaMauFilter";
 import { CV_CARD_CUSTOM_FIELDS } from "./congViecRules";
 
@@ -58,9 +61,14 @@ export default function CongViecListScreen() {
   const [tab, setTab] = useState<CongViecTab>(related ? "TatCa" : "ChuaXong");
   const [mau, setMau] = useState<string[]>([]);
   const [keyword, setKeyword] = useState("");
+  const search = useHeaderSearch({
+    query: keyword,
+    onClear: () => setKeyword(""),
+  });
   const searchText = useDebounce(keyword, 600);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [infos, setInfos] = useState<Record<number, CongViecThongTin>>({});
+  const [lichSuItem, setLichSuItem] = useState<CongViecItem | null>(null);
   const { pendingIds: infoPending, track: trackInfo } = useInfoPending();
   const { fields, ready: fieldsReady } = useClassFields(CV_CONG_VIEC_NAME_CLASS);
 
@@ -170,13 +178,17 @@ export default function CongViecListScreen() {
 
   return (
     <View style={styles.container}>
-      <SearchBar
-        value={keyword}
-        onChangeText={setKeyword}
-        placeholder="Tìm số, tiêu đề, mô tả..."
-        isSearching={list.loading && !!keyword}
-        style={styles.search}
-      />
+      <HeaderSearchReveal open={search.open}>
+        <SearchBar
+          value={keyword}
+          onChangeText={setKeyword}
+          placeholder="Tìm số, tiêu đề, mô tả..."
+          isSearching={list.loading && !!keyword}
+          style={styles.search}
+          autoFocus
+          onClose={search.close}
+        />
+      </HeaderSearchReveal>
       <WorkflowTabBar
         tabs={tabs}
         activeKey={tab}
@@ -216,6 +228,7 @@ export default function CongViecListScreen() {
                   titleHeader: item.soCongViec ?? undefined,
                 })
               }
+              onOpenLichSu={() => setLichSuItem(item)}
             />
           )}
           contentContainerStyle={styles.listContent}
@@ -248,6 +261,11 @@ export default function CongViecListScreen() {
       {canAdd ? (
         <WorkflowFab onPress={() => navigation.navigate("CongViecForm", { mode: "add" })} />
       ) : null}
+
+      <CongViecLichSuSheet
+        target={lichSuItem ? { item: lichSuItem, mode: "lichSu" } : null}
+        onClose={() => setLichSuItem(null)}
+      />
     </View>
   );
 }

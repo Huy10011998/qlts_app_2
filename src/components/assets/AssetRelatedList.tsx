@@ -23,6 +23,7 @@ import { shouldShowListSkeleton } from "../../components/ui/shouldShowListSkelet
 import ListCardAsset from "../../components/list/ListCardAsset";
 import { AddItem } from "../add/AddItem";
 import { useDebounce } from "../../hooks/useDebounce";
+import { useHeaderSearch } from "../../hooks/useHeaderSearch";
 import { useParentValuePairs } from "../../hooks/parentValue/useParentValuePairs";
 import { usePermission } from "../../hooks/usePermission";
 import { useSelector } from "react-redux";
@@ -85,6 +86,10 @@ export default function AssetRelatedList() {
   });
 
   const [searchText, setSearchText] = useState("");
+  const search = useHeaderSearch({
+    query: searchText,
+    onClear: () => setSearchText(""),
+  });
   const debouncedSearch = useDebounce(searchText, 600);
   const [listLayoutVersion, setListLayoutVersion] = useState(0);
   const { can, loaded } = usePermission();
@@ -222,7 +227,12 @@ export default function AssetRelatedList() {
     })
   ) {
     return (
-      <RecordListSkeleton hasSearchBar hasFab={showAddFab} {...cardShape} />
+      <RecordListSkeleton
+        hasSearchBar
+        hasSearchInput={search.open}
+        hasFab={showAddFab}
+        {...cardShape}
+      />
     );
   }
 
@@ -257,6 +267,7 @@ export default function AssetRelatedList() {
         onClear={() => setSearchText("")}
         badgeText="Dữ liệu liên quan"
         summaryText={`${total} bản ghi`}
+        search={search}
       />
 
       <View style={styles.listWrap}>

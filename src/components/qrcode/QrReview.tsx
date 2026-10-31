@@ -23,6 +23,7 @@ import { shouldShowListSkeleton } from "../ui/shouldShowListSkeleton";
 import ListCardAsset from "../list/ListCardAsset";
 import { AddItem } from "../add/AddItem";
 import { useDebounce } from "../../hooks/useDebounce";
+import { useHeaderSearch } from "../../hooks/useHeaderSearch";
 import { useParentValuePairs } from "../../hooks/parentValue/useParentValuePairs";
 import { usePermission } from "../../hooks/usePermission";
 import { useSelector } from "react-redux";
@@ -75,6 +76,10 @@ export default function QrReview() {
   });
 
   const [searchText, setSearchText] = useState("");
+  const search = useHeaderSearch({
+    query: searchText,
+    onClear: () => setSearchText(""),
+  });
   const debouncedSearch = useDebounce(searchText, 600);
   const [listLayoutVersion, setListLayoutVersion] = useState(0);
   const { can, loaded } = usePermission();
@@ -192,7 +197,12 @@ export default function QrReview() {
     })
   ) {
     return (
-      <RecordListSkeleton hasSearchBar hasFab={showAddFab} {...cardShape} />
+      <RecordListSkeleton
+        hasSearchBar
+        hasSearchInput={search.open}
+        hasFab={showAddFab}
+        {...cardShape}
+      />
     );
   }
 
@@ -224,6 +234,7 @@ export default function QrReview() {
         // Một dòng đếm là đủ; "Đã tải n" là chi tiết phân trang, người dùng
         // không cần (cùng cách với danh sách tài sản).
         summaryText={`${total} kết quả`}
+        search={search}
       />
 
       <View style={styles.listWrap}>

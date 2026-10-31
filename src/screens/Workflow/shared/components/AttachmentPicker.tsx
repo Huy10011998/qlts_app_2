@@ -105,7 +105,7 @@ export function useAttachmentPicker(
             </TouchableOpacity>
           ))}
           <TouchableOpacity style={styles.cancel} onPress={() => setVisible(false)}>
-            <Text style={styles.cancelText}>Hủy</Text>
+            <Text style={styles.cancelText}>Huỷ</Text>
           </TouchableOpacity>
         </View>
       </View>

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { StyleSheet, Switch, Text, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationOptions } from "@react-navigation/native-stack";
@@ -80,6 +80,15 @@ const toNumberOr = (value: unknown, fallback: number | null) => {
 };
 
 /**
+ * Câu lỗi mục 8e (file Flow): người khác vừa xử lý phiếu / phiếu đã kết thúc —
+ * lượt duyệt đã mất, sửa form rồi lưu lại cũng không được. Lỗi khác của công
+ * việc (kế hoạch, người tham gia...) thì sửa được, ở lại form.
+ */
+const isPhieuHetLuot = (loi?: string | null) => !!loi && loi.trim().startsWith("Phiếu ");
+
+const EMPLOYEES_ERROR = "Không tải được danh sách nhân viên.";
+
+/**
  * Form thêm / sửa công việc (mục 4). Phần động (TieuDe, Loại, Kế hoạch, MoTa,
  * Khẩn, Quan trọng) theo metadata; Từ / Đến (ngày + giờ), người tham gia, định
  * kỳ, đính kèm vẽ riêng. cv-them / cv-sua chỉ nhận đúng các khoá của mục 4.
@@ -103,6 +112,8 @@ export default function CongViecFormScreen() {
 
   const [fields, setFields] = useState<WorkflowField[] | null>(null);
   const [employees, setEmployees] = useState<WorkflowEmployee[]>([]);
+  const [employeesLoading, setEmployeesLoading] = useState(false);
+  const [employeesError, setEmployeesError] = useState<string | null>(null);
   const [detail, setDetail] = useState<CongViecChiTiet | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -145,7 +156,11 @@ export default function CongViecFormScreen() {
 
     Promise.all([
       loadClassFields(CV_CONG_VIEC_NAME_CLASS),
-      cvNhanVien().catch(() => [] as WorkflowEmployee[]),
+      // Lỗi không chặn form: bảng chọn người báo lỗi + Thử lại thay vì "không có nhân viên".
+      cvNhanVien().catch((err) => {
+        if (alive) setEmployeesError(getWorkflowErrorMessage(err, EMPLOYEES_ERROR));
+        return [] as WorkflowEmployee[];
+      }),
       sourceId ? cvChiTiet(sourceId) : Promise.resolve(null),
     ])
       .then(([metadata, staff, chiTiet]) => {
@@ -186,6 +201,16 @@ export default function CongViecFormScreen() {
     // navigation ổn định suốt đời màn — chỉ chạy lại khi đổi việc đang sửa / nhân bản.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sourceId]);
+
+  /** "Thử lại" của bảng chọn người tham gia (lần đầu nạp cùng form). */
+  const retryEmployees = useCallback(() => {
+    setEmployeesLoading(true);
+    setEmployeesError(null);
+    cvNhanVien()
+      .then(setEmployees)
+      .catch((err) => setEmployeesError(getWorkflowErrorMessage(err, EMPLOYEES_ERROR)))
+      .finally(() => setEmployeesLoading(false));
+  }, []);
 
   // Ngày bắt đầu định kỳ chưa sửa tay thì đi theo ngày của Từ ngày.
   useEffect(() => {
@@ -283,8 +308,9 @@ export default function CongViecFormScreen() {
   // tải thì chưa có gì để mất. Mở từ lượt duyệt phiếu ("Tạo công việc") thì luôn
   // hỏi: rời form là bỏ luôn lượt duyệt, phiếu vẫn nằm chờ.
   const formReady = !loadError && !!fields && !meLoading && (!sourceId || !!detail);
+  const hasChanges = form.isDirty || extrasDirty || files.length > 0;
   const { leaveWithoutPrompt } = useUnsavedChangesGuard(
-    formReady && (!!fromFlow || form.isDirty || extrasDirty || files.length > 0),
+    formReady && (!!fromFlow || hasChanges),
     {
       message: fromFlow
         ? "Phiếu chưa được duyệt. Rời màn này là bỏ lượt duyệt vừa chọn, nội dung công việc vừa nhập cũng mất."
@@ -323,9 +349,10 @@ export default function CongViecFormScreen() {
   };
 
   const validate = (payload: CongViecSavePayload) => {
+    const missing = (message: string) => ({ title: "Thiếu thông tin", message });
     const requiredMessage = form.validateRequired();
-    if (requiredMessage) return requiredMessage;
-    if (!payload.TieuDe) return "Vui lòng nhập tiêu đề.";
+    if (requiredMessage) return missing(requiredMessage);
+    if (!payload.TieuDe) return missing("Vui lòng nhập tiêu đề.");
 
     const dinhKyInput = showDinhKy ? toDinhKyInput(dinhKy) : null;
     const nextErrors = {
@@ -337,7 +364,14 @@ export default function CongViecFormScreen() {
         (dinhKyInput ? validateDinhKyDates(buildDinhKyDates(dinhKyInput)) : null),
     };
     setErrors(nextErrors);
-    return nextErrors.tuDen ?? nextErrors.thamGia ?? nextErrors.dinhKy ?? null;
+    if (nextErrors.tuDen) {
+      // Đủ hai ngày mà vẫn lỗi = Đến trước Từ: ngày sai chứ không thiếu (như form kế hoạch).
+      return tuNgay && denNgay
+        ? { title: "Ngày không hợp lệ", message: nextErrors.tuDen }
+        : missing(nextErrors.tuDen);
+    }
+    const message = nextErrors.thamGia ?? nextErrors.dinhKy;
+    return message ? missing(message) : null;
   };
 
   const uploadFiles = async (idCongViec: number) => {
@@ -354,9 +388,9 @@ export default function CongViecFormScreen() {
 
   const handleSave = async () => {
     const payload = buildPayload();
-    const message = validate(payload);
-    if (message) {
-      AppAlert.alert("Thiếu thông tin", message);
+    const invalid = validate(payload);
+    if (invalid) {
+      AppAlert.alert(invalid.title, invalid.message);
       return;
     }
 
@@ -376,7 +410,15 @@ export default function CongViecFormScreen() {
         // Giao việc từ phiếu bị từ chối (vd người khác vừa xử lý phiếu — mục 8e
         // phiếu): nạp lại phiếu / danh sách khi quay về để nút Duyệt tự ẩn.
         if (fromFlow) markChanged();
-        AppAlert.alert("Không lưu được", result.loi || "Vui lòng thử lại.");
+        const loi = result.loi || "Vui lòng thử lại.";
+        // Lượt duyệt đã mất: ở lại thì câu "Phiếu chưa được duyệt…" lúc rời form thành sai.
+        if (fromFlow && isPhieuHetLuot(result.loi)) {
+          AppAlert.alert("Không lưu được", loi, [
+            { text: "OK", onPress: () => leaveWithoutPrompt(() => navigation.goBack()) },
+          ]);
+          return;
+        }
+        AppAlert.alert("Không lưu được", loi);
         return;
       }
 
@@ -390,8 +432,14 @@ export default function CongViecFormScreen() {
         : result.soLuong > 1
         ? `Đã tạo ${result.soLuong} công việc`
         : "Đã tạo công việc";
-      // Đã lưu: rời form không hỏi "Bỏ thay đổi?" nữa.
-      const leave = () => leaveWithoutPrompt(() => navigation.goBack());
+      // Đã lưu: rời form không hỏi "Bỏ thay đổi?" nữa. Nhân bản thì mở luôn việc MỚI —
+      // quay về việc gốc trông y hệt, không biết bản mới nằm đâu.
+      const leave = () =>
+        leaveWithoutPrompt(() =>
+          cloneId
+            ? navigation.replace("CongViecChiTiet", { id: result.id })
+            : navigation.goBack(),
+        );
 
       // File hỏng vẫn phải báo bằng Alert để người dùng đọc được tên file.
       if (failed.length) {
@@ -451,7 +499,8 @@ export default function CongViecFormScreen() {
           label={fromFlow ? "Tạo công việc" : "Lưu"}
           icon="checkmark-circle-outline"
           onPress={handleSave}
-          disabled={submitting}
+          // Như form kế hoạch: sửa mà chưa đổi gì thì khoá Lưu.
+          disabled={submitting || (isEdit && !hasChanges)}
         />
       }
     >
@@ -485,6 +534,9 @@ export default function CongViecFormScreen() {
           fallbackNames={fallbackNames}
           error={errors.thamGia}
           lockChuTri={isEdit && !detail?.quyen.duocDoiChuTri}
+          employeesLoading={employeesLoading}
+          employeesError={employeesError}
+          onRetryEmployees={retryEmployees}
         />
         <View style={styles.switchRow}>
           <View style={styles.switchBody}>

@@ -27,6 +27,7 @@ import type {
 } from "../../types/index";
 import { API_ENDPOINTS, BASE_URL } from "../../config/index";
 import { useDebounce } from "../../hooks/useDebounce";
+import { useHeaderSearch } from "../../hooks/useHeaderSearch";
 import { useDismissableModal } from "../../hooks/useDismissableModal";
 import { usePermission } from "../../hooks/usePermission";
 import { filterReportPermissionTree } from "../../hooks/shared/permissionHelpers";
@@ -103,6 +104,10 @@ export default function AssetScreen() {
   const [isFetching, setIsFetching] = useState(false);
   const [isRefreshingTop, setIsRefreshingTop] = useState(false);
   const [search, setSearch] = useState("");
+  const headerSearch = useHeaderSearch({
+    query: search,
+    onClear: () => setSearch(""),
+  });
   const {
     content: activeReport,
     visible: isReportVisible,
@@ -345,6 +350,7 @@ export default function AssetScreen() {
   const treeSkeleton = (
     <MenuCardSkeleton
       hasSearchBar
+      hasSearchInput={headerSearch.open}
       hasCollapseAll={expandedIds.length > 0}
       hasRecents={recents.length > 0}
     />
@@ -411,6 +417,7 @@ export default function AssetScreen() {
         resultCount={filteredData.length}
         showResultCount={Boolean(debouncedSearch.trim())}
         onCollapseAll={expandedIds.length > 0 ? handleCollapseAll : undefined}
+        search={headerSearch}
       />
 
       {hasSearch ? null : (

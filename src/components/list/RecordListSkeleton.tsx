@@ -64,6 +64,7 @@ function SkeletonFab({
 
 export default function RecordListSkeleton({
   hasSearchBar = false,
+  hasSearchInput = true,
   searchSummary = "badge",
   hasSummaryCard = false,
   hasBanner = false,
@@ -80,6 +81,11 @@ export default function RecordListSkeleton({
   contentStyle,
 }: {
   hasSearchBar?: boolean;
+  /**
+   * Ô nhập của khối tìm kiếm. False khi ô đang ẩn sau nút kính lúp trên header
+   * (`useHeaderSearch`): chỉ còn dòng tóm tắt, như màn thật.
+   */
+  hasSearchInput?: boolean;
   /**
    * Dòng tóm tắt dưới ô tìm kiếm — mỗi kiểu ứng với một khối tìm kiếm thật:
    *
@@ -179,21 +185,26 @@ export default function RecordListSkeleton({
         >
           {/* Ô tìm kiếm thật là hộp TRẮNG có viền (`SearchBar` cardBox), chỉ chữ
               bên trong mới xám — vẽ thành khối xám đặc là lệch hình dáng. */}
-          <Animated.View
-            style={[styles.searchBar, { borderColor: colors.border, opacity }]}
-          >
-            <View style={styles.searchIcon} />
-            <View style={styles.searchText} />
-          </Animated.View>
+          {hasSearchInput ? (
+            <Animated.View
+              style={[styles.searchBar, { borderColor: colors.border, opacity }]}
+            >
+              <View style={styles.searchIcon} />
+              <View style={styles.searchText} />
+            </Animated.View>
+          ) : null}
           {searchSummary === "count" ? (
             <Animated.View
               style={[
                 styles.countLabel,
+                hasSearchInput ? null : styles.countLabelNoInput,
                 { backgroundColor: colors.skeleton, opacity },
               ]}
             />
           ) : (
-            <View style={styles.summaryRow}>
+            <View
+              style={[styles.summaryRow, hasSearchInput ? null : styles.summaryRowNoInput]}
+            >
               <Animated.View
                 style={[
                   styles.summaryBadge,
@@ -329,6 +340,9 @@ const makeStyles = (c: AppColors) =>
       marginTop: 8,
       gap: 12,
     },
+    summaryRowNoInput: {
+      marginTop: 0,
+    },
     summaryBadge: {
       width: 108,
       height: 22,
@@ -347,6 +361,11 @@ const makeStyles = (c: AppColors) =>
       marginTop: 8 + 2,
       marginBottom: 2,
       borderRadius: 5,
+    },
+    // Ô nhập đang ẩn (`hasSearchInput` false): dòng đếm ở đỉnh khối, 2 vẫn để
+    // căn giữa với dòng chữ thật.
+    countLabelNoInput: {
+      marginTop: 2,
     },
     // Lề 2 / 10 là `stickyHeader` bọc `AssetListSummaryCard` — trước đây 0 / 6
     // nên lúc dữ liệu về danh sách tụt xuống 6pt.

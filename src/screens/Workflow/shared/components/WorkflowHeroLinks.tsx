@@ -12,6 +12,8 @@ export type WorkflowHeroLink = {
   count?: number;
   /** Thiếu thì không bấm được (khung chờ). */
   onPress?: () => void;
+  /** Mờ đi, không bấm được — vd Đính kèm của phiếu chưa có file mà mình không thêm được. */
+  disabled?: boolean;
 };
 
 const formatCount = (count: number) => (count > 99 ? "99+" : String(count));
@@ -33,24 +35,27 @@ export default function WorkflowHeroLinks({ links }: { links: WorkflowHeroLink[]
         <TouchableOpacity
           key={link.key}
           activeOpacity={0.7}
-          disabled={!link.onPress}
+          disabled={link.disabled || !link.onPress}
           onPress={link.onPress}
           style={[styles.item, index > 0 && styles.itemDivider]}
           accessibilityRole="button"
+          accessibilityState={{ disabled: !!link.disabled }}
           accessibilityLabel={link.count == null ? link.label : `${link.label}, ${link.count}`}
         >
-          <Ionicons name={link.icon} size={16} color={c.textSecondary} />
-          <Text style={styles.label} numberOfLines={1}>
-            {link.label}
-          </Text>
-          {link.count != null ? (
-            <View style={[styles.count, !link.count && styles.countEmpty]}>
-              <Text style={[styles.countText, !link.count && styles.countTextEmpty]}>
-                {formatCount(link.count)}
-              </Text>
-            </View>
-          ) : null}
-          <Ionicons name="chevron-forward" size={14} color={c.textMuted} />
+          <View style={[styles.itemBody, link.disabled && styles.itemDisabled]}>
+            <Ionicons name={link.icon} size={16} color={c.textSecondary} />
+            <Text style={styles.label} numberOfLines={1}>
+              {link.label}
+            </Text>
+            {link.count != null ? (
+              <View style={[styles.count, !link.count && styles.countEmpty]}>
+                <Text style={[styles.countText, !link.count && styles.countTextEmpty]}>
+                  {formatCount(link.count)}
+                </Text>
+              </View>
+            ) : null}
+            <Ionicons name="chevron-forward" size={14} color={c.textMuted} />
+          </View>
         </TouchableOpacity>
       ))}
     </View>
@@ -71,16 +76,22 @@ const makeStyles = (c: AppColors) =>
     },
     item: {
       flex: 1,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 6,
       paddingVertical: 12,
       paddingHorizontal: 10,
     },
     itemDivider: {
       borderLeftWidth: StyleSheet.hairlineWidth,
       borderLeftColor: c.separator,
+    },
+    // Mờ phần ruột, không mờ ô: đường kẻ giữa hai ô giữ nguyên độ đậm.
+    itemBody: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+    },
+    itemDisabled: {
+      opacity: 0.5,
     },
     label: {
       flexShrink: 1,

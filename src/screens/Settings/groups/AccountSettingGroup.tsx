@@ -1,10 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
-import * as Keychain from "react-native-keychain";
 import { useNavigation } from "@react-navigation/native";
-import { useAuth } from "../../../context/AuthContext";
 import { readStoredAuthTokens } from "../../../context/authStorage";
-import { changePasswordApi } from "../../../services";
 import {
   readFaceIdEnabled,
   writeFaceIdEnabled,
@@ -22,20 +19,14 @@ import {
   writeBiometricMarker,
   writeDeviceLockEnabled,
 } from "../../../services/auth/biometric";
-import { AUTH_LOGIN_SERVICE } from "../../../constants/AuthStorage";
 import type { StackNavigation } from "../../../types";
 import { C } from "../../../utils/helpers/colors";
-import { warn } from "../../../utils/Logger";
 import SettingSectionGroup from "../shared/SettingSectionGroup";
 import { getSettingGroupColor } from "../shared/settingGroups";
 import { SettingRowItem, SettingSwitchRow } from "../shared/SettingRowItem";
 import ChangePasswordModal from "../shared/ChangePasswordModal";
+import { useChangePasswordFlow } from "../shared/useChangePasswordFlow";
 import { AppAlert } from "../../../components/ui/AppAlert";
-
-const isAuthExpiredError = (error: any) =>
-  error?.NEED_LOGIN ||
-  error?.response?.status === 401 ||
-  error?.response?.status === 403;
 
 const capitalize = (text: string) =>
   text.charAt(0).toUpperCase() + text.slice(1);
@@ -46,7 +37,6 @@ const capitalize = (text: string) =>
  */
 export default function AccountSettingGroup() {
   const navigation = useNavigation<StackNavigation<"SettingGroup">>();
-  const { logoutReason } = useAuth();
   const isMountedRef = useRef(true);
 
   const [isFaceIdEnabled, setIsFaceIdEnabled] = useState(false);
@@ -59,11 +49,8 @@ export default function AccountSettingGroup() {
   // Máy không có khoá màn hình thì ẩn dòng công tắc.
   const [isDeviceLockEnabled, setIsDeviceLockEnabled] = useState(false);
   const [isDeviceLockOnDevice, setIsDeviceLockOnDevice] = useState(false);
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [oldPassword, setOldPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const { openChangePassword, changePasswordModalProps } =
+    useChangePasswordFlow();
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -204,74 +191,6 @@ export default function AccountSettingGroup() {
     }
   };
 
-  const closeModal = () => {
-    setIsModalVisible(false);
-    setOldPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-  };
-
-  const handleChangePassword = async () => {
-    if (isChangingPassword) return;
-    if (!oldPassword || !newPassword || !confirmPassword) {
-      AppAlert.alert("Lỗi", "Vui lòng điền đầy đủ thông tin.");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      AppAlert.alert("Lỗi", "Mật khẩu xác nhận không khớp.");
-      return;
-    }
-    if (oldPassword === newPassword) {
-      AppAlert.alert("Lỗi", "Mật khẩu mới phải khác mật khẩu cũ.");
-      return;
-    }
-    setIsChangingPassword(true);
-    try {
-      const response = await changePasswordApi(oldPassword, newPassword);
-      const isChangePasswordSuccess =
-        response?.success === true ||
-        response?.data === 1 ||
-        (typeof response?.data === "object" &&
-          response?.data?.success === true);
-      const responseMessage =
-        response?.message ||
-        (typeof response?.data === "object"
-          ? response?.data?.message
-          : undefined) ||
-        "Đổi mật khẩu thất bại!";
-
-      if (isChangePasswordSuccess) {
-        try {
-          const saved = await Keychain.getGenericPassword({
-            service: AUTH_LOGIN_SERVICE,
-          });
-          if (saved) {
-            await Keychain.setGenericPassword(saved.username, newPassword, {
-              service: AUTH_LOGIN_SERVICE,
-              accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-            });
-          }
-        } catch (storageError) {
-          warn("[Settings] Update saved password failed:", storageError);
-        }
-
-        AppAlert.alert("Thành công", "Đổi mật khẩu thành công!");
-        closeModal();
-      } else {
-        AppAlert.alert("Lỗi", responseMessage);
-      }
-    } catch (error: any) {
-      if (isAuthExpiredError(error) || logoutReason === "EXPIRED") return;
-      AppAlert.alert(
-        "Lỗi",
-        error.response?.data?.message ||
-          "Không thể đổi mật khẩu. Vui lòng thử lại.",
-      );
-    } finally {
-      if (isMountedRef.current) setIsChangingPassword(false);
-    }
-  };
-
   // iOS giữ như cũ: luôn có dòng Face ID. Android chỉ hiện khi máy có sinh trắc.
   const isFaceIdAvailable = Platform.OS === "ios" || biometricKind !== null;
 
@@ -297,7 +216,7 @@ export default function AccountSettingGroup() {
           iconBg={C.amber}
           label="Đổi mật khẩu"
           sublabel="Cập nhật mật khẩu đăng nhập"
-          onPress={() => setIsModalVisible(true)}
+          onPress={openChangePassword}
           isLast={!isFaceIdAvailable && !isDeviceLockOnDevice}
         />
         {isFaceIdAvailable ? (
@@ -334,18 +253,7 @@ export default function AccountSettingGroup() {
         ) : null}
       </SettingSectionGroup>
 
-      <ChangePasswordModal
-        visible={isModalVisible}
-        isLoading={isChangingPassword}
-        oldPassword={oldPassword}
-        newPassword={newPassword}
-        confirmPassword={confirmPassword}
-        onChangeOldPassword={setOldPassword}
-        onChangeNewPassword={setNewPassword}
-        onChangeConfirmPassword={setConfirmPassword}
-        onClose={closeModal}
-        onSubmit={handleChangePassword}
-      />
+      <ChangePasswordModal {...changePasswordModalProps} />
     </>
   );
 }

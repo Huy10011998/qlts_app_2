@@ -4,6 +4,7 @@ import {
   HOME_HIDDEN_BLOCKS_KEY,
   normalizeHomeBlockList,
   setHomeBlockInList,
+  setHomeBlocksInList,
 } from "../src/screens/Home/shared/homeBlockLists";
 import type { HomeBlockKey } from "../src/screens/Home/shared/homeBlockOrder";
 
@@ -53,6 +54,17 @@ describe("normalizeHomeBlockList", () => {
   });
 });
 
+describe("normalizeHomeBlockList – danh sách không phải khối Trang chủ", () => {
+  it("nhóm của màn Chức năng lọc theo `isKey` riêng", () => {
+    const isGroup = (key: string): key is "feature" | "report" =>
+      key === "feature" || key === "report";
+
+    expect(
+      normalizeHomeBlockList(["report", "stats", "feature", "report"], isGroup),
+    ).toEqual(["report", "feature"]);
+  });
+});
+
 describe("setHomeBlockInList", () => {
   const list: HomeBlockKey[] = ["assetStructure"];
 
@@ -67,5 +79,25 @@ describe("setHomeBlockInList", () => {
   it("không đổi gì thì trả lại đúng mảng cũ, để khỏi ghi máy vô ích", () => {
     expect(setHomeBlockInList(list, "assetStructure", true)).toBe(list);
     expect(setHomeBlockInList(list, "stats", false)).toBe(list);
+  });
+});
+
+describe("setHomeBlocksInList – gập / mở tất cả", () => {
+  const collapsed: HomeBlockKey[] = ["stats"];
+
+  it("gập hết: thêm các khối còn thiếu, giữ khối đã có", () => {
+    expect(
+      setHomeBlocksInList(collapsed, ["stats", "shortcuts", "workflow"], true),
+    ).toEqual(["stats", "shortcuts", "workflow"]);
+  });
+
+  it("mở hết: bỏ đúng các khối được nêu", () => {
+    expect(
+      setHomeBlocksInList(["stats", "shortcuts"], ["stats", "shortcuts"], false),
+    ).toEqual([]);
+  });
+
+  it("không đổi gì thì trả lại đúng mảng cũ", () => {
+    expect(setHomeBlocksInList(collapsed, ["stats"], true)).toBe(collapsed);
   });
 });

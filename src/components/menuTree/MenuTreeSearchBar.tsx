@@ -7,6 +7,7 @@ import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import SearchBar from "../ui/SearchBar";
+import HeaderSearchReveal from "../ui/HeaderSearchReveal";
 
 type MenuTreeSearchBarProps = {
   value: string;
@@ -17,6 +18,11 @@ type MenuTreeSearchBarProps = {
   placeholder?: string;
   /** Bỏ trống khi không còn nhóm nào đang mở — lúc đó nút không có việc gì làm. */
   onCollapseAll?: () => void;
+  /**
+   * Ô ẩn sau nút kính lúp trên header (`useHeaderSearch`). Đóng thì chỉ ẩn ô
+   * nhập; nút "Thu tất cả" vẫn ở đó nếu có.
+   */
+  search?: { open: boolean; close: () => void };
 };
 
 export default function MenuTreeSearchBar({
@@ -27,21 +33,32 @@ export default function MenuTreeSearchBar({
   showResultCount,
   placeholder = "Tìm kiếm...",
   onCollapseAll,
+  search,
 }: MenuTreeSearchBarProps) {
   const accentBorders = useAccentBorderColors();
   const colors = useAppColors();
+  const showInput = search?.open ?? true;
+  const showMeta = showResultCount || Boolean(onCollapseAll);
 
+  // Khoảng 14 trên luôn giữ: hàng Truy cập nhanh và danh sách bên dưới không có
+  // lề trên riêng (vốn dựa vào khối này), bỏ hẳn thì chúng dính sát header.
+  // Khoảng 8 dưới ô nhập là `gap` của khung trượt, thu về 0 cùng ô; khoảng 8
+  // dưới hàng đếm đi theo hàng đó. Ô ẩn, không có hàng nào: chỉ còn 14 trên.
   return (
     <View style={[styles.searchWrap, { backgroundColor: colors.bg }]}>
-      <SearchBar
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        isSearching={isSearching}
-        spinnerColor={C.red}
-      />
+      <HeaderSearchReveal open={showInput} gap={8}>
+        <SearchBar
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          isSearching={isSearching}
+          spinnerColor={C.red}
+          autoFocus={Boolean(search)}
+          onClose={search?.close}
+        />
+      </HeaderSearchReveal>
 
-      {showResultCount || onCollapseAll ? (
+      {showMeta ? (
         <View style={styles.metaRow}>
           {showResultCount ? (
             <View
@@ -87,10 +104,9 @@ const styles = StyleSheet.create({
   searchWrap: {
     paddingHorizontal: 14,
     paddingTop: 14,
-    paddingBottom: 8,
   },
   metaRow: {
-    marginTop: 8,
+    marginBottom: 8,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",

@@ -25,6 +25,7 @@ import {
   AUTH_TOKEN_KEY,
   clearStoredAuthTokens,
   clearStoredFaceIdData,
+  clearStoredLoginProfile,
   readStoredAuthTokens,
   writeStoredAuthValue,
 } from "./authStorage";
@@ -44,6 +45,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
   const logout = useCallback(async (reason: LogoutReason = "OTHER") => {
     log("[Auth] Logout → hard reset");
+    // Tự đăng xuất là cách đổi tài khoản: quên họ tên đã lưu để màn Đăng nhập
+    // hiện lại ô Tài khoản. Gọi TRƯỚC khi đổi state — màn Đăng nhập mount ngay
+    // sau đó và đọc lại; AsyncStorage chạy lệnh theo thứ tự gọi.
+    const forgetLoginProfile =
+      reason !== "EXPIRED" ? clearStoredLoginProfile() : null;
     setLogoutReason(reason);
     setIsLoading(true);
     setTokenState(null);
@@ -56,6 +62,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       if (reason !== "EXPIRED") {
         await clearStoredFaceIdData();
       }
+      await forgetLoginProfile;
     } catch (e) {
       error("[Auth] Logout cleanup failed", e);
     } finally {

@@ -3,7 +3,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import type { RootStackParamList } from "../types/index";
 import CameraScreen from "../screens/Camera/CameraScreen";
-import { headerWithoutBackAndHelp } from "./shared/navigationOptions";
+import { headerTabRoot } from "./shared/navigationOptions";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -15,7 +15,7 @@ export default function CameraStack() {
         component={CameraScreen}
         options={{
           title: "Hệ thống Camera",
-          ...headerWithoutBackAndHelp("camera"),
+          ...headerTabRoot("camera"),
         }}
       />
     </Stack.Navigator>

@@ -21,7 +21,7 @@ const TOPICS: GuideTopic[] = [
     iconName: "log-in-outline",
     iconBg: C.blue,
     group: "Bắt đầu",
-    keywords: ["dang nhap", "login", "mat khau", "faceid", "face id", "van tay", "khuon mat", "sinh trac", "khoa man hinh", "mau hinh", "ma pin", "mo khoa", "mang noi bo"],
+    keywords: ["dang nhap", "login", "mat khau", "faceid", "face id", "van tay", "khuon mat", "sinh trac", "khoa man hinh", "mau hinh", "ma pin", "mo khoa", "mang noi bo", "doi tai khoan", "xin chao", "quen mat khau", "ho tro dang nhap", "nut wifi"],
     sections: [
       {
         id: "dang-nhap-thuong",
@@ -32,13 +32,18 @@ const TOPICS: GuideTopic[] = [
             items: [
               "Mở ứng dụng, chờ màn hình chào kết thúc.",
               "Nhập Tài khoản và Mật khẩu do IT cấp. Bấm hình con mắt ở cuối ô mật khẩu để xem lại chữ vừa nhập.",
-              "Bấm Đăng nhập. Nút chỉ sáng khi cả hai ô đã có chữ.",
+              "Máy đã đăng nhập trước đó thì màn chào bằng họ tên của bạn và chỉ hỏi Mật khẩu. Muốn đổi sang tài khoản khác thì đăng xuất (tab Cài đặt: nút nguồn góc phải trên hoặc dòng Đăng xuất cuối màn), màn Đăng nhập sẽ hiện lại ô Tài khoản.",
+              "Bấm Đăng nhập. Nút chỉ sáng khi đã nhập đủ tài khoản và mật khẩu.",
             ],
           },
           {
             kind: "note",
             tone: "info",
             text: "Máy phải ở mạng nội bộ công ty (Wi-Fi công ty) mới kết nối được máy chủ. Nếu báo \"Không thể kết nối đến máy chủ\", hãy kiểm tra Wi-Fi trước khi thử lại.",
+          },
+          {
+            kind: "paragraph",
+            text: "Quên mật khẩu hoặc bị khoá tài khoản: bấm Email hỗ trợ hoặc số điện thoại ở cuối màn Đăng nhập để liên hệ IT. App chưa có chức năng tự đặt lại mật khẩu.",
           },
         ],
       },
@@ -48,13 +53,13 @@ const TOPICS: GuideTopic[] = [
         blocks: [
           {
             kind: "paragraph",
-            text: "Ngay trên màn Đăng nhập có dòng trạng thái Mạng nội bộ. iOS bắt buộc phải cho phép quyền này, không có nó thì máy không gọi được tới máy chủ trong công ty.",
+            text: "Góc phải trên màn Đăng nhập có nút tròn hình wifi báo trạng thái Mạng nội bộ: chấm xanh là đã cấp quyền, chấm vàng là chưa. iOS bắt buộc phải cho phép quyền này, không có nó thì máy không gọi được tới máy chủ trong công ty.",
           },
           {
             kind: "bullets",
             items: [
-              "Chưa cấp quyền: bấm vào dòng đó và chọn Cho phép ở hộp thoại của hệ thống.",
-              "Đã chặn quyền: vào Cài đặt của iPhone → tìm ứng dụng → bật lại Local Network.",
+              "Lần đầu mở app: chọn Cho phép ở hộp thoại của hệ thống.",
+              "Chấm vàng (đã chặn quyền): bấm nút wifi để mở Cài đặt, bật lại Mạng cục bộ (Local Network).",
             ],
           },
         ],
@@ -74,7 +79,7 @@ const TOPICS: GuideTopic[] = [
           {
             kind: "note",
             tone: "info",
-            text: "Nút Face ID bị mờ, bấm vào báo \"FaceID chưa bật\" là tài khoản này chưa bật Face ID ở Cài đặt → Tài khoản trên máy đang dùng (hoặc vừa đăng xuất). Đăng nhập bằng mật khẩu rồi bật lại. Ô tài khoản luôn điền sẵn tên đăng nhập lần trước.",
+            text: "Nút Face ID bị mờ, bấm vào báo \"FaceID chưa bật\" là tài khoản này chưa bật Face ID ở Cài đặt → Tài khoản trên máy đang dùng (hoặc vừa đăng xuất). Đăng nhập bằng mật khẩu rồi bật lại. Máy đã nhớ tài khoản thì màn chào bằng tên và chỉ còn ô Mật khẩu; vừa đăng xuất thì ô Tài khoản điền sẵn tên đăng nhập lần trước.",
           },
           {
             kind: "paragraph",
@@ -134,7 +139,7 @@ const TOPICS: GuideTopic[] = [
             kind: "bullets",
             items: [
               "Bật cả hai: hộp hỏi vân tay / khuôn mặt có thêm nút chuyển sang mẫu hình / mã PIN. Chữ trên nút do điện thoại ghi, mỗi hãng một kiểu.",
-              "Muốn dùng mật khẩu: cứ nhập Tài khoản, Mật khẩu rồi bấm Đăng nhập như thường. Hộp hỏi đang mở thì bấm Dùng mật khẩu, hoặc bấm ra ngoài hộp / nút Quay lại để đóng.",
+              "Muốn dùng mật khẩu: cứ nhập Mật khẩu (và Tài khoản nếu màn có ô này) rồi bấm Đăng nhập như thường. Hộp hỏi đang mở thì bấm Dùng mật khẩu, hoặc bấm ra ngoài hộp / nút Quay lại để đóng.",
               "Đang dùng mà ra màn hình chính rồi quay lại app thì vào tiếp luôn, không hỏi.",
             ],
           },
@@ -170,11 +175,25 @@ const TOPICS: GuideTopic[] = [
   {
     id: "tong-quan",
     title: "Tổng quan giao diện",
-    summary: "5 tab dưới màn hình và thanh tiêu đề đỏ",
+    summary: "5 tab dưới màn hình, thanh tiêu đề và nút tìm kiếm",
     iconName: "apps-outline",
     iconBg: C.redDeep,
     group: "Bắt đầu",
-    keywords: ["tab", "thanh dieu huong", "giao dien", "header"],
+    keywords: [
+      "tab",
+      "thanh dieu huong",
+      "giao dien",
+      "header",
+      "thanh tab",
+      "an thanh tab",
+      "bieu tuong",
+      "kinh lup",
+      "tim kiem",
+      "chuong",
+      "logo",
+      "thanh tieu de",
+      "anh nha may",
+    ],
     sections: [
       {
         id: "tong-quan-tab",
@@ -183,26 +202,36 @@ const TOPICS: GuideTopic[] = [
           {
             kind: "bullets",
             items: [
-              "Trang chủ: số liệu toàn công ty và các lối vào nhanh bạn tự chọn.",
-              "Chức năng: danh mục đầy đủ mọi chức năng, có ô tìm kiếm.",
-              "Quét QR: nút to ở giữa, mở máy quét tem QR.",
-              "Camera: hệ thống camera theo khu vực. Tài khoản dùng Workflow thấy tab Lịch ở chỗ này — xem chủ đề Lịch công việc.",
-              "Cài đặt: chia 5 nhóm Tài khoản, Hỗ trợ, Hệ thống, Thông tin ứng dụng, Khác — gồm hồ sơ, danh thiếp QR, mật khẩu, quyền, giao diện, cỡ chữ và tài liệu hướng dẫn này.",
+              "Trang chủ (hình ngôi nhà): số liệu toàn công ty và các lối vào nhanh bạn tự chọn.",
+              "Chức năng (hình bốn ô vuông): danh mục đầy đủ mọi chức năng, chia ba nhóm Tiện ích, Phương tiện, Báo cáo; bấm kính lúp trên thanh tiêu đề để tìm. Nhóm ít dùng thì bấm nhãn màu của nhóm để thu gọn, bấm lần nữa để mở lại; đè giữ nhãn bất kỳ để thu gọn tất cả nhóm (đè giữ lần nữa để mở hết).",
+              "Quét QR (ô đỏ ở giữa): mở máy quét tem QR.",
+              "Camera (hình máy quay): hệ thống camera theo khu vực. Tài khoản dùng Workflow thấy tab Lịch (hình tờ lịch) ở chỗ này, số đỏ trên tab là số việc cần xử lý — xem chủ đề Lịch công việc.",
+              "Cài đặt (ảnh đại diện của bạn; chưa có ảnh thì hình bánh răng): chia 5 nhóm Tài khoản, Hỗ trợ, Hệ thống, Thông tin ứng dụng, Khác — gồm hồ sơ, danh thiếp QR, mật khẩu, quyền, giao diện, cỡ chữ và tài liệu hướng dẫn này.",
             ],
+          },
+          {
+            kind: "paragraph",
+            text: "Thanh tab là một viên bo tròn nổi trên nội dung, chỉ có biểu tượng, không ghi chữ: tab đang mở có biểu tượng đỏ trên nền hồng nhạt. Vuốt đọc xuống thì thanh tab trượt khuất cho rộng chỗ; kéo ngược lên một đoạn hoặc cuộn về đầu trang là thanh tab hiện lại. Chỉ màn đầu của mỗi tab mới có thanh tab: mở sang màn khác (danh sách, chi tiết, màn Thông tin sau khi quét QR…) thì màn mới phủ kín, bấm mũi tên quay lại để về.",
+          },
+          {
+            kind: "note",
+            tone: "info",
+            text: "Máy đang bật VoiceOver (iPhone) hoặc TalkBack (Android) thì thanh tab không tự ẩn. Mỗi biểu tượng tab vẫn được đọc đúng tên tab.",
           },
         ],
       },
       {
         id: "tong-quan-header",
-        heading: "Thanh tiêu đề đỏ",
+        heading: "Thanh tiêu đề",
         blocks: [
           {
             kind: "paragraph",
-            text: "Mọi màn mở từ danh sách đều có thanh đỏ ở trên. Bên trái là mũi tên quay lại màn trước. Bên phải có thể có thêm nút, tuỳ màn:",
+            text: "Mọi màn đều có thanh tiêu đề ở trên, nền là ảnh nhà máy Cholimex, viền đỏ mảnh ở dưới; dòng chữ nhỏ dưới tiêu đề cho biết bạn đang ở đâu (tab Lịch thì hiện thứ và ngày hôm nay). Màn đầu của các tab Chức năng, Lịch / Camera có logo bên trái và chuông thông báo ngoài cùng bên phải, như Trang chủ. Riêng tab Cài đặt, đầu màn là ảnh lớn kèm thẻ hồ sơ màu đỏ (xem chủ đề Cài đặt & quyền). Màn mở từ danh sách thì bên trái là mũi tên quay lại màn trước. Bên phải có thể có thêm nút, tuỳ màn:",
           },
           {
             kind: "bullets",
             items: [
+              "Kính lúp: mở ô tìm kiếm ngay dưới thanh tiêu đề, bàn phím bật sẵn. Bấm kính lúp lần nữa (lúc này có nền tròn mờ) hoặc dấu × trong ô để xoá chữ và ẩn ô. Danh sách vẫn giữ dòng đếm số bản ghi, nút lọc danh mục và nút Thu tất cả như cũ.",
               "Dấu hỏi: mở đúng chủ đề hướng dẫn của màn đang xem.",
               "Hình mã QR: quét tem để ra ngay bản ghi, nhanh hơn dò cây danh mục.",
               "Dấu ba chấm: thao tác quản trị bản ghi (Bản sao, Xoá). Việc nghiệp vụ như Đánh giá không nằm trong đây: vuốt dòng ở danh sách, hoặc dùng thanh dưới đáy màn khi quét QR.",
@@ -211,7 +240,7 @@ const TOPICS: GuideTopic[] = [
           {
             kind: "note",
             tone: "info",
-            text: "Nút nào không có quyền thì app ẩn hẳn, không hiện rồi báo lỗi. Thiếu nút cần dùng thì liên hệ IT để xin quyền.",
+            text: "Nút nào không có quyền thì app ẩn hẳn, không hiện rồi báo lỗi. Thiếu nút cần dùng thì liên hệ IT để xin quyền. Các bảng chọn bật lên từ dưới (chọn nhân viên, khách hàng, danh mục…) không có thanh tiêu đề nên vẫn có ô tìm kiếm sẵn ở đầu bảng.",
           },
         ],
       },
@@ -241,8 +270,11 @@ const TOPICS: GuideTopic[] = [
       "dashboard",
       "hoan tat trong nam",
       "thu gon",
+      "thu gon tat ca",
       "an khoi",
       "di toi khoi",
+      "lam moi",
+      "len dau trang",
     ],
     sections: [
       {
@@ -271,7 +303,11 @@ const TOPICS: GuideTopic[] = [
           },
           {
             kind: "paragraph",
-            text: "Hình chuông trên thanh đầu Trang chủ là thông báo của phiếu đề nghị, công việc và kế hoạch — xem mục Chuông thông báo bên dưới. Việc Workflow đang chờ bạn thì xem bằng nút Việc cần xử lý (hình bảng kẹp giấy có dấu tích) ngay cạnh chuông.",
+            text: "Thanh tiêu đề Trang chủ có bốn nút: Làm mới (mũi tên vòng tròn — tải lại cả trang, giống kéo trang xuống), Sắp xếp (mũi tên lên xuống — xem mục Đổi thứ tự bên dưới), Việc cần xử lý (hình bảng kẹp giấy có dấu tích) và chuông. Chuông là thông báo của phiếu đề nghị, công việc và kế hoạch — xem mục Chuông thông báo bên dưới; chuông cũng có ở thanh tiêu đề các tab khác. Việc Workflow đang chờ bạn thì xem bằng nút Việc cần xử lý ngay cạnh chuông.",
+          },
+          {
+            kind: "paragraph",
+            text: "Cuộn xuống quá một màn thì góc dưới bên phải hiện nút tròn đỏ mũi tên lên: bấm để trượt về đầu trang.",
           },
         ],
       },
@@ -310,7 +346,7 @@ const TOPICS: GuideTopic[] = [
           {
             kind: "bullets",
             items: [
-              "Máy móc đang quản lý: mở màn Tài sản nhưng chỉ hiện đúng nhánh thiết bị máy móc, tiêu đề thanh đỏ đổi theo tên nhánh.",
+              "Máy móc đang quản lý: mở màn Tài sản nhưng chỉ hiện đúng nhánh thiết bị máy móc, tiêu đề màn đổi theo tên nhánh.",
               "Thiết bị CNTT đang dùng: mở nhóm IT (thiết bị CNTT đã chuyển từ nhóm Tài sản sang nhóm này), chỉ hiện nhánh CNTT. Số trên ô chưa gồm camera — camera đếm riêng ở ô khác.",
               "Đã điểm danh hôm nay: trượt xuống khối ĐIỂM DANH NHÂN SỰ HÔM NAY ngay trên Trang chủ, nơi có số theo từng phòng ban.",
             ],
@@ -358,7 +394,7 @@ const TOPICS: GuideTopic[] = [
           },
           {
             kind: "paragraph",
-            text: "Khối vẫn muốn giữ nhưng ít xem thì bấm vào nhãn màu ở đầu khối để thu gọn — chỉ còn dòng tiêu đề, cạnh đó ghi Đã thu gọn. Bấm nhãn lần nữa để mở lại.",
+            text: "Khối vẫn muốn giữ nhưng ít xem thì bấm vào nhãn màu ở đầu khối để thu gọn — chỉ còn dòng tiêu đề, cạnh đó ghi Đã thu gọn. Bấm nhãn lần nữa để mở lại. Muốn nhìn tổng quát thì đè giữ nhãn của khối bất kỳ: tất cả khối thu gọn cùng lúc, Trang chủ chỉ còn danh sách tiêu đề; đè giữ lần nữa để mở hết.",
           },
           {
             kind: "note",
@@ -388,7 +424,7 @@ const TOPICS: GuideTopic[] = [
           {
             kind: "steps",
             items: [
-              "Bấm nút tròn Quét QR ở giữa thanh tab, hoặc bấm hình mã QR ở góc phải thanh đỏ khi đang xem một danh sách tài sản.",
+              "Bấm nút đỏ Quét QR ở giữa thanh tab, hoặc bấm hình mã QR ở góc phải thanh tiêu đề khi đang xem một danh sách tài sản.",
               "Lần đầu máy sẽ hỏi quyền camera — chọn Cho phép.",
               "Đưa camera vào tem QR trên thiết bị, giữ cách khoảng một gang tay cho khung ngắm ăn trọn tem.",
               "Máy rung nhẹ là đã đọc được mã; app tự mở màn Thông tin của thiết bị đó.",
@@ -412,21 +448,21 @@ const TOPICS: GuideTopic[] = [
         blocks: [
           {
             kind: "paragraph",
-            text: "App mở màn Thông tin của thiết bị. Nếu thiết bị có nhiều việc làm được thì bảng Làm gì với thiết bị này? tự mở sẵn — quét xong thường là để làm một việc gì đó, không phải để đọc.",
+            text: "App mở màn Thông tin của thiết bị, phủ kín màn hình như mọi màn chi tiết (thanh tab tạm ẩn). Nếu thiết bị có nhiều việc làm được thì bảng Làm gì với thiết bị này? tự mở sẵn — quét xong thường là để làm một việc gì đó, không phải để đọc.",
           },
           {
             kind: "steps",
             items: [
               "Chọn việc trong bảng, ví dụ Đánh giá.",
               "App mở thẳng màn nhập của việc đó, ô thiết bị đã điền sẵn.",
-              "Nhập xong bấm Xác nhận ở góc phải thanh đỏ.",
+              "Nhập xong bấm Xác nhận ở góc phải thanh tiêu đề.",
               "App tự quay về màn quét kèm dải xanh Đã lưu…, camera sẵn sàng cho mã kế tiếp.",
             ],
           },
           {
             kind: "note",
             tone: "info",
-            text: "Chỉ muốn xem thông tin thì bấm ra ngoài bảng để đóng. Thiết bị chỉ làm được một việc thì bảng không mở, thanh dưới đáy màn ghi thẳng tên việc đó.",
+            text: "Chỉ muốn xem thông tin thì bấm ra ngoài bảng để đóng; xem xong bấm mũi tên quay lại là về máy quét. Thiết bị chỉ làm được một việc thì bảng không mở, thanh dưới đáy màn ghi thẳng tên việc đó.",
           },
         ],
       },
@@ -513,8 +549,8 @@ const TOPICS: GuideTopic[] = [
             items: [
               "Vào tab Chức năng (hoặc lối vào nhanh trên Trang chủ) và chọn nhóm tài sản cần xem.",
               "Đi theo cây danh mục tới đúng loại tài sản để ra danh sách bản ghi.",
-              "Gõ vào ô tìm kiếm để lọc. Gõ không dấu vẫn ra kết quả.",
-              "Loại tài sản có cây danh mục thì bấm ô hình phễu (ghi Tất cả hoặc tên danh mục đang chọn) cạnh ô tìm kiếm để lọc theo một nhánh; bấm dấu × trên ô đó để bỏ lọc.",
+              "Bấm kính lúp trên thanh tiêu đề rồi gõ vào ô tìm kiếm vừa hiện ra để lọc. Gõ không dấu vẫn ra kết quả. Bấm kính lúp lần nữa hoặc dấu × trong ô để xoá chữ và ẩn ô.",
+              "Loại tài sản có cây danh mục thì bấm ô hình phễu (ghi Tất cả hoặc tên danh mục đang chọn) ở đầu danh sách để lọc theo một nhánh; bấm dấu × trên ô đó để bỏ lọc.",
               "Bấm vào một dòng để mở màn chi tiết.",
             ],
           },
@@ -525,7 +561,7 @@ const TOPICS: GuideTopic[] = [
           {
             kind: "note",
             tone: "info",
-            text: "Đứng ngay trước thiết bị thì bấm hình mã QR ở góc phải thanh đỏ — quét tem ra bản ghi nhanh hơn dò danh mục.",
+            text: "Đứng ngay trước thiết bị thì bấm hình mã QR ở góc phải thanh tiêu đề — quét tem ra bản ghi nhanh hơn dò danh mục.",
           },
         ],
       },
@@ -535,7 +571,7 @@ const TOPICS: GuideTopic[] = [
         blocks: [
           {
             kind: "paragraph",
-            text: "Thanh tab dưới thanh đỏ chia màn chi tiết thành các mục. Mục đang mở hiện cả chữ, các mục khác chỉ hiện biểu tượng; số đỏ trên biểu tượng cho biết trong mục có bao nhiêu dòng, chấm đỏ ở Note là bản ghi có ghi chú.",
+            text: "Thanh tab dưới thanh tiêu đề chia màn chi tiết thành các mục. Mục đang mở hiện cả chữ, các mục khác chỉ hiện biểu tượng; số đỏ trên biểu tượng cho biết trong mục có bao nhiêu dòng, chấm đỏ ở Note là bản ghi có ghi chú.",
           },
           {
             kind: "bullets",
@@ -738,7 +774,7 @@ const TOPICS: GuideTopic[] = [
           {
             kind: "note",
             tone: "info",
-            text: "Danh sách nào vuốt được thì có dòng nhắc màu đỏ nhạt ngay dưới ô tìm kiếm. Không có dòng đó nghĩa là loại tài sản này không khai báo danh mục con nào, hoặc tài khoản chưa có quyền thêm ở danh mục con — không phải app lỗi.",
+            text: "Danh sách nào vuốt được thì có dòng nhắc màu đỏ nhạt ở đầu danh sách. Không có dòng đó nghĩa là loại tài sản này không khai báo danh mục con nào, hoặc tài khoản chưa có quyền thêm ở danh mục con — không phải app lỗi.",
           },
         ],
       },
@@ -922,7 +958,7 @@ const TOPICS: GuideTopic[] = [
             kind: "image",
             source: require("../../../assets/images/guide/phieu-de-nghi-01.png"),
             caption: "Màn Workflow: số nhắc dưới tên từng chức năng",
-            aspectRatio: 0.75,
+            aspectRatio: 0.8,
           },
           {
             kind: "paragraph",
@@ -970,7 +1006,7 @@ const TOPICS: GuideTopic[] = [
           },
           {
             kind: "paragraph",
-            text: "Gõ vào ô Tìm kiếm phiếu... để lọc. Mỗi thẻ có nhãn tình trạng tô màu (Nháp, Chờ duyệt, Đang xử lý, Đã hoàn tất, Đã từ chối, Đã hủy), tên bước hiện tại (bước có nhiều phòng duyệt song song thì ghi tên bước lớn) — chữ đỏ khi tới lượt bạn — và số bình luận, số file đính kèm. Bấm thẳng vào số bình luận, số file hay nút tròn hình sơ đồ cạnh đó để mở màn Bình luận, File đính kèm hay Quy trình của phiếu đó, khỏi vào chi tiết phiếu. Số file mờ đi giống nút Đính kèm ở chi tiết khi phiếu chưa có file mà bạn không thêm được.",
+            text: "Bấm kính lúp trên thanh tiêu đề rồi gõ vào ô Tìm kiếm phiếu... để lọc. Mỗi thẻ có nhãn tình trạng tô màu (Nháp, Chờ duyệt, Đang xử lý, Đã hoàn tất, Đã từ chối, Đã hủy), tên bước hiện tại (bước có nhiều phòng duyệt song song thì ghi tên bước lớn) — chữ đỏ khi tới lượt bạn — và số bình luận, số file đính kèm. Bấm thẳng vào số bình luận, số file hay nút tròn hình sơ đồ cạnh đó để mở màn Bình luận, Đính kèm hay Quy trình của phiếu đó, khỏi vào chi tiết phiếu. Số file mờ đi giống mục Đính kèm ở chi tiết khi phiếu chưa có file mà bạn không thêm được.",
           },
           {
             kind: "paragraph",
@@ -980,13 +1016,13 @@ const TOPICS: GuideTopic[] = [
             kind: "image",
             source: require("../../../assets/images/guide/phieu-de-nghi-02.png"),
             caption: "Tab Chờ duyệt: dải nhắc vuốt, nút Duyệt nhiều (n) và tên bước chữ đỏ khi tới lượt bạn",
-            aspectRatio: 0.74,
+            aspectRatio: 0.9,
           },
           {
             kind: "image",
             source: require("../../../assets/images/guide/phieu-de-nghi-02-vuot.png"),
             caption: "Vuốt thẻ sang trái: hiện nút Từ chối / Duyệt — bước cho phép thì có thêm Trả bước, Không ý kiến",
-            aspectRatio: 1.67,
+            aspectRatio: 1.65,
           },
         ],
       },
@@ -1142,7 +1178,7 @@ const TOPICS: GuideTopic[] = [
         blocks: [
           {
             kind: "paragraph",
-            text: "Ở màn Chi tiết phiếu, bấm Quy trình (hoặc bấm nút tròn hình sơ đồ ngay trên thẻ ở danh sách). Màn có hai tab:",
+            text: "Ở màn Chi tiết phiếu, bấm Quy trình ở hàng nút ngay dưới thẻ đầu (hoặc bấm nút tròn hình sơ đồ ngay trên thẻ ở danh sách). Phiếu chưa có bước nào thì chưa có nút này. Màn có hai tab:",
           },
           {
             kind: "bullets",
@@ -1157,7 +1193,7 @@ const TOPICS: GuideTopic[] = [
             kind: "image",
             source: require("../../../assets/images/guide/phieu-de-nghi-06.png"),
             caption: "Tab Quy trình: mỗi dòng một lượt chạy, nét đứt cam là trả bước; bấm một điểm để xem chi tiết bên dưới",
-            aspectRatio: 0.46,
+            aspectRatio: 0.477,
           },
           {
             kind: "paragraph",
@@ -1172,11 +1208,12 @@ const TOPICS: GuideTopic[] = [
           {
             kind: "bullets",
             items: [
-              "Bình luận (n): trao đổi về phiếu. Ai xem được phiếu thì bình luận được — gõ vào ô Viết bình luận..., mỗi bình luận gửi kèm được 1 file. Ảnh chụp hay ảnh chọn từ máy hiện thẳng trong khung chat, bấm vào để xem to; file khác hiện tên file, bấm để mở.",
-              "Đính kèm (n): xem và mở các file của phiếu. Chỉ người lập thêm hoặc xoá file được, và chỉ khi phiếu còn nháp.",
+              "Bình luận (dải dưới cùng của thẻ đầu, kèm số lượng): trao đổi về phiếu. Ai xem được phiếu thì bình luận được — gõ vào ô Viết bình luận..., mỗi bình luận gửi kèm được 1 file. Ảnh chụp hay ảnh chọn từ máy hiện thẳng trong khung chat, bấm vào để xem to; file khác hiện tên file, bấm để mở. Tin mới thường tự hiện; nghi bị sót thì kéo danh sách xuống để tải lại.",
+              "Đính kèm (cạnh Bình luận, kèm số file): xem và mở các file của phiếu. Chỉ người lập thêm hoặc xoá file được, và chỉ khi phiếu còn nháp. Phiếu chưa có file mà bạn không thêm được thì mục này mờ đi.",
+              "Sửa, Nhân bản, Xoá nằm ở hàng nút ngay dưới thẻ đầu (cùng hàng với Quy trình), giống màn Chi tiết công việc. Nút nào bạn không có quyền thì không hiện.",
               "Sửa: chỉ có ở phiếu nháp của chính bạn.",
               "Nhân bản: tạo phiếu mới lấy sẵn nội dung phiếu đang xem.",
-              "Xoá: chỉ người lập, khi phiếu chưa hoàn tất. App hỏi xác nhận — thao tác không hoàn tác được.",
+              "Xoá (chữ đỏ): chỉ người lập, khi phiếu chưa hoàn tất. App hỏi xác nhận — thao tác không hoàn tác được.",
             ],
           },
         ],
@@ -1210,6 +1247,8 @@ const TOPICS: GuideTopic[] = [
       "lap lai",
       "tien do",
       "file ket qua",
+      "lich su",
+      "xoa ke hoach",
     ],
     sections: [
       {
@@ -1225,15 +1264,15 @@ const TOPICS: GuideTopic[] = [
             items: [
               "Các tab: Chưa xong (mở sẵn), Đến hạn, Quá hạn, Gia hạn, Mới hôm nay, Tất cả, Đã hủy.",
               "Hàng chip màu bên dưới lọc thêm theo tình trạng: Quá hạn, Gia hạn, Đang xử lý, Mới, Hoàn thành, Hủy.",
-              "Ô tìm kiếm tìm theo số, tiêu đề, mô tả.",
-              "Mỗi thẻ ghi Chủ trì, số bình luận, số file; việc sinh từ lịch định kỳ ghi Định kỳ · lần n. Việc quá hạn hay đã gia hạn có thêm nhãn nhỏ Quá hạn / Gia hạn cạnh tình trạng. Bấm thẳng vào số bình luận hay số file để mở màn đó, khỏi vào chi tiết việc.",
+              "Bấm kính lúp trên thanh tiêu đề để mở ô tìm kiếm, tìm theo số, tiêu đề, mô tả.",
+              "Mỗi thẻ ghi Chủ trì, số bình luận, số file đính kèm; việc sinh từ lịch định kỳ ghi Định kỳ · lần n. Việc quá hạn hay đã gia hạn có thêm nhãn nhỏ Quá hạn / Gia hạn cạnh tình trạng. Bấm thẳng vào Bình luận hay Đính kèm ở chân thẻ để mở màn đó, khỏi vào chi tiết việc; nút đồng hồ Lịch sử cuối chân thẻ mở bảng lịch sử của việc ngay tại chỗ.",
             ],
           },
           {
             kind: "image",
             source: require("../../../assets/images/guide/cong-viec-01.png"),
             caption: "Hàng tab theo hạn, hàng chip màu để lọc; viền trái thẻ cùng màu với chip (đỏ là quá hạn)",
-            aspectRatio: 0.72,
+            aspectRatio: 0.9,
           },
         ],
       },
@@ -1308,8 +1347,8 @@ const TOPICS: GuideTopic[] = [
           {
             kind: "image",
             source: require("../../../assets/images/guide/cong-viec-04.png"),
-            caption: "Bình luận · Đính kèm ở đáy thẻ đầu, nút đỏ Chuyển trạng thái, rồi hàng nút Sửa · Gia hạn · Đổi chủ trì · Nhân bản",
-            aspectRatio: 0.79,
+            caption: "Bình luận · Đính kèm ở đáy thẻ đầu, nút đỏ Chuyển trạng thái, rồi hàng nút Sửa · Gia hạn · Đổi chủ trì · Nhân bản (có quyền thì thêm Xoá)",
+            aspectRatio: 0.87,
           },
           {
             kind: "bullets",
@@ -1353,13 +1392,13 @@ const TOPICS: GuideTopic[] = [
               "Bấm nút + để Thêm kế hoạch. Chủ trì là người tạo kế hoạch, không cần chọn; chỉ chọn thêm người tham gia.",
               "Màn chi tiết có vòng tiến độ x/y việc. Tab Công việc liệt kê các việc trong kế hoạch; bấm Thêm công việc để tạo việc đã gắn sẵn vào kế hoạch này.",
               "Không phải chủ trì thì tab Công việc chỉ hiện việc bạn tham gia.",
-              "Mỗi thẻ việc trong kế hoạch có số bình luận, số file — bấm thẳng vào để mở màn Bình luận / File của việc đó, như ở danh sách Công việc.",
+              "Mỗi thẻ việc trong kế hoạch có Bình luận, Đính kèm (kèm số) và nút Lịch sử ở chân thẻ — bấm thẳng vào để xem bình luận, file hay lịch sử của việc đó, như ở danh sách Công việc.",
             ],
           },
           {
             kind: "note",
             tone: "info",
-            text: "Chỉ chủ trì kế hoạch mới thấy nút Sửa và Xoá. Nút Xoá bị mờ khi kế hoạch còn công việc — chỉ xoá được kế hoạch không còn việc nào.",
+            text: "Chỉ chủ trì kế hoạch mới thấy nút Sửa và Xoá, ở hàng nút ngay dưới thẻ đầu. Kế hoạch còn công việc thì bấm Xoá app báo \"Kế hoạch còn n công việc, không xoá được.\" — chỉ xoá được kế hoạch không còn việc nào.",
           },
         ],
       },
@@ -1379,11 +1418,24 @@ const TOPICS: GuideTopic[] = [
       "thang",
       "tuan",
       "hom nay",
+      "ve hom nay",
+      "vuot",
       "phieu cho duyet",
       "duoc giao",
       "sap den han",
       "qua han",
+      "con n ngay",
       "binh luan",
+      "dinh kem",
+      "lich su",
+      "gia han",
+      "doi chu tri",
+      "nhan ban",
+      "chon chuc nang",
+      "am lich",
+      "ngay le",
+      "tet",
+      "bay gio",
       "mat tab camera",
     ],
     sections: [
@@ -1409,12 +1461,19 @@ const TOPICS: GuideTopic[] = [
           {
             kind: "bullets",
             items: [
-              "Chọn Tháng hoặc Tuần ở trên cùng. Bấm Hôm nay để về ngày hiện tại; mũi tên hai bên để sang tháng / tuần trước hoặc sau.",
-              "Xem theo Tháng: bấm một ngày trên lưới, thẻ của ngày đó hiện ngay bên dưới. Xem theo Tuần: mỗi ngày một thẻ xếp dọc.",
-              "Thẻ ngày có ô ngày bên trái (thứ và số ngày; hôm nay tô đỏ, có thêm chữ Hôm nay), dòng ghi số việc hoặc Chưa có việc, và nút + bên phải. Việc của ngày xếp bên dưới, viền mỗi việc theo màu tình trạng.",
-              "Trên lưới Tháng, mỗi việc là một vạch màu dưới ngày, màu theo tình trạng. Hàng chip màu lọc theo tình trạng như ở danh sách công việc.",
+              "Chọn Tháng, Tuần hoặc Hôm nay ở trên cùng; lần sau mở Lịch, app mở lại đúng chế độ đã chọn trên máy này.",
+              "Ở Tháng / Tuần: mũi tên hai bên hoặc vuốt ngang để sang tháng / tuần trước, sau. Bấm tên tháng để chọn một ngày bất kỳ. Nút tròn có số ngày hôm nay (cạnh tên tháng) để quay về hôm nay — đang đúng hôm nay thì nút mờ.",
+              "Xem theo Tháng: bấm một ngày trên lưới, thẻ của ngày đó hiện ngay bên dưới. Mỗi việc là một vạch màu dưới ngày (màu theo tình trạng), quá 3 việc thì ghi +n. Tuần không có việc thì hàng thấp lại cho gọn.",
+              "Trên lưới, ngày đã qua có số xám hơn, cột T7 và CN có nền nhạt, ngày lễ có số màu đỏ.",
+              "Xem theo Tuần: mỗi ngày một thẻ xếp dọc. Hôm nay: chỉ việc của hôm nay, danh sách lên ngay đầu màn — hợp khi chỉ cần xem việc trong ngày.",
+              "Hàng chip màu lọc theo tình trạng như ở danh sách công việc; số trên chip là số việc trong khoảng đang xem.",
               "Bấm một việc để mở chi tiết công việc.",
             ],
+          },
+          {
+            kind: "note",
+            tone: "info",
+            text: "Hôm nay chỉ có việc rơi vào hôm nay (từ Từ ngày tới Đến ngày). Việc đã quá hạn từ hôm trước không kéo sang — xem ở nút Việc cần xử lý cạnh chuông.",
           },
           {
             kind: "image",
@@ -1424,12 +1483,46 @@ const TOPICS: GuideTopic[] = [
           },
           {
             kind: "paragraph",
-            text: "Bấm nút + trên thẻ một ngày để thêm việc cho ngày đó — ngày chưa có việc thì bấm vào đâu trên thẻ cũng được. Form điền sẵn từ 08:00 đến 17:00, chủ trì là bạn, sửa lại được.",
+            text: "Thêm việc: bấm nút + bên phải thẻ ngày — ở Tháng là thẻ của ngày đang chọn, ở Tuần là thẻ của ngày muốn thêm. Ngày chưa có việc thì bấm vào đâu trên thẻ ngày cũng được. Form điền sẵn từ 08:00 đến 17:00, chủ trì là bạn, sửa lại được.",
           },
           {
             kind: "note",
             tone: "info",
             text: "Đầu màn thêm việc ghi rõ ngày đang tạo (ví dụ THỨ 4, 21/10/2026), để biết mình đang thêm việc cho ngày nào. Đổi Từ ngày trong form thì dòng này đổi theo.",
+          },
+        ],
+      },
+      {
+        id: "lich-the-ngay",
+        heading: "Thẻ ngày: âm lịch, ngày lễ, việc sắp hạn",
+        blocks: [
+          {
+            kind: "bullets",
+            items: [
+              "Bên trái là ô ngày (thứ và số ngày; hôm nay tô đỏ, có thêm chữ Hôm nay). Dòng dưới tên thứ ghi ngày, ngày âm lịch và số việc, ví dụ 29/10 · 20/9 âm · 5 việc.",
+              "Ngày lễ có thêm nhãn viền đỏ ghi tên lễ: Tết Dương lịch (1/1), Giao thừa và mùng 1–3 Tết, Giỗ Tổ Hùng Vương (10/3 âm), 30/4, 1/5, Quốc khánh (2/9).",
+              "Có việc quá hạn hoặc sắp đến hạn thì thêm một dòng: ● n quá hạn (đỏ), ● n sắp đến hạn (cam, là hạn hôm nay hoặc ngày mai).",
+              "Thẻ hôm nay có vạch đỏ Bây giờ kèm giờ hiện tại, chen giữa các việc: phía trên là việc đã tới giờ bắt đầu, phía dưới là việc sắp tới. Việc nào cũng đã bắt đầu thì vạch nằm cuối.",
+            ],
+          },
+          {
+            kind: "note",
+            tone: "info",
+            text: "Ngày âm lịch do app tự tính theo giờ Việt Nam. App chỉ đánh dấu các ngày lễ cố định trong luật; ngày nghỉ bù hay số ngày nghỉ Tết từng năm theo thông báo của công ty.",
+          },
+        ],
+      },
+      {
+        id: "lich-the-viec",
+        heading: "Thẻ việc trên lịch",
+        blocks: [
+          {
+            kind: "bullets",
+            items: [
+              "Dòng giờ: Cả ngày, 08:00 - 17:00, hoặc kèm ngày khi việc kéo dài nhiều ngày. Bên cạnh là nhãn hạn: Quá hạn n ngày (đỏ), Hạn hôm nay / Hạn ngày mai (cam), Còn n ngày (xám). Việc đã Hoàn thành hoặc Hủy không có nhãn này.",
+              "Chân thẻ, bên trái là trạng thái (Mới, Đang xử lý, Hoàn thành, Hủy) — màu thẻ theo tình trạng như Quá hạn, Gia hạn nên cần ghi riêng trạng thái. Bên phải là Bình luận và Đính kèm (kèm số nếu có), Lịch sử, và Gia hạn (chỉ có ở việc đã gia hạn).",
+              "Nút ⋮ ở góc phải, hoặc giữ lâu thẻ việc (máy rung nhẹ), mở khung Chọn chức năng: Xem chi tiết, Chuyển trạng thái, Gia hạn, Đổi chủ trì, Sửa, Nhân bản, Xoá. Khung chỉ có những mục bạn được phép làm với việc đó.",
+            ],
           },
         ],
       },
@@ -1475,9 +1568,9 @@ const TOPICS: GuideTopic[] = [
           {
             kind: "steps",
             items: [
-              "Vào tab Camera để xem các khu vực; gõ ô tìm kiếm nếu nhiều khu vực.",
-              "Chọn một khu vực để ra Danh sách Camera.",
-              "Bấm một camera để xem trực tiếp, hoặc chọn Live View Camera để xem nhiều camera cùng lúc dạng lưới.",
+              "Vào tab Camera để xem các khu vực; nhiều khu vực thì bấm kính lúp trên thanh tiêu đề để tìm.",
+              "Chọn một khu vực để ra Danh sách Camera; dòng chữ nhỏ dưới tiêu đề ghi tên khu vực và số camera.",
+              "Bấm vào ảnh một camera (góc ảnh có biểu tượng phóng to) để xem trực tiếp toàn màn hình, hoặc chọn Live View Camera để xem nhiều camera cùng lúc dạng lưới.",
               "Ở lưới, chạm hai lần vào một ô để phóng ô đó ra toàn màn hình; chạm hai lần nữa để trở về lưới.",
               "Đang toàn màn hình thì vuốt trái/phải để chuyển sang camera kế tiếp, hoặc xoay ngang máy cho hình lớn hơn.",
             ],
@@ -1543,7 +1636,12 @@ const TOPICS: GuideTopic[] = [
             items: [
               "Bấm vào thông báo — app mở thẳng hình trực tiếp của đúng camera đó.",
               "Xoay ngang máy để xem hình lớn hơn.",
+              "Bấm quay lại là về đúng màn đang xem trước đó, kể cả lưới nhiều camera.",
             ],
+          },
+          {
+            kind: "paragraph",
+            text: "Bấm tiếp thông báo của camera khác thì màn camera vừa mở được thay luôn, không chồng thành một dãy phải quay lại từng màn.",
           },
           {
             kind: "bullets",
@@ -1551,6 +1649,8 @@ const TOPICS: GuideTopic[] = [
               "Thông báo không kèm ảnh chụp hiện trường; muốn biết chuyện gì thì phải mở xem trực tiếp.",
               "App không lưu lịch sử thông báo — vuốt bỏ rồi thì không xem lại được trong app.",
               "Sự kiện dồn dập thì thông báo cũng dồn theo — hệ thống không gộp giúp. Đang thi công hay có việc làm camera báo liên tục thì dùng Tạm dừng thông báo.",
+              "Tài khoản không có quyền xem camera thì app không hiện thông báo camera lúc đang mở app; thông báo nằm trên khay thì bấm vào chỉ mở app, không mở camera.",
+              "Đăng xuất thì app xoá hết thông báo đang nằm trên khay, máy dùng chung không lộ thông báo của người trước.",
             ],
           },
           {
@@ -1602,7 +1702,7 @@ const TOPICS: GuideTopic[] = [
     iconName: "bar-chart-outline",
     iconBg: C.emerald,
     group: "Theo dõi & báo cáo",
-    keywords: ["bao cao", "report", "dien mat troi", "solar", "san luong", "loc", "nhan su", "hr", "dieu kien", "tim trong bang chon"],
+    keywords: ["bao cao", "report", "dien mat troi", "solar", "san luong", "loc", "nhan su", "hr", "dieu kien", "tim trong bang chon", "truc tiep", "het nang", "tu chu", "can bang", "mua tu luoi", "ban len luoi"],
     sections: [
       {
         id: "bao-cao-xem",
@@ -1633,6 +1733,14 @@ const TOPICS: GuideTopic[] = [
           {
             kind: "paragraph",
             text: "Chức năng Điện mặt trời hiện sản lượng phát và lượng tiêu thụ của nhà máy, tỷ lệ điện tự dùng so với điện mua lưới, kèm biểu đồ so sánh giữa các năm. Bấm vào biểu đồ để xem giá trị từng mốc.",
+          },
+          {
+            kind: "bullets",
+            items: [
+              "Đầu màn là sơ đồ dòng điện theo thời tiết tại nhà máy: Điện mặt trời hiện tại, Nhà máy và lưới điện (Mua từ lưới hoặc Bán lên lưới). Chấm chạy trên dây cho biết điện đang đi chiều nào.",
+              "Dưới số Sản lượng hôm nay có nhãn Trực tiếp (chấm xanh nhấp nháy): màn tự tải lại mỗi 2 phút. Ban đêm nhãn đổi thành Hết nắng, công suất pin 0 kW lúc đó là bình thường. Mất mạng thì nhãn và chấm chạy tắt, số đang hiện là số cũ.",
+              "Khối Cân bằng năng lượng: Tự chủ năng lượng là phần trăm lượng điện nhà máy dùng do điện mặt trời đáp ứng. Bên dưới, cụm Sản xuất chia Tự dùng / Phát lên lưới, cụm Tiêu thụ chia Từ mặt trời / Mua từ lưới.",
+            ],
           },
         ],
       },
@@ -1720,10 +1828,15 @@ const TOPICS: GuideTopic[] = [
             kind: "steps",
             items: [
               "Mở chức năng Đại hội cổ đông, ở tab Điểm danh.",
-              "Bấm nút quét để mở máy quét.",
+              "Bấm nút QR trên thanh tiêu đề để mở máy quét.",
               "Quét mã QR trên thư mời của cổ đông; app ghi nhận có mặt ngay.",
-              "Quay lại tab Điểm danh để xem tỷ lệ tham dự và các mục Tất cả / Đã điểm danh / Chưa điểm danh.",
+              "Không quét được thì bấm nút ✓ cuối dòng cổ đông để điểm danh tay; nút ↶ là huỷ điểm danh.",
             ],
+          },
+          {
+            kind: "note",
+            tone: "info",
+            text: "Thẻ đầu tab Điểm danh tính theo cổ phần dự họp: vượt 50% tổng cổ phần thì hiện \"Đủ điều kiện tiến hành\". Bên dưới là số cổ đông có mặt / chưa đến và các mục lọc Tất cả / Đã có mặt / Chưa.",
           },
         ],
       },
@@ -1734,9 +1847,10 @@ const TOPICS: GuideTopic[] = [
           {
             kind: "steps",
             items: [
-              "Chuyển sang tab biểu quyết.",
-              "Chọn Ý kiến cần lấy trong bảng chọn.",
-              "Bấm quét rồi quét QR của từng cổ đông để ghi phiếu.",
+              "Chuyển sang tab Lấy ý kiến; thanh 3 bước ở đầu cho biết còn thiếu bước nào.",
+              "Ở thẻ Nội dung biểu quyết, bấm Đổi để chọn nội dung cần lấy ý kiến.",
+              "Chọn một ô phân loại: Tán thành / Không tán thành / Không có ý kiến.",
+              "Bấm Quét QR ghi ý kiến rồi quét QR của từng cổ đông để ghi phiếu.",
             ],
           },
           {
@@ -1765,7 +1879,7 @@ const TOPICS: GuideTopic[] = [
         blocks: [
           {
             kind: "paragraph",
-            text: "Tab Cài đặt chia thành 5 nhóm, bấm vào nhóm để mở các dòng cài đặt bên trong. Dòng chữ nhỏ dưới tên nhóm cho biết nhóm có gì. Đăng xuất nằm riêng ở cuối màn Cài đặt.",
+            text: "Đầu màn Cài đặt là ảnh nhà máy, góc phải có nút hướng dẫn (?), chuông thông báo và nút nguồn để đăng xuất. Ngay dưới là thẻ hồ sơ màu đỏ của bạn (ảnh, tên, chức danh, mã nhân viên, bộ phận): bấm vào tên hoặc Hồ sơ cá nhân ở cuối thẻ để mở Hồ sơ cá nhân, bấm nút QR bên phải dòng Mã NV / Bộ phận để mở danh thiếp QR, bấm Đổi mật khẩu ở cuối thẻ để đổi mật khẩu ngay. Bên dưới, tab Cài đặt chia thành 5 nhóm, bấm vào nhóm để mở các dòng cài đặt bên trong. Dòng chữ nhỏ dưới tên nhóm cho biết nhóm có gì. Đăng xuất nằm riêng ở cuối màn Cài đặt.",
           },
           {
             kind: "bullets",
@@ -1775,7 +1889,7 @@ const TOPICS: GuideTopic[] = [
               "Hệ thống: quyền mạng nội bộ, camera, vị trí, thông báo và thông báo camera.",
               "Thông tin ứng dụng: phiên bản đang cài và bản mới trên store.",
               "Khác: hiển thị sáng / tối và cỡ chữ.",
-              "Đăng xuất (cuối màn Cài đặt, ngoài các nhóm): app hỏi xác nhận trước khi thoát khỏi tài khoản hiện tại.",
+              "Đăng xuất (cuối màn Cài đặt, ngoài các nhóm, hoặc nút nguồn góc phải trên): app hỏi xác nhận trước khi thoát khỏi tài khoản hiện tại.",
             ],
           },
         ],
@@ -1808,7 +1922,7 @@ const TOPICS: GuideTopic[] = [
           {
             kind: "steps",
             items: [
-              "Vào tab Cài đặt → Tài khoản, chọn Thông tin QrCode.",
+              "Vào tab Cài đặt, bấm nút QR trên thẻ hồ sơ đỏ ở đầu màn, bên phải dòng Mã NV / Bộ phận (hoặc vào Tài khoản, chọn Thông tin QrCode).",
               "Đưa màn hình cho người cần lưu liên hệ.",
               "Người đó mở camera có sẵn của điện thoại, quét mã QR — máy mở trang danh thiếp của bạn trên web.",
               "Trên trang đó có nút tải thẻ liên hệ (vCard) để lưu vào danh bạ, và nút đổi tiếng Việt / tiếng Anh.",

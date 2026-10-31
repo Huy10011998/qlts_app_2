@@ -47,6 +47,7 @@ import CameraSnapshotThumbnail, {
   CAMERA_SKELETON_STYLE,
 } from "./shared/CameraSnapshotThumbnail";
 import { buildCameraFullscreenHTML } from "./shared/cameraStreamHtml";
+import { getCameraZoneHeaderLabel } from "./shared/cameraZoneHeaderLabel";
 import {
   ANDROID_LIVE_RETRY_BASE_MS,
   ANDROID_LIVE_RETRY_MAX_MS,
@@ -258,6 +259,30 @@ const CameraList: React.FC = () => {
     pendingFullscreenCameraRef.current = null;
     setFullscreenCamera(pendingCamera);
   }, [clearOpenFullscreenTimeout]);
+
+  // Màn khác chồng lên (bấm noti camera) lúc đang toàn màn hình / xoay ngang:
+  // bỏ hẳn chế độ đó. iOS dựng toàn màn hình bằng <Modal> — để nguyên thì Modal
+  // phủ luôn lên màn mới, bấm noti như không có gì; Android thì video còn phát
+  // tiếng phía sau. Màn mới khoá dọc nên quay lại danh sách cũng phải là dọc.
+  React.useEffect(() => {
+    if (isFocused) return;
+    pendingFullscreenCameraRef.current = null;
+    clearOpenFullscreenTimeout();
+    clearCloseFullscreenTimeout();
+    clearAndroidTimers();
+    isClosingFullscreenRef.current = false;
+    setFullscreenCamera(null);
+    setIsClosingFullscreen(false);
+    setIsFullscreenPending(false);
+    setIsLandscape(false);
+    setShowLayoutModal(false);
+    setPendingThumbUrl(null);
+  }, [
+    clearAndroidTimers,
+    clearCloseFullscreenTimeout,
+    clearOpenFullscreenTimeout,
+    isFocused,
+  ]);
 
   React.useEffect(() => {
     isClosingFullscreenRef.current = isClosingFullscreen;
@@ -597,6 +622,16 @@ const CameraList: React.FC = () => {
     });
   }, [isFullscreenActive, translateX]);
 
+  // Tên khu vực + số camera nằm ở dòng phụ của header (trước đây là một hàng
+  // tiêu đề riêng phía trên lưới ảnh).
+  const headerLabel = getCameraZoneHeaderLabel(zoneName, cameras.length);
+  React.useEffect(() => {
+    navigation.setOptions({
+      headerBadgeLabel: headerLabel,
+      headerBadgeIcon: "videocam-outline",
+    } as object);
+  }, [headerLabel, navigation]);
+
   // Lớp phủ nằm chung cây nên phải tự giấu header/tabBar thì nó mới phủ kín
   // như Modal. Nhánh iOS không đụng tới, Modal tự lo.
   React.useEffect(() => {
@@ -737,6 +772,8 @@ const CameraList: React.FC = () => {
             activeOpacity={0.9}
             onPress={() => openFullscreen(item)}
             style={styles.videoWrapper}
+            accessibilityRole="button"
+            accessibilityLabel={`Xem toàn màn hình ${item.iD_Camera_MoTa ?? ""}`}
           >
             {cameraToken && thumbTimestamp ? (
               <CameraSnapshotThumbnail
@@ -751,6 +788,10 @@ const CameraList: React.FC = () => {
                 <SkeletonFill style={CAMERA_SKELETON_STYLE} />
               </View>
             )}
+            {/* Gợi ý bấm vào ảnh là xem toàn màn hình. */}
+            <View pointerEvents="none" style={styles.expandBadge}>
+              <Ionicons name="expand-outline" size={14} color="#FFFFFF" />
+            </View>
           </TouchableOpacity>
         </View>
       );
@@ -1210,9 +1251,6 @@ const CameraList: React.FC = () => {
       style={[styles.container, { backgroundColor: colors.bg }]}
     >
       <View style={styles.headerRow}>
-        <Text style={[styles.pageTitle, { color: colors.text }]}>
-          {zoneName} ({cameras.length} Camera)
-        </Text>
         <View style={styles.headerRight}>
           {/* Icon 24px trơn, không khung: hitSlop để ngón tay không phải nhắm
               đúng vào hình. */}

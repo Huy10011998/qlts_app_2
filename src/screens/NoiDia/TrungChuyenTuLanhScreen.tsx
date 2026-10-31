@@ -7,6 +7,7 @@ import type { StackNavigation } from "../../types/index";
 import ScreenContainer from "../shared/ScreenContainer";
 import RecordListSkeleton from "../../components/list/RecordListSkeleton";
 import { shouldShowListSkeleton } from "../../components/ui/shouldShowListSkeleton";
+import { useHeaderSearch } from "../../hooks/useHeaderSearch";
 import AssetListEmptyState from "../../components/assets/shared/AssetListEmptyState";
 import AssetListSearchBar from "../../components/assets/shared/AssetListSearchBar";
 import AssetListSummaryCard from "../../components/assets/shared/AssetListSummaryCard";
@@ -32,6 +33,10 @@ export default function TrungChuyenTuLanhScreen() {
   const navigation = useNavigation<StackNavigation<"TrungChuyenTuLanh">>();
 
   const [searchText, setSearchText] = useState("");
+  const search = useHeaderSearch({
+    query: searchText,
+    onClear: () => setSearchText(""),
+  });
   const [fridges, setFridges] = useState<FridgeSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
@@ -92,6 +97,7 @@ export default function TrungChuyenTuLanhScreen() {
          ở đỉnh thẻ, và `listContent` có `paddingTop` 2 dưới thẻ tổng số. */
       <RecordListSkeleton
         hasSearchBar
+        hasSearchInput={search.open}
         hasSummaryCard
         lines={4}
         avatarAlign="top"
@@ -112,6 +118,7 @@ export default function TrungChuyenTuLanhScreen() {
         onClear={() => setSearchText("")}
         badgeText={hasSearch ? "Kết quả tìm kiếm" : "Tủ lạnh gần đây"}
         summaryText={`${fridges.length} tủ`}
+        search={search}
       />
 
       {fridges.length ? (

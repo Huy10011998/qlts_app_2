@@ -43,6 +43,9 @@ export function useWorkflowPagedList<T>(
     async (mode: "initial" | "refresh" | "more" | "silent") => {
       const requestId = ++requestIdRef.current;
       const skip = mode === "more" ? itemsRef.current.length : 0;
+      // "silent" (quay lại màn có thay đổi): nạp lại ĐỦ số dòng đã tải trong 1
+      // lượt — chỉ lấy trang đầu thì danh sách co về 20 dòng, mất chỗ đang cuộn.
+      const size = mode === "silent" ? Math.max(pageSize, itemsRef.current.length) : pageSize;
 
       if (mode === "initial") setLoading(true);
       if (mode === "refresh") setRefreshing(true);
@@ -52,7 +55,7 @@ export function useWorkflowPagedList<T>(
       // một khoảng chừa vòng xoay và có khi kẹt luôn tới khi kéo tay.
 
       try {
-        const result = await fetchRef.current(skip, pageSize);
+        const result = await fetchRef.current(skip, size);
         if (requestId !== requestIdRef.current) return;
 
         const page = Array.isArray(result?.items) ? result.items : [];
@@ -85,7 +88,10 @@ export function useWorkflowPagedList<T>(
   }, [enabled, load, queryKey]);
 
   const refresh = useCallback(() => load("refresh"), [load]);
-  /** Nạp lại im lặng (không vòng xoay, không khung chờ) — dùng khi quay lại màn có thay đổi. */
+  /**
+   * Nạp lại im lặng (không vòng xoay, không khung chờ), giữ đủ số dòng đã tải —
+   * dùng khi quay lại màn có thay đổi.
+   */
   const reload = useCallback(() => load(itemsRef.current.length ? "silent" : "initial"), [load]);
 
   const loadMore = useCallback(() => {

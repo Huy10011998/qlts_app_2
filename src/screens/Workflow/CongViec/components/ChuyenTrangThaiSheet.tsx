@@ -9,9 +9,15 @@ import PendingFilesField from "../../shared/components/PendingFilesField";
 import WorkflowButton from "../../shared/components/WorkflowButton";
 import WorkflowSheet, { confirmCloseSheet } from "../../shared/components/WorkflowSheet";
 import WorkflowTextArea from "../../shared/components/WorkflowTextArea";
-import { CV_TRANG_THAI, CV_TRANG_THAI_HUY, tint } from "../../shared/workflowConstants";
+import {
+  CV_TRANG_THAI,
+  CV_TRANG_THAI_HUY,
+  getCongViecTrangThai,
+  tint,
+} from "../../shared/workflowConstants";
 import { getWorkflowErrorMessage } from "../../shared/workflowErrors";
 import { AppAlert } from "../../../../components/ui/AppAlert";
+import { showAppToast } from "../../../../components/ui/AppToast";
 
 /** Đỏ cùng tông Material với 3 nút còn lại (như màu Quá hạn). */
 const HUY_BUTTON_COLOR = "#e53935";
@@ -96,6 +102,18 @@ export default function ChuyenTrangThaiSheet({
           "Đã chuyển trạng thái",
           `Nhưng một số file chưa tải lên được:\n${failed.join("\n")}`,
         );
+      } else {
+        const cu = getCongViecTrangThai(trangThai)?.label;
+        const moi = getCongViecTrangThai(selected)?.label;
+        // Giữ nguyên trạng thái = ghi thêm một mốc (ghi chú / file kết quả).
+        showAppToast(
+          selected === trangThai
+            ? { message: "Đã ghi mốc trạng thái", detail: moi ? `Giữ nguyên: ${moi}` : undefined }
+            : {
+                message: "Đã chuyển trạng thái",
+                detail: cu && moi ? `${cu} → ${moi}` : moi,
+              },
+        );
       }
       onDone();
     } catch (err) {
@@ -108,8 +126,11 @@ export default function ChuyenTrangThaiSheet({
     }
   };
 
-  // Ghi chú / file kết quả đã chọn mà chạm nhầm ra nền tối là mất — hỏi trước khi đóng.
-  const dirty = !!ghiChu.trim() || files.length > 0;
+  // Đã chọn trạng thái khác, ghi chú hay file kết quả mà chạm nhầm ra nền tối là
+  // mất — hỏi trước khi đóng.
+  const dirty = selected !== trangThai || !!ghiChu.trim() || files.length > 0;
+  // Giữ nguyên trạng thái mà chưa có ghi chú / file thì chưa có gì để lưu.
+  const nothingToSave = selected === trangThai && !ghiChu.trim() && !files.length;
 
   return (
     <WorkflowSheet
@@ -127,7 +148,13 @@ export default function ChuyenTrangThaiSheet({
             flex
             onPress={() => confirmCloseSheet(dirty, onClose)}
           />
-          <WorkflowButton label="Lưu" icon="checkmark" flex onPress={submit} />
+          <WorkflowButton
+            label="Lưu"
+            icon="checkmark"
+            flex
+            disabled={nothingToSave}
+            onPress={submit}
+          />
         </>
       }
     >

@@ -554,7 +554,7 @@ function AppStack() {
         component={WorkflowFilesScreen}
         options={({ route }) => ({
           headerShown: true,
-          title: route.params?.titleHeader ? `File · ${route.params.titleHeader}` : "File đính kèm",
+          title: route.params?.titleHeader ? `Đính kèm · ${route.params.titleHeader}` : "Đính kèm",
           ...headerWithBack,
         })}
       />

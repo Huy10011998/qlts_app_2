@@ -41,6 +41,7 @@ import {
 } from "./shared/homeBlockOrder";
 import HomeScreenSkeleton, { AttendanceSkeleton } from "./shared/HomeScreenSkeleton";
 import HomeJumpBar from "./shared/HomeJumpBar";
+import HomeScrollTopButton from "./shared/HomeScrollTopButton";
 import { HOME_BRAND_RED } from "./shared/homeTheme";
 import {
   getHomeCardChrome,
@@ -65,6 +66,8 @@ import { useHomeMenuItems } from "./shared/useHomeMenuItems";
 import WorkflowDashboardCard from "../Workflow/Dashboard/WorkflowDashboardCard";
 import { WORKFLOW_VIEW_CODE } from "../Workflow/workflowMenu";
 import { navigateFromRef } from "../../navigation/navigationService";
+import TabBarSpacer from "../../navigation/shared/TabBarSpacer";
+import { useHideTabBarOnScroll } from "../../navigation/shared/tabBarAutoHide";
 import { createReportActions } from "./shared/homeMenuHelpers";
 import EmptyState from "../../components/ui/EmptyState";
 import { useAppDispatch } from "../../store/hooks";
@@ -111,7 +114,7 @@ const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeNavigationProp>();
   const colors = useAppColors();
   const pageBackground = useHomePageBackground();
-  const { width: windowWidth } = useWindowDimensions();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const tabsNavigation = navigation.getParent() as any;
   const isFocused = useIsFocused();
   const { canView, hasPermission, loaded } = usePermission();
@@ -161,6 +164,7 @@ const HomeScreen: React.FC = () => {
   const {
     keys: collapsedKeys,
     setIncluded: setBlockCollapsed,
+    setManyIncluded: setBlocksCollapsed,
     isLoading: isCollapsedKeysLoading,
   } = useStoredHomeBlockList(HOME_COLLAPSED_BLOCKS_KEY);
   const {
@@ -192,6 +196,22 @@ const HomeScreen: React.FC = () => {
     },
     [setBlockCollapsed],
   );
+  // Nút lên đầu trang: chỉ đổi state lúc vượt ngưỡng, không phải mỗi khung hình
+  // cuộn — màn này dựng lại nặng.
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  // Thanh tab tự ẩn khi đọc xuống, hiện lại khi vuốt ngược lên (như Facebook).
+  const hideTabBarOnScroll = useHideTabBarOnScroll();
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const next = event.nativeEvent.contentOffset.y > windowHeight * 0.8;
+      setShowScrollTop((prev) => (prev === next ? prev : next));
+      hideTabBarOnScroll(event);
+    },
+    [hideTabBarOnScroll, windowHeight],
+  );
+  const scrollToTop = useCallback(() => {
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  }, []);
   const openCustomizeSheet = useCallback(() => setIsCustomizeVisible(true), []);
   const closeCustomizeSheet = useCallback(
     () => setIsCustomizeVisible(false),
@@ -239,6 +259,9 @@ const HomeScreen: React.FC = () => {
     () => {
       loadPermissions();
       fetchHomeMenuItems();
+      // Thẻ số liệu (tài sản, điểm danh, máy móc): để ra nền từ sáng thì số
+      // điểm danh còn là số lúc mở app.
+      refreshDashboard();
     },
     {
       enabled: isFocused,
@@ -650,6 +673,14 @@ const HomeScreen: React.FC = () => {
   );
   // Một hai khối thì cuộn chút là thấy hết, hàng chip chỉ chiếm chỗ.
   const showJumpBar = visibleBlockKeys.length >= 3;
+  // Đè giữ nhãn khối nào cũng được: còn khối mở thì gập hết, đã gập hết thì mở
+  // hết. Chỉ các khối đang hiện — khối đã ẩn ở Sắp xếp giữ nguyên.
+  const toggleAllBlocksCollapsed = () => {
+    const allCollapsed = visibleBlockKeys.every((key) =>
+      collapsedKeySet.has(key),
+    );
+    setBlocksCollapsed(visibleBlockKeys, !allCollapsed);
+  };
 
   useEffect(() => {
     if (!showJumpBar) jumpBarHeightRef.current = 0;
@@ -722,7 +753,7 @@ const HomeScreen: React.FC = () => {
     key: HomeBlockKey,
     title: Omit<
       React.ComponentProps<typeof HomeSectionTitle>,
-      "tone" | "iconName" | "collapsed" | "onToggleCollapsed"
+      "tone" | "iconName" | "collapsed" | "onToggleCollapsed" | "onLongPress"
     >,
     content: React.ReactNode,
   ) => {
@@ -736,6 +767,7 @@ const HomeScreen: React.FC = () => {
           iconName={HOME_BLOCK_META[key].iconName}
           collapsed={isCollapsed}
           onToggleCollapsed={() => setBlockCollapsed(key, !isCollapsed)}
+          onLongPress={toggleAllBlocksCollapsed}
         />
         {isCollapsed ? null : content}
       </HomeBlockToneContext.Provider>
@@ -1001,6 +1033,10 @@ const HomeScreen: React.FC = () => {
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        // 16 (mỗi khung hình) để thanh tab ẩn/hiện bám tay; `handleScroll` chỉ
+        // đổi state lúc vượt ngưỡng nên gọi dày không làm màn dựng lại.
+        scrollEventThrottle={16}
         // Hàng chip là con đầu tiên và dính trên cùng khi cuộn.
         stickyHeaderIndices={showJumpBar ? [0] : undefined}
         refreshControl={
@@ -1049,7 +1085,10 @@ const HomeScreen: React.FC = () => {
             />
           </View>
         ) : null}
+        <TabBarSpacer />
       </ScrollView>
+
+      <HomeScrollTopButton visible={showScrollTop} onPress={scrollToTop} />
 
       <HomeBlockOrderSheet
         visible={isBlockOrderSheetVisible}

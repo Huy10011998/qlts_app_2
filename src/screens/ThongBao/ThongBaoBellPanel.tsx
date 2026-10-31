@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useAutoReload } from "../../hooks/useAutoReload";
 import { navigateFromRef, navigationRef } from "../../navigation/navigationService";
 import { thongBaoDaDoc, thongBaoGetList } from "../../services/data/thongBaoApi";
 import { subscribeThongBao } from "../../services/realtime/traoDoiHub";
@@ -110,6 +111,10 @@ export default function ThongBaoBellPanel() {
       backSubscription.remove();
     };
   }, [close, load, visible]);
+
+  // Mở bảng rồi ra nền: thông báo đến lúc nằm nền. Khung chờ chỉ hiện khi danh
+  // sách rỗng nên nạp lại không nháy.
+  useAutoReload(load, { enabled: visible });
 
   // Bảng vẫn mở bên dưới chi tiết vừa mở.
   const open = (item: ThongBaoItem) => {

@@ -5,7 +5,9 @@ import type { CongViecItem } from "../../../types/index";
 import { AppColors, useStyles } from "../../../utils/helpers/colors";
 import { getHomeCardChrome } from "../../Home/shared/homeBlockTone";
 import { getMaMauColor } from "../shared/workflowConstants";
-import { isSameDay } from "../shared/workflowDate";
+import { isSameDay, startOfDay } from "../shared/workflowDate";
+import { getNgayLe } from "./amLich";
+import { selectionHaptic } from "./lichHaptic";
 import { dayKey, LichRange, WEEKDAY_LABELS } from "./lichHelpers";
 
 type Props = {
@@ -22,13 +24,13 @@ const MAX_BARS = 3;
 /** Lưới tháng (tuần bắt đầu thứ Hai), gồm vài ngày tháng trước / sau đang lộ ra. */
 export default function MonthGrid({ anchor, range, tasksByDay, selected, onSelect }: Props) {
   const styles = useStyles(makeStyles);
-  const today = new Date();
+  const today = startOfDay(new Date());
   const weeks: Date[][] = [];
   for (let i = 0; i < range.days.length; i += 7) weeks.push(range.days.slice(i, i + 7));
 
   return (
     <View style={styles.grid}>
-      <View style={styles.weekRow}>
+      <View style={[styles.weekRow, styles.headerRow]}>
         {WEEKDAY_LABELS.map((label, index) => (
           <Text key={label} style={[styles.weekday, index === 6 && styles.sunday]}>
             {label}
@@ -36,56 +38,68 @@ export default function MonthGrid({ anchor, range, tasksByDay, selected, onSelec
         ))}
       </View>
 
-      {weeks.map((week) => (
-        <View key={dayKey(week[0])} style={styles.weekRow}>
-          {week.map((day) => {
-            const tasks = tasksByDay.get(dayKey(day)) ?? [];
-            const outside = day.getMonth() !== anchor.getMonth();
-            const isToday = isSameDay(day, today);
-            const isSelected = isSameDay(day, selected);
-            const extra = tasks.length - MAX_BARS;
+      <View>
+        {/* Một dải nền liền sau cột T7 + CN, nằm dưới các ô. */}
+        <View style={styles.weekendBand} pointerEvents="none" />
+        {weeks.map((week) => (
+          <View key={dayKey(week[0])} style={styles.weekRow}>
+            {week.map((day) => {
+              const tasks = tasksByDay.get(dayKey(day)) ?? [];
+              const outside = day.getMonth() !== anchor.getMonth();
+              const isToday = isSameDay(day, today);
+              // Chỉ số ngày mờ đi; vạch giữ nguyên để việc quá hạn vẫn nổi.
+              const isPast = !outside && day < today;
+              const isHoliday = !outside && !!getNgayLe(day);
+              const isSelected = isSameDay(day, selected);
+              const extra = tasks.length - MAX_BARS;
 
-            return (
-              <TouchableOpacity
-                key={dayKey(day)}
-                activeOpacity={0.7}
-                onPress={() => onSelect(day)}
-                style={[styles.cell, isSelected && styles.cellSelected]}
-              >
-                <View style={[styles.dayBadge, isToday && styles.todayBadge]}>
-                  <Text
-                    style={[
-                      styles.dayText,
-                      outside && styles.outsideText,
-                      isToday && styles.todayText,
-                    ]}
-                  >
-                    {day.getDate()}
-                  </Text>
-                </View>
-                <View style={styles.bars}>
-                  {tasks.slice(0, MAX_BARS).map((task) => (
-                    <View
-                      key={task.id}
+              return (
+                <TouchableOpacity
+                  key={dayKey(day)}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    if (!isSelected) selectionHaptic();
+                    onSelect(day);
+                  }}
+                  style={[styles.cell, isSelected && styles.cellSelected]}
+                >
+                  <View style={[styles.dayBadge, isToday && styles.todayBadge]}>
+                    <Text
                       style={[
-                        styles.bar,
-                        { backgroundColor: getMaMauColor(task.maMau) },
-                        task.mauLoai ? [styles.loaiBorder, { borderLeftColor: task.mauLoai }] : null,
-                        outside && styles.outsideBar,
+                        styles.dayText,
+                        outside && styles.outsideText,
+                        isPast && styles.pastText,
+                        isHoliday && styles.holidayText,
+                        isToday && styles.todayText,
                       ]}
-                    />
-                  ))}
-                  {extra > 0 ? (
-                    <Text style={styles.more} numberOfLines={1}>
-                      +{extra} việc
+                    >
+                      {day.getDate()}
                     </Text>
-                  ) : null}
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      ))}
+                  </View>
+                  <View style={styles.bars}>
+                    {tasks.slice(0, MAX_BARS).map((task) => (
+                      <View
+                        key={task.id}
+                        style={[
+                          styles.bar,
+                          { backgroundColor: getMaMauColor(task.maMau) },
+                          task.mauLoai ? [styles.loaiBorder, { borderLeftColor: task.mauLoai }] : null,
+                          outside && styles.outsideBar,
+                        ]}
+                      />
+                    ))}
+                    {extra > 0 ? (
+                      <Text style={styles.more} numberOfLines={1}>
+                        +{extra}
+                      </Text>
+                    ) : null}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
@@ -107,6 +121,20 @@ const makeStyles = (c: AppColors) =>
     weekRow: {
       flexDirection: "row",
     },
+    headerRow: {
+      marginBottom: 4,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.separator,
+    },
+    weekendBand: {
+      position: "absolute",
+      top: 0,
+      bottom: 0,
+      right: 0,
+      width: `${(2 / 7) * 100}%`,
+      borderRadius: 10,
+      backgroundColor: c.surfaceAlt,
+    },
     weekday: {
       flex: 1,
       textAlign: "center",
@@ -120,9 +148,12 @@ const makeStyles = (c: AppColors) =>
     },
     cell: {
       flex: 1,
-      minHeight: 64,
+      // Cao theo nội dung: hàng tuần tự giãn theo ô nhiều việc nhất, tuần trống
+      // thì gọn lại. Đệm dưới giữ chữ "+n" khỏi chạm viền ô đang chọn.
+      minHeight: 48,
       alignItems: "center",
       paddingTop: 4,
+      paddingBottom: 5,
       paddingHorizontal: 2,
       borderRadius: 10,
       borderWidth: 1.5,
@@ -150,20 +181,29 @@ const makeStyles = (c: AppColors) =>
     outsideText: {
       color: c.textMuted,
     },
+    // Đậm hơn ngày ngoài tháng (textMuted) để vẫn thấy tháng bắt đầu từ đâu.
+    pastText: {
+      color: c.slate,
+    },
+    // Ngày lễ đỏ như nhãn CN; tên lễ ghi trên thẻ ngày bên dưới.
+    holidayText: {
+      color: c.red,
+    },
     todayText: {
       color: "#FFFFFF",
     },
     bars: {
       alignSelf: "stretch",
       marginTop: 3,
-      gap: 2,
+      gap: 3,
     },
+    // Vạch 5pt khó nhìn màu, nhất là phần màu loại việc ở đầu vạch.
     bar: {
-      height: 5,
+      height: 6,
       borderRadius: 3,
     },
     loaiBorder: {
-      borderLeftWidth: 3,
+      borderLeftWidth: 4,
     },
     outsideBar: {
       opacity: 0.45,

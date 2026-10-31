@@ -19,6 +19,7 @@ jest.mock("../src/context/authStorage", () => ({
   readStoredAuthTokens: () => mockReadStoredAuthTokens(),
   clearStoredAuthTokens: jest.fn(async () => {}),
   clearStoredFaceIdData: jest.fn(async () => {}),
+  clearStoredLoginProfile: jest.fn(async () => {}),
   writeStoredAuthValue: jest.fn(async () => {}),
 }));
 
@@ -202,5 +203,33 @@ describe("classifyBiometricError", () => {
     setPlatform("ios");
     expect(classifyBiometricError({ code: -128 })).toBe("cancel");
     expect(classifyBiometricError(androidError(7))).toBe("other");
+  });
+});
+
+/* Họ tên chào ở màn Đăng nhập (kiểu VCB): tự đăng xuất là để đổi tài khoản nên
+   quên đi; hết phiên thì giữ để người đó đăng nhập lại cho nhanh. */
+describe("Đăng xuất – họ tên chào ở màn Đăng nhập", () => {
+  const clearStoredLoginProfile = jest.requireMock(
+    "../src/context/authStorage",
+  ).clearStoredLoginProfile as jest.Mock;
+
+  it("tự đăng xuất thì xoá họ tên đã lưu", async () => {
+    const auth = await bootstrap();
+
+    await ReactTestRenderer.act(async () => {
+      await auth.logout();
+    });
+
+    expect(clearStoredLoginProfile).toHaveBeenCalledTimes(1);
+  });
+
+  it("hết phiên thì giữ họ tên", async () => {
+    const auth = await bootstrap();
+
+    await ReactTestRenderer.act(async () => {
+      await auth.logout("EXPIRED");
+    });
+
+    expect(clearStoredLoginProfile).not.toHaveBeenCalled();
   });
 });

@@ -11,6 +11,7 @@ import WorkflowTextArea from "../../shared/components/WorkflowTextArea";
 import { formatDayTime, parseBeDate, toBeDateTime } from "../../shared/workflowDate";
 import { getWorkflowErrorMessage } from "../../shared/workflowErrors";
 import { AppAlert } from "../../../../components/ui/AppAlert";
+import { showAppToast } from "../../../../components/ui/AppToast";
 
 type Props = {
   visible: boolean;
@@ -48,6 +49,8 @@ export default function GiaHanSheet({ visible, idCongViec, denNgay, onClose, onD
         AppAlert.alert("Không gia hạn được", loi);
         return;
       }
+      // Sheet đóng ngay — không báo thì người dùng không biết đã gia hạn chưa.
+      showAppToast({ message: "Đã gia hạn", detail: `Hạn mới: ${formatDayTime(denNgayMoi)}` });
       onDone();
     } catch (err) {
       AppAlert.alert("Không gia hạn được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
@@ -56,8 +59,10 @@ export default function GiaHanSheet({ visible, idCongViec, denNgay, onClose, onD
     }
   };
 
-  // Ghi chú đã gõ mà chạm nhầm ra nền tối là mất — sheet hỏi trước khi đóng.
-  const dirty = !!ghiChu.trim();
+  // Như form Sửa: hạn mới chưa khác hạn hiện tại thì chưa có gì để gia hạn.
+  const unchanged = !denNgayMoi || (!!current && denNgayMoi.getTime() === current.getTime());
+  // Hạn mới đã chọn / ghi chú đã gõ mà chạm nhầm ra nền tối là mất — sheet hỏi trước khi đóng.
+  const dirty = !unchanged || !!ghiChu.trim();
 
   return (
     <WorkflowSheet
@@ -75,7 +80,13 @@ export default function GiaHanSheet({ visible, idCongViec, denNgay, onClose, onD
             flex
             onPress={() => confirmCloseSheet(dirty, onClose)}
           />
-          <WorkflowButton label="Gia hạn" icon="time-outline" flex onPress={submit} />
+          <WorkflowButton
+            label="Gia hạn"
+            icon="time-outline"
+            flex
+            disabled={unchanged}
+            onPress={submit}
+          />
         </>
       }
     >

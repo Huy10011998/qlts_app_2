@@ -16,7 +16,9 @@ type Props = {
   onChange: (key: string) => void;
   /**
    * Nằm trong nội dung đã có lề (màn chi tiết): bỏ lề + nền riêng, viên nhỏ
-   * hơn — không thì thụt vào so với các khối phía trên.
+   * hơn — không thì thụt vào so với các khối phía trên. Màn chi tiết chỉ vài
+   * tab nên các tab chia đều cả bề ngang (2 tab mỗi tab một nửa, 3 tab chia ba),
+   * không cuộn.
    */
   embedded?: boolean;
 };
@@ -24,47 +26,56 @@ type Props = {
 const formatCount = (count: number) => (count > 99 ? "99+" : String(count));
 
 /**
- * Thanh tab dạng viên thuốc, cuộn ngang. `DetailSectionTabs` chia đều bề ngang
- * nên 6–7 tab của danh sách phiếu / công việc sẽ bị bóp chữ — dùng thanh này.
+ * Thanh tab dạng viên thuốc. Danh sách (6–7 tab phiếu / công việc): cuộn ngang,
+ * chia đều thì bị bóp chữ. Màn chi tiết (`embedded`): chia đều một hàng.
  */
 export default function WorkflowTabBar({ tabs, activeKey, onChange, embedded }: Props) {
   const styles = useStyles(makeStyles);
 
+  const items = tabs.map((tab) => {
+    const active = tab.key === activeKey;
+    return (
+      <TouchableOpacity
+        key={tab.key}
+        activeOpacity={0.8}
+        onPress={() => onChange(tab.key)}
+        style={[styles.tab, embedded && styles.tabEmbedded, active && styles.tabActive]}
+        accessibilityRole="tab"
+        accessibilityState={{ selected: active }}
+      >
+        <Text
+          style={[styles.label, embedded && styles.labelEmbedded, active && styles.labelActive]}
+          numberOfLines={1}
+        >
+          {tab.label}
+        </Text>
+        {tab.count ? (
+          <View style={[styles.count, active && styles.countActive]}>
+            <Text style={[styles.countText, active && styles.countTextActive]}>
+              {formatCount(tab.count)}
+            </Text>
+          </View>
+        ) : null}
+      </TouchableOpacity>
+    );
+  });
+
+  if (embedded) {
+    return (
+      <View style={[styles.wrapEmbedded, styles.contentEmbedded, styles.row]}>{items}</View>
+    );
+  }
+
   return (
-    <View style={embedded ? styles.wrapEmbedded : styles.wrap}>
+    <View style={styles.wrap}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.scroll}
-        contentContainerStyle={[styles.content, embedded && styles.contentEmbedded]}
+        contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        {tabs.map((tab) => {
-          const active = tab.key === activeKey;
-          return (
-            <TouchableOpacity
-              key={tab.key}
-              activeOpacity={0.8}
-              onPress={() => onChange(tab.key)}
-              style={[styles.tab, embedded && styles.tabEmbedded, active && styles.tabActive]}
-            >
-              <Text
-                style={[styles.label, embedded && styles.labelEmbedded, active && styles.labelActive]}
-              >
-                {tab.label}
-              </Text>
-              {tab.count ? (
-                <View style={[styles.count, active && styles.countActive]}>
-                  <Text
-                    style={[styles.countText, active && styles.countTextActive]}
-                  >
-                    {formatCount(tab.count)}
-                  </Text>
-                </View>
-              ) : null}
-            </TouchableOpacity>
-          );
-        })}
+        {items}
       </ScrollView>
     </View>
   );
@@ -91,7 +102,10 @@ const makeStyles = (c: AppColors) =>
     contentEmbedded: {
       paddingHorizontal: 0,
       paddingVertical: 6,
-      gap: 6,
+      gap: 8,
+    },
+    row: {
+      flexDirection: "row",
     },
     tab: {
       flexDirection: "row",
@@ -106,10 +120,13 @@ const makeStyles = (c: AppColors) =>
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: c.borderStrong,
     },
+    // Chia đều hàng: mỗi tab giãn bằng nhau, chữ + số nằm giữa viên.
     tabEmbedded: {
-      minHeight: 18 + 6 * 2 + StyleSheet.hairlineWidth * 2,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
+      flex: 1,
+      justifyContent: "center",
+      minHeight: 18 + 8 * 2 + StyleSheet.hairlineWidth * 2,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
     },
     tabActive: {
       backgroundColor: c.red,
@@ -121,7 +138,8 @@ const makeStyles = (c: AppColors) =>
       color: c.textSecondary,
     },
     labelEmbedded: {
-      fontSize: 12,
+      flexShrink: 1,
+      fontSize: 13,
     },
     labelActive: {
       color: c.onBrand,

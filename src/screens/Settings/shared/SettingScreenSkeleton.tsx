@@ -1,6 +1,5 @@
 import React, { useContext } from "react";
 import { StyleSheet, View } from "react-native";
-import LinearGradient from "react-native-linear-gradient";
 
 import { AppColors, C, useStyles } from "../../../utils/helpers/colors";
 import { ROW_DIVIDER_OPACITY } from "../../../utils/helpers/tokens";
@@ -18,55 +17,49 @@ const SECTIONS = [
 ];
 
 /**
- * Khung chờ của màn Cài đặt.
+ * Khung chờ của màn Cài đặt (phần dưới ảnh đầu màn).
  *
  * Bố cục màn này **hoàn toàn cố định** — không có gì phụ thuộc dữ liệu BE ngoài
- * tên và ảnh đại diện — nên khung chờ dựng đúng được từng dòng. Vùng đỏ dùng
- * cùng dải gradient và cùng đường bo hai góc dưới với màn thật: nó chiếm nửa
- * trên màn hình, lệch một chút là thấy giật khi dữ liệu về.
- *
- * Trước đây chỗ này là vòng xoay giữa màn trắng, mất cả vùng đỏ — vào Cài đặt
- * thấy trắng rồi mới đỏ, giật hẳn một nhịp màu.
+ * thẻ hồ sơ — nên khung chờ dựng đúng được từng dòng. Ảnh đầu màn
+ * (`SettingPhotoHeader`) hiện sẵn cả lúc chờ; ở đây chỉ vẽ thẻ hồ sơ đỏ cùng cỡ
+ * thẻ thật (`SettingProfileCard`, cao 194), lệch là thấy giật khi dữ liệu về.
  *
  * Thẻ nhóm dùng lại chính `SettingSectionGroup` (viền 1pt + mép trên 3pt theo
  * `accent`), không vẽ lại: hai chỗ tự vẽ khung thẻ thì đổi màu một bên là lệch
  * bên kia.
  */
-export default function SettingScreenSkeleton({
-  safeTop = 44,
-}: {
-  safeTop?: number;
-}) {
+export default function SettingScreenSkeleton() {
   const styles = useStyles(makeStyles);
 
   return (
     <View style={styles.root} accessibilityLabel="Đang tải cài đặt">
-      <LinearGradient
-        colors={[C.redLight, C.red, C.redDeep]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.redZone}
-      >
-        <View style={[styles.header, { paddingTop: safeTop + 8 }]}>
-          {/* Hai vòng trang trí mờ của `SettingProfileHeader`. */}
-          <View style={styles.deco1} />
-          <View style={styles.deco2} />
-          <View style={styles.avatarRing}>
-            <View style={styles.avatar} />
+      <View style={styles.card}>
+        <View style={styles.cardTop}>
+          <View style={styles.avatar} />
+          <View style={styles.cardLines}>
+            <View style={styles.name} />
+            <View style={styles.title} />
           </View>
-          <View style={styles.name} />
-          <View style={styles.badge} />
         </View>
-      </LinearGradient>
+        <View style={styles.infoBlock}>
+          <View style={styles.infoRows}>
+            <View style={styles.infoRow}>
+              <View style={styles.infoBar} />
+            </View>
+            <View style={styles.infoRow}>
+              <View style={[styles.infoBar, styles.infoBarLong]} />
+            </View>
+          </View>
+          <View style={styles.qr} />
+        </View>
+        <View style={styles.strip} />
+      </View>
 
       <View style={styles.greyZone}>
         {SECTIONS.map((section, sectionIndex) => (
           <SettingSectionGroup
             key={`section-${sectionIndex}`}
             accent={section.accent}
-            // Nhóm đầu: `groupListTop` của màn thật; nhóm sau giữ marginTop 22
-            // mặc định của `SettingSectionGroup`.
-            style={sectionIndex === 0 ? styles.firstSection : undefined}
           >
             {Array.from({ length: section.rows }).map((_, rowIndex) => (
               <SkeletonRow
@@ -114,76 +107,89 @@ function SkeletonRow({ isLast }: { isLast: boolean }) {
 const makeStyles = (c: AppColors) =>
   StyleSheet.create({
     root: {
-      flex: 1,
+      flexGrow: 1,
+    },
+    // Khung `SettingProfileCard`: hàng đầu 80 + 2 hàng 30 + 6 + dải 48 = 194.
+    // Thẻ đỏ ở cả hai chế độ; chỗ chữ là vệt trắng mờ trên nền đỏ.
+    card: {
+      height: 194,
+      marginHorizontal: 16,
+      borderRadius: 20,
       overflow: "hidden",
-      backgroundColor: c.bg,
+      backgroundColor: C.red,
     },
-    header: {
+    cardTop: {
+      height: 80,
+      flexDirection: "row",
       alignItems: "center",
-      paddingBottom: 20,
-      overflow: "hidden",
-    },
-    deco1: {
-      position: "absolute",
-      width: 180,
-      height: 180,
-      borderRadius: 90,
-      backgroundColor: "rgba(255,255,255,0.07)",
-      top: -60,
-      left: -40,
-    },
-    deco2: {
-      position: "absolute",
-      width: 120,
-      height: 120,
-      borderRadius: 60,
-      backgroundColor: "rgba(255,255,255,0.06)",
-      top: 20,
-      right: -20,
-    },
-    avatarRing: {
-      width: 92,
-      height: 92,
-      borderRadius: 46,
-      borderWidth: 3,
-      borderColor: "rgba(255,255,255,0.55)",
-      alignItems: "center",
-      justifyContent: "center",
-      marginBottom: 14,
+      paddingTop: 8,
+      paddingHorizontal: 16,
+      gap: 12,
     },
     avatar: {
-      width: 80,
-      height: 80,
-      borderRadius: 40,
-      backgroundColor: "rgba(255,255,255,0.35)",
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: "rgba(255,255,255,0.25)",
     },
-    // Tên 19pt đậm (dòng ~23) + marginBottom 8 của `SettingProfileHeader`.
+    cardLines: {
+      flexGrow: 1,
+      flexShrink: 1,
+      flexBasis: 0,
+      gap: 8,
+    },
     name: {
-      width: 168,
-      height: 19,
-      marginTop: 2,
-      marginBottom: 10,
-      borderRadius: 8,
-      backgroundColor: "rgba(255,255,255,0.35)",
+      width: "72%",
+      height: 15,
+      borderRadius: 7,
+      backgroundColor: "rgba(255,255,255,0.3)",
     },
-    // Nhãn chức danh: đệm dọc 5 × 2 + viền 1 × 2 + chữ 11pt (~13).
-    badge: {
-      width: 96,
-      height: 25,
-      borderRadius: 13,
+    title: {
+      width: "52%",
+      height: 12,
+      borderRadius: 6,
       backgroundColor: "rgba(255,255,255,0.22)",
     },
-    // Như `redZone` của SettingScreen: không padding, vì iOS không tô gradient
-    // phần padding còn Android có.
-    redZone: {
-      overflow: "hidden",
+    // Nút QR thật nền tối mờ trên thẻ đỏ — vẽ đúng màu đó.
+    qr: {
+      width: 72,
+      height: 40,
+      borderRadius: 14,
+      backgroundColor: "rgba(0,0,0,0.18)",
+    },
+    // Nút QR bên phải hai dòng Mã NV / Bộ phận, như thẻ thật.
+    infoBlock: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingRight: 16,
+      gap: 10,
+    },
+    infoRows: {
+      flexGrow: 1,
+      flexShrink: 1,
+      flexBasis: 0,
+    },
+    infoRow: {
+      height: 30,
+      justifyContent: "center",
+      paddingLeft: 16,
+    },
+    infoBar: {
+      width: "42%",
+      height: 12,
+      borderRadius: 6,
+      backgroundColor: "rgba(255,255,255,0.22)",
+    },
+    infoBarLong: {
+      width: "64%",
+    },
+    strip: {
+      height: 48,
+      marginTop: 6,
+      backgroundColor: "rgba(0,0,0,0.14)",
     },
     greyZone: {
       flexGrow: 1,
-    },
-    // Cùng khoảng cách với danh sách nhóm của màn thật (`groupListTop`).
-    firstSection: {
-      marginTop: 24,
     },
     // Đệm và ô icon theo `SettingRowItem`: dòng cao 13 + 38 + 13 = 64.
     row: {

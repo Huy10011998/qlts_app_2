@@ -6,6 +6,8 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 
 import EmptyState from "../../components/ui/EmptyState";
 import SearchBar from "../../components/ui/SearchBar";
+import HeaderSearchReveal from "../../components/ui/HeaderSearchReveal";
+import { useHeaderSearch } from "../../hooks/useHeaderSearch";
 import {
   SUPPORT_EMAIL,
   SUPPORT_PHONE,
@@ -30,6 +32,7 @@ export default function GuideScreen() {
   const styles = useStyles(makeGuideStyles);
   const navigation = useNavigation<GuideNavigationProp>();
   const [query, setQuery] = useState("");
+  const search = useHeaderSearch({ query, onClear: () => setQuery("") });
 
   const hits = useMemo(() => filterGuideTopics(query), [query]);
   const isSearching = query.trim().length > 0;
@@ -52,15 +55,19 @@ export default function GuideScreen() {
 
   return (
     <View style={styles.root}>
-      {/* Ô tìm kiếm đứng ngoài ScrollView: cuộn xuống giữa mục lục vẫn gõ lọc
-          được ngay, không phải kéo lên đầu. */}
-      <View style={styles.searchWrap}>
-        <SearchBar
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Tìm trong hướng dẫn"
-        />
-      </View>
+      {/* Ô tìm kiếm ẩn sau nút kính lúp trên header; mở thì đứng ngoài
+          ScrollView: cuộn xuống giữa mục lục vẫn gõ lọc được ngay. */}
+      <HeaderSearchReveal open={search.open}>
+        <View style={styles.searchWrap}>
+          <SearchBar
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Tìm trong hướng dẫn"
+            autoFocus
+            onClose={search.close}
+          />
+        </View>
+      </HeaderSearchReveal>
 
       <ScrollView
         style={styles.scroll}
@@ -71,8 +78,9 @@ export default function GuideScreen() {
       >
         {isSearching ? null : (
           <Text style={styles.intro}>
-            Chọn một chủ đề để xem từng bước. Gõ vào ô tìm kiếm để tìm theo chữ
-            trên màn hình hoặc theo câu thông báo lỗi bạn gặp — không cần gõ dấu.
+            Chọn một chủ đề để xem từng bước. Bấm kính lúp trên thanh đỏ để tìm
+            theo chữ trên màn hình hoặc theo câu thông báo lỗi bạn gặp — không
+            cần gõ dấu.
             {"\n\n"}
             Tài liệu mô tả đầy đủ chức năng của ứng dụng. Những gì bạn thấy được
             trên máy còn tuỳ quyền của tài khoản, nên có thể ít hơn tài liệu này —

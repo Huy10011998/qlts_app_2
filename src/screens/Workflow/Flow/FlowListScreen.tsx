@@ -9,8 +9,10 @@ import SwipeableListRow, {
   useSingleOpenRow,
 } from "../../../components/list/SwipeableListRow";
 import EmptyState from "../../../components/ui/EmptyState";
-import InlineToast from "../../../components/ui/InlineToast";
+import { showAppToast } from "../../../components/ui/AppToast";
 import SearchBar from "../../../components/ui/SearchBar";
+import HeaderSearchReveal from "../../../components/ui/HeaderSearchReveal";
+import { useHeaderSearch } from "../../../hooks/useHeaderSearch";
 import { useDebounce } from "../../../hooks/useDebounce";
 import { flowDemTab, flowGetList, flowThongTin } from "../../../services/data/flowApi";
 import type {
@@ -74,7 +76,6 @@ const TABS_CO_BUOC: FlowTab[] = ["ChoDuyet", "DangXuLy"];
 
 type ApproveState = { record: FlowRecord; ketQua: FlowKetQua | typeof FLOW_KET_QUA.TraBuoc };
 type BulkState = { records: FlowRecord[]; skippedNotAllowed: number };
-type ToastState = { message: string; detail?: string; tone: "success" | "warning" };
 
 /**
  * Danh sách phiếu đề nghị — MỘT màn cho mọi loại phiếu chạy quy trình. Đầu vào
@@ -88,7 +89,12 @@ export default function FlowListScreen() {
   const navigation = useNavigation<StackNavigation<"Flow">>();
   const route = useRoute<StackRoute<"Flow">>();
   const nameClass = route.params?.nameClass ?? "";
-  const { meta, errorMessage: metaError, loading: metaLoading } = useFlowMeta(nameClass);
+  const {
+    meta,
+    errorMessage: metaError,
+    loading: metaLoading,
+    reload: reloadMeta,
+  } = useFlowMeta(nameClass);
   const perms = useWorkflowPermissions(nameClass);
   const { me } = useWorkflowMe();
   const markChanged = useMarkWorkflowChanged();
@@ -96,6 +102,10 @@ export default function FlowListScreen() {
   // Mở từ thông báo "n phiếu đang chờ bạn duyệt" thì vào thẳng tab đó.
   const [tab, setTab] = useState<FlowTab>(route.params?.tab ?? "ChoDuyet");
   const [keyword, setKeyword] = useState("");
+  const search = useHeaderSearch({
+    query: keyword,
+    onClear: () => setKeyword(""),
+  });
   const searchText = useDebounce(keyword, 600);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [infos, setInfos] = useState<Record<number, FlowThongTin>>({});
@@ -104,7 +114,6 @@ export default function FlowListScreen() {
   const [approve, setApprove] = useState<ApproveState | null>(null);
   const [bulk, setBulk] = useState<BulkState | null>(null);
   const [preparingBulk, setPreparingBulk] = useState(false);
-  const [toast, setToast] = useState<ToastState | null>(null);
   const { closeOpenRow, rowHandlers } = useSingleOpenRow();
 
   useEffect(() => {
@@ -302,16 +311,15 @@ export default function FlowListScreen() {
   };
 
   /**
-   * Xong 1 phiếu (duyệt / từ chối / không ý kiến / trả bước): báo ngắn cùng chỗ
-   * với duyệt nhiều — trước đây im lặng, phiếu chỉ lặng lẽ biến khỏi tab. Server
+   * Xong 1 phiếu (duyệt / từ chối / không ý kiến / trả bước): báo bằng dải đầu màn
+   * như duyệt nhiều — trước đây im lặng, phiếu chỉ lặng lẽ biến khỏi tab. Server
    * từ chối (`sent` = false) thì sheet đã báo bằng Alert, chỉ nạp lại.
    */
   const handleSingleDone = (target: ApproveState, sent: boolean) => {
     finishAction();
     if (!sent) return;
-    setToast({
+    showAppToast({
       message: getFlowDoneMessage(target.ketQua, getFlowLabel(target.record, soPhieuField)),
-      tone: "success",
     });
   };
 
@@ -352,7 +360,7 @@ export default function FlowListScreen() {
     }
 
     if (soThanhCong > 0) {
-      setToast({
+      showAppToast({
         message: `Đã duyệt ${soThanhCong} phiếu`,
         detail: boQua || undefined,
         tone: boQua ? "warning" : "success",
@@ -365,7 +373,15 @@ export default function FlowListScreen() {
   // Đang nạp cấu hình phiếu: vẫn dựng ô tìm kiếm + hàng tab thật, danh sách là
   // khung chờ — giống hệt lúc chờ trang đầu, khỏi thêm một nhịp vòng xoay trước.
   if (!metaLoading && (metaError || !meta)) {
-    return <EmptyState iconName="alert-circle-outline" title="Không mở được phiếu" subtitle={metaError ?? undefined} />;
+    return (
+      <EmptyState
+        iconName="alert-circle-outline"
+        title="Không mở được phiếu"
+        subtitle={metaError ?? undefined}
+        actionLabel="Thử lại"
+        onActionPress={reloadMeta}
+      />
+    );
   }
 
   if (meta && perms.loaded && !perms.canRead) {
@@ -395,13 +411,17 @@ export default function FlowListScreen() {
 
   return (
     <View style={styles.container}>
-      <SearchBar
-        value={keyword}
-        onChangeText={setKeyword}
-        placeholder="Tìm kiếm phiếu..."
-        isSearching={list.loading && !!keyword}
-        style={styles.search}
-      />
+      <HeaderSearchReveal open={search.open}>
+        <SearchBar
+          value={keyword}
+          onChangeText={setKeyword}
+          placeholder="Tìm kiếm phiếu..."
+          isSearching={list.loading && !!keyword}
+          style={styles.search}
+          autoFocus
+          onClose={search.close}
+        />
+      </HeaderSearchReveal>
       <WorkflowTabBar tabs={tabs} activeKey={tab} onChange={(key) => setTab(key as FlowTab)} />
       {showApproveAll ? (
         <View style={styles.approveAllRow}>
@@ -422,12 +442,6 @@ export default function FlowListScreen() {
           />
         </View>
       ) : null}
-      <InlineToast
-        message={toast?.message}
-        detail={toast?.detail}
-        tone={toast?.tone}
-        onDismiss={() => setToast(null)}
-      />
 
       {firstLoading ? (
         <WorkflowListSkeleton kind="flow" shape={skeletonShape} hasApproveAllRow={reserveApproveAll} />

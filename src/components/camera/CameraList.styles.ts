@@ -24,19 +24,13 @@ export const makeStyles = (c: AppColors) =>
       flexGrow: 1,
       paddingBottom: 0,
     },
+    // Tên khu vực đã lên header, hàng này chỉ còn hai nút bên phải.
     headerRow: {
       flexDirection: "row",
-      justifyContent: "space-between",
+      justifyContent: "flex-end",
       alignItems: "center",
       marginHorizontal: 16,
       marginVertical: 12,
-    },
-    pageTitle: {
-      flex: 1,
-      fontSize: 16,
-      fontWeight: "600",
-      color: c.text,
-      marginRight: 12,
     },
     headerRight: { flexDirection: "row", alignItems: "center", gap: 16 },
     card: {
@@ -62,6 +56,17 @@ export const makeStyles = (c: AppColors) =>
       height: "100%",
       borderRadius: 8,
       backgroundColor: "#000",
+    },
+    expandBadge: {
+      position: "absolute",
+      top: 6,
+      right: 6,
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "rgba(0,0,0,0.45)",
     },
     previewLoadingBackground: {
       backgroundColor: "#111",

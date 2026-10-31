@@ -3,9 +3,10 @@ import {
   useStyles,
 } from "../../../utils/helpers/colors";
 import React from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import SearchBar from "../../ui/SearchBar";
+import HeaderSearchReveal from "../../ui/HeaderSearchReveal";
 import { BRAND_RED } from "./listTheme";
 import { makeSharedAssetListStyles } from "./listStyles";
 
@@ -24,6 +25,11 @@ type AssetListSearchBarProps = {
   onBadgePress?: () => void;
   /** Có thì nhãn hiện thêm nút × để bỏ lọc. Chỉ truyền khi đang lọc. */
   onBadgeClear?: () => void;
+  /**
+   * Ô ẩn sau nút kính lúp trên header (`useHeaderSearch`). Đóng thì chỉ ẩn ô
+   * nhập — dòng nhãn + số bản ghi (và nút lọc danh mục) vẫn ở đó.
+   */
+  search?: { open: boolean; close: () => void };
 };
 
 export default function AssetListSearchBar({
@@ -36,22 +42,30 @@ export default function AssetListSearchBar({
   summaryText,
   onBadgePress,
   onBadgeClear,
+  search,
 }: AssetListSearchBarProps) {
   const styles = useStyles(makeSharedAssetListStyles);
   const accentBorders = useAccentBorderColors();
+  const showInput = search?.open ?? true;
 
   return (
     <View style={styles.searchWrap}>
-      <SearchBar
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        onClear={onClear}
-        isSearching={isSearching}
-        spinnerColor={BRAND_RED}
-      />
+      {/* Khoảng 8 giữa ô và dòng nhãn là `gap` của khung trượt: đóng ô thì
+          thu về 0 cùng ô, dòng nhãn lên sát đỉnh khối. */}
+      <HeaderSearchReveal open={showInput} gap={8}>
+        <SearchBar
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          onClear={onClear}
+          isSearching={isSearching}
+          spinnerColor={BRAND_RED}
+          autoFocus={Boolean(search)}
+          onClose={search?.close}
+        />
+      </HeaderSearchReveal>
 
-      <View style={styles.summaryRow}>
+      <View style={[styles.summaryRow, localStyles.flush]}>
         {onBadgePress ? (
           <View
             style={[
@@ -105,3 +119,8 @@ export default function AssetListSearchBar({
     </View>
   );
 }
+
+// Khoảng trên dòng nhãn đã nằm trong khung trượt của ô nhập.
+const localStyles = StyleSheet.create({
+  flush: { marginTop: 0 },
+});

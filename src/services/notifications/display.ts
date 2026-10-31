@@ -106,6 +106,21 @@ export const shouldDisplayLocally = (
   isForeground: boolean,
 ): boolean => isForeground || !message.hasOsNotification;
 
+/**
+ * Xoá mọi noti của app đang nằm trên khay (kể cả noti OS tự dựng từ FCM) và số
+ * trên icon — gọi khi rời phiên đăng nhập. Máy dùng chung: để lại thì người đăng
+ * nhập sau bấm noti của người trước vẫn mở được (lần bấm ở màn Đăng nhập được giữ
+ * tới khi vào app), lại còn đọc được tên camera / nội dung thông báo của họ.
+ */
+export const clearDisplayedNotifications = async (): Promise<void> => {
+  try {
+    await notifee.cancelDisplayedNotifications();
+    await notifee.setBadgeCount(0);
+  } catch (err) {
+    warn("[Push] Xoá noti trên khay thất bại", err);
+  }
+};
+
 /** Xoá badge trên icon app (iOS) — gọi khi user mở app. */
 export const clearNotificationBadge = async (): Promise<void> => {
   try {
