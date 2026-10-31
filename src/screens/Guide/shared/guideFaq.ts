@@ -12,7 +12,7 @@ import type { GuideTopic } from "./guideTypes";
 export const GUIDE_FAQ_TOPIC: GuideTopic = {
   id: "faq",
   title: "Câu hỏi thường gặp",
-  summary: "Lỗi kết nối, hết phiên, vân tay, quyền, GPS, camera, tệp, Workflow, Trang chủ, danh thiếp QR",
+  summary: "Lỗi kết nối, hết phiên, đổi tài khoản, quên mật khẩu, vân tay, quyền, GPS, camera, tệp, Workflow, Trang chủ, danh thiếp QR, thanh tab, tìm kiếm",
   iconName: "help-circle-outline",
   iconBg: C.violet,
   group: "Trợ giúp",
@@ -30,10 +30,24 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
   ],
   keywords: [
     "faq",
+    "doi tai khoan",
+    "tai khoan khac",
+    "quen mat khau",
+    "doi mat khau",
+    "dang xuat",
+    "nut nguon",
+    "nut wifi",
+    "cham vang",
     "cau hoi",
     "an khoi",
     "thu gon",
+    "thu gon tat ca",
     "mat khoi",
+    "thanh tab",
+    "mat thanh tab",
+    "kinh lup",
+    "tim kiem",
+    "cham",
     "doi may",
     "diem danh phong ban",
     "loi",
@@ -99,6 +113,10 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
     "workflow",
     "khong thay workflow",
     "tab lich",
+    "lich hom nay",
+    "lich thang",
+    "am lich",
+    "ngay le",
     "mat tab camera",
     "chuong thong bao",
     "sap trien khai",
@@ -145,7 +163,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
           kind: "steps",
           items: [
             "Kiểm tra máy đang nối Wi-Fi công ty, không phải 4G hay Wi-Fi khác.",
-            "Trên iPhone/iPad: mở tab Cài đặt → Hệ thống trong app, xem dòng Quyền mạng nội bộ đã ở trạng thái Đã cấp quyền chưa.",
+            "Trên iPhone/iPad: nhìn nút hình wifi ở góc phải trên màn Đăng nhập — chấm vàng là chưa cấp quyền Mạng nội bộ, bấm vào để mở Cài đặt của máy và bật lên. Đã vào được app thì xem ở tab Cài đặt → Hệ thống, dòng Quyền mạng nội bộ.",
             "Bấm Thử lại. Nếu vẫn không được và đồng nghiệp cùng phòng cũng vậy thì máy chủ đang có vấn đề — liên hệ IT.",
           ],
         },
@@ -158,11 +176,98 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
       blocks: [
         {
           kind: "paragraph",
-          text: "Phiên làm việc có thời hạn; hết hạn là app đưa về màn Đăng nhập. Đăng nhập lại bằng tài khoản và mật khẩu là dùng tiếp được. Face ID / vân tay / khoá màn hình đã bật vẫn giữ nguyên, lần sau mở app dùng lại bình thường.",
+          text: "Phiên làm việc có thời hạn; hết hạn là app đưa về màn Đăng nhập. Màn vẫn chào bằng tên bạn, chỉ cần nhập lại mật khẩu là dùng tiếp được. Face ID / vân tay / khoá màn hình đã bật vẫn giữ nguyên, lần sau mở app dùng lại bình thường.",
         },
         {
           kind: "paragraph",
           text: "Những gì đã bấm Gửi trước đó vẫn nằm trên máy chủ, không mất. Chỉ phần đang nhập dở dang là phải làm lại.",
+        },
+      ],
+    },
+    {
+      id: "faq-doi-tai-khoan",
+      group: "Đăng nhập & quyền",
+      heading: "Màn Đăng nhập chỉ có ô Mật khẩu, muốn vào tài khoản khác?",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Máy đã đăng nhập thì lần sau màn Đăng nhập chào bằng họ tên người đó và chỉ hỏi mật khẩu cho nhanh. Muốn đổi sang tài khoản khác thì người đang dùng đăng xuất trước.",
+        },
+        {
+          kind: "steps",
+          items: [
+            "Đăng nhập vào app.",
+            "Vào tab Cài đặt, bấm nút nguồn ở góc phải trên (hoặc dòng Đăng xuất cuối màn), chọn Đăng xuất.",
+            "Màn Đăng nhập hiện lại ô Tài khoản, nhập tài khoản mới như bình thường.",
+          ],
+        },
+        {
+          kind: "note",
+          tone: "warn",
+          text: "Máy dùng chung thì nhớ đăng xuất khi dùng xong. Phiên hết hạn mà chưa đăng xuất thì màn vẫn chỉ hỏi mật khẩu của người trước — nhờ người đó đăng nhập rồi đăng xuất.",
+        },
+      ],
+    },
+    {
+      id: "faq-ten-anh-man-dang-nhap",
+      group: "Đăng nhập & quyền",
+      heading: "Tên và ảnh ở màn Đăng nhập lấy ở đâu, người khác có thấy không?",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "App lưu họ tên và ảnh đại diện của người đăng nhập gần nhất ngay trên máy đó (không gửi đi đâu) để lần sau chào bằng tên, giống app ngân hàng. Ai mở app trên máy đó cũng thấy tên và ảnh này, nhưng vẫn phải có mật khẩu (hoặc Face ID / vân tay của bạn) mới vào được.",
+        },
+        {
+          kind: "paragraph",
+          text: "Đăng xuất là app xoá tên và ảnh đã lưu. Đổi ảnh đại diện hay hồ sơ thì lần đăng nhập sau màn tự cập nhật.",
+        },
+      ],
+    },
+    {
+      id: "faq-nut-wifi-dang-nhap",
+      group: "Đăng nhập & quyền",
+      heading: "Nút hình wifi ở góc màn Đăng nhập có chấm vàng",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Nút này báo quyền Mạng nội bộ (chỉ iPhone/iPad cần): chấm xanh là đã cấp quyền, chấm vàng là chưa. Chưa cấp thì máy không gọi được tới máy chủ công ty, đăng nhập sẽ báo lỗi kết nối.",
+        },
+        {
+          kind: "steps",
+          items: [
+            "Bấm nút wifi có chấm vàng — app mở Cài đặt của máy.",
+            "Bật Mạng cục bộ (Local Network) cho ứng dụng.",
+            "Quay lại app, chấm chuyển xanh là đăng nhập được.",
+          ],
+        },
+      ],
+    },
+    {
+      id: "faq-quen-mat-khau",
+      group: "Đăng nhập & quyền",
+      heading: "Quên mật khẩu thì làm sao?",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "App chưa có chức năng tự đặt lại mật khẩu. Bấm Email hỗ trợ hoặc số điện thoại ở cuối màn Đăng nhập để liên hệ IT cấp lại mật khẩu.",
+        },
+        {
+          kind: "paragraph",
+          text: "Đã bật Face ID / vân tay / khoá màn hình và phiên còn hạn thì vẫn vào app được bằng cách đó; vào xong nên đổi mật khẩu mới ở tab Cài đặt (nút Đổi mật khẩu dưới thẻ hồ sơ đỏ).",
+        },
+      ],
+    },
+    {
+      id: "faq-doi-mat-khau-dang-xuat",
+      group: "Đăng nhập & quyền",
+      heading: "Đổi mật khẩu, đăng xuất ở đâu?",
+      blocks: [
+        {
+          kind: "bullets",
+          items: [
+            "Đổi mật khẩu: tab Cài đặt, bấm Đổi mật khẩu ở dải dưới thẻ hồ sơ đỏ (hoặc vào Tài khoản → Đổi mật khẩu).",
+            "Đăng xuất: tab Cài đặt, bấm nút nguồn ở góc phải trên hoặc dòng Đăng xuất cuối màn. App hỏi xác nhận trước khi thoát.",
+          ],
         },
       ],
     },
@@ -180,7 +285,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
           items: [
             "Đăng nhập bằng tài khoản và mật khẩu.",
             "Vào tab Cài đặt → Tài khoản → bật Đăng nhập FaceID (iPhone) hoặc Đăng nhập bằng vân tay / khuôn mặt / khoá màn hình (Android) rồi xác thực khi máy hỏi.",
-            "Lần sau mở app: iPhone tự hỏi Face ID ở màn Đăng nhập (lỡ bỏ qua thì bấm nút Face ID); máy Android bấm nút vân tay / khuôn mặt / khoá màn hình cạnh nút Đăng nhập.",
+            "Lần sau mở app: máy tự hỏi Face ID (iPhone) hoặc vân tay / khuôn mặt / khoá màn hình (Android). Lỡ bỏ qua thì bấm nút cạnh nút Đăng nhập.",
           ],
         },
       ],
@@ -352,7 +457,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
         {
           kind: "bullets",
           items: [
-            "Không có dòng nhắc màu đỏ nhạt dưới ô tìm kiếm nghĩa là danh sách đó không vuốt được.",
+            "Không có dòng nhắc màu đỏ nhạt ở đầu danh sách nghĩa là danh sách đó không vuốt được.",
             "Loại tài sản không khai báo danh mục con nào — ví dụ danh sách phiếu đánh giá — thì không có gì để thêm bên dưới nữa.",
             "Có danh mục con nhưng tài khoản chưa có quyền thêm ở đó thì nút cũng ẩn; liên hệ IT để được cấp quyền.",
           ],
@@ -728,6 +833,14 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
           text: "App mở thẳng hình trực tiếp của đúng camera vừa báo. Nếu app đang khoá bằng Face ID / vân tay / khoá màn hình thì mở sau khi xác thực xong. Thông báo không kèm ảnh hiện trường, nên muốn biết chuyện gì thì phải mở xem trực tiếp.",
         },
         {
+          kind: "bullets",
+          items: [
+            "Màn camera mở chồng lên chỗ bạn đang đứng: bấm quay lại là về đúng màn cũ, kể cả lưới nhiều camera.",
+            "Bấm tiếp thông báo của camera khác thì màn camera vừa mở được thay luôn, không chồng thành dãy dài.",
+            "Tài khoản không có quyền xem camera thì bấm thông báo chỉ mở app, không mở camera — báo IT nếu bạn không cần nhận loại thông báo này.",
+          ],
+        },
+        {
           kind: "paragraph",
           text: "Camera chỉ xem được khi máy đang ở mạng nội bộ công ty. Đang dùng 4G thì thông báo vẫn tới nhưng hình không lên — không phải camera hỏng.",
         },
@@ -981,7 +1094,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
           kind: "bullets",
           items: [
             "Vào tab Cài đặt → Hệ thống của app, xem dòng Quyền thông báo đã ở trạng thái Đã cấp quyền chưa. Chưa cấp quyền thì bấm vào dòng đó để app hỏi lại (app chỉ tự hỏi một lần sau khi đăng nhập); đang bị chặn thì bấm vào để mở Cài đặt của điện thoại.",
-            "Đăng xuất thì máy không nhận thông báo nữa — đăng nhập lại là nhận tiếp.",
+            "Đăng xuất thì máy không nhận thông báo nữa, thông báo cũ trên khay cũng bị xoá — đăng nhập lại là nhận tiếp.",
             "Máy Xiaomi, Oppo, Vivo, Realme: vuốt tắt app trong đa nhiệm có thể làm máy chặn luôn thông báo. Bật Tự khởi động cho app, hoặc khoá app trong đa nhiệm.",
             "Việc do chính bạn làm không tạo thông báo cho bạn.",
           ],
@@ -1007,6 +1120,62 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
             "Cần theo dõi một việc thì nhờ người tạo thêm bạn vào mục Để biết.",
             "Chủ trì kế hoạch xem được mọi việc trong kế hoạch của mình ở tab Công việc của kế hoạch.",
           ],
+        },
+      ],
+    },
+    {
+      id: "faq-lich-hom-nay-thieu-viec-qua-han",
+      group: "Workflow & thông báo",
+      heading: "Lịch chế độ Hôm nay không có việc quá hạn của hôm trước",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Hôm nay chỉ hiện việc rơi vào hôm nay, tức hôm nay nằm trong khoảng Từ ngày – Đến ngày của việc. Việc hết hạn từ hôm trước vẫn nằm ở ngày cũ trên lịch.",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Xem mọi việc đang chờ bạn: bấm nút Việc cần xử lý cạnh chuông.",
+            "Xem việc quá hạn trong tháng: chọn Tháng rồi bấm chip Quá hạn.",
+          ],
+        },
+      ],
+    },
+    {
+      id: "faq-lich-mo-lai-che-do",
+      group: "Workflow & thông báo",
+      heading: "Mở tab Lịch không còn ra lịch tháng như trước",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "App nhớ chế độ bạn chọn lần trước (Tháng, Tuần hoặc Hôm nay) trên máy này và mở lại đúng chế độ đó. Muốn xem kiểu khác thì chọn lại ở thanh trên cùng, lần sau app nhớ theo lựa chọn mới.",
+        },
+      ],
+    },
+    {
+      id: "faq-lich-hang-cao-thap",
+      group: "Workflow & thông báo",
+      heading: "Lưới tháng có hàng cao, hàng thấp; tháng có 4 hàng, tháng có 6 hàng",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Tuần không có việc thì hàng thu gọn, tuần có việc giãn theo ngày nhiều việc nhất. Lưới chỉ hiện đủ số tuần của tháng, không thêm hàng toàn ngày của tháng sau, nên mỗi tháng có 4 đến 6 hàng. Đây là cách hiển thị, không phải mất việc.",
+        },
+      ],
+    },
+    {
+      id: "faq-lich-am-lich-ngay-le",
+      group: "Workflow & thông báo",
+      heading: "Ngày âm lịch và ngày lễ trên Lịch lấy từ đâu?",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "App tự tính ngày âm lịch theo giờ Việt Nam, không cần mạng. Ngày lễ chỉ gồm các ngày cố định trong luật: Tết Dương lịch, Giao thừa và mùng 1–3 Tết, Giỗ Tổ Hùng Vương, 30/4, 1/5, Quốc khánh 2/9.",
+        },
+        {
+          kind: "note",
+          tone: "info",
+          text: "Ngày nghỉ bù và số ngày nghỉ Tết từng năm do công ty thông báo, app không đánh dấu.",
         },
       ],
     },
@@ -1097,7 +1266,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
       blocks: [
         {
           kind: "paragraph",
-          text: "Đúng như thiết kế. Ô Máy móc đang quản lý chỉ mở nhánh máy móc trong nhóm Tài sản, ô Thiết bị CNTT đang dùng chỉ mở nhánh CNTT trong nhóm IT — tiêu đề thanh đỏ ghi đúng tên nhóm đang xem.",
+          text: "Đúng như thiết kế. Ô Máy móc đang quản lý chỉ mở nhánh máy móc trong nhóm Tài sản, ô Thiết bị CNTT đang dùng chỉ mở nhánh CNTT trong nhóm IT — tiêu đề màn ghi đúng tên nhóm đang xem.",
         },
         {
           kind: "bullets",
@@ -1117,6 +1286,7 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
           kind: "bullets",
           items: [
             "Chỉ còn nhãn màu, bên cạnh ghi Đã thu gọn: khối đang được thu gọn. Bấm vào nhãn màu để mở lại.",
+            "Cả Trang chủ chỉ còn danh sách tiêu đề: bạn vừa đè giữ một nhãn màu (thu gọn tất cả). Đè giữ nhãn bất kỳ lần nữa để mở hết.",
             "Mất hẳn: khối đang bị ẩn. Bấm nút Sắp xếp (mũi tên lên xuống) trên đầu Trang chủ, khối có nút tròn trống (dấu +) là đang ẩn — bấm vào để hiện lại.",
             "Không có trong bảng Sắp xếp: tài khoản chưa được cấp quyền xem khối đó (Dashboard Tài sản hoặc Workflow) — nhờ IT cấp.",
           ],
@@ -1150,6 +1320,105 @@ export const GUIDE_FAQ_TOPIC: GuideTopic = {
             "Chọn một phòng ban ở ô Tất cả bộ phận phía trên thì chỉ còn phòng ban đó.",
             "Bấm một phòng ban để xem danh sách người đã và chưa điểm danh.",
           ],
+        },
+      ],
+    },
+    {
+      id: "faq-thanh-tab-bien-mat",
+      group: "Khác",
+      heading: "Thanh tab dưới màn hình biến mất",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Thanh tab biến mất không phải lỗi:",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Đang ở màn đầu của tab mà vuốt đọc xuống: thanh tab tự trượt khuất cho rộng chỗ. Kéo ngược lên một đoạn (nhích nhẹ thì chưa hiện, để thanh tab không bật ra tắt vào lúc đang đọc) hoặc cuộn về đầu trang là thanh tab hiện lại.",
+            "Đang ở màn mở từ danh sách, màn chi tiết hay màn Thông tin sau khi quét QR: các màn này phủ kín màn hình nên không có thanh tab. Bấm mũi tên quay lại để về màn có thanh tab.",
+            "Chuyển tab, hoặc mở màn khác rồi quay lại, thì thanh tab luôn hiện.",
+          ],
+        },
+        {
+          kind: "note",
+          tone: "info",
+          text: "Máy đang bật VoiceOver (iPhone) hoặc TalkBack (Android) thì thanh tab không tự ẩn.",
+        },
+      ],
+    },
+    {
+      id: "faq-tab-khong-co-chu",
+      group: "Khác",
+      heading: "Thanh tab không có chữ, tab nào là gì?",
+      blocks: [
+        {
+          kind: "bullets",
+          items: [
+            "Hình ngôi nhà: Trang chủ.",
+            "Hình bốn ô vuông: Chức năng.",
+            "Ô đỏ ở giữa: Quét QR.",
+            "Hình tờ lịch: Lịch công việc (tài khoản dùng Workflow; số đỏ là số việc cần xử lý). Tài khoản khác thấy hình máy quay: Camera.",
+            "Ảnh đại diện của bạn (chưa có ảnh thì hình bánh răng): Cài đặt.",
+          ],
+        },
+        {
+          kind: "paragraph",
+          text: "Tab đang mở có biểu tượng đỏ trên nền hồng nhạt. Xem thêm chủ đề Tổng quan giao diện.",
+        },
+      ],
+    },
+    {
+      id: "faq-khong-thay-o-tim-kiem",
+      group: "Khác",
+      heading: "Không thấy ô tìm kiếm ở danh sách",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Ô tìm kiếm ẩn sau nút kính lúp trên thanh tiêu đề, để danh sách có thêm chỗ.",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Bấm kính lúp: ô tìm hiện ngay dưới thanh tiêu đề, bàn phím bật sẵn. Gõ không dấu vẫn ra kết quả.",
+            "Bấm kính lúp lần nữa hoặc dấu × trong ô để xoá chữ và ẩn ô — danh sách về lại đầy đủ.",
+            "Vào lại màn mà chữ tìm lần trước vẫn còn thì ô tự hiện sẵn, không có chuyện danh sách bị lọc mà không thấy ô.",
+            "Bảng chọn bật lên từ dưới (chọn nhân viên, khách hàng, danh mục…) vẫn có ô tìm kiếm sẵn ở đầu bảng.",
+          ],
+        },
+      ],
+    },
+    {
+      id: "faq-chuc-nang-chi-con-nhom",
+      group: "Khác",
+      heading: "Màn Chức năng chỉ còn tên nhóm, không thấy ô chức năng",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Nhóm đang được thu gọn — bên cạnh nhãn màu có chữ Đã thu gọn.",
+        },
+        {
+          kind: "bullets",
+          items: [
+            "Bấm nhãn màu (TIỆN ÍCH, PHƯƠNG TIỆN, BÁO CÁO) để mở lại nhóm đó.",
+            "Cả ba nhóm đều gập: đè giữ nhãn bất kỳ để mở hết cùng lúc.",
+            "Đang tìm kiếm thì mọi nhóm tự mở để thấy kết quả; xoá chữ là nhóm về lại như trước.",
+          ],
+        },
+      ],
+    },
+    {
+      id: "faq-cham-goc-bieu-tuong",
+      group: "Khác",
+      heading: "Chấm nhỏ ở góc biểu tượng chức năng là gì?",
+      blocks: [
+        {
+          kind: "paragraph",
+          text: "Ở màn Chức năng, chấm cho biết ô thuộc nhóm nào, trùng hình trên nhãn nhóm: lưới đỏ là Tiện ích, xe xanh là Phương tiện, biểu đồ tím là Báo cáo.",
+        },
+        {
+          kind: "paragraph",
+          text: "Báo cáo dùng lại hình của chức năng nó thuộc (báo cáo Tài sản cũng hình khối hộp như Tài sản), nên ở TRUY CẬP NHANH trên Trang chủ chỉ ô báo cáo có chấm biểu đồ — để không nhầm với chính chức năng đó.",
         },
       ],
     },

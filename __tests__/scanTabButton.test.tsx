@@ -3,10 +3,10 @@ import {
   AccessibilityInfo,
   Animated,
   StyleSheet,
-  Text,
   TouchableOpacity,
 } from "react-native";
 import ReactTestRenderer from "react-test-renderer";
+import { Rect } from "react-native-svg";
 import ScanTabButton from "../src/navigation/shared/ScanTabButton";
 
 const mountedTrees: ReactTestRenderer.ReactTestRenderer[] = [];
@@ -49,19 +49,13 @@ describe("nút Quét QR ở giữa thanh tab", () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
-  it("hiện nhãn 'Quét QR' và giữ nhãn cho trình đọc màn hình", async () => {
+  // Thanh tab chỉ có icon; tên nút còn ở nhãn trợ năng.
+  it("giữ nhãn 'Quét QR' cho trình đọc màn hình", async () => {
     const tree = await mount(<ScanTabButton {...({} as any)} />);
     const button = tree.root.findByType(TouchableOpacity);
 
     expect(button.props["aria-label"]).toBe("Quét QR");
     expect(button.props.accessibilityRole).toBe("button");
-
-    const renderedStrings = tree.root
-      .findAllByType(Text)
-      .flatMap((node) => node.props.children)
-      .filter((child): child is string => typeof child === "string");
-
-    expect(renderedStrings).toContain("Quét QR");
   });
 
   it("chạy vạch quét trong icon", async () => {
@@ -86,15 +80,8 @@ describe("nút Quét QR ở giữa thanh tab", () => {
   });
 
   it("chỉ thêm viền sáng khi đang ở tab quét", async () => {
-    const countBorders = (tree: ReactTestRenderer.ReactTestRenderer) =>
-      tree.root.findAll(
-        (node) =>
-          typeof node.type === "string" &&
-          Array.isArray(node.props?.style) &&
-          node.props.style.some(
-            (style: any) => style && typeof style.borderWidth === "number",
-          ),
-      ).length;
+    const strokeOf = (tree: ReactTestRenderer.ReactTestRenderer) =>
+      tree.root.findByType(Rect).props.stroke;
 
     // BottomTabItem của @react-navigation v7 truyền trạng thái chọn qua
     // `aria-selected`, không phải `accessibilityState`.
@@ -105,7 +92,18 @@ describe("nút Quét QR ở giữa thanh tab", () => {
       <ScanTabButton {...({ "aria-selected": false } as any)} />,
     );
 
-    expect(countBorders(focusedTree)).toBe(1);
-    expect(countBorders(blurredTree)).toBe(0);
+    expect(strokeOf(focusedTree)).toBeDefined();
+    expect(strokeOf(blurredTree)).toBeUndefined();
+  });
+
+  // Ô đỏ nằm trong thanh tab, không nhô ra ngoài như vòng tròn cũ.
+  it("ô đỏ không nhô lên khỏi thanh tab", async () => {
+    const tree = await mount(<ScanTabButton {...({} as any)} />);
+    const margins = tree.root
+      .findAll((node) => typeof node.type === "string")
+      .map((node) => (StyleSheet.flatten(node.props?.style) as any)?.marginTop)
+      .filter((value) => typeof value === "number");
+
+    expect(margins.every((value) => value >= 0)).toBe(true);
   });
 });

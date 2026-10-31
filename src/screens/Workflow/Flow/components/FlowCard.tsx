@@ -137,7 +137,7 @@ export default function FlowCard({
             icon="attach-outline"
             iconSize={15}
             count={info?.soFile ?? 0}
-            label="File đính kèm"
+            label="Đính kèm"
             onPress={onOpenFiles}
             disabled={filesDisabled}
           />

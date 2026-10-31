@@ -37,6 +37,7 @@ import { shouldShowListSkeleton } from "../ui/shouldShowListSkeleton";
 import ListCardAsset from "../../components/list/ListCardAsset";
 import SwipeableListRow, { useSingleOpenRow } from "../../components/list/SwipeableListRow";
 import { useDebounce } from "../../hooks/useDebounce";
+import { useHeaderSearch } from "../../hooks/useHeaderSearch";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { AddItem } from "../add/AddItem";
 import { useParams } from "../../hooks/useParams";
@@ -125,6 +126,10 @@ export default function AssetList() {
   const [isSearching, setIsSearching] = useState(false);
   const [total, setTotal] = useState(0);
   const [searchText, setSearchText] = useState("");
+  const search = useHeaderSearch({
+    query: searchText,
+    onClear: () => setSearchText(""),
+  });
 
   const [isRefreshingTop, setIsRefreshingTop] = useState(false);
   const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
@@ -637,6 +642,7 @@ export default function AssetList() {
     return (
       <RecordListSkeleton
         hasSearchBar
+        hasSearchInput={search.open}
         hasBanner={hasChildClasses}
         hasFab={showAddFab}
         {...cardShape}
@@ -689,6 +695,7 @@ export default function AssetList() {
         summaryText={`${total} tài sản`}
         onBadgePress={canFilterByTree ? openMenu : undefined}
         onBadgeClear={canFilterByTree && selectedNode ? clearFilter : undefined}
+        search={search}
       />
 
       {!isEmpty && hasChildClasses ? (

@@ -102,7 +102,7 @@ const withTextScale = <P extends { style?: unknown; allowFontScaling?: boolean }
  * gốc, không đi qua lớp bọc nên không tự chặn cỡ chữ của điện thoại:
  *
  * - chữ nung vào ảnh chụp (cỡ tính từ kích thước ảnh, không liên quan tới UI);
- * - nhãn thanh tab (khớp `TAB_HEIGHT` và SVG nền);
+ * - nhãn thanh tab (khớp `TAB_HEIGHT`);
  * - số trong bong bóng tròn cỡ cố định, nhãn thước giờ, badge chồng lên video.
  *
  * Được gán trong `installTextScaling`; trước lúc đó nó là `Text` thường, vốn

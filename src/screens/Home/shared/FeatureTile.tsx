@@ -4,6 +4,7 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 
 import { useAppColors, useStyles } from "../../../utils/helpers/colors";
 import { makeFeatureStyles } from "../FeaturesScreen.styles";
+import GroupIconMarker from "./GroupIconMarker";
 
 export type FeatureTileGroup = "feature" | "vehicle" | "report";
 
@@ -49,6 +50,7 @@ export default function FeatureTile({
     >
       <View style={[styles.tileIconWrap, { backgroundColor: accent.iconBg }]}>
         <Ionicons name={iconName} color={accent.color} size={24} />
+        <GroupIconMarker group={group} />
         {notificationCount ? (
           <View style={styles.tileBadge}>
             <Text style={styles.tileBadgeText}>

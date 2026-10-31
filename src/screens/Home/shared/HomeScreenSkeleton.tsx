@@ -141,6 +141,7 @@ export default function HomeScreenSkeleton({
                 tone={HOME_BLOCK_TONES[key]}
                 iconName={HOME_BLOCK_META[key].iconName}
                 collapsed={isCollapsed}
+                showChevron
               />
               {isCollapsed ? null : renderBody(key)}
             </HomeBlockToneContext.Provider>

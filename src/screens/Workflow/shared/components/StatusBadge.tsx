@@ -55,6 +55,7 @@ const styles = StyleSheet.create({
     marginRight: 5,
   },
   text: {
+    flexShrink: 1,
     fontSize: 12,
     fontWeight: "700",
   },

@@ -22,14 +22,22 @@ export const getHomeBlockListKey = (
   return `${baseKey}:user:${encodeURIComponent(normalizedUserName)}`;
 };
 
-/** Lọc rác trong dữ liệu đã lưu: khối lạ (đã bị bỏ ở bản sau) và khối lặp. */
-export const normalizeHomeBlockList = (value: unknown): HomeBlockKey[] => {
+/**
+ * Lọc rác trong dữ liệu đã lưu: khối lạ (đã bị bỏ ở bản sau) và khối lặp.
+ * `isKey` cho danh sách không phải khối Trang chủ (nhóm của màn Chức năng).
+ */
+export const normalizeHomeBlockList = <K extends string = HomeBlockKey>(
+  value: unknown,
+  isKey: (key: string) => key is K = isHomeBlockKey as (
+    key: string,
+  ) => key is K,
+): K[] => {
   if (!Array.isArray(value)) return [];
 
-  const keys: HomeBlockKey[] = [];
+  const keys: K[] = [];
 
   value.forEach((key) => {
-    if (typeof key !== "string" || !isHomeBlockKey(key)) return;
+    if (typeof key !== "string" || !isKey(key)) return;
     if (keys.includes(key)) return;
 
     keys.push(key);
@@ -39,12 +47,20 @@ export const normalizeHomeBlockList = (value: unknown): HomeBlockKey[] => {
 };
 
 /** Trả lại đúng mảng cũ khi không đổi gì, để nơi gọi khỏi ghi máy vô ích. */
-export const setHomeBlockInList = (
-  list: HomeBlockKey[],
-  key: HomeBlockKey,
+export const setHomeBlockInList = <K extends string>(
+  list: K[],
+  key: K,
   included: boolean,
-): HomeBlockKey[] => {
+): K[] => {
   if (list.includes(key) === included) return list;
 
   return included ? [...list, key] : list.filter((item) => item !== key);
 };
+
+/** Như `setHomeBlockInList` cho nhiều khối một lượt (gập / mở tất cả). */
+export const setHomeBlocksInList = <K extends string>(
+  list: K[],
+  keys: K[],
+  included: boolean,
+): K[] =>
+  keys.reduce((current, key) => setHomeBlockInList(current, key, included), list);

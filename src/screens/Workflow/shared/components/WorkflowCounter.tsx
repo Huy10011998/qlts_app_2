@@ -1,11 +1,14 @@
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 
 import { AppColors, useAppColors, useStyles } from "../../../../utils/helpers/colors";
 
 type Props = {
   icon: string;
+  /** Bộ icon của `icon` — Ionicons không có đồng hồ ngược "history". */
+  iconFamily?: "ionicons" | "material";
   iconSize: number;
   /** Không truyền thì viên chỉ có icon (vd. Quy trình). */
   count?: number;
@@ -24,6 +27,7 @@ type Props = {
  */
 export default function WorkflowCounter({
   icon,
+  iconFamily = "ionicons",
   iconSize,
   count,
   label,
@@ -33,9 +37,10 @@ export default function WorkflowCounter({
   const styles = useStyles(makeStyles);
   const c = useAppColors();
   const a11yLabel = count === undefined ? label : `${label} (${count})`;
+  const Icon = iconFamily === "material" ? MaterialIcons : Ionicons;
   const pillContent = (
     <>
-      <Ionicons name={icon} size={iconSize + 3} color={c.red} />
+      <Icon name={icon} size={iconSize + 3} color={c.red} />
       {count === undefined ? null : (
         <Text style={styles.pillText}>
           {count}
@@ -59,7 +64,7 @@ export default function WorkflowCounter({
   if (!onPress) {
     return (
       <View style={styles.counter}>
-        <Ionicons name={icon} size={iconSize} color={c.textSub} />
+        <Icon name={icon} size={iconSize} color={c.textSub} />
         <Text style={styles.text}>{count}</Text>
       </View>
     );

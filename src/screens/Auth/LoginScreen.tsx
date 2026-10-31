@@ -1,11 +1,6 @@
-import {
-  C,
-  useAccentBorderColors,
-  useAppColors,
-  useHairlineBorderColor,
-  useStyles,
-} from "../../utils/helpers/colors";
+import { C, useAppColors, useStyles } from "../../utils/helpers/colors";
 import { getTextScaleFactor } from "../../utils/helpers/textScaling";
+import { getNameInitials } from "../../utils/helpers/string";
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import {
   AppState,
@@ -23,10 +18,8 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import LinearGradient from "react-native-linear-gradient";
 import * as Keychain from "react-native-keychain";
 import DeviceInfo from "react-native-device-info";
 import { useAuth } from "../../context/AuthContext";
@@ -43,6 +36,8 @@ import { log } from "../../utils/Logger";
 import {
   readStoredAuthTokens,
   readStoredAuthUsername,
+  readStoredLoginProfile,
+  StoredLoginProfile,
   writeStoredAuthUsername,
 } from "../../context/authStorage";
 import {
@@ -88,7 +83,38 @@ import { makeStyles } from "./LoginScreen.styles";
 import { AppAlert } from "../../components/ui/AppAlert";
 
 const RED = C.red;
+const SECURE_GREEN = "#16A34A";
 const COMPANY_FOUNDED_YEAR = 1983;
+const LOGIN_GRADIENT = [C.redLight, C.red, C.redDeep];
+const LOGIN_GRADIENT_LOCATIONS = [0, 0.45, 1];
+// Ảnh nền ghép sẵn (login-bg-company5.jpg, 2000×1590, từ ảnh phối cảnh
+// cholimex-company5): toà nhà ở trên, mặt nước phản chiếu dài bằng phần trên.
+// Mép nước cắt ngay trên đầu người đi bộ trước toà nhà, nằm ở 317.83/636 chiều
+// cao ảnh.
+const PHOTO_ASPECT = 2000 / 1590;
+const PHOTO_SHORE = 317.83 / 636;
+// Hiện TOÀN CẢNH: ảnh rộng 1.15 lần màn (thấy trọn toà nhà), không phóng theo
+// chiều cao — phóng kiểu phủ kín thì biển Cholimex trên toà nhà đè vào thanh
+// logo. Ảnh thấp hơn vùng trên thẻ form nên phía trên tô màu trời ở mép ảnh,
+// mép ảnh nhoà dần vào màu đó.
+const PHOTO_WIDTH_RATIO = 1.15;
+const PHOTO_SKY_COLOR = "#CCE0F4";
+const PHOTO_SKY_BLEND = 40;
+// Mép nước đặt ở 70% vùng ảnh phía trên thẻ form, để luôn còn một dải nước
+// ngay trên thẻ như ảnh mẫu VCB.
+const SHORE_IN_PHOTO_AREA = 0.7;
+// Thẻ form cao tối thiểu chừng này phần màn hình; nội dung cần nhiều hơn thì
+// thẻ theo nội dung (iPhone 6.3" cần ~49%). Phần dư dồn lên trên chân trang.
+// Mở bàn phím thì thẻ thu về vừa nội dung.
+const CARD_MIN_HEIGHT_RATIO = 0.45;
+// Thẻ form nâng mép trên thêm chừng này (user muốn nền thông tin lên cao hơn)
+// mà ảnh không xê dịch: mép nước vẫn tính như lúc thẻ chưa nâng. Nửa thành
+// khoảng thoáng trên lời chào, nửa dồn lên trên chân thẻ. Màn thấp nâng ít hơn
+// để khỏi phải cuộn.
+const CARD_LIFT = 40;
+const CARD_LIFT_SHORT = 20;
+const CARD_PADDING_TOP = 24;
+const CARD_PADDING_TOP_SHORT = 18;
 
 const capitalize = (text: string) =>
   text.charAt(0).toUpperCase() + text.slice(1);
@@ -97,9 +123,8 @@ export default function LoginScreen() {
   const c = useAppColors();
   const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
-  const hairlineBorderColor = useHairlineBorderColor();
-  const accentBorders = useAccentBorderColors();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
+  const scrollRef = useRef<ScrollView>(null);
   const usernameRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
   const appVersionLabel = `v${DeviceInfo.getVersion()}`;
@@ -113,6 +138,14 @@ export default function LoginScreen() {
   const [isLoginDisabled, setIsLoginDisabled] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [isUsernameFocused, setIsUsernameFocused] = useState(false);
+  // Máy nhớ người đăng nhập trước (họ tên + ảnh) thì chào bằng tên và ẩn ô
+  // Tài khoản như VCB. Muốn đổi tài khoản thì tự đăng xuất — `logout` xoá họ
+  // tên đã lưu nên lần sau màn này hiện lại ô Tài khoản.
+  const [rememberedProfile, setRememberedProfile] =
+    useState<StoredLoginProfile | null>(null);
+  const [isAvatarBroken, setIsAvatarBroken] = useState(false);
+  const isRememberedAccount =
+    !!rememberedProfile && userName === rememberedProfile.userName;
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
   const [isTokenReady, setIsTokenReady] = useState(false);
   const [isFaceIdEnabled, setIsFaceIdEnabled] = useState(false);
@@ -129,6 +162,7 @@ export default function LoginScreen() {
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [scrollViewportHeight, setScrollViewportHeight] = useState(0);
   const [scrollContentHeight, setScrollContentHeight] = useState(0);
+  const [photoAreaHeight, setPhotoAreaHeight] = useState(0);
   const [localNetworkStatus, setLocalNetworkStatus] =
     useState<LocalNetworkPermissionStatus>("unknown");
   // iOS: mở màn bằng phiên còn hạn + đã bật Face ID thì tự hỏi Face ID một
@@ -141,48 +175,51 @@ export default function LoginScreen() {
   const isLocalNetworkRequestRunning = useRef(false);
   const isLocalNetworkDenied = localNetworkStatus === "denied";
   const isLocalNetworkGranted = localNetworkStatus === "granted";
-  const localNetworkToneStyle = isLocalNetworkGranted
-    ? [styles.localNetworkNoticeGranted, { borderColor: accentBorders.green }]
+  const localNetworkLabel = getLocalNetworkPermissionLabel(localNetworkStatus);
+  const localNetworkDotStyle = isLocalNetworkGranted
+    ? styles.networkDotGranted
     : isLocalNetworkDenied
-    ? [styles.localNetworkNoticeDenied, { borderColor: accentBorders.amber }]
-    : [styles.localNetworkNoticeUnknown, { borderColor: hairlineBorderColor }];
-  const localNetworkIconToneStyle = isLocalNetworkGranted
-    ? styles.localNetworkIconGranted
-    : isLocalNetworkDenied
-    ? styles.localNetworkIconDenied
-    : styles.localNetworkIconUnknown;
-  const localNetworkStatusToneStyle = isLocalNetworkGranted
-    ? styles.localNetworkStatusGranted
-    : isLocalNetworkDenied
-    ? styles.localNetworkStatusDenied
-    : styles.localNetworkStatusUnknown;
-  const localNetworkIconColor = isLocalNetworkGranted
-    ? "#15803D"
-    : isLocalNetworkDenied
-    ? RED
-    : "#64748B";
+    ? styles.networkDotDenied
+    : styles.networkDotUnknown;
   // Chữ to lên thì nội dung cao thêm mà `windowHeight` không đổi, nên màn hình
   // vẫn rơi vào nhánh "rộng rãi" trong khi thực tế đã chật. Quy về chiều cao
   // hiệu dụng: chia cho hệ số Cỡ chữ của app trước khi so ngưỡng (cỡ chữ của
   // điện thoại thì app bỏ qua).
   const textScale = getTextScaleFactor();
   const effectiveHeight = windowHeight / textScale;
-  const isCompactHeight = effectiveHeight < 880;
   const isShortHeight = effectiveHeight < 760;
-  const isNarrowFooter = windowWidth < 330 * textScale;
-  const heroRatio = isShortHeight ? 0.17 : isCompactHeight ? 0.18 : 0.2;
-  const heroHeight = Math.min(Math.max(windowHeight * heroRatio, 112), 190);
-  const heroBgStyle = [
-    styles.heroBg,
-    { height: heroHeight, paddingBottom: isCompactHeight ? 10 : 16 },
-  ];
-  const restingContentTopPadding = Math.min(
-    Math.max(windowHeight * 0.024, 16),
-    24,
-  );
+  // Vùng ảnh giãn lấp chỗ trống phía trên thẻ form; tối thiểu đủ thanh logo +
+  // một khúc ảnh.
+  const photoAreaMinHeight = insets.top + (isShortHeight ? 150 : 176);
+  const cardLift = isShortHeight ? CARD_LIFT_SHORT : CARD_LIFT;
+  const cardPaddingTop =
+    (isShortHeight ? CARD_PADDING_TOP_SHORT : CARD_PADDING_TOP) + cardLift / 2;
+  // Mép nước của ảnh rơi đúng `shoreY` — tính như khi thẻ chưa nâng
+  // (`cardLift`) nên ảnh đứng yên; phần nước dưới mép đủ dài để nằm dưới cả
+  // góc bo của thẻ.
+  const shoreY =
+    ((photoAreaHeight || windowHeight * 0.5) + cardLift) * SHORE_IN_PHOTO_AREA;
+  const photoWidth = windowWidth * PHOTO_WIDTH_RATIO;
+  const photoHeight = photoWidth / PHOTO_ASPECT;
+  const photoTop = shoreY - photoHeight * PHOTO_SHORE;
+  const photoLayout = {
+    width: photoWidth,
+    height: photoHeight,
+    top: photoTop,
+    left: (windowWidth - photoWidth) / 2,
+  };
   const bottomContentPadding = isKeyboardVisible
-    ? Math.max(insets.bottom, 16) + 24
-    : Math.max(insets.bottom, 10) + (isCompactHeight ? 8 : 16);
+    ? 16
+    : Math.max(insets.bottom, 12) + 8;
+  const cardMinHeight = isKeyboardVisible
+    ? 0
+    : windowHeight * CARD_MIN_HEIGHT_RATIO;
+  // Ba ô giới thiệu ở chân thẻ: nhãn nhỏ trên, giá trị đỏ đậm dưới.
+  const infoChips = [
+    { label: "Thành lập", value: String(COMPANY_FOUNDED_YEAR) },
+    { label: "Phát triển", value: `${companyAge} năm` },
+    { label: "Danh mục", value: "Gia vị · Thực phẩm", wide: true },
+  ];
   const isContentOverflowing =
     scrollViewportHeight > 0 && scrollContentHeight > scrollViewportHeight + 1;
 
@@ -194,11 +231,17 @@ export default function LoginScreen() {
   }, [token]);
 
   useEffect(() => {
+    // Thẻ form nằm nửa dưới màn hình nên bàn phím che mất ô nhập: mở bàn phím
+    // thì cuộn hết xuống cho thẻ lên trên bàn phím, đóng thì trả về đầu.
     const showSubscription = Keyboard.addListener("keyboardDidShow", () => {
       setIsKeyboardVisible(true);
+      requestAnimationFrame(() => {
+        scrollRef.current?.scrollToEnd({ animated: true });
+      });
     });
     const hideSubscription = Keyboard.addListener("keyboardDidHide", () => {
       setIsKeyboardVisible(false);
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
     });
 
     return () => {
@@ -213,12 +256,14 @@ export default function LoginScreen() {
 
   // Điền sẵn tài khoản lần đăng nhập trước (lưu ở `completeLogin`) cho khỏi gõ
   // lại. Chỉ điền khi ô còn trống — người dùng gõ trước khi đọc xong thì giữ.
+  // Có họ tên của đúng tài khoản đó (lưu lúc nạp danh thiếp) thì chào bằng tên.
   useEffect(() => {
     let isCancelled = false;
-    readStoredAuthUsername()
-      .then((storedUserName) => {
+    Promise.all([readStoredAuthUsername(), readStoredLoginProfile()])
+      .then(([storedUserName, profile]) => {
         if (isCancelled || !storedUserName) return;
         setUserName((current) => current || storedUserName);
+        if (profile?.userName === storedUserName) setRememberedProfile(profile);
       })
       .catch(() => {});
     return () => {
@@ -266,10 +311,8 @@ export default function LoginScreen() {
         return;
       }
       setIsFaceIdEnabled(true);
-      // Android: thấy màn Đăng nhập trước rồi tự chọn bấm icon hay gõ mật
-      // khẩu. Hộp hỏi có khoá màn hình còn không có nút "Dùng mật khẩu".
-      if (Platform.OS === "android") return;
-      // Tự hỏi Face ID chỉ khi còn phiên để khôi phục — cùng điều kiện
+      // Hai nền tảng cùng tự hỏi ngay lúc còn splash: qua là vào thẳng, không
+      // thấy màn Đăng nhập. Tự hỏi chỉ khi còn phiên để khôi phục — cùng điều kiện
       // `handleFaceIDLogin` dùng. Đăng xuất chủ động thì `logout()` đã xoá cả
       // cờ Face ID lẫn token; hết phiên (EXPIRED) thì token cũng đã bị xoá —
       // cả hai trường hợp đều không tự bật Face ID lên nữa.
@@ -612,7 +655,7 @@ export default function LoginScreen() {
       handleFaceIDLoginRef.current();
     };
 
-    // Face ID không hiện được khi app chưa ở foreground (vd mở nền do push) —
+    // Hộp hỏi không hiện được khi app chưa ở foreground (vd mở nền do push) —
     // đợi tới lần app active đầu tiên rồi mới hỏi.
     if (AppState.currentState === "active") {
       prompt();
@@ -644,421 +687,431 @@ export default function LoginScreen() {
       keyboardVerticalOffset={0}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        {/*
-          SafeAreaView chỉ handle top (hero đỏ),
-          bottom được handle bởi ScrollView contentInset
-        */}
-        <SafeAreaView style={styles.root} edges={["top"]}>
-          {/* ── RED HERO (responsive) ── */}
-          <View style={heroBgStyle}>
-            <View style={styles.circle1} />
-            <View style={styles.circle2} />
-            <View style={styles.circle3} />
-
-            <View style={styles.logoBlock}>
-              <View
-                style={[
-                  styles.brandPill,
-                  isCompactHeight && styles.brandPillCompact,
-                ]}
-              >
-                <Ionicons
-                  name="sparkles-outline"
-                  size={11}
-                  color="rgba(255,255,255,0.86)"
-                />
-                <Text style={styles.brandPillText}>Cholimex Platform</Text>
-              </View>
-              <View
-                style={[
-                  styles.logoShadowWrap,
-                  isCompactHeight && styles.logoShadowWrapCompact,
-                ]}
-              >
-                <Image
-                  source={require("../../assets/images/logo-cholimex.jpg")}
-                  style={[styles.logo, isCompactHeight && styles.logoCompact]}
-                />
-              </View>
-              {!isShortHeight && (
-                <Text
-                  style={[
-                    styles.heroTagline,
-                    isCompactHeight && styles.heroTaglineCompact,
-                  ]}
-                >
-                  Nền tảng quản lý và vận hành
-                </Text>
-              )}
-            </View>
-          </View>
-
-          {/* ── FORM CARD (scroll để không bị che) ── */}
-          <View style={[styles.card, { borderColor: hairlineBorderColor }]}>
-            <ScrollView
-              style={styles.scrollView}
-              contentContainerStyle={[
-                styles.scrollContent,
-                isCompactHeight && styles.scrollContentCompact,
-                isCompactHeight && {
-                  paddingTop: restingContentTopPadding,
+        <View style={styles.root}>
+          <ScrollView
+            ref={scrollRef}
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            scrollEnabled={isKeyboardVisible || isContentOverflowing}
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+            onLayout={(event) =>
+              setScrollViewportHeight(event.nativeEvent.layout.height)
+            }
+            onContentSizeChange={(_, height) => setScrollContentHeight(height)}
+          >
+            {/* ── ẢNH NỀN (tràn cả vùng tai thỏ, nằm dưới thẻ form) ── */}
+            {/* Màu trời phía trên ảnh, phủ xuống quá mép ảnh để không hở. */}
+            <View
+              style={[
+                styles.photoSky,
+                {
+                  height: Math.max(0, photoTop) + PHOTO_SKY_BLEND,
+                  backgroundColor: PHOTO_SKY_COLOR,
                 },
-                { paddingBottom: bottomContentPadding },
               ]}
-              keyboardShouldPersistTaps="handled"
-              scrollEnabled={isKeyboardVisible || isContentOverflowing}
-              showsVerticalScrollIndicator={false}
-              bounces={false}
-              onLayout={(event) =>
-                setScrollViewportHeight(event.nativeEvent.layout.height)
-              }
-              onContentSizeChange={(_, height) =>
-                setScrollContentHeight(height)
-              }
+            />
+            <Image
+              source={require("../../assets/images/login-bg-company5.jpg")}
+              style={[styles.photo, photoLayout]}
+            />
+            <LinearGradient
+              pointerEvents="none"
+              colors={[PHOTO_SKY_COLOR, `${PHOTO_SKY_COLOR}00`]}
+              style={[
+                styles.photoSkyBlend,
+                { top: photoTop, height: PHOTO_SKY_BLEND },
+              ]}
+            />
+            <LinearGradient
+              pointerEvents="none"
+              colors={["rgba(0,0,0,0.38)", "rgba(0,0,0,0)"]}
+              style={[styles.photoTopShade, { height: insets.top + 120 }]}
+            />
+
+            {/* ── THANH TRÊN: logo + nút mạng nội bộ ── */}
+            <View
+              style={[styles.photoArea, { minHeight: photoAreaMinHeight }]}
+              // Chỉ nhận chiều cao lớn nhất: mở bàn phím thì vùng này co lại,
+              // giữ nguyên ảnh cho khỏi nhảy.
+              onLayout={(event) => {
+                const { height } = event.nativeEvent.layout;
+                setPhotoAreaHeight((current) => Math.max(current, height));
+              }}
             >
-              <View
-                style={[
-                  styles.cardHeader,
-                  isCompactHeight && styles.cardHeaderCompact,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.cardTitle,
-                    isCompactHeight && styles.cardTitleCompact,
-                  ]}
-                >
-                  Đăng nhập
-                </Text>
-                <Text
-                  style={[
-                    styles.cardSubtitle,
-                    isCompactHeight && styles.cardSubtitleCompact,
-                  ]}
-                >
-                  Đăng nhập để tiếp tục sử dụng hệ thống
-                </Text>
-              </View>
-
-              {/* Username */}
-              <View
-                style={[
-                  styles.inputWrapper,
-                  isCompactHeight && styles.inputWrapperCompact,
-                  isUsernameFocused && styles.inputWrapperFocused,
-                ]}
-              >
-                <Ionicons
-                  name="person-outline"
-                  size={18}
-                  color={isUsernameFocused ? RED : c.placeholder}
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  ref={usernameRef}
-                  style={[
-                    styles.textInput,
-                    isCompactHeight && styles.textInputCompact,
-                  ]}
-                  placeholder="Tài khoản"
-                  placeholderTextColor={c.placeholder}
-                  value={userName}
-                  onChangeText={setUserName}
-                  onFocus={() => setIsUsernameFocused(true)}
-                  onBlur={() => setIsUsernameFocused(false)}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  // Khai báo rõ cho AutoFill của iOS/Android thay vì để hệ điều
-                  // hành tự đoán theo heuristic — đoán thì hành vi focus và
-                  // keyboard sau khi chọn gợi ý không ổn định.
-                  textContentType="username"
-                  autoComplete="username"
-                  importantForAutofill="yes"
-                  returnKeyType="next"
-                  // Nhảy xuống ô mật khẩu khi bấm Next
-                  onSubmitEditing={() => passwordRef.current?.focus()}
-                  blurOnSubmit={false}
-                />
-              </View>
-
-              {/* Password */}
-              <View
-                style={[
-                  styles.inputWrapper,
-                  isCompactHeight && styles.inputWrapperCompact,
-                  isPasswordFocused && styles.inputWrapperFocused,
-                ]}
-              >
-                <Ionicons
-                  name="lock-closed-outline"
-                  size={18}
-                  color={isPasswordFocused ? RED : c.placeholder}
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  ref={passwordRef}
-                  style={[
-                    styles.textInput,
-                    isCompactHeight && styles.textInputCompact,
-                  ]}
-                  secureTextEntry={!isPasswordVisible}
-                  placeholder="Mật khẩu"
-                  placeholderTextColor={c.placeholder}
-                  value={userPassword}
-                  onChangeText={setUserPassword}
-                  onFocus={() => setIsPasswordFocused(true)}
-                  onBlur={() => setIsPasswordFocused(false)}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  textContentType="password"
-                  autoComplete="password"
-                  importantForAutofill="yes"
-                  returnKeyType="done"
-                  onSubmitEditing={handlePressLogin}
-                />
-                <TouchableOpacity
-                  onPress={() => setIsPasswordVisible(!isPasswordVisible)}
-                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                >
-                  <Ionicons
-                    name={isPasswordVisible ? "eye-outline" : "eye-off-outline"}
-                    size={20}
-                    color={c.placeholder}
+              <View style={[styles.topBar, { marginTop: insets.top + 10 }]}>
+                <View style={styles.brandRow}>
+                  <Image
+                    source={require("../../assets/images/logo-cholimex-trans.jpg")}
+                    style={styles.brandLogo}
                   />
-                </TouchableOpacity>
-              </View>
+                  <View style={styles.brandTextWrap}>
+                    {/* Màn hẹp (375pt) thì co chữ thay vì cắt "…". */}
+                    <Text
+                      style={styles.brandTitle}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.8}
+                    >
+                      Cholimex Platform
+                    </Text>
+                    <Text
+                      style={styles.brandTagline}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.8}
+                    >
+                      Nền tảng quản lý và vận hành
+                    </Text>
+                  </View>
+                </View>
 
-              {/* Buttons */}
-              <View
-                style={[
-                  styles.actionsRow,
-                  isCompactHeight && styles.actionsRowCompact,
-                ]}
-              >
-                <TouchableOpacity
-                  style={[
-                    styles.loginBtn,
-                    isLoginDisabled && styles.loginBtnDisabled,
-                  ]}
-                  disabled={isLoginDisabled || isLoading}
-                  onPress={handlePressLogin}
-                  activeOpacity={0.88}
-                >
-                  {isLoading ? (
-                    <IsLoading size="small" color="#fff" />
-                  ) : (
-                    <Text style={styles.loginBtnText}>Đăng nhập</Text>
-                  )}
-                </TouchableOpacity>
-
-                {Platform.OS === "ios" && (
+                {(Platform.OS === "ios" || Platform.OS === "android") && (
+                  // Chấm màu đã đủ báo trạng thái, không hiện hộp thông báo.
+                  // Chỉ iOS bị chặn quyền mới bấm được: mở thẳng Cài đặt như
+                  // nút bánh răng ở ô cũ.
                   <TouchableOpacity
-                    style={[
-                      styles.faceIdBtn,
-                      { borderColor: hairlineBorderColor },
-                      (!isTokenReady || !isFaceIdEnabled) &&
-                        styles.faceIdBtnDimmed,
-                    ]}
-                    onPress={handleFaceIDPress}
+                    style={styles.networkBtn}
+                    onPress={openLocalNetworkSettings}
+                    disabled={!(Platform.OS === "ios" && isLocalNetworkDenied)}
                     activeOpacity={0.8}
-                    // Nút chỉ có icon: không có nhãn thì trình đọc màn hình chỉ
-                    // đọc được "nút".
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                     accessibilityRole="button"
-                    accessibilityLabel="Đăng nhập bằng Face ID"
+                    accessibilityLabel={`Mạng nội bộ: ${localNetworkLabel}`}
                   >
-                    <Image
-                      source={require("../../assets/images/faceid-icon2.png")}
-                      style={styles.faceIDIcon}
-                    />
+                    <Ionicons name="wifi" size={22} color="#fff" />
+                    <View style={[styles.networkDot, localNetworkDotStyle]}>
+                      <Ionicons
+                        name={
+                          isLocalNetworkGranted
+                            ? "checkmark"
+                            : isLocalNetworkDenied
+                            ? "alert"
+                            : "help"
+                        }
+                        size={10}
+                        color="#fff"
+                      />
+                    </View>
                   </TouchableOpacity>
                 )}
+              </View>
+            </View>
 
-                {/* Android: cùng ô với nút Face ID, chỉ hiện khi máy có sinh
-                    trắc hoặc khoá màn hình. */}
-                {Platform.OS === "android" &&
-                  (biometricKind || isDeviceLockOnDevice) && (
+            {/* ── THẺ FORM ── */}
+            <View
+              style={[
+                styles.card,
+                isShortHeight && styles.cardShort,
+                {
+                  paddingTop: cardPaddingTop,
+                  paddingBottom: bottomContentPadding,
+                  minHeight: cardMinHeight,
+                },
+              ]}
+            >
+              <View style={styles.cardInner}>
+                {isRememberedAccount && rememberedProfile ? (
+                  <View
+                    style={[
+                      styles.greeting,
+                      styles.greetingRow,
+                      isShortHeight && styles.greetingShort,
+                    ]}
+                  >
+                    <View style={styles.avatar}>
+                      {rememberedProfile.avatar && !isAvatarBroken ? (
+                        <Image
+                          source={{ uri: rememberedProfile.avatar }}
+                          style={styles.avatarImage}
+                          onError={() => setIsAvatarBroken(true)}
+                        />
+                      ) : (
+                        <LinearGradient
+                          colors={[C.redLight, C.redDeep]}
+                          style={styles.avatarInitials}
+                        >
+                          <Text style={styles.avatarInitialsText}>
+                            {getNameInitials(rememberedProfile.name)}
+                          </Text>
+                        </LinearGradient>
+                      )}
+                    </View>
+                    <View style={styles.greetingTextWrap}>
+                      <Text style={styles.greetingHello}>Xin chào,</Text>
+                      <Text
+                        style={styles.greetingName}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.75}
+                      >
+                        {rememberedProfile.name.toUpperCase()}
+                      </Text>
+                    </View>
+                  </View>
+                ) : (
+                  <View
+                    style={[
+                      styles.greeting,
+                      isShortHeight && styles.greetingShort,
+                    ]}
+                  >
+                    <Text style={styles.greetingHello}>Xin chào,</Text>
+                    <Text style={styles.greetingTitle}>
+                      Đăng nhập để tiếp tục
+                    </Text>
+                  </View>
+                )}
+
+                {/* Username — ẩn khi đã chào bằng tên */}
+                {!isRememberedAccount && (
+                  <View
+                    style={[
+                      styles.inputWrapper,
+                      isShortHeight && styles.inputWrapperShort,
+                      isUsernameFocused && styles.inputWrapperFocused,
+                    ]}
+                  >
+                    <Ionicons
+                      name="person-outline"
+                      size={20}
+                      color={isUsernameFocused ? RED : c.textMuted}
+                      style={styles.inputIcon}
+                    />
+                    <TextInput
+                      ref={usernameRef}
+                      style={[
+                        styles.textInput,
+                        isShortHeight && styles.textInputShort,
+                      ]}
+                      placeholder="Tài khoản"
+                      placeholderTextColor={c.placeholder}
+                      value={userName}
+                      onChangeText={setUserName}
+                      onFocus={() => setIsUsernameFocused(true)}
+                      onBlur={() => setIsUsernameFocused(false)}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      // Khai báo rõ cho AutoFill của iOS/Android thay vì để hệ điều
+                      // hành tự đoán theo heuristic — đoán thì hành vi focus và
+                      // keyboard sau khi chọn gợi ý không ổn định.
+                      textContentType="username"
+                      autoComplete="username"
+                      importantForAutofill="yes"
+                      returnKeyType="next"
+                      // Nhảy xuống ô mật khẩu khi bấm Next
+                      onSubmitEditing={() => passwordRef.current?.focus()}
+                      blurOnSubmit={false}
+                    />
+                  </View>
+                )}
+
+                {/* Password */}
+                <View
+                  style={[
+                    styles.inputWrapper,
+                    isShortHeight && styles.inputWrapperShort,
+                    isPasswordFocused && styles.inputWrapperFocused,
+                  ]}
+                >
+                  <Ionicons
+                    name="lock-closed-outline"
+                    size={20}
+                    color={isPasswordFocused ? RED : c.textMuted}
+                    style={styles.inputIcon}
+                  />
+                  <TextInput
+                    ref={passwordRef}
+                    style={[
+                      styles.textInput,
+                      isShortHeight && styles.textInputShort,
+                    ]}
+                    secureTextEntry={!isPasswordVisible}
+                    placeholder="Mật khẩu"
+                    placeholderTextColor={c.placeholder}
+                    value={userPassword}
+                    onChangeText={setUserPassword}
+                    onFocus={() => setIsPasswordFocused(true)}
+                    onBlur={() => setIsPasswordFocused(false)}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    textContentType="password"
+                    autoComplete="password"
+                    importantForAutofill="yes"
+                    returnKeyType="done"
+                    onSubmitEditing={handlePressLogin}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  >
+                    <Ionicons
+                      name={
+                        isPasswordVisible ? "eye-outline" : "eye-off-outline"
+                      }
+                      size={21}
+                      color={RED}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Buttons */}
+                <View style={styles.actionsRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.loginBtn,
+                      isShortHeight && styles.loginBtnShort,
+                      isLoginDisabled && styles.loginBtnDisabled,
+                    ]}
+                    disabled={isLoginDisabled || isLoading}
+                    onPress={handlePressLogin}
+                    activeOpacity={0.88}
+                  >
+                    <LinearGradient
+                      colors={LOGIN_GRADIENT}
+                      locations={LOGIN_GRADIENT_LOCATIONS}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.loginBtnFill}
+                    />
+                    {isLoading ? (
+                      <IsLoading size="small" color="#fff" />
+                    ) : (
+                      <Text style={styles.loginBtnText}>Đăng nhập</Text>
+                    )}
+                  </TouchableOpacity>
+
+                  {Platform.OS === "ios" && (
                     <TouchableOpacity
                       style={[
                         styles.faceIdBtn,
-                        { borderColor: hairlineBorderColor },
+                        isShortHeight && styles.faceIdBtnShort,
                         (!isTokenReady || !isFaceIdEnabled) &&
                           styles.faceIdBtnDimmed,
                       ]}
                       onPress={handleFaceIDPress}
                       activeOpacity={0.8}
+                      // Nút chỉ có icon: không có nhãn thì trình đọc màn hình chỉ
+                      // đọc được "nút".
                       accessibilityRole="button"
-                      accessibilityLabel={`Đăng nhập bằng ${biometricLabel}`}
+                      accessibilityLabel="Đăng nhập bằng Face ID"
                     >
-                      <MaterialCommunityIcons
-                        name={androidUnlockIcon}
-                        size={28}
-                        color={C.blue}
+                      <Image
+                        source={require("../../assets/images/faceid-icon2.png")}
+                        style={styles.faceIDIcon}
                       />
                     </TouchableOpacity>
                   )}
-              </View>
 
-              {(Platform.OS === "ios" || Platform.OS === "android") && (
-                <View
-                  style={[styles.localNetworkNotice, localNetworkToneStyle]}
-                >
-                  <View
-                    style={[
-                      styles.localNetworkIconWrap,
-                      localNetworkIconToneStyle,
-                    ]}
-                  >
-                    <Ionicons
-                      name={
-                        isLocalNetworkGranted
-                          ? "checkmark-circle"
-                          : "wifi-outline"
-                      }
-                      size={15}
-                      color={localNetworkIconColor}
-                    />
-                  </View>
-                  <View style={styles.localNetworkTextWrap}>
-                    <Text style={styles.localNetworkLabel}>Mạng nội bộ</Text>
-                    <Text
-                      style={[
-                        styles.localNetworkStatusText,
-                        localNetworkStatusToneStyle,
-                      ]}
-                    >
-                      {getLocalNetworkPermissionLabel(localNetworkStatus)}
-                    </Text>
-                  </View>
-                  {Platform.OS === "ios" && isLocalNetworkDenied && (
-                    <TouchableOpacity
-                      style={[
-                        styles.localNetworkSettingsButton,
-                        { borderColor: accentBorders.red },
-                      ]}
-                      onPress={openLocalNetworkSettings}
-                      activeOpacity={0.8}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <Ionicons name="settings-outline" size={15} color={RED} />
-                    </TouchableOpacity>
-                  )}
+                  {/* Android: cùng ô với nút Face ID, chỉ hiện khi máy có sinh
+                      trắc hoặc khoá màn hình. */}
+                  {Platform.OS === "android" &&
+                    (biometricKind || isDeviceLockOnDevice) && (
+                      <TouchableOpacity
+                        style={[
+                          styles.faceIdBtn,
+                          isShortHeight && styles.faceIdBtnShort,
+                          (!isTokenReady || !isFaceIdEnabled) &&
+                            styles.faceIdBtnDimmed,
+                        ]}
+                        onPress={handleFaceIDPress}
+                        activeOpacity={0.8}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Đăng nhập bằng ${biometricLabel}`}
+                      >
+                        <MaterialCommunityIcons
+                          name={androidUnlockIcon}
+                          size={28}
+                          color={C.blue}
+                        />
+                      </TouchableOpacity>
+                    )}
                 </View>
-              )}
 
-              <View
-                style={[
-                  styles.supportCard,
-                  { borderColor: accentBorders.red },
-                  isCompactHeight && styles.supportCardCompact,
-                ]}
-              >
+                {/* Hỗ trợ */}
                 <View
                   style={[
-                    styles.supportActions,
-                    isCompactHeight && styles.supportActionsCompact,
+                    styles.supportRow,
+                    isShortHeight && styles.supportRowShort,
                   ]}
                 >
                   <TouchableOpacity
-                    style={[
-                      styles.supportAction,
-                      { borderColor: accentBorders.red },
-                    ]}
+                    style={styles.supportAction}
                     onPress={handleOpenSupportEmail}
                     activeOpacity={0.82}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Email hỗ trợ ${SUPPORT_EMAIL}`}
                   >
-                    <Ionicons name="mail-outline" size={15} color="#B91C1C" />
-                    <Text style={styles.supportActionText} numberOfLines={2}>
-                      {SUPPORT_EMAIL}
+                    <Ionicons name="mail-outline" size={17} color={RED} />
+                    <Text style={styles.supportActionText} numberOfLines={1}>
+                      Email hỗ trợ
                     </Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={[
-                      styles.supportAction,
-                      { borderColor: accentBorders.red },
-                    ]}
+                    style={styles.supportAction}
                     onPress={handleOpenSupportPhone}
                     activeOpacity={0.82}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Gọi hỗ trợ ${SUPPORT_PHONE}`}
                   >
-                    <Ionicons name="call-outline" size={15} color="#15803D" />
+                    <Ionicons name="call-outline" size={17} color={RED} />
                     <Text style={styles.supportActionText} numberOfLines={1}>
                       {SUPPORT_PHONE}
                     </Text>
                   </TouchableOpacity>
                 </View>
-              </View>
 
-              {/* Info chips — luôn hiển thị, màn hình thấp sẽ cuộn khi cần */}
-              <View
-                style={[
-                  styles.infoRow,
-                  isCompactHeight && styles.infoRowCompact,
-                ]}
-              >
-                <View
-                  style={[
-                    styles.infoChip,
-                    isCompactHeight && styles.infoChipCompact,
-                    { borderColor: accentBorders.red },
-                  ]}
-                >
-                  <Text style={styles.infoLabel}>Thành lập</Text>
-                  <Text style={styles.infoValue}>1983</Text>
-                </View>
-                <View
-                  style={[
-                    styles.infoChip,
-                    isCompactHeight && styles.infoChipCompact,
-                    { borderColor: accentBorders.red },
-                  ]}
-                >
-                  <Text style={styles.infoLabel}>Phát triển</Text>
-                  <Text style={styles.infoValue}>{companyAge} năm</Text>
-                </View>
-                <View
-                  style={[
-                    styles.infoChip,
-                    isCompactHeight && styles.infoChipCompact,
-                    { borderColor: accentBorders.red },
-                    styles.infoChipWide,
-                  ]}
-                >
-                  <Text style={styles.infoLabel}>Danh mục</Text>
-                  <Text style={styles.infoValue}>Gia vị · Thực phẩm</Text>
-                </View>
-              </View>
+                {/* Chỗ trống của thẻ cao tối thiểu dồn vào đây: chân trang luôn
+                    nằm sát đáy, các ô nhập không giãn ra. */}
+                <View style={[styles.cardSpacer, { minHeight: cardLift / 2 }]} />
 
-              {/* Footer */}
-              <View
-                style={[
-                  styles.footer,
-                  isCompactHeight && styles.footerCompact,
-                  isNarrowFooter && styles.footerNarrow,
-                ]}
-              >
-                <View style={styles.secureRow}>
-                  <Ionicons
-                    name="shield-checkmark-outline"
-                    size={13}
-                    color={c.placeholder}
-                  />
-                  <Text style={styles.secureText}>Kết nối bảo mật SSL</Text>
-                </View>
-                {!isNarrowFooter && <View style={styles.footerDot} />}
+                {/* Footer */}
                 <View
-                  style={[
-                    styles.versionPill,
-                    { borderColor: hairlineBorderColor },
-                  ]}
+                  style={[styles.footer, isShortHeight && styles.footerShort]}
                 >
-                  <Text style={styles.versionText}>
-                    {appVersionLabel} · Cholimex Food
-                  </Text>
+                  <View style={styles.infoRow}>
+                    {infoChips.map((chip) => (
+                      <View
+                        key={chip.label}
+                        style={[
+                          styles.infoChip,
+                          chip.wide && styles.infoChipWide,
+                        ]}
+                      >
+                        <Text style={styles.infoLabel} numberOfLines={1}>
+                          {chip.label}
+                        </Text>
+                        <Text
+                          style={styles.infoValue}
+                          numberOfLines={1}
+                          adjustsFontSizeToFit
+                          minimumFontScale={0.8}
+                        >
+                          {chip.value}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                  <View style={styles.secureRow}>
+                    <Ionicons
+                      name="shield-checkmark"
+                      size={15}
+                      color={SECURE_GREEN}
+                    />
+                    <Text style={styles.secureText}>Kết nối bảo mật SSL</Text>
+                    <View style={styles.versionPill}>
+                      <Text style={styles.versionText} numberOfLines={1}>
+                        {appVersionLabel} · Cholimex Food
+                      </Text>
+                    </View>
+                  </View>
                 </View>
               </View>
-            </ScrollView>
-          </View>
-        </SafeAreaView>
+            </View>
+          </ScrollView>
+        </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );

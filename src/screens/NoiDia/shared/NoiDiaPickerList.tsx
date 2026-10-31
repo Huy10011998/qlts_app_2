@@ -3,6 +3,8 @@ import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import SearchBar from "../../../components/ui/SearchBar";
+import HeaderSearchReveal from "../../../components/ui/HeaderSearchReveal";
+import { useHeaderSearch } from "../../../hooks/useHeaderSearch";
 import { removeVietnameseTones } from "../../../utils/Helper";
 import RecordListSkeleton from "../../../components/list/RecordListSkeleton";
 import { shouldShowListSkeleton } from "../../../components/ui/shouldShowListSkeleton";
@@ -55,6 +57,10 @@ export default function NoiDiaPickerList<T>({
   const styles = useStyles(makeStyles);
   const c = useAppColors();
   const [searchText, setSearchText] = useState("");
+  const search = useHeaderSearch({
+    query: searchText,
+    onClear: () => setSearchText(""),
+  });
 
   // Bỏ dấu sẵn một lần cho mỗi dòng: gõ "Minh Thien" phải ra "Minh Thiên A",
   // người dùng ngoài hiện trường hiếm khi gõ đủ dấu.
@@ -105,6 +111,7 @@ export default function NoiDiaPickerList<T>({
 
         <RecordListSkeleton
           hasSearchBar
+          hasSearchInput={search.open}
           searchSummary="count"
           variant="row"
           lines={2}
@@ -123,14 +130,22 @@ export default function NoiDiaPickerList<T>({
         </Text>
       ) : null}
 
-      <SearchBar
-        value={searchText}
-        onChangeText={setSearchText}
-        placeholder={searchPlaceholder}
-        style={styles.searchBar}
-      />
+      <HeaderSearchReveal open={search.open} gap={8}>
+        <SearchBar
+          value={searchText}
+          onChangeText={setSearchText}
+          placeholder={searchPlaceholder}
+          style={styles.searchBar}
+          autoFocus
+          onClose={search.close}
+        />
+      </HeaderSearchReveal>
 
-      <Text style={styles.countLabel}>{filteredRows.length} kết quả</Text>
+      <Text
+        style={styles.countLabel}
+      >
+        {filteredRows.length} kết quả
+      </Text>
 
       <FlatList
         data={filteredRows}
@@ -189,9 +204,10 @@ const makeStyles = (c: AppColors) =>
     searchBar: {
       marginHorizontal: 16,
     },
+    // Sát ngay dưới ô tìm: khoảng hở 8 là `gap` của khung trượt, đóng ô thì
+    // thu về 0 cùng ô.
     countLabel: {
       paddingHorizontal: 16,
-      paddingTop: 8,
       fontSize: 12,
       color: c.textSub,
     },

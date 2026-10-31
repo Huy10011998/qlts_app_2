@@ -165,24 +165,14 @@ export default function SolarPlantSkeleton() {
         <Animated.View style={[styles.dateNavSide, { opacity }]} />
       </View>
 
-      {/* Khối "Cân bằng năng lượng": hai cụm Sản xuất và Tiêu thụ, cách nhau
-          một vạch, cuối khối là dòng tự dùng. */}
+      {/* Khối "Cân bằng năng lượng": vòng Tự chủ năng lượng, rồi hai cụm Sản
+          xuất và Tiêu thụ cách nhau một vạch. */}
       <BlockShell styles={styles}>
         <Animated.View style={[styles.blockTitle, { opacity }]} />
-        <BalanceCluster
-          colors={colors}
-          opacity={opacity}
-          sizeScale={sizeScale}
-          styles={styles}
-        />
+        <AutonomyRow opacity={opacity} sizeScale={sizeScale} styles={styles} />
+        <BalanceCluster colors={colors} opacity={opacity} styles={styles} />
         <View style={[styles.separator, { backgroundColor: colors.border }]} />
-        <BalanceCluster
-          colors={colors}
-          opacity={opacity}
-          sizeScale={sizeScale}
-          styles={styles}
-        />
-        <Animated.View style={[styles.selfLine, { opacity }]} />
+        <BalanceCluster colors={colors} opacity={opacity} styles={styles} />
       </BlockShell>
 
       {/* Khối "Công suất": nút Gộp / Tách biểu đồ, hàng tiêu đề + nút phóng to,
@@ -287,71 +277,83 @@ type SkeletonOpacity = ReturnType<typeof useSkeletonAutoFill>["opacity"];
  * Một cụm của khối Cân bằng năng lượng: nhãn 14pt, số lớn 32pt × hệ số, thanh
  * tỉ trọng 10, rồi hàng vòng tròn 84 × hệ số + hai dòng chú giải.
  */
-function BalanceCluster({
-  colors,
+/** Vòng Tự chủ năng lượng (96 × hệ số) + tiêu đề và hai dòng giải thích. */
+function AutonomyRow({
   opacity,
   sizeScale,
   styles,
 }: {
-  colors: AppColors;
   opacity: SkeletonOpacity;
   sizeScale: number;
   styles: SkeletonStyles;
 }) {
-  const donutSize = Math.round(84 * sizeScale);
+  const donutSize = Math.round(96 * sizeScale);
   // `DonutChart` vẽ vòng bán kính (size − 14) / 2, nét 10: mép ngoài vòng hụt
   // 2 so với khung mỗi bên.
   const ringSize = donutSize - 4;
 
   return (
-    <>
-      <Animated.View style={[styles.blockSubLabel, { opacity }]} />
-      <Animated.View
-        style={[
-          styles.blockBigValue,
-          {
-            height: 26 * sizeScale,
-            marginVertical: 6 * sizeScale,
-            opacity,
-          },
-        ]}
-      />
+    <View style={styles.autonomyRow}>
+      <View style={{ width: donutSize, height: donutSize }}>
+        <Animated.View
+          style={[
+            styles.donutRing,
+            {
+              width: ringSize,
+              height: ringSize,
+              borderRadius: ringSize / 2,
+              opacity,
+            },
+          ]}
+        />
+      </View>
+      <View style={styles.autonomyTextCol}>
+        <Animated.View style={[styles.autonomyTitle, { opacity }]} />
+        <Animated.View style={[styles.autonomyLine, { opacity }]} />
+        <Animated.View
+          style={[styles.autonomyLine, styles.autonomyLineShort, { opacity }]}
+        />
+      </View>
+    </View>
+  );
+}
+
+/** Một cụm Sản xuất / Tiêu thụ: tên + tổng, thanh tỉ trọng, hai dòng chia nhỏ. */
+function BalanceCluster({
+  colors,
+  opacity,
+  styles,
+}: {
+  colors: AppColors;
+  opacity: SkeletonOpacity;
+  styles: SkeletonStyles;
+}) {
+  return (
+    <View style={styles.balanceGroup}>
+      <View style={styles.balanceGroupHeader}>
+        <Animated.View style={[styles.blockSubLabel, { opacity }]} />
+        <Animated.View style={[styles.balanceGroupTotal, { opacity }]} />
+      </View>
       <Animated.View
         style={[styles.balanceBar, { backgroundColor: colors.border, opacity }]}
       />
-
-      <View style={styles.donutRow}>
-        <View style={{ width: donutSize, height: donutSize }}>
-          <Animated.View
-            style={[
-              styles.donutRing,
-              {
-                width: ringSize,
-                height: ringSize,
-                borderRadius: ringSize / 2,
-                opacity,
-              },
-            ]}
-          />
-        </View>
-        <View style={styles.legendCol}>
-          {[0, 1].map((index) => (
-            <View key={`legend-${index}`} style={styles.legendItem}>
-              <Animated.View style={[styles.legendDot, { opacity }]} />
-              <Animated.View style={[styles.legendLabel, { opacity }]} />
-              <Animated.View style={[styles.legendValue, { opacity }]} />
-            </View>
-          ))}
-        </View>
+      <View style={styles.balanceRows}>
+        {[0, 1].map((index) => (
+          <View key={`row-${index}`} style={styles.balanceRow}>
+            <Animated.View style={[styles.balanceIconChip, { opacity }]} />
+            <Animated.View style={[styles.balanceRowLabel, { opacity }]} />
+            <Animated.View style={[styles.balanceRowValue, { opacity }]} />
+          </View>
+        ))}
       </View>
-    </>
+    </View>
   );
 }
 
 /**
- * Hàng nút viền xanh (Gộp / Tách biểu đồ, Theo tháng / quý / năm), ô đầu tô
- * như đang chọn. `tall` là hàng Gộp / Tách: chữ 14pt, đệm 10, cách dưới 16;
- * còn lại chữ 13pt, đệm 8, cách dưới 8.
+ * Hàng nút chọn (Gộp / Tách biểu đồ, Theo tháng / quý / năm): rãnh xám nhạt,
+ * ô đầu là viên đỏ như đang chọn. `tall` là hàng Gộp / Tách: cao 39,
+ * cách dưới 16; còn lại cao 34, cách dưới 8.
  */
 function SegmentRow({
   count,
@@ -371,7 +373,13 @@ function SegmentRow({
           key={`segment-${index}`}
           style={[styles.segment, index === 0 && styles.segmentActive]}
         >
-          <Animated.View style={[styles.segmentLabel, { opacity }]} />
+          <Animated.View
+            style={[
+              styles.segmentLabel,
+              index === 0 && styles.segmentLabelOnActive,
+              { opacity },
+            ]}
+          />
         </View>
       ))}
     </View>
@@ -519,9 +527,9 @@ const makeStyles = (c: AppColors) =>
       borderRadius: 18,
       backgroundColor: c.skeleton,
     },
-    // Tab đang chọn của màn thật là chip xanh đặc, không phải khối xám.
+    // Tab đang chọn của màn thật là chip đỏ đặc, không phải khối xám.
     tabChipActive: {
-      backgroundColor: "#4285f4",
+      backgroundColor: c.red,
     },
     dateNav: {
       width: "100%",
@@ -562,19 +570,59 @@ const makeStyles = (c: AppColors) =>
       borderRadius: 6,
       backgroundColor: c.skeleton,
     },
-    // `balanceSubLabel`: marginTop 12 + chữ 14pt (~17) + marginBottom 4.
-    blockSubLabel: {
-      width: 74,
-      height: 12,
-      marginTop: 14,
-      marginBottom: 7,
+    // `autonomyRow`: cách trên 12, dưới 4, vòng và chữ cách 16.
+    autonomyRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 16,
+      marginTop: 12,
+      marginBottom: 4,
+    },
+    donutRing: {
+      margin: 2,
+      borderWidth: 10,
+      borderColor: c.skeleton,
+    },
+    autonomyTextCol: {
+      flex: 1,
+      gap: 8,
+    },
+    // Tiêu đề 15pt, hai dòng giải thích 13pt.
+    autonomyTitle: {
+      width: 130,
+      height: 14,
+      borderRadius: 6,
+      backgroundColor: c.skeleton,
+    },
+    autonomyLine: {
+      width: "100%",
+      height: 11,
       borderRadius: 5,
       backgroundColor: c.skeleton,
     },
-    // Số 32pt × hệ số: cao và lề dọc đặt inline.
-    blockBigValue: {
-      width: 132,
-      borderRadius: 8,
+    autonomyLineShort: {
+      width: "60%",
+    },
+    // `balanceGroup` cách trên 16; hàng tên + tổng theo dòng chữ 20pt (~24).
+    balanceGroup: {
+      marginTop: 16,
+    },
+    balanceGroupHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      minHeight: 24,
+    },
+    blockSubLabel: {
+      width: 64,
+      height: 12,
+      borderRadius: 5,
+      backgroundColor: c.skeleton,
+    },
+    balanceGroupTotal: {
+      width: 96,
+      height: 18,
+      borderRadius: 7,
       backgroundColor: c.skeleton,
     },
     // `barTrack`: cao 10, cách trên dưới 10; nền `border` như rãnh thật.
@@ -584,43 +632,32 @@ const makeStyles = (c: AppColors) =>
       borderRadius: 5,
       marginVertical: 10,
     },
-    donutRow: {
+    // Mỗi dòng cao theo chấm icon 26, hai dòng cách 8.
+    balanceRows: {
+      gap: 8,
+    },
+    balanceRow: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 16,
-      marginVertical: 8,
-    },
-    donutRing: {
-      margin: 2,
-      borderWidth: 10,
-      borderColor: c.skeleton,
-    },
-    legendCol: {
-      flex: 1,
       gap: 10,
     },
-    // Chữ chú giải 12pt (dòng ~14).
-    legendItem: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 6,
-      minHeight: 14,
-    },
-    legendDot: {
-      width: 10,
-      height: 10,
-      borderRadius: 5,
+    balanceIconChip: {
+      width: 26,
+      height: 26,
+      borderRadius: 13,
       backgroundColor: c.skeleton,
     },
-    legendLabel: {
-      width: 70,
-      height: 11,
-      borderRadius: 5,
-      backgroundColor: c.skeleton,
-    },
-    legendValue: {
+    balanceRowLabel: {
       flex: 1,
+      maxWidth: 96,
       height: 11,
+      borderRadius: 5,
+      backgroundColor: c.skeleton,
+    },
+    balanceRowValue: {
+      width: 90,
+      height: 11,
+      marginLeft: "auto",
       borderRadius: 5,
       backgroundColor: c.skeleton,
     },
@@ -629,26 +666,16 @@ const makeStyles = (c: AppColors) =>
       height: 1,
       marginVertical: 14,
     },
-    // `selfConsumptionRow` marginTop 12 + chữ 13pt (~15.5).
-    selfLine: {
-      width: "58%",
-      height: 11,
-      marginTop: 14,
-      marginBottom: 2,
-      borderRadius: 5,
-      backgroundColor: c.skeleton,
-    },
-    // `subTabRow`: viền xanh 1, đệm dọc 8 + chữ 13pt → cao ~34, cách dưới 8.
+    // `subTabRow`: rãnh xám đệm 3, viên đệm dọc 6 + chữ 13pt → cao ~34, cách dưới 8.
     segmentRow: {
       flexDirection: "row",
       height: 34,
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: "#4285f4",
-      overflow: "hidden",
+      padding: 3,
+      borderRadius: 12,
+      backgroundColor: c.surfaceAlt,
       marginBottom: 8,
     },
-    // `toggleRow`: đệm dọc 10 + chữ 14pt → cao ~39, cách dưới 16.
+    // `toggleRow`: viên đệm dọc 8 + chữ 14pt → cao ~39, cách dưới 16.
     segmentRowTall: {
       height: 39,
       marginBottom: 16,
@@ -657,16 +684,20 @@ const makeStyles = (c: AppColors) =>
       flex: 1,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: c.surface,
+      borderRadius: 9,
     },
     segmentActive: {
-      backgroundColor: c.accentLight,
+      backgroundColor: c.red,
     },
     segmentLabel: {
       width: 72,
       height: 11,
       borderRadius: 5,
       backgroundColor: c.skeleton,
+    },
+    // Vạch chữ trên viên đỏ: trắng mờ như chữ trắng của ô đang chọn.
+    segmentLabelOnActive: {
+      backgroundColor: "rgba(255,255,255,0.55)",
     },
     // `chartHeaderRow`: cao bằng nút phóng to 52, cách dưới 8.
     chartHeader: {

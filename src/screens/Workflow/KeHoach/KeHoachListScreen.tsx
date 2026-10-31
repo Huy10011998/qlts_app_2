@@ -5,6 +5,8 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { useHeaderRecordPill } from "../../../components/assets/shared/useHeaderRecordPill";
 import EmptyState from "../../../components/ui/EmptyState";
 import SearchBar from "../../../components/ui/SearchBar";
+import HeaderSearchReveal from "../../../components/ui/HeaderSearchReveal";
+import { useHeaderSearch } from "../../../hooks/useHeaderSearch";
 import { useDebounce } from "../../../hooks/useDebounce";
 import { khGetList } from "../../../services/data/keHoachApi";
 import { CV_KE_HOACH_NAME_CLASS } from "../../../services/data/workflowApi";
@@ -51,6 +53,10 @@ export default function KeHoachListScreen() {
 
   const [tab, setTab] = useState<KeHoachTab>("TatCa");
   const [keyword, setKeyword] = useState("");
+  const search = useHeaderSearch({
+    query: keyword,
+    onClear: () => setKeyword(""),
+  });
   const searchText = useDebounce(keyword, 600);
   const { fields, ready: fieldsReady } = useClassFields(CV_KE_HOACH_NAME_CLASS);
 
@@ -100,13 +106,17 @@ export default function KeHoachListScreen() {
 
   return (
     <View style={styles.container}>
-      <SearchBar
-        value={keyword}
-        onChangeText={setKeyword}
-        placeholder="Tìm số, tiêu đề, mô tả..."
-        isSearching={list.loading && !!keyword}
-        style={styles.search}
-      />
+      <HeaderSearchReveal open={search.open}>
+        <SearchBar
+          value={keyword}
+          onChangeText={setKeyword}
+          placeholder="Tìm số, tiêu đề, mô tả..."
+          isSearching={list.loading && !!keyword}
+          style={styles.search}
+          autoFocus
+          onClose={search.close}
+        />
+      </HeaderSearchReveal>
       {related ? null : (
         <WorkflowTabBar
           tabs={KH_TABS.map((item) => ({ key: item.key, label: item.label }))}

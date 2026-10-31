@@ -1,10 +1,18 @@
-import { pushScreensFromRef } from "../../navigation/navigationService";
+import { StackActions } from "@react-navigation/native";
+import {
+  navigationRef,
+  pushScreensFromRef,
+} from "../../navigation/navigationService";
 import { getThongBaoScreens } from "../../screens/ThongBao/thongBaoRules";
+import { store } from "../../store";
 import { thongBaoDaDoc } from "../data/thongBaoApi";
 import { log, warn } from "../../utils/Logger";
 import {
   buildCameraAiParams,
   CAMERA_AI_ROUTE,
+  type CameraAiRouteParams,
+  canViewCameraPush,
+  getCameraAiOpenAction,
   isCameraAiPush,
 } from "./cameraPush";
 import { TAP_DEDUPE_LIMIT } from "./constants";
@@ -73,10 +81,57 @@ const resolveTapTarget = (
   };
 };
 
+/** Noti camera: chồng / thay / đứng yên tuỳ màn đang mở (`getCameraAiOpenAction`). */
+const openCameraAiFromRef = (params: CameraAiRouteParams): boolean => {
+  if (!navigationRef.isReady()) return false;
+
+  const action = getCameraAiOpenAction(
+    navigationRef.getCurrentRoute(),
+    params.cameras[0].iD_Camera,
+  );
+
+  log("[Push] Mở live view camera theo thông báo", {
+    action,
+    cameraId: params.cameras[0].iD_Camera,
+  });
+
+  if (action === "stay") return true;
+
+  try {
+    navigationRef.dispatch(
+      action === "replace"
+        ? StackActions.replace(CAMERA_AI_ROUTE, params)
+        : StackActions.push(CAMERA_AI_ROUTE, params),
+    );
+    return true;
+  } catch (err) {
+    warn("[Push] Mở live view camera thất bại", err);
+    return false;
+  }
+};
+
 const routePendingTap = (): boolean => {
   if (!pendingTap) return true;
 
   const payload = pendingTap;
+
+  if (isCameraAiPush(payload.data)) {
+    const canViewCamera = canViewCameraPush(store.getState().permission);
+
+    // Quyền nạp sau khi vào AppNavigator — giữ lại chờ, đừng chặn oan người có quyền.
+    if (canViewCamera === null) return false;
+
+    if (!canViewCamera) {
+      log("[Push] Không có quyền xem Camera → chỉ mở app", {
+        id: payload.id,
+        source: payload.source,
+      });
+      handledTaps.claim(payload.id);
+      pendingTap = null;
+      return true;
+    }
+  }
+
   const target = resolveTapTarget(payload.data);
 
   // Không suy ra được đích đến: coi như đã xử lý xong — mục tiêu của thông báo
@@ -96,6 +151,8 @@ const routePendingTap = (): boolean => {
   // Push chuông: chồng màn như bấm trong chuông (back hết về chỗ đang đứng).
   const navigated = isThongBaoPush(payload.data)
     ? pushScreensFromRef(getThongBaoScreens(target))
+    : isCameraAiPush(payload.data)
+    ? openCameraAiFromRef(target.params as CameraAiRouteParams)
     : navigateToPushRoute(target.route, target.params);
 
   if (!navigated) {
@@ -162,6 +219,12 @@ export const drainPendingPushTap = (): void => {
 };
 
 export const hasPendingPushTap = (): boolean => pendingTap !== null;
+
+/** Lần bấm đang chờ là noti camera, còn chờ quyền nạp xong mới biết có mở được không. */
+export const isPendingPushTapWaitingForPermissions = (): boolean =>
+  pendingTap !== null &&
+  isCameraAiPush(pendingTap.data) &&
+  canViewCameraPush(store.getState().permission) === null;
 
 /** Xoá lần bấm đang chờ — gọi khi logout để không điều hướng cho phiên mới. */
 export const clearPendingPushTap = (): void => {

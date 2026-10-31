@@ -3,6 +3,8 @@ import { ScrollView, Text, View } from "react-native";
 
 import EmptyState from "../../../components/ui/EmptyState";
 import SearchBar from "../../../components/ui/SearchBar";
+import HeaderSearchReveal from "../../../components/ui/HeaderSearchReveal";
+import { useHeaderSearch } from "../../../hooks/useHeaderSearch";
 import { useStyles } from "../../../utils/helpers/colors";
 import {
   guideCardAccent,
@@ -31,6 +33,11 @@ export default function GuideTopicSectionList({
   const styles = useStyles(makeGuideStyles);
   const [query, setQuery] = useState("");
   const isSearchable = Boolean(topic.collapsibleSections);
+  const search = useHeaderSearch({
+    query,
+    onClear: () => setQuery(""),
+    enabled: isSearchable,
+  });
   const isSearching = isSearchable && query.trim().length > 0;
 
   /* Chủ đề có `sectionGroups` thì gom mục theo nhóm (bỏ nhóm không còn mục
@@ -52,17 +59,19 @@ export default function GuideTopicSectionList({
 
   return (
     <>
-      {/* Ô tìm kiếm đứng ngoài ScrollView như mục lục Hướng dẫn: cuộn xuống
-          giữa danh sách vẫn gõ lọc được ngay. */}
-      {isSearchable ? (
+      {/* Ô tìm kiếm ẩn sau nút kính lúp trên header như mục lục Hướng dẫn;
+          mở thì đứng ngoài ScrollView, cuộn giữa danh sách vẫn gõ lọc được. */}
+      <HeaderSearchReveal open={search.open}>
         <View style={styles.searchWrap}>
           <SearchBar
             value={query}
             onChangeText={setQuery}
             placeholder="Tìm câu hỏi"
+            autoFocus
+            onClose={search.close}
           />
         </View>
-      ) : null}
+      </HeaderSearchReveal>
 
       <ScrollView
         style={styles.scroll}

@@ -18,8 +18,11 @@ import {
 } from "react-native";
 
 import { useDebounce } from "../../hooks/useDebounce";
+import { useHeaderSearch } from "../../hooks/useHeaderSearch";
 import { usePermission } from "../../hooks/usePermission";
 import EmptyState from "../../components/ui/EmptyState";
+import TabBarSpacer from "../../navigation/shared/TabBarSpacer";
+import { useHideTabBarOnScroll } from "../../navigation/shared/tabBarAutoHide";
 import { getVungCamera } from "../../services/data/callApi";
 import { error } from "../../utils/Logger";
 import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
@@ -70,6 +73,13 @@ export default function CameraScreen() {
   const [isFetching, setIsFetching] = useState(true);
   const [isRefreshingTop, setIsRefreshingTop] = useState(false);
   const [search, setSearch] = useState("");
+  // Thanh tab tự ẩn khi đọc xuống (như Trang chủ). Màn này còn được mở từ
+  // stack gốc (ô Camera ở Chức năng) — ở đó không có thanh tab, hook không làm gì.
+  const hideTabBarOnScroll = useHideTabBarOnScroll();
+  const headerSearch = useHeaderSearch({
+    query: search,
+    onClear: () => setSearch(""),
+  });
   const [isSearching, setIsSearching] = useState(false);
   const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
 
@@ -202,6 +212,7 @@ export default function CameraScreen() {
   const treeSkeleton = (
     <MenuCardSkeleton
       hasSearchBar
+      hasSearchInput={headerSearch.open}
       hasCollapseAll={expandedIds.length > 0}
       hasRecents={recents.length > 0}
     />
@@ -270,6 +281,7 @@ export default function CameraScreen() {
           onCollapseAll={
             expandedIds.length > 0 ? handleCollapseAll : undefined
           }
+          search={headerSearch}
         />
 
         {hasSearch ? null : (
@@ -298,6 +310,8 @@ export default function CameraScreen() {
             isEmpty && styles.listContentEmpty,
           ]}
           removeClippedSubviews={Platform.OS === "android"}
+          onScroll={hideTabBarOnScroll}
+          scrollEventThrottle={16}
           initialNumToRender={20}
           windowSize={10}
           keyboardShouldPersistTaps="handled"
@@ -311,6 +325,7 @@ export default function CameraScreen() {
               progressViewOffset={50}
             />
           }
+          ListFooterComponent={TabBarSpacer}
           ListEmptyComponent={
             <EmptyState
               iconName="videocam-outline"

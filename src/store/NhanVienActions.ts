@@ -11,10 +11,32 @@ import {
   setNhanVienLoading,
 } from "./NhanVienSlice";
 import { error, warn } from "../utils/Logger";
+import {
+  readStoredAuthUsername,
+  writeStoredLoginProfile,
+} from "../context/authStorage";
 
 type NhanVienResponse = {
   message?: string;
   data: NhanVienInfo | null;
+};
+
+/** Lưu họ tên + ảnh để lần sau màn Đăng nhập chào bằng tên. Lỗi thì thôi. */
+const rememberLoginProfile = async (info: NhanVienInfo) => {
+  const name = info.ten?.trim();
+  if (!name) return;
+
+  try {
+    const userName = await readStoredAuthUsername();
+    if (!userName) return;
+    await writeStoredLoginProfile({
+      userName,
+      name,
+      avatar: info.hinhAnh ?? null,
+    });
+  } catch (err) {
+    warn("Save login profile failed", err);
+  }
 };
 
 /**
@@ -55,6 +77,7 @@ export const loadNhanVienInfo = (options?: { force?: boolean }) => {
       }
 
       dispatch(setNhanVienInfo(res.data));
+      rememberLoginProfile(res.data);
       return true;
     } catch (err) {
       if (isAuthExpiredError(err)) {

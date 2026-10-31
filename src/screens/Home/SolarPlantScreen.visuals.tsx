@@ -32,6 +32,7 @@ import {
   isStormWeatherCode,
   roundTo,
   SCREEN_WIDTH,
+  SOLAR_SERIES_COLORS,
   type EnergyBarBucket,
   type SolarComparativeBucket,
 } from "./SolarPlantScreen.helpers";
@@ -1052,11 +1053,12 @@ const formatTick = (value: number, step: number) => {
 
 /**
  * Màu các chuỗi của biểu đồ vùng, khớp với chấm chú giải trong
- * `SolarPlantScreen.styles.ts`: Sản xuất xanh dương, Tiêu thụ cam, phần điện mặt
- * trời trong Tiêu thụ ("Từ mặt trời" / "Tự dùng") xanh lá.
+ * `SolarPlantScreen.styles.ts` (cùng lấy từ `SOLAR_SERIES_COLORS`): Sản xuất và
+ * phần điện mặt trời trong Tiêu thụ ("Từ mặt trời") xanh lá; Tiêu thụ của biểu
+ * đồ gộp xanh dương; biểu đồ Tiêu thụ riêng thì phần nằm trên vùng xanh lá chính
+ * là "Mua từ lưới" nên tô cam.
  */
-const PRODUCTION_SERIES_COLOR = "#2a78d6";
-const SOLAR_SERIES_COLOR = "#1baf7a";
+const PRODUCTION_SERIES_COLOR = SOLAR_SERIES_COLORS.solar;
 
 /** Lề trục của biểu đồ vùng; dùng lại ở ngoài để đặt viên nhãn đúng mốc. */
 const AREA_PAD_L = 40;
@@ -1330,27 +1332,32 @@ const AreaChartBase: React.FC<{
         <>
           <Path
             d={paths.consumptionArea}
-            fill={isMerged ? "#eb683440" : "#eb68344f"}
+            fill={
+              isMerged
+                ? `${SOLAR_SERIES_COLORS.load}40`
+                : `${SOLAR_SERIES_COLORS.grid}4f`
+            }
           />
           <Path
             d={paths.consumptionLine}
             fill="none"
-            stroke="#eb6834"
+            stroke={
+              isMerged ? SOLAR_SERIES_COLORS.load : SOLAR_SERIES_COLORS.grid
+            }
             strokeWidth={1.5}
           />
         </>
       ) : null}
 
-      {/* Ở biểu đồ Tiêu thụ, chuỗi Sản xuất chính là phần "Từ mặt trời" nên phải
-          vẽ bằng đúng màu của chấm chú giải đó (xanh lá), không phải màu xanh
-          dương của biểu đồ Sản xuất. */}
+      {/* Ở biểu đồ Tiêu thụ, chuỗi Sản xuất chính là phần "Từ mặt trời" — cùng
+          màu xanh lá, chỉ tô đậm hơn để nổi trên nền cam. */}
       {isMerged || isProduction || isConsumption ? (
         <>
           <Path
             d={paths.productionArea}
             fill={
               isConsumption
-                ? `${SOLAR_SERIES_COLOR}70`
+                ? `${PRODUCTION_SERIES_COLOR}70`
                 : isProduction
                 ? `${PRODUCTION_SERIES_COLOR}45`
                 : `${PRODUCTION_SERIES_COLOR}78`
@@ -1359,9 +1366,7 @@ const AreaChartBase: React.FC<{
           <Path
             d={paths.productionLine}
             fill="none"
-            stroke={
-              isConsumption ? SOLAR_SERIES_COLOR : PRODUCTION_SERIES_COLOR
-            }
+            stroke={PRODUCTION_SERIES_COLOR}
             strokeWidth={1.5}
           />
         </>
@@ -1373,7 +1378,7 @@ const AreaChartBase: React.FC<{
         <Path
           d={paths.selfLine}
           fill="none"
-          stroke={SOLAR_SERIES_COLOR}
+          stroke={SOLAR_SERIES_COLORS.solarDark}
           strokeWidth={1.5}
           strokeDasharray="5 4"
         />
@@ -1428,7 +1433,11 @@ const AreaChartBase: React.FC<{
               cy={py(markerValue)}
               r={5}
               fill="white"
-              stroke={isConsumption ? "#eb6834" : PRODUCTION_SERIES_COLOR}
+              stroke={
+                isConsumption
+                  ? SOLAR_SERIES_COLORS.grid
+                  : PRODUCTION_SERIES_COLOR
+              }
               strokeWidth={2}
             />
           ) : null}

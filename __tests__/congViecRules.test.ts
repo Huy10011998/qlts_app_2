@@ -1,5 +1,8 @@
 import {
+  getCongViecActions,
   getCongViecHanBadge,
+  getCongViecQuickActions,
+  isCongViecDaGiaHan,
   shiftDenNgay,
 } from "../src/screens/Workflow/CongViec/congViecRules";
 import { getFlowDoneMessage } from "../src/screens/Workflow/Flow/flowRules";
@@ -69,5 +72,57 @@ describe("snapshotFormValues (form có thay đổi chưa lưu)", () => {
     expect(snapshotFormValues(["MucDoKhan"], { MucDoKhan: 1 })).toBe(
       snapshotFormValues(["MucDoKhan"], { MucDoKhan: "1" }),
     );
+  });
+});
+
+describe("getCongViecQuickActions (nút ⋯ trên việc ở màn Lịch)", () => {
+  const perms = { canUpdate: true, canDelete: true };
+  const fullQuyen = {
+    duocQuanLy: true,
+    duocChuyenTrangThai: true,
+    duocDoiChuTri: true,
+    duocTraoDoi: true,
+    duocXoa: true,
+  };
+
+  it("đủ quyền: đủ thao tác, Xoá đứng cuối", () => {
+    const actions = getCongViecActions({ trangThai: 1 }, fullQuyen, perms);
+    expect(getCongViecQuickActions(actions, true)).toEqual([
+      "chuyenTrangThai",
+      "giaHan",
+      "doiChuTri",
+      "sua",
+      "nhanBan",
+      "xoa",
+    ]);
+  });
+
+  it("người chỉ xem: không có thao tác nào (Bình luận / Đính kèm ở chân việc)", () => {
+    const actions = getCongViecActions({ trangThai: 1 }, {}, perms);
+    expect(getCongViecQuickActions(actions, false)).toEqual([]);
+  });
+
+  it("việc Hoàn thành: hết Sửa / Gia hạn / Đổi chủ trì, còn Chuyển trạng thái", () => {
+    const actions = getCongViecActions({ trangThai: 2 }, fullQuyen, perms);
+    const list = getCongViecQuickActions(actions, false);
+    expect(list).toContain("chuyenTrangThai");
+    expect(list).not.toContain("sua");
+    expect(list).not.toContain("giaHan");
+    expect(list).not.toContain("doiChuTri");
+  });
+});
+
+describe("isCongViecDaGiaHan (icon gia hạn ở chân việc trên Lịch)", () => {
+  it("hạn ban đầu khác Đến ngày là đã gia hạn", () => {
+    expect(
+      isCongViecDaGiaHan({ hanBanDau: "2026-10-09T00:00:00", denNgay: "2026-10-14T00:00:00" }),
+    ).toBe(true);
+  });
+
+  it("trùng nhau hoặc thiếu một bên thì chưa", () => {
+    expect(
+      isCongViecDaGiaHan({ hanBanDau: "2026-10-14T00:00:00", denNgay: "2026-10-14T00:00:00" }),
+    ).toBe(false);
+    expect(isCongViecDaGiaHan({ hanBanDau: null, denNgay: "2026-10-14T00:00:00" })).toBe(false);
   });
 });

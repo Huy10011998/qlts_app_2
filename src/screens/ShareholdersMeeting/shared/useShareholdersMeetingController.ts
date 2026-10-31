@@ -33,6 +33,8 @@ import {
   filterShareholders,
   GetListResponse,
   getAttendanceSummary,
+  getMeetingHeaderLabel,
+  getOpinionDisplayTitle,
   mapOpinionItem,
   mapShareholderItem,
   MeetingOpinion,
@@ -320,7 +322,9 @@ export function useShareholdersMeetingController() {
       meetingId: activeMeeting.id,
       scanMode: activeTab,
       votingOpinionId: selectedOpinion ? Number(selectedOpinion.id) : undefined,
-      votingOpinionTitle: selectedOpinion?.title,
+      votingOpinionTitle: selectedOpinion
+        ? getOpinionDisplayTitle(selectedOpinion)
+        : undefined,
       votingChoice: selectedVotingChoice ?? undefined,
     });
   }, [
@@ -346,6 +350,16 @@ export function useShareholdersMeetingController() {
       headerRight: renderHeaderRight,
     });
   }, [navigation, renderHeaderRight]);
+
+  // Tên đại hội nằm ở dòng phụ của header (trước đây là một khối màu riêng
+  // dưới header). Chưa có đại hội thì để header tự ghi nhãn mặc định.
+  const meetingHeaderLabel = getMeetingHeaderLabel(activeMeeting?.ten);
+  useEffect(() => {
+    navigation.setOptions({
+      headerBadgeLabel: meetingHeaderLabel || undefined,
+      headerBadgeIcon: "people-outline",
+    } as object);
+  }, [meetingHeaderLabel, navigation]);
 
   const refreshAttendanceList = useCallback(async () => {
     if (!activeMeeting?.id) return;
@@ -644,7 +658,7 @@ export function useShareholdersMeetingController() {
     [canHuyDiemDanh, shareholders, syncShareholderAttendance],
   );
 
-  const { attendanceRate, pendingCount, presentCount } = useMemo(
+  const attendanceSummary = useMemo(
     () => getAttendanceSummary(shareholders),
     [shareholders],
   );
@@ -653,10 +667,12 @@ export function useShareholdersMeetingController() {
     () =>
       filterShareholders(
         shareholders,
-        debouncedSearchQuery,
+        // Xoá chữ / đóng ô tìm thì trả đủ danh sách ngay, không chờ hết debounce
+        // với dòng "Không có cổ đông phù hợp".
+        searchQuery.trim() ? debouncedSearchQuery : "",
         attendanceFilter,
       ),
-    [attendanceFilter, debouncedSearchQuery, shareholders],
+    [attendanceFilter, debouncedSearchQuery, searchQuery, shareholders],
   );
 
   useEffect(() => {
@@ -667,7 +683,7 @@ export function useShareholdersMeetingController() {
     activeMeeting,
     activeTab,
     attendanceFilter,
-    attendanceRate,
+    attendanceSummary,
     canDiemDanh,
     canGhiYKien,
     canHuyDiemDanh,
@@ -679,6 +695,7 @@ export function useShareholdersMeetingController() {
     handleUndoCheckIn,
     hasAnyViewPermission,
     isMeetingLoading,
+    isMeetingLocked,
     isOpinionModalVisible,
     isRefreshingAttendance,
     isSearching,
@@ -686,10 +703,9 @@ export function useShareholdersMeetingController() {
     loadMeetingData,
     loaded,
     meetingError,
+    openScanner,
     opinionSearchQuery,
     opinions,
-    pendingCount,
-    presentCount,
     searchQuery,
     selectedOpinion,
     selectedOpinionId,

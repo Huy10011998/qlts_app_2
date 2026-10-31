@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
@@ -10,7 +10,7 @@ import EmptyState from "../../../components/ui/EmptyState";
 import { useUnsavedChangesGuard } from "../../../hooks/useUnsavedChangesGuard";
 import { cvNhanVien } from "../../../services/data/congViecApi";
 import { khChiTiet, khSua, khThem } from "../../../services/data/keHoachApi";
-import { CV_KE_HOACH_NAME_CLASS } from "../../../services/data/workflowApi";
+import { CV_KE_HOACH_NAME_CLASS, isWorkflowNotFound } from "../../../services/data/workflowApi";
 import type {
   KeHoachChiTiet,
   KeHoachSavePayload,
@@ -44,6 +44,8 @@ import { loadClassFields } from "../shared/workflowMetadata";
 import { KH_DYNAMIC_SAVE_KEYS } from "./keHoachRules";
 import { AppAlert } from "../../../components/ui/AppAlert";
 
+const EMPLOYEES_ERROR = "Không tải được danh sách nhân viên.";
+
 /**
  * Form thêm / sửa kế hoạch (mục 4). Phần động theo metadata (TieuDe, TuNgay,
  * DenNgay, MoTa — kh-them / kh-sua chỉ nhận bộ khoá này); người tham gia vẽ
@@ -61,6 +63,8 @@ export default function KeHoachFormScreen() {
 
   const [fields, setFields] = useState<WorkflowField[] | null>(null);
   const [employees, setEmployees] = useState<WorkflowEmployee[]>([]);
+  const [employeesLoading, setEmployeesLoading] = useState(false);
+  const [employeesError, setEmployeesError] = useState<string | null>(null);
   const [detail, setDetail] = useState<KeHoachChiTiet | null>(null);
   const [thamGias, setThamGias] = useState<number[]>([]);
   const [pickerVisible, setPickerVisible] = useState(false);
@@ -75,7 +79,11 @@ export default function KeHoachFormScreen() {
     let alive = true;
     Promise.all([
       loadClassFields(CV_KE_HOACH_NAME_CLASS),
-      cvNhanVien().catch(() => [] as WorkflowEmployee[]),
+      // Lỗi không chặn form: bảng chọn người báo lỗi + Thử lại thay vì "không có nhân viên".
+      cvNhanVien().catch((err) => {
+        if (alive) setEmployeesError(getWorkflowErrorMessage(err, EMPLOYEES_ERROR));
+        return [] as WorkflowEmployee[];
+      }),
       isEdit && editId ? khChiTiet(editId) : Promise.resolve(null),
     ])
       .then(([metadata, staff, chiTiet]) => {
@@ -86,12 +94,30 @@ export default function KeHoachFormScreen() {
         if (chiTiet) setThamGias(chiTiet.thamGias.map((item) => Number(item.id)));
       })
       .catch((err) => {
-        if (alive) setLoadError(getWorkflowErrorMessage(err, "Không tải được form."));
+        if (!alive) return;
+        // Kế hoạch vừa bị xoá (ở web / máy khác): như form công việc, báo rồi quay lại.
+        if (isWorkflowNotFound(err)) {
+          AppAlert.alert("Thông báo", "Không tìm thấy kế hoạch.", [
+            { text: "OK", onPress: () => navigation.goBack() },
+          ]);
+          return;
+        }
+        setLoadError(getWorkflowErrorMessage(err, "Không tải được form."));
       });
     return () => {
       alive = false;
     };
-  }, [editId, isEdit]);
+  }, [editId, isEdit, navigation]);
+
+  /** "Thử lại" của bảng chọn người tham gia (lần đầu nạp cùng form). */
+  const retryEmployees = useCallback(() => {
+    setEmployeesLoading(true);
+    setEmployeesError(null);
+    cvNhanVien()
+      .then(setEmployees)
+      .catch((err) => setEmployeesError(getWorkflowErrorMessage(err, EMPLOYEES_ERROR)))
+      .finally(() => setEmployeesLoading(false));
+  }, []);
 
   const formFields = useMemo(
     () => getFormFields(fields ?? [], { only: KH_DYNAMIC_SAVE_KEYS }),
@@ -126,9 +152,8 @@ export default function KeHoachFormScreen() {
     JSON.stringify(thamGias),
   );
   const formReady = !loadError && !!fields && !meLoading && (!isEdit || !!detail);
-  const { leaveWithoutPrompt } = useUnsavedChangesGuard(
-    formReady && (form.isDirty || thamGiasDirty),
-  );
+  const hasChanges = form.isDirty || thamGiasDirty;
+  const { leaveWithoutPrompt } = useUnsavedChangesGuard(formReady && hasChanges);
 
   // Chủ trì (chính mình khi thêm, người tạo khi sửa) không nằm trong danh sách chọn.
   const chuTriId = detail ? Number(detail.keHoach.iD_NhanVien_Tao) : me.iD_NhanVien;
@@ -217,7 +242,9 @@ export default function KeHoachFormScreen() {
           label="Lưu"
           icon="checkmark-circle-outline"
           onPress={handleSave}
-          disabled={submitting}
+          // Sửa mà chưa đổi gì: khoá Lưu — bấm vẫn gửi một lượt lưu rỗng rồi báo
+          // "Đã lưu kế hoạch". Đổi rồi trả lại như cũ thì khoá lại.
+          disabled={submitting || (isEdit && !hasChanges)}
         />
       }
     >
@@ -264,6 +291,9 @@ export default function KeHoachFormScreen() {
         employees={employees}
         selectedIds={thamGias}
         excludeIds={chuTriId ? [chuTriId] : []}
+        loading={employeesLoading && !employees.length}
+        errorMessage={employeesError}
+        onRetry={retryEmployees}
         onClose={() => setPickerVisible(false)}
         onConfirm={(ids) => {
           markThamGiasTouched();

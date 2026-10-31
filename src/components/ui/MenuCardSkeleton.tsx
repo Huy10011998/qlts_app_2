@@ -63,6 +63,7 @@ export default function MenuCardSkeleton({
   rows,
   variant = "menu",
   hasSearchBar = false,
+  hasSearchInput = true,
   hasCollapseAll = false,
   hasRecents = false,
   hasGroupHeader = false,
@@ -78,6 +79,11 @@ export default function MenuCardSkeleton({
    * khoá thì danh sách cũ được giữ lại chứ không thay bằng khung chờ.
    */
   hasSearchBar?: boolean;
+  /**
+   * Ô nhập của thanh tìm kiếm. False khi ô đang ẩn sau nút kính lúp trên header
+   * (`useHeaderSearch`): chỉ còn nút "Thu tất cả" nếu có, như màn thật.
+   */
+  hasSearchInput?: boolean;
   /**
    * Nút "Thu tất cả" dưới ô tìm kiếm. Nhóm đang mở được lưu xuống máy
    * (`useMenuTreeState`), nên người đã mở nhóm từ lần trước thì vào màn là có
@@ -121,19 +127,30 @@ export default function MenuCardSkeleton({
       accessibilityLabel="Đang tải danh sách"
     >
       {hasSearchBar ? (
-        <View style={styles.searchWrap}>
-          <Animated.View
-            style={[
-              styles.searchBar,
-              { borderColor: hairlineBorderColor, opacity },
-            ]}
-          >
-            <View style={styles.searchIcon} />
-            <View style={styles.searchText} />
-          </Animated.View>
+        // Ô ẩn và không có "Thu tất cả" thì khối rỗng nhưng vẫn giữ lề trên 14,
+        // như `MenuTreeSearchBar` thật.
+        <View
+          style={[
+            styles.searchWrap,
+            hasSearchInput || hasCollapseAll ? null : styles.searchWrapEmpty,
+          ]}
+        >
+          {hasSearchInput ? (
+            <Animated.View
+              style={[
+                styles.searchBar,
+                { borderColor: hairlineBorderColor, opacity },
+              ]}
+            >
+              <View style={styles.searchIcon} />
+              <View style={styles.searchText} />
+            </Animated.View>
+          ) : null}
 
           {hasCollapseAll ? (
-            <View style={styles.metaRow}>
+            <View
+              style={[styles.metaRow, hasSearchInput ? null : styles.metaRowFlush]}
+            >
               <Animated.View style={[styles.collapseButton, { opacity }]}>
                 <View style={styles.collapseText} />
               </Animated.View>
@@ -237,6 +254,9 @@ const makeStyles = (c: AppColors) =>
       paddingTop: 14,
       paddingBottom: 8,
     },
+    searchWrapEmpty: {
+      paddingBottom: 0,
+    },
     // Ô tìm kiếm thật là hộp TRẮNG có viền (`SearchBar` cardBox), chỉ chữ bên
     // trong mới xám — vẽ thành khối xám đặc là lệch hình dáng.
     searchBar: {
@@ -266,6 +286,9 @@ const makeStyles = (c: AppColors) =>
     metaRow: {
       marginTop: 8,
       flexDirection: "row",
+    },
+    metaRowFlush: {
+      marginTop: 0,
     },
     collapseButton: {
       marginLeft: "auto",

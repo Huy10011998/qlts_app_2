@@ -30,13 +30,21 @@ type Props = {
   phieuLabel?: string;
   onClose: () => void;
   /**
-   * Màn gọi nạp lại. `sent` = true: server đã nhận lượt xử lý; false: server từ
-   * chối vì người khác vừa xử lý trước / phiếu đã kết thúc (mục 8e) — chỉ nạp lại.
+   * Màn gọi nạp lại. `sent` = true: server đã nhận lượt xử lý; false: server không
+   * thực hiện (người khác vừa xử lý trước / phiếu đã kết thúc — mục 8e, hoặc bước
+   * kế phải chọn người) — chỉ nạp lại.
    */
   onDone: (sent: boolean) => void;
   /** Lượt duyệt cuối chọn "Tạo công việc": màn gọi mở form công việc. */
   onTaoCongViec: (args: { yKien: string | null; prefill: FlowTaoCongViecPrefill | null }) => void;
 };
+
+/** Bộ người duyệt đã chọn, không phụ thuộc thứ tự — so với `daChons` server trả. */
+const chonsKey = (list: FlowChonNguoiPair[]) =>
+  list
+    .map((chon) => `${chon.iD_Buoc}:${chon.iD_NhanVien}`)
+    .sort()
+    .join(",");
 
 const TITLES: Record<FlowKetQua, string> = {
   1: "Duyệt phiếu",
@@ -129,7 +137,14 @@ export default function FlowApproveSheet({
         return;
       }
       if ((result.soCanChonNguoi ?? 0) > 0) {
-        AppAlert.alert("Cần chọn người duyệt", "Phiếu cần chọn người duyệt cho bước kế tiếp.");
+        // Lúc mở sheet server chưa đòi chọn người nên sheet không có lưới chọn —
+        // ở lại là kẹt. Phiếu chưa được duyệt: đóng, nạp lại rồi bấm Duyệt lần
+        // nữa, flow-chon-nguoi-duyet sẽ trả bước cần chọn.
+        AppAlert.alert(
+          "Cần chọn người duyệt",
+          "Phiếu cần chọn người duyệt cho bước kế tiếp nên chưa duyệt. Bấm Duyệt lại để chọn người.",
+          [{ text: "OK", onPress: () => onDone(false) }],
+        );
         return;
       }
       onDone(true);
@@ -172,8 +187,10 @@ export default function FlowApproveSheet({
       ? "Không ý kiến"
       : "Duyệt";
 
-  // Ý kiến đã gõ mà chạm nhầm ra nền tối là mất — sheet hỏi trước khi đóng.
-  const dirty = !!yKien.trim();
+  // Ý kiến đã gõ / người duyệt đã chọn mà chạm nhầm ra nền tối là mất — sheet
+  // hỏi trước khi đóng.
+  const dirty =
+    !!yKien.trim() || (needPick && chonsKey(chons) !== chonsKey(data?.daChons ?? []));
 
   return (
     <WorkflowSheet

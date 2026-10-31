@@ -1,7 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import {
   Animated,
-  AppState,
   Easing,
   View,
   Image,
@@ -20,34 +19,22 @@ import { navigateFromRef } from "../../navigation/navigationService";
 import { WORKFLOW_VIEW_CODE } from "../../screens/Workflow/workflowMenu";
 import { useThongBaoContext } from "../../screens/ThongBao/ThongBaoProvider";
 import type { HeaderHomeProps } from "../../types/components.d";
-import { AppColors, useAppColors, useStyles } from "../../utils/helpers/colors";
+import { AppColors, useStyles } from "../../utils/helpers/colors";
+import HeaderPhotoBackground, {
+  HEADER_RED_EDGE,
+} from "./HeaderPhotoBackground";
 
-const getGreeting = (date: Date) => {
-  const h = date.getHours();
-  if (h < 12) return { text: "Chào buổi sáng", icon: "sunny-outline" };
-  if (h < 18) return { text: "Chào buổi chiều", icon: "partly-sunny-outline" };
-  return { text: "Chào buổi tối", icon: "moon-outline" };
-};
-
-const formatTime = (d: Date) =>
-  d.toLocaleTimeString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-
-const formatDate = (d: Date) =>
-  d.toLocaleDateString("vi-VN", {
-    weekday: "long",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-
+/**
+ * Header Trang chủ chỉ còn một hàng logo + nút. Từng có lời chào theo buổi kèm
+ * ngày, viên giờ (trùng đồng hồ trên thanh trạng thái) và dải đệm đáy — header
+ * cao ~139pt; bỏ hết theo yêu cầu (29/10) để nhường chỗ cho nội dung.
+ *
+ * Nền là ảnh nhà máy kèm lớp tối (đồng bộ với màn Đăng nhập / Cài đặt), viền
+ * đỏ mảnh ở đáy giữ màu thương hiệu (30/10).
+ */
 export default function HeaderHome(_props: HeaderHomeProps) {
   const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
-  const colors = useAppColors();
   // Hai góc bo dưới của header lộ ra nền phía sau: phải trùng nền Trang chủ
   // (đậm hơn `bg` một nấc), không thì lộ hai mảng màu khác ở hai góc.
   const pageBackground = useHomePageBackground();
@@ -62,29 +49,7 @@ export default function HeaderHome(_props: HeaderHomeProps) {
   // Bảng chuông dựng ở Tabs.tsx (nằm dưới các màn mở từ nó), không ở header.
   const { soChuaDoc, setBellOpen } = useThongBaoContext();
 
-  const [now, setNow] = useState(new Date());
   const spin = useRef(new Animated.Value(0)).current;
-  const greeting = getGreeting(now);
-
-  useEffect(() => {
-    const updateNow = () => setNow(new Date());
-    const timer = setInterval(updateNow, 1_000);
-    const appStateSubscription = AppState.addEventListener(
-      "change",
-      (nextAppState) => {
-        if (nextAppState === "active") {
-          updateNow();
-        }
-      }
-    );
-
-    updateNow();
-
-    return () => {
-      clearInterval(timer);
-      appStateSubscription.remove();
-    };
-  }, []);
 
   // Quay hết một vòng rồi mới dừng: cắt giữa vòng thì icon đứng nghiêng, nhìn như
   // bị treo. Vòng cuối chạy nốt trong lúc `isHomeRefreshing` đã về false.
@@ -127,30 +92,18 @@ export default function HeaderHome(_props: HeaderHomeProps) {
     // ra đúng màu nền trang, không lộ nền mặc định của navigator.
     <View style={{ backgroundColor: pageBackground }}>
       <View style={[styles.outer, { paddingTop: insets.top }]}>
-        <View style={styles.deco1} />
-        <View style={styles.deco2} />
-        <View style={styles.deco3} />
+        <HeaderPhotoBackground />
 
         <View style={styles.topBar}>
           <TouchableOpacity
             onPress={() => Linking.openURL("https://cholimexfood.com.vn")}
             activeOpacity={0.8}
           >
-            <View
-              style={[
-                styles.logoWrap,
-                {
-                  backgroundColor: colors.surface,
-                  shadowColor: colors.shadow,
-                },
-              ]}
-            >
-              <Image
-                source={require("../../assets/images/logo-cholimex-trans.jpg")}
-                style={styles.logo}
-                resizeMode="contain"
-              />
-            </View>
+            <Image
+              source={require("../../assets/images/logo-cholimex-trans.jpg")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
           </TouchableOpacity>
 
           <View style={styles.topActions}>
@@ -238,39 +191,6 @@ export default function HeaderHome(_props: HeaderHomeProps) {
             </TouchableOpacity>
           </View>
         </View>
-
-        <View style={styles.greetRow}>
-          <View style={styles.greetLeft}>
-            <View style={styles.greetIconWrap}>
-              <Ionicons
-                name={greeting.icon as any}
-                size={14}
-                color="rgba(255,255,255,0.85)"
-              />
-            </View>
-            <Text style={styles.greetText}>
-              {greeting.text}
-            </Text>
-          </View>
-          <View style={styles.timePill}>
-            <Ionicons
-              name="time-outline"
-              size={11}
-              color="rgba(255,255,255,0.7)"
-              style={styles.timeIcon}
-            />
-            <Text style={styles.timeText}>
-              {formatTime(now)}
-            </Text>
-          </View>
-        </View>
-
-        <Text style={styles.dateText}>
-          {formatDate(now)}
-        </Text>
-
-        <View style={styles.bottomSpacer} />
-
       </View>
     </View>
   );
@@ -278,44 +198,12 @@ export default function HeaderHome(_props: HeaderHomeProps) {
 
 const makeStyles = (c: AppColors) =>
   StyleSheet.create({
-    // Đáy thẳng, không bo góc. `overflow: hidden` cắt các vòng tròn trang trí
-    // tràn ra ngoài header.
+    // Đáy thẳng, không bo góc. `overflow: hidden` cắt phần ảnh tràn ra ngoài
+    // header; nền đỏ lộ ra khi ảnh chưa tải xong.
     outer: {
       backgroundColor: c.red,
       overflow: "hidden",
-    },
-    timeIcon: {
-      marginRight: 4,
-    },
-    bottomSpacer: {
-      height: 20,
-    },
-    deco1: {
-      position: "absolute",
-      width: 160,
-      height: 160,
-      borderRadius: 80,
-      backgroundColor: "rgba(255,255,255,0.08)",
-      top: -50,
-      right: -40,
-    },
-    deco2: {
-      position: "absolute",
-      width: 100,
-      height: 100,
-      borderRadius: 50,
-      backgroundColor: "rgba(255,255,255,0.06)",
-      top: 30,
-      right: 60,
-    },
-    deco3: {
-      position: "absolute",
-      width: 80,
-      height: 80,
-      borderRadius: 40,
-      backgroundColor: "rgba(0,0,0,0.06)",
-      bottom: 20,
-      left: -20,
+      paddingBottom: HEADER_RED_EDGE,
     },
 
     topBar: {
@@ -323,36 +211,29 @@ const makeStyles = (c: AppColors) =>
       alignItems: "center",
       justifyContent: "space-between",
       paddingHorizontal: 16,
-      paddingTop: 10,
-      paddingBottom: 2,
+      // Đệm dưới 9 + dải đỏ 3 = 12 như header cũ: hàng cao 64, nội dung
+      // Trang chủ không bị dời.
+      paddingTop: 8,
+      paddingBottom: 9,
     },
-    logoWrap: {
-      backgroundColor: c.surface,
-      borderRadius: 50,
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      shadowColor: c.shadow,
-      shadowOpacity: 0.12,
-      shadowRadius: 6,
-      shadowOffset: { width: 0, height: 2 },
-      elevation: 3,
-      overflow: "hidden",
-    },
-    logo: { width: 90, height: 34 },
+    // Logo hiện nguyên hình kèm nền trắng của file (tỷ lệ 2560×1810), không
+    // khung — như màn Đăng nhập / Cài đặt. Cao 44 bằng viên logo cũ.
+    logo: { width: 62, height: 44 },
     topActions: {
       flexDirection: "row",
       alignItems: "center",
       gap: 6,
     },
+    // Kính tối trên nền ảnh (kính trắng cũ chìm vào mảng trời sáng).
     iconBtn: {
       width: 38,
       height: 38,
       borderRadius: 12,
-      backgroundColor: "rgba(255,255,255,0.18)",
+      backgroundColor: "rgba(0,0,0,0.25)",
       alignItems: "center",
       justifyContent: "center",
       borderWidth: 1,
-      borderColor: "rgba(255,255,255,0.22)",
+      borderColor: "rgba(255,255,255,0.28)",
     },
     // Chuông và nút Việc cần xử lý dùng chung kiểu số để hàng nút một kiểu.
     countBadge: {
@@ -374,58 +255,5 @@ const makeStyles = (c: AppColors) =>
       lineHeight: 12,
       fontWeight: "800",
       color: c.red,
-    },
-
-    greetRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingHorizontal: 18,
-      marginTop: 14,
-      marginBottom: 3,
-    },
-    greetLeft: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 6,
-    },
-    greetIconWrap: {
-      width: 22,
-      height: 22,
-      borderRadius: 7,
-      backgroundColor: "rgba(255,255,255,0.18)",
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    greetText: {
-      fontSize: 13,
-      fontWeight: "600",
-      color: "rgba(255,255,255,0.9)",
-      letterSpacing: 0.2,
-    },
-    timePill: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: "rgba(0,0,0,0.18)",
-      borderRadius: 12,
-      paddingHorizontal: 9,
-      paddingVertical: 4,
-      borderWidth: 1,
-      borderColor: "rgba(255,255,255,0.15)",
-    },
-    timeText: {
-      fontSize: 12,
-      fontWeight: "700",
-      color: "#fff",
-      letterSpacing: 0.5,
-    },
-
-    dateText: {
-      fontSize: 11,
-      color: "rgba(255,255,255,0.65)",
-      fontWeight: "400",
-      paddingHorizontal: 18,
-      marginBottom: 8,
-      letterSpacing: 0.2,
     },
   });

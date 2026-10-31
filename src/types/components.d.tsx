@@ -214,6 +214,29 @@ export type HeaderOptionsProps = {
    * trống thì không có nút.
    */
   helpTopicId?: GuideTopicId;
+  /**
+   * Màn gốc của một tab: logo ở chỗ nút quay lại, chuông thông báo ở góc phải
+   * như header Trang chủ.
+   */
+  tabRoot?: boolean;
+  /**
+   * Nhãn nhỏ trên tiêu đề, thay nhãn đoán theo chữ trong tiêu đề. "today" là
+   * thứ + ngày hôm nay, tự sang ngày mới.
+   */
+  badge?: HeaderBadge;
+};
+
+export type HeaderBadge =
+  | { label: string; icon: React.ComponentProps<typeof Ionicons>["name"] }
+  | "today";
+
+/**
+ * Nút kính lúp trên header, màn tự gắn qua `setOptions({ headerSearch })` (xem
+ * `useHeaderSearch`). `active` khi ô tìm đang mở dưới header.
+ */
+export type HeaderSearchOption = {
+  active: boolean;
+  onPress: () => void;
 };
 
 export interface ViewerProps {
@@ -351,6 +374,8 @@ export interface CameraCellProps {
   cam: any;
   idx: number;
   isActive: boolean;
+  /** Viền đỏ ô đang chọn — tắt khi lưới chỉ có một camera, không có gì để chọn. */
+  showActiveBorder?: boolean;
   isPaused: boolean;
   isWebViewActive: boolean;
   isSnapshotActive?: boolean;

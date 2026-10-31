@@ -11,9 +11,13 @@ import type { FlowRecord, FlowThongTin, StackNavigation, StackRoute } from "../.
 import { AppColors, useAppColors, useStyles } from "../../../utils/helpers/colors";
 import { elevation } from "../../../utils/helpers/tokens";
 import StatusBadge from "../shared/components/StatusBadge";
+import WorkflowActionToolbar, {
+  WorkflowToolbarAction,
+} from "../shared/components/WorkflowActionToolbar";
 import WorkflowButton from "../shared/components/WorkflowButton";
 import WorkflowDetailFields from "../shared/components/WorkflowDetailFields";
 import WorkflowDetailSkeleton from "../shared/components/WorkflowDetailSkeleton";
+import WorkflowHeroLinks from "../shared/components/WorkflowHeroLinks";
 import { useWorkflowMe } from "../shared/useWorkflowMe";
 import { useWorkflowPermissions } from "../shared/useWorkflowPermissions";
 import {
@@ -55,7 +59,12 @@ export default function FlowDetailScreen() {
   const route = useRoute<StackRoute<"FlowChiTiet">>();
   const { nameClass } = route.params;
   const id = Number(route.params.id);
-  const { meta, errorMessage: metaError, loading: metaLoading } = useFlowMeta(nameClass);
+  const {
+    meta,
+    errorMessage: metaError,
+    loading: metaLoading,
+    reload: reloadMeta,
+  } = useFlowMeta(nameClass);
   const perms = useWorkflowPermissions(nameClass);
   const { me, loading: meLoading } = useWorkflowMe();
   const markChanged = useMarkWorkflowChanged();
@@ -97,7 +106,12 @@ export default function FlowDetailScreen() {
         setErrorMessage(null);
         setInfo(infos[0] ?? null);
       } catch (err) {
-        setErrorMessage(getWorkflowErrorMessage(err, "Không tải được phiếu."));
+        const message = getWorkflowErrorMessage(err, "Không tải được phiếu.");
+        setErrorMessage(message);
+        // Kéo làm mới hỏng mà phiếu đang hiện: lỗi trên chỉ hiện khi chưa có phiếu.
+        if (mode === "refresh" && recordRef.current) {
+          showAppToast({ message: "Không làm mới được", detail: message, tone: "warning" });
+        }
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -110,10 +124,18 @@ export default function FlowDetailScreen() {
     load();
   }, [load]);
 
+  /** "Thử lại" ở màn lỗi: nạp lại phiếu, cả metadata nếu lượt trước hỏng. */
+  const retry = () => {
+    setLoading(true);
+    setErrorMessage(null);
+    if (metaError) reloadMeta();
+    load();
+  };
+
   // Im lặng: bật vòng xoay bằng code lúc quay lại màn làm iOS kẹt một khoảng trống.
   useReloadOnWorkflowChange(() => load("silent"));
 
-  // Đóng màn Bình luận / Đính kèm → số trên 2 nút.
+  // Đóng màn Bình luận / Đính kèm → số trên dải đáy thẻ đầu.
   useOnWorkflowInfoStale((apiBase) => {
     if (apiBase !== nameClass) return;
     flowThongTin(nameClass, [id])
@@ -155,6 +177,7 @@ export default function FlowDetailScreen() {
             setDeleting(true);
             await flowDelete(nameClass, [id]);
             markChanged();
+            showAppToast({ message: `Đã xoá phiếu ${phieuLabel}` });
             navigation.goBack();
           } catch (err) {
             AppAlert.alert("Không xoá được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
@@ -176,11 +199,51 @@ export default function FlowDetailScreen() {
         iconName="alert-circle-outline"
         title="Không mở được phiếu"
         subtitle={errorMessage ?? metaError ?? undefined}
+        actionLabel="Thử lại"
+        onActionPress={retry}
       />
     );
   }
 
   const tinhTrang = getTinhTrangOption(getFlowTinhTrang(record));
+
+  // Cùng thanh nút phụ với màn Chi tiết công việc / kế hoạch: icon trên chữ
+  // dưới, một hàng, Xoá đỏ. Nút duyệt vẫn ghim dưới đáy màn.
+  const toolbarActions: WorkflowToolbarAction[] = [];
+  if (actions.quyTrinh) {
+    toolbarActions.push({
+      key: "quyTrinh",
+      icon: "git-network-outline",
+      label: "Quy trình",
+      onPress: () => navigation.navigate("FlowTienTrinh", { nameClass, id, item: record }),
+    });
+  }
+  if (actions.sua) {
+    toolbarActions.push({
+      key: "sua",
+      icon: "create-outline",
+      label: "Sửa",
+      onPress: () => navigation.navigate("FlowForm", { nameClass, mode: "edit", item: record }),
+    });
+  }
+  if (actions.nhanBan) {
+    toolbarActions.push({
+      key: "nhanBan",
+      icon: "copy-outline",
+      label: "Nhân bản",
+      onPress: () => navigation.navigate("FlowForm", { nameClass, mode: "clone", item: record }),
+    });
+  }
+  if (actions.xoa) {
+    toolbarActions.push({
+      key: "xoa",
+      icon: "trash-outline",
+      label: "Xoá",
+      tone: "danger",
+      loading: deleting,
+      onPress: confirmDelete,
+    });
+  }
 
   return (
     <View style={styles.container}>
@@ -202,81 +265,51 @@ export default function FlowDetailScreen() {
           </View>
           <Text style={styles.phieuLabel}>{phieuLabel}</Text>
           {info?.buocHienTai ? (
-            <View style={styles.stepRow}>
-              <Ionicons name="git-commit-outline" size={16} color={info.isToiLuot ? c.red : c.textSub} />
-              <Text style={[styles.stepText, info.isToiLuot && styles.stepMine]}>
+            <View style={styles.heroLine}>
+              <Ionicons name="git-commit-outline" size={15} color={info.isToiLuot ? c.red : c.textSub} />
+              <Text style={[styles.heroText, info.isToiLuot && styles.stepMine]}>
                 Bước hiện tại: {info.buocHienTai}
               </Text>
             </View>
           ) : null}
+
+          <WorkflowHeroLinks
+            links={[
+              {
+                key: "binhLuan",
+                icon: "chatbubble-ellipses-outline",
+                label: "Bình luận",
+                count: info?.soBinhLuan ?? 0,
+                onPress: () =>
+                  navigation.navigate("WorkflowBinhLuan", {
+                    apiBase: nameClass,
+                    idHoSo: id,
+                    // Ai xem được phiếu thì bình luận được.
+                    canSend: true,
+                  }),
+              },
+              {
+                key: "file",
+                icon: "attach-outline",
+                label: "Đính kèm",
+                count: info?.soFile ?? 0,
+                disabled: !actions.dinhKem,
+                onPress: () =>
+                  navigation.navigate("WorkflowFile", {
+                    apiBase: nameClass,
+                    idHoSo: id,
+                    canEdit: actions.suaFile,
+                  }),
+              },
+            ]}
+          />
         </View>
 
-        <View style={styles.actions}>
-          <WorkflowButton
-            compact
-            variant="outline"
-            icon="git-network-outline"
-            label="Quy trình"
-            disabled={!actions.quyTrinh}
-            onPress={() => navigation.navigate("FlowTienTrinh", { nameClass, id, item: record })}
-          />
-          <WorkflowButton
-            compact
-            variant="outline"
-            icon="chatbubble-ellipses-outline"
-            label={`Bình luận (${info?.soBinhLuan ?? 0})`}
-            onPress={() =>
-              navigation.navigate("WorkflowBinhLuan", {
-                apiBase: nameClass,
-                idHoSo: id,
-                // Ai xem được phiếu thì bình luận được.
-                canSend: true,
-              })
-            }
-          />
-          <WorkflowButton
-            compact
-            variant="outline"
-            icon="attach-outline"
-            label={`Đính kèm (${info?.soFile ?? 0})`}
-            disabled={!actions.dinhKem}
-            onPress={() =>
-              navigation.navigate("WorkflowFile", {
-                apiBase: nameClass,
-                idHoSo: id,
-                canEdit: actions.suaFile,
-              })
-            }
-          />
-          {actions.sua ? (
-            <WorkflowButton
-              compact
-              variant="neutral"
-              icon="create-outline"
-              label="Sửa"
-              onPress={() => navigation.navigate("FlowForm", { nameClass, mode: "edit", item: record })}
-            />
-          ) : null}
-          {actions.nhanBan ? (
-            <WorkflowButton
-              compact
-              variant="neutral"
-              icon="copy-outline"
-              label="Nhân bản"
-              onPress={() => navigation.navigate("FlowForm", { nameClass, mode: "clone", item: record })}
-            />
-          ) : null}
-          {actions.xoa ? (
-            <WorkflowButton
-              compact
-              variant="neutral"
-              icon="trash-outline"
-              label="Xoá"
-              loading={deleting}
-              onPress={confirmDelete}
-            />
-          ) : null}
-        </View>
+        {toolbarActions.length ? (
+          <View style={styles.toolbar}>
+            <WorkflowActionToolbar actions={toolbarActions} />
+          </View>
+        ) : null}
 
         {detailFields.length ? <WorkflowDetailFields item={record} fields={detailFields} /> : null}
       </ScrollView>
@@ -370,26 +403,33 @@ const makeStyles = (c: AppColors) =>
       fontWeight: "700",
       color: c.accent,
     },
+    // Tiêu đề + dòng phụ cùng số đo thẻ đầu màn Chi tiết công việc.
     phieuLabel: {
       fontSize: 18,
       fontWeight: "700",
       color: c.text,
-      marginTop: 6,
+      marginTop: 8,
+      marginBottom: 6,
     },
-    stepRow: {
+    heroLine: {
       flexDirection: "row",
       alignItems: "center",
       gap: 6,
-      marginTop: 10,
+      marginTop: 4,
     },
-    stepText: {
+    heroText: {
       flex: 1,
-      fontSize: 14,
+      fontSize: 13,
       color: c.textSecondary,
     },
     stepMine: {
       color: c.red,
       fontWeight: "600",
+    },
+    // Thanh nút tự chừa 2 (sát thanh tab ở hai màn kia); ở đây field nằm ngay
+    // dưới nên chừa thêm cho bằng khoảng dưới thẻ đầu.
+    toolbar: {
+      marginBottom: 8,
     },
     // Cùng kiểu thanh "Duyệt nhiều" của danh sách phiếu, nhưng nằm trong luồng
     // layout (dưới ScrollView) nên nội dung không bị che.
@@ -405,11 +445,5 @@ const makeStyles = (c: AppColors) =>
     },
     approveHalf: {
       flexBasis: "45%",
-    },
-    actions: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: 6,
-      marginBottom: 12,
     },
   });

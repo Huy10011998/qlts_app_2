@@ -10,6 +10,7 @@ import {
 } from "@react-native-firebase/messaging";
 import { log, warn } from "../../utils/Logger";
 import { canAccessAppNavigator } from "../../navigation/shared/rootNavigationHelpers";
+import { store } from "../../store";
 import {
   emitThongBaoPush,
   handleThongBaoBadgeDismissed,
@@ -17,12 +18,16 @@ import {
   showThongBaoInTray,
 } from "../../services/notifications/thongBaoPush";
 import {
+  canViewCameraPush,
+  clearDisplayedNotifications,
   clearPendingPushTap,
   displayPushNotification,
   drainPendingPushTap,
   ensureNotificationChannels,
   handlePushTap,
   hasPendingPushTap,
+  isCameraAiPush,
+  isPendingPushTapWaitingForPermissions,
   normalizeRemoteMessage,
   shouldDisplayLocally,
   stopPushTokenRetries,
@@ -39,6 +44,11 @@ type UsePushNotificationsParams = {
 /** Số lần thử điều hướng lại khi NavigationContainer chưa kịp mount AppNavigator. */
 const DRAIN_MAX_ATTEMPTS = 8;
 const DRAIN_RETRY_DELAY_MS = 300;
+/**
+ * Noti camera còn chờ quyền (gọi API sau khi vào AppNavigator) thì chờ lâu hơn,
+ * ~10 giây — mạng chậm thì 2,4 giây của vòng thường không đủ.
+ */
+const DRAIN_PERMISSION_MAX_ATTEMPTS = Math.ceil(10000 / DRAIN_RETRY_DELAY_MS);
 
 const toStringRecord = (
   data: Record<string, unknown> | undefined,
@@ -101,6 +111,18 @@ export function usePushNotifications({
         if (isThongBaoPush(message.data)) {
           showThongBaoInTray(message);
           emitThongBaoPush({ kind: "foreground", data: message.data });
+          return;
+        }
+
+        // Tài khoản không có tính năng Camera: BE vẫn gửi, app không hiện. Quyền
+        // chưa nạp (null) thì cứ hiện — thà dư còn hơn lỡ báo cháy khói.
+        if (
+          isCameraAiPush(message.data) &&
+          canViewCameraPush(store.getState().permission) === false
+        ) {
+          log("[Push] Không có quyền xem Camera → bỏ qua noti camera", {
+            id: message.id,
+          });
           return;
         }
 
@@ -238,7 +260,10 @@ export function usePushNotifications({
       if (!hasPendingPushTap()) return;
 
       attempt += 1;
-      if (attempt >= DRAIN_MAX_ATTEMPTS) {
+      const maxAttempts = isPendingPushTapWaitingForPermissions()
+        ? DRAIN_PERMISSION_MAX_ATTEMPTS
+        : DRAIN_MAX_ATTEMPTS;
+      if (attempt >= maxAttempts) {
         warn("[Push] Không điều hướng được thông báo đang chờ, bỏ qua");
         clearPendingPushTap();
         return;
@@ -273,6 +298,7 @@ export function usePushNotifications({
       wasRegisteredRef.current = false;
       stopPushTokenRetries();
       clearPendingPushTap();
+      clearDisplayedNotifications();
       unregisterPushToken();
     }
   }, [authReady, isAuthenticated, sessionUnlocked]);

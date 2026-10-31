@@ -2,10 +2,10 @@ import React from "react";
 import {
   Alert,
   AppState,
+  Linking,
   NativeModules,
   Platform,
   StyleSheet,
-  Text,
   TextInput,
 } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -23,6 +23,7 @@ import LoginScreen from "../src/screens/Auth/LoginScreen";
 const mockReadFaceIdEnabled = jest.fn();
 const mockReadStoredAuthTokens = jest.fn();
 const mockReadStoredAuthUsername = jest.fn();
+const mockReadStoredLoginProfile = jest.fn();
 const mockReadStoredLocalNetworkPermission = jest.fn();
 const mockRefreshStoredLocalNetworkPermission = jest.fn();
 const mockCheckServerReachability = jest.fn();
@@ -45,6 +46,7 @@ jest.mock("../src/services/auth/faceIdFlag", () => ({
 jest.mock("../src/context/authStorage", () => ({
   readStoredAuthTokens: () => mockReadStoredAuthTokens(),
   readStoredAuthUsername: () => mockReadStoredAuthUsername(),
+  readStoredLoginProfile: () => mockReadStoredLoginProfile(),
   writeStoredAuthUsername: jest.fn(),
 }));
 
@@ -128,13 +130,6 @@ const render = async () => {
   return tree!;
 };
 
-const texts = (tree: ReactTestRenderer.ReactTestRenderer) =>
-  tree.root
-    .findAllByType(Text)
-    .map((node) => node.props.children)
-    .flat()
-    .filter((child) => typeof child === "string");
-
 /* Nút Face ID chỉ có icon (không có chữ), tìm theo nhãn trợ năng. Luôn hiện
    trên iOS; chưa bật Face ID thì mờ đi chứ không ẩn. */
 const faceIdButton = (tree: ReactTestRenderer.ReactTestRenderer) =>
@@ -162,6 +157,7 @@ beforeEach(() => {
   jest.spyOn(console, "log").mockImplementation(() => {});
   getGenericPassword.mockResolvedValue(false);
   mockReadStoredAuthUsername.mockResolvedValue(null);
+  mockReadStoredLoginProfile.mockResolvedValue(null);
   // Chặn ở bước kiểm máy chủ: đủ để biết luồng Face ID đã chạy mà không phải
   // giả lập cả phần khôi phục phiên.
   mockCheckServerReachability.mockResolvedValue({ canReachServer: false });
@@ -307,8 +303,9 @@ describe("LoginScreen – vân tay Android", () => {
     const tree = await render();
     await press(buttonLabelled(tree, "Đăng nhập bằng khoá màn hình"));
 
-    expect(authenticate).toHaveBeenCalledTimes(1);
-    expect(authenticate.mock.calls[0][0]).toMatchObject({
+    // Lần 1 tự hỏi lúc mở, lần 2 do bấm nút.
+    expect(authenticate).toHaveBeenCalledTimes(2);
+    expect(authenticate.mock.calls[1][0]).toMatchObject({
       biometric: false,
       deviceLock: true,
     });
@@ -417,7 +414,8 @@ describe("LoginScreen – vân tay Android", () => {
     expect(mockCheckServerReachability).not.toHaveBeenCalled();
   });
 
-  it("đã bật và còn phiên thì không tự hỏi, bấm icon mới hỏi", async () => {
+  it("đã bật và còn phiên thì tự hỏi một lần như iOS, huỷ thì bấm icon hỏi lại", async () => {
+    mockCheckServerReachability.mockResolvedValue({ canReachServer: true });
     setup({
       faceIdEnabled: true,
       tokens: { token: "access", refreshToken: "refresh" },
@@ -428,10 +426,22 @@ describe("LoginScreen – vân tay Android", () => {
 
     expect(button).toBeTruthy();
     expect(StyleSheet.flatten(button.props.style)?.opacity ?? 1).toBe(1);
-    expect(mockCheckServerReachability).not.toHaveBeenCalled();
+    expect(authenticate).toHaveBeenCalledTimes(1);
 
     await press(button);
-    expect(mockCheckServerReachability).toHaveBeenCalledTimes(1);
+    expect(authenticate).toHaveBeenCalledTimes(2);
+  });
+
+  it("không tự hỏi khi không còn token", async () => {
+    setup({
+      faceIdEnabled: true,
+      tokens: { token: null, refreshToken: null },
+    });
+
+    await render();
+
+    expect(mockCheckServerReachability).not.toHaveBeenCalled();
+    expect(authenticate).not.toHaveBeenCalled();
   });
 });
 
@@ -449,19 +459,82 @@ describe("LoginScreen – tài khoản và mạng nội bộ", () => {
     expect(usernameInput.props.value).toBe("nguyenvana");
   });
 
-  it("vẫn hiện thẻ mạng nội bộ khi đã cấp quyền", async () => {
+  /* Kiểu VCB: máy nhớ họ tên của đúng tài khoản đang điền sẵn thì chào bằng
+     tên, ẩn ô Tài khoản. Đổi tài khoản thì tự đăng xuất (xoá họ tên đã lưu). */
+
+  const allTexts = (tree: ReactTestRenderer.ReactTestRenderer) =>
+    tree.root
+      .findAll((node) => typeof node.props.children === "string")
+      .map((node) => node.props.children);
+
+  it("máy nhớ họ tên thì chào bằng tên và chỉ hỏi mật khẩu", async () => {
+    setup({
+      faceIdEnabled: false,
+      tokens: { token: null, refreshToken: null },
+    });
+    mockReadStoredAuthUsername.mockResolvedValue("nguyenvana");
+    mockReadStoredLoginProfile.mockResolvedValue({
+      userName: "nguyenvana",
+      name: "Nguyễn Văn An",
+      avatar: null,
+    });
+
+    const tree = await render();
+    const inputs = tree.root.findAllByType(TextInput);
+
+    expect(allTexts(tree)).toContain("NGUYỄN VĂN AN");
+    expect(allTexts(tree)).toContain("VA");
+    expect(inputs).toHaveLength(1);
+    expect(inputs[0].props.placeholder).toBe("Mật khẩu");
+  });
+
+  it("họ tên lưu của tài khoản khác thì không chào bằng tên", async () => {
+    setup({
+      faceIdEnabled: false,
+      tokens: { token: null, refreshToken: null },
+    });
+    mockReadStoredAuthUsername.mockResolvedValue("tranthib");
+    mockReadStoredLoginProfile.mockResolvedValue({
+      userName: "nguyenvana",
+      name: "Nguyễn Văn An",
+    });
+
+    const tree = await render();
+
+    expect(tree.root.findAllByType(TextInput)).toHaveLength(2);
+    expect(allTexts(tree)).not.toContain("NGUYỄN VĂN AN");
+  });
+
+  /* Mạng nội bộ là nút tròn góc trên (icon + chấm màu), trạng thái bằng chữ
+     chỉ nằm ở nhãn trợ năng — bấm không hiện hộp thông báo. */
+  const networkButton = (
+    tree: ReactTestRenderer.ReactTestRenderer,
+    label: string,
+  ) =>
+    tree.root.findAll(
+      (node) =>
+        typeof node.type !== "string" &&
+        node.props.accessibilityLabel === `Mạng nội bộ: ${label}` &&
+        typeof node.props.onPress === "function",
+    )[0];
+
+  it("đã cấp quyền thì nút mạng nội bộ chỉ để xem, không bấm được", async () => {
     setup({
       faceIdEnabled: false,
       tokens: { token: null, refreshToken: null },
     });
 
     const tree = await render();
+    const button = networkButton(tree, "Đã cấp quyền");
 
-    expect(texts(tree)).toContain("Mạng nội bộ");
-    expect(texts(tree)).toContain("Đã cấp quyền");
+    expect(button).toBeTruthy();
+    expect(button.props.disabled).toBe(true);
   });
 
-  it("nhắc mạng nội bộ khi chưa cấp quyền", async () => {
+  it("chưa cấp quyền thì bấm mở thẳng Cài đặt, không hiện hộp thông báo", async () => {
+    const openSettings = jest
+      .spyOn(Linking, "openSettings")
+      .mockResolvedValue(undefined);
     setup({
       faceIdEnabled: false,
       tokens: { token: null, refreshToken: null },
@@ -469,8 +542,13 @@ describe("LoginScreen – tài khoản và mạng nội bộ", () => {
     });
 
     const tree = await render();
+    const button = networkButton(tree, "Chưa cấp quyền");
 
-    expect(texts(tree)).toContain("Mạng nội bộ");
-    expect(texts(tree)).toContain("Chưa cấp quyền");
+    expect(button.props.disabled).toBe(false);
+    await ReactTestRenderer.act(async () => {
+      button.props.onPress();
+    });
+    expect(openSettings).toHaveBeenCalledTimes(1);
+    expect(Alert.alert).not.toHaveBeenCalled();
   });
 });

@@ -14,6 +14,7 @@ import {
   useStyles,
 } from "../../../utils/helpers/colors";
 import { useHomeCardChrome } from "./homeBlockTone";
+import GroupIconMarker from "./GroupIconMarker";
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 const localStyles = StyleSheet.create({
@@ -54,8 +55,8 @@ export default function HomeMenuItemCard({
   }, [index, scaleAnim]);
 
   // Báo cáo ghim ra Trang chủ dùng chung hình dạng card với chức năng (cùng
-  // 4 cột, cùng chiều cao) để không phá lưới; chỉ màu nhấn tím và icon tài liệu
-  // cho biết đó là báo cáo.
+  // 4 cột, cùng chiều cao) để không phá lưới; chỉ màu nhấn tím và chấm biểu đồ
+  // ở góc icon cho biết đó là báo cáo.
   const accentByGroup = {
     vehicle: { iconBg: colors.blueSurface, color: c.sky },
     report: { iconBg: colors.violetSurface, color: c.violet },
@@ -92,6 +93,9 @@ export default function HomeMenuItemCard({
       >
         <View style={[styles.iconWrap, { backgroundColor: theme.iconBg }]}>
           <Ionicons name={iconName} color={theme.color} size={22} />
+          {/* Trang chủ chỉ gắn chấm cho báo cáo (để không lẫn với chính chức
+              năng cùng icon); màn Chức năng thì ô nào cũng có. */}
+          {homeGroup === "report" ? <GroupIconMarker group="report" /> : null}
           {notificationCount ? (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>

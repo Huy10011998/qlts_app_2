@@ -1,6 +1,8 @@
 import {
   buildCameraAiParams,
+  canViewCameraPush,
   getCameraAiGroupId,
+  getCameraAiOpenAction,
   isCameraAiPush,
 } from "../src/services/notifications/cameraPush";
 import { normalizeRemoteMessage } from "../src/services/notifications/payload";
@@ -54,6 +56,91 @@ describe("isCameraAiPush", () => {
   });
 });
 
+describe("canViewCameraPush", () => {
+  it("cho mở khi có quyền xem Camera, không phân biệt hoa thường", () => {
+    expect(
+      canViewCameraPush({ permissions: ["view.camera"], loaded: true }),
+    ).toBe(true);
+  });
+
+  it("tài khoản toàn quyền luôn mở được", () => {
+    expect(canViewCameraPush({ permissions: ["Group.1"], loaded: true })).toBe(
+      true,
+    );
+  });
+
+  it("chặn tài khoản không có tính năng Camera", () => {
+    expect(
+      canViewCameraPush({ permissions: ["View.Workflow"], loaded: true }),
+    ).toBe(false);
+  });
+
+  it("chỉ có quyền tạm dừng noti camera thì vẫn chưa được xem", () => {
+    expect(
+      canViewCameraPush({
+        permissions: ["Class.Camera.NotiCameraMobile"],
+        loaded: true,
+      }),
+    ).toBe(false);
+  });
+
+  it("trả null khi quyền chưa nạp — chưa được chặn", () => {
+    expect(
+      canViewCameraPush({ permissions: [], loaded: false }),
+    ).toBeNull();
+  });
+});
+
+describe("getCameraAiOpenAction", () => {
+  const moTuNoti = (iD_Camera: number) => ({
+    name: "CameraListGrid",
+    params: buildCameraAiParams({
+      ...CAMERA_AI_DATA,
+      ID_Camera: String(iD_Camera),
+    })!,
+  });
+
+  it("chồng màn mới lên lưới 16 cam, không thay params của lưới", () => {
+    const luoi16 = {
+      name: "CameraListGrid",
+      params: {
+        zoneName: "Kho lạnh",
+        cameras: Array.from({ length: 16 }, (_, i) => ({
+          iD_Camera: 2568 + i,
+          iD_Camera_Ma: `CAM${i}`,
+          iD_Camera_MoTa: `CAM ${i}`,
+        })),
+      },
+    };
+    expect(getCameraAiOpenAction(luoi16, 2568)).toBe("push");
+  });
+
+  it("chồng màn mới khi đang ở màn khác hoặc chưa có màn nào", () => {
+    expect(getCameraAiOpenAction({ name: "Home" }, 2568)).toBe("push");
+    expect(getCameraAiOpenAction(undefined, 2568)).toBe("push");
+  });
+
+  it("khu vực chỉ có 1 cam mở tay vẫn được giữ lại phía dưới", () => {
+    const motCamMoTay = {
+      name: "CameraListGrid",
+      params: {
+        cameras: [
+          { iD_Camera: 99, iD_Camera_Ma: "CAM99", iD_Camera_MoTa: "CAM 99" },
+        ],
+      },
+    };
+    expect(getCameraAiOpenAction(motCamMoTay, 2568)).toBe("push");
+  });
+
+  it("đang xem đúng camera đó từ noti trước thì đứng yên", () => {
+    expect(getCameraAiOpenAction(moTuNoti(2568), 2568)).toBe("stay");
+  });
+
+  it("đang xem camera khác từ noti trước thì thay màn đó", () => {
+    expect(getCameraAiOpenAction(moTuNoti(2568), 3001)).toBe("replace");
+  });
+});
+
 describe("buildCameraAiParams", () => {
   it("dựng params live view từ payload BE", () => {
     expect(buildCameraAiParams(CAMERA_AI_DATA)).toEqual({
@@ -66,6 +153,7 @@ describe("buildCameraAiParams", () => {
           iD_Camera_MoTa: "CAM 24-CLF24",
         },
       ],
+      fromPush: true,
     });
   });
 

@@ -70,11 +70,30 @@ const PERIOD_TAB_LABELS: Record<PeriodTab, string> = {
 const NO_VALUE = "—";
 
 /**
- * Màu hai cột của biểu đồ so sánh sản lượng. Khai báo ở đây vì cả biểu đồ (fill
- * của Svg) và chú giải (style của chấm tròn) đều phải dùng đúng một mã màu.
+ * Bảng màu chung của cả màn, theo NGUỒN điện như ba vòng của hero: điện mặt trời
+ * xanh lá (Sản xuất, Tự dùng, Từ mặt trời), nhà máy xanh dương (Tiêu thụ), lưới
+ * điện cam (Mua từ lưới, Phát lên lưới). Thanh, donut, biểu đồ và chấm chú giải
+ * đều lấy từ đây — trước đây mỗi khối một bộ nên "Từ mặt trời" lúc xanh lá lúc
+ * xanh dương ngay trên cùng một màn.
  */
-const COMPARE_PREVIOUS_YEAR_COLOR = "#4aa3e0";
-const COMPARE_CURRENT_YEAR_COLOR = "#8b5cf6";
+const SOLAR_SERIES_COLORS = {
+  solar: "#1baf7a",
+  /**
+   * "Tự dùng" trên biểu đồ gộp: cùng họ xanh lá nhưng đậm hơn, vì nó gần như
+   * trùng khít đường Sản xuất — cùng một màu thì nét đứt chìm mất.
+   */
+  solarDark: "#0b7550",
+  load: "#2a78d6",
+  grid: "#eb6834",
+} as const;
+
+/**
+ * Màu hai cột của biểu đồ so sánh sản lượng: năm nay là màu điện mặt trời, năm
+ * trước xám để làm nền. Khai báo ở đây vì cả biểu đồ (fill của Svg) và chú giải
+ * (style của chấm tròn) đều phải dùng đúng một mã màu.
+ */
+const COMPARE_PREVIOUS_YEAR_COLOR = "#9aa6b2";
+const COMPARE_CURRENT_YEAR_COLOR = SOLAR_SERIES_COLORS.solar;
 
 const hasNumber = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value);
@@ -770,16 +789,17 @@ type EnergyBarChartView = {
 
 /**
  * Màu các chuỗi trong biểu đồ cột. PHẢI trùng màu chấm chú giải đang dùng ở khối
- * này (`styles.productionDot`, `styles.consumptionDot`, `styles.selfDot`,
+ * này (`styles.productionDot`, `styles.loadDot`, `styles.selfDot`,
  * `styles.toGridDot`, `styles.fromSolarDot`) — chú giải khác màu cột thì người
  * xem không đối chiếu được.
  */
 const ENERGY_BAR_COLORS = {
-  production: "#2a78d6",
+  production: SOLAR_SERIES_COLORS.solar,
   /** Cột "Tiêu thụ" để nhạt vì cột "Tự dùng" vẽ đè lên trên. */
-  consumption: "#eb683499",
-  self: "#1baf7a",
-  grid: "#eb6834",
+  consumption: `${SOLAR_SERIES_COLORS.load}99`,
+  /** Phần "Tự dùng" phủ lên cột Tiêu thụ của biểu đồ gộp. */
+  self: SOLAR_SERIES_COLORS.solarDark,
+  grid: SOLAR_SERIES_COLORS.grid,
 };
 
 /**
@@ -865,13 +885,10 @@ const buildEnergyBarChart = (
               // cộng lại đúng bằng cột Sản xuất (hoặc Tiêu thụ) của mốc đó.
               stack: [
                 {
-                  // Phần dưới lấy đúng màu chấm chú giải của chính biểu đồ đó:
-                  // biểu đồ Sản xuất ghi "Tự dùng" bằng chấm `productionDot`,
-                  // còn biểu đồ Tiêu thụ ghi "Từ mặt trời" bằng `fromSolarDot`.
-                  color:
-                    kind === "production"
-                      ? ENERGY_BAR_COLORS.production
-                      : ENERGY_BAR_COLORS.self,
+                  // Phần dưới là điện mặt trời dùng tại nhà máy — "Tự dùng" của
+                  // biểu đồ Sản xuất, "Từ mặt trời" của biểu đồ Tiêu thụ — nên
+                  // cả hai đều màu điện mặt trời như chấm chú giải.
+                  color: ENERGY_BAR_COLORS.production,
                   value: scale(bucket.selfConsumption),
                 },
                 {
@@ -1290,19 +1307,60 @@ async function fetchPlantWeather(signal?: AbortSignal) {
   };
 }
 
-const usePlantWeather = () => {
-  const [weather, setWeather] = useState<PlantWeatherState>({
+/**
+ * Chưa có số của Open-Meteo thì đoán ngày / đêm theo giờ Việt Nam (nhà máy ở
+ * TP.HCM, mặt trời mọc ~5:30–6:10, lặn ~17:30–18:15 quanh năm). Không đoán thì
+ * hero coi như ban ngày: mở màn buổi tối thấy cảnh ngày vài giây rồi mới tối.
+ * Tính theo UTC+7 chứ không theo múi giờ của máy.
+ */
+const guessPlantIsDay = (now: Date = new Date()) => {
+  const hour = (now.getUTCHours() + 7) % 24;
+  return hour >= 6 && hour < 18;
+};
+
+/** Lần đọc thời tiết gần nhất còn dùng được để vẽ ngay khi mở lại màn. */
+const WEATHER_CACHE_MAX_AGE_MS = 30 * 60 * 1000;
+
+let lastPlantWeather:
+  | (Omit<PlantWeatherState, "isLoading"> & { fetchedAt: number })
+  | null = null;
+
+/**
+ * Trạng thái ban đầu của hero: lấy lần đọc gần nhất trong phiên (mở lại màn là
+ * đúng trời ngay, kể cả mưa / nhiệt độ), quá cũ hoặc chưa có thì chỉ đoán ngày /
+ * đêm theo giờ. API vẫn được gọi lại như thường để cập nhật.
+ */
+const getInitialPlantWeather = (now = Date.now()): PlantWeatherState => {
+  if (lastPlantWeather && now - lastPlantWeather.fetchedAt < WEATHER_CACHE_MAX_AGE_MS) {
+    const { fetchedAt: _fetchedAt, ...cached } = lastPlantWeather;
+    return { ...cached, isLoading: false };
+  }
+
+  return {
     temperature: null,
     weatherCode: undefined,
+    isDay: guessPlantIsDay(new Date(now)),
     isLoading: true,
-  });
+  };
+};
+
+const usePlantWeather = () => {
+  const [weather, setWeather] = useState<PlantWeatherState>(() =>
+    getInitialPlantWeather(),
+  );
 
   useEffect(() => {
     const controller = new AbortController();
 
     const loadWeather = async () => {
       try {
-        const nextWeather = await fetchPlantWeather(controller.signal);
+        const fetched = await fetchPlantWeather(controller.signal);
+        // Phản hồi thiếu `is_day` thì vẫn giữ phỏng đoán theo giờ.
+        const nextWeather = {
+          ...fetched,
+          isDay: fetched.isDay ?? guessPlantIsDay(),
+        };
+        lastPlantWeather = { ...nextWeather, fetchedAt: Date.now() };
         setWeather({ ...nextWeather, isLoading: false });
       } catch {
         setWeather((current) => ({
@@ -1356,8 +1414,10 @@ export {
   getEnergyDetailsTimeUnit,
   getPowerDetailsDate,
   getSolarContentWidth,
+  getInitialPlantWeather,
   getYearGridStart,
   getYearGridYears,
+  guessPlantIsDay,
   hasNumber,
   isCurrentPeriodRange,
   isDateInRange,
@@ -1381,6 +1441,7 @@ export {
   PERIOD_TABS,
   roundTo,
   SCREEN_WIDTH,
+  SOLAR_SERIES_COLORS,
   startOfDay,
   startOfMonth,
   toPercent,

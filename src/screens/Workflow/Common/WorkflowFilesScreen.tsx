@@ -4,6 +4,7 @@ import { useRoute } from "@react-navigation/native";
 
 import EmptyState from "../../../components/ui/EmptyState";
 import IsLoading from "../../../components/ui/IconLoading";
+import { useAutoReload } from "../../../hooks/useAutoReload";
 import {
   deleteWorkflowFile,
   getWorkflowFiles,
@@ -23,6 +24,7 @@ import { formatFileSizeKb, isImageFileName } from "../shared/workflowAttachments
 import { formatBeDate } from "../shared/workflowDate";
 import { getWorkflowErrorMessage } from "../shared/workflowErrors";
 import { AppAlert } from "../../../components/ui/AppAlert";
+import { showAppToast } from "../../../components/ui/AppToast";
 
 /**
  * File đính kèm của phiếu / công việc. Thêm, xoá khi được phép (phiếu: nháp
@@ -59,6 +61,9 @@ export default function WorkflowFilesScreen() {
     load();
   }, [load]);
 
+  // App vừa từ nền về: người khác có thể vừa thêm / xoá file.
+  useAutoReload(load);
+
   const upload = async (files: WorkflowPickedFile[]) => {
     setBusy(true);
     const failed: string[] = [];
@@ -69,10 +74,14 @@ export default function WorkflowFilesScreen() {
         failed.push(`- ${file.name}: ${getWorkflowErrorMessage(err, "lỗi tải lên")}`);
       }
     }
-    setBusy(false);
-    if (failed.length) AppAlert.alert("Có file chưa tải lên được", failed.join("\n"));
+    // Tắt vòng xoay sau khi danh sách đã nạp lại — không thì có lúc vòng xoay
+    // tắt mà file mới chưa hiện.
     await load();
+    setBusy(false);
     markChanged();
+    const uploaded = files.length - failed.length;
+    if (failed.length) AppAlert.alert("Có file chưa tải lên được", failed.join("\n"));
+    if (uploaded) showAppToast({ message: `Đã tải lên ${uploaded} file` });
   };
 
   const picker = useAttachmentPicker(upload, true);
@@ -89,6 +98,7 @@ export default function WorkflowFilesScreen() {
             await deleteWorkflowFile(apiBase, file.id);
             await load();
             markChanged();
+            showAppToast({ message: "Đã xoá file", detail: file.name });
           } catch (err) {
             AppAlert.alert("Không xoá được", getWorkflowErrorMessage(err, "Vui lòng thử lại."));
           } finally {

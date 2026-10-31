@@ -1,6 +1,7 @@
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import ReactNativeHapticFeedback from "react-native-haptic-feedback";
 import { HOME_BRAND_RED } from "./homeTheme";
 import type { HomeBlockTone } from "./homeBlockTone";
 import {
@@ -20,6 +21,17 @@ type HomeSectionTitleProps = {
   collapsed?: boolean;
   /** Có thì nhãn bấm được để thu gọn / mở khối. */
   onToggleCollapsed?: () => void;
+  /**
+   * Đè giữ nhãn: gập / mở TẤT CẢ khối (nhóm) trên màn. Không truyền thì đè giữ
+   * chỉ gập / mở khối này như chạm.
+   */
+  onLongPress?: () => void;
+  /**
+   * Khung chờ: vẽ mũi tên ^ / ˅ như nhãn gập được của màn thật, nhưng không
+   * bấm được. Thiếu nó thì lúc dữ liệu về nhãn dài ra một mũi tên, đường kẻ
+   * cạnh nhãn nhích theo.
+   */
+  showChevron?: boolean;
   action?: string;
   /** Icon Ionicons đứng trước chữ của nút hành động. */
   actionIconName?: string;
@@ -37,6 +49,8 @@ export default function HomeSectionTitle({
   iconName,
   collapsed = false,
   onToggleCollapsed,
+  onLongPress,
+  showChevron = false,
   action,
   actionIconName,
   onAction,
@@ -55,12 +69,27 @@ export default function HomeSectionTitle({
   // Đang thu gọn thì chú thích của nội dung (giờ số liệu, số mục đã ghim) không
   // còn gì để chú thích — thay bằng lời nhắc khối đang gập.
   const visibleNote = collapsed ? "Đã thu gọn" : note;
+  // Gập / mở cả trang là thay đổi lớn: rung một nhịp cho biết đã nhận lệnh.
+  const handleLongPress = onLongPress
+    ? () => {
+        try {
+          ReactNativeHapticFeedback.trigger("impactMedium", {
+            enableVibrateFallback: false,
+            ignoreAndroidSystemSettings: false,
+          });
+        } catch {
+          // Rung chỉ là gia vị, máy không hỗ trợ thì bỏ qua.
+        }
+        onLongPress();
+      }
+    : onToggleCollapsed;
 
   return (
     <View style={styles.row}>
       <TouchableOpacity
         style={[styles.tab, { backgroundColor: tone.label }]}
         onPress={onToggleCollapsed}
+        onLongPress={handleLongPress}
         disabled={!onToggleCollapsed}
         activeOpacity={0.8}
         hitSlop={{ top: 8, right: 4, bottom: 8, left: 4 }}
@@ -68,9 +97,9 @@ export default function HomeSectionTitle({
         accessibilityLabel={label}
         accessibilityHint={
           onToggleCollapsed
-            ? collapsed
-              ? "Chạm để mở khối"
-              : "Chạm để thu gọn khối"
+            ? `${collapsed ? "Chạm để mở khối" : "Chạm để thu gọn khối"}${
+                onLongPress ? ". Đè giữ để thu gọn hoặc mở tất cả" : ""
+              }`
             : undefined
         }
         accessibilityState={
@@ -81,7 +110,7 @@ export default function HomeSectionTitle({
         <Text style={styles.tabLabel} numberOfLines={1}>
           {label}
         </Text>
-        {onToggleCollapsed ? (
+        {onToggleCollapsed || showChevron ? (
           <Ionicons
             name={collapsed ? "chevron-down" : "chevron-up"}
             size={11}

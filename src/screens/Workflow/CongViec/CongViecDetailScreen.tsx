@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
+import { showAppToast } from "../../../components/ui/AppToast";
 import EmptyState from "../../../components/ui/EmptyState";
 import IsLoading from "../../../components/ui/IconLoading";
 import {
@@ -36,6 +37,7 @@ import WorkflowHeroLinks from "../shared/components/WorkflowHeroLinks";
 import WorkflowSection from "../shared/components/WorkflowSection";
 import WorkflowTabBar from "../shared/components/WorkflowTabBar";
 import { useWorkflowFileOpener } from "../shared/useWorkflowFileOpener";
+import { useWorkflowMe } from "../shared/useWorkflowMe";
 import { useWorkflowPermissions } from "../shared/useWorkflowPermissions";
 import {
   useMarkWorkflowChanged,
@@ -96,6 +98,7 @@ export default function CongViecDetailScreen() {
   const route = useRoute<StackRoute<"CongViecChiTiet">>();
   const id = Number(route.params?.id);
   const { canUpdate, canDelete, canInsert } = useWorkflowPermissions(CV_CONG_VIEC_NAME_CLASS);
+  const { me } = useWorkflowMe();
   const markChanged = useMarkWorkflowChanged();
   const fileOpener = useWorkflowFileOpener();
 
@@ -108,6 +111,8 @@ export default function CongViecDetailScreen() {
   const [tab, setTab] = useState<Tab>("thongTin");
   const [sheet, setSheet] = useState<Sheet>(null);
   const [deleting, setDeleting] = useState(false);
+  /** Đã hiện được công việc — kéo làm mới hỏng thì báo thay vì im lặng. */
+  const shownRef = useRef(false);
 
   const { fields, ready: fieldsReady } = useClassFields(CV_CONG_VIEC_NAME_CLASS);
 
@@ -124,6 +129,7 @@ export default function CongViecDetailScreen() {
         setInfo(infos[0] ?? null);
         setLichSu(history);
         setErrorMessage(null);
+        shownRef.current = true;
       } catch (err) {
         if (isWorkflowNotFound(err)) {
           AppAlert.alert("Thông báo", "Không tìm thấy công việc.", [
@@ -131,7 +137,13 @@ export default function CongViecDetailScreen() {
           ]);
           return;
         }
-        setErrorMessage(getWorkflowErrorMessage(err, "Không tải được công việc."));
+        const message = getWorkflowErrorMessage(err, "Không tải được công việc.");
+        // Màn vẫn giữ dữ liệu cũ: người dùng kéo làm mới thì phải biết là hỏng.
+        // Nạp ngầm sau thao tác ("silent") thì vẫn im lặng.
+        if (mode === "refresh" && shownRef.current) {
+          showAppToast({ message: "Không làm mới được", detail: message, tone: "warning" });
+        }
+        setErrorMessage(message);
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -157,7 +169,10 @@ export default function CongViecDetailScreen() {
 
   const congViec = data?.congViec;
   const actions = getCongViecActions(congViec, data?.quyen, { canUpdate, canDelete });
-  const isReadOnly = !!data && !Object.values(actions).some(Boolean);
+  // Như nút + ở danh sách / Lịch: chưa liên kết nhân viên thì không thêm được việc.
+  const canNhanBan = canInsert && !!me.iD_NhanVien;
+  // Chỉ xem = không còn nút nào bấm được, kể cả Nhân bản.
+  const isReadOnly = !!data && !Object.values(actions).some(Boolean) && !canNhanBan;
 
   const detailFields = useMemo(
     () => getDetailFields(fields, "true", CV_CARD_CUSTOM_FIELDS),
@@ -188,6 +203,7 @@ export default function CongViecDetailScreen() {
           try {
             setDeleting(true);
             await cvDelete([id]);
+            showAppToast({ message: "Đã xoá công việc", detail: congViec?.soCongViec ?? undefined });
             markChanged();
             navigation.goBack();
           } catch (err) {
@@ -250,7 +266,7 @@ export default function CongViecDetailScreen() {
       onPress: () => setSheet("doiChuTri"),
     });
   }
-  if (canInsert) {
+  if (canNhanBan) {
     // Mục 4b: chép sang form THÊM (không chép file, lịch sử, bình luận, định kỳ cũ).
     toolbarActions.push({
       key: "nhanBan",

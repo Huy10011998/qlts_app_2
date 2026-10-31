@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
+import { showAppToast } from "../../../components/ui/AppToast";
 import EmptyState from "../../../components/ui/EmptyState";
 import { cvGetList, cvThongTin } from "../../../services/data/congViecApi";
 import { khChiTiet, khXoa } from "../../../services/data/keHoachApi";
@@ -23,9 +24,13 @@ import { SqlOperator, TypeProperty } from "../../../utils/Enum";
 import { AppColors, useAppColors, useStyles } from "../../../utils/helpers/colors";
 import { elevation } from "../../../utils/helpers/tokens";
 import CongViecCard from "../CongViec/components/CongViecCard";
+import CongViecLichSuSheet from "../CongViec/components/CongViecLichSuSheet";
 import { CV_CARD_CUSTOM_FIELDS } from "../CongViec/congViecRules";
 import ProgressRing from "../shared/components/ProgressRing";
-import WorkflowButton from "../shared/components/WorkflowButton";
+import WorkflowActionToolbar, {
+  WorkflowToolbarAction,
+} from "../shared/components/WorkflowActionToolbar";
+import WorkflowFab from "../shared/components/WorkflowFab";
 import WorkflowDetailFields from "../shared/components/WorkflowDetailFields";
 import WorkflowDetailSkeleton from "../shared/components/WorkflowDetailSkeleton";
 import WorkflowSection from "../shared/components/WorkflowSection";
@@ -70,11 +75,14 @@ export default function KeHoachDetailScreen() {
   const [congViecError, setCongViecError] = useState<string | null>(null);
   /** cv-thong-tin của các việc đang hiện: số bình luận / file + cờ quyền. */
   const [cvInfos, setCvInfos] = useState<Record<number, CongViecThongTin>>({});
+  const [lichSuItem, setLichSuItem] = useState<CongViecItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("thongTin");
   const [deleting, setDeleting] = useState(false);
+  /** Đã hiện được kế hoạch — kéo làm mới hỏng thì báo thay vì im lặng. */
+  const shownRef = useRef(false);
 
   const { fields: khFields, ready: khFieldsReady } = useClassFields(CV_KE_HOACH_NAME_CLASS);
   const { fields: cvFields, ready: cvFieldsReady } = useClassFields(CV_CONG_VIEC_NAME_CLASS);
@@ -112,6 +120,7 @@ export default function KeHoachDetailScreen() {
         const infos = ids.length ? await cvThongTin(ids).catch(() => [] as CongViecThongTin[]) : [];
         setCvInfos(Object.fromEntries(infos.map((info) => [info.id, info])));
         setErrorMessage(null);
+        shownRef.current = true;
       } catch (err) {
         if (isWorkflowNotFound(err)) {
           AppAlert.alert("Thông báo", "Không tìm thấy kế hoạch.", [
@@ -119,7 +128,13 @@ export default function KeHoachDetailScreen() {
           ]);
           return;
         }
-        setErrorMessage(getWorkflowErrorMessage(err, "Không tải được kế hoạch."));
+        const message = getWorkflowErrorMessage(err, "Không tải được kế hoạch.");
+        // Màn vẫn giữ dữ liệu cũ: người dùng kéo làm mới thì phải biết là hỏng.
+        // Nạp ngầm sau thao tác ("silent") thì vẫn im lặng.
+        if (mode === "refresh" && shownRef.current) {
+          showAppToast({ message: "Không làm mới được", detail: message, tone: "warning" });
+        }
+        setErrorMessage(message);
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -163,7 +178,7 @@ export default function KeHoachDetailScreen() {
       return;
     }
 
-    AppAlert.alert("Xoá kế hoạch", "Xoá kế hoạch này?", [
+    AppAlert.alert("Xoá kế hoạch", "Xoá kế hoạch này? Thao tác không hoàn tác được.", [
       { text: "Huỷ", style: "cancel" },
       {
         text: "Xoá",
@@ -177,6 +192,7 @@ export default function KeHoachDetailScreen() {
               AppAlert.alert("Không xoá được", loi);
               return;
             }
+            showAppToast({ message: "Đã xoá kế hoạch", detail: keHoach?.soKeHoach ?? undefined });
             markChanged();
             navigation.goBack();
           } catch (err) {
@@ -212,149 +228,154 @@ export default function KeHoachDetailScreen() {
 
   const progress = getKeHoachProgress(keHoach);
   const canAddCongViec = cvPerm.canInsert && !!me.iD_NhanVien;
+  // Như các màn danh sách: nút + nổi góc dưới, chỉ ở tab Công việc.
+  const showAddFab = tab === "congViec" && canAddCongViec;
+  const addCongViec = () =>
+    navigation.navigate("CongViecForm", {
+      mode: "add",
+      keHoach: {
+        id,
+        text: [keHoach.soKeHoach, keHoach.tieuDe].filter(Boolean).join(" - "),
+      },
+    });
+
+  // Cùng thanh nút phụ với màn Chi tiết công việc: icon trên chữ dưới, Xoá đỏ.
+  const toolbarActions: WorkflowToolbarAction[] = [];
+  if (isChuTri && khPerm.canUpdate) {
+    toolbarActions.push({
+      key: "sua",
+      icon: "create-outline",
+      label: "Sửa",
+      onPress: () => navigation.navigate("KeHoachForm", { mode: "edit", id }),
+    });
+  }
+  if (isChuTri && khPerm.canDelete) {
+    toolbarActions.push({
+      key: "xoa",
+      icon: "trash-outline",
+      label: "Xoá",
+      tone: "danger",
+      loading: deleting,
+      onPress: confirmDelete,
+    });
+  }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load("refresh")} />}
-    >
-      <View style={styles.hero}>
-        <View style={styles.heroBody}>
-          <Text style={styles.code}>{keHoach.soKeHoach}</Text>
-          <Text style={styles.title}>{keHoach.tieuDe}</Text>
-          <View style={styles.heroLine}>
-            <Ionicons name="calendar-outline" size={15} color={c.textSub} />
-            <Text style={styles.heroText}>
-              {formatBeDate(keHoach.tuNgay)} - {formatBeDate(keHoach.denNgay)}
-            </Text>
-          </View>
-          {keHoach.chuTri_MoTa ? (
+    <View style={styles.container}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.content, showAddFab && styles.contentWithFab]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load("refresh")} />}
+      >
+        <View style={styles.hero}>
+          <View style={styles.heroBody}>
+            <Text style={styles.code}>{keHoach.soKeHoach}</Text>
+            <Text style={styles.title}>{keHoach.tieuDe}</Text>
             <View style={styles.heroLine}>
-              <Ionicons name="person-circle-outline" size={15} color={c.textSub} />
-              <Text style={styles.heroText}>Chủ trì: {keHoach.chuTri_MoTa}</Text>
+              <Ionicons name="calendar-outline" size={15} color={c.textSub} />
+              <Text style={styles.heroText}>
+                {formatBeDate(keHoach.tuNgay)} - {formatBeDate(keHoach.denNgay)}
+              </Text>
             </View>
-          ) : null}
+            {keHoach.chuTri_MoTa ? (
+              <View style={styles.heroLine}>
+                <Ionicons name="person-circle-outline" size={15} color={c.textSub} />
+                <Text style={styles.heroText}>Chủ trì: {keHoach.chuTri_MoTa}</Text>
+              </View>
+            ) : null}
+            {/* Thêm được việc vào kế hoạch (nút + ở tab Công việc) thì không phải chỉ xem. */}
+            {!toolbarActions.length && !canAddCongViec ? (
+              <Text style={styles.readOnly}>Bạn đang xem ở chế độ chỉ xem.</Text>
+            ) : null}
+          </View>
+          <View style={styles.progress}>
+            <ProgressRing percent={progress.percent} size={60} strokeWidth={6} />
+            <Text style={styles.progressText}>{progress.label}</Text>
+          </View>
         </View>
-        <View style={styles.progress}>
-          <ProgressRing percent={progress.percent} size={60} strokeWidth={6} />
-          <Text style={styles.progressText}>{progress.label}</Text>
-        </View>
-      </View>
 
-      {isChuTri ? (
-        <View style={styles.actions}>
-          {khPerm.canUpdate ? (
-            <WorkflowButton
-              compact
-              variant="neutral"
-              icon="create-outline"
-              label="Sửa"
-              onPress={() => navigation.navigate("KeHoachForm", { mode: "edit", id })}
-            />
-          ) : null}
-          {khPerm.canDelete ? (
-            <WorkflowButton
-              compact
-              variant="neutral"
-              icon="trash-outline"
-              label="Xoá"
-              loading={deleting}
-              onPress={confirmDelete}
-            />
-          ) : null}
-        </View>
-      ) : null}
+        <WorkflowActionToolbar actions={toolbarActions} />
 
-      <WorkflowTabBar
-        embedded
-        tabs={[
-          { key: "thongTin", label: "Thông tin" },
-          { key: "congViec", label: "Công việc", count: congViecs.length || undefined },
-        ]}
-        activeKey={tab}
-        onChange={(key) => setTab(key as Tab)}
-      />
+        <WorkflowTabBar
+          embedded
+          tabs={[
+            { key: "thongTin", label: "Thông tin" },
+            { key: "congViec", label: "Công việc", count: congViecs.length || undefined },
+          ]}
+          activeKey={tab}
+          onChange={(key) => setTab(key as Tab)}
+        />
 
-      {tab === "thongTin" ? (
-        <>
-          {detailFields.length ? <WorkflowDetailFields item={keHoach} fields={detailFields} /> : null}
-          <WorkflowSection title="Người tham gia" icon="people-outline">
-            {data.thamGias.length ? (
-              data.thamGias.map((person) => (
-                <Text key={person.id} style={styles.person}>
-                  {person.ten}
-                  {person.phongBan ? <Text style={styles.personMeta}> · {person.phongBan}</Text> : null}
-                </Text>
+        {tab === "thongTin" ? (
+          <>
+            {detailFields.length ? <WorkflowDetailFields item={keHoach} fields={detailFields} /> : null}
+            <WorkflowSection title="Người tham gia" icon="people-outline">
+              {data.thamGias.length ? (
+                data.thamGias.map((person) => (
+                  <Text key={person.id} style={styles.person}>
+                    {person.ten}
+                    {person.phongBan ? <Text style={styles.personMeta}> · {person.phongBan}</Text> : null}
+                  </Text>
+                ))
+              ) : (
+                <Text style={styles.personMeta}>Chưa có người tham gia.</Text>
+              )}
+            </WorkflowSection>
+          </>
+        ) : (
+          <View style={styles.tabBody}>
+            {!isChuTri ? <Text style={styles.note}>Chỉ hiện việc bạn tham gia.</Text> : null}
+            {congViecs.length ? (
+              congViecs.map((item) => (
+                <CongViecCard
+                  key={item.id}
+                  item={item}
+                  fields={cvCardFields}
+                  info={cvInfos[item.id]}
+                  onPress={() => navigation.navigate("CongViecChiTiet", { id: item.id })}
+                  // Cùng tham số với danh sách Công việc: duocTraoDoi quyết định gửi / sửa file.
+                  onOpenComments={() =>
+                    navigation.navigate("WorkflowBinhLuan", {
+                      apiBase: CV_CONG_VIEC_NAME_CLASS,
+                      idHoSo: item.id,
+                      canSend: !!cvInfos[item.id]?.duocTraoDoi,
+                      titleHeader: item.soCongViec ?? undefined,
+                    })
+                  }
+                  onOpenFiles={() =>
+                    navigation.navigate("WorkflowFile", {
+                      apiBase: CV_CONG_VIEC_NAME_CLASS,
+                      idHoSo: item.id,
+                      canEdit: !!cvInfos[item.id]?.duocTraoDoi,
+                      titleHeader: item.soCongViec ?? undefined,
+                    })
+                  }
+                  onOpenLichSu={() => setLichSuItem(item)}
+                />
               ))
-            ) : (
-              <Text style={styles.personMeta}>Chưa có người tham gia.</Text>
-            )}
-          </WorkflowSection>
-        </>
-      ) : (
-        <View style={styles.tabBody}>
-          {!isChuTri ? <Text style={styles.note}>Chỉ hiện việc bạn tham gia.</Text> : null}
-          {canAddCongViec ? (
-            <WorkflowButton
-              compact
-              variant="outline"
-              icon="add"
-              label="Thêm công việc"
-              style={styles.addButton}
-              onPress={() =>
-                navigation.navigate("CongViecForm", {
-                  mode: "add",
-                  keHoach: {
-                    id,
-                    text: [keHoach.soKeHoach, keHoach.tieuDe].filter(Boolean).join(" - "),
-                  },
-                })
-              }
-            />
-          ) : null}
-          {congViecs.length ? (
-            congViecs.map((item) => (
-              <CongViecCard
-                key={item.id}
-                item={item}
-                fields={cvCardFields}
-                info={cvInfos[item.id]}
-                onPress={() => navigation.navigate("CongViecChiTiet", { id: item.id })}
-                // Cùng tham số với danh sách Công việc: duocTraoDoi quyết định gửi / sửa file.
-                onOpenComments={() =>
-                  navigation.navigate("WorkflowBinhLuan", {
-                    apiBase: CV_CONG_VIEC_NAME_CLASS,
-                    idHoSo: item.id,
-                    canSend: !!cvInfos[item.id]?.duocTraoDoi,
-                    titleHeader: item.soCongViec ?? undefined,
-                  })
-                }
-                onOpenFiles={() =>
-                  navigation.navigate("WorkflowFile", {
-                    apiBase: CV_CONG_VIEC_NAME_CLASS,
-                    idHoSo: item.id,
-                    canEdit: !!cvInfos[item.id]?.duocTraoDoi,
-                    titleHeader: item.soCongViec ?? undefined,
-                  })
-                }
+            ) : congViecError ? (
+              <EmptyState
+                iconName="cloud-offline-outline"
+                title="Không tải được công việc"
+                subtitle={congViecError}
+                actionLabel="Thử lại"
+                onActionPress={() => load("refresh")}
+                style={styles.tabEmpty}
               />
-            ))
-          ) : congViecError ? (
-            <EmptyState
-              iconName="cloud-offline-outline"
-              title="Không tải được công việc"
-              subtitle={congViecError}
-              actionLabel="Thử lại"
-              onActionPress={() => load("refresh")}
-              style={styles.tabEmpty}
-            />
-          ) : (
-            <EmptyState iconName="checkbox-outline" title="Chưa có công việc" style={styles.tabEmpty} />
-          )}
-        </View>
-      )}
-    </ScrollView>
+            ) : (
+              <EmptyState iconName="checkbox-outline" title="Chưa có công việc" style={styles.tabEmpty} />
+            )}
+          </View>
+        )}
+      </ScrollView>
+
+      {showAddFab ? <WorkflowFab onPress={addCongViec} /> : null}
+
+      <CongViecLichSuSheet
+        target={lichSuItem ? { item: lichSuItem, mode: "lichSu" } : null}
+        onClose={() => setLichSuItem(null)}
+      />
+    </View>
   );
 }
 
@@ -364,10 +385,17 @@ const makeStyles = (c: AppColors) =>
       flex: 1,
       backgroundColor: c.bg,
     },
+    scroll: {
+      flex: 1,
+    },
     content: {
       padding: 12,
       paddingBottom: 40,
       flexGrow: 1,
+    },
+    // Chừa đáy như danh sách Công việc: nút + nổi không che thẻ việc cuối.
+    contentWithFab: {
+      paddingBottom: 96,
     },
     // Tab Công việc giãn hết phần dưới phần đầu để "Chưa có công việc" nằm giữa.
     tabBody: {
@@ -422,10 +450,11 @@ const makeStyles = (c: AppColors) =>
       color: c.textSub,
       marginTop: 4,
     },
-    actions: {
-      flexDirection: "row",
-      gap: 6,
-      marginBottom: 2,
+    readOnly: {
+      marginTop: 10,
+      fontSize: 12,
+      color: c.textSub,
+      fontStyle: "italic",
     },
     person: {
       fontSize: 14,
@@ -441,9 +470,5 @@ const makeStyles = (c: AppColors) =>
       color: c.textSub,
       fontStyle: "italic",
       marginBottom: 8,
-    },
-    addButton: {
-      alignSelf: "flex-start",
-      marginBottom: 10,
     },
   });

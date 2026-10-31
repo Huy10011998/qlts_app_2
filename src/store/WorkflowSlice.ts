@@ -8,6 +8,9 @@ import { createSlice } from "@reduxjs/toolkit";
  * Dùng một bộ đếm chung thay cho cờ từng màn: một thao tác ở màn công việc làm
  * đổi cả lịch, danh sách kế hoạch (% hoàn thành) lẫn phiếu đề nghị đã sinh ra
  * việc đó.
+ *
+ * Chỉ đếm thao tác của chính app. Dữ liệu BE / người khác đổi thì các màn bắt
+ * lúc app vào lại (`useReloadOnWorkflowChange`), không tăng bộ đếm này.
  */
 type WorkflowState = {
   version: number;

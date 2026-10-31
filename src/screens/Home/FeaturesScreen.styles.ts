@@ -2,6 +2,8 @@ import { StyleSheet } from "react-native";
 
 import { AppColors } from "../../utils/helpers/colors";
 import { getTextScaleFactor } from "../../utils/helpers/textScaling";
+import type { FeatureTileGroup } from "./shared/FeatureTile";
+import { HOME_BLOCK_TONES, type HomeBlockTone } from "./shared/homeBlockTone";
 import { HOME_BRAND_RED } from "./shared/homeTheme";
 
 /**
@@ -21,6 +23,41 @@ export const FEATURE_CARD_PADDING = 10;
 // và lưới rớt xuống 2 cột. Phần trăm thì luôn đúng 3 ô mỗi hàng.
 export const FEATURE_TILE_WIDTH = `${100 / FEATURE_GRID_COLUMNS}%` as const;
 
+/**
+ * Nhãn tiêu đề ba nhóm, kiểu nhãn màu ngoài thẻ của Trang chủ mẫu C
+ * (`HomeSectionTitle`), mượn đúng bộ màu nhãn đỏ · xanh · tím của Trang chủ.
+ * Dùng chung cho màn thật và khung chờ. `markerIconName` là bản đầy của icon
+ * nhãn, vẽ trong chấm góc dưới mỗi ô (`GroupIconMarker`).
+ */
+export const FEATURE_SECTIONS: Record<
+  FeatureTileGroup,
+  {
+    label: string;
+    iconName: string;
+    markerIconName: string;
+    tone: HomeBlockTone;
+  }
+> = {
+  feature: {
+    label: "TIỆN ÍCH",
+    iconName: "apps-outline",
+    markerIconName: "apps",
+    tone: HOME_BLOCK_TONES.shortcuts,
+  },
+  vehicle: {
+    label: "PHƯƠNG TIỆN",
+    iconName: "car-outline",
+    markerIconName: "car",
+    tone: HOME_BLOCK_TONES.utilities,
+  },
+  report: {
+    label: "BÁO CÁO",
+    iconName: "bar-chart-outline",
+    markerIconName: "stats-chart",
+    tone: HOME_BLOCK_TONES.assetStructure,
+  },
+};
+
 export const makeFeatureStyles = (c: AppColors) =>
   StyleSheet.create({
     root: { flex: 1 },
@@ -33,9 +70,9 @@ export const makeFeatureStyles = (c: AppColors) =>
     scroll: { flex: 1 },
     scrollContent: {
       paddingHorizontal: FEATURE_SCREEN_PADDING,
-      paddingTop: 12,
+      paddingTop: 14,
       paddingBottom: 40,
-      gap: 14,
+      gap: 18,
     },
 
     // Ô tìm kiếm nằm ngay dưới header đỏ, trên nền xám của trang: thẻ trắng có
@@ -51,12 +88,12 @@ export const makeFeatureStyles = (c: AppColors) =>
       borderBottomColor: c.separator,
     },
 
+    // Tiêu đề nhóm nằm ngoài thẻ (`HomeSectionTitle`), thẻ chỉ còn lưới.
     sectionCard: {
       backgroundColor: c.surface,
       borderRadius: 20,
       paddingHorizontal: FEATURE_CARD_PADDING,
-      paddingTop: 14,
-      paddingBottom: 6,
+      paddingVertical: 6,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: c.hairline,
       shadowColor: c.shadow,
@@ -64,25 +101,6 @@ export const makeFeatureStyles = (c: AppColors) =>
       shadowRadius: 10,
       shadowOffset: { width: 0, height: 3 },
       elevation: 2,
-    },
-    // Gạch chân kéo hết bề ngang thẻ (bù lại padding ngang) để tiêu đề nhóm tách
-    // hẳn khỏi lưới, thay vì trôi lơ lửng giữa khoảng trắng.
-    sectionHeader: {
-      marginHorizontal: -FEATURE_CARD_PADDING,
-      paddingHorizontal: FEATURE_CARD_PADDING,
-      paddingBottom: 12,
-      marginBottom: 10,
-      // Dày bằng viền thẻ (`getHomeCardChrome`): để hairline thì gạch cùng màu
-      // mà trông nhạt hơn viền hẳn.
-      borderBottomWidth: 1,
-      borderBottomColor: c.separator,
-    },
-    sectionTitle: {
-      fontSize: 15,
-      fontWeight: "700",
-      color: c.text,
-      textAlign: "center",
-      letterSpacing: 0.2,
     },
     sectionGrid: {
       flexDirection: "row",
@@ -92,7 +110,7 @@ export const makeFeatureStyles = (c: AppColors) =>
     tile: {
       width: FEATURE_TILE_WIDTH,
       alignItems: "center",
-      paddingVertical: 10,
+      paddingVertical: 8,
       paddingHorizontal: 4,
     },
     tileIconWrap: {
@@ -101,7 +119,7 @@ export const makeFeatureStyles = (c: AppColors) =>
       borderRadius: 26,
       alignItems: "center",
       justifyContent: "center",
-      marginBottom: 8,
+      marginBottom: 6,
     },
     tileBadge: {
       position: "absolute",
@@ -122,12 +140,13 @@ export const makeFeatureStyles = (c: AppColors) =>
       fontSize: 10,
       fontWeight: "700",
     },
-    // Chiều cao cố định cho nhãn: tên một dòng và tên hai dòng nằm cùng thẻ thì
-    // hàng dưới phải bắt đầu ngang nhau, không so le. Đủ hai dòng ở mọi cỡ chữ
-    // của app — để 32 cứng thì chữ 150% chỉ còn chỗ cho một dòng.
+    // Chỉ giữ chỗ MỘT dòng (theo cỡ chữ app): trước đây giữ sẵn hai dòng cho
+    // mọi ô nên hàng nào cũng thừa một dòng trống, trong khi tên gần như đều
+    // vừa một dòng. Tên dài xuống dòng thì cả hàng đó cao theo — các ô cùng
+    // hàng của lưới flexWrap luôn cao bằng nhau nên hàng dưới vẫn thẳng.
     tileLabel: {
       fontSize: 12.5,
-      height: 32 * getTextScaleFactor(),
+      minHeight: 16 * getTextScaleFactor(),
       fontWeight: "500",
       color: c.text,
       textAlign: "center",

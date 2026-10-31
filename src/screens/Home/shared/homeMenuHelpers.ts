@@ -45,6 +45,7 @@ type ReportSourceItem = {
   groupMenuId?: number;
   id: string;
   label: string;
+  iconName?: string;
   viewPermission?: string;
 };
 
@@ -68,7 +69,10 @@ export const createReportActions = <T extends ReportSourceItem>(
       ...item,
       id: toReportFeatureId(item.id),
       homeGroup: "report" as const,
-      iconName: "document-text-outline",
+      // Giữ icon của chức năng nguồn: năm báo cáo chung một icon tờ giấy thì
+      // phải đọc chữ mới phân biệt. Ô báo cáo thêm chấm biểu đồ
+      // (`GroupIconMarker`) để không lẫn với chính chức năng.
+      iconName: item.iconName ?? "document-text-outline",
       onPress: () =>
         openReportScreen({
           groupMenuId: item.groupMenuId,

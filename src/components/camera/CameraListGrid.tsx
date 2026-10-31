@@ -51,6 +51,7 @@ import {
   buildCameraFullscreenHTML,
   buildCameraGridStreamHTML,
 } from "./shared/cameraStreamHtml";
+import { getCameraZoneHeaderLabel } from "./shared/cameraZoneHeaderLabel";
 import {
   broadcastCameraWebViewMessage,
   broadcastCameraWebViewToken,
@@ -94,6 +95,7 @@ const CameraCell = React.memo(
     cam,
     idx,
     isActive,
+    showActiveBorder = true,
     isPaused,
     isWebViewActive,
     isSnapshotActive,
@@ -238,7 +240,7 @@ const CameraCell = React.memo(
               </Text>
             </View>
           </View>
-          {isActive && (
+          {isActive && showActiveBorder && (
             <View style={styles.activeBorder} pointerEvents="none" />
           )}
         </View>
@@ -247,6 +249,7 @@ const CameraCell = React.memo(
   },
   (prev, next) =>
     prev.isActive === next.isActive &&
+    prev.showActiveBorder === next.showActiveBorder &&
     prev.isPaused === next.isPaused &&
     prev.isWebViewActive === next.isWebViewActive &&
     prev.isSnapshotActive === next.isSnapshotActive &&
@@ -388,13 +391,21 @@ const CameraListGrid: React.FC = () => {
   // Cả hai chế độ đều phải ẩn thanh hệ thống. Bộ đếm trong immersiveMode lo ca
   // chồng nhau (mở 1 camera từ lưới đang toàn màn hình).
   useImmersiveMode(isGridFullscreenMode || isSingleFullscreen);
-  const effectiveLayoutCount = layoutCount;
+  // Chỉ một camera (mở từ thông báo, hoặc khu vực chỉ có một camera): không có
+  // gì để chọn nên chọn sẵn luôn — Phát lại / Chụp ảnh bấm được ngay mà không
+  // cần viền đỏ đánh dấu. Xoay ngang cả lưới cũng chỉ ra đúng camera đó, trùng
+  // với nhấn đúp xem toàn màn hình, nên tắt nút xoay. Lưới 2×2 trở lên chỉ làm
+  // camera nằm lọt một góc, nên luôn là 1 ô (khu vực 1 camera mở từ Danh sách
+  // camera mặc định 4×4) và tắt luôn nút Bố trí cửa sổ.
+  const hasOnlyOneCamera = cameras.length === 1;
+  const effectiveLayoutCount = hasOnlyOneCamera ? 1 : layoutCount;
   const [cols, rows] = LAYOUT_OPTIONS[effectiveLayoutCount] ?? [4, 4];
   const perPage = cols * rows;
   const liveCellLimit = Platform.OS === "android" ? 0 : perPage;
   const totalPages = Math.ceil(cameras.length / perPage);
   const pagedCameras = cameras.slice(page * perPage, (page + 1) * perPage);
   pagedCamerasRef.current = pagedCameras;
+  const selectedIndex = hasOnlyOneCamera ? 0 : activeIndex;
   const fullscreenIndex = fullscreenCam
     ? cameras.findIndex((cam: any) => cam.iD_Camera === fullscreenCam.iD_Camera)
     : -1;
@@ -521,6 +532,15 @@ const CameraListGrid: React.FC = () => {
   React.useEffect(() => {
     navigation.setOptions({ headerShown: !isAnyFullscreen });
   }, [isAnyFullscreen, navigation]);
+
+  // Cùng dòng phụ "Vĩnh Lộc · 265 camera" như màn Danh sách camera.
+  const headerLabel = getCameraZoneHeaderLabel(zoneName, cameras.length);
+  React.useEffect(() => {
+    navigation.setOptions({
+      headerBadgeLabel: headerLabel,
+      headerBadgeIcon: "videocam-outline",
+    } as object);
+  }, [headerLabel, navigation]);
 
   React.useEffect(() => {
     const tabNavigation = navigation.getParent();
@@ -801,6 +821,24 @@ const CameraListGrid: React.FC = () => {
       androidWatchdogRef.current = null;
     }
   }, []);
+
+  // Màn khác chồng lên lúc đang toàn màn hình (bấm noti camera): bỏ hẳn chế độ
+  // toàn màn hình. Video Android không tự dừng khi mất focus — để nguyên là còn
+  // phát tiếng phía sau; quay lại thì về lưới dọc như lúc mở màn. Sheet Bố trí
+  // cửa sổ là <Modal>, không đóng thì phủ lên cả màn mới.
+  React.useEffect(() => {
+    if (isFocused) return;
+    setShowLayoutPicker(false);
+    pendingFullscreenCamRef.current = null;
+    clearFullscreenPlaybackTimers();
+    clearCloseFullscreenTimeout();
+    isClosingFullscreenRef.current = false;
+    setFullscreenCam(null);
+    setIsClosingFullscreen(false);
+    setIsGridLandscapeFullscreen(false);
+    setVideoReady(false);
+    setPendingThumbUrl(null);
+  }, [clearCloseFullscreenTimeout, clearFullscreenPlaybackTimers, isFocused]);
 
   const handleAndroidReady = React.useCallback(() => {
     if (androidRetryRef.current) {
@@ -1197,17 +1235,17 @@ const CameraListGrid: React.FC = () => {
     [SW, cameras.length, fsTranslateX, fullscreenIndex, handleFullscreenSwipe],
   );
 
-  const activeCam = pagedCameras[activeIndex] ?? null;
+  const activeCam = pagedCameras[selectedIndex] ?? null;
 
   const openPlayback = React.useCallback(() => {
-    const cam = pagedCamerasRef.current[activeIndex];
+    const cam = pagedCamerasRef.current[selectedIndex];
     if (!cam) return;
 
     navigation.navigate("CameraPlayback", { camera: cam, zoneName });
-  }, [activeIndex, navigation, zoneName]);
+  }, [selectedIndex, navigation, zoneName]);
 
   const handleSnapshot = React.useCallback(async () => {
-    const snapshotCam = pagedCamerasRef.current[activeIndex];
+    const snapshotCam = pagedCamerasRef.current[selectedIndex];
     const token = cameraTokenRef.current;
     if (!snapshotCam || !token) return;
     try {
@@ -1233,7 +1271,7 @@ const CameraListGrid: React.FC = () => {
     } catch (e) {
       AppAlert.alert("Lỗi", "Không thể chụp ảnh camera.");
     }
-  }, [activeIndex, cameraTokenRef]);
+  }, [selectedIndex, cameraTokenRef]);
 
   const closeFullscreen = React.useCallback(() => {
     pendingFullscreenCamRef.current = null;
@@ -1410,7 +1448,8 @@ const CameraListGrid: React.FC = () => {
                     key={`${gridRenderKey}-${cam.iD_Camera?.toString() ?? idx}`}
                     cam={cam}
                     idx={idx}
-                    isActive={idx === activeIndex}
+                    isActive={idx === selectedIndex}
+                    showActiveBorder={!hasOnlyOneCamera}
                     isPaused={isPaused}
                     isWebViewActive={idx < liveCellLimit}
                     isSnapshotActive={isAndroidSnapshot}
@@ -1485,7 +1524,11 @@ const CameraListGrid: React.FC = () => {
               />
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.toolBtn}
+              style={[
+                styles.toolBtn,
+                hasOnlyOneCamera && styles.toolBtnDisabled,
+              ]}
+              disabled={hasOnlyOneCamera}
               onPress={() => setShowLayoutPicker((v) => !v)}
             >
               <MaterialCommunityIcons
@@ -1495,7 +1538,11 @@ const CameraListGrid: React.FC = () => {
               />
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.toolBtn}
+              style={[
+                styles.toolBtn,
+                hasOnlyOneCamera && styles.toolBtnDisabled,
+              ]}
+              disabled={hasOnlyOneCamera}
               onPress={openGridLandscapeFullscreen}
             >
               <MaterialCommunityIcons

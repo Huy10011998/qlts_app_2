@@ -12,6 +12,18 @@ export function capitalizeFirstLetter(str?: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
+/** Chữ cái đầu của hai chữ cuối họ tên ("Nguyễn Văn An" → "VA"), thay ảnh đại diện. */
+export function getNameInitials(name?: string): string {
+  if (!name) return "?";
+
+  return name
+    .split(" ")
+    .slice(-2)
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase();
+}
+
 export const normalizeClassName = (name?: string) => {
   if (!name) return "";
 

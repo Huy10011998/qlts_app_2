@@ -17,6 +17,7 @@ import { writeDeviceLockEnabled } from "../services/auth/biometric";
 export const AUTH_TOKEN_KEY = "token";
 export const AUTH_REFRESH_TOKEN_KEY = "refreshToken";
 export const AUTH_USERNAME_KEY = "authUserName";
+export const AUTH_LOGIN_PROFILE_KEY = "authLoginProfile";
 
 export const readStoredAuthTokens = async () => {
   const [token, refreshToken] = await Promise.all([
@@ -64,6 +65,36 @@ export const readStoredAuthUsername = async () => {
 
 export const writeStoredAuthUsername = (userName: string | null) =>
   writeStoredAuthValue(AUTH_USERNAME_KEY, userName?.trim() || null);
+
+/**
+ * Họ tên + ảnh của người đăng nhập gần nhất trên máy, để lần sau màn Đăng nhập
+ * chào bằng tên (kiểu VCB). Chỉ nằm trên máy; ghi mỗi lần nạp danh thiếp xong.
+ * Hết phiên thì giữ, tự đăng xuất thì xoá (xem `logout`). `userName` để chắc là
+ * của đúng tài khoản đang điền sẵn.
+ */
+export type StoredLoginProfile = {
+  userName: string;
+  name: string;
+  /** Data URL của `NhanVienInfo.hinhAnh` — hiện được cả khi chưa đăng nhập. */
+  avatar?: string | null;
+};
+
+export const readStoredLoginProfile =
+  async (): Promise<StoredLoginProfile | null> => {
+    try {
+      const raw = await AsyncStorage.getItem(AUTH_LOGIN_PROFILE_KEY);
+      const profile = raw ? (JSON.parse(raw) as StoredLoginProfile) : null;
+      return profile?.userName && profile?.name ? profile : null;
+    } catch {
+      return null;
+    }
+  };
+
+export const writeStoredLoginProfile = (profile: StoredLoginProfile) =>
+  AsyncStorage.setItem(AUTH_LOGIN_PROFILE_KEY, JSON.stringify(profile));
+
+export const clearStoredLoginProfile = () =>
+  AsyncStorage.removeItem(AUTH_LOGIN_PROFILE_KEY);
 
 export const clearStoredAuthTokens = () => clearAuthTokens();
 

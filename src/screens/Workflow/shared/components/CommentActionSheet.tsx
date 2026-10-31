@@ -70,7 +70,7 @@ export default function CommentActionSheet({
             <Text style={[styles.optionText, styles.optionTextDanger]}>Thu hồi</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.cancel} onPress={onClose}>
-            <Text style={styles.cancelText}>Hủy</Text>
+            <Text style={styles.cancelText}>Huỷ</Text>
           </TouchableOpacity>
         </View>
       </View>

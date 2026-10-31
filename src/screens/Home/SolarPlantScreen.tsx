@@ -40,7 +40,6 @@ import type { TreeNode } from "../../types";
 import {
   C,
   useAppColors,
-  useHairlineBorderColor,
   useSeparatorColor,
   useStyles,
 } from "../../utils/helpers/colors";
@@ -66,6 +65,7 @@ import {
   hasNumber,
   isCurrentPeriodRange,
   NO_VALUE,
+  SOLAR_SERIES_COLORS,
   type CompareMode,
   type EnergyBarChartView,
   type ExpandedChart,
@@ -388,13 +388,15 @@ const useChartLegendEntries = (
         ringStyle: styles.productionRing,
       },
       {
-        dotStyle: styles.consumptionDot,
+        dotStyle: styles.loadDot,
         label: "Tiêu thụ",
-        ringStyle: styles.consumptionRing,
+        ringStyle: styles.loadRing,
       },
       {
+        // Cùng nghĩa "Tự dùng" với cụm Sản xuất của khối Cân bằng: phần sản
+        // lượng dùng tại nhà máy, nên chia cho Sản xuất.
         dotStyle: styles.selfDot,
-        label: `Tự dùng (${formatPercent(balance?.selfOfConsumptionPercent)})`,
+        label: `Tự dùng (${formatPercent(balance?.selfOfProductionPercent)})`,
         muted: true,
         ringStyle: styles.selfRing,
       },
@@ -594,7 +596,6 @@ const ExpandedChartModal: React.FC<ExpandedChartModalProps> = ({
   const styles = useStyles(makeStyles);
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const hairlineBorderColor = useHairlineBorderColor();
   const title = getExpandedChartTitle(activeChart);
   const isComparative = activeChart === "comparative";
   const isProduction = activeChart === "production";
@@ -773,12 +774,7 @@ const ExpandedChartModal: React.FC<ExpandedChartModalProps> = ({
           {isLoading ? <RefreshBar /> : null}
         </View>
         {isComparative ? (
-          <View
-            style={[
-              styles.expandedCompareTabs,
-              { borderColor: hairlineBorderColor },
-            ]}
-          >
+          <View style={styles.expandedCompareTabs}>
             {COMPARE_MODES.map((mode) => (
               <TouchableOpacity
                 key={mode}
@@ -1013,6 +1009,8 @@ const COMPARE_MODE_LABELS: Record<CompareMode, string> = {
 
 type SolarHeroSectionProps = {
   flow: SolarBlockState<SolarPowerFlowView>;
+  /** Mất mạng thì số trên màn là số cũ — không được ghi "Trực tiếp". */
+  isOffline: boolean;
   overview: SolarBlockState<SolarOverviewView>;
   screenWidth: number;
   weather: PlantWeatherState;
@@ -1020,6 +1018,7 @@ type SolarHeroSectionProps = {
 
 const SolarHeroSection: React.FC<SolarHeroSectionProps> = ({
   flow,
+  isOffline,
   overview,
   screenWidth,
   weather,
@@ -1046,8 +1045,11 @@ const SolarHeroSection: React.FC<SolarHeroSectionProps> = ({
           gridPower={gridPower}
           gridWatt={flowData?.gridPower ?? null}
           isExportingToGrid={flowData?.isExportingToGrid ?? false}
+          isLive={Boolean(flowData?.hasData) && !flow.error && !isOffline}
           loadPower={loadPower}
+          loadWatt={flowData?.loadPower ?? null}
           pvPower={pvPower}
+          pvWatt={flowData?.pvPower ?? null}
           todayEnergy={todayEnergy}
           weather={weather}
           width={getFlowHeroCardInnerWidth(contentWidth)}
@@ -1122,6 +1124,122 @@ const EnergyProducedSummary: React.FC<{
         ))}
       </View>
       <BlockError message={block.error} />
+    </View>
+  );
+};
+
+// ─── Khối 3: cân bằng năng lượng ─────────────────────────────────────────────
+
+/**
+ * Con số chính của khối: mức TỰ CHỦ — điện mặt trời gánh được bao nhiêu phần
+ * mức tiêu thụ, nên chia cho Tiêu thụ (tỉ trọng chia cho Sản xuất nằm ở cụm Sản
+ * xuất bên dưới). Trước đây số này nằm cuối khối dưới tên "Tự dùng", trùng tên
+ * với dòng "Tự dùng" của cụm Sản xuất mà phần trăm khác hẳn.
+ */
+const AutonomySummary: React.FC<{
+  percent: number | null | undefined;
+  size: number;
+}> = ({ percent, size }) => {
+  const styles = useStyles(makeStyles);
+  const appColors = useAppColors();
+  const hasPercent = hasNumber(percent);
+  const percentText = formatPercent(percent);
+
+  return (
+    <View style={styles.autonomyRow}>
+      <View style={{ width: size, height: size }}>
+        <DonutChart
+          primaryColor={SOLAR_SERIES_COLORS.solar}
+          // Chưa có số thì cả vòng là rãnh xám, không tô cam như thể nhà máy
+          // mua lưới 100%.
+          secondaryColor={hasPercent ? SOLAR_SERIES_COLORS.grid : appColors.border}
+          primaryPct={percent ?? 0}
+          size={size}
+        />
+        <View pointerEvents="none" style={styles.autonomyCenter}>
+          <Text
+            adjustsFontSizeToFit
+            minimumFontScale={0.6}
+            numberOfLines={1}
+            style={styles.autonomyPercent}
+          >
+            {percentText}
+          </Text>
+        </View>
+      </View>
+      <View style={styles.autonomyTextCol}>
+        <Text style={styles.autonomyTitle}>Tự chủ năng lượng</Text>
+        <Text style={styles.autonomyCaption}>
+          Điện mặt trời đáp ứng{" "}
+          <Text style={styles.autonomyCaptionBold}>{percentText}</Text> lượng
+          điện nhà máy dùng
+        </Text>
+      </View>
+    </View>
+  );
+};
+
+type BalanceRowItem = {
+  color: string;
+  energy: number | null | undefined;
+  icon: string;
+  label: string;
+  percent: number | null | undefined;
+};
+
+/**
+ * Một cụm Sản xuất / Tiêu thụ: tổng, thanh tỉ trọng, rồi mỗi phần một dòng (icon
+ * cùng màu với đoạn thanh, số, phần trăm thẳng cột). Bỏ donut riêng của từng cụm
+ * vì nó nói lại đúng tỉ lệ của thanh ngay trên.
+ */
+const BalanceGroup: React.FC<{
+  rows: BalanceRowItem[];
+  title: string;
+  total: number | null | undefined;
+}> = ({ rows, title, total }) => {
+  const styles = useStyles(makeStyles);
+  const totalParts = formatEnergy(total);
+
+  return (
+    <View style={styles.balanceGroup}>
+      <View style={styles.balanceGroupHeader}>
+        <Text style={styles.balanceGroupTitle}>{title}</Text>
+        <Text style={styles.balanceGroupTotal}>
+          {totalParts.value}
+          {totalParts.unit ? (
+            <Text style={styles.balanceUnit}>{` ${totalParts.unit}`}</Text>
+          ) : null}
+        </Text>
+      </View>
+      <BalanceBar
+        segments={rows.map((row) => ({
+          fillStyle: { backgroundColor: row.color },
+          percent: row.percent,
+        }))}
+      />
+      <View style={styles.balanceRows}>
+        {rows.map((row) => (
+          <View key={row.label} style={styles.balanceRow}>
+            <View
+              style={[
+                styles.balanceIconChip,
+                { backgroundColor: `${row.color}1f` },
+              ]}
+            >
+              <Ionicons name={row.icon} size={15} color={row.color} />
+            </View>
+            <Text numberOfLines={1} style={styles.balanceRowLabel}>
+              {row.label}
+            </Text>
+            <Text style={styles.balanceRowValue}>
+              {formatMetricText(formatEnergy(row.energy))}
+            </Text>
+            <Text style={styles.balanceRowPercent}>
+              {formatPercent(row.percent)}
+            </Text>
+          </View>
+        ))}
+      </View>
     </View>
   );
 };
@@ -1604,6 +1722,7 @@ const SolarFullScreen: React.FC = () => {
       >
         <SolarHeroSection
           flow={blocks.flow}
+          isOffline={isOffline}
           overview={blocks.overview}
           screenWidth={screenWidth}
           weather={weather}
@@ -1637,124 +1756,54 @@ const SolarFullScreen: React.FC = () => {
           {/* Chưa có số thì các ô hiện "—", KHÔNG che khối bằng khung chờ:
               người dùng vẫn đọc được nhãn và bố cục, ô nào có số trước thì hiện
               trước. Vạch mảnh trên viền khối là dấu hiệu đang tải. */}
-          {/* Cụm SẢN XUẤT */}
-          <Text style={styles.balanceSubLabel}>Sản xuất</Text>
-          <Text style={[styles.balanceBigValue, { fontSize: 32 * sizeScale }]}>
-            {formatEnergy(balance?.production).value}{" "}
-            <Text style={[styles.balanceUnit, { fontSize: 12 * sizeScale }]}>
-              {formatEnergy(balance?.production).unit}
-            </Text>
-          </Text>
-          <BalanceBar
-            segments={[
+          <AutonomySummary
+            percent={balance?.selfOfConsumptionPercent}
+            size={Math.round(96 * sizeScale)}
+          />
+
+          <BalanceGroup
+            title="Sản xuất"
+            total={balance?.production}
+            rows={[
               {
-                fillStyle: styles.toHomeBarFill,
+                color: SOLAR_SERIES_COLORS.solar,
+                energy: balance?.selfConsumption,
+                icon: "business-outline",
+                label: "Tự dùng",
                 percent: balance?.selfOfProductionPercent,
               },
               {
-                fillStyle: styles.toGridBarFill,
+                color: SOLAR_SERIES_COLORS.grid,
+                energy: balance?.feedIn,
+                icon: "flash-outline",
+                label: "Phát lên lưới",
                 percent: balance?.feedInPercent,
               },
             ]}
           />
 
-          <View style={styles.donutRow}>
-            <DonutChart
-              primaryColor="#1baf7a"
-              secondaryColor="#eb6834"
-              primaryPct={balance?.selfOfProductionPercent ?? 0}
-              size={Math.round(84 * sizeScale)}
-            />
-            <View style={styles.legendCol}>
-              <View style={styles.legendItem}>
-                <View style={[styles.dot, styles.balanceToHomeDot]} />
-                <Text style={styles.legendLabel}>🏠 Tự dùng</Text>
-                <Text style={styles.legendValue}>
-                  {formatMetricText(formatEnergy(balance?.selfConsumption))}{" "}
-                  <Text style={styles.legendPercent}>
-                    ({formatPercent(balance?.selfOfProductionPercent)})
-                  </Text>
-                </Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.dot, styles.balanceToGridDot]} />
-                <Text style={styles.legendLabel}>⚡ Phát lên lưới</Text>
-                <Text style={styles.legendValue}>
-                  {formatMetricText(formatEnergy(balance?.feedIn))}{" "}
-                  <Text style={styles.legendPercent}>
-                    ({formatPercent(balance?.feedInPercent)})
-                  </Text>
-                </Text>
-              </View>
-            </View>
-          </View>
-
           <View style={styles.separator} />
 
-          {/* Cụm TIÊU THỤ */}
-          <Text style={styles.balanceSubLabel}>Tiêu thụ</Text>
-          <Text style={[styles.balanceBigValue, { fontSize: 32 * sizeScale }]}>
-            {formatEnergy(balance?.consumption).value}{" "}
-            <Text style={[styles.balanceUnit, { fontSize: 12 * sizeScale }]}>
-              {formatEnergy(balance?.consumption).unit}
-            </Text>
-          </Text>
-          <BalanceBar
-            segments={[
+          <BalanceGroup
+            title="Tiêu thụ"
+            total={balance?.consumption}
+            rows={[
               {
-                fillStyle: styles.fromSolarBarFill,
+                color: SOLAR_SERIES_COLORS.solar,
+                energy: balance?.selfConsumption,
+                icon: "sunny-outline",
+                label: "Từ mặt trời",
                 percent: balance?.selfOfConsumptionPercent,
               },
               {
-                fillStyle: styles.fromGridBarFill,
+                color: SOLAR_SERIES_COLORS.grid,
+                energy: balance?.purchased,
+                icon: "flash-outline",
+                label: "Mua từ lưới",
                 percent: balance?.purchasedPercent,
               },
             ]}
           />
-
-          <View style={styles.donutRow}>
-            <DonutChart
-              primaryColor="#eb6834"
-              secondaryColor="#1baf7a"
-              primaryPct={balance?.purchasedPercent ?? 0}
-              size={Math.round(84 * sizeScale)}
-            />
-            <View style={styles.legendCol}>
-              <View style={styles.legendItem}>
-                <View style={[styles.dot, styles.balanceFromSolarDot]} />
-                <Text style={styles.legendLabel}>☀️ Từ mặt trời</Text>
-                <Text style={styles.legendValue}>
-                  {formatMetricText(formatEnergy(balance?.selfConsumption))}{" "}
-                  <Text style={styles.legendPercent}>
-                    ({formatPercent(balance?.selfOfConsumptionPercent)})
-                  </Text>
-                </Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.dot, styles.balanceFromGridDot]} />
-                <Text style={styles.legendLabel}>⚡ Mua từ lưới</Text>
-                <Text style={styles.legendValue}>
-                  {formatMetricText(formatEnergy(balance?.purchased))}{" "}
-                  <Text style={styles.legendPercent}>
-                    ({formatPercent(balance?.purchasedPercent)})
-                  </Text>
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Dòng tổng kết này là mức TỰ CHỦ: điện mặt trời gánh được bao
-                nhiêu phần mức tiêu thụ, nên chia cho Tiêu thụ. Tỉ trọng chia
-                cho Sản xuất đã nằm ở cụm Sản xuất phía trên. */}
-          <View style={styles.selfConsumptionRow}>
-            <Text style={styles.selfText}>
-              ☀️ Tự dùng{" "}
-              <Text style={styles.selfBold}>
-                {formatMetricText(formatEnergy(balance?.selfConsumption))} (
-                {formatPercent(balance?.selfOfConsumptionPercent)})
-              </Text>
-            </Text>
-          </View>
 
           <BlockError message={blocks.balance.error} />
         </View>

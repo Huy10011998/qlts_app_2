@@ -2,6 +2,7 @@ import type { NativeStackNavigationOptions } from "@react-navigation/native-stac
 import { capitalizeFirstLetter } from "../../utils/helpers/string";
 import { HeaderDetails } from "../../components/header/HeaderDetails";
 import type { GuideTopicId } from "../../screens/Guide/shared/guideTypes";
+import type { HeaderBadge } from "../../types/components.d";
 
 export const headerWithBack = HeaderDetails({ showBackButton: true });
 
@@ -34,11 +35,13 @@ export const headerWithBackAndHelp = (topicId: GuideTopicId) =>
 
 /**
  * Màn gốc của một tab: cùng header đỏ như các màn chi tiết nhưng không có nút
- * quay lại, vì không có gì phía dưới nó trong stack.
+ * quay lại (không có gì phía dưới nó trong stack). Góc trái để trống trông hụt
+ * nên đặt logo như Trang chủ; góc phải thêm chuông để khỏi phải về Trang chủ
+ * mới xem được thông báo.
  */
-export const headerWithoutBackAndHelp = (topicId: GuideTopicId) =>
-  cachedHelpHeader(`no-back:${topicId}`, () =>
-    HeaderDetails({ showBackButton: false, helpTopicId: topicId }),
+export const headerTabRoot = (topicId: GuideTopicId, badge?: HeaderBadge) =>
+  cachedHelpHeader(`tab-root:${topicId}`, () =>
+    HeaderDetails({ tabRoot: true, helpTopicId: topicId, badge }),
   );
 
 /**

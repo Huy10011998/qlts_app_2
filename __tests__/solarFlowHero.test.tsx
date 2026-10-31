@@ -1,6 +1,7 @@
 import React from "react";
 import ReactTestRenderer from "react-test-renderer";
 import {
+  getFlowHeroFrame,
   getFlowHeroHeight,
   SolarFlowHero,
 } from "../src/screens/Home/SolarPlantScreen.flowHero";
@@ -35,7 +36,9 @@ const weatherOf = (weatherCode: number, isDay = true): PlantWeatherState => ({
 
 const mountedTrees: ReactTestRenderer.ReactTestRenderer[] = [];
 
-const mount = async (props: Partial<typeof baseProps> = {}) => {
+type HeroProps = React.ComponentProps<typeof SolarFlowHero>;
+
+const mount = async (props: Partial<HeroProps> = {}) => {
   let tree: ReactTestRenderer.ReactTestRenderer;
 
   await ReactTestRenderer.act(async () => {
@@ -76,6 +79,25 @@ describe("hero dòng năng lượng điện mặt trời", () => {
   it("cao theo tỉ lệ ảnh mẫu, màn rộng thì dừng ở bề ngang tối đa", () => {
     expect(getFlowHeroHeight(390)).toBe(Math.round((390 * 1007) / 1182));
     expect(getFlowHeroHeight(800)).toBe(getFlowHeroHeight(520));
+  });
+
+  it("tablet giãn ngang cho kín bề ngang, điện thoại giữ nguyên ảnh mẫu", () => {
+    expect(getFlowHeroFrame(390).spread).toBe(0);
+    // Tablet dọc ~800: cụm hai bên dạt ra vừa khít mép khối.
+    const tablet = getFlowHeroFrame(774);
+    expect(tablet.spread).toBeGreaterThan(0);
+    expect((1182 + tablet.spread * 2) * tablet.scale).toBeCloseTo(774);
+    // Tablet ngang: giãn có giới hạn, phần còn lại là trời hai bên.
+    const wide = getFlowHeroFrame(1254);
+    expect((1182 + wide.spread * 2) * wide.scale).toBeLessThan(1254);
+  });
+
+  it("màn rộng: dây lưới dài ra, mũi tên dời theo cột điện", async () => {
+    const tree = await mount({ width: 774 });
+    const { spread } = getFlowHeroFrame(774);
+
+    expect(countByProp(tree, "x1", 874 + spread)).toBeGreaterThan(0);
+    expect(countByProp(tree, "points", GRID_ARROW_IN)).toBeGreaterThan(0);
   });
 
   it("hiện đủ số liệu và nhãn tiếng Việt", async () => {
@@ -176,5 +198,64 @@ describe("hero dòng năng lượng điện mặt trời", () => {
 
     expect(textContent(tree)).toContain("— °C");
     expect(countByProp(tree, "fill", "#F89B12")).toBe(0);
+  });
+
+  it("có số trực tiếp: chấm sáng chạy trên ba dây, nhãn Trực tiếp", async () => {
+    const tree = await mount({
+      isLive: true,
+      loadWatt: 224500,
+      pvWatt: 140300,
+    });
+
+    expect(countLayers(tree, "FlowDots")).toBe(3);
+    expect(textContent(tree)).toContain("Trực tiếp");
+  });
+
+  it("chưa có số trực tiếp: dây đứng yên, không có nhãn", async () => {
+    const tree = await mount({ loadWatt: 224500, pvWatt: 140300 });
+
+    expect(countLayers(tree, "FlowDots")).toBe(0);
+    expect(textContent(tree)).not.toContain("Trực tiếp");
+  });
+
+  it("ban đêm: vòng giữa vẫn là công suất hiện tại như web, dây mặt trời đứng yên", async () => {
+    const tree = await mount({
+      isLive: true,
+      loadWatt: 224500,
+      pvPower: { value: "0.0", unit: "kW" },
+      pvWatt: 0,
+      weather: weatherOf(0, false),
+    });
+    const text = textContent(tree);
+
+    expect(text).toContain("0.0");
+    expect(text).toContain("hiện tại");
+    expect(text).toContain("Hết nắng");
+    // Còn dây nhà máy và dây lưới.
+    expect(countLayers(tree, "FlowDots")).toBe(2);
+  });
+
+  it("số mới chạy dần tới đích thay vì nhảy phắt", async () => {
+    jest.useFakeTimers();
+    try {
+      const tree = await mount();
+
+      await ReactTestRenderer.act(async () => {
+        tree.update(
+          <SolarFlowHero {...baseProps} pvPower={{ value: "200.0", unit: "kW" }} />,
+        );
+      });
+      await ReactTestRenderer.act(async () => {
+        jest.advanceTimersByTime(100);
+      });
+      expect(textContent(tree)).not.toContain("200.0");
+
+      await ReactTestRenderer.act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(textContent(tree)).toContain("200.0");
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });

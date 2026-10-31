@@ -43,6 +43,22 @@ describe("tìm kiếm trong tài liệu hướng dẫn", () => {
     expect(ids).toContain("faq");
   });
 
+  // Lịch có thêm âm lịch / ngày lễ / chế độ Hôm nay: người dùng tra bằng đúng
+  // chữ thấy trên thẻ ngày.
+  it("tra được âm lịch và chế độ Hôm nay của Lịch ở cả tài liệu lẫn câu hỏi thường gặp", () => {
+    const amLich = filterGuideTopics("am lich");
+    expect(amLich.map((hit) => hit.topic.id)).toEqual(
+      expect.arrayContaining(["lich-thong-bao", "faq"]),
+    );
+    expect(
+      amLich.find((hit) => hit.topic.id === "lich-thong-bao")?.matchedHeadings,
+    ).toContain("Thẻ ngày: âm lịch, ngày lễ, việc sắp hạn");
+
+    expect(
+      filterGuideTopics("qua han").find((hit) => hit.topic.id === "faq")?.matchedHeadings,
+    ).toContain("Lịch chế độ Hôm nay không có việc quá hạn của hôm trước");
+  });
+
   it("tra được câu hỏi vì sao mất hộp thoại Tạo mới thành công", () => {
     const hit = filterGuideTopics("tao moi thanh cong").find(
       (entry) => entry.topic.id === "faq",
@@ -156,6 +172,19 @@ describe("tìm câu hỏi trong Câu hỏi thường gặp", () => {
 
   it("không khớp gì thì trả về danh sách rỗng", () => {
     expect(filterGuideSections("faq", "zzzz khong co cau nay")).toEqual([]);
+  });
+
+  // Các câu cho giao diện 29/10: thanh tab tự ẩn, ô tìm sau nút kính lúp.
+  it.each([
+    ["thanh tab bien mat", "Thanh tab dưới màn hình biến mất"],
+    ["khong thay o tim kiem", "Không thấy ô tìm kiếm ở danh sách"],
+    ["kinh lup", "Không thấy ô tìm kiếm ở danh sách"],
+    ["tab khong co chu", "Thanh tab không có chữ, tab nào là gì?"],
+    ["cham nho", "Chấm nhỏ ở góc biểu tượng chức năng là gì?"],
+  ])("“%s” ra câu “%s”", (query, heading) => {
+    expect(
+      filterGuideSections("faq", query).map((section) => section.heading),
+    ).toContain(heading);
   });
 
   // Màn chỉ vẽ nhóm có trong `sectionGroups`: câu hỏi thiếu nhóm hoặc gõ sai tên

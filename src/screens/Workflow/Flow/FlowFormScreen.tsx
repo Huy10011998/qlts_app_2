@@ -96,6 +96,11 @@ export default function FlowFormScreen() {
   const [chonNguoi, setChonNguoi] = useState<FlowChonNguoi | null>(null);
   const [chons, setChons] = useState<FlowChonNguoiPair[]>([]);
   const [loadingChon, setLoadingChon] = useState(false);
+  // Tải bước chọn người hỏng: báo trong khung Người duyệt + "Thử lại" (tăng
+  // `chonAttempt`). Không báo thì khung biến mất, "Lưu phiếu" bỏ qua bước kiểm
+  // người duyệt và chỉ hỏng ở lượt nộp.
+  const [chonError, setChonError] = useState<string | null>(null);
+  const [chonAttempt, setChonAttempt] = useState(0);
   const [showStepErrors, setShowStepErrors] = useState(false);
   const [files, setFiles] = useState<WorkflowPickedFile[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -133,9 +138,8 @@ export default function FlowFormScreen() {
     markSaved: markChonsSaved,
   } = useFormDirty(JSON.stringify(chons));
   const ready = !metaError && !metaLoading && !meLoading && !phongBanLoading && !!meta;
-  const { leaveWithoutPrompt } = useUnsavedChangesGuard(
-    ready && (form.isDirty || chonsDirty || files.length > 0),
-  );
+  const hasChanges = form.isDirty || chonsDirty || files.length > 0;
+  const { leaveWithoutPrompt } = useUnsavedChangesGuard(ready && hasChanges);
 
   const loaiFieldName =
     findWorkflowField(formFields, FLOW_FIELD.ID_LoaiFlow)?.name ?? FLOW_FIELD.ID_LoaiFlow;
@@ -144,6 +148,7 @@ export default function FlowFormScreen() {
 
   // Bước phải chọn người duyệt: gọi khi mở form và mỗi lần đổi Loại đề nghị.
   useEffect(() => {
+    setChonError(null);
     if (!idLoaiFlow) {
       setChonNguoi(null);
       setChons([]);
@@ -159,8 +164,10 @@ export default function FlowFormScreen() {
         setChons(data.daChons ?? []);
         setShowStepErrors(false);
       })
-      .catch(() => {
-        if (alive) setChonNguoi(null);
+      .catch((err) => {
+        if (!alive) return;
+        setChonNguoi(null);
+        setChonError(getWorkflowErrorMessage(err, "Không tải được danh sách người duyệt."));
       })
       .finally(() => {
         if (alive) setLoadingChon(false);
@@ -169,9 +176,9 @@ export default function FlowFormScreen() {
     return () => {
       alive = false;
     };
-    // Chỉ theo Loại đề nghị — đổi savedId sau lần lưu đầu không cần hỏi lại.
+    // Chỉ theo Loại đề nghị (và "Thử lại") — đổi savedId sau lần lưu đầu không cần hỏi lại.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idLoaiFlow, nameClass]);
+  }, [chonAttempt, idLoaiFlow, nameClass]);
 
   const buildEntity = () => {
     const dyn = buildDynamicPayload(formFields, form.formData);
@@ -205,6 +212,9 @@ export default function FlowFormScreen() {
     }
 
     setSubmitting(true);
+    // Ngoài `try`: insert xong mà bước sau hỏng thì câu lỗi vẫn biết nháp đã có
+    // (`savedId` của lượt render này chưa có ID vừa insert).
+    let idHoSo = savedId;
     try {
       const entity = buildEntity();
 
@@ -226,7 +236,6 @@ export default function FlowFormScreen() {
       }
 
       // d) Lưu nháp.
-      let idHoSo = savedId;
       if (idHoSo > 0) {
         await flowUpdate(nameClass, entity, idHoSo);
         setSavedEntity(entity);
@@ -277,12 +286,18 @@ export default function FlowFormScreen() {
       }
 
       showAppToast({ message: submit ? "Đã nộp phiếu" : "Đã lưu nháp" });
-      leaveWithoutPrompt(() => navigation.goBack());
+      // Nhân bản: mở luôn phiếu MỚI — quay về là về phiếu gốc, dễ tưởng phiếu gốc
+      // vừa bị sửa.
+      leaveWithoutPrompt(() =>
+        mode === "clone"
+          ? navigation.replace("FlowChiTiet", { nameClass, id: idHoSo })
+          : navigation.goBack(),
+      );
     } catch (err) {
       AppAlert.alert(
         "Không lưu được",
         getWorkflowErrorMessage(err, "Vui lòng thử lại.") +
-          (savedId > 0 ? "\nPhiếu vẫn là nháp, lưu lại lần sau là cập nhật." : ""),
+          (idHoSo > 0 ? "\nPhiếu vẫn là nháp, lưu lại lần sau là cập nhật." : ""),
       );
     } finally {
       setSubmitting(false);
@@ -322,14 +337,16 @@ export default function FlowFormScreen() {
             variant="neutral"
             icon="save-outline"
             label="Lưu nháp"
-            disabled={submitting}
+            // Sửa nháp: chưa đổi gì thì không có gì để lưu (cùng luật form Công việc).
+            disabled={submitting || (isEdit && !hasChanges)}
             onPress={() => save(false)}
           />
           <WorkflowButton
             flex
             icon="paper-plane-outline"
             label="Lưu phiếu"
-            disabled={submitting}
+            // Chưa biết bước nào phải chọn người thì chưa nộp được.
+            disabled={submitting || loadingChon || !!chonError}
             onPress={() => save(true)}
           />
         </View>
@@ -364,6 +381,18 @@ export default function FlowFormScreen() {
         <WorkflowSection title="Người duyệt" icon="people-outline">
           <ApproverStepPickerSkeleton />
         </WorkflowSection>
+      ) : chonError ? (
+        <WorkflowSection title="Người duyệt" icon="people-outline">
+          <Text style={styles.chonError}>{chonError}</Text>
+          <WorkflowButton
+            compact
+            variant="outline"
+            icon="refresh-outline"
+            label="Thử lại"
+            style={styles.chonRetry}
+            onPress={() => setChonAttempt((value) => value + 1)}
+          />
+        </WorkflowSection>
       ) : chonNguoi?.buocs.length ? (
         <WorkflowSection title="Người duyệt" icon="people-outline">
           <ApproverStepPicker
@@ -397,5 +426,13 @@ const makeStyles = (c: AppColors) =>
     existingFiles: {
       alignSelf: "flex-start",
       marginBottom: 10,
+    },
+    chonError: {
+      fontSize: 13,
+      color: c.red,
+      marginBottom: 8,
+    },
+    chonRetry: {
+      alignSelf: "flex-start",
     },
   });

@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 
+import { showAppToast } from "../../../components/ui/AppToast";
 import EmptyState from "../../../components/ui/EmptyState";
 import { flowTienTrinh } from "../../../services/data/flowApi";
 import type { FlowTienTrinh, StackNavigation, StackRoute } from "../../../types/index";
@@ -52,13 +53,20 @@ export default function FlowProcessScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("quyTrinh");
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const dataRef = useRef(data);
+  dataRef.current = data;
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (mode: "initial" | "refresh" | "silent" = "initial") => {
     try {
       setData(await flowTienTrinh(nameClass, id));
       setErrorMessage(null);
     } catch (err) {
-      setErrorMessage(getWorkflowErrorMessage(err, "Không tải được quy trình."));
+      const message = getWorkflowErrorMessage(err, "Không tải được quy trình.");
+      setErrorMessage(message);
+      // Kéo làm mới hỏng mà sơ đồ đang hiện: lỗi trên chỉ hiện khi chưa có dữ liệu.
+      if (mode === "refresh" && dataRef.current) {
+        showAppToast({ message: "Không làm mới được", detail: message, tone: "warning" });
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -70,7 +78,7 @@ export default function FlowProcessScreen() {
   }, [load]);
 
   // Quay về từ màn công việc (điểm Công việc trên sơ đồ) mà có thay đổi → phiếu đi theo việc.
-  useReloadOnWorkflowChange(load);
+  useReloadOnWorkflowChange(() => load("silent"));
 
   const nguoiLap = readItemValue(item, `${FLOW_FIELD.ID_NhanVien_Tao}_MoTa`);
   const ngayLap = readItemValue(item, FLOW_FIELD.NgayTao);
@@ -93,7 +101,18 @@ export default function FlowProcessScreen() {
   );
 
   if (!loading && !data) {
-    return <EmptyState iconName="git-network-outline" title="Không tải được quy trình" subtitle={errorMessage ?? undefined} />;
+    return (
+      <EmptyState
+        iconName="git-network-outline"
+        title="Không tải được quy trình"
+        subtitle={errorMessage ?? undefined}
+        actionLabel="Thử lại"
+        onActionPress={() => {
+          setLoading(true);
+          load();
+        }}
+      />
+    );
   }
 
   return (
@@ -113,7 +132,7 @@ export default function FlowProcessScreen() {
             refreshing={refreshing}
             onRefresh={() => {
               setRefreshing(true);
-              load();
+              load("refresh");
             }}
           />
         }

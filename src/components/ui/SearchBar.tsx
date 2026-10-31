@@ -38,6 +38,13 @@ type SearchBarProps = {
   style?: StyleProp<ViewStyle>;
   /** Đặt false ở nơi chiều cao cố định không chịu được cỡ chữ hệ thống lớn. */
   allowFontScaling?: boolean;
+  /** Ô vừa mở từ nút kính lúp trên header: bật bàn phím luôn. */
+  autoFocus?: boolean;
+  /**
+   * Ô ẩn sau nút kính lúp (`useHeaderSearch`): nút ✕ luôn hiện, bấm là xoá chữ
+   * và ẩn ô — chứ không chỉ xoá chữ.
+   */
+  onClose?: () => void;
 };
 
 /**
@@ -62,6 +69,8 @@ export default function SearchBar({
   variant = "card",
   style,
   allowFontScaling,
+  autoFocus,
+  onClose,
 }: SearchBarProps) {
   const styles = useStyles(makeStyles);
   const c = useAppColors();
@@ -91,6 +100,7 @@ export default function SearchBar({
         clearButtonMode="never"
         returnKeyType="search"
         allowFontScaling={allowFontScaling}
+        autoFocus={autoFocus}
         accessibilityLabel={placeholder}
       />
 
@@ -100,13 +110,13 @@ export default function SearchBar({
         </View>
       ) : null}
 
-      {!isSearching && value.length > 0 ? (
+      {!isSearching && (onClose || value.length > 0) ? (
         <Pressable
-          onPress={onClear ?? (() => onChangeText(""))}
+          onPress={onClose ?? onClear ?? (() => onChangeText(""))}
           style={styles.clearButton}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Xoá từ khoá"
+          accessibilityLabel={onClose ? "Đóng tìm kiếm" : "Xoá từ khoá"}
         >
           <Ionicons name="close-circle" size={16} color={c.placeholder} />
         </Pressable>

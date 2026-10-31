@@ -25,6 +25,7 @@ import {
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { API_ENDPOINTS, BASE_URL } from "../../config/index";
 import { useDebounce } from "../../hooks/useDebounce";
+import { useHeaderSearch } from "../../hooks/useHeaderSearch";
 import { useDismissableModal } from "../../hooks/useDismissableModal";
 import { useNetworkAwareReload } from "../../hooks/useNetworkAwareReload";
 import { usePermission } from "../../hooks/usePermission";
@@ -234,6 +235,10 @@ export default function ReportScreen() {
   const [isFetching, setIsFetching] = useState(true);
   const [isRefreshingTop, setIsRefreshingTop] = useState(false);
   const [search, setSearch] = useState("");
+  const headerSearch = useHeaderSearch({
+    query: search,
+    onClear: () => setSearch(""),
+  });
   const {
     content: activeReport,
     visible: isReportVisible,
@@ -431,6 +436,7 @@ export default function ReportScreen() {
   const listSkeleton = (
     <MenuCardSkeleton
       hasSearchBar
+      hasSearchInput={headerSearch.open}
       hasGroupHeader
       variant="report"
       paddingTop={6}
@@ -504,6 +510,7 @@ export default function ReportScreen() {
         resultCount={filteredReports.length}
         showResultCount={Boolean(debouncedSearch.trim())}
         placeholder="Tìm kiếm báo cáo..."
+        search={headerSearch}
       />
 
       <SectionList

@@ -159,6 +159,35 @@ describe("thẻ giữ chỗ thông tin phụ", () => {
     expect(loaded.root.findAllByType(WorkflowCounter)).toHaveLength(2);
   });
 
+  it("công việc: có onOpenLichSu thì thêm viên Lịch sử, kể cả lúc chờ cv-thong-tin", async () => {
+    const pending = await mount(
+      <CongViecCard
+        item={congViec}
+        fields={[]}
+        infoPending
+        onPress={() => undefined}
+        onOpenLichSu={() => undefined}
+      />,
+    );
+    expect(countByName(pending, "CounterPendingPills")).toBe(1);
+    expect(
+      pending.root.findAllByType(WorkflowCounter).map((node) => node.props.label),
+    ).toEqual(["Lịch sử"]);
+
+    const loaded = await mount(
+      <CongViecCard
+        item={congViec}
+        fields={[]}
+        info={cvInfo}
+        onPress={() => undefined}
+        onOpenLichSu={() => undefined}
+      />,
+    );
+    expect(
+      loaded.root.findAllByType(WorkflowCounter).map((node) => node.props.label),
+    ).toEqual(["Bình luận", "Đính kèm", "Lịch sử"]);
+  });
+
   // Lượt gọi hỏng: không còn chờ mà vẫn không có thông tin — không nhấp nháy mãi.
   it("công việc: hết chờ mà không có thông tin thì không giữ chỗ", async () => {
     const failed = await mount(

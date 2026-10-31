@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import InlineToast, { type InlineToastTone } from "./InlineToast";
@@ -29,8 +29,12 @@ export const showAppToast = (toast: AppToastPayload) => {
   showListener?.(toast);
 };
 
-/** Khoảng cách tới đáy: chừa thanh tab (cao ~70) và nút Quét QR nhô lên. */
-const BOTTOM_OFFSET = 96;
+/**
+ * Nằm ở ĐẦU màn, ngay dưới thanh trạng thái (như thông báo đẩy): ở đáy thì bị
+ * thanh tab / nút Quét QR / nút + nổi che, còn màn không có thanh tab thì chừa
+ * khoảng của thanh tab làm dải lơ lửng giữa màn.
+ */
+const TOP_OFFSET = 8;
 
 /** Đặt một lần ở gốc app, ngoài NavigationContainer. */
 export function AppToastHost() {
@@ -50,17 +54,24 @@ export function AppToastHost() {
   return (
     <View
       pointerEvents="box-none"
-      style={[styles.host, { bottom: insets.bottom + BOTTOM_OFFSET }]}
+      style={[styles.host, { top: insets.top + TOP_OFFSET }]}
     >
-      {/* key đổi mỗi lần gọi: thông báo mới thay thông báo cũ và đếm giờ lại. */}
-      <InlineToast
-        key={toast.key}
-        message={toast.message}
-        detail={toast.detail}
-        tone={toast.tone}
-        durationMs={toast.durationMs}
-        onDismiss={() => setToast(null)}
-      />
+      {/* Dải đè lên nút quay lại / tiêu đề trong vài giây: chạm vào là tắt ngay. */}
+      <Pressable
+        onPress={() => setToast(null)}
+        accessibilityRole="button"
+        accessibilityHint="Chạm để ẩn thông báo"
+      >
+        {/* key đổi mỗi lần gọi: thông báo mới thay thông báo cũ và đếm giờ lại. */}
+        <InlineToast
+          key={toast.key}
+          message={toast.message}
+          detail={toast.detail}
+          tone={toast.tone}
+          durationMs={toast.durationMs}
+          onDismiss={() => setToast(null)}
+        />
+      </Pressable>
     </View>
   );
 }

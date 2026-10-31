@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useIsFocused } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import EmptyState from "../../components/ui/EmptyState";
+import { useAutoReload } from "../../hooks/useAutoReload";
 import { thongBaoDaDoc, thongBaoGetList } from "../../services/data/thongBaoApi";
 import { subscribeThongBao } from "../../services/realtime/traoDoiHub";
 import type { ThongBaoItem, ThongBaoNhom } from "../../types/index";
@@ -52,6 +54,10 @@ export default function ThongBaoScreen() {
     queryKey: `${nhom}|${chiChuaDoc}`,
   });
   const { setItems, reload } = list;
+
+  // App vừa từ nền về: hub có khi chưa rớt (không có onReconnected) mà vẫn lỡ
+  // thông báo lúc nằm nền.
+  useAutoReload(reload, { enabled: useIsFocused() });
 
   // Bộ lọc đang chọn — đọc trong handler realtime mà không phải đăng ký lại.
   const filterRef = useRef({ nhom, chiChuaDoc });

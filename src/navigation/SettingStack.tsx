@@ -7,11 +7,12 @@ const Stack = createNativeStackNavigator();
 export default function SettingStack() {
   return (
     <Stack.Navigator>
-      {/* SettingScreen tự render header đỏ + avatar + wave riêng */}
+      {/* Không dùng header chung của các tab gốc: đầu màn là ảnh nhà máy kèm
+          logo, hướng dẫn, chuông, nút nguồn (`SettingPhotoHeader`, kiểu VCB). */}
       <Stack.Screen
         name="Setting"
         component={SettingScreen}
-        options={{ headerShown: false }}
+        options={{ title: "Cài đặt", headerShown: false }}
       />
     </Stack.Navigator>
   );

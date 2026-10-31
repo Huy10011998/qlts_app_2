@@ -1,15 +1,29 @@
 import { AppColors, C } from "../../utils/helpers/colors";
-import { StyleSheet } from "react-native";
+import { StyleSheet, type ViewStyle } from "react-native";
 
 import {
   COMPARE_CURRENT_YEAR_COLOR,
   COMPARE_PREVIOUS_YEAR_COLOR,
+  SOLAR_SERIES_COLORS,
 } from "./SolarPlantScreen.helpers";
 import {
   FLOW_HERO_CARD_BORDER,
   FLOW_HERO_CARD_MARGIN,
   FLOW_HERO_CARD_RADIUS,
 } from "./SolarPlantScreen.flowHero";
+
+/**
+ * Khung hàng nút chọn (Gộp / Tách biểu đồ, Theo tháng / quý / năm) — cùng kiểu
+ * hàng tab kỳ ở đầu màn: rãnh xám nhạt, ô đang chọn là viên đỏ chữ trắng. Khung
+ * nằm trong khối nền trắng nên dùng rãnh xám chứ không dùng thẻ trắng có bóng
+ * như thanh chế độ của màn Lịch (nền trang ở đó là xám).
+ */
+const segmentShell = (c: AppColors): ViewStyle => ({
+  flexDirection: "row",
+  backgroundColor: c.surfaceAlt,
+  borderRadius: 12,
+  padding: 3,
+});
 
 export const makeStyles = (c: AppColors) =>
   StyleSheet.create({
@@ -259,11 +273,13 @@ export const makeStyles = (c: AppColors) =>
       justifyContent: "center",
       gap: 8,
     },
+    // Chữ thường: tab kỳ ngay trên đã tô đỏ, hàng này đỏ đậm nữa thì hai chữ
+    // "Hôm nay" chồng nhau giành mắt. Icon lịch giữ màu đỏ để còn biết bấm được.
     dateNavCenterText: {
       flexShrink: 1,
       fontSize: 15,
-      color: C.red,
-      fontWeight: "700",
+      color: c.text,
+      fontWeight: "400",
       textAlign: "center",
     },
 
@@ -276,17 +292,42 @@ export const makeStyles = (c: AppColors) =>
     },
 
     // Energy Balance
-    balanceSubLabel: {
-      fontSize: 14,
-      color: c.textSecondary,
+    // Hàng đầu khối: vòng Tự chủ năng lượng + lời giải thích bên phải.
+    autonomyRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 16,
       marginTop: 12,
       marginBottom: 4,
     },
-    balanceBigValue: {
-      fontSize: 32,
-      fontWeight: "500",
+    autonomyCenter: {
+      ...StyleSheet.absoluteFillObject,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    autonomyPercent: {
+      fontSize: 22,
+      fontWeight: "700",
       color: c.text,
     },
+    autonomyTextCol: { flex: 1, gap: 4 },
+    autonomyTitle: { fontSize: 15, fontWeight: "600", color: c.text },
+    autonomyCaption: { fontSize: 13, lineHeight: 18, color: c.textSecondary },
+    autonomyCaptionBold: {
+      fontWeight: "700",
+      color: SOLAR_SERIES_COLORS.solar,
+    },
+    // Hai cụm Sản xuất / Tiêu thụ: tên bên trái, tổng bên phải, rồi thanh tỉ
+    // trọng và hai dòng chia nhỏ.
+    balanceGroup: { marginTop: 16 },
+    balanceGroupHeader: {
+      flexDirection: "row",
+      alignItems: "baseline",
+      justifyContent: "space-between",
+      gap: 12,
+    },
+    balanceGroupTitle: { fontSize: 14, color: c.textSecondary },
+    balanceGroupTotal: { fontSize: 20, fontWeight: "700", color: c.text },
     balanceUnit: { fontSize: 12, fontWeight: "400", color: c.textMuted },
     barTrack: {
       flexDirection: "row",
@@ -297,63 +338,52 @@ export const makeStyles = (c: AppColors) =>
       backgroundColor: c.border,
     },
     barFill: { height: 10 },
-    toHomeBarFill: { backgroundColor: "#4caf50" },
-    toGridBarFill: { backgroundColor: "#42b0e8" },
-    fromSolarBarFill: { backgroundColor: "#42b0e8" },
-    fromGridBarFill: { backgroundColor: "#f5a623" },
-    donutRow: {
+    balanceRows: { gap: 8 },
+    balanceRow: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 16,
-      marginVertical: 8,
+      gap: 10,
     },
-    legendCol: { flex: 1, gap: 10 },
-    legendItem: {
-      flexDirection: "row",
+    balanceIconChip: {
+      width: 26,
+      height: 26,
+      borderRadius: 13,
       alignItems: "center",
-      gap: 6,
-      flexWrap: "wrap",
+      justifyContent: "center",
+    },
+    balanceRowLabel: { flex: 1, fontSize: 13, color: c.textSecondary },
+    balanceRowValue: { fontSize: 13, fontWeight: "600", color: c.text },
+    // Cột phần trăm rộng cố định để hai dòng thẳng hàng như một bảng.
+    balanceRowPercent: {
+      minWidth: 40,
+      fontSize: 12,
+      color: c.textMuted,
+      textAlign: "right",
     },
     dot: { width: 10, height: 10, borderRadius: 5 },
-    balanceToHomeDot: { backgroundColor: "#4caf50" },
-    balanceToGridDot: { backgroundColor: "#42b0e8" },
-    balanceFromSolarDot: { backgroundColor: "#42b0e8" },
-    balanceFromGridDot: { backgroundColor: "#f5a623" },
-    // Bám theo BarChart: năm trước xanh da trời, năm nay tím.
+    // Bám theo BarChart: năm trước xám, năm nay màu điện mặt trời.
     year2025Dot: { backgroundColor: COMPARE_PREVIOUS_YEAR_COLOR },
     year2026Dot: { backgroundColor: COMPARE_CURRENT_YEAR_COLOR },
-    // Một dòng mỗi mục như app FusionSolar: nhãn xám bên trái, số bên phải,
-    // phần trăm xám nhạt. Không đủ chỗ thì số mới xuống dòng.
-    legendLabel: {
-      fontSize: 12,
-      color: c.textSecondary,
-      flex: 1,
-      minWidth: 70,
-    },
-    legendValue: {
-      fontSize: 12,
-      color: c.text,
-      fontWeight: "500",
-      flexShrink: 1,
-    },
-    legendPercent: { color: c.textMuted, fontWeight: "400" },
     separator: { height: 1, backgroundColor: c.border, marginVertical: 14 },
-    selfConsumptionRow: { marginTop: 12 },
-    selfText: { fontSize: 13, color: c.textSecondary },
-    selfBold: { fontWeight: "600", color: c.text },
-    // Màu chú giải của biểu đồ phải khớp nét vẽ trong AreaChart/BarChart.
-    // Bảng màu chung (đã qua kiểm tra mù màu): #2a78d6 sản xuất,
-    // #eb6834 tiêu thụ & lưới điện, #1baf7a tự dùng.
-    productionDot: { backgroundColor: "#2a78d6" },
-    productionRing: { borderColor: "#2a78d6" },
-    consumptionDot: { backgroundColor: "#eb6834" },
-    consumptionRing: { borderColor: "#eb6834" },
-    toGridDot: { backgroundColor: "#eb6834" },
-    toGridRing: { borderColor: "#eb6834" },
-    fromSolarDot: { backgroundColor: "#1baf7a" },
-    fromSolarRing: { borderColor: "#1baf7a" },
-    selfDot: { backgroundColor: "#1baf7a" },
-    selfRing: { borderColor: "#1baf7a" },
+    // Màu chú giải của biểu đồ phải khớp nét vẽ trong AreaChart/BarChart — cả
+    // hai lấy từ `SOLAR_SERIES_COLORS` (mặt trời xanh lá, nhà máy xanh dương,
+    // lưới cam).
+    productionDot: { backgroundColor: SOLAR_SERIES_COLORS.solar },
+    productionRing: { borderColor: SOLAR_SERIES_COLORS.solar },
+    loadDot: { backgroundColor: SOLAR_SERIES_COLORS.load },
+    loadRing: { borderColor: SOLAR_SERIES_COLORS.load },
+    consumptionDot: { backgroundColor: SOLAR_SERIES_COLORS.grid },
+    consumptionRing: { borderColor: SOLAR_SERIES_COLORS.grid },
+    toGridDot: { backgroundColor: SOLAR_SERIES_COLORS.grid },
+    toGridRing: { borderColor: SOLAR_SERIES_COLORS.grid },
+    fromSolarDot: { backgroundColor: SOLAR_SERIES_COLORS.solar },
+    fromSolarRing: { borderColor: SOLAR_SERIES_COLORS.solar },
+    selfDot: { backgroundColor: SOLAR_SERIES_COLORS.solarDark },
+    // Vòng nét đứt = đường nét đứt "Tự dùng" trên biểu đồ gộp.
+    selfRing: {
+      borderColor: SOLAR_SERIES_COLORS.solarDark,
+      borderStyle: "dashed",
+    },
 
     // Chart
     chartHeaderRow: {
@@ -436,43 +466,35 @@ export const makeStyles = (c: AppColors) =>
     checkDot: { width: 10, height: 10, borderRadius: 5 },
     checkDotCompact: { width: 8, height: 8, borderRadius: 4 },
 
-    // Toggle Merged/Split
+    // Toggle Merged/Split — cao ~39 như bản viền xanh cũ (đệm 3 + 8 + chữ 14pt).
     toggleRow: {
-      flexDirection: "row",
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: "#4285f4",
-      overflow: "hidden",
+      ...segmentShell(c),
       marginBottom: 16,
     },
     toggleBtn: {
       flex: 1,
-      paddingVertical: 10,
+      paddingVertical: 8,
       alignItems: "center",
-      backgroundColor: c.surface,
+      borderRadius: 9,
     },
-    toggleBtnActive: { backgroundColor: c.accentLight },
-    toggleText: { fontSize: 14, color: c.textSecondary },
-    toggleTextActive: { color: "#4285f4", fontWeight: "600" },
+    toggleBtnActive: { backgroundColor: c.red },
+    toggleText: { fontSize: 14, fontWeight: "600", color: c.textSub },
+    toggleTextActive: { color: c.onBrand },
 
-    // Sub-tabs
+    // Sub-tabs (Theo tháng / quý / năm) — cao ~34 (đệm 3 + 6 + chữ 13pt).
     subTabRow: {
-      flexDirection: "row",
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: "#4285f4",
-      overflow: "hidden",
+      ...segmentShell(c),
       marginBottom: 8,
     },
     subTab: {
       flex: 1,
-      paddingVertical: 8,
+      paddingVertical: 6,
       alignItems: "center",
-      backgroundColor: c.surface,
+      borderRadius: 9,
     },
-    subTabActive: { backgroundColor: c.accentLight },
-    subTabText: { fontSize: 13, color: c.textSecondary },
-    subTabTextActive: { color: "#4285f4", fontWeight: "600" },
+    subTabActive: { backgroundColor: c.red },
+    subTabText: { fontSize: 13, fontWeight: "600", color: c.textSub },
+    subTabTextActive: { color: c.onBrand },
 
     // Environmental
     envRow: { flexDirection: "row", marginTop: 12 },
@@ -491,37 +513,32 @@ export const makeStyles = (c: AppColors) =>
       flex: 1,
       backgroundColor: c.surface,
     },
+    // Cùng kiểu hàng Theo tháng / quý / năm trong màn, chỉ cao và chữ to hơn.
+    // Thụt vào đúng lề 18 của phần biểu đồ bên dưới thay vì sát mép màn.
     expandedCompareTabs: {
-      width: "100%",
-      alignSelf: "center",
+      ...segmentShell(c),
+      marginHorizontal: 18,
+      marginTop: 10,
       minHeight: 46,
-      flexDirection: "row",
       alignItems: "center",
-      backgroundColor: c.surfaceAlt,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border,
-      borderRadius: 8,
-      padding: 2,
     },
     expandedCompareTab: {
       flex: 1,
       minHeight: 40,
       alignItems: "center",
       justifyContent: "center",
-      borderRadius: 7,
+      borderRadius: 9,
     },
     expandedCompareTabActive: {
-      backgroundColor: c.blueSurface,
-      borderWidth: 1,
-      borderColor: "#6ea0f6",
+      backgroundColor: c.red,
     },
     expandedCompareTabText: {
-      color: c.text,
+      color: c.textSub,
       fontSize: 16,
+      fontWeight: "600",
     },
     expandedCompareTabTextActive: {
-      color: "#6ea0f6",
-      fontWeight: "600",
+      color: c.onBrand,
     },
     expandedCompareChartWrap: {
       marginTop: 16,

@@ -174,10 +174,10 @@ export function popToRecordDetailsRoot(
  * Máy quét tồn tại ở hai chỗ và stack khác nhau tuỳ nơi mở (xem chú thích của
  * `QrScan` trong `RootStackParamList`):
  * - Mở từ header màn danh sách: `QrScan` nằm ngay trong stack gốc → pop về nó.
- * - Mở từ tab Quét: màn quét là route `Scan` trong `ScanTab`, còn màn tạo được
- *   đẩy lên stack gốc. Một lệnh `navigate` lồng lo cả hai tầng: `Tabs` đang nằm
- *   dưới trong stack gốc nên navigate về nó là pop, và params lồng đẩy stack của
- *   `ScanTab` về `Scan`, tức pop luôn `QrDetails` nếu có.
+ * - Mở từ tab Quét: màn quét là route `Scan` trong `ScanTab`, còn `QrDetails` và
+ *   màn tạo được đẩy lên stack gốc. Một lệnh `navigate` lồng lo cả hai tầng:
+ *   `Tabs` đang nằm dưới trong stack gốc nên navigate về nó là pop hết các màn
+ *   đó, và params lồng chọn đúng tab Quét.
  *
  * Không cần đánh thức camera bằng tay: `useFocusEffect` của màn quét tự
  * `resetScannerSession` + `activateScanner` khi được focus lại.

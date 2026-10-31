@@ -21,9 +21,9 @@ import WorkflowTabBar from "./WorkflowTabBar";
 
 export type WorkflowDetailSkeletonVariant = "flow" | "congViec" | "keHoach";
 
+// Thanh nút phụ (Sửa, Xoá…) cả ba màn đều theo quyền / dữ liệu chưa biết lúc
+// chờ nên không vẽ.
 type VariantConfig = {
-  /** Số nút LUÔN có ở thanh nút — nút theo quyền chưa biết thì không vẽ. */
-  actionWidths: number[];
   /** Dải Bình luận · Đính kèm ở đáy thẻ đầu — nhãn biết trước, vẽ thật. */
   heroLinks?: WorkflowHeroLink[];
   tabs?: string[];
@@ -33,22 +33,21 @@ type VariantConfig = {
 
 const NGUOI_THAM_GIA = { title: "Người tham gia", icon: "people-outline" };
 
-// Bám đúng phần chắc chắn có của từng màn: Flow luôn có Quy trình · Bình luận ·
-// Đính kèm; Công việc luôn có dải Bình luận · Đính kèm trong thẻ đầu, còn nút
-// thì theo quyền; Kế hoạch chỉ chủ trì mới có nút.
+const HERO_LINKS: WorkflowHeroLink[] = [
+  { key: "binhLuan", icon: "chatbubble-ellipses-outline", label: "Bình luận" },
+  { key: "file", icon: "attach-outline", label: "Đính kèm" },
+];
+
+// Bám đúng phần chắc chắn có của từng màn: Flow và Công việc luôn có dải Bình
+// luận · Đính kèm trong thẻ đầu; Kế hoạch thì không.
 const VARIANTS: Record<WorkflowDetailSkeletonVariant, VariantConfig> = {
-  flow: { actionWidths: [92, 112, 104] },
+  flow: { heroLinks: HERO_LINKS },
   congViec: {
-    actionWidths: [],
-    heroLinks: [
-      { key: "binhLuan", icon: "chatbubble-ellipses-outline", label: "Bình luận" },
-      { key: "file", icon: "attach-outline", label: "Đính kèm" },
-    ],
+    heroLinks: HERO_LINKS,
     tabs: ["Thông tin", "Lịch sử"],
     sections: [NGUOI_THAM_GIA],
   },
   keHoach: {
-    actionWidths: [],
     tabs: ["Thông tin", "Công việc"],
     sections: [NGUOI_THAM_GIA],
   },
@@ -93,14 +92,6 @@ export default function WorkflowDetailSkeleton({
       ) : (
         <DefaultHero variant={variant} opacity={opacity} links={config.heroLinks} />
       )}
-
-      {config.actionWidths.length ? (
-        <View style={[styles.actions, variant === "flow" && styles.actionsFlow]}>
-          {config.actionWidths.map((width, index) => (
-            <SkeletonBlock key={index} opacity={opacity} style={[styles.actionButton, { width }]} />
-          ))}
-        </View>
-      ) : null}
 
       {config.tabs ? (
         // Thanh tab thật để đúng kích thước viên; chặn chạm vì chưa có gì để đổi.
@@ -149,7 +140,7 @@ function DefaultHero({
       </View>
       <SkeletonBlock opacity={opacity} style={[styles.title, variant === "congViec" && styles.titleCongViec]} />
       {metaIcons.map((icon, index) => (
-        <View key={icon} style={[styles.heroLine, variant === "flow" && styles.heroLineFlow]}>
+        <View key={icon} style={styles.heroLine}>
           <Ionicons name={icon} size={15} color={c.textMuted} />
           <SkeletonBlock opacity={opacity} style={[styles.line, index ? styles.w44 : styles.w60]} />
         </View>
@@ -302,11 +293,11 @@ const makeStyles = (c: AppColors) =>
       width: "62%",
       height: 18,
       marginTop: 9,
+      marginBottom: 6,
       borderRadius: 7,
     },
     titleCongViec: {
       width: "78%",
-      marginBottom: 6,
     },
     titleKeHoach: {
       width: "80%",
@@ -318,9 +309,6 @@ const makeStyles = (c: AppColors) =>
       alignItems: "center",
       gap: 6,
       marginTop: 6,
-    },
-    heroLineFlow: {
-      marginTop: 12,
     },
     line: {
       height: 12,
@@ -346,19 +334,6 @@ const makeStyles = (c: AppColors) =>
       height: 11,
       marginTop: 6,
       borderRadius: 5,
-    },
-    actions: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: 6,
-      marginBottom: 2,
-    },
-    actionsFlow: {
-      marginBottom: 12,
-    },
-    actionButton: {
-      height: 30,
-      borderRadius: 9,
     },
     // Khung nhóm field — số đo của `AssetGroupList`.
     groupCard: {

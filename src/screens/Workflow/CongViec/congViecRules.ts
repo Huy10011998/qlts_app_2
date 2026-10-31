@@ -5,6 +5,7 @@ import type {
   CongViecThamGiaPayload,
 } from "../../../types/index";
 import { CV_MA_MAU, CV_VAI_TRO, isCongViecChuaXong } from "../shared/workflowConstants";
+import { parseBeDate } from "../shared/workflowDate";
 
 /**
  * Luật ẩn / hiện của màn Công việc (mục 3, 4-Mobile-CongViec). Luật thật ở
@@ -74,6 +75,41 @@ export const getCongViecActions = (
     xoa: !!quyen.duocXoa && perms.canDelete,
     traoDoi: !!quyen.duocTraoDoi,
   };
+};
+
+export type CongViecQuickAction =
+  | "chuyenTrangThai"
+  | "giaHan"
+  | "doiChuTri"
+  | "sua"
+  | "nhanBan"
+  | "xoa";
+
+/**
+ * Thao tác nhanh ở nút ⋯ của một việc (màn Lịch), cùng luật nút với màn chi
+ * tiết. Bình luận / Đính kèm / Lịch sử không nằm đây: là hàng icon ở chân việc.
+ *
+ * `canNhanBan` = quyền .Insert VÀ đã liên kết nhân viên (như nút thêm việc).
+ */
+export const getCongViecQuickActions = (
+  actions: CongViecActions,
+  canNhanBan: boolean,
+): CongViecQuickAction[] => {
+  const list: CongViecQuickAction[] = [];
+  if (actions.chuyenTrangThai) list.push("chuyenTrangThai");
+  if (actions.giaHan) list.push("giaHan");
+  if (actions.doiChuTri) list.push("doiChuTri");
+  if (actions.sua) list.push("sua");
+  if (canNhanBan) list.push("nhanBan");
+  if (actions.xoa) list.push("xoa");
+  return list;
+};
+
+/** Đã gia hạn: Đến ngày hiện tại khác hạn ban đầu (như dòng "Hạn ban đầu" ở chi tiết). */
+export const isCongViecDaGiaHan = (item: Pick<CongViecItem, "hanBanDau" | "denNgay">) => {
+  const hanBanDau = parseBeDate(item.hanBanDau);
+  const denNgay = parseBeDate(item.denNgay);
+  return !!hanBanDau && !!denNgay && hanBanDau.getTime() !== denNgay.getTime();
 };
 
 /** Lỗi của danh sách người tham gia, null = hợp lệ. */
